@@ -9,6 +9,24 @@ Rails Error Dashboard provides a complete error tracking and alerting solution f
 
 ![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Error+Dashboard+Screenshot)
 
+## 📖 Table of Contents
+
+- [Features](#-features)
+- [Installation](#-installation)
+- [Configuration](#️-configuration)
+- [Usage](#-usage)
+  - [Automatic Error Tracking](#automatic-error-tracking)
+  - [Manual Error Logging](#manual-error-logging)
+  - [Frontend & Mobile Error Reporting](#frontend--mobile-error-reporting)
+- [Optional Separate Database](#️-optional-separate-database)
+- [Advanced Features](#-advanced-features)
+  - [Notification System](#-notification-system)
+  - [Platform Detection](#platform-detection)
+- [Architecture Details](#-architecture-details)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ## ✨ Features
 
 ### 🎯 Complete Error Tracking
@@ -689,6 +707,23 @@ create_table :rails_error_dashboard_error_logs do |t|
 end
 ```
 
+## 📚 Documentation
+
+### Quick Start Guides
+- **[README.md](README.md)** - Main documentation (you are here!)
+- **[MOBILE_APP_INTEGRATION.md](MOBILE_APP_INTEGRATION.md)** - Complete guide for integrating with React Native, Expo, and other mobile frameworks
+- **[MIGRATION_TO_SEPARATE_DATABASE.md](MIGRATION_TO_SEPARATE_DATABASE.md)** - Step-by-step guide for migrating to a separate error logs database
+
+### Topics Covered
+- ✅ Rails backend error tracking (automatic + manual)
+- ✅ Frontend/mobile error reporting (React, React Native, Vue, Angular, Flutter)
+- ✅ Multi-channel notifications (Slack + Email)
+- ✅ Analytics and dashboard usage
+- ✅ Separate database setup and migration
+- ✅ Queue configuration (Sidekiq, Solid Queue, etc.)
+- ✅ Security and authentication
+- ✅ Service Objects + CQRS architecture
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
@@ -702,7 +737,7 @@ Contributions are welcome! Please:
 ### Development Setup
 
 ```bash
-git clone https://github.com/yourusername/rails_error_dashboard.git
+git clone https://github.com/AnjanJ/rails_error_dashboard.git
 cd rails_error_dashboard
 bundle install
 ```
@@ -721,8 +756,9 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## 📮 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/rails_error_dashboard/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/rails_error_dashboard/discussions)
+- **Issues**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AnjanJ/rails_error_dashboard/discussions)
+- **Repository**: [https://github.com/AnjanJ/rails_error_dashboard](https://github.com/AnjanJ/rails_error_dashboard)
 
 ---
 
