@@ -92,7 +92,34 @@ This will:
 rails db:migrate
 ```
 
-### 5. Visit the dashboard
+### 5. (Optional) Configure queue for notifications
+
+If you're using **Sidekiq**, add the notification queue to your config:
+
+```yaml
+# config/sidekiq.yml
+:queues:
+  - error_notifications
+  - default
+  - mailers
+```
+
+If you're using **Solid Queue** (Rails 8.1+), add to your config:
+
+```yaml
+# config/queue.yml
+workers:
+  - queues: error_notifications
+    threads: 3
+    processes: 1
+  - queues: default
+    threads: 5
+    processes: 1
+```
+
+**Note:** If you're using the default `async` adapter or other backends, no additional configuration is needed. The gem works with all ActiveJob adapters out of the box.
+
+### 6. Visit the dashboard
 
 Start your server and visit:
 ```
@@ -371,11 +398,66 @@ When an error occurs:
 4. Team clicks link in notification to view full details
 5. Error can be investigated and marked as resolved in dashboard
 
+#### Queue Configuration
+
+Notification jobs use the `:error_notifications` queue by default. This allows you to:
+- Prioritize error notifications over other jobs
+- Monitor notification delivery separately
+- Configure different concurrency/workers for notifications
+
+**Works with all ActiveJob backends:**
+- ✅ **Solid Queue** (Rails 8.1+ default)
+- ✅ **Sidekiq** (most popular)
+- ✅ **Delayed Job**
+- ✅ **Resque**
+- ✅ **Async** (Rails default for development)
+- ✅ **Inline** (for testing)
+
+**Setup for Sidekiq:**
+
+```ruby
+# config/sidekiq.yml
+:queues:
+  - default
+  - error_notifications  # Add this queue
+  - mailers
+
+# Optional: Higher priority for error notifications
+:queues:
+  - [error_notifications, 5]  # Process 5x more often
+  - [default, 1]
+  - [mailers, 1]
+```
+
+**Setup for Solid Queue (Rails 8.1+):**
+
+```ruby
+# config/queue.yml
+dispatchers:
+  batch_size: 500
+
+workers:
+  - queues: error_notifications
+    threads: 3
+    processes: 1
+    polling_interval: 1
+  - queues: default
+    threads: 5
+    processes: 1
+    polling_interval: 5
+```
+
+**No additional setup needed for:**
+- Async adapter (Rails default in development)
+- Inline adapter (synchronous, for testing)
+- Other adapters use the queue name automatically
+
 **Background Jobs:**
 - Notifications use `ActiveJob` and run in background
+- Use dedicated `:error_notifications` queue
 - Won't block or slow down your application
 - Failed notifications are logged but don't raise errors
-- Compatible with Sidekiq, Delayed Job, etc.
+- Retries handled by your ActiveJob backend (Sidekiq, Solid Queue, etc.)
 
 ### Platform Detection
 

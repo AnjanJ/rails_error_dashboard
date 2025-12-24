@@ -2,7 +2,7 @@
 
 module RailsErrorDashboard
   class SlackErrorNotificationJob < ApplicationJob
-    queue_as :default
+    queue_as :error_notifications
 
     def perform(error_log_id)
       error_log = ErrorLog.find_by(id: error_log_id)

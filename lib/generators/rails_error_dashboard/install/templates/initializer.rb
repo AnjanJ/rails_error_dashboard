@@ -19,6 +19,19 @@ RailsErrorDashboard.configure do |config|
   config.user_model = 'User'
 
   # === NOTIFICATION SETTINGS ===
+  #
+  # Notifications are sent asynchronously via the :error_notifications queue
+  # Works with: Solid Queue (Rails 8.1+), Sidekiq, Delayed Job, Resque, etc.
+  #
+  # For Sidekiq, add to config/sidekiq.yml:
+  #   :queues:
+  #     - error_notifications
+  #     - default
+  #
+  # For Solid Queue (Rails 8.1+), add to config/queue.yml:
+  #   workers:
+  #     - queues: error_notifications
+  #       threads: 3
 
   # Slack notifications
   config.enable_slack_notifications = true
