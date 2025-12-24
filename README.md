@@ -59,14 +59,21 @@ Rails Error Dashboard provides a complete error tracking and alerting solution f
 - Link to PRs, commits, or issues
 - Track resolver name and timestamp
 - View related errors
+- **Batch operations** - resolve or delete multiple errors at once
 
 ### 🚨 Multi-Channel Alerting
+- **5 notification backends**: Email, Slack, Discord, PagerDuty, Webhooks
 - **Slack notifications** with beautifully formatted messages
+- **Discord notifications** with rich embeds and color-coded severity
+- **PagerDuty integration** for critical errors (on-call escalation)
+- **Custom webhooks** for integration with any monitoring service
 - **Email alerts** with HTML templates to multiple recipients
 - **Instant notifications** when errors occur (async background jobs)
 - **Rich context** including user, platform, environment, stack trace
 - **Direct links** to view full error details in dashboard
 - **Customizable** - enable/disable channels independently
+
+See [NOTIFICATION_CONFIGURATION.md](NOTIFICATION_CONFIGURATION.md) for detailed setup.
 
 ### 🔒 Security & Configuration
 - **HTTP Basic Auth** (configurable)
@@ -75,7 +82,7 @@ Rails Error Dashboard provides a complete error tracking and alerting solution f
 
 ### 🏗️ Architecture
 Built with **Service Objects + CQRS Principles**:
-- **Commands**: LogError, ResolveError (write operations)
+- **Commands**: LogError, ResolveError, BatchResolveErrors, BatchDeleteErrors (write operations)
 - **Queries**: ErrorsList, DashboardStats, AnalyticsStats (read operations)
 - **Value Objects**: ErrorContext (immutable data)
 - **Services**: PlatformDetector (business logic)

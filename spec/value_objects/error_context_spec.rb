@@ -137,7 +137,7 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
     it 'returns a hash with all attributes' do
       result = subject.to_h
       expect(result).to be_a(Hash)
-      expect(result.keys).to contain_exactly(:user_id, :request_url, :request_params, :user_agent, :ip_address, :platform)
+      expect(result.keys).to contain_exactly(:user_id, :request_url, :request_params, :user_agent, :ip_address, :platform, :controller_name, :action_name)
     end
   end
 end

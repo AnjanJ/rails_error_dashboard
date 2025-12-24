@@ -59,6 +59,32 @@ module RailsErrorDashboard
       @api_errors = analytics[:api_errors]
     end
 
+    def batch_action
+      error_ids = params[:error_ids] || []
+      action_type = params[:action_type]
+
+      result = case action_type
+      when "resolve"
+        Commands::BatchResolveErrors.call(
+          error_ids,
+          resolved_by_name: params[:resolved_by_name],
+          resolution_comment: params[:resolution_comment]
+        )
+      when "delete"
+        Commands::BatchDeleteErrors.call(error_ids)
+      else
+        { success: false, count: 0, errors: ["Invalid action type"] }
+      end
+
+      if result[:success]
+        flash[:notice] = "Successfully #{action_type}d #{result[:count]} error(s)"
+      else
+        flash[:alert] = "Batch operation failed: #{result[:errors].join(', ')}"
+      end
+
+      redirect_to errors_path
+    end
+
     private
 
     def filter_params

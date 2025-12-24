@@ -7,6 +7,7 @@ RailsErrorDashboard::Engine.routes.draw do
     end
     collection do
       get :analytics
+      post :batch_action
     end
   end
 end

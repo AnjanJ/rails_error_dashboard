@@ -132,12 +132,42 @@
       <h5 class="mb-0">Recent Errors</h5>
       <small class="text-muted"><%== pagy_info(@pagy) %></small>
     </div>
+
+    <!-- Batch Actions Toolbar -->
+    <div class="card-body border-bottom" id="batch-actions-toolbar" style="display: none;">
+      <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form" do |f| %>
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <span id="selected-count" class="fw-bold">0 selected</span>
+          </div>
+          <div class="col-auto">
+            <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm btn-success" do %>
+              <i class="bi bi-check-circle"></i> Resolve Selected
+            <% end %>
+          </div>
+          <div class="col-auto">
+            <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm btn-danger", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
+              <i class="bi bi-trash"></i> Delete Selected
+            <% end %>
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-selection">
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
     <div class="card-body p-0">
       <% if @errors.any? %>
         <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
+                <th style="width: 40px;">
+                  <input type="checkbox" id="select-all" class="form-check-input">
+                </th>
                 <th>Time</th>
                 <th>Error Type</th>
                 <th>Message</th>
@@ -150,19 +180,22 @@
             </thead>
             <tbody>
               <% @errors.each do |error| %>
-                <tr onclick="window.location='<%= error_path(error) %>';">
-                  <td>
+                <tr>
+                  <td onclick="event.stopPropagation();">
+                    <input type="checkbox" class="error-checkbox form-check-input" value="<%= error.id %>" data-error-id="<%= error.id %>">
+                  </td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <small><%= error.occurred_at.strftime("%m/%d %I:%M%p") %></small>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <code class="text-danger"><%= error.error_type.split('::').last %></code>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <div class="text-truncate" style="max-width: 300px;" title="<%= error.message %>">
                       <%= error.message %>
                     </div>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <% if error.platform == 'iOS' %>
                       <span class="badge badge-ios">iOS</span>
                     <% elsif error.platform == 'Android' %>
@@ -171,26 +204,26 @@
                       <span class="badge badge-api"><%= error.platform || 'API' %></span>
                     <% end %>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <span class="badge <%= error.environment == 'production' ? 'bg-danger' : 'bg-info' %>">
                       <%= error.environment %>
                     </span>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <% if error.user %>
                       <small><%= error.user.email %></small>
                     <% else %>
                       <small class="text-muted">Guest</small>
                     <% end %>
                   </td>
-                  <td>
+                  <td onclick="window.location='<%= error_path(error) %>';">
                     <% if error.resolved? %>
                       <i class="bi bi-check-circle-fill text-success" title="Resolved"></i>
                     <% else %>
                       <i class="bi bi-exclamation-circle-fill text-danger" title="Unresolved"></i>
                     <% end %>
                   </td>
-                  <td>
+                  <td onclick="event.stopPropagation();">
                     <%= link_to error_path(error), class: "btn btn-sm btn-outline-primary" do %>
                       <i class="bi bi-eye"></i>
                     <% end %>
@@ -214,3 +247,88 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const errorCheckboxes = document.querySelectorAll('.error-checkbox');
+    const batchToolbar = document.getElementById('batch-actions-toolbar');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const batchForm = document.getElementById('batch-form');
+    const clearSelectionBtn = document.getElementById('clear-selection');
+
+    function updateBatchToolbar() {
+      const checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
+      const count = checkedBoxes.length;
+
+      if (count > 0) {
+        batchToolbar.style.display = 'block';
+        selectedCountSpan.textContent = `${count} selected`;
+      } else {
+        batchToolbar.style.display = 'none';
+      }
+    }
+
+    // Select all checkbox
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        errorCheckboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+        updateBatchToolbar();
+      });
+    }
+
+    // Individual checkboxes
+    errorCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        updateBatchToolbar();
+
+        // Update "select all" checkbox state
+        const allChecked = Array.from(errorCheckboxes).every(cb => cb.checked);
+        const someChecked = Array.from(errorCheckboxes).some(cb => cb.checked);
+
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = allChecked;
+          selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+      });
+    });
+
+    // Clear selection button
+    if (clearSelectionBtn) {
+      clearSelectionBtn.addEventListener('click', function() {
+        errorCheckboxes.forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = false;
+        }
+        updateBatchToolbar();
+      });
+    }
+
+    // Form submission - add selected error IDs
+    if (batchForm) {
+      batchForm.addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
+
+        if (checkedBoxes.length === 0) {
+          e.preventDefault();
+          alert('Please select at least one error');
+          return false;
+        }
+
+        // Add hidden inputs for each selected error ID
+        checkedBoxes.forEach(checkbox => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'error_ids[]';
+          input.value = checkbox.value;
+          this.appendChild(input);
+        });
+      });
+    }
+  });
+</script>
