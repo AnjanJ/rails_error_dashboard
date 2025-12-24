@@ -3,3 +3,10 @@ test:
   database: spec/dummy/db/test.sqlite3
   pool: 5
   timeout: 5000
+
+# Error logs database - pointing to same database for testing
+error_logs:
+  adapter: sqlite3
+  database: spec/dummy/db/test.sqlite3
+  pool: 5
+  timeout: 5000

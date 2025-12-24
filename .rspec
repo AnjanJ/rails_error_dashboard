@@ -2,3 +2,4 @@
 --format documentation
 --color
 --order random
+--default-path spec

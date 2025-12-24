@@ -18,7 +18,19 @@ module RailsErrorDashboard
     scope :resolved, -> { where(resolved: true) }
     scope :recent, -> { order(occurred_at: :desc) }
     scope :by_environment, ->(env) { where(environment: env) }
+    scope :by_error_type, ->(type) { where(error_type: type) }
     scope :by_type, ->(type) { where(error_type: type) }
+    scope :by_platform, ->(platform) { where(platform: platform) }
+    scope :last_24_hours, -> { where('occurred_at >= ?', 24.hours.ago) }
+    scope :last_week, -> { where('occurred_at >= ?', 1.week.ago) }
+
+    # Set defaults
+    before_validation :set_defaults, on: :create
+
+    def set_defaults
+      self.environment ||= Rails.env.to_s
+      self.platform ||= 'API'
+    end
 
     # Log an error with context (delegates to Command)
     def self.log_error(exception, context = {})

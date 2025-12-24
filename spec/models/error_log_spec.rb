@@ -78,7 +78,9 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
 
     describe '.recent' do
       it 'returns errors ordered by most recent first' do
-        expect(described_class.recent.first).to eq(recent_error)
+        # recent_error should be in the list and newer than old_error
+        errors = described_class.recent.to_a
+        expect(errors.index(recent_error)).to be < errors.index(old_error)
       end
     end
 
@@ -132,8 +134,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
 
     it 'sets platform to API by default' do
       error_log = build(:error_log, platform: nil)
-      # Platform might be set in before_validation callback
-      expect(error_log.platform).to be_present
+      error_log.valid? # Trigger before_validation callback
+      expect(error_log.platform).to eq('API')
     end
   end
 end

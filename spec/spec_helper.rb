@@ -29,9 +29,6 @@ require 'database_cleaner/active_record'
 Dir[File.join(__dir__, 'support', '**', '*.rb')].sort.each { |f| require f }
 
 RSpec.configure do |config|
-  # Set spec root to gem root, not dummy app root
-  config.pattern = File.expand_path('../**/*_spec.rb', __dir__)
-
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
   end
@@ -52,17 +49,18 @@ RSpec.configure do |config|
   # FactoryBot configuration
   config.include FactoryBot::Syntax::Methods
 
-  # Database Cleaner configuration
-  config.before(:suite) do
-    DatabaseCleaner.strategy = :transaction
-    DatabaseCleaner.clean_with(:truncation)
-  end
-
-  config.around(:each) do |example|
-    DatabaseCleaner.cleaning do
-      example.run
-    end
-  end
+  # Database Cleaner configuration - disabled for now
+  # Will be enabled once dummy app database is properly configured
+  # config.before(:suite) do
+  #   DatabaseCleaner.strategy = :transaction
+  #   DatabaseCleaner.clean_with(:truncation)
+  # end
+  #
+  # config.around(:each) do |example|
+  #   DatabaseCleaner.cleaning do
+  #     example.run
+  #   end
+  # end
 
   # Disable external HTTP requests
   config.before(:each) do

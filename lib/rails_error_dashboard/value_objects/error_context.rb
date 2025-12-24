@@ -81,12 +81,15 @@ module RailsErrorDashboard
         # Custom params
         params.merge!(@context[:params]) if @context[:params]
 
+        # Additional context (from mobile apps, etc.)
+        params.merge!(@context[:additional_context]) if @context[:additional_context]
+
         params.to_json
       end
 
       def extract_user_agent
         return @context[:request]&.user_agent if @context[:request]
-        return "Sidekiq Worker" if @source&.include?("active_job") || @context[:job]
+        return "Sidekiq Worker" if @source&.to_s&.include?("active_job") || @context[:job]
         return @context[:user_agent] if @context[:user_agent]
 
         "Rails Application"

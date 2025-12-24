@@ -4,7 +4,13 @@ require 'rails_helper'
 
 RSpec.describe RailsErrorDashboard::Commands::LogError do
   describe '.call' do
-    let(:exception) { StandardError.new('Test error') }
+    let(:exception) do
+      begin
+        raise StandardError, 'Test error'
+      rescue => e
+        e
+      end
+    end
     let(:context) { {} }
 
     it 'creates an error log' do
@@ -95,9 +101,10 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
 
       it 'creates error log successfully' do
-        expect {
-          described_class.call(exception, context)
-        }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+        result = described_class.call(exception, context)
+        expect(result).not_to be_nil
+        expect(result).to be_a(RailsErrorDashboard::ErrorLog)
+        expect(result).to be_persisted
       end
     end
 

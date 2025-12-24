@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require 'spec_helper'
+require_relative '../../lib/rails_error_dashboard/services/platform_detector'
 
 RSpec.describe RailsErrorDashboard::Services::PlatformDetector do
   describe '.detect' do

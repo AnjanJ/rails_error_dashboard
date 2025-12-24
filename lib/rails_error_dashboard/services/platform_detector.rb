@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'browser'
+
 module RailsErrorDashboard
   module Services
     # Detects the platform (iOS/Android/API) from user agent string
