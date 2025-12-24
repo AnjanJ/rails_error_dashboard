@@ -1,0 +1,33 @@
+===============================================================================
+
+Rails Error Dashboard has been installed!
+
+Next steps:
+
+1. Run migrations:
+   rails db:migrate
+
+2. (Optional) If you want to use a separate database for error logs:
+   - Set USE_SEPARATE_ERROR_DB=true in your .env file
+   - Configure error_logs database in config/database.yml
+   - Run: rails db:create:error_logs
+   - Run: rails db:migrate:error_logs
+
+3. Start your Rails server:
+   rails server
+
+4. Visit the error dashboard:
+   http://localhost:3000/error_dashboard
+
+5. Default credentials (change in config/initializers/rails_error_dashboard.rb):
+   Username: admin
+   Password: password
+
+6. (Optional) Set up Slack notifications:
+   - Set SLACK_WEBHOOK_URL in your .env file
+   - Errors will be sent to your Slack channel automatically
+
+For more information, visit:
+https://github.com/anjanjagirdar/rails_error_dashboard
+
+===============================================================================

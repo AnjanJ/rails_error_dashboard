@@ -1,0 +1,294 @@
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <%= link_to errors_path, class: "btn btn-outline-secondary btn-sm mb-2" do %>
+        <i class="bi bi-arrow-left"></i> Back to Errors
+      <% end %>
+      <h2 class="mb-0">Error Details</h2>
+    </div>
+    <div>
+      <% if @error.resolved? %>
+        <span class="badge bg-success fs-6">
+          <i class="bi bi-check-circle"></i> Resolved
+        </span>
+      <% else %>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#resolveModal">
+          <i class="bi bi-check-circle"></i> Mark as Resolved
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Error Information -->
+    <div class="col-md-8">
+      <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0"><i class="bi bi-bug-fill"></i> <%= @error.error_type %></h5>
+        </div>
+        <div class="card-body">
+          <h6 class="text-muted mb-3">Error Message:</h6>
+          <div class="alert alert-danger">
+            <%= @error.message %>
+          </div>
+
+          <h6 class="text-muted mb-2 mt-4">Backtrace:</h6>
+          <% if @error.backtrace.present? %>
+            <div class="bg-dark text-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+              <pre class="mb-0"><code><%= @error.backtrace %></code></pre>
+            </div>
+          <% else %>
+            <p class="text-muted">No backtrace available</p>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Request Context -->
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-globe"></i> Request Context</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm">
+            <tr>
+              <th width="200">Request URL:</th>
+              <td><code><%= @error.request_url || 'N/A' %></code></td>
+            </tr>
+            <tr>
+              <th>Request Params:</th>
+              <td>
+                <% if @error.request_params.present? %>
+                  <pre class="mb-0"><code><%= JSON.pretty_generate(JSON.parse(@error.request_params)) rescue @error.request_params %></code></pre>
+                <% else %>
+                  <span class="text-muted">N/A</span>
+                <% end %>
+              </td>
+            </tr>
+            <tr>
+              <th>User Agent:</th>
+              <td><small><%= @error.user_agent || 'N/A' %></small></td>
+            </tr>
+            <tr>
+              <th>IP Address:</th>
+              <td><code><%= @error.ip_address || 'N/A' %></code></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Related Errors -->
+      <% if @related_errors.any? %>
+        <div class="card">
+          <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-collection"></i> Related Errors</h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Time</th>
+                    <th>Message</th>
+                    <th>Platform</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @related_errors.each do |related| %>
+                    <tr>
+                      <td><small><%= related.occurred_at.strftime("%m/%d %I:%M%p") %></small></td>
+                      <td>
+                        <div class="text-truncate" style="max-width: 400px;">
+                          <%= related.message %>
+                        </div>
+                      </td>
+                      <td>
+                        <% if related.platform == 'iOS' %>
+                          <span class="badge badge-ios">iOS</span>
+                        <% elsif related.platform == 'Android' %>
+                          <span class="badge badge-android">Android</span>
+                        <% else %>
+                          <span class="badge badge-api"><%= related.platform || 'API' %></span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if related.resolved? %>
+                          <i class="bi bi-check-circle-fill text-success"></i>
+                        <% else %>
+                          <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                        <% end %>
+                      </td>
+                      <td>
+                        <%= link_to "View", error_path(related), class: "btn btn-sm btn-outline-primary" %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+      <!-- Metadata Card -->
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle"></i> Metadata</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">Occurred At</small>
+            <strong><%= @error.occurred_at.strftime("%B %d, %Y") %></strong><br>
+            <small><%= @error.occurred_at.strftime("%I:%M:%S %p %Z") %></small>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">Environment</small>
+            <span class="badge <%= @error.environment == 'production' ? 'bg-danger' : 'bg-info' %>">
+              <%= @error.environment.titleize %>
+            </span>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">Platform</small>
+            <% if @error.platform == 'iOS' %>
+              <span class="badge badge-ios"><i class="bi bi-phone"></i> iOS</span>
+            <% elsif @error.platform == 'Android' %>
+              <span class="badge badge-android"><i class="bi bi-phone"></i> Android</span>
+            <% else %>
+              <span class="badge badge-api"><i class="bi bi-server"></i> <%= @error.platform || 'API' %></span>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">User</small>
+            <% if @error.user %>
+              <strong><%= @error.user.email %></strong><br>
+              <small class="text-muted">ID: <%= @error.user_id %></small>
+            <% else %>
+              <span class="text-muted">Guest / Unauthenticated</span>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted d-block mb-1">Status</small>
+            <% if @error.resolved? %>
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle"></i> Resolved
+              </span>
+              <% if @error.resolved_at.present? %>
+                <br>
+                <small class="text-muted mt-1 d-block">
+                  <%= @error.resolved_at.strftime("%B %d, %Y at %I:%M %p") %>
+                </small>
+              <% end %>
+            <% else %>
+              <span class="badge bg-danger">
+                <i class="bi bi-exclamation-circle"></i> Unresolved
+              </span>
+            <% end %>
+          </div>
+
+          <% if @error.resolved? && @error.resolved_by_name.present? %>
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Resolved By</small>
+              <strong><%= @error.resolved_by_name %></strong>
+            </div>
+          <% end %>
+
+          <% if @error.resolved? && @error.resolution_reference.present? %>
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Reference</small>
+              <code><%= @error.resolution_reference %></code>
+            </div>
+          <% end %>
+
+          <% if @error.resolved? && @error.resolution_comment.present? %>
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Resolution Notes</small>
+              <div class="alert alert-success mb-0">
+                <%= simple_format(@error.resolution_comment) %>
+              </div>
+            </div>
+          <% end %>
+
+          <div>
+            <small class="text-muted d-block mb-1">Error ID</small>
+            <code><%= @error.id %></code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <%= link_to errors_path(error_type: @error.error_type), class: "btn btn-outline-primary btn-sm" do %>
+              <i class="bi bi-filter"></i> View Similar Errors
+            <% end %>
+
+            <% if @error.user %>
+              <%= link_to errors_path(user_id: @error.user_id), class: "btn btn-outline-primary btn-sm" do %>
+                <i class="bi bi-person"></i> View User's Errors
+              <% end %>
+            <% end %>
+
+            <%= link_to errors_path(platform: @error.platform), class: "btn btn-outline-primary btn-sm" do %>
+              <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
+            <% end %>
+
+            <%= link_to error_dashboard_analytics_path, class: "btn btn-outline-secondary btn-sm" do %>
+              <i class="bi bi-graph-up"></i> View Analytics
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resolve Error Modal -->
+<div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: resolve_error_path(@error), method: :patch, class: "modal-content" do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="resolveModalLabel">
+            <i class="bi bi-check-circle"></i> Mark Error as Resolved
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="resolved_by_name" class="form-label">Your Name <span class="text-danger">*</span></label>
+            <%= text_field_tag :resolved_by_name, nil, class: "form-control", placeholder: "e.g., John Doe", required: true %>
+            <small class="text-muted">Who is resolving this error?</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="resolution_reference" class="form-label">Reference (Optional)</label>
+            <%= text_field_tag :resolution_reference, nil, class: "form-control", placeholder: "e.g., JIRA-123, PR #456, GitHub Issue #789" %>
+            <small class="text-muted">Link to ticket, PR, or issue</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="resolution_comment" class="form-label">Resolution Notes (Optional)</label>
+            <%= text_area_tag :resolution_comment, nil, class: "form-control", rows: 4, placeholder: "Describe what was done to fix this error..." %>
+            <small class="text-muted">What was done to resolve this error?</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Mark as Resolved", class: "btn btn-success" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

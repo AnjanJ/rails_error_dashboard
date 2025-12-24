@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rails error dashboard</title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <%= yield :head %>
+
+  <%= stylesheet_link_tag    "rails_error_dashboard/application", media: "all" %>
+</head>
+<body>
+
+<%= yield %>
+
+</body>
+</html>
