@@ -106,6 +106,21 @@ module RailsErrorDashboard
         if config.enable_email_notifications && config.notification_email_recipients.present?
           EmailErrorNotificationJob.perform_later(error_log.id)
         end
+
+        # Send Discord notification
+        if config.enable_discord_notifications && config.discord_webhook_url.present?
+          DiscordErrorNotificationJob.perform_later(error_log.id)
+        end
+
+        # Send PagerDuty notification (critical errors only)
+        if config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?
+          PagerdutyErrorNotificationJob.perform_later(error_log.id)
+        end
+
+        # Send webhook notifications
+        if config.enable_webhook_notifications && config.webhook_urls.present?
+          WebhookErrorNotificationJob.perform_later(error_log.id)
+        end
       end
     end
   end
