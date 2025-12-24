@@ -335,4 +335,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ---
 
-**Made with ❤️ for the Rails community**
+**Made with ❤️ by Anjan for the Rails community**
