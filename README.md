@@ -403,6 +403,38 @@ rails db:create:error_logs
 rails db:migrate:error_logs
 ```
 
+### Migrating Existing Data
+
+If you already have error logs in your primary database and want to move them to the separate database:
+
+**📚 Complete Migration Guide:** See [MIGRATION_TO_SEPARATE_DATABASE.md](MIGRATION_TO_SEPARATE_DATABASE.md)
+
+The guide covers:
+- Step-by-step migration process
+- Data integrity verification
+- Safe cleanup of old data
+- Rollback procedures
+- Performance considerations
+- Troubleshooting common issues
+
+**Quick summary:**
+```bash
+# 1. Configure separate database in database.yml
+# 2. Create the new database
+rails db:create:error_logs
+rails db:migrate:error_logs
+
+# 3. Copy data (use rake task from migration guide)
+rake error_logs:migrate_to_separate_db
+
+# 4. Verify migration
+rake error_logs:verify_migration
+
+# 5. Enable in config and restart app
+# 6. Clean up primary database
+rake error_logs:cleanup_primary_db
+```
+
 ## 🔧 Advanced Features
 
 ### 📧 Notification System
