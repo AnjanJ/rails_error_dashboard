@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name        = "rails_error_dashboard"
   spec.version     = RailsErrorDashboard::VERSION
   spec.authors     = [ "Anjan Jagirdar" ]
-  spec.email       = [ "anjan@example.com" ]
+  spec.email       = [ "anjan.jagirdar@gmail.com" ]
   spec.homepage    = "https://github.com/AnjanJ/rails_error_dashboard"
   spec.summary     = "Beautiful error tracking dashboard for Rails applications (BETA)"
   spec.description = "⚠️ BETA: Rails Error Dashboard provides error tracking with a beautiful UI, " \
