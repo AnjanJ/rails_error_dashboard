@@ -1,7 +1,7 @@
 RailsErrorDashboard::Engine.routes.draw do
-  root to: 'errors#index'
+  root to: "errors#index"
 
-  resources :errors, only: [:index, :show] do
+  resources :errors, only: [ :index, :show ] do
     member do
       post :resolve
     end

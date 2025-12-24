@@ -3,6 +3,6 @@
 module RailsErrorDashboard
   class ApplicationMailer < ActionMailer::Base
     default from: -> { RailsErrorDashboard.configuration.notification_email_from }
-    layout 'mailer'
+    layout "mailer"
   end
 end

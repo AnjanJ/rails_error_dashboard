@@ -30,11 +30,11 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_24_000001) do
     t.datetime "updated_at", null: false
     t.text "user_agent"
     t.integer "user_id"
-    t.index ["environment"], name: "index_rails_error_dashboard_error_logs_on_environment"
-    t.index ["error_type"], name: "index_rails_error_dashboard_error_logs_on_error_type"
-    t.index ["occurred_at"], name: "index_rails_error_dashboard_error_logs_on_occurred_at"
-    t.index ["platform"], name: "index_rails_error_dashboard_error_logs_on_platform"
-    t.index ["resolved"], name: "index_rails_error_dashboard_error_logs_on_resolved"
-    t.index ["user_id"], name: "index_rails_error_dashboard_error_logs_on_user_id"
+    t.index [ "environment" ], name: "index_rails_error_dashboard_error_logs_on_environment"
+    t.index [ "error_type" ], name: "index_rails_error_dashboard_error_logs_on_error_type"
+    t.index [ "occurred_at" ], name: "index_rails_error_dashboard_error_logs_on_occurred_at"
+    t.index [ "platform" ], name: "index_rails_error_dashboard_error_logs_on_platform"
+    t.index [ "resolved" ], name: "index_rails_error_dashboard_error_logs_on_resolved"
+    t.index [ "user_id" ], name: "index_rails_error_dashboard_error_logs_on_user_id"
   end
 end

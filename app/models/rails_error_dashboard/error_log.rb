@@ -2,7 +2,7 @@
 
 module RailsErrorDashboard
   class ErrorLog < ErrorLogsRecord
-    self.table_name = 'rails_error_dashboard_error_logs'
+    self.table_name = "rails_error_dashboard_error_logs"
 
     # User association - works with both single and separate database
     # When using separate database, joins are not possible, but Rails
@@ -21,15 +21,15 @@ module RailsErrorDashboard
     scope :by_error_type, ->(type) { where(error_type: type) }
     scope :by_type, ->(type) { where(error_type: type) }
     scope :by_platform, ->(platform) { where(platform: platform) }
-    scope :last_24_hours, -> { where('occurred_at >= ?', 24.hours.ago) }
-    scope :last_week, -> { where('occurred_at >= ?', 1.week.ago) }
+    scope :last_24_hours, -> { where("occurred_at >= ?", 24.hours.ago) }
+    scope :last_week, -> { where("occurred_at >= ?", 1.week.ago) }
 
     # Set defaults
     before_validation :set_defaults, on: :create
 
     def set_defaults
       self.environment ||= Rails.env.to_s
-      self.platform ||= 'API'
+      self.platform ||= "API"
     end
 
     # Log an error with context (delegates to Command)
@@ -47,14 +47,14 @@ module RailsErrorDashboard
       start_date = days.days.ago
 
       {
-        total: where('occurred_at >= ?', start_date).count,
-        unresolved: where('occurred_at >= ?', start_date).unresolved.count,
-        by_type: where('occurred_at >= ?', start_date)
+        total: where("occurred_at >= ?", start_date).count,
+        unresolved: where("occurred_at >= ?", start_date).unresolved.count,
+        by_type: where("occurred_at >= ?", start_date)
           .group(:error_type)
           .count
           .sort_by { |_, count| -count }
           .to_h,
-        by_day: where('occurred_at >= ?', start_date)
+        by_day: where("occurred_at >= ?", start_date)
           .group("DATE(occurred_at)")
           .count
       }

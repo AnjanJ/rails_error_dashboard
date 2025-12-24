@@ -33,7 +33,7 @@ module RailsErrorDashboard
       private
 
       def base_query
-        ErrorLog.where('occurred_at >= ?', @start_date)
+        ErrorLog.where("occurred_at >= ?", @start_date)
       end
 
       def error_statistics
@@ -77,7 +77,7 @@ module RailsErrorDashboard
                   .count
                   .sort_by { |_, count| -count }
                   .first(10)
-                  .map { |user_id, count| [find_user_email(user_id, user_model), count] }
+                  .map { |user_id, count| [ find_user_email(user_id, user_model), count ] }
                   .to_h
       end
 
@@ -92,16 +92,16 @@ module RailsErrorDashboard
         total = error_statistics[:total]
         return 0 if total.zero?
 
-        resolved_count = ErrorLog.resolved.where('occurred_at >= ?', @start_date).count
+        resolved_count = ErrorLog.resolved.where("occurred_at >= ?", @start_date).count
         ((resolved_count.to_f / total) * 100).round(1)
       end
 
       def mobile_errors_count
-        base_query.where(platform: ['iOS', 'Android']).count
+        base_query.where(platform: [ "iOS", "Android" ]).count
       end
 
       def api_errors_count
-        base_query.where('platform IS NULL OR platform = ?', 'API').count
+        base_query.where("platform IS NULL OR platform = ?", "API").count
       end
     end
   end

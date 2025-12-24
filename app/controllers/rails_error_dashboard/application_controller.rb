@@ -2,7 +2,7 @@ module RailsErrorDashboard
   class ApplicationController < ActionController::Base
     include Pagy::Backend
 
-    layout 'rails_error_dashboard'
+    layout "rails_error_dashboard"
 
     protect_from_forgery with: :exception
 

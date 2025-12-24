@@ -51,7 +51,7 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
           class: double(name: 'TestJob'),
           job_id: 'abc123',
           queue_name: 'default',
-          arguments: [1, 2, 3],
+          arguments: [ 1, 2, 3 ],
           executions: 1
         )
       end

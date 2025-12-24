@@ -11,9 +11,9 @@ module RailsErrorDashboard
 
       def call
         {
-          total_today: ErrorLog.where('occurred_at >= ?', Time.current.beginning_of_day).count,
-          total_week: ErrorLog.where('occurred_at >= ?', 7.days.ago).count,
-          total_month: ErrorLog.where('occurred_at >= ?', 30.days.ago).count,
+          total_today: ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count,
+          total_week: ErrorLog.where("occurred_at >= ?", 7.days.ago).count,
+          total_month: ErrorLog.where("occurred_at >= ?", 30.days.ago).count,
           unresolved: ErrorLog.unresolved.count,
           resolved: ErrorLog.resolved.count,
           by_environment: ErrorLog.group(:environment).count,
@@ -25,7 +25,7 @@ module RailsErrorDashboard
       private
 
       def top_errors
-        ErrorLog.where('occurred_at >= ?', 7.days.ago)
+        ErrorLog.where("occurred_at >= ?", 7.days.ago)
                 .group(:error_type)
                 .count
                 .sort_by { |_, count| -count }

@@ -124,7 +124,7 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
     context 'with email notifications enabled' do
       before do
         allow(RailsErrorDashboard.configuration).to receive(:enable_email_notifications).and_return(true)
-        allow(RailsErrorDashboard.configuration).to receive(:notification_email_recipients).and_return(['dev@example.com'])
+        allow(RailsErrorDashboard.configuration).to receive(:notification_email_recipients).and_return([ 'dev@example.com' ])
       end
 
       it 'enqueues email notification job' do

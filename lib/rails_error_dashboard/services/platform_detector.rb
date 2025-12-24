@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'browser'
+require "browser"
 
 module RailsErrorDashboard
   module Services
@@ -15,25 +15,25 @@ module RailsErrorDashboard
       end
 
       def detect
-        return 'API' if @user_agent.blank?
+        return "API" if @user_agent.blank?
 
         browser = Browser.new(@user_agent)
 
         if browser.device.iphone? || browser.device.ipad?
-          'iOS'
+          "iOS"
         elsif browser.platform.android?
-          'Android'
-        elsif @user_agent&.include?('Expo')
+          "Android"
+        elsif @user_agent&.include?("Expo")
           # Expo apps might have specific patterns
-          if @user_agent.include?('iOS')
-            'iOS'
-          elsif @user_agent.include?('Android')
-            'Android'
+          if @user_agent.include?("iOS")
+            "iOS"
+          elsif @user_agent.include?("Android")
+            "Android"
           else
-            'Mobile'
+            "Mobile"
           end
         else
-          'API'
+          "API"
         end
       end
     end

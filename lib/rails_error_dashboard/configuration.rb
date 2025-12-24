@@ -33,22 +33,22 @@ module RailsErrorDashboard
 
     def initialize
       # Default values
-      @dashboard_username = ENV.fetch('ERROR_DASHBOARD_USER', 'admin')
-      @dashboard_password = ENV.fetch('ERROR_DASHBOARD_PASSWORD', 'password')
+      @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "admin")
+      @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "password")
       @require_authentication = true
       @require_authentication_in_development = false
 
-      @user_model = 'User'
+      @user_model = "User"
 
       # Notification settings
-      @slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
-      @notification_email_recipients = ENV.fetch('ERROR_NOTIFICATION_EMAILS', '').split(',').map(&:strip)
-      @notification_email_from = ENV.fetch('ERROR_NOTIFICATION_FROM', 'errors@example.com')
-      @dashboard_base_url = ENV['DASHBOARD_BASE_URL']
+      @slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
+      @notification_email_recipients = ENV.fetch("ERROR_NOTIFICATION_EMAILS", "").split(",").map(&:strip)
+      @notification_email_from = ENV.fetch("ERROR_NOTIFICATION_FROM", "errors@example.com")
+      @dashboard_base_url = ENV["DASHBOARD_BASE_URL"]
       @enable_slack_notifications = true
       @enable_email_notifications = true
 
-      @use_separate_database = ENV.fetch('USE_SEPARATE_ERROR_DB', 'false') == 'true'
+      @use_separate_database = ENV.fetch("USE_SEPARATE_ERROR_DB", "false") == "true"
 
       @retention_days = 90
 

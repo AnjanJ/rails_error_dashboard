@@ -43,7 +43,7 @@ module RailsErrorDashboard
       end
 
       def filter_by_resolved(query)
-        return query unless @filters[:unresolved] == 'true' || @filters[:unresolved] == true
+        return query unless @filters[:unresolved] == "true" || @filters[:unresolved] == true
 
         query.unresolved
       end
@@ -57,7 +57,7 @@ module RailsErrorDashboard
       def filter_by_search(query)
         return query unless @filters[:search].present?
 
-        query.where('message ILIKE ?', "%#{@filters[:search]}%")
+        query.where("message ILIKE ?", "%#{@filters[:search]}%")
       end
     end
   end

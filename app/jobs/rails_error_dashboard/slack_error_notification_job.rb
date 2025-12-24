@@ -19,14 +19,14 @@ module RailsErrorDashboard
     private
 
     def send_slack_notification(error_log, webhook_url)
-      require 'net/http'
-      require 'json'
+      require "net/http"
+      require "json"
 
       uri = URI(webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
 
-      request = Net::HTTP::Post.new(uri.path, { 'Content-Type' => 'application/json' })
+      request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
       request.body = slack_payload(error_log).to_json
 
       response = http.request(request)
@@ -140,26 +140,26 @@ module RailsErrorDashboard
 
     def platform_emoji(platform)
       case platform&.downcase
-      when 'ios'
-        '📱'
-      when 'android'
-        '🤖'
-      when 'api'
-        '🔌'
+      when "ios"
+        "📱"
+      when "android"
+        "🤖"
+      when "api"
+        "🔌"
       else
-        '💻'
+        "💻"
       end
     end
 
     def truncate_message(message, length = 500)
-      return '' unless message
+      return "" unless message
       message.length > length ? "#{message[0...length]}..." : message
     end
 
     def dashboard_url(error_log)
       # Generate URL to error dashboard
       # This will need to be configured based on your app's URL
-      base_url = RailsErrorDashboard.configuration.dashboard_base_url || 'http://localhost:3000'
+      base_url = RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000"
       "#{base_url}/error_dashboard/errors/#{error_log.id}"
     end
   end
