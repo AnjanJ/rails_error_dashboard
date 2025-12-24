@@ -10,7 +10,7 @@
 
 Rails Error Dashboard provides a complete error tracking and alerting solution for Rails backends AND frontend/mobile apps (React, React Native, Vue, Angular, Flutter, etc.). Features include: modern UI, multi-channel notifications (Slack + Email), real-time analytics, platform detection (iOS/Android/Web/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
 
-**Tested on**: Rails 7.0, 7.1, 7.2, 8.0 | Ruby 3.1, 3.2, 3.3+
+**Tested on**: Rails 7.0, 7.1, 7.2, 8.0 | Ruby 3.2, 3.3+
 
 ![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Error+Dashboard+Screenshot)
 

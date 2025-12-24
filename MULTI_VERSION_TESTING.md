@@ -11,12 +11,11 @@ Rails Error Dashboard supports multiple Rails versions and is tested against Rai
 - ✅ **Rails 8.0** (Latest)
 
 ### Ruby Versions
-- ✅ **Ruby 3.1** (with Rails 7.0, 7.1, 7.2)
 - ✅ **Ruby 3.2** (with Rails 7.0, 7.1, 7.2, 8.0)
 - ✅ **Ruby 3.3** (with Rails 7.0, 7.1, 7.2, 8.0)
 - ✅ **Ruby 3.4** (with Rails 7.0, 7.1, 7.2, 8.0)
 
-**Note**: Rails 8.0 requires Ruby >= 3.2
+**Note**: Rails Error Dashboard requires Ruby >= 3.2 due to the browser gem dependency
 
 ---
 
@@ -76,8 +75,7 @@ chmod +x test_all_versions.sh
 
 Multi-version testing is automated via GitHub Actions. Every push and pull request is tested against:
 
-- **12 combinations** (3 Ruby versions × 4 Rails versions)
-  - Ruby 3.1 with Rails 7.0, 7.1, 7.2
+- **8 combinations** (2 Ruby versions × 4 Rails versions)
   - Ruby 3.2 with Rails 7.0, 7.1, 7.2, 8.0
   - Ruby 3.3 with Rails 7.0, 7.1, 7.2, 8.0
 
@@ -100,11 +98,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.1', '3.2', '3.3']
+        ruby: ['3.2', '3.3']
         rails: ['7.0', '7.1', '7.2', '8.0']
-        exclude:
-          - ruby: '3.1'
-            rails: '8.0'
 
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
 
@@ -198,14 +193,14 @@ end
 
 | Ruby | Rails 7.0 | Rails 7.1 | Rails 7.2 | Rails 8.0 |
 |------|-----------|-----------|-----------|-----------|
-| 3.1  | ✅        | ✅        | ✅        | ❌        |
 | 3.2  | ✅        | ✅        | ✅        | ✅        |
 | 3.3  | ✅        | ✅        | ✅        | ✅        |
 | 3.4  | ✅        | ✅        | ✅        | ✅        |
 
 **Legend**:
 - ✅ Supported and tested
-- ❌ Not compatible (Rails 8.0 requires Ruby >= 3.2)
+
+**Note**: Ruby 3.1 is not supported because the browser gem (used for platform detection) requires Ruby >= 3.2.0
 
 ---
 
@@ -421,7 +416,6 @@ Before releasing a new version:
 - [ ] All specs pass on Rails 7.1
 - [ ] All specs pass on Rails 7.2
 - [ ] All specs pass on Rails 8.0
-- [ ] All specs pass on Ruby 3.1 (with supported Rails)
 - [ ] All specs pass on Ruby 3.2 (with all Rails)
 - [ ] All specs pass on Ruby 3.3 (with all Rails)
 - [ ] GitHub Actions CI passing (all combinations)

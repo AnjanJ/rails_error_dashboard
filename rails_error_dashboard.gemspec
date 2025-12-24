@@ -12,6 +12,7 @@ Gem::Specification.new do |spec|
                      "(iOS/Android/Web/API), analytics, and optional separate database support. " \
                      "Works with Rails 7.0-8.0. API may change before v1.0.0."
   spec.license     = "MIT"
+  spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/AnjanJ/rails_error_dashboard"

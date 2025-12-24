@@ -11,5 +11,8 @@ module Dummy
     config.load_defaults Rails::VERSION::STRING.to_f
     config.eager_load = false
     config.secret_key_base = 'test_secret_key_base'
+
+    # Configure ActiveJob to use test adapter
+    config.active_job.queue_adapter = :test
   end
 end

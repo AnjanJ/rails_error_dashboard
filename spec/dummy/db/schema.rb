@@ -10,32 +10,32 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_12_24_101217) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_24_101217) do
   create_table "rails_error_dashboard_error_logs", force: :cascade do |t|
-    t.string "action_name"
-    t.text "backtrace"
-    t.string "controller_name"
-    t.datetime "created_at", null: false
-    t.string "environment", null: false
-    t.string "error_hash"
     t.string "error_type", null: false
-    t.datetime "first_seen_at"
-    t.string "ip_address"
-    t.datetime "last_seen_at"
     t.text "message", null: false
-    t.datetime "occurred_at", null: false
-    t.integer "occurrence_count", default: 1, null: false
-    t.string "platform"
-    t.text "request_params"
+    t.text "backtrace"
+    t.integer "user_id"
     t.text "request_url"
+    t.text "request_params"
+    t.text "user_agent"
+    t.string "ip_address"
+    t.string "environment", null: false
+    t.string "platform"
+    t.boolean "resolved", null: false
     t.text "resolution_comment"
     t.string "resolution_reference"
-    t.boolean "resolved", default: false, null: false
-    t.datetime "resolved_at"
     t.string "resolved_by_name"
+    t.datetime "resolved_at"
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.text "user_agent"
-    t.integer "user_id"
+    t.string "error_hash"
+    t.datetime "first_seen_at"
+    t.datetime "last_seen_at"
+    t.integer "occurrence_count", default: 1, null: false
+    t.string "controller_name"
+    t.string "action_name"
     t.index ["controller_name", "action_name", "error_hash"], name: "index_error_logs_on_controller_action_hash"
     t.index ["environment"], name: "index_rails_error_dashboard_error_logs_on_environment"
     t.index ["error_hash"], name: "index_rails_error_dashboard_error_logs_on_error_hash"

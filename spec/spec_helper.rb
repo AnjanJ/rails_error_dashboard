@@ -18,6 +18,10 @@ SimpleCov.start 'rails' do
 end
 
 require File.expand_path('dummy/config/environment.rb', __dir__)
+
+# Store original root path before loading RSpec Rails
+ORIGINAL_ROOT = File.expand_path('..', __dir__)
+
 require 'rspec/rails'
 require 'factory_bot_rails'
 require 'faker'
@@ -26,9 +30,12 @@ require 'vcr'
 require 'database_cleaner/active_record'
 
 # Require support files
-Dir[File.join(__dir__, 'support', '**', '*.rb')].sort.each { |f| require f }
+Dir[File.join(ORIGINAL_ROOT, 'spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
 RSpec.configure do |config|
+  # Configure spec file pattern to use original root
+  config.pattern = File.join(ORIGINAL_ROOT, 'spec', '**', '*_spec.rb')
+
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
   end
@@ -39,7 +46,7 @@ RSpec.configure do |config|
 
   config.shared_context_metadata_behavior = :apply_to_host_groups
   config.filter_run_when_matching :focus
-  config.example_status_persistence_file_path = 'spec/examples.txt'
+  config.example_status_persistence_file_path = File.join(ORIGINAL_ROOT, 'spec', 'examples.txt')
   config.disable_monkey_patching!
   config.warnings = false
   config.default_formatter = 'doc' if config.files_to_run.one?
@@ -48,19 +55,6 @@ RSpec.configure do |config|
 
   # FactoryBot configuration
   config.include FactoryBot::Syntax::Methods
-
-  # Database Cleaner configuration - disabled for now
-  # Will be enabled once dummy app database is properly configured
-  # config.before(:suite) do
-  #   DatabaseCleaner.strategy = :transaction
-  #   DatabaseCleaner.clean_with(:truncation)
-  # end
-  #
-  # config.around(:each) do |example|
-  #   DatabaseCleaner.cleaning do
-  #     example.run
-  #   end
-  # end
 
   # Disable external HTTP requests
   config.before(:each) do
