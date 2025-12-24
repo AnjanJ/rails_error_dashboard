@@ -5,7 +5,7 @@
 
 > **A beautiful, production-ready error tracking dashboard for Rails applications**
 
-Rails Error Dashboard provides a complete error tracking solution with a modern UI, real-time analytics, platform detection (iOS/Android/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
+Rails Error Dashboard provides a complete error tracking and alerting solution with a modern UI, multi-channel notifications (Slack + Email), real-time analytics, platform detection (iOS/Android/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
 
 ![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Error+Dashboard+Screenshot)
 
@@ -41,10 +41,17 @@ Rails Error Dashboard provides a complete error tracking solution with a modern 
 - Track resolver name and timestamp
 - View related errors
 
+### 🚨 Multi-Channel Alerting
+- **Slack notifications** with beautifully formatted messages
+- **Email alerts** with HTML templates to multiple recipients
+- **Instant notifications** when errors occur (async background jobs)
+- **Rich context** including user, platform, environment, stack trace
+- **Direct links** to view full error details in dashboard
+- **Customizable** - enable/disable channels independently
+
 ### 🔒 Security & Configuration
 - **HTTP Basic Auth** (configurable)
 - **Environment-based settings**
-- **Optional Slack notifications**
 - **Optional separate database** for performance isolation
 
 ### 🏗️ Architecture
@@ -111,8 +118,19 @@ RailsErrorDashboard.configure do |config|
   # User model for associations
   config.user_model = 'User'
 
-  # Slack notifications (optional)
+  # === Notification Settings ===
+
+  # Slack notifications
+  config.enable_slack_notifications = true
   config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
+
+  # Email notifications
+  config.enable_email_notifications = true
+  config.notification_email_recipients = ENV.fetch('ERROR_NOTIFICATION_EMAILS', '').split(',').map(&:strip)
+  config.notification_email_from = ENV.fetch('ERROR_NOTIFICATION_FROM', 'errors@example.com')
+
+  # Dashboard base URL (for notification links)
+  config.dashboard_base_url = ENV['DASHBOARD_BASE_URL']
 
   # Separate database (optional - for high-volume apps)
   config.use_separate_database = ENV.fetch('USE_SEPARATE_ERROR_DB', 'false') == 'true'
@@ -132,7 +150,17 @@ end
 # .env
 ERROR_DASHBOARD_USER=admin
 ERROR_DASHBOARD_PASSWORD=your_secure_password
+
+# Slack notifications
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# Email notifications (comma-separated list)
+ERROR_NOTIFICATION_EMAILS=dev-team@example.com,ops@example.com
+ERROR_NOTIFICATION_FROM=errors@myapp.com
+
+# Dashboard URL (used in notification links)
+DASHBOARD_BASE_URL=https://myapp.com
+
 USE_SEPARATE_ERROR_DB=false  # Set to true for separate database
 ```
 
@@ -223,9 +251,131 @@ rails db:migrate:error_logs
 
 ## 🔧 Advanced Features
 
-### Slack Notifications
+### 📧 Notification System
 
-Set `SLACK_WEBHOOK_URL` in your environment to receive notifications for new errors.
+Rails Error Dashboard includes a powerful multi-channel notification system to alert your team when errors occur.
+
+#### Slack Notifications
+
+Get instant alerts in Slack with rich, formatted messages including:
+- Error type and message
+- Environment (Production, Staging, etc.)
+- Platform (iOS, Android, API)
+- User information
+- Request details
+- Direct link to view full error in dashboard
+
+**Setup:**
+
+1. Create a Slack webhook URL:
+   - Go to https://api.slack.com/messaging/webhooks
+   - Create a new webhook for your channel
+   - Copy the webhook URL
+
+2. Configure in your app:
+   ```bash
+   # .env
+   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+   DASHBOARD_BASE_URL=https://myapp.com
+   ```
+
+3. Enable in initializer (enabled by default):
+   ```ruby
+   config.enable_slack_notifications = true
+   config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
+   ```
+
+**Slack Message Features:**
+- 🎨 Beautifully formatted with color-coded blocks
+- 📱 Platform emoji indicators (iOS 📱, Android 🤖, API 🔌)
+- 👤 User and IP address tracking
+- 🔗 Direct "View Details" button linking to dashboard
+- ⏰ Timestamp with timezone
+
+#### Email Notifications
+
+Send detailed email alerts to your team with HTML and plain text versions.
+
+**Email Features:**
+- 📨 Beautiful HTML email template with your app's branding
+- 📄 Plain text fallback for email clients
+- 🎯 Send to multiple recipients
+- 📊 Full error context including stack trace
+- 🔗 One-click link to view in dashboard
+- 🏷️ Environment and platform badges
+
+**Setup:**
+
+1. Configure recipients and sender:
+   ```bash
+   # .env
+   ERROR_NOTIFICATION_EMAILS=dev-team@example.com,ops@example.com,alerts@example.com
+   ERROR_NOTIFICATION_FROM=errors@myapp.com
+   DASHBOARD_BASE_URL=https://myapp.com
+   ```
+
+2. Enable in initializer (enabled by default):
+   ```ruby
+   config.enable_email_notifications = true
+   config.notification_email_recipients = ENV.fetch('ERROR_NOTIFICATION_EMAILS', '').split(',').map(&:strip)
+   config.notification_email_from = ENV.fetch('ERROR_NOTIFICATION_FROM', 'errors@example.com')
+   ```
+
+3. Ensure your Rails app has ActionMailer configured:
+   ```ruby
+   # config/environments/production.rb
+   config.action_mailer.delivery_method = :smtp
+   config.action_mailer.smtp_settings = {
+     address: 'smtp.sendgrid.net',
+     port: 587,
+     domain: 'myapp.com',
+     user_name: ENV['SENDGRID_USERNAME'],
+     password: ENV['SENDGRID_PASSWORD'],
+     authentication: 'plain',
+     enable_starttls_auto: true
+   }
+   ```
+
+**Email Template Includes:**
+- Error type and full message
+- Environment badge (Production/Staging/Development)
+- Platform badge (iOS/Android/API)
+- Timestamp with timezone
+- User email and IP address
+- Request URL and parameters
+- First 10 lines of stack trace
+- Prominent "View Full Details" button
+
+#### Disabling Notifications
+
+You can selectively disable notifications:
+
+```ruby
+# Disable Slack only
+config.enable_slack_notifications = false
+
+# Disable email only
+config.enable_email_notifications = false
+
+# Disable both
+config.enable_slack_notifications = false
+config.enable_email_notifications = false
+```
+
+#### Notification Workflow
+
+When an error occurs:
+1. Error is logged to database
+2. Notifications are sent **asynchronously** via background jobs
+3. Your team receives alerts via configured channels
+4. Team clicks link in notification to view full details
+5. Error can be investigated and marked as resolved in dashboard
+
+**Background Jobs:**
+- Notifications use `ActiveJob` and run in background
+- Won't block or slow down your application
+- Failed notifications are logged but don't raise errors
+- Compatible with Sidekiq, Delayed Job, etc.
 
 ### Platform Detection
 

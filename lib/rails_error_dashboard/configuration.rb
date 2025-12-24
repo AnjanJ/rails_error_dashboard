@@ -11,8 +11,13 @@ module RailsErrorDashboard
     # User model (for associations)
     attr_accessor :user_model
 
-    # Slack notifications
+    # Notifications
     attr_accessor :slack_webhook_url
+    attr_accessor :notification_email_recipients
+    attr_accessor :notification_email_from
+    attr_accessor :dashboard_base_url
+    attr_accessor :enable_slack_notifications
+    attr_accessor :enable_email_notifications
 
     # Separate database configuration
     attr_accessor :use_separate_database
@@ -35,7 +40,13 @@ module RailsErrorDashboard
 
       @user_model = 'User'
 
+      # Notification settings
       @slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
+      @notification_email_recipients = ENV.fetch('ERROR_NOTIFICATION_EMAILS', '').split(',').map(&:strip)
+      @notification_email_from = ENV.fetch('ERROR_NOTIFICATION_FROM', 'errors@example.com')
+      @dashboard_base_url = ENV['DASHBOARD_BASE_URL']
+      @enable_slack_notifications = true
+      @enable_email_notifications = true
 
       @use_separate_database = ENV.fetch('USE_SEPARATE_ERROR_DB', 'false') == 'true'
 

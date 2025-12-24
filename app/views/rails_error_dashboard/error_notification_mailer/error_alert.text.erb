@@ -1,0 +1,32 @@
+==========================================
+🚨 ERROR ALERT
+==========================================
+
+Error Type: <%= @error_log.error_type %>
+Environment: <%= @error_log.environment.upcase %>
+<% if @error_log.platform.present? %>Platform: <%= @error_log.platform %><% end %>
+Occurred At: <%= @error_log.occurred_at.strftime('%B %d, %Y at %I:%M %p %Z') %>
+<% if @error_log.user.present? %>User: <%= @error_log.user.email %><% end %>
+<% if @error_log.ip_address.present? %>IP Address: <%= @error_log.ip_address %><% end %>
+<% if @error_log.request_url.present? %>Request URL: <%= @error_log.request_url %><% end %>
+
+------------------------------------------
+MESSAGE
+------------------------------------------
+<%= @error_log.message %>
+
+<% if @error_log.backtrace.present? %>
+------------------------------------------
+STACK TRACE (first 10 lines)
+------------------------------------------
+<%= @error_log.backtrace.split("\n").first(10).join("\n") %>
+<% end %>
+
+------------------------------------------
+
+View full details in the dashboard:
+<%= @dashboard_url %>
+
+Error ID: <%= @error_log.id %>
+
+This is an automated error notification from Rails Error Dashboard.

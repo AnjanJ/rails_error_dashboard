@@ -31,8 +31,8 @@ module RailsErrorDashboard
           occurred_at: Time.current
         )
 
-        # Send notification asynchronously if configured
-        notify_error(error_log) if should_notify?
+        # Send notifications asynchronously if configured
+        send_notifications(error_log)
 
         error_log
       rescue => e
@@ -43,12 +43,18 @@ module RailsErrorDashboard
 
       private
 
-      def should_notify?
-        RailsErrorDashboard.configuration.slack_webhook_url.present?
-      end
+      def send_notifications(error_log)
+        config = RailsErrorDashboard.configuration
 
-      def notify_error(error_log)
-        SlackErrorNotificationJob.perform_later(error_log.id)
+        # Send Slack notification
+        if config.enable_slack_notifications && config.slack_webhook_url.present?
+          SlackErrorNotificationJob.perform_later(error_log.id)
+        end
+
+        # Send email notification
+        if config.enable_email_notifications && config.notification_email_recipients.present?
+          EmailErrorNotificationJob.perform_later(error_log.id)
+        end
       end
     end
   end
