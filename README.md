@@ -3,20 +3,21 @@
 [![Gem Version](https://badge.fury.io/rb/rails_error_dashboard.svg)](https://badge.fury.io/rb/rails_error_dashboard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **A beautiful, production-ready error tracking dashboard for Rails applications**
+> **A beautiful, production-ready error tracking dashboard for Rails applications and their frontends**
 
-Rails Error Dashboard provides a complete error tracking and alerting solution with a modern UI, multi-channel notifications (Slack + Email), real-time analytics, platform detection (iOS/Android/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
+Rails Error Dashboard provides a complete error tracking and alerting solution for Rails backends AND frontend/mobile apps (React, React Native, Vue, Angular, Flutter, etc.). Features include: modern UI, multi-channel notifications (Slack + Email), real-time analytics, platform detection (iOS/Android/Web/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
 
 ![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Error+Dashboard+Screenshot)
 
 ## ✨ Features
 
 ### 🎯 Complete Error Tracking
-- **Automatic error capture** from controllers, jobs, services, and middleware
-- **Platform detection** (iOS/Android/API) using user agent parsing
+- **Automatic error capture** from Rails controllers, jobs, services, and middleware
+- **Frontend & mobile support** - React, React Native, Vue, Angular, Flutter, and more
+- **Platform detection** (iOS/Android/Web/API) using user agent parsing
 - **User context tracking** with optional user associations
-- **Request context** including URL, params, IP address
-- **Full stack traces** for debugging
+- **Request context** including URL, params, IP address, component/screen
+- **Full stack traces** for debugging (Ruby + JavaScript)
 
 ### 📊 Beautiful Dashboard
 - **Modern UI** with Bootstrap 5
@@ -220,6 +221,132 @@ rescue => e
   )
 end
 ```
+
+### Frontend & Mobile Error Reporting
+
+Rails Error Dashboard can track errors from **any frontend or mobile application** - not just your Rails backend!
+
+**Supported platforms:**
+- 📱 **React Native** (iOS & Android)
+- ⚛️ **React** (Web)
+- 🅰️ **Angular**
+- 💚 **Vue.js**
+- 📱 **Flutter** (via HTTP)
+- 📱 **Swift/Kotlin** (Native apps)
+- 🌐 **Any JavaScript/TypeScript** application
+
+#### Quick Setup
+
+**1. Create an API endpoint in your Rails app:**
+
+```ruby
+# app/controllers/api/v1/mobile_errors_controller.rb
+module Api
+  module V1
+    class MobileErrorsController < BaseController
+      def create
+        mobile_error = MobileError.new(error_params)
+
+        RailsErrorDashboard::Commands::LogError.call(
+          mobile_error,
+          {
+            current_user: current_user,
+            request: request,
+            source: :mobile_app  # or :react, :vue, :angular, etc.
+          }
+        )
+
+        render json: { success: true }, status: :created
+      end
+
+      private
+
+      def error_params
+        params.require(:error).permit(:error_type, :message, :stack, :component)
+      end
+
+      class MobileError < StandardError
+        attr_reader :mobile_data
+        def initialize(data)
+          @mobile_data = data
+          super(data[:message])
+        end
+        def backtrace
+          @mobile_data[:stack]&.split("\n") || []
+        end
+      end
+    end
+  end
+end
+```
+
+**2. Report errors from your frontend:**
+
+```javascript
+// React/React Native/Vue/Angular
+async function reportError(error, component) {
+  try {
+    await fetch('/api/v1/mobile_errors', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        error: {
+          error_type: error.name,
+          message: error.message,
+          stack: error.stack,
+          component: component
+        }
+      })
+    });
+  } catch (e) {
+    console.error('Failed to report error:', e);
+  }
+}
+
+// Usage in React component
+try {
+  // Your code
+} catch (error) {
+  reportError(error, 'UserProfile');
+  // Handle error in UI
+}
+```
+
+**3. Add Error Boundary (React/React Native):**
+
+```jsx
+class ErrorBoundary extends React.Component {
+  componentDidCatch(error, errorInfo) {
+    reportError(error, errorInfo.componentStack);
+  }
+
+  render() {
+    return this.props.children;
+  }
+}
+```
+
+**Benefits:**
+- ✅ **Single dashboard** for all errors (backend + frontend + mobile)
+- ✅ **Platform detection** - errors automatically tagged by source
+- ✅ **User tracking** - errors associated with logged-in users
+- ✅ **Real-time notifications** - Slack/Email alerts for frontend errors too
+- ✅ **Component tracking** - know which component/screen errored
+- ✅ **Stack traces** - full JavaScript stack traces
+
+**📚 Complete Integration Guide:**
+
+For detailed setup instructions including:
+- Offline support and retry logic
+- Batch error reporting
+- React Native integration
+- Error filtering and deduplication
+- Best practices
+
+See: [MOBILE_APP_INTEGRATION.md](MOBILE_APP_INTEGRATION.md)
 
 ### Accessing the Dashboard
 
