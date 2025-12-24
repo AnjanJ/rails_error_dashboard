@@ -26,6 +26,9 @@ module RailsErrorDashboard
     self.abstract_class = true
 
     # Connect to error_logs database (or primary if not using separate DB)
-    connects_to database: { writing: :error_logs, reading: :error_logs }
+    # Only connect to separate database if configuration is enabled
+    if RailsErrorDashboard.configuration&.use_separate_database
+      connects_to database: { writing: :error_logs, reading: :error_logs }
+    end
   end
 end

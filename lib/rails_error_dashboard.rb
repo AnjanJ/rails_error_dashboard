@@ -2,6 +2,12 @@ require "rails_error_dashboard/version"
 require "rails_error_dashboard/engine"
 require "rails_error_dashboard/configuration"
 
+# External dependencies
+require "pagy"
+require "browser"
+require "groupdate"
+require "httparty"
+
 # Core library files
 require "rails_error_dashboard/value_objects/error_context"
 require "rails_error_dashboard/services/platform_detector"

@@ -7,7 +7,10 @@ module RailsErrorDashboard
     # User association - works with both single and separate database
     # When using separate database, joins are not possible, but Rails
     # will automatically fetch users in a separate query when using includes()
-    belongs_to :user, optional: true
+    # Only define association if User model exists
+    if defined?(::User)
+      belongs_to :user, optional: true
+    end
 
     validates :error_type, presence: true
     validates :message, presence: true

@@ -15,7 +15,9 @@ module RailsErrorDashboard
       end
 
       def call
-        query = ErrorLog.includes(:user).order(occurred_at: :desc)
+        query = ErrorLog.order(occurred_at: :desc)
+        # Only eager load user if User model exists
+        query = query.includes(:user) if defined?(::User)
         query = apply_filters(query)
         query
       end
