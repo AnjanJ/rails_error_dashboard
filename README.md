@@ -2,10 +2,13 @@
 
 [![Gem Version](https://badge.fury.io/rb/rails_error_dashboard.svg)](https://badge.fury.io/rb/rails_error_dashboard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://github.com/AnjanJ/rails_error_dashboard/workflows/Tests/badge.svg)](https://github.com/AnjanJ/rails_error_dashboard/actions)
 
 > **A beautiful, production-ready error tracking dashboard for Rails applications and their frontends**
 
 Rails Error Dashboard provides a complete error tracking and alerting solution for Rails backends AND frontend/mobile apps (React, React Native, Vue, Angular, Flutter, etc.). Features include: modern UI, multi-channel notifications (Slack + Email), real-time analytics, platform detection (iOS/Android/Web/API), and optional separate database support. Built with Rails 7+ error reporting and following Service Objects + CQRS principles.
+
+**Tested on**: Rails 7.0, 7.1, 7.2, 8.0 | Ruby 3.1, 3.2, 3.3+
 
 ![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Error+Dashboard+Screenshot)
 
@@ -103,6 +106,14 @@ Built with **Service Objects + CQRS Principles**:
 - **Value Objects**: ErrorContext (immutable data)
 - **Services**: PlatformDetector (business logic)
 - **Plugins**: Extensible event-driven architecture
+
+### ✅ Multi-Version Testing
+- **Rails Support**: 7.0, 7.1, 7.2, 8.0
+- **Ruby Support**: 3.1, 3.2, 3.3+
+- **CI/CD**: 12 version combinations tested automatically
+- **Compatibility**: 100% feature parity across all versions
+
+See [MULTI_VERSION_TESTING.md](MULTI_VERSION_TESTING.md) for testing guide.
 
 ## 📦 Installation
 
