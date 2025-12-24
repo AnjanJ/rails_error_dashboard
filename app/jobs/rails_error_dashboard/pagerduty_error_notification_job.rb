@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'httparty'
+require "httparty"
 
 module RailsErrorDashboard
   # Job to send critical error notifications to PagerDuty
@@ -8,7 +8,7 @@ module RailsErrorDashboard
   class PagerdutyErrorNotificationJob < ApplicationJob
     queue_as :default
 
-    PAGERDUTY_EVENTS_API = 'https://events.pagerduty.com/v2/enqueue'
+    PAGERDUTY_EVENTS_API = "https://events.pagerduty.com/v2/enqueue"
 
     def perform(error_log_id)
       error_log = ErrorLog.find(error_log_id)
@@ -24,7 +24,7 @@ module RailsErrorDashboard
       response = HTTParty.post(
         PAGERDUTY_EVENTS_API,
         body: payload.to_json,
-        headers: { 'Content-Type' => 'application/json' }
+        headers: { "Content-Type" => "application/json" }
       )
 
       unless response.success?

@@ -76,7 +76,7 @@ module RailsErrorDashboard
       when "delete"
         Commands::BatchDeleteErrors.call(error_ids)
       else
-        { success: false, count: 0, errors: ["Invalid action type"] }
+        { success: false, count: 0, errors: [ "Invalid action type" ] }
       end
 
       if result[:success]

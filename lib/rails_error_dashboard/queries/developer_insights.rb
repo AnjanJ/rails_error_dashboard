@@ -216,7 +216,7 @@ module RailsErrorDashboard
 
         # Stability = 100 - (errors per 1000 requests ratio)
         # Simplified: just show error rate
-        100.0 - [(total.to_f / 10), 100.0].min
+        100.0 - [ (total.to_f / 10), 100.0 ].min
       end
 
       def average_resolution_time

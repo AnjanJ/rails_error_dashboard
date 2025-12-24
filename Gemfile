@@ -5,7 +5,7 @@ gemspec
 
 # Allow testing against different Rails versions via RAILS_VERSION env var
 # Use pessimistic version to get latest patch versions (e.g. ~> 7.0.1 gets latest 7.0.x)
-rails_version = ENV['RAILS_VERSION'] || '~> 8.0.0'
+rails_version = ENV["RAILS_VERSION"] || "~> 8.0.0"
 rails_version = "~> #{rails_version}.1" if rails_version =~ /^\d+\.\d+$/
 gem "rails", rails_version
 
@@ -15,8 +15,8 @@ gem "pg"
 
 # SQLite3 - version depends on Rails version
 # Rails 7.0-7.2 require ~> 1.4, Rails 8.0+ requires >= 2.1
-rails_env = ENV['RAILS_VERSION'] || '8.0'
-if rails_env.start_with?('7.') || rails_env.start_with?('~> 7.')
+rails_env = ENV["RAILS_VERSION"] || "8.0"
+if rails_env.start_with?("7.") || rails_env.start_with?("~> 7.")
   gem "sqlite3", "~> 1.4"
 else
   gem "sqlite3", ">= 2.1"

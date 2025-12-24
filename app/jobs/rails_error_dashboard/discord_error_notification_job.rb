@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'httparty'
+require "httparty"
 
 module RailsErrorDashboard
   # Job to send error notifications to Discord via webhook
@@ -18,7 +18,7 @@ module RailsErrorDashboard
       HTTParty.post(
         webhook_url,
         body: payload.to_json,
-        headers: { 'Content-Type' => 'application/json' }
+        headers: { "Content-Type" => "application/json" }
       )
     rescue StandardError => e
       Rails.logger.error("Failed to send Discord notification: #{e.message}")
@@ -29,7 +29,7 @@ module RailsErrorDashboard
 
     def build_discord_payload(error_log)
       {
-        embeds: [{
+        embeds: [ {
           title: "🚨 New Error: #{error_log.error_type}",
           description: truncate_message(error_log.message),
           color: severity_color(error_log),
@@ -74,7 +74,7 @@ module RailsErrorDashboard
             text: "Rails Error Dashboard"
           },
           timestamp: error_log.occurred_at.iso8601
-        }]
+        } ]
       }
     end
 

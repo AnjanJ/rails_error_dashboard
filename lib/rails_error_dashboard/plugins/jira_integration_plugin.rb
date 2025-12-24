@@ -59,7 +59,7 @@ module RailsErrorDashboard
           description: build_description(error_log),
           issuetype: { name: "Bug" },
           priority: { name: jira_priority(error_log) },
-          labels: ["rails-error-dashboard", error_log.platform, error_log.environment]
+          labels: [ "rails-error-dashboard", error_log.platform, error_log.environment ]
         }
 
         Rails.logger.info("Would create Jira ticket: #{ticket_data.to_json}")

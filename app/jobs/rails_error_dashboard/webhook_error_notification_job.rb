@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'httparty'
+require "httparty"
 
 module RailsErrorDashboard
   # Job to send error notifications to custom webhook URLs
@@ -34,10 +34,10 @@ module RailsErrorDashboard
         url,
         body: payload.to_json,
         headers: {
-          'Content-Type' => 'application/json',
-          'User-Agent' => 'RailsErrorDashboard/1.0',
-          'X-Error-Dashboard-Event' => 'error.created',
-          'X-Error-Dashboard-ID' => error_log.id.to_s
+          "Content-Type" => "application/json",
+          "User-Agent" => "RailsErrorDashboard/1.0",
+          "X-Error-Dashboard-Event" => "error.created",
+          "X-Error-Dashboard-ID" => error_log.id.to_s
         },
         timeout: 10 # 10 second timeout
       )

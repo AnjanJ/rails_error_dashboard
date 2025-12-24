@@ -14,7 +14,7 @@ module RailsErrorDashboard
       end
 
       def call
-        return { success: false, count: 0, errors: ["No error IDs provided"] } if @error_ids.empty?
+        return { success: false, count: 0, errors: [ "No error IDs provided" ] } if @error_ids.empty?
 
         errors = ErrorLog.where(id: @error_ids)
         count = errors.count
@@ -33,7 +33,7 @@ module RailsErrorDashboard
         }
       rescue => e
         Rails.logger.error("Batch delete failed: #{e.message}")
-        { success: false, count: 0, total: @error_ids.size, errors: [e.message] }
+        { success: false, count: 0, total: @error_ids.size, errors: [ e.message ] }
       end
     end
   end

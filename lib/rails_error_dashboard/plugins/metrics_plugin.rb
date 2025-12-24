@@ -71,7 +71,7 @@ module RailsErrorDashboard
       end
 
       def sanitize_metric_name(name)
-        name.gsub('::', '.').downcase
+        name.gsub("::", ".").downcase
       end
     end
   end

@@ -16,7 +16,7 @@ module RailsErrorDashboard
       end
 
       def call
-        return { success: false, count: 0, errors: ["No error IDs provided"] } if @error_ids.empty?
+        return { success: false, count: 0, errors: [ "No error IDs provided" ] } if @error_ids.empty?
 
         errors = ErrorLog.where(id: @error_ids)
 
@@ -49,11 +49,11 @@ module RailsErrorDashboard
           count: resolved_count,
           total: @error_ids.size,
           failed_ids: failed_ids,
-          errors: failed_ids.empty? ? [] : ["Failed to resolve #{failed_ids.size} error(s)"]
+          errors: failed_ids.empty? ? [] : [ "Failed to resolve #{failed_ids.size} error(s)" ]
         }
       rescue => e
         Rails.logger.error("Batch resolve failed: #{e.message}")
-        { success: false, count: 0, total: @error_ids.size, errors: [e.message] }
+        { success: false, count: 0, total: @error_ids.size, errors: [ e.message ] }
       end
     end
   end
