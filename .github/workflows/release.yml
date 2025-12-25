@@ -27,6 +27,8 @@ jobs:
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
 
       # Steps below only run if a release was created (Release PR was merged)
 
