@@ -88,7 +88,7 @@
         </div>
       </div>
 
-      <!-- Similar Errors (Fuzzy Matching) - Phase 4.1.1 -->
+      <!-- Similar Errors (Fuzzy Matching) -->
       <% if RailsErrorDashboard.configuration.enable_similar_errors && @error.respond_to?(:similar_errors) %>
         <% similar = @error.similar_errors(threshold: 0.6, limit: 5) %>
         <% if similar.any? %>
@@ -96,7 +96,7 @@
             <div class="card-header bg-white">
               <h5 class="mb-0">
                 <i class="bi bi-diagram-3"></i> Similar Errors
-                <span class="badge bg-info text-dark">Phase 4.1: Fuzzy Matching</span>
+                <span class="badge bg-info text-dark">Fuzzy Matching</span>
               </h5>
               <small class="text-muted">Errors with similar backtraces and messages (60%+ similarity)</small>
             </div>
@@ -160,7 +160,7 @@
         <% end %>
       <% end %>
 
-      <!-- Phase 4.1.2: Co-occurring Errors -->
+      <!-- Co-occurring Errors -->
       <% if RailsErrorDashboard.configuration.enable_co_occurring_errors && @error.respond_to?(:co_occurring_errors) %>
         <% co_occurring = @error.co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 5) %>
         <% if co_occurring.any? %>
@@ -168,7 +168,7 @@
             <div class="card-header bg-white">
               <h5 class="mb-0">
                 <i class="bi bi-clock-history"></i> Co-occurring Errors
-                <span class="badge bg-info text-dark">Phase 4.1.2: Time Patterns</span>
+                <span class="badge bg-info text-dark">Time Patterns</span>
               </h5>
               <small class="text-muted">Errors that occur within 5 minutes of this error</small>
             </div>
@@ -286,7 +286,7 @@
         </div>
       <% end %>
 
-      <!-- Error Cascades (Phase 4.1.3) -->
+      <!-- Error Cascades -->
       <% if RailsErrorDashboard.configuration.enable_error_cascades %>
         <% cascades = @error.error_cascades %>
         <% if cascades[:parents].any? || cascades[:children].any? %>
@@ -425,7 +425,7 @@
         <% end %>
       <% end %>
 
-      <!-- Phase 4.5: Occurrence Patterns and Bursts -->
+      <!-- Occurrence Patterns and Bursts -->
       <%= render "pattern_insights" %>
     </div>
 
@@ -541,7 +541,7 @@
         </div>
       </div>
 
-      <!-- Phase 4.2: Baseline Statistics -->
+      <!-- Baseline Statistics -->
       <% if RailsErrorDashboard.configuration.enable_baseline_alerts %>
         <% baselines = @error.baselines %>
         <% if baselines[:hourly].present? || baselines[:daily].present? || baselines[:weekly].present? %>

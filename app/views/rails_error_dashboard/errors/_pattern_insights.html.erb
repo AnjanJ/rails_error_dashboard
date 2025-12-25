@@ -1,7 +1,6 @@
 <% if RailsErrorDashboard.configuration.enable_occurrence_patterns %>
   <%
-    # Phase 4.5: Display occurrence patterns and bursts for an error
-    # This partial shows cyclical patterns and burst detection
+    # Display occurrence patterns and bursts for an error
     pattern_data = @error.occurrence_pattern(days: 30)
     bursts = @error.error_bursts(days: 7)
   %>

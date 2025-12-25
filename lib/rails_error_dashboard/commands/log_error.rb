@@ -66,7 +66,7 @@ module RailsErrorDashboard
         # Generate error hash for deduplication (including controller/action context)
         error_hash = generate_error_hash(@exception, error_context.controller_name, error_context.action_name)
 
-        # Phase 4.1: Calculate backtrace signature for fuzzy matching (if column exists)
+        #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
           attributes[:backtrace_signature] = calculate_backtrace_signature_from_backtrace(truncated_backtrace)
         end
@@ -75,7 +75,7 @@ module RailsErrorDashboard
         # This ensures accurate occurrence tracking
         error_log = ErrorLog.find_or_increment_by_hash(error_hash, attributes.merge(error_hash: error_hash))
 
-        # Phase 4.1.2: Track individual error occurrence for co-occurrence analysis (if table exists)
+        #  Track individual error occurrence for co-occurrence analysis (if table exists)
         if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
           begin
             ErrorOccurrence.create(
@@ -105,7 +105,7 @@ module RailsErrorDashboard
           PluginRegistry.dispatch(:on_error_recurred, error_log)
         end
 
-        # Phase 4.3: Check for baseline anomalies
+        #  Check for baseline anomalies
         check_baseline_anomaly(error_log)
 
         error_log
@@ -302,7 +302,7 @@ module RailsErrorDashboard
         end
       end
 
-      # Phase 4.1: Calculate backtrace signature from backtrace string/array
+      #  Calculate backtrace signature from backtrace string/array
       # This matches the algorithm in ErrorLog#calculate_backtrace_signature
       def calculate_backtrace_signature_from_backtrace(backtrace)
         return nil if backtrace.blank?
@@ -324,7 +324,7 @@ module RailsErrorDashboard
         Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
       end
 
-      # Phase 4.3: Check if error exceeds baseline and send alert if needed
+      #  Check if error exceeds baseline and send alert if needed
       def check_baseline_anomaly(error_log)
         config = RailsErrorDashboard.configuration
 

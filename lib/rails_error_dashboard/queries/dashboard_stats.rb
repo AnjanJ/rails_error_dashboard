@@ -18,7 +18,7 @@ module RailsErrorDashboard
           resolved: ErrorLog.resolved.count,
           by_platform: ErrorLog.group(:platform).count,
           top_errors: top_errors,
-          # Phase 3.2: Trend visualizations
+          #  Trend visualizations
           errors_trend_7d: errors_trend_7d,
           errors_by_severity_7d: errors_by_severity_7d,
           spike_detected: spike_detected?,
@@ -57,7 +57,7 @@ module RailsErrorDashboard
       end
 
       # Detect if there's an error spike
-      # Phase 4.2: Uses baselines if available, falls back to simple 2x average
+      #  Uses baselines if available, falls back to simple 2x average
       def spike_detected?
         return false if errors_trend_7d.empty?
 
@@ -76,7 +76,7 @@ module RailsErrorDashboard
       end
 
       # Get spike information
-      # Phase 4.2: Enhanced with baseline information
+      #  Enhanced with baseline information
       def spike_info
         return nil unless spike_detected?
 

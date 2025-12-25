@@ -12,10 +12,10 @@ module RailsErrorDashboard
       belongs_to :user, optional: true
     end
 
-    # Phase 4.1.2: Association for error occurrences
+    # Association for tracking individual error occurrences
     has_many :error_occurrences, class_name: "RailsErrorDashboard::ErrorOccurrence", dependent: :destroy
 
-    # Phase 4.1.3: Associations for cascade patterns
+    # Cascade pattern associations
     # parent_cascade_patterns: patterns where this error is the CHILD (errors that cause this error)
     has_many :parent_cascade_patterns, class_name: "RailsErrorDashboard::CascadePattern",
              foreign_key: :child_error_id, dependent: :destroy
@@ -205,7 +205,6 @@ module RailsErrorDashboard
           .limit(limit)
     end
 
-    # Phase 4.1: Fuzzy Error Matching
     # Extract backtrace frames for similarity comparison
     def backtrace_frames
       return [] if backtrace.blank?
@@ -261,7 +260,7 @@ module RailsErrorDashboard
       Queries::SimilarErrors.call(id, threshold: threshold, limit: limit)
     end
 
-    # Phase 4.1.2: Find errors that occur together in time
+    # Find errors that occur together in time
     # @param window_minutes [Integer] Time window in minutes (default: 5)
     # @param min_frequency [Integer] Minimum co-occurrence count (default: 2)
     # @param limit [Integer] Maximum results (default: 10)
@@ -279,7 +278,7 @@ module RailsErrorDashboard
       )
     end
 
-    # Phase 4.1.3: Find cascade patterns (what causes this error, what this error causes)
+    # Find cascade patterns (what causes this error, what this error causes)
     # @param min_probability [Float] Minimum cascade probability (0.0-1.0), default 0.5
     # @return [Hash] {parents: Array, children: Array} of cascade patterns
     def error_cascades(min_probability: 0.5)
@@ -290,7 +289,7 @@ module RailsErrorDashboard
       Queries::ErrorCascades.call(error_id: id, min_probability: min_probability)
     end
 
-    # Phase 4.2: Get baseline statistics for this error type
+    # Get baseline statistics for this error type
     # @return [Hash] {hourly: ErrorBaseline, daily: ErrorBaseline, weekly: ErrorBaseline}
     def baselines
       return {} unless RailsErrorDashboard.configuration.enable_baseline_alerts
@@ -299,7 +298,7 @@ module RailsErrorDashboard
       Queries::BaselineStats.new(error_type, platform).all_baselines
     end
 
-    # Phase 4.2: Check if this error is anomalous compared to baseline
+    # Check if this error is anomalous compared to baseline
     # @param sensitivity [Integer] Standard deviations threshold (default: 2)
     # @return [Hash] Anomaly check result
     def baseline_anomaly(sensitivity: 2)
@@ -315,7 +314,7 @@ module RailsErrorDashboard
       Queries::BaselineStats.new(error_type, platform).check_anomaly(today_count, sensitivity: sensitivity)
     end
 
-    # Phase 4.5: Detect cyclical occurrence patterns (daily/weekly rhythms)
+    # Detect cyclical occurrence patterns (daily/weekly rhythms)
     # @param days [Integer] Number of days to analyze (default: 30)
     # @return [Hash] Pattern analysis result
     def occurrence_pattern(days: 30)
@@ -329,7 +328,7 @@ module RailsErrorDashboard
       )
     end
 
-    # Phase 4.5: Detect error bursts (many errors in short time)
+    # Detect error bursts (many errors in short time)
     # @param days [Integer] Number of days to analyze (default: 7)
     # @return [Array<Hash>] Array of burst metadata
     def error_bursts(days: 7)

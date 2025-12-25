@@ -170,7 +170,6 @@ RailsErrorDashboard.configure do |config|
   # ============================================================================
   # ADVANCED ANALYTICS
   # ============================================================================
-  # Phase 4 features for advanced error analysis
 
 <% if @enable_baseline_alerts -%>
   # Baseline Anomaly Alerts - ENABLED

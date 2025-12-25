@@ -100,7 +100,7 @@ module RailsErrorDashboard
         base_query.where("platform IS NULL OR platform = ?", "API").count
       end
 
-      # Phase 4.5: Pattern insights for top error types
+      #  Pattern insights for top error types
       # Analyzes occurrence patterns and bursts for top 5 error types
       def pattern_insights
         return {} unless defined?(Services::PatternDetector)

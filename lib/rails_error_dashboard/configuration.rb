@@ -43,7 +43,7 @@ module RailsErrorDashboard
     # Enable/disable Rails.error subscriber
     attr_accessor :enable_error_subscriber
 
-    # Phase 1: Advanced Configuration Options
+    # Advanced configuration options
     # Custom severity classification rules (hash of error_type => severity)
     attr_accessor :custom_severity_rules
 
@@ -60,13 +60,12 @@ module RailsErrorDashboard
     # Backtrace configuration
     attr_accessor :max_backtrace_lines
 
-    # Phase 3.3: Enhanced Metrics
+    # Enhanced metrics
     attr_accessor :app_version
     attr_accessor :git_sha
     attr_accessor :total_users_for_impact # For user impact % calculation
 
-    # Phase 4: Advanced Error Analysis Features
-    # Enable/disable individual Phase 4 features
+    # Advanced error analysis features
     attr_accessor :enable_similar_errors          # Fuzzy error matching
     attr_accessor :enable_co_occurring_errors     # Detect errors happening together
     attr_accessor :enable_error_cascades          # Parent→child error relationships
@@ -74,7 +73,7 @@ module RailsErrorDashboard
     attr_accessor :enable_platform_comparison     # iOS vs Android analytics
     attr_accessor :enable_occurrence_patterns     # Cyclical/burst pattern detection
 
-    # Phase 4.3: Baseline Alert Configuration
+    # Baseline alert configuration
     attr_accessor :enable_baseline_alerts
     attr_accessor :baseline_alert_threshold_std_devs # Number of std devs to trigger alert (default: 2.0)
     attr_accessor :baseline_alert_severities # Array of severities to alert on (default: [:critical, :high])
@@ -119,7 +118,7 @@ module RailsErrorDashboard
       @enable_middleware = true
       @enable_error_subscriber = true
 
-      # Phase 1: Advanced Configuration Defaults
+      # Advanced configuration defaults
       @custom_severity_rules = {}
       @ignored_exceptions = []
       @sampling_rate = 1.0 # 100% by default
@@ -127,12 +126,12 @@ module RailsErrorDashboard
       @async_adapter = :sidekiq # Battle-tested default
       @max_backtrace_lines = 50
 
-      # Phase 3.3: Enhanced Metrics Defaults
+      # Enhanced metrics defaults
       @app_version = ENV["APP_VERSION"]
       @git_sha = ENV["GIT_SHA"]
       @total_users_for_impact = nil # Auto-detect if not set
 
-      # Phase 4: Advanced Error Analysis Features (all OFF by default - opt-in)
+      # Advanced error analysis features (all OFF by default - opt-in)
       @enable_similar_errors = false        # Fuzzy error matching
       @enable_co_occurring_errors = false   # Co-occurring error detection
       @enable_error_cascades = false        # Error cascade detection
@@ -140,8 +139,8 @@ module RailsErrorDashboard
       @enable_platform_comparison = false   # Platform health comparison
       @enable_occurrence_patterns = false   # Pattern detection
 
-      # Phase 4.3: Baseline Alert Defaults
-      @enable_baseline_alerts = false  # OFF by default (was true)
+      # Baseline alert defaults
+      @enable_baseline_alerts = false  # OFF by default (opt-in)
       @baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
       @baseline_alert_severities = [ :critical, :high ] # Alert on critical and high severity anomalies
       @baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i

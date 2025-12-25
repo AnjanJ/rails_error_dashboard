@@ -60,7 +60,6 @@ module RailsErrorDashboard
       @api_errors = analytics[:api_errors]
     end
 
-    # Phase 4.4: Platform comparison analytics
     def platform_comparison
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_platform_comparison
@@ -111,7 +110,6 @@ module RailsErrorDashboard
       redirect_to errors_path
     end
 
-    # Phase 4.6: Error Correlation Analysis
     def correlation
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_error_correlation
