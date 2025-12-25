@@ -6,6 +6,18 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <!-- Apply theme immediately to prevent flash of wrong theme -->
+    <script>
+      // This runs BEFORE body renders to prevent flash
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+          // Add to html element so we can style body
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -45,8 +57,9 @@
         transition: background-color 0.3s ease, color 0.3s ease;
       }
 
-      /* Dark mode */
-      body.dark-mode {
+      /* Dark mode - support both class and data attribute for immediate loading */
+      body.dark-mode,
+      html[data-theme="dark"] body {
         --bg-color: #1A1B26;
         --text-color: #E4E5E9;
         --card-bg: #24283B;
@@ -201,7 +214,8 @@
         filter: brightness(0) invert(1);
       }
 
-      body.dark-mode .btn-close {
+      body.dark-mode .btn-close,
+      html[data-theme="dark"] body .btn-close {
         filter: brightness(0) invert(1);
       }
 
@@ -416,13 +430,26 @@
         const savedTheme = localStorage.getItem('theme') || 'light';
         if (savedTheme === 'dark') {
           document.body.classList.add('dark-mode');
+          document.documentElement.setAttribute('data-theme', 'dark');
           updateThemeIcon(true);
+        } else {
+          // Ensure light mode is clean
+          document.body.classList.remove('dark-mode');
+          document.documentElement.removeAttribute('data-theme');
+          updateThemeIcon(false);
         }
       });
 
       function toggleTheme() {
         const body = document.body;
         const isDark = body.classList.toggle('dark-mode');
+
+        // Sync with html data attribute
+        if (isDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
 
         // Save preference
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
