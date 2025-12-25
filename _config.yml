@@ -1,4 +1,4 @@
-theme: jekyll-theme-minimal
+theme: jekyll-theme-hacker
 title: Rails Error Dashboard
 description: Advanced error tracking and monitoring for Ruby on Rails applications
 show_downloads: true
