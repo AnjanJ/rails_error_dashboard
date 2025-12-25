@@ -674,6 +674,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
     end
 
     it 'uses default threshold of 0.6' do
+      RailsErrorDashboard.configuration.enable_similar_errors = true
+
       expect(RailsErrorDashboard::Queries::SimilarErrors).to receive(:call)
         .with(error1.id, threshold: 0.6, limit: 10)
         .and_return([])
@@ -682,6 +684,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
     end
 
     it 'uses default limit of 10' do
+      RailsErrorDashboard.configuration.enable_similar_errors = true
+
       expect(RailsErrorDashboard::Queries::SimilarErrors).to receive(:call)
         .with(error1.id, threshold: 0.6, limit: 10)
         .and_return([])
@@ -773,6 +777,10 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
 
   describe '#error_cascades' do
     let(:error) { create(:error_log) }
+
+    before do
+      RailsErrorDashboard.configuration.enable_error_cascades = true
+    end
 
     it 'delegates to ErrorCascades query object' do
       expect(RailsErrorDashboard::Queries::ErrorCascades).to receive(:call)

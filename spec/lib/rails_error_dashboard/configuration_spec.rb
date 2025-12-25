@@ -58,8 +58,8 @@ RSpec.describe RailsErrorDashboard::Configuration do
     end
 
     describe "Phase 4.3: baseline alert configuration defaults" do
-      it "sets enable_baseline_alerts to true" do
-        expect(config.enable_baseline_alerts).to be true
+      it "sets enable_baseline_alerts to false (opt-in)" do
+        expect(config.enable_baseline_alerts).to be false
       end
 
       it "sets baseline_alert_threshold_std_devs to 2.0" do

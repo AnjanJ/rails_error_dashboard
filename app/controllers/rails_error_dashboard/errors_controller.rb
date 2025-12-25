@@ -62,6 +62,13 @@ module RailsErrorDashboard
 
     # Phase 4.4: Platform comparison analytics
     def platform_comparison
+      # Check if feature is enabled
+      unless RailsErrorDashboard.configuration.enable_platform_comparison
+        flash[:alert] = "Platform Comparison is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
       days = (params[:days] || 7).to_i
       @days = days
 
@@ -106,6 +113,13 @@ module RailsErrorDashboard
 
     # Phase 4.6: Error Correlation Analysis
     def correlation
+      # Check if feature is enabled
+      unless RailsErrorDashboard.configuration.enable_error_correlation
+        flash[:alert] = "Error Correlation is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
       days = (params[:days] || 30).to_i
       @days = days
       correlation = Queries::ErrorCorrelation.new(days: days)

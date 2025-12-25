@@ -257,6 +257,7 @@ module RailsErrorDashboard
     # @return [Array<Hash>] Array of {error: ErrorLog, similarity: Float}
     def similar_errors(threshold: 0.6, limit: 10)
       return [] unless persisted?
+      return [] unless RailsErrorDashboard.configuration.enable_similar_errors
       Queries::SimilarErrors.call(id, threshold: threshold, limit: limit)
     end
 
@@ -267,6 +268,7 @@ module RailsErrorDashboard
     # @return [Array<Hash>] Array of {error: ErrorLog, frequency: Integer, avg_delay_seconds: Float}
     def co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 10)
       return [] unless persisted?
+      return [] unless RailsErrorDashboard.configuration.enable_co_occurring_errors
       return [] unless defined?(Queries::CoOccurringErrors)
 
       Queries::CoOccurringErrors.call(
@@ -282,6 +284,7 @@ module RailsErrorDashboard
     # @return [Hash] {parents: Array, children: Array} of cascade patterns
     def error_cascades(min_probability: 0.5)
       return { parents: [], children: [] } unless persisted?
+      return { parents: [], children: [] } unless RailsErrorDashboard.configuration.enable_error_cascades
       return { parents: [], children: [] } unless defined?(Queries::ErrorCascades)
 
       Queries::ErrorCascades.call(error_id: id, min_probability: min_probability)
@@ -290,6 +293,7 @@ module RailsErrorDashboard
     # Phase 4.2: Get baseline statistics for this error type
     # @return [Hash] {hourly: ErrorBaseline, daily: ErrorBaseline, weekly: ErrorBaseline}
     def baselines
+      return {} unless RailsErrorDashboard.configuration.enable_baseline_alerts
       return {} unless defined?(Queries::BaselineStats)
 
       Queries::BaselineStats.new(error_type, platform).all_baselines
@@ -299,6 +303,7 @@ module RailsErrorDashboard
     # @param sensitivity [Integer] Standard deviations threshold (default: 2)
     # @return [Hash] Anomaly check result
     def baseline_anomaly(sensitivity: 2)
+      return { anomaly: false, message: "Feature disabled" } unless RailsErrorDashboard.configuration.enable_baseline_alerts
       return { anomaly: false, message: "No baseline available" } unless defined?(Queries::BaselineStats)
 
       # Get count of this error type today
@@ -314,6 +319,7 @@ module RailsErrorDashboard
     # @param days [Integer] Number of days to analyze (default: 30)
     # @return [Hash] Pattern analysis result
     def occurrence_pattern(days: 30)
+      return {} unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return {} unless defined?(Services::PatternDetector)
 
       Services::PatternDetector.analyze_cyclical_pattern(
@@ -327,6 +333,7 @@ module RailsErrorDashboard
     # @param days [Integer] Number of days to analyze (default: 7)
     # @return [Array<Hash>] Array of burst metadata
     def error_bursts(days: 7)
+      return [] unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return [] unless defined?(Services::PatternDetector)
 
       Services::PatternDetector.detect_bursts(

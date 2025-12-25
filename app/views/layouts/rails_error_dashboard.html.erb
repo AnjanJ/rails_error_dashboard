@@ -358,16 +358,20 @@
                   <i class="bi bi-graph-up"></i> Analytics
                 <% end %>
               </li>
-              <li class="nav-item">
-                <%= link_to platform_comparison_errors_path, class: "nav-link #{request.path == platform_comparison_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-phone"></i> Platform Health
-                <% end %>
-              </li>
-              <li class="nav-item">
-                <%= link_to correlation_errors_path, class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-diagram-3"></i> Correlation
-                <% end %>
-              </li>
+              <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
+                <li class="nav-item">
+                  <%= link_to platform_comparison_errors_path, class: "nav-link #{request.path == platform_comparison_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-phone"></i> Platform Health
+                  <% end %>
+                </li>
+              <% end %>
+              <% if RailsErrorDashboard.configuration.enable_error_correlation %>
+                <li class="nav-item">
+                  <%= link_to correlation_errors_path, class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-diagram-3"></i> Correlation
+                  <% end %>
+                </li>
+              <% end %>
             </ul>
 
             <hr class="my-3">

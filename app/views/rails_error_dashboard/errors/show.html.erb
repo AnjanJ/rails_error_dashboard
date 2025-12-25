@@ -89,7 +89,7 @@
       </div>
 
       <!-- Similar Errors (Fuzzy Matching) - Phase 4.1.1 -->
-      <% if @error.respond_to?(:similar_errors) %>
+      <% if RailsErrorDashboard.configuration.enable_similar_errors && @error.respond_to?(:similar_errors) %>
         <% similar = @error.similar_errors(threshold: 0.6, limit: 5) %>
         <% if similar.any? %>
           <div class="card mb-4">
@@ -161,7 +161,7 @@
       <% end %>
 
       <!-- Phase 4.1.2: Co-occurring Errors -->
-      <% if @error.respond_to?(:co_occurring_errors) %>
+      <% if RailsErrorDashboard.configuration.enable_co_occurring_errors && @error.respond_to?(:co_occurring_errors) %>
         <% co_occurring = @error.co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 5) %>
         <% if co_occurring.any? %>
           <div class="card mb-4">
@@ -287,8 +287,9 @@
       <% end %>
 
       <!-- Error Cascades (Phase 4.1.3) -->
-      <% cascades = @error.error_cascades %>
-      <% if cascades[:parents].any? || cascades[:children].any? %>
+      <% if RailsErrorDashboard.configuration.enable_error_cascades %>
+        <% cascades = @error.error_cascades %>
+        <% if cascades[:parents].any? || cascades[:children].any? %>
         <div class="card">
           <div class="card-header bg-white">
             <h5 class="mb-0">
@@ -421,6 +422,7 @@
             </div>
           </div>
         </div>
+        <% end %>
       <% end %>
 
       <!-- Phase 4.5: Occurrence Patterns and Bursts -->
@@ -540,8 +542,9 @@
       </div>
 
       <!-- Phase 4.2: Baseline Statistics -->
-      <% baselines = @error.baselines %>
-      <% if baselines[:hourly].present? || baselines[:daily].present? || baselines[:weekly].present? %>
+      <% if RailsErrorDashboard.configuration.enable_baseline_alerts %>
+        <% baselines = @error.baselines %>
+        <% if baselines[:hourly].present? || baselines[:daily].present? || baselines[:weekly].present? %>
         <div class="card mb-4">
           <div class="card-header bg-white">
             <h5 class="mb-0">
@@ -632,6 +635,7 @@
             </div>
           </div>
         </div>
+        <% end %>
       <% end %>
 
       <!-- Quick Actions -->

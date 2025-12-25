@@ -1,11 +1,12 @@
-<%
-  # Phase 4.5: Display occurrence patterns and bursts for an error
-  # This partial shows cyclical patterns and burst detection
-  pattern_data = @error.occurrence_pattern(days: 30)
-  bursts = @error.error_bursts(days: 7)
-%>
+<% if RailsErrorDashboard.configuration.enable_occurrence_patterns %>
+  <%
+    # Phase 4.5: Display occurrence patterns and bursts for an error
+    # This partial shows cyclical patterns and burst detection
+    pattern_data = @error.occurrence_pattern(days: 30)
+    bursts = @error.error_bursts(days: 7)
+  %>
 
-<% if pattern_data.present? && pattern_data[:total_errors] > 0 %>
+  <% if pattern_data.present? && pattern_data[:total_errors] > 0 %>
   <div class="card mb-4">
     <div class="card-header bg-white">
       <h5 class="mb-0">
@@ -123,10 +124,10 @@
       <% end %>
     </div>
   </div>
-<% end %>
+  <% end %>
 
-<!-- Error Bursts -->
-<% if bursts.present? && bursts.any? %>
+  <!-- Error Bursts -->
+  <% if bursts.present? && bursts.any? %>
   <div class="card mb-4">
     <div class="card-header bg-white">
       <h5 class="mb-0">
@@ -198,11 +199,12 @@
       </div>
     </div>
   </div>
-<% end %>
+  <% end %>
 
-<% if (pattern_data.blank? || pattern_data[:total_errors] == 0) && bursts.blank? %>
-  <div class="alert alert-info">
-    <i class="bi bi-info-circle"></i>
-    No occurrence patterns or bursts detected. More data may be needed for pattern analysis.
-  </div>
+  <% if (pattern_data.blank? || pattern_data[:total_errors] == 0) && bursts.blank? %>
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i>
+      No occurrence patterns or bursts detected. More data may be needed for pattern analysis.
+    </div>
+  <% end %>
 <% end %>
