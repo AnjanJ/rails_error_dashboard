@@ -151,8 +151,9 @@
 
         <div class="col-auto">
           <div class="form-check mt-2">
-            <%= check_box_tag :unresolved, true, params[:unresolved] == 'true', class: "form-check-input" %>
+            <%= check_box_tag :unresolved, "true", params[:unresolved] != "false" && params[:unresolved] != "0", class: "form-check-input", data: { uncheck_value: "false" } %>
             <%= label_tag :unresolved, "Unresolved only", class: "form-check-label" %>
+            <%= hidden_field_tag :unresolved, "false", id: nil %>
           </div>
         </div>
 
