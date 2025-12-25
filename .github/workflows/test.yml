@@ -38,6 +38,7 @@ jobs:
       env:
         RAILS_VERSION: ${{ matrix.rails }}
       run: |
+        mkdir -p spec/dummy/db
         cd spec/dummy
         RAILS_ENV=test bundle exec rake db:schema:load
         cd ../..
