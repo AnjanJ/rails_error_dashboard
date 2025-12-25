@@ -65,6 +65,15 @@ module RailsErrorDashboard
     attr_accessor :git_sha
     attr_accessor :total_users_for_impact # For user impact % calculation
 
+    # Phase 4: Advanced Error Analysis Features
+    # Enable/disable individual Phase 4 features
+    attr_accessor :enable_similar_errors          # Fuzzy error matching
+    attr_accessor :enable_co_occurring_errors     # Detect errors happening together
+    attr_accessor :enable_error_cascades          # Parent→child error relationships
+    attr_accessor :enable_error_correlation       # Version/user/time correlation
+    attr_accessor :enable_platform_comparison     # iOS vs Android analytics
+    attr_accessor :enable_occurrence_patterns     # Cyclical/burst pattern detection
+
     # Phase 4.3: Baseline Alert Configuration
     attr_accessor :enable_baseline_alerts
     attr_accessor :baseline_alert_threshold_std_devs # Number of std devs to trigger alert (default: 2.0)
@@ -123,8 +132,16 @@ module RailsErrorDashboard
       @git_sha = ENV["GIT_SHA"]
       @total_users_for_impact = nil # Auto-detect if not set
 
+      # Phase 4: Advanced Error Analysis Features (all OFF by default - opt-in)
+      @enable_similar_errors = false        # Fuzzy error matching
+      @enable_co_occurring_errors = false   # Co-occurring error detection
+      @enable_error_cascades = false        # Error cascade detection
+      @enable_error_correlation = false     # Version/user/time correlation
+      @enable_platform_comparison = false   # Platform health comparison
+      @enable_occurrence_patterns = false   # Pattern detection
+
       # Phase 4.3: Baseline Alert Defaults
-      @enable_baseline_alerts = ENV.fetch("ENABLE_BASELINE_ALERTS", "true") == "true"
+      @enable_baseline_alerts = false  # OFF by default (was true)
       @baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
       @baseline_alert_severities = [ :critical, :high ] # Alert on critical and high severity anomalies
       @baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i

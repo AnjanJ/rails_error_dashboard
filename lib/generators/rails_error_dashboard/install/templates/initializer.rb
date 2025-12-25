@@ -128,11 +128,20 @@ RailsErrorDashboard.configure do |config|
   # Backtrace size limiting (reduces storage by ~80%)
   config.max_backtrace_lines = 50
 
-  # Error sampling rate (1.0 = 100%, log all errors)
-  # Reduce for high-traffic apps: 0.1 = log 10% of non-critical errors
+<% if @enable_error_sampling -%>
+  # Error Sampling - ENABLED
+  # Reduce volume by logging only a percentage of non-critical errors
   # Critical errors are ALWAYS logged regardless of sampling rate
+  config.sampling_rate = 0.1  # 10% - Adjust as needed (0.0 to 1.0)
+  # To disable: Set config.sampling_rate = 1.0 (100%)
+
+<% else -%>
+  # Error Sampling - DISABLED
+  # All errors are logged (100% sampling rate)
+  # To enable: Set config.sampling_rate < 1.0 (e.g., 0.1 for 10%)
   config.sampling_rate = 1.0
 
+<% end -%>
   # Ignored exceptions (skip logging these)
   # config.ignored_exceptions = [
   #   "ActionController::RoutingError",
@@ -159,15 +168,103 @@ RailsErrorDashboard.configure do |config|
 
 <% end -%>
   # ============================================================================
-  # ADVANCED FEATURES
+  # ADVANCED ANALYTICS
   # ============================================================================
+  # Phase 4 features for advanced error analysis
 
-  # Baseline monitoring and anomaly detection
+<% if @enable_baseline_alerts -%>
+  # Baseline Anomaly Alerts - ENABLED
   # Automatically detect when error rates exceed normal patterns
-  config.enable_baseline_alerts = ENV.fetch("ENABLE_BASELINE_ALERTS", "true") == "true"
-  config.baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
+  config.enable_baseline_alerts = true
+  config.baseline_alert_threshold_std_devs = 2.0  # Alert when > 2 std devs above baseline
   config.baseline_alert_severities = [ :critical, :high ]
-  config.baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i
+  config.baseline_alert_cooldown_minutes = 120  # 2 hours between alerts
+  # To disable: Set config.enable_baseline_alerts = false
+
+<% else -%>
+  # Baseline Anomaly Alerts - DISABLED
+  # To enable: Set config.enable_baseline_alerts = true
+  config.enable_baseline_alerts = false
+  # config.baseline_alert_threshold_std_devs = 2.0
+  # config.baseline_alert_severities = [ :critical, :high ]
+  # config.baseline_alert_cooldown_minutes = 120
+
+<% end -%>
+<% if @enable_similar_errors -%>
+  # Fuzzy Error Matching - ENABLED
+  # Find similar errors even with different error_hashes
+  config.enable_similar_errors = true
+  # To disable: Set config.enable_similar_errors = false
+
+<% else -%>
+  # Fuzzy Error Matching - DISABLED
+  # To enable: Set config.enable_similar_errors = true
+  config.enable_similar_errors = false
+
+<% end -%>
+<% if @enable_co_occurring_errors -%>
+  # Co-occurring Errors - ENABLED
+  # Detect errors that happen together in time
+  config.enable_co_occurring_errors = true
+  # To disable: Set config.enable_co_occurring_errors = false
+
+<% else -%>
+  # Co-occurring Errors - DISABLED
+  # To enable: Set config.enable_co_occurring_errors = true
+  config.enable_co_occurring_errors = false
+
+<% end -%>
+<% if @enable_error_cascades -%>
+  # Error Cascade Detection - ENABLED
+  # Identify error chains (A causes B causes C)
+  config.enable_error_cascades = true
+  # To disable: Set config.enable_error_cascades = false
+
+<% else -%>
+  # Error Cascade Detection - DISABLED
+  # To enable: Set config.enable_error_cascades = true
+  config.enable_error_cascades = false
+
+<% end -%>
+<% if @enable_error_correlation -%>
+  # Error Correlation Analysis - ENABLED
+  # Correlate errors with versions, users, and time
+  config.enable_error_correlation = true
+  # To disable: Set config.enable_error_correlation = false
+
+<% else -%>
+  # Error Correlation Analysis - DISABLED
+  # To enable: Set config.enable_error_correlation = true
+  config.enable_error_correlation = false
+
+<% end -%>
+<% if @enable_platform_comparison -%>
+  # Platform Comparison - ENABLED
+  # Compare iOS vs Android vs Web health metrics
+  config.enable_platform_comparison = true
+  # To disable: Set config.enable_platform_comparison = false
+
+<% else -%>
+  # Platform Comparison - DISABLED
+  # To enable: Set config.enable_platform_comparison = true
+  config.enable_platform_comparison = false
+
+<% end -%>
+<% if @enable_occurrence_patterns -%>
+  # Occurrence Pattern Detection - ENABLED
+  # Detect cyclical patterns and error bursts
+  config.enable_occurrence_patterns = true
+  # To disable: Set config.enable_occurrence_patterns = false
+
+<% else -%>
+  # Occurrence Pattern Detection - DISABLED
+  # To enable: Set config.enable_occurrence_patterns = true
+  config.enable_occurrence_patterns = false
+
+<% end -%>
+  # ============================================================================
+  # ADDITIONAL CONFIGURATION
+  # ============================================================================
 
   # Custom severity rules (override automatic severity classification)
   # config.custom_severity_rules = {
