@@ -1,0 +1,19 @@
+# GitHub CODEOWNERS
+# These owners will be requested for review when files are changed
+
+# Default owner for everything
+* @AnjanJ
+
+# Critical files require extra scrutiny
+/lib/rails_error_dashboard/version.rb @AnjanJ
+/lib/rails_error_dashboard/configuration.rb @AnjanJ
+/.github/workflows/* @AnjanJ
+/rails_error_dashboard.gemspec @AnjanJ
+
+# Security-sensitive files
+/lib/rails_error_dashboard/middleware/* @AnjanJ
+/app/controllers/rails_error_dashboard/* @AnjanJ
+
+# Release infrastructure
+/.release-please-* @AnjanJ
+/CHANGELOG.md @AnjanJ
