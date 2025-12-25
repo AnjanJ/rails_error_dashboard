@@ -10,17 +10,18 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
     let!(:resolved_error) { create(:error_log, :resolved, occurred_at: 4.hours.ago) }
 
     context "with no filters" do
-      it "returns all errors" do
+      it "returns only unresolved errors by default" do
         result = described_class.call
 
-        expect(result.count).to eq(4)
+        expect(result.count).to eq(3)
+        expect(result).not_to include(resolved_error)
       end
 
       it "orders by occurred_at descending" do
         result = described_class.call
 
         expect(result.first).to eq(error1)
-        expect(result.last).to eq(resolved_error)
+        expect(result.last).to eq(error3)
       end
 
       it "returns ActiveRecord relation" do
@@ -73,10 +74,11 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
         expect(result.count).to eq(4)
       end
 
-      it "shows all errors when unresolved is not provided" do
+      it "shows only unresolved errors when unresolved is not provided (default)" do
         result = described_class.call
 
-        expect(result.count).to eq(4)
+        expect(result.count).to eq(3)
+        expect(result).not_to include(resolved_error)
       end
     end
 
@@ -174,10 +176,11 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
     end
 
     describe "with empty filters hash" do
-      it "returns all errors" do
+      it "returns only unresolved errors by default" do
         result = described_class.call({})
 
-        expect(result.count).to eq(4)
+        expect(result.count).to eq(3)
+        expect(result).not_to include(resolved_error)
       end
     end
 
