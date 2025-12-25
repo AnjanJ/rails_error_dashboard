@@ -61,76 +61,124 @@
       /* Dark mode */
       @media (prefers-color-scheme: dark) {
         body {
-          background-color: #0d1117;
-          color: #c9d1d9;
+          background-color: #0d1117 !important;
+          color: #e6edf3 !important;
         }
 
+        /* Override minimal theme styles */
+        header p, section p, section li, footer p {
+          color: #e6edf3 !important;
+        }
+
+        /* Headings with excellent contrast */
+        h1, h2, h3, h4, h5, h6 {
+          color: #f0f6fc !important;
+          font-weight: 600;
+        }
+
+        /* Bright, readable links */
         a {
-          color: #58a6ff;
+          color: #58a6ff !important;
+          text-decoration: none;
         }
 
         a:hover {
-          color: #79c0ff;
+          color: #79c0ff !important;
+          text-decoration: underline;
         }
 
+        /* Strong/bold text */
+        strong, b {
+          color: #f0f6fc !important;
+        }
+
+        /* Code blocks */
         code {
-          background-color: #161b22;
-          color: #c9d1d9;
+          background-color: #161b22 !important;
+          color: #f0f6fc !important;
           border: 1px solid #30363d;
         }
 
         pre {
-          background-color: #161b22;
+          background-color: #161b22 !important;
           border: 1px solid #30363d;
         }
 
         pre code {
-          background-color: transparent;
+          background-color: transparent !important;
           border: none;
         }
 
+        /* Blockquotes */
         blockquote {
           border-left: 3px solid #3b434b;
-          color: #8b949e;
+          color: #c9d1d9 !important;
         }
 
+        /* Tables */
         table {
           border-color: #30363d;
         }
 
         th {
-          background-color: #161b22;
+          background-color: #161b22 !important;
           border-color: #30363d;
+          color: #f0f6fc !important;
         }
 
         td {
           border-color: #30363d;
+          color: #e6edf3 !important;
         }
 
         tr:nth-child(even) {
           background-color: #0d1117;
         }
 
+        /* Horizontal rules */
         hr {
           background-color: #30363d;
           border-color: #30363d;
         }
 
-        h1, h2, h3, h4, h5, h6 {
-          color: #c9d1d9;
+        /* List items */
+        ul, ol {
+          color: #e6edf3 !important;
         }
 
-        /* Badges */
+        li {
+          color: #e6edf3 !important;
+        }
+
+        /* Badges - make them brighter */
         img[src*="badge.fury.io"],
         img[src*="shields.io"],
         img[src*="github.com/workflows"] {
-          filter: brightness(0.9);
+          filter: brightness(1.1) contrast(1.1);
         }
 
         /* Better contrast for inline code */
         p code, li code, td code {
           padding: 2px 6px;
           border-radius: 3px;
+        }
+
+        /* Header and footer text */
+        header {
+          background-color: #0d1117 !important;
+        }
+
+        footer {
+          background-color: #0d1117 !important;
+        }
+
+        footer p, footer small {
+          color: #8b949e !important;
+        }
+
+        /* Emoji visibility */
+        .emoji {
+          filter: brightness(1.2);
         }
       }
 
