@@ -34,6 +34,14 @@ jobs:
         bundle config set --local path 'vendor/bundle'
         bundle install --jobs 4 --retry 3
 
+    - name: Setup test database
+      env:
+        RAILS_VERSION: ${{ matrix.rails }}
+      run: |
+        cd spec/dummy
+        bundle exec rails db:create db:schema:load RAILS_ENV=test
+        cd ../..
+
     - name: Run tests
       env:
         RAILS_VERSION: ${{ matrix.rails }}
