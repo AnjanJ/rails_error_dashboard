@@ -131,10 +131,16 @@
       }
 
       .stat-label {
-        color: #6B7280;
+        color: #6B7280; /* Medium gray for light mode */
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+      }
+
+      /* Brighter stat labels in dark mode */
+      body.dark-mode .stat-label,
+      html[data-theme="dark"] body .stat-label {
+        color: #9CA3AF; /* Lighter gray for better visibility in dark mode */
       }
 
       .badge-ios {
