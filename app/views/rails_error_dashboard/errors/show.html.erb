@@ -484,9 +484,11 @@
 
           <div class="mb-3">
             <small class="text-muted d-block mb-1">User</small>
-            <% if @error.user %>
+            <% if @error.respond_to?(:user) && @error.user %>
               <strong><%= @error.user.email %></strong><br>
               <small class="text-muted">ID: <%= @error.user_id %></small>
+            <% elsif @error.user_id %>
+              <span class="text-muted">User ID: <%= @error.user_id %></span>
             <% else %>
               <span class="text-muted">Guest / Unauthenticated</span>
             <% end %>
@@ -649,7 +651,7 @@
               <i class="bi bi-filter"></i> View Similar Errors
             <% end %>
 
-            <% if @error.user %>
+            <% if @error.user_id %>
               <%= link_to errors_path(user_id: @error.user_id), class: "btn btn-outline-primary btn-sm" do %>
                 <i class="bi bi-person"></i> View User's Errors
               <% end %>
