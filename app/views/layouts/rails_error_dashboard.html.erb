@@ -425,10 +425,29 @@
 
     <!-- Theme Toggle Script -->
     <script>
+      // Update Chart.js defaults for dark/light theme
+      function updateChartTheme(isDark) {
+        if (typeof Chart !== 'undefined') {
+          const textColor = isDark ? '#E4E5E9' : '#1F2937';
+          const gridColor = isDark ? 'rgba(65, 72, 104, 0.3)' : 'rgba(0, 0, 0, 0.1)';
+
+          Chart.defaults.color = textColor;
+          Chart.defaults.borderColor = gridColor;
+          Chart.defaults.scale.grid.color = gridColor;
+          Chart.defaults.scale.ticks.color = textColor;
+          Chart.defaults.plugins.legend.labels.color = textColor;
+          Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#24283B' : 'rgba(0, 0, 0, 0.8)';
+          Chart.defaults.plugins.tooltip.titleColor = textColor;
+          Chart.defaults.plugins.tooltip.bodyColor = textColor;
+        }
+      }
+
       // Load theme from localStorage on page load
       document.addEventListener('DOMContentLoaded', function() {
         const savedTheme = localStorage.getItem('theme') || 'light';
-        if (savedTheme === 'dark') {
+        const isDark = savedTheme === 'dark';
+
+        if (isDark) {
           document.body.classList.add('dark-mode');
           document.documentElement.setAttribute('data-theme', 'dark');
           updateThemeIcon(true);
@@ -438,6 +457,9 @@
           document.documentElement.removeAttribute('data-theme');
           updateThemeIcon(false);
         }
+
+        // Update Chart.js theme
+        updateChartTheme(isDark);
       });
 
       function toggleTheme() {
@@ -456,6 +478,12 @@
 
         // Update icon
         updateThemeIcon(isDark);
+
+        // Update Chart.js theme
+        updateChartTheme(isDark);
+
+        // Reload page to apply chart theme (Chart.js requires re-render)
+        setTimeout(() => location.reload(), 100);
       }
 
       function updateThemeIcon(isDark) {
