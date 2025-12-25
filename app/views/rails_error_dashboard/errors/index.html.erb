@@ -119,12 +119,12 @@
   <% end %>
 
   <!-- Filters -->
-  <div class="card mb-4">
+  <div class="card mb-4" id="filters-section">
     <div class="card-header bg-white">
       <h5 class="mb-0">Filters & Search</h5>
     </div>
     <div class="card-body">
-      <%= form_with url: errors_path, method: :get, class: "row g-3" do %>
+      <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false } do %>
         <div class="col-md-4">
           <%= text_field_tag :search, params[:search], placeholder: "Search errors...", class: "form-control" %>
         </div>
@@ -151,9 +151,18 @@
 
         <div class="col-auto">
           <div class="form-check mt-2">
-            <%= check_box_tag :unresolved, "true", params[:unresolved] != "false" && params[:unresolved] != "0", class: "form-check-input", data: { uncheck_value: "false" } %>
+            <%
+              # Determine checkbox state based on params
+              # If unresolved param is missing or nil, default to checked (true)
+              # If unresolved param is explicitly "false" or "0", uncheck it
+              is_checked = if params[:unresolved].nil?
+                true  # Default to checked when first loading
+              else
+                params[:unresolved] != "false" && params[:unresolved] != "0"
+              end
+            %>
+            <%= check_box_tag :unresolved, "1", is_checked, class: "form-check-input", id: "unresolved_checkbox" %>
             <%= label_tag :unresolved, "Unresolved only", class: "form-check-label" %>
-            <%= hidden_field_tag :unresolved, "false", id: nil %>
           </div>
         </div>
 
@@ -406,6 +415,39 @@
             '/ - Focus search\n' +
             'a - Analytics page\n' +
             '? - Show this help');
+    }
+  });
+
+  // Preserve scroll position on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const scrollPos = sessionStorage.getItem('scrollPos');
+    if (scrollPos) {
+      window.scrollTo(0, parseInt(scrollPos));
+      sessionStorage.removeItem('scrollPos');
+    }
+  });
+
+  // Handle filter form submission
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.querySelector('form[action="<%= errors_path %>"]');
+    if (filterForm) {
+      filterForm.addEventListener('submit', function(e) {
+        // Save scroll position before form submission
+        sessionStorage.setItem('scrollPos', window.pageYOffset);
+
+        // Handle unchecked checkbox - when unchecked, send "0" explicitly
+        const unresolvedCheckbox = document.getElementById('unresolved_checkbox');
+        if (unresolvedCheckbox && !unresolvedCheckbox.checked) {
+          // Create hidden input to send "0" when unchecked
+          const hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = 'unresolved';
+          hiddenInput.value = '0';
+          filterForm.appendChild(hiddenInput);
+          // Remove the checkbox from form submission to avoid sending empty value
+          unresolvedCheckbox.disabled = true;
+        }
+      });
     }
   });
 </script>
