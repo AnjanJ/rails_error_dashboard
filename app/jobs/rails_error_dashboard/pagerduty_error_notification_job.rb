@@ -24,15 +24,16 @@ module RailsErrorDashboard
       response = HTTParty.post(
         PAGERDUTY_EVENTS_API,
         body: payload.to_json,
-        headers: { "Content-Type" => "application/json" }
+        headers: { "Content-Type" => "application/json" },
+        timeout: 10  # CRITICAL: 10 second timeout to prevent hanging
       )
 
       unless response.success?
-        Rails.logger.error("PagerDuty API error: #{response.code} - #{response.body}")
+        Rails.logger.error("[RailsErrorDashboard] PagerDuty API error: #{response.code} - #{response.body}")
       end
     rescue StandardError => e
-      Rails.logger.error("Failed to send PagerDuty notification: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
+      Rails.logger.error("[RailsErrorDashboard] Failed to send PagerDuty notification: #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
     end
 
     private

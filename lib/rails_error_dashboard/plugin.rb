@@ -85,14 +85,17 @@ module RailsErrorDashboard
     end
 
     # Helper method to safely execute plugin hooks
-    # Prevents plugin errors from breaking the main application
+    # CRITICAL: Prevents plugin errors from breaking the main application
     def safe_execute(method_name, *args)
       return unless enabled?
 
       send(method_name, *args)
     rescue => e
-      Rails.logger.error("Plugin '#{name}' failed in #{method_name}: #{e.message}")
-      Rails.logger.error(e.backtrace.first(5).join("\n"))
+      # Log plugin failures but never propagate - plugins must not break the app
+      Rails.logger.error("[RailsErrorDashboard] Plugin '#{name}' failed in #{method_name}: #{e.class} - #{e.message}")
+      Rails.logger.error("Plugin version: #{version}")
+      Rails.logger.error(e.backtrace&.first(10)&.join("\n")) if e.backtrace
+      nil # Explicitly return nil, never raise
     end
   end
 end

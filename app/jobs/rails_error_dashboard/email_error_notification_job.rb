@@ -13,7 +13,8 @@ module RailsErrorDashboard
 
       ErrorNotificationMailer.error_alert(error_log, recipients).deliver_now
     rescue => e
-      Rails.logger.error("Failed to send email notification: #{e.message}")
+      Rails.logger.error("[RailsErrorDashboard] Failed to send email notification: #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
     end
   end
 end

@@ -23,8 +23,8 @@ module RailsErrorDashboard
         send_webhook(url, payload, error_log)
       end
     rescue StandardError => e
-      Rails.logger.error("Failed to send webhook notification: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
+      Rails.logger.error("[RailsErrorDashboard] Failed to send webhook notification: #{e.message}")
+      Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
     end
 
     private
@@ -39,14 +39,14 @@ module RailsErrorDashboard
           "X-Error-Dashboard-Event" => "error.created",
           "X-Error-Dashboard-ID" => error_log.id.to_s
         },
-        timeout: 10 # 10 second timeout
+        timeout: 10  # CRITICAL: 10 second timeout to prevent hanging
       )
 
       unless response.success?
-        Rails.logger.warn("Webhook failed for #{url}: #{response.code}")
+        Rails.logger.warn("[RailsErrorDashboard] Webhook failed for #{url}: #{response.code}")
       end
     rescue StandardError => e
-      Rails.logger.error("Webhook error for #{url}: #{e.message}")
+      Rails.logger.error("[RailsErrorDashboard] Webhook error for #{url}: #{e.message}")
     end
 
     def build_webhook_payload(error_log)
