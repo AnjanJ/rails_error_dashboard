@@ -219,8 +219,15 @@
         filter: brightness(0) invert(1);
       }
 
+      /* Light mode text-muted */
       .text-muted {
-        color: #D1D5DB !important; /* Lighter gray for better contrast in dark mode */
+        color: #6B7280 !important; /* Medium gray for light mode */
+      }
+
+      /* Dark mode text-muted */
+      body.dark-mode .text-muted,
+      html[data-theme="dark"] body .text-muted {
+        color: #D1D5DB !important; /* Lighter gray for dark mode */
       }
 
       .theme-toggle {
