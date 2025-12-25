@@ -51,7 +51,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "factory_bot_rails", "~> 6.4"
   spec.add_development_dependency "faker", "~> 3.0"
   spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
-  spec.add_development_dependency "shoulda-matchers", "~> 6.0"
+  spec.add_development_dependency "shoulda-matchers", "~> 7.0"
   spec.add_development_dependency "webmock", "~> 3.0"
   spec.add_development_dependency "vcr", "~> 6.0"
   spec.add_development_dependency "simplecov", "~> 0.22"
