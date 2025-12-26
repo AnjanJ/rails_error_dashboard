@@ -29,7 +29,21 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
     # Temporarily disable stdin to prevent interactive prompts during tests
     allow($stdin).to receive(:tty?).and_return(false)
 
-    generator = described_class.new(args, {}, { destination_root: destination_root })
+    # Parse CLI args into options hash for proper Thor option handling
+    # Thor doesn't auto-parse args when calling .new() directly, so we need to
+    # manually convert CLI strings like "--slack" into {slack: true}
+    options = {}
+    args.each do |arg|
+      if arg.start_with?("--")
+        # Extract key: "--slack" => :slack, "--no-interactive" => :interactive
+        key = arg.sub(/^--/, "").sub(/^no-/, "").gsub("-", "_").to_sym
+        # Determine value: "--slack" => true, "--no-interactive" => false
+        value = !arg.start_with?("--no-")
+        options[key] = value
+      end
+    end
+
+    generator = described_class.new([], options, { destination_root: destination_root })
     generator.invoke_all
   end
 
