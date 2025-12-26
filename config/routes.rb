@@ -1,5 +1,8 @@
 RailsErrorDashboard::Engine.routes.draw do
-  root to: "errors#index"
+  root to: "errors#overview"
+
+  # Dashboard overview
+  get "overview", to: "errors#overview", as: :overview
 
   resources :errors, only: [ :index, :show ] do
     member do

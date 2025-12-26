@@ -146,6 +146,22 @@ module RailsErrorDashboard
       @resolution_rate = analytics[:resolution_rate]
       @mobile_errors = analytics[:mobile_errors]
       @api_errors = analytics[:api_errors]
+
+      # Get recurring issues data
+      recurring = Queries::RecurringIssues.call(days)
+      @recurring_data = recurring
+
+      # Get release correlation data
+      correlation = Queries::ErrorCorrelation.new(days: days)
+      @errors_by_version = correlation.errors_by_version
+      @problematic_releases = correlation.problematic_releases
+      @release_comparison = calculate_release_comparison
+
+      # Get MTTR data
+      mttr_data = Queries::MttrStats.call(days)
+      @mttr_stats = mttr_data
+      @overall_mttr = mttr_data[:overall_mttr]
+      @mttr_by_platform = mttr_data[:mttr_by_platform]
     end
 
     def platform_comparison
@@ -221,6 +237,26 @@ module RailsErrorDashboard
 
     private
 
+    def calculate_release_comparison
+      return {} if @errors_by_version.empty? || @errors_by_version.count < 2
+
+      versions_sorted = @errors_by_version.sort_by { |_, data| data[:last_seen] || Time.at(0) }.reverse
+      latest = versions_sorted.first
+      previous = versions_sorted.second
+
+      return {} if latest.nil? || previous.nil?
+
+      {
+        latest_version: latest[0],
+        latest_count: latest[1][:count],
+        latest_critical: latest[1][:critical_count],
+        previous_version: previous[0],
+        previous_count: previous[1][:count],
+        previous_critical: previous[1][:critical_count],
+        change_percentage: previous[1][:count] > 0 ? ((latest[1][:count] - previous[1][:count]).to_f / previous[1][:count] * 100).round(1) : 0.0
+      }
+    end
+
     def filter_params
       {
         error_type: params[:error_type],
@@ -228,11 +264,16 @@ module RailsErrorDashboard
         platform: params[:platform],
         search: params[:search],
         severity: params[:severity],
+        timeframe: params[:timeframe],
+        frequency: params[:frequency],
         # Phase 3: Workflow filter params
         status: params[:status],
         assigned_to: params[:assigned_to],
         priority_level: params[:priority_level],
-        hide_snoozed: params[:hide_snoozed]
+        hide_snoozed: params[:hide_snoozed],
+        # Sorting params
+        sort_by: params[:sort_by],
+        sort_direction: params[:sort_direction]
       }
     end
 

@@ -35,6 +35,9 @@ Gem::Specification.new do |spec|
   # Grouping and time-based queries
   spec.add_dependency "groupdate", "~> 6.0"
 
+  # Charts for analytics
+  spec.add_dependency "chartkick", "~> 5.0"
+
   # HTTP client for notifications (Discord, PagerDuty, Webhooks)
   spec.add_dependency "httparty", "~> 0.21"
 

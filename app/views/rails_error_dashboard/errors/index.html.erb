@@ -1,5 +1,7 @@
-<!-- Subscribe to Turbo Stream updates -->
-<%= turbo_stream_from "error_list" %>
+<!-- Subscribe to Turbo Stream updates (only if ActionCable is available) -->
+<% if defined?(ActionCable) %>
+  <%= turbo_stream_from "error_list" %>
+<% end %>
 
 <div class="py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -124,6 +126,16 @@
       <h5 class="mb-0">Filters & Search</h5>
     </div>
     <div class="card-body">
+      <!-- Quick Filter Buttons -->
+      <div class="d-flex gap-2 mb-3">
+        <%= link_to "All Errors", errors_path,
+            class: "btn btn-sm #{params[:assigned_to].blank? ? 'btn-primary' : 'btn-outline-primary'}" %>
+        <%= link_to "Unassigned", errors_path(assigned_to: '__unassigned__'),
+            class: "btn btn-sm #{params[:assigned_to] == '__unassigned__' ? 'btn-primary' : 'btn-outline-primary'}" %>
+        <%= link_to "My Errors", errors_path(assigned_to: current_user_name),
+            class: "btn btn-sm #{params[:assigned_to] == current_user_name ? 'btn-primary' : 'btn-outline-primary'}" %>
+      </div>
+
       <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false } do %>
         <div class="col-md-4">
           <%= text_field_tag :search, params[:search], placeholder: "Search errors...", class: "form-control" %>
@@ -147,6 +159,31 @@
             ['🟡 Medium', 'medium'],
             ['⚪ Low', 'low']
           ], params[:severity]), class: "form-select" %>
+        </div>
+
+        <!-- Time Range Filter -->
+        <div class="col-md-2">
+          <%= select_tag :timeframe, options_for_select([
+            ['All Time', ''],
+            ['Last Hour', 'last_hour'],
+            ['Today', 'today'],
+            ['Yesterday', 'yesterday'],
+            ['Last 7 Days', 'last_7_days'],
+            ['Last 30 Days', 'last_30_days'],
+            ['Last 90 Days', 'last_90_days']
+          ], params[:timeframe]), class: "form-select" %>
+        </div>
+
+        <!-- Frequency Filter -->
+        <div class="col-md-2">
+          <%= select_tag :frequency, options_for_select([
+            ['All Frequencies', ''],
+            ['Once', 'once'],
+            ['2-9 Times', 'few'],
+            ['10-99 Times', 'frequent'],
+            ['100+ Times', 'very_frequent'],
+            ['Recurring (Active)', 'recurring']
+          ], params[:frequency]), class: "form-select" %>
         </div>
 
         <!-- Phase 3: Workflow Filters -->
@@ -253,13 +290,13 @@
                 <th style="width: 40px;">
                   <input type="checkbox" id="select-all" class="form-check-input">
                 </th>
-                <th>Severity</th>
-                <th>Error Type</th>
+                <th><%= sortable_header("Severity", "severity") %></th>
+                <th><%= sortable_header("Error Type", "error_type") %></th>
                 <th>Message</th>
-                <th>Occurrences</th>
-                <th>First / Last Seen</th>
+                <th><%= sortable_header("Occurrences", "occurrence_count") %></th>
+                <th><%= sortable_header("First / Last Seen", "last_seen_at") %></th>
                 <% if @platforms.size > 1 %>
-                  <th>Platform</th>
+                  <th><%= sortable_header("Platform", "platform") %></th>
                 <% end %>
                 <th>Status</th>
                 <th></th>

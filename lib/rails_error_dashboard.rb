@@ -8,6 +8,7 @@ require "pagy"
 require "browser"
 require "groupdate"
 require "httparty"
+require "chartkick"
 
 # Core library files
 require "rails_error_dashboard/value_objects/error_context"
@@ -32,6 +33,8 @@ require "rails_error_dashboard/queries/dashboard_stats"
 require "rails_error_dashboard/queries/analytics_stats"
 require "rails_error_dashboard/queries/filter_options"
 require "rails_error_dashboard/queries/similar_errors"
+require "rails_error_dashboard/queries/recurring_issues"
+require "rails_error_dashboard/queries/mttr_stats"
 require "rails_error_dashboard/error_reporter"
 require "rails_error_dashboard/middleware/error_catcher"
 

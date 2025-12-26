@@ -330,4 +330,305 @@
       </div>
     </div>
   </div>
+
+  <!-- Recurring Issues Analysis -->
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Recurring Issues</h5>
+    </div>
+    <div class="card-body">
+      <% if @recurring_data[:high_frequency_errors].any? %>
+        <h6 class="text-muted mb-3">High Frequency Errors</h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Error Type</th>
+                <th>Total Occurrences</th>
+                <th>Duration</th>
+                <th>First Seen</th>
+                <th>Last Seen</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @recurring_data[:high_frequency_errors].first(10).each do |error| %>
+                <tr>
+                  <td><code class="small"><%= error[:error_type] %></code></td>
+                  <td><span class="badge bg-danger"><%= error[:total_occurrences] %></span></td>
+                  <td><%= error[:duration_days] %> days</td>
+                  <td><small class="text-muted"><%= error[:first_seen].strftime("%b %d, %Y") %></small></td>
+                  <td><small class="text-muted"><%= error[:last_seen].strftime("%b %d, %Y %H:%M") %></small></td>
+                  <td>
+                    <% if error[:still_active] %>
+                      <span class="badge bg-warning">Active</span>
+                    <% else %>
+                      <span class="badge bg-secondary">Inactive</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-muted">No high-frequency errors found in the last <%= @days %> days.</p>
+      <% end %>
+
+      <% if @recurring_data[:persistent_errors].any? %>
+        <h6 class="text-muted mb-3 mt-4">Persistent Unresolved Errors</h6>
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i> These errors have been unresolved for more than 7 days.
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Error Type</th>
+                <th>Message</th>
+                <th>Platform</th>
+                <th>Count</th>
+                <th>Age</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @recurring_data[:persistent_errors].first(10).each do |error| %>
+                <tr>
+                  <td><code class="small"><%= error[:error_type] %></code></td>
+                  <td class="text-muted small"><%= error[:message] %></td>
+                  <td><%= error[:platform] %></td>
+                  <td><span class="badge bg-secondary"><%= error[:occurrence_count] %>x</span></td>
+                  <td>
+                    <span class="badge bg-warning"><%= error[:age_days] %> days</span>
+                  </td>
+                  <td>
+                    <%= link_to "View", error_path(error[:id]), class: "btn btn-sm btn-outline-primary" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Release Comparison Charts -->
+  <% if @errors_by_version.present? && @errors_by_version.count >= 2 %>
+    <div class="row g-4 mb-4">
+      <!-- Errors by Version Chart -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-git"></i> Errors by Release Version</h5>
+          </div>
+          <div class="card-body">
+            <div id="errors-by-version-chart"></div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const versionData = <%= raw @errors_by_version.transform_values { |v| v[:count] }.to_json %>;
+                const colors = window.getChartColors();
+
+                new Chartkick.ColumnChart("errors-by-version-chart", versionData, {
+                  colors: ["#8B5CF6", "#EF4444", "#F59E0B", "#10B981"],
+                  height: "300px",
+                  xtitle: "Version",
+                  ytitle: "Error Count",
+                  library: window.getChartLibraryOptions()
+                });
+              });
+            </script>
+          </div>
+        </div>
+      </div>
+
+      <!-- Release Comparison Card -->
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">Latest vs Previous</h5>
+          </div>
+          <div class="card-body">
+            <% if @release_comparison.present? %>
+              <div class="mb-3">
+                <small class="text-muted">Latest Version</small>
+                <h4><%= @release_comparison[:latest_version] %></h4>
+                <p class="mb-0">
+                  <span class="badge bg-danger"><%= @release_comparison[:latest_count] %> errors</span>
+                  <% if @release_comparison[:latest_critical] > 0 %>
+                    <span class="badge bg-dark ms-1"><%= @release_comparison[:latest_critical] %> critical</span>
+                  <% end %>
+                </p>
+              </div>
+              <div class="mb-3">
+                <small class="text-muted">Previous Version</small>
+                <h4><%= @release_comparison[:previous_version] %></h4>
+                <p class="mb-0">
+                  <span class="badge bg-secondary"><%= @release_comparison[:previous_count] %> errors</span>
+                  <% if @release_comparison[:previous_critical] > 0 %>
+                    <span class="badge bg-secondary ms-1"><%= @release_comparison[:previous_critical] %> critical</span>
+                  <% end %>
+                </p>
+              </div>
+              <hr>
+              <div>
+                <small class="text-muted">Change</small>
+                <h4 class="<%= @release_comparison[:change_percentage] > 0 ? 'text-danger' : 'text-success' %>">
+                  <%= @release_comparison[:change_percentage] > 0 ? '↑' : '↓' %>
+                  <%= @release_comparison[:change_percentage].abs %>%
+                </h4>
+              </div>
+            <% else %>
+              <p class="text-muted">Not enough release data for comparison.</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problematic Releases Alert -->
+    <% if @problematic_releases.any? %>
+      <div class="alert alert-warning mb-4">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Problematic Releases Detected</h5>
+        <p>The following releases have significantly higher error rates (&gt;2x average):</p>
+        <ul class="mb-0">
+          <% @problematic_releases.each do |release| %>
+            <li>
+              <strong><%= release[:version] %></strong>:
+              <%= release[:error_count] %> errors
+              (<%= release[:critical_count] %> critical,
+              +<%= release[:deviation_from_avg] %>% from average)
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  <% end %>
+
+  <!-- MTTR (Mean Time to Resolution) -->
+  <% if @mttr_stats[:total_resolved] > 0 %>
+    <div class="card mb-4">
+      <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Resolution Performance (MTTR)</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-4">
+          <!-- Overall MTTR -->
+          <div class="col-md-3">
+            <div class="card border-info">
+              <div class="card-body text-center">
+                <small class="text-muted d-block">Overall MTTR</small>
+                <h3 class="text-info mb-0"><%= @mttr_stats[:overall_mttr] %>h</h3>
+                <small class="text-muted">Average resolution time</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fastest -->
+          <div class="col-md-3">
+            <div class="card border-success">
+              <div class="card-body text-center">
+                <small class="text-muted d-block">Fastest</small>
+                <h3 class="text-success mb-0"><%= @mttr_stats[:fastest_resolution] || 0 %>m</h3>
+                <small class="text-muted">Best resolution time</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slowest -->
+          <div class="col-md-3">
+            <div class="card border-danger">
+              <div class="card-body text-center">
+                <small class="text-muted d-block">Slowest</small>
+                <h3 class="text-danger mb-0"><%= @mttr_stats[:slowest_resolution] || 0 %>h</h3>
+                <small class="text-muted">Longest resolution time</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Resolved -->
+          <div class="col-md-3">
+            <div class="card border-secondary">
+              <div class="card-body text-center">
+                <small class="text-muted d-block">Total Resolved</small>
+                <h3 class="text-secondary mb-0"><%= @mttr_stats[:total_resolved] %></h3>
+                <small class="text-muted">In last <%= @days %> days</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MTTR by Platform -->
+        <% if @mttr_by_platform.present? && @mttr_by_platform.any? %>
+          <div class="mt-4">
+            <h6 class="text-muted mb-3">MTTR by Platform</h6>
+            <div id="mttr-by-platform-chart"></div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const colors = window.getChartColors();
+                new Chartkick.BarChart("mttr-by-platform-chart",
+                  <%= raw @mttr_by_platform.to_json %>, {
+                  suffix: " hours",
+                  height: "200px",
+                  colors: ["#8B5CF6"],
+                  library: window.getChartLibraryOptions()
+                });
+              });
+            </script>
+          </div>
+        <% end %>
+
+        <!-- MTTR by Severity -->
+        <% if @mttr_stats[:mttr_by_severity].present? && @mttr_stats[:mttr_by_severity].any? %>
+          <div class="mt-4">
+            <h6 class="text-muted mb-3">MTTR by Severity</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Severity</th>
+                    <th>Average Time to Resolution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @mttr_stats[:mttr_by_severity].each do |severity, hours| %>
+                    <tr>
+                      <td>
+                        <span class="badge bg-<%= severity_color(severity) %>">
+                          <%= severity.to_s.capitalize %>
+                        </span>
+                      </td>
+                      <td><strong><%= hours %> hours</strong></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- MTTR Trend -->
+        <% if @mttr_stats[:mttr_trend].present? && @mttr_stats[:mttr_trend].any? %>
+          <div class="mt-4">
+            <h6 class="text-muted mb-3">MTTR Trend (Weekly)</h6>
+            <div id="mttr-trend-chart"></div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const colors = window.getChartColors();
+                new Chartkick.LineChart("mttr-trend-chart",
+                  <%= raw @mttr_stats[:mttr_trend].to_json %>, {
+                  suffix: " hours",
+                  height: "250px",
+                  colors: ["#10B981"],
+                  curve: false,
+                  library: window.getChartLibraryOptions()
+                });
+              });
+            </script>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 </div>

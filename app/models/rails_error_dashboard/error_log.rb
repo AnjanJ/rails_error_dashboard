@@ -133,6 +133,11 @@ module RailsErrorDashboard
       SystemStackError
       SignalException
       ActiveRecord::StatementInvalid
+      LoadError
+      SyntaxError
+      ActiveRecord::ConnectionNotEstablished
+      Redis::ConnectionError
+      OpenSSL::SSL::SSLError
     ].freeze
 
     HIGH_SEVERITY_ERROR_TYPES = %w[
@@ -141,6 +146,11 @@ module RailsErrorDashboard
       TypeError
       NoMethodError
       NameError
+      ZeroDivisionError
+      FloatDomainError
+      IndexError
+      KeyError
+      RangeError
     ].freeze
 
     MEDIUM_SEVERITY_ERROR_TYPES = %w[
@@ -148,6 +158,10 @@ module RailsErrorDashboard
       Timeout::Error
       Net::ReadTimeout
       Net::OpenTimeout
+      ActiveRecord::RecordNotUnique
+      JSON::ParserError
+      CSV::MalformedCSVError
+      Errno::ECONNREFUSED
     ].freeze
 
     # Find existing error by hash or create new one

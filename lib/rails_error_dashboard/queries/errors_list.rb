@@ -14,10 +14,11 @@ module RailsErrorDashboard
       end
 
       def call
-        query = ErrorLog.order(occurred_at: :desc)
+        query = ErrorLog
         # Only eager load user if User model exists
         query = query.includes(:user) if defined?(::User)
         query = apply_filters(query)
+        query = apply_sorting(query)
         query
       end
 
@@ -29,6 +30,8 @@ module RailsErrorDashboard
         query = filter_by_platform(query)
         query = filter_by_search(query)
         query = filter_by_severity(query)
+        query = filter_by_timeframe(query)
+        query = filter_by_frequency(query)
         # Phase 3: Workflow filters
         query = filter_by_status(query)
         query = filter_by_assignment(query)
@@ -121,14 +124,14 @@ module RailsErrorDashboard
 
       def filter_by_status(query)
         return query unless @filters[:status].present?
-        return query unless query.model.column_names.include?("status")
+        return query unless ErrorLog.column_names.include?("status")
 
         query.by_status(@filters[:status])
       end
 
       def filter_by_assignment(query)
         return query unless @filters[:assigned_to].present?
-        return query unless query.model.column_names.include?("assigned_to")
+        return query unless ErrorLog.column_names.include?("assigned_to")
 
         case @filters[:assigned_to]
         when "__unassigned__"
@@ -142,19 +145,88 @@ module RailsErrorDashboard
 
       def filter_by_priority(query)
         return query unless @filters[:priority_level].present?
-        return query unless query.model.column_names.include?("priority_level")
+        return query unless ErrorLog.column_names.include?("priority_level")
 
         query.by_priority(@filters[:priority_level])
       end
 
       def filter_by_snoozed(query)
-        return query unless query.model.column_names.include?("snoozed_until")
+        return query unless ErrorLog.column_names.include?("snoozed_until")
 
         # If hide_snoozed is checked, exclude snoozed errors
         if @filters[:hide_snoozed] == "1" || @filters[:hide_snoozed] == true
           query.active
         else
           query
+        end
+      end
+
+      def filter_by_timeframe(query)
+        return query unless @filters[:timeframe].present?
+
+        case @filters[:timeframe]
+        when "last_hour"
+          query.where("occurred_at >= ?", 1.hour.ago)
+        when "today"
+          query.where("occurred_at >= ?", Time.current.beginning_of_day)
+        when "yesterday"
+          query.where("occurred_at BETWEEN ? AND ?",
+                      1.day.ago.beginning_of_day,
+                      1.day.ago.end_of_day)
+        when "last_7_days"
+          query.where("occurred_at >= ?", 7.days.ago)
+        when "last_30_days"
+          query.where("occurred_at >= ?", 30.days.ago)
+        when "last_90_days"
+          query.where("occurred_at >= ?", 90.days.ago)
+        else
+          query
+        end
+      end
+
+      def filter_by_frequency(query)
+        return query unless @filters[:frequency].present?
+
+        case @filters[:frequency]
+        when "once"
+          query.where(occurrence_count: 1)
+        when "few"
+          query.where("occurrence_count BETWEEN ? AND ?", 2, 9)
+        when "frequent"
+          query.where("occurrence_count BETWEEN ? AND ?", 10, 99)
+        when "very_frequent"
+          query.where("occurrence_count >= ?", 100)
+        when "recurring"
+          # Errors that occurred multiple times AND are still active
+          query.where("occurrence_count > ?", 5)
+               .where("last_seen_at > ?", 24.hours.ago)
+        else
+          query
+        end
+      end
+
+      def apply_sorting(query)
+        sort_column = @filters[:sort_by].presence || "occurred_at"
+        sort_direction = @filters[:sort_direction].presence || "desc"
+
+        # Validate sort direction
+        sort_direction = %w[asc desc].include?(sort_direction) ? sort_direction : "desc"
+
+        # Map severity to priority for sorting (since severity is an enum/method)
+        # We'll use priority_score which factors in severity
+        case sort_column
+        when "occurred_at", "first_seen_at", "last_seen_at", "created_at", "resolved_at"
+          query.order(sort_column => sort_direction)
+        when "occurrence_count", "priority_score"
+          query.order(sort_column => sort_direction, occurred_at: :desc)
+        when "error_type", "platform", "app_version"
+          query.order(sort_column => sort_direction, occurred_at: :desc)
+        when "severity"
+          # Sort by priority_score as proxy for severity (critical=highest score)
+          query.order(priority_score: sort_direction, occurred_at: :desc)
+        else
+          # Default sort
+          query.order(occurred_at: :desc)
         end
       end
     end

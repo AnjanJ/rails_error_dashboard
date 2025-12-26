@@ -55,5 +55,43 @@ module RailsErrorDashboard
         "var(--text-color)"
       end
     end
+
+    # Returns the current user name for filtering "My Errors"
+    # Uses configured dashboard username or system username
+    # @return [String] Current user identifier
+    def current_user_name
+      RailsErrorDashboard.configuration.dashboard_username || ENV["USER"] || "unknown"
+    end
+
+    # Generates a sortable column header link
+    # @param label [String] The column label to display
+    # @param column [String] The column name to sort by
+    # @return [String] HTML safe link with sort indicator
+    def sortable_header(label, column)
+      current_sort = params[:sort_by]
+      current_direction = params[:sort_direction] || "desc"
+
+      # Determine new direction: if clicking same column, toggle; otherwise default to desc
+      new_direction = if current_sort == column
+        current_direction == "asc" ? "desc" : "asc"
+      else
+        "desc"
+      end
+
+      # Choose icon based on current state
+      icon = if current_sort == column
+        current_direction == "asc" ? "▲" : "▼"
+      else
+        "⇅"  # Unsorted indicator
+      end
+
+      # Preserve existing filter params while adding sort params
+      link_params = params.permit!.to_h.merge(sort_by: column, sort_direction: new_direction)
+
+      link_to errors_path(link_params), class: "text-decoration-none" do
+        content_tag(:span, "#{label} ", class: current_sort == column ? "fw-bold" : "") +
+        content_tag(:span, icon, class: "text-muted small")
+      end
+    end
   end
 end
