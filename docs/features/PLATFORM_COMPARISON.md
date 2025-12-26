@@ -709,4 +709,4 @@ Android: "NoMethodError: undefined method `name`"  # Note: ` vs '
 - [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Fuzzy matching across platforms
 - [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Platform-specific baselines
 - [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Platform-specific patterns
-- [Error Correlation Guide](ERROR_CORRELATION_GUIDE.md) - Platform correlation analysis
+- [Error Correlation Guide](ERROR_CORRELATION.md) - Platform correlation analysis

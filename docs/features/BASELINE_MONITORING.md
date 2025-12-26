@@ -674,6 +674,6 @@ throttler.record_alert(
 ## Further Reading
 
 - [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Fuzzy matching and cascades
-- [Platform Comparison Guide](PLATFORM_COMPARISON_GUIDE.md) - iOS vs Android analysis
+- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - iOS vs Android analysis
 - [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Cyclical and burst patterns
-- [Error Correlation Guide](ERROR_CORRELATION_GUIDE.md) - Release and user correlation
+- [Error Correlation Guide](ERROR_CORRELATION.md) - Release and user correlation

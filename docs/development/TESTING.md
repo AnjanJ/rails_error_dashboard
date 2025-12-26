@@ -2,8 +2,6 @@
 
 Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.0, 7.1, 7.2, and 8.0.
 
-> 💡 **Troubleshooting CI?** See [CI_TROUBLESHOOTING.md](CI_TROUBLESHOOTING.md) for detailed solutions to common issues.
-
 ## Table of Contents
 
 - [Supported Versions](#supported-versions)
@@ -30,7 +28,7 @@ Rails Error Dashboard supports multiple Rails versions and is tested against Rai
 
 **Note**: Rails Error Dashboard requires **Ruby >= 3.2** due to the browser gem dependency.
 
-**Why no Ruby 3.1?** The browser gem v6.x requires Ruby >= 3.2.0. See [CI_TROUBLESHOOTING.md#1-browser-gem-ruby-version-incompatibility](CI_TROUBLESHOOTING.md#1-browser-gem-ruby-version-incompatibility) for details.
+**Why no Ruby 3.1?** The browser gem v6.x requires Ruby >= 3.2.0.
 
 ---
 
@@ -148,7 +146,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
-        bundler-cache: false  # Important: See CI_TROUBLESHOOTING.md#7
+        bundler-cache: false  # Important: Fresh lockfile per Rails version
 
     - name: Install dependencies
       env:
@@ -172,8 +170,6 @@ We **don't commit `Gemfile.lock`** for this gem. Here's why:
 **Problem**: Gemfile.lock with dynamic Rails versions causes deployment mode conflicts in CI.
 
 **Solution**: Generate fresh lockfile for each Rails version.
-
-**Details**: See [CI_TROUBLESHOOTING.md#7-bundler-deployment-mode-conflicts](CI_TROUBLESHOOTING.md#7-bundler-deployment-mode-conflicts)
 
 **This is standard for multi-version gems**: Devise, Pundit, FactoryBot, etc. all skip Gemfile.lock.
 
@@ -206,9 +202,9 @@ gh run view <run-id> --log
 ### Key Compatibility Notes
 
 1. **Ruby 3.2+ required** - browser gem dependency
-2. **concurrent-ruby pinned to < 1.3.5** - Rails 7.0 compatibility ([details](CI_TROUBLESHOOTING.md#3-concurrent-ruby-135-breaking-rails-70))
-3. **Rails 7.0.8+ used** - Bug fixes for Ruby 3.2+ ([details](CI_TROUBLESHOOTING.md#4-rails-700-descendantstracker-bugs))
-4. **sqlite3 version is conditional** - Different versions for Rails 7.x vs 8.x ([details](CI_TROUBLESHOOTING.md#5-sqlite3-version-conflicts))
+2. **concurrent-ruby pinned to < 1.3.5** - Rails 7.0 compatibility
+3. **Rails 7.0.8+ used** - Bug fixes for Ruby 3.2+
+4. **sqlite3 version is conditional** - Different versions for Rails 7.x vs 8.x
 
 ---
 
@@ -258,8 +254,6 @@ spec.add_dependency "httparty", "~> 0.21"
 - **concurrent-ruby < 1.3.5**: Rails 7.0 compatibility
 - **Rails 7.0.8+**: Bug fixes for Ruby 3.2+
 
-See [CI_TROUBLESHOOTING.md](CI_TROUBLESHOOTING.md) for detailed explanations.
-
 ---
 
 ## Troubleshooting
@@ -286,22 +280,18 @@ bundle install
 1. Check [Actions tab](https://github.com/AnjanJ/rails_error_dashboard/actions)
 2. Look for specific Ruby/Rails combination failing
 3. Check logs for error messages
-4. See [CI_TROUBLESHOOTING.md](CI_TROUBLESHOOTING.md) for solutions
+4. Common issues include: dependency conflicts, version incompatibilities, and platform-specific failures
 
 ### Common Issues
 
-All common CI issues and their solutions are documented in:
-
-**[CI_TROUBLESHOOTING.md](CI_TROUBLESHOOTING.md)**
-
-Issues covered:
-1. Browser gem Ruby version incompatibility
-2. SimpleCov blocking tests
-3. concurrent-ruby 1.3.5+ breaking Rails 7.0
-4. Rails 7.0.0 DescendantsTracker bugs
-5. SQLite3 version conflicts
-6. Gemfile.lock platform issues
-7. Bundler deployment mode conflicts
+Common CI issues and their resolutions:
+1. **Browser gem Ruby version incompatibility** - Requires Ruby >= 3.2.0
+2. **SimpleCov blocking tests** - Set `COVERAGE=false` in CI
+3. **concurrent-ruby 1.3.5+ breaking Rails 7.0** - Pinned to < 1.3.5
+4. **Rails 7.0.0 DescendantsTracker bugs** - Use Rails 7.0.8+
+5. **SQLite3 version conflicts** - Conditional versions per Rails
+6. **Gemfile.lock platform issues** - Don't commit lockfile
+7. **Bundler deployment mode conflicts** - Fresh lockfile per version
 
 ---
 
@@ -342,7 +332,6 @@ RAILS_DEPRECATION_WARNINGS=1 bundle exec rspec
 ## Resources
 
 ### Documentation
-- [CI Troubleshooting Guide](CI_TROUBLESHOOTING.md) - Detailed CI issue solutions
 - [Rails Upgrade Guide](https://guides.rubyonrails.org/upgrading_ruby_on_rails.html)
 - [ruby/setup-ruby](https://github.com/ruby/setup-ruby)
 
@@ -366,13 +355,13 @@ Rails Error Dashboard will:
 A: Use Rails 8.0 (latest) unless you have specific version requirements.
 
 **Q: Why isn't Gemfile.lock committed?**
-A: For multi-version gems, committed lockfiles conflict with CI matrix testing. See [CI_TROUBLESHOOTING.md#7](CI_TROUBLESHOOTING.md#7-bundler-deployment-mode-conflicts).
+A: For multi-version gems, committed lockfiles conflict with CI matrix testing. We generate a fresh lockfile for each Rails version.
 
 **Q: Can I use Rails 6.x?**
 A: No, minimum is Rails 7.0. Rails 6.x reached EOL.
 
 **Q: Why no Ruby 3.1?**
-A: The browser gem requires Ruby >= 3.2.0. See [CI_TROUBLESHOOTING.md#1](CI_TROUBLESHOOTING.md#1-browser-gem-ruby-version-incompatibility).
+A: The browser gem requires Ruby >= 3.2.0.
 
 **Q: How do I test locally without installing all versions?**
 A: Use Docker or rely on CI. GitHub Actions tests all combinations for you.
@@ -381,4 +370,4 @@ A: Use Docker or rely on CI. GitHub Actions tests all combinations for you.
 
 **Multi-version testing complete!** 🎉
 
-All 8 Ruby/Rails combinations tested in CI. See [CI_TROUBLESHOOTING.md](CI_TROUBLESHOOTING.md) for lessons learned.
+All 8 Ruby/Rails combinations tested in CI with comprehensive coverage across Rails 7.0 through 8.0.

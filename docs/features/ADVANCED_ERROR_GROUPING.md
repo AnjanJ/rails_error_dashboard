@@ -465,6 +465,6 @@ RailsErrorDashboard::Services::CascadeDetector.call(
 ## Further Reading
 
 - [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Statistical anomaly detection
-- [Platform Comparison Guide](PLATFORM_COMPARISON_GUIDE.md) - iOS vs Android analysis
+- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - iOS vs Android analysis
 - [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Temporal pattern detection
-- [Error Correlation Guide](ERROR_CORRELATION_GUIDE.md) - Release and user correlation
+- [Error Correlation Guide](ERROR_CORRELATION.md) - Release and user correlation

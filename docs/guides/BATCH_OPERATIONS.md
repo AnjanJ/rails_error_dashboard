@@ -413,9 +413,8 @@ Planned features for future versions:
 
 ## Related Documentation
 
-- [Main README](README.md) - Overall gem documentation
-- [NOTIFICATION_CONFIGURATION.md](NOTIFICATION_CONFIGURATION.md) - Notification setup
-- [Architecture Documentation](docs/architecture.md) - CQRS pattern details (if exists)
+- [Main README](../README.md) - Overall gem documentation
+- [Notifications](NOTIFICATIONS.md) - Notification setup
 
 ---
 

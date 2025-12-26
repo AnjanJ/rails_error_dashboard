@@ -831,5 +831,5 @@ correlation.platform_specific_errors
 
 - [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Finding related errors
 - [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Statistical anomaly detection
-- [Platform Comparison Guide](PLATFORM_COMPARISON_GUIDE.md) - Platform health analysis
+- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - Platform health analysis
 - [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Temporal pattern detection

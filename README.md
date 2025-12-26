@@ -96,18 +96,20 @@ HTTP Basic Auth, environment-based settings, optional separate database for isol
 ### Optional Features (Choose During Install)
 
 #### 🚨 Multi-Channel Notifications
-**Slack** - Rich formatted messages with error context and direct dashboard links
-**Email** - HTML formatted alerts with full error details
-**Discord** - Embedded messages with severity color coding
-**PagerDuty** - Critical error escalation with incident management
-**Webhooks** - Custom integrations with any service (JSON payloads)
+
+- **Slack** - Rich formatted messages with error context and direct dashboard links
+- **Email** - HTML formatted alerts with full error details
+- **Discord** - Embedded messages with severity color coding
+- **PagerDuty** - Critical error escalation with incident management
+- **Webhooks** - Custom integrations with any service (JSON payloads)
 
 #### ⚡ Performance Optimizations
-**Async Logging** - Non-blocking error capture using ActiveJob (Sidekiq/SolidQueue/Async)
-**Error Sampling** - Reduce storage by sampling high-frequency errors
-**Backtrace Limiting** - Save 70-90% storage with smart truncation
-**Separate Database** - Isolate error data for better performance
-**Database Indexes** - Composite indexes and PostgreSQL GIN full-text search
+
+- **Async Logging** - Non-blocking error capture using ActiveJob (Sidekiq/SolidQueue/Async)
+- **Error Sampling** - Reduce storage by sampling high-frequency errors
+- **Backtrace Limiting** - Save 70-90% storage with smart truncation
+- **Separate Database** - Isolate error data for better performance
+- **Database Indexes** - Composite indexes and PostgreSQL GIN full-text search
 
 #### 🧠 Advanced Analytics (8 Powerful Features)
 
@@ -378,7 +380,6 @@ config.webhook_urls = ['https://yourapp.com/hooks/errors']
 
 ### Development
 - **[Testing](docs/development/TESTING.md)** - Multi-version testing
-- **[CI Setup](docs/development/CI_SETUP.md)** - GitHub Actions configuration
 
 **📖 [View all documentation →](docs/README.md)**
 

@@ -479,4 +479,4 @@ RailsErrorDashboard::Commands::LogError.call(error, {})
 - Configure environment variables
 - Monitor error notifications
 
-For more help, see the [main README](README.md).
+For more help, see the [main README](../README.md).
