@@ -4,6 +4,13 @@ RailsErrorDashboard::Engine.routes.draw do
   resources :errors, only: [ :index, :show ] do
     member do
       post :resolve
+      post :assign
+      post :unassign
+      post :update_priority
+      post :snooze
+      post :unsnooze
+      post :update_status
+      post :add_comment
     end
     collection do
       get :analytics
