@@ -144,7 +144,7 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         end
 
         it "logs warning and continues" do
-          expect(Rails.logger).to receive(:warn).with(/Invalid ignored exception class/)
+          expect(RailsErrorDashboard::Logger).to receive(:warn).with(/Invalid ignored exception class/)
 
           expect {
             described_class.call(exception, context)
@@ -427,8 +427,8 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
 
           it "logs alert queued message" do
             # Allow other logging calls that may occur during the process
-            allow(Rails.logger).to receive(:info).and_call_original
-            expect(Rails.logger).to receive(:info).with(/Baseline alert queued/).and_call_original
+            allow(RailsErrorDashboard::Logger).to receive(:info).and_call_original
+            expect(RailsErrorDashboard::Logger).to receive(:info).with(/Baseline alert queued/).and_call_original
             described_class.call(exception, context)
           end
 
@@ -485,7 +485,7 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
           end
 
           it "handles error gracefully" do
-            expect(Rails.logger).to receive(:error).with(/Failed to check baseline anomaly/)
+            expect(RailsErrorDashboard::Logger).to receive(:error).with(/Failed to check baseline anomaly/)
 
             expect {
               described_class.call(exception, context)

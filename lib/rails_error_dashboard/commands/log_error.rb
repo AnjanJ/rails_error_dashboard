@@ -348,7 +348,7 @@ module RailsErrorDashboard
         # Enqueue alert job (which will handle throttling)
         BaselineAlertJob.perform_later(error_log.id, anomaly)
 
-        Rails.logger.info(
+        RailsErrorDashboard::Logger.info(
           "Baseline alert queued for #{error_log.error_type} on #{error_log.platform}: " \
           "#{anomaly[:level]} (#{anomaly[:std_devs_above]&.round(1)}σ above baseline)"
         )

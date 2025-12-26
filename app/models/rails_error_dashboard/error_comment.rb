@@ -3,7 +3,7 @@
 module RailsErrorDashboard
   # Model: ErrorComment
   # Represents a comment/note on an error for team collaboration
-  class ErrorComment < ApplicationRecord
+  class ErrorComment < ErrorLogsRecord
     self.table_name = "rails_error_dashboard_error_comments"
 
     belongs_to :error_log, class_name: "RailsErrorDashboard::ErrorLog"

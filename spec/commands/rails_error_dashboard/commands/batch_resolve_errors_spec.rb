@@ -176,11 +176,11 @@ RSpec.describe RailsErrorDashboard::Commands::BatchResolveErrors do
       end
 
       it "logs the error" do
-        allow(Rails.logger).to receive(:error)
+        allow(RailsErrorDashboard::Logger).to receive(:error)
 
         described_class.call(error_ids)
 
-        expect(Rails.logger).to have_received(:error).with(/Batch resolve failed/)
+        expect(RailsErrorDashboard::Logger).to have_received(:error).with(/Batch resolve failed/)
       end
     end
 
