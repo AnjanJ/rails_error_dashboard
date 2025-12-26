@@ -415,16 +415,19 @@ We welcome contributions! Here's how to get started:
 ```bash
 git clone https://github.com/AnjanJ/rails_error_dashboard.git
 cd rails_error_dashboard
+
+# Automated setup (installs deps, hooks, runs tests)
+bin/setup
+
+# Or manual setup
 bundle install
-
-# Run tests
+bundle exec lefthook install  # Installs git hooks
 bundle exec rspec
-
-# Run tests for all Rails versions
-bundle exec appraisal rspec
 ```
 
-**🔧 [Development guide →](docs/development/TESTING.md)**
+**Git Hooks:** We use [Lefthook](https://github.com/evilmartians/lefthook) to run quality checks before commit/push. This ensures CI passes and saves GitHub Actions minutes!
+
+**🔧 [Development guide →](DEVELOPMENT.md)** | **🧪 [Testing guide →](docs/development/TESTING.md)**
 
 ---
 

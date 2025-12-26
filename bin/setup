@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Setup script for Rails Error Dashboard development
+set -e
+
+echo "🚀 Setting up Rails Error Dashboard development environment..."
+echo
+
+# Check Ruby version
+echo "📍 Checking Ruby version..."
+ruby_version=$(ruby -v | awk '{print $2}')
+required_version="3.2.0"
+if [[ "$(printf '%s\n' "$required_version" "$ruby_version" | sort -V | head -n1)" != "$required_version" ]]; then
+  echo "❌ Ruby $required_version or higher is required"
+  echo "   Current version: $ruby_version"
+  exit 1
+fi
+echo "✅ Ruby $ruby_version"
+echo
+
+# Install dependencies
+echo "📦 Installing dependencies..."
+bundle install
+echo
+
+# Install Lefthook hooks
+echo "🪝 Installing Lefthook git hooks..."
+bundle exec lefthook install
+echo "✅ Git hooks installed (pre-commit, pre-push)"
+echo
+
+# Run bundle audit setup
+echo "🔒 Setting up bundle audit..."
+gem list bundler-audit | grep bundler-audit || gem install bundler-audit
+bundle audit update
+echo
+
+# Setup database
+echo "🗄️  Setting up test database..."
+RAILS_ENV=test bundle exec rails db:create db:migrate 2>/dev/null || echo "Database already exists"
+echo
+
+# Run tests to verify setup
+echo "🧪 Running tests to verify setup..."
+COVERAGE=false bundle exec rspec --format documentation --fail-fast || {
+  echo "❌ Some tests failed. Please fix before continuing."
+  exit 1
+}
+echo
+
+# Success!
+echo "============================================"
+echo "✅ Setup complete!"
+echo "============================================"
+echo
+echo "📚 Quick Reference:"
+echo "  • Run tests:        bundle exec rspec"
+echo "  • Run RuboCop:      bundle exec rubocop"
+echo "  • Auto-fix RuboCop: bundle exec rubocop -A"
+echo "  • Run all checks:   lefthook run qa"
+echo "  • Run quick checks: lefthook run quick"
+echo "  • Skip hooks:       LEFTHOOK=0 git commit"
+echo
+echo "🪝 Git Hooks Active:"
+echo "  • pre-commit: Fast checks on staged files"
+echo "  • pre-push:   Full CI checks before pushing"
+echo
+echo "💡 Tip: Hooks save CI minutes by catching issues locally!"
+echo
