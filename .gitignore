@@ -24,3 +24,6 @@ coverage/
 # Ignore byebug history
 .byebug_history
 log/
+
+# Ignore Claude IDE settings
+.claude/settings.local.json
