@@ -1,0 +1,253 @@
+<div class="container-fluid py-4">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-speedometer2 me-2"></i>
+      Dashboard Overview
+    </h1>
+    <div class="text-muted">
+      <small>
+        Last updated: <%= Time.current.strftime("%B %d, %Y %I:%M %p") %>
+      </small>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards (Mobile-first: stack on mobile, 3 columns on desktop) -->
+  <div class="row g-3 mb-4">
+    <!-- Error Rate Card -->
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card stat-card h-100 <%= error_rate_border_class(@stats[:error_rate]) %>">
+        <div class="card-body text-center">
+          <div class="stat-label mb-2">ERROR RATE</div>
+          <div class="stat-value <%= error_rate_text_class(@stats[:error_rate]) %>">
+            <%= @stats[:error_rate] %>%
+          </div>
+          <small class="text-muted">Errors per hour today</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Affected Users Card -->
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card stat-card h-100">
+        <div class="card-body text-center">
+          <div class="stat-label mb-2">AFFECTED USERS</div>
+          <div class="stat-value text-primary">
+            <%= @stats[:affected_users_today] %>
+          </div>
+          <small class="<%= trend_color_class(@stats[:affected_users_change]) %>">
+            <%= trend_arrow(@stats[:affected_users_change]) %>
+            <%= @stats[:affected_users_change].abs %>
+            from yesterday
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trend Card -->
+    <div class="col-12 col-lg-4">
+      <div class="card stat-card h-100">
+        <div class="card-body text-center">
+          <div class="stat-label mb-2">ERROR TREND</div>
+          <div class="stat-value <%= trend_color_class(@stats[:trend_percentage]) %>">
+            <%= trend_arrow(@stats[:trend_percentage]) %>
+            <%= @stats[:trend_percentage].abs %>%
+          </div>
+          <small class="text-muted">
+            <%= trend_text(@stats[:trend_direction]) %>
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 5 Errors by Impact (Mobile: stack, Desktop: 2 columns) -->
+  <% if @stats[:top_errors_by_impact].any? %>
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Top 5 Errors by Impact
+        </h5>
+        <%= link_to "View All Errors →", errors_path, class: "btn btn-sm btn-outline-primary" %>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <% @stats[:top_errors_by_impact].each do |error| %>
+            <div class="col-12 col-lg-6">
+              <%= link_to error_path(error[:id]), class: "text-decoration-none" do %>
+                <div class="card h-100 border-start border-<%= severity_color(error[:severity]) %> border-3">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                          <span class="badge bg-<%= severity_color(error[:severity]) %> me-2">
+                            <%= severity_icon(error[:severity]) %> <%= error[:severity].to_s.titleize %>
+                          </span>
+                          <code class="small"><%= error[:error_type] %></code>
+                        </h6>
+                        <p class="small text-muted mb-2"><%= error[:message] %></p>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small">
+                      <span class="text-muted">
+                        <i class="bi bi-people-fill me-1"></i>
+                        <%= error[:affected_users] %> user<%= error[:affected_users] != 1 ? 's' : '' %>
+                      </span>
+                      <span class="text-muted">
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                        <%= error[:occurrence_count] %> occurrence<%= error[:occurrence_count] != 1 ? 's' : '' %>
+                      </span>
+                      <span class="fw-bold text-danger">
+                        Impact: <%= error[:impact_score] %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Platform Health Summary (Mobile: stack, Desktop: 3 columns) -->
+  <% if @platform_health.any? %>
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-phone me-2"></i>
+          Platform Health
+        </h5>
+        <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
+          <%= link_to "Full Comparison →", platform_comparison_errors_path, class: "btn btn-sm btn-outline-primary" %>
+        <% end %>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <% @platform_health.each do |platform, health| %>
+            <div class="col-12 col-md-4">
+              <div class="card h-100 border-<%= health_status_color(health[:health_status]) %>">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h6 class="text-capitalize mb-0"><%= platform %></h6>
+                    <span class="badge bg-<%= health_status_color(health[:health_status]) %>">
+                      <%= health_status_text(health[:health_status]) %>
+                    </span>
+                  </div>
+
+                  <div class="mb-2">
+                    <small class="text-muted">Stability Score</small>
+                    <div class="d-flex align-items-center">
+                      <h4 class="mb-0 me-2"><%= health[:stability_score] %>/100</h4>
+                      <div class="progress flex-grow-1" style="height: 8px;">
+                        <div class="progress-bar bg-<%= health_status_color(health[:health_status]) %>"
+                             role="progressbar"
+                             style="width: <%= health[:stability_score] %>%">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="text-muted">Total Errors:</span>
+                      <strong><%= health[:total_errors] %></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="text-muted">Critical:</span>
+                      <strong class="text-danger"><%= health[:critical_errors] %></strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">Unresolved:</span>
+                      <strong><%= health[:unresolved_errors] %></strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Critical Alerts (Last hour) -->
+  <% if @critical_alerts.any? %>
+    <div class="alert alert-danger border-danger mb-4" role="alert">
+      <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+        <div>
+          <h5 class="alert-heading mb-0">
+            🚨 <%= @critical_alerts.count %> Critical/High Error<%= @critical_alerts.count != 1 ? 's' : '' %> in Last Hour
+          </h5>
+        </div>
+      </div>
+      <div class="list-group list-group-flush">
+        <% @critical_alerts.first(5).each do |error| %>
+          <%= link_to error_path(error), class: "list-group-item list-group-item-action" do %>
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-1">
+                  <span class="badge bg-<%= severity_color(error.severity) %> me-2">
+                    <%= severity_icon(error.severity) %>
+                  </span>
+                  <code class="small"><%= error.error_type %></code>
+                </div>
+                <p class="mb-1 small"><%= error.message&.truncate(100) %></p>
+                <small class="text-muted">
+                  <i class="bi bi-clock me-1"></i>
+                  <%= time_ago_in_words(error.occurred_at) %> ago
+                  •
+                  <i class="bi bi-arrow-repeat me-1"></i>
+                  <%= error.occurrence_count %> occurrence<%= error.occurrence_count != 1 ? 's' : '' %>
+                </small>
+              </div>
+              <i class="bi bi-chevron-right"></i>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+      <% if @critical_alerts.count > 5 %>
+        <div class="mt-2">
+          <%= link_to "View all #{@critical_alerts.count} critical errors →",
+                     errors_path(severity: 'critical'),
+                     class: "btn btn-sm btn-outline-danger" %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Quick Actions -->
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-lg-3">
+      <%= link_to errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
+        <i class="bi bi-list-ul d-block fs-3 mb-2"></i>
+        View All Errors
+      <% end %>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+      <%= link_to analytics_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
+        <i class="bi bi-graph-up d-block fs-3 mb-2"></i>
+        Analytics
+      <% end %>
+    </div>
+    <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
+      <div class="col-12 col-md-6 col-lg-3">
+        <%= link_to platform_comparison_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
+          <i class="bi bi-phone d-block fs-3 mb-2"></i>
+          Platform Health
+        <% end %>
+      </div>
+    <% end %>
+    <% if RailsErrorDashboard.configuration.enable_error_correlation %>
+      <div class="col-12 col-md-6 col-lg-3">
+        <%= link_to correlation_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
+          <i class="bi bi-diagram-3 d-block fs-3 mb-2"></i>
+          Correlation
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -44,11 +44,72 @@
             <%= @error.message %>
           </div>
 
-          <h6 class="text-muted mb-2 mt-4">Backtrace:</h6>
+          <h6 class="text-muted mb-2 mt-4">
+            Backtrace:
+            <% if @error.backtrace.present? %>
+              <% frames = parse_backtrace(@error.backtrace) %>
+              <% app_frames = filter_app_code(frames) %>
+              <% framework_frames = filter_framework_code(frames) %>
+              <small class="text-muted">
+                (<%= app_frames.count %> your code, <%= framework_frames.count %> framework/gems)
+              </small>
+            <% end %>
+          </h6>
           <% if @error.backtrace.present? %>
-            <div class="bg-dark text-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">
-              <pre class="mb-0"><code><%= @error.backtrace %></code></pre>
-            </div>
+            <% frames = parse_backtrace(@error.backtrace) %>
+            <% app_frames = filter_app_code(frames) %>
+            <% framework_frames = filter_framework_code(frames) %>
+
+            <% if app_frames.any? %>
+              <!-- Your Code Section (Expanded by default) -->
+              <div class="card mb-3">
+                <div class="card-header bg-success bg-opacity-10 border-success">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <strong class="text-success">
+                      <i class="bi bi-code-square"></i> Your Code
+                    </strong>
+                    <span class="badge bg-success"><%= app_frames.count %> frames</span>
+                  </div>
+                </div>
+                <div class="card-body p-0">
+                  <div class="bg-dark text-light p-3" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
+                    <pre class="mb-0"><code><% app_frames.each do |frame| %><span class="<%= frame_bg_class(frame[:category]) %> d-block px-2 py-1"><span class="text-success fw-bold"><%= frame_icon(frame[:category]) %> <%= frame[:short_path] %>:<%= frame[:line_number] %></span> in <span class="text-info">`<%= frame[:method_name] %>'</span></span>
+<% end %></code></pre>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <% if framework_frames.any? %>
+              <!-- Framework/Gem Code Section (Collapsed by default) -->
+              <div class="accordion" id="frameworkBacktraceAccordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#frameworkBacktrace" aria-expanded="false" aria-controls="frameworkBacktrace">
+                      <i class="bi bi-gear me-2 text-warning"></i>
+                      <strong>Framework & Gem Code</strong>
+                      <span class="badge bg-secondary ms-2"><%= framework_frames.count %> frames</span>
+                      <small class="text-muted ms-2">(click to expand)</small>
+                    </button>
+                  </h2>
+                  <div id="frameworkBacktrace" class="accordion-collapse collapse" data-bs-parent="#frameworkBacktraceAccordion">
+                    <div class="accordion-body p-0">
+                      <div class="bg-dark text-light p-3" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                        <pre class="mb-0"><code><% framework_frames.each do |frame| %><span class="<%= frame_color_class(frame[:category]) %> d-block px-2 py-1"><%= frame_icon(frame[:category]) %> <%= frame[:short_path] %>:<%= frame[:line_number] %></span> in <span class="text-info">`<%= frame[:method_name] %>'</span></span>
+<% end %></code></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <% if app_frames.empty? && framework_frames.empty? %>
+              <!-- Fallback: Show raw backtrace if parsing failed -->
+              <div class="bg-dark text-light p-3 rounded" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                <pre class="mb-0"><code><%= @error.backtrace %></code></pre>
+              </div>
+            <% end %>
           <% else %>
             <p class="text-muted">No backtrace available</p>
           <% end %>
@@ -78,7 +139,28 @@
             </tr>
             <tr>
               <th>User Agent:</th>
-              <td><small><%= @error.user_agent || 'N/A' %></small></td>
+              <td>
+                <% if @error.user_agent.present? %>
+                  <% ua_info = parse_user_agent(@error.user_agent) %>
+                  <div class="mb-2">
+                    <%= browser_icon(ua_info) %>
+                    <strong><%= ua_info[:browser_name] %></strong>
+                    <% if ua_info[:browser_version].present? %>
+                      <span class="text-muted"><%= ua_info[:browser_version] %></span>
+                    <% end %>
+                    <span class="ms-2"><%= os_icon(ua_info) %> <%= ua_info[:os_name] %></span>
+                    <span class="ms-2"><%= device_icon(ua_info) %> <%= ua_info[:device_type] %></span>
+                  </div>
+                  <details>
+                    <summary class="text-muted" style="cursor: pointer;">
+                      <small>Raw User Agent</small>
+                    </summary>
+                    <small class="text-muted"><%= @error.user_agent %></small>
+                  </details>
+                <% else %>
+                  <span class="text-muted">N/A</span>
+                <% end %>
+              </td>
             </tr>
             <tr>
               <th>IP Address:</th>
@@ -231,56 +313,66 @@
         <% end %>
       <% end %>
 
-      <!-- Related Errors -->
-      <% if @related_errors.any? %>
-        <div class="card">
+      <!-- Timeline: Related Errors -->
+      <%= render "timeline" %>
+
+      <!-- Phase 3: Comment Threads -->
+      <% if @error.respond_to?(:comments) %>
+        <div class="card mb-4">
           <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-collection"></i> Related Errors</h5>
+            <h5 class="mb-0">
+              <i class="bi bi-chat-dots"></i> Discussion
+              <span class="badge bg-secondary ms-2"><%= @error.comments.count %></span>
+            </h5>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Time</th>
-                    <th>Message</th>
-                    <th>Platform</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @related_errors.each do |related| %>
-                    <tr>
-                      <td><small><%= related.occurred_at.strftime("%m/%d %I:%M%p") %></small></td>
-                      <td>
-                        <div class="text-truncate" style="max-width: 400px;">
-                          <%= related.message %>
-                        </div>
-                      </td>
-                      <td>
-                        <% if related.platform == 'iOS' %>
-                          <span class="badge badge-ios">iOS</span>
-                        <% elsif related.platform == 'Android' %>
-                          <span class="badge badge-android">Android</span>
-                        <% else %>
-                          <span class="badge badge-api"><%= related.platform || 'API' %></span>
+          <div class="card-body">
+            <!-- Existing Comments -->
+            <% if @error.comments.recent_first.any? %>
+              <div class="mb-4">
+                <% @error.comments.recent_first.each do |comment| %>
+                  <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <strong class="text-primary">
+                          <i class="bi bi-person-circle"></i> <%= comment.author_name %>
+                        </strong>
+                        <% if comment.recent? %>
+                          <span class="badge bg-success ms-2">New</span>
                         <% end %>
-                      </td>
-                      <td>
-                        <% if related.resolved? %>
-                          <i class="bi bi-check-circle-fill text-success"></i>
-                        <% else %>
-                          <i class="bi bi-exclamation-circle-fill text-danger"></i>
-                        <% end %>
-                      </td>
-                      <td>
-                        <%= link_to "View", error_path(related), class: "btn btn-sm btn-outline-primary" %>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
+                      </div>
+                      <small class="text-muted">
+                        <%= comment.formatted_time %>
+                        <span class="ms-1 text-muted">(<%= time_ago_in_words(comment.created_at) %> ago)</span>
+                      </small>
+                    </div>
+                    <div class="text-break">
+                      <%= simple_format(comment.body, class: "mb-0") %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="text-muted mb-4">
+                <i class="bi bi-info-circle"></i> No comments yet. Start the discussion below.
+              </p>
+            <% end %>
+
+            <!-- Add Comment Form -->
+            <div class="border-top pt-3">
+              <h6 class="mb-3">
+                <i class="bi bi-plus-circle"></i> Add Comment
+              </h6>
+              <%= form_with url: add_comment_error_path(@error), method: :post do |f| %>
+                <div class="mb-3">
+                  <label for="author_name" class="form-label">Your Name <span class="text-danger">*</span></label>
+                  <%= text_field_tag :author_name, @error.assigned_to, class: "form-control", placeholder: "e.g., John Doe", required: true %>
+                </div>
+                <div class="mb-3">
+                  <label for="body" class="form-label">Comment <span class="text-danger">*</span></label>
+                  <%= text_area_tag :body, nil, class: "form-control", rows: 4, placeholder: "Share your thoughts, findings, or updates...", required: true %>
+                </div>
+                <%= submit_tag "Post Comment", class: "btn btn-primary" %>
+              <% end %>
             </div>
           </div>
         </div>
@@ -494,9 +586,14 @@
             <% end %>
           </div>
 
+          <!-- Phase 3: Workflow Status -->
           <div class="mb-3">
-            <small class="text-muted d-block mb-1">Status</small>
-            <% if @error.resolved? %>
+            <small class="text-muted d-block mb-1">Workflow Status</small>
+            <% if @error.respond_to?(:status) %>
+              <span class="badge bg-<%= @error.status_badge_color %> fs-6">
+                <%= @error.status.titleize %>
+              </span>
+            <% elsif @error.resolved? %>
               <span class="badge bg-success">
                 <i class="bi bi-check-circle"></i> Resolved
               </span>
@@ -512,6 +609,67 @@
               </span>
             <% end %>
           </div>
+
+          <!-- Phase 3: Assignment -->
+          <% if @error.respond_to?(:assigned_to) %>
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Assigned To</small>
+              <% if @error.assigned? %>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <i class="bi bi-person-fill text-primary"></i>
+                    <strong><%= @error.assigned_to %></strong>
+                    <% if @error.assigned_at.present? %>
+                      <br>
+                      <small class="text-muted">
+                        <%= time_ago_in_words(@error.assigned_at) %> ago
+                      </small>
+                    <% end %>
+                  </div>
+                  <%= button_to unassign_error_path(@error), method: :patch, class: "btn btn-sm btn-outline-secondary",
+                      data: { turbo_confirm: "Remove assignment?" } do %>
+                    <i class="bi bi-x"></i>
+                  <% end %>
+                </div>
+              <% else %>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+                  <i class="bi bi-person-plus"></i> Assign
+                </button>
+              <% end %>
+            </div>
+
+            <!-- Phase 3: Priority -->
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Priority</small>
+              <% if @error.respond_to?(:priority_level) %>
+                <span class="badge bg-<%= @error.priority_color %> fs-6">
+                  <%= @error.priority_label %>
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#priorityModal">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              <% end %>
+            </div>
+
+            <!-- Phase 3: Snooze -->
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Snooze</small>
+              <% if @error.respond_to?(:snoozed?) && @error.snoozed? %>
+                <div class="alert alert-warning py-2 mb-2">
+                  <i class="bi bi-alarm"></i>
+                  <strong>Snoozed</strong><br>
+                  <small>Until <%= @error.snoozed_until&.strftime("%b %d at %I:%M %p") %></small>
+                </div>
+                <%= button_to unsnooze_error_path(@error), method: :patch, class: "btn btn-sm btn-outline-warning" do %>
+                  <i class="bi bi-alarm-fill"></i> Unsnooze
+                <% end %>
+              <% else %>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#snoozeModal">
+                  <i class="bi bi-alarm"></i> Snooze
+                </button>
+              <% end %>
+            </div>
+          <% end %>
 
           <% if @error.resolved? && @error.resolved_by_name.present? %>
             <div class="mb-3">
@@ -535,6 +693,44 @@
               </div>
             </div>
           <% end %>
+
+          <!-- Environment Information -->
+          <div class="mb-3">
+            <small class="text-muted d-block mb-2">
+              <i class="bi bi-gear"></i> Environment
+            </small>
+
+            <% if @error.app_version.present? %>
+              <div class="mb-1">
+                <small class="text-muted">App Version:</small>
+                <code class="ms-1"><%= @error.app_version %></code>
+              </div>
+            <% end %>
+
+            <% if @error.git_sha.present? %>
+              <div class="mb-1">
+                <small class="text-muted">Git SHA:</small>
+                <code class="ms-1"><%= @error.git_sha[0..7] %></code>
+              </div>
+            <% end %>
+
+            <div class="mb-1">
+              <small class="text-muted">Rails:</small>
+              <code class="ms-1"><%= Rails.version %></code>
+            </div>
+
+            <div class="mb-1">
+              <small class="text-muted">Ruby:</small>
+              <code class="ms-1"><%= RUBY_VERSION %></code>
+            </div>
+
+            <div class="mb-1">
+              <small class="text-muted">Environment:</small>
+              <span class="badge bg-<%= Rails.env.production? ? 'danger' : Rails.env.development? ? 'success' : 'warning' %> ms-1">
+                <%= Rails.env.titleize %>
+              </span>
+            </div>
+          </div>
 
           <div>
             <small class="text-muted d-block mb-1">Error ID</small>
@@ -704,6 +900,109 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <%= submit_tag "Mark as Resolved", class: "btn btn-success" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: assign_error_path(@error), method: :patch do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignModalLabel">
+            <i class="bi bi-person-plus"></i> Assign Error
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="assigned_to" class="form-label">Assign To <span class="text-danger">*</span></label>
+            <%= text_field_tag :assigned_to, nil, class: "form-control", placeholder: "e.g., John Doe", required: true, autofocus: true %>
+            <small class="text-muted">Who should investigate this error?</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Assign", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Priority Modal -->
+<div class="modal fade" id="priorityModal" tabindex="-1" aria-labelledby="priorityModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: update_priority_error_path(@error), method: :patch do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="priorityModalLabel">
+            <i class="bi bi-flag"></i> Update Priority
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="priority_level" class="form-label">Priority Level <span class="text-danger">*</span></label>
+            <%= select_tag :priority_level,
+                options_for_select([
+                  ['Critical (P3)', 3],
+                  ['High (P2)', 2],
+                  ['Medium (P1)', 1],
+                  ['Low (P0)', 0]
+                ], @error.priority_level),
+                class: "form-select", required: true %>
+            <small class="text-muted">Current: <%= @error.priority_label %></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Update Priority", class: "btn btn-warning" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Snooze Modal -->
+<div class="modal fade" id="snoozeModal" tabindex="-1" aria-labelledby="snoozeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: snooze_error_path(@error), method: :patch do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="snoozeModalLabel">
+            <i class="bi bi-alarm"></i> Snooze Error
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="hours" class="form-label">Snooze Duration <span class="text-danger">*</span></label>
+            <%= select_tag :hours,
+                options_for_select([
+                  ['1 hour', 1],
+                  ['4 hours', 4],
+                  ['8 hours', 8],
+                  ['24 hours (1 day)', 24],
+                  ['48 hours (2 days)', 48],
+                  ['168 hours (1 week)', 168]
+                ], 24),
+                class: "form-select", required: true %>
+            <small class="text-muted">Hide this error from active views</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label">Reason (Optional)</label>
+            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: "Why are you snoozing this error?" %>
+            <small class="text-muted">Reason will be added as a comment</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Snooze", class: "btn btn-warning" %>
         </div>
       <% end %>
     </div>

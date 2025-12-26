@@ -1,0 +1,167 @@
+<%# Timeline view for related errors leading up to this error %>
+<% if @related_errors.any? %>
+  <div class="card">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">
+        <i class="bi bi-clock-history"></i> Timeline
+        <small class="text-muted ms-2">Recent related errors</small>
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="timeline">
+        <% @related_errors.each_with_index do |error, index| %>
+          <div class="timeline-item <%= index == @related_errors.length - 1 ? 'timeline-item-last' : '' %>">
+            <div class="timeline-marker <%= error.id == @error.id ? 'timeline-marker-current' : '' %>">
+              <% if error.id == @error.id %>
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+              <% elsif error.resolved? %>
+                <i class="bi bi-check-circle-fill text-success"></i>
+              <% else %>
+                <i class="bi bi-circle-fill text-secondary"></i>
+              <% end %>
+            </div>
+
+            <div class="timeline-content">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="flex-grow-1">
+                  <% if error.id == @error.id %>
+                    <strong class="text-danger">
+                      <i class="bi bi-arrow-right-circle"></i> Current Error
+                    </strong>
+                  <% else %>
+                    <%= link_to error_path(error), class: "text-decoration-none" do %>
+                      <strong><%= error.error_type %></strong>
+                    <% end %>
+                  <% end %>
+
+                  <% if error.platform.present? %>
+                    <% if error.platform == 'iOS' %>
+                      <span class="badge badge-ios ms-2">iOS</span>
+                    <% elsif error.platform == 'Android' %>
+                      <span class="badge badge-android ms-2">Android</span>
+                    <% else %>
+                      <span class="badge badge-api ms-2"><%= error.platform %></span>
+                    <% end %>
+                  <% end %>
+                </div>
+
+                <small class="text-muted">
+                  <%= time_ago_in_words(error.occurred_at) %> ago
+                </small>
+              </div>
+
+              <% if error.message.present? %>
+                <p class="mb-1 text-muted small">
+                  <%= truncate(error.message, length: 100) %>
+                </p>
+              <% end %>
+
+              <div class="d-flex align-items-center gap-2 small">
+                <% if error.user_id %>
+                  <span class="text-muted">
+                    <i class="bi bi-person"></i>
+                    User: <%= error.user_id %>
+                  </span>
+                <% end %>
+
+                <% if error.occurrence_count > 1 %>
+                  <span class="text-muted">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <%= error.occurrence_count %>x
+                  </span>
+                <% end %>
+
+                <% if error.resolved? %>
+                  <span class="badge bg-success">
+                    <i class="bi bi-check-circle"></i> Resolved
+                  </span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .timeline {
+      position: relative;
+      padding-left: 0;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 40px;
+      padding-bottom: 30px;
+    }
+
+    .timeline-item-last {
+      padding-bottom: 0;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 30px;
+      bottom: 0;
+      width: 2px;
+      background: var(--bs-border-color);
+    }
+
+    .timeline-item-last::before {
+      display: none;
+    }
+
+    .timeline-marker {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 2px solid var(--bs-border-color);
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .timeline-marker-current {
+      border-color: var(--bs-danger);
+      background: var(--bs-danger-bg-subtle);
+      box-shadow: 0 0 0 4px var(--bs-danger-bg-subtle);
+    }
+
+    .timeline-marker i {
+      font-size: 12px;
+    }
+
+    .timeline-content {
+      background: var(--bs-body-bg);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--bs-border-color);
+    }
+
+    .timeline-item:hover .timeline-content {
+      border-color: var(--bs-primary);
+      background: var(--bs-primary-bg-subtle);
+    }
+
+    /* Dark mode support */
+    body.dark-mode .timeline-marker,
+    html[data-theme="dark"] body .timeline-marker {
+      background: var(--card-bg);
+      border-color: var(--border-color);
+    }
+
+    body.dark-mode .timeline-marker-current,
+    html[data-theme="dark"] body .timeline-marker-current {
+      border-color: var(--bs-danger);
+      background: rgba(220, 53, 69, 0.2);
+    }
+  </style>
+<% end %>

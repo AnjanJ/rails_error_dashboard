@@ -26,7 +26,7 @@ rails db:migrate
 
 ### Interactive Feature Selection
 
-The installer will guide you through **16 optional features** organized in 3 categories:
+The installer will guide you through **15 optional features** organized in 3 categories:
 
 **📧 Notifications (5 features)**
 - Slack - Real-time error notifications to Slack channels
@@ -40,7 +40,7 @@ The installer will guide you through **16 optional features** organized in 3 cat
 - Error Sampling - Reduce volume by sampling non-critical errors
 - Separate Database - Isolate error data in dedicated database
 
-**📊 Advanced Analytics (8 features)**
+**📊 Advanced Analytics (7 features)**
 - Baseline Anomaly Alerts - Detect unusual error patterns automatically
 - Fuzzy Error Matching - Find similar errors across different hashes
 - Co-occurring Errors - Identify errors that happen together
@@ -69,11 +69,11 @@ Choose the features you want to enable:
 📧  NOTIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/16] Slack Notifications
+[1/15] Slack Notifications
     Send real-time error notifications to Slack channels
     Enable? (y/N): y
 
-[2/16] Email Notifications
+[2/15] Email Notifications
     Send error alerts via email to your team
     Enable? (y/N): n
 
@@ -294,8 +294,8 @@ end
 
 **Verify credentials** in `config/initializers/rails_error_dashboard.rb`:
 ```ruby
-config.username = "admin"
-config.password = "your_password"
+config.dashboard_username = "admin"
+config.dashboard_password = "your_password"
 ```
 
 **Restart server** after changing configuration:
@@ -380,7 +380,7 @@ Before deploying to production:
 ## Getting Help
 
 - **Documentation**: [docs/README.md](README.md)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/rails_error_dashboard/issues)
+- **Issues**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
 - **Configuration**: [Configuration Guide](guides/CONFIGURATION.md)
 
 ## What's Next?

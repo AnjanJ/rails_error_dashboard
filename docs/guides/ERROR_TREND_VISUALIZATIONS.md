@@ -18,7 +18,7 @@ This guide explains the trend visualization and spike detection features in Rail
 
 ## Overview
 
-Phase 3.2 adds visual trend analysis to help you:
+Visual trend analysis helps you:
 - **Spot patterns** in error occurrences over time
 - **Detect spikes** automatically when error rates surge
 - **Understand severity distribution** to prioritize fixes
@@ -743,7 +743,7 @@ end
 ✅ **High Performance** - Only 2 queries, < 200ms load time
 ✅ **Production Ready** - 545 tests passing
 
-**Next Up: Phase 3.3 - Enhanced Metrics**
+**Available Now:**
 - User impact tracking (% of users affected)
 - Smart priority scoring
-- Release/version tracking
+- Release/version tracking via error correlation features

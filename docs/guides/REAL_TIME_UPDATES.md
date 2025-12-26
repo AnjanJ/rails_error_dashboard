@@ -730,7 +730,7 @@ Dashboard continues to function normally with manual refresh.
 ✅ **Browser compatible** - All modern browsers supported
 ✅ **Production ready** - All 545 tests passing
 
-**Next Steps:**
-- Continue with Phase 3.2: Error Trend Visualizations
-- Add charts for 7-day trends
-- Implement spike detection
+**Related Features:**
+- [Error Trend Visualizations](ERROR_TREND_VISUALIZATIONS.md) - Charts for 7-day trends
+- [Baseline Monitoring](../features/BASELINE_MONITORING.md) - Spike detection and alerts
+- [Analytics](../FEATURES.md#analytics--insights) - Complete analytics features

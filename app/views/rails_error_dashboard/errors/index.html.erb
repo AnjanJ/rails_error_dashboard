@@ -149,6 +149,36 @@
           ], params[:severity]), class: "form-select" %>
         </div>
 
+        <!-- Phase 3: Workflow Filters -->
+        <div class="col-md-2">
+          <%= select_tag :status, options_for_select([
+            ['All Statuses', ''],
+            ['🆕 New', 'new'],
+            ['🔵 In Progress', 'in_progress'],
+            ['🟡 Investigating', 'investigating'],
+            ['✅ Resolved', 'resolved'],
+            ['⚫ Won\'t Fix', 'wont_fix']
+          ], params[:status]), class: "form-select" %>
+        </div>
+
+        <div class="col-md-2">
+          <%= select_tag :assigned_to, options_for_select([
+            ['All Assignments', ''],
+            ['Unassigned', '__unassigned__'],
+            ['Assigned', '__assigned__']
+          ], params[:assigned_to]), class: "form-select" %>
+        </div>
+
+        <div class="col-md-2">
+          <%= select_tag :priority_level, options_for_select([
+            ['All Priorities', ''],
+            ['🔴 Critical (P3)', 3],
+            ['🟠 High (P2)', 2],
+            ['🟡 Medium (P1)', 1],
+            ['⚪ Low (P0)', 0]
+          ], params[:priority_level]), class: "form-select" %>
+        </div>
+
         <div class="col-auto">
           <div class="form-check mt-2">
             <%
@@ -163,6 +193,13 @@
             %>
             <%= check_box_tag :unresolved, "1", is_checked, class: "form-check-input", id: "unresolved_checkbox" %>
             <%= label_tag :unresolved, "Unresolved only", class: "form-check-label" %>
+          </div>
+        </div>
+
+        <div class="col-auto">
+          <div class="form-check mt-2">
+            <%= check_box_tag :hide_snoozed, "1", params[:hide_snoozed] == "1", class: "form-check-input" %>
+            <%= label_tag :hide_snoozed, "Hide snoozed", class: "form-check-label" %>
           </div>
         </div>
 

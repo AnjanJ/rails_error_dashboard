@@ -76,28 +76,69 @@ This Rails Engine is in beta and under active development. While functional and 
 
 ## ✨ Features
 
-### 🎯 Complete Error Tracking
+### Core Features (Always Enabled)
+
+#### 🎯 Complete Error Tracking
 Automatic error capture from Rails controllers, jobs, and middleware. Frontend & mobile support for React, React Native, Vue, Angular, Flutter. Platform detection (iOS/Android/Web/API), user context tracking, full stack traces.
 
-### 📊 Beautiful Dashboard
-Modern Bootstrap 5 UI with dark/light mode, responsive design, real-time statistics, search and filtering, fast pagination.
+#### 📊 Beautiful Dashboard
+Modern Bootstrap 5 UI with dark/light mode, responsive design, real-time statistics, search and filtering, fast pagination. Overview dashboard with critical alerts, error trend charts, and platform health summary.
 
-### 📈 Analytics & Insights
-7-day trend charts, severity breakdown, spike detection, platform comparison, resolution rate tracking, user impact analysis.
+#### 📈 Analytics & Insights
+7-day trend charts, severity breakdown, spike detection, resolution rate tracking, user impact analysis. Comprehensive analytics page with hourly patterns, mobile vs API breakdowns, and top affected users.
 
-### 🚨 Multi-Channel Alerting
-Slack, Email, Discord, PagerDuty, and custom webhooks. Beautifully formatted messages with rich context, direct links to errors, customizable per channel.
+#### 🔧 Workflow Management
+Error assignment and status tracking, priority levels (critical/high/medium/low), snooze functionality, comment threads, batch operations (bulk resolve/delete), resolution tracking with references.
 
-### ⚡ Performance & Scalability
-Async error logging, backtrace limiting (70-90% storage reduction), error sampling, database optimization with composite indexes, PostgreSQL GIN indexes.
+#### 🔒 Security & Privacy
+HTTP Basic Auth, environment-based settings, optional separate database for isolation. Your data stays on your server - no third-party access.
 
-### 🔌 Plugin System
-Extensible architecture with event hooks. Built-in examples for Jira, metrics tracking, audit logging. Easy to create custom integrations.
+### Optional Features (Choose During Install)
 
-### 🔒 Security & Privacy
-HTTP Basic Auth, environment-based settings, optional separate database for isolation.
+#### 🚨 Multi-Channel Notifications
+**Slack** - Rich formatted messages with error context and direct dashboard links
+**Email** - HTML formatted alerts with full error details
+**Discord** - Embedded messages with severity color coding
+**PagerDuty** - Critical error escalation with incident management
+**Webhooks** - Custom integrations with any service (JSON payloads)
 
-**📚 [View complete feature list →](docs/FEATURES.md)**
+#### ⚡ Performance Optimizations
+**Async Logging** - Non-blocking error capture using ActiveJob (Sidekiq/SolidQueue/Async)
+**Error Sampling** - Reduce storage by sampling high-frequency errors
+**Backtrace Limiting** - Save 70-90% storage with smart truncation
+**Separate Database** - Isolate error data for better performance
+**Database Indexes** - Composite indexes and PostgreSQL GIN full-text search
+
+#### 🧠 Advanced Analytics (8 Powerful Features)
+
+**1. Baseline Anomaly Alerts** 🔔
+Automatically detect unusual error rate spikes using statistical analysis (mean + std dev). Get proactive notifications when errors exceed expected baselines with intelligent cooldown to avoid alert fatigue.
+
+**2. Fuzzy Error Matching** 🔍
+Find similar errors across different error hashes using Jaccard similarity (70%) and Levenshtein distance (30%). Discover related errors that share common root causes even when they manifest differently.
+
+**3. Co-occurring Errors** 🔗
+Detect errors that happen together within configurable time windows (default: 5 minutes). Identify patterns where one error frequently triggers another, helping you prioritize fixes.
+
+**4. Error Cascade Detection** ⛓️
+Identify error chains (A causes B causes C) with probability calculations and average delays. Visualize parent→child relationships to understand cascading failures and fix root causes.
+
+**5. Error Correlation Analysis** 📊
+Correlate errors with app versions, git commits, and users. Find problematic releases, identify users affected by multiple error types, and detect time-based patterns.
+
+**6. Platform Comparison** 📱
+Compare iOS vs Android vs Web health metrics side-by-side. Platform-specific error rates, severity distributions, resolution times, and stability scores (0-100).
+
+**7. Occurrence Pattern Detection** 📈
+Detect cyclical patterns (business hours, nighttime, weekend rhythms) and error bursts (many errors in short time). Understand when and how your errors happen.
+
+**8. Developer Insights** 💡
+AI-powered insights with severity detection, platform stability scoring, actionable recommendations, and recent error activity summaries.
+
+#### 🔌 Plugin System
+Extensible architecture with event hooks (`on_error_logged`, `on_error_resolved`, `on_threshold_exceeded`). Built-in examples for Jira integration, metrics tracking, audit logging. Easy to create custom plugins - just drop a file in `config/initializers/error_dashboard_plugins/`.
+
+**📚 [View complete feature list with examples →](docs/FEATURES.md)**
 
 ---
 

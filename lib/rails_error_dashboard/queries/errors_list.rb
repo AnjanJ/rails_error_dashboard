@@ -29,6 +29,11 @@ module RailsErrorDashboard
         query = filter_by_platform(query)
         query = filter_by_search(query)
         query = filter_by_severity(query)
+        # Phase 3: Workflow filters
+        query = filter_by_status(query)
+        query = filter_by_assignment(query)
+        query = filter_by_priority(query)
+        query = filter_by_snoozed(query)
         query
       end
 
@@ -110,6 +115,47 @@ module RailsErrorDashboard
         end
 
         query.where(error_type: error_types)
+      end
+
+      # Phase 3: Workflow filter methods
+
+      def filter_by_status(query)
+        return query unless @filters[:status].present?
+        return query unless query.model.column_names.include?("status")
+
+        query.by_status(@filters[:status])
+      end
+
+      def filter_by_assignment(query)
+        return query unless @filters[:assigned_to].present?
+        return query unless query.model.column_names.include?("assigned_to")
+
+        case @filters[:assigned_to]
+        when "__unassigned__"
+          query.unassigned
+        when "__assigned__"
+          query.assigned
+        else
+          query.by_assignee(@filters[:assigned_to])
+        end
+      end
+
+      def filter_by_priority(query)
+        return query unless @filters[:priority_level].present?
+        return query unless query.model.column_names.include?("priority_level")
+
+        query.by_priority(@filters[:priority_level])
+      end
+
+      def filter_by_snoozed(query)
+        return query unless query.model.column_names.include?("snoozed_until")
+
+        # If hide_snoozed is checked, exclude snoozed errors
+        if @filters[:hide_snoozed] == "1" || @filters[:hide_snoozed] == true
+          query.active
+        else
+          query
+        end
       end
     end
   end

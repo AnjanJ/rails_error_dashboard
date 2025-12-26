@@ -283,8 +283,13 @@ module RailsErrorDashboard
         say "  3. Restart your Rails server"
         say "  4. Visit http://localhost:3000/error_dashboard"
         say "\n"
-        say "📖 Documentation: docs/QUICKSTART.md", :light_black
-        say "⚙️  To enable/disable features: config/initializers/rails_error_dashboard.rb", :light_black
+        say "📖 Documentation:", :light_black
+        say "   • Quick Start: docs/QUICKSTART.md", :light_black
+        say "   • Complete Feature Guide: docs/FEATURES.md", :light_black
+        say "   • All Docs: docs/README.md", :light_black
+        say "\n"
+        say "⚙️  To enable/disable features later:", :light_black
+        say "   Edit config/initializers/rails_error_dashboard.rb", :light_black
         say "\n"
       end
 

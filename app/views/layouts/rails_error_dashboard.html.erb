@@ -225,6 +225,23 @@
         background-color: var(--table-hover) !important;
       }
 
+      /* Mobile offcanvas menu dark mode */
+      body.dark-mode .offcanvas,
+      html[data-theme="dark"] body .offcanvas {
+        background-color: var(--sidebar-bg);
+        color: var(--text-color);
+      }
+
+      body.dark-mode .offcanvas-header,
+      html[data-theme="dark"] body .offcanvas-header {
+        border-color: var(--border-color);
+      }
+
+      body.dark-mode .offcanvas-title,
+      html[data-theme="dark"] body .offcanvas-title {
+        color: var(--text-color);
+      }
+
       .form-control, .form-select {
         background-color: var(--card-bg);
         color: var(--text-color);
@@ -379,15 +396,21 @@
     <!-- Top Navbar -->
     <nav class="navbar navbar-dark">
       <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="<%= root_path %>">
-          <i class="bi bi-bug-fill"></i>
-          Error Dashboard
-        </a>
+        <div class="d-flex align-items-center">
+          <!-- Mobile menu toggle -->
+          <button class="btn btn-link text-white d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+            <i class="bi bi-list fs-4"></i>
+          </button>
+          <a class="navbar-brand fw-bold" href="<%= root_path %>">
+            <i class="bi bi-bug-fill"></i>
+            Error Dashboard
+          </a>
+        </div>
         <div class="d-flex align-items-center gap-3">
           <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
           </button>
-          <div class="text-white">
+          <div class="text-white d-none d-md-block">
             <small><%= Rails.env.titleize %> Environment</small>
           </div>
         </div>
@@ -396,8 +419,8 @@
 
     <div class="container-fluid">
       <div class="row">
-        <!-- Sidebar -->
-        <nav class="col-md-2 d-md-block sidebar">
+        <!-- Sidebar - Desktop -->
+        <nav class="col-md-2 d-none d-md-block sidebar" id="sidebarDesktop">
           <div class="position-sticky pt-3">
             <ul class="nav flex-column">
               <li class="nav-item">
@@ -455,6 +478,79 @@
             </ul>
           </div>
         </nav>
+
+        <!-- Sidebar - Mobile (Offcanvas) -->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarMenuLabel">
+              <i class="bi bi-bug-fill"></i> Error Dashboard
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <%= link_to root_path, class: "nav-link #{request.path == root_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-speedometer2"></i> Overview
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to errors_path, class: "nav-link #{request.path == errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-list-ul"></i> All Errors
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to analytics_errors_path, class: "nav-link #{request.path == analytics_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-graph-up"></i> Analytics
+                <% end %>
+              </li>
+              <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
+                <li class="nav-item">
+                  <%= link_to platform_comparison_errors_path, class: "nav-link #{request.path == platform_comparison_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
+                    <i class="bi bi-phone"></i> Platform Health
+                  <% end %>
+                </li>
+              <% end %>
+              <% if RailsErrorDashboard.configuration.enable_error_correlation %>
+                <li class="nav-item">
+                  <%= link_to correlation_errors_path, class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
+                    <i class="bi bi-diagram-3"></i> Correlation
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+
+            <hr class="my-3">
+
+            <h6 class="sidebar-heading px-3 mt-4 mb-2 text-muted text-uppercase">
+              <small>Quick Filters</small>
+            </h6>
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <%= link_to errors_path(unresolved: true), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-exclamation-circle text-danger"></i> Unresolved
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to errors_path(platform: 'iOS'), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-phone"></i> iOS Errors
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to errors_path(platform: 'Android'), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
+                  <i class="bi bi-phone"></i> Android Errors
+                <% end %>
+              </li>
+            </ul>
+
+            <hr class="my-3">
+
+            <div class="px-3">
+              <small class="text-muted">Environment</small>
+              <div class="fw-bold"><%= Rails.env.titleize %></div>
+            </div>
+          </div>
+        </div>
 
         <!-- Main content -->
         <main class="col-md-10 ms-sm-auto px-md-4">

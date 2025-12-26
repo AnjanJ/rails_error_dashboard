@@ -22,7 +22,15 @@ module RailsErrorDashboard
           errors_trend_7d: errors_trend_7d,
           errors_by_severity_7d: errors_by_severity_7d,
           spike_detected: spike_detected?,
-          spike_info: spike_info
+          spike_info: spike_info,
+          # New metrics for Overview dashboard
+          error_rate: error_rate,
+          affected_users_today: affected_users_today,
+          affected_users_yesterday: affected_users_yesterday,
+          affected_users_change: affected_users_change,
+          trend_percentage: trend_percentage,
+          trend_direction: trend_direction,
+          top_errors_by_impact: top_errors_by_impact
         }
       end
 
@@ -163,6 +171,106 @@ module RailsErrorDashboard
         else
           :critical
         end
+      end
+
+      # Calculate error rate as a percentage
+      # Since we don't track total requests, we'll use error count as proxy
+      # In the future, this could be: (errors / total_requests) * 100
+      def error_rate
+        today_errors = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        return 0.0 if today_errors.zero?
+
+        # For now, use a simple heuristic: errors per hour today
+        # Assume we want < 1 error per hour = good (< 1%)
+        # 1-5 errors per hour = warning (1-5%)
+        # > 5 errors per hour = critical (> 5%)
+        hours_today = ((Time.current - Time.current.beginning_of_day) / 1.hour).round(1)
+        hours_today = 1.0 if hours_today < 1.0 # Avoid division by zero in early morning
+
+        errors_per_hour = today_errors / hours_today
+        # Convert to percentage scale (0-100)
+        # Scale: 0 errors/hr = 0%, 1 error/hr = 1%, 10 errors/hr = 10%, etc.
+        [errors_per_hour, 100.0].min.round(1)
+      end
+
+      # Count distinct users affected by errors today
+      def affected_users_today
+        ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day)
+                .where.not(user_id: nil)
+                .distinct
+                .count(:user_id)
+      end
+
+      # Count distinct users affected by errors yesterday
+      def affected_users_yesterday
+        ErrorLog.where("occurred_at >= ? AND occurred_at < ?",
+                      1.day.ago.beginning_of_day,
+                      Time.current.beginning_of_day)
+                .where.not(user_id: nil)
+                .distinct
+                .count(:user_id)
+      end
+
+      # Calculate change in affected users (today vs yesterday)
+      def affected_users_change
+        today = affected_users_today
+        yesterday = affected_users_yesterday
+
+        return 0 if today.zero? && yesterday.zero?
+        return today if yesterday.zero?
+
+        today - yesterday
+      end
+
+      # Calculate percentage change in errors (today vs yesterday)
+      def trend_percentage
+        today = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        yesterday = ErrorLog.where("occurred_at >= ? AND occurred_at < ?",
+                                  1.day.ago.beginning_of_day,
+                                  Time.current.beginning_of_day).count
+
+        return 0.0 if today.zero? && yesterday.zero?
+        return 100.0 if yesterday.zero? && today.positive?
+
+        ((today - yesterday).to_f / yesterday * 100).round(1)
+      end
+
+      # Determine trend direction (increasing, decreasing, stable)
+      def trend_direction
+        trend = trend_percentage
+
+        if trend > 10
+          :increasing
+        elsif trend < -10
+          :decreasing
+        else
+          :stable
+        end
+      end
+
+      # Get top 5 errors ranked by impact score
+      # Impact = affected_users_count × occurrence_count
+      def top_errors_by_impact
+        ErrorLog.where("occurred_at >= ?", 7.days.ago)
+                .group(:error_type, :id)
+                .select("error_type, id, occurrence_count,
+                        COUNT(DISTINCT user_id) as affected_users,
+                        COUNT(DISTINCT user_id) * occurrence_count as impact_score")
+                .order("impact_score DESC")
+                .limit(5)
+                .map do |error|
+                  full_error = ErrorLog.find(error.id)
+                  {
+                    id: error.id,
+                    error_type: error.error_type,
+                    message: full_error.message&.truncate(80),
+                    severity: full_error.severity,
+                    occurrence_count: error.occurrence_count,
+                    affected_users: error.affected_users.to_i,
+                    impact_score: error.impact_score.to_i,
+                    occurred_at: full_error.occurred_at
+                  }
+                end
       end
     end
   end

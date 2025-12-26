@@ -601,4 +601,4 @@ end
 
 ---
 
-**Questions?** Check the [documentation](README.md) or [open an issue](https://github.com/yourusername/rails_error_dashboard/issues).
+**Questions?** Check the [documentation](README.md) or [open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues).

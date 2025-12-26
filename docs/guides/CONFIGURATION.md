@@ -29,10 +29,10 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 - ✅ Real-time updates via Turbo Streams
 - ✅ Analytics and trend charts
 
-**Optional Features (16 total):**
+**Optional Features (15 total):**
 - 📧 **5 Notification Channels** (Slack, Email, Discord, PagerDuty, Webhooks)
 - ⚡ **3 Performance Features** (Async Logging, Error Sampling, Separate Database)
-- 📊 **8 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
+- 📊 **7 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
 
 All features can be enabled during installation via the interactive installer, or toggled on/off at any time in the initializer.
 
@@ -703,11 +703,11 @@ end
 
 ---
 
-## Async Logging
+## Async Error Logging (Revisited)
 
-*Note: Async logging will be available in Phase 2.1 - coming soon.*
+Async logging is available and fully functional. See the [Async Error Logging](#async-error-logging) section above for complete configuration details.
 
-Configure asynchronous error logging to prevent blocking your application:
+For quick reference:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
@@ -972,8 +972,8 @@ end
 
 ## Next Steps
 
-- **Phase 2 Features**: Async logging, database optimization, performance tuning
 - **Testing**: Write tests for your custom callbacks and severity rules
 - **Monitoring**: Set up ActiveSupport::Notifications subscribers for your metrics service
+- **Optimization**: Review database optimization and performance tuning guides
 
-For questions or issues, visit: https://github.com/yourusername/rails_error_dashboard
+For questions or issues, visit: https://github.com/AnjanJ/rails_error_dashboard

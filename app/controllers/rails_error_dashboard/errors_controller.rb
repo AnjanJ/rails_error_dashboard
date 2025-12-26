@@ -6,6 +6,30 @@ module RailsErrorDashboard
 
     before_action :authenticate_dashboard_user!
 
+    def overview
+      # Get dashboard stats using Query
+      @stats = Queries::DashboardStats.call
+
+      # Get platform health summary (if enabled)
+      if RailsErrorDashboard.configuration.enable_platform_comparison
+        comparison = Queries::PlatformComparison.new(days: 7)
+        @platform_health = comparison.platform_health_summary
+        @platform_scores = comparison.platform_stability_scores
+      else
+        @platform_health = {}
+        @platform_scores = {}
+      end
+
+      # Get critical alerts (critical/high severity errors from last hour)
+      @critical_alerts = ErrorLog
+        .where("occurred_at >= ?", 1.hour.ago)
+        .where(resolved_at: nil)
+        .select { |error| [ :critical, :high ].include?(error.severity) }
+        .sort_by(&:occurred_at)
+        .reverse
+        .first(10)
+    end
+
     def index
       # Use Query to get filtered errors
       errors_query = Queries::ErrorsList.call(filter_params)
@@ -39,6 +63,70 @@ module RailsErrorDashboard
         resolution_reference: params[:resolution_reference]
       )
 
+      redirect_to error_path(@error)
+    end
+
+    # Phase 3: Workflow Integration Actions
+
+    def assign
+      @error = ErrorLog.find(params[:id])
+      @error.assign_to!(params[:assigned_to])
+      redirect_to error_path(@error)
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def unassign
+      @error = ErrorLog.find(params[:id])
+      @error.unassign!
+      redirect_to error_path(@error)
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def update_priority
+      @error = ErrorLog.find(params[:id])
+      @error.update!(priority_level: params[:priority_level])
+      redirect_to error_path(@error)
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def snooze
+      @error = ErrorLog.find(params[:id])
+      @error.snooze!(params[:hours].to_i, reason: params[:reason])
+      redirect_to error_path(@error)
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def unsnooze
+      @error = ErrorLog.find(params[:id])
+      @error.unsnooze!
+      redirect_to error_path(@error)
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def update_status
+      @error = ErrorLog.find(params[:id])
+      if @error.update_status!(params[:status], comment: params[:comment])
+        redirect_to error_path(@error)
+      else
+        redirect_to error_path(@error)
+      end
+    rescue => e
+      redirect_to error_path(@error)
+    end
+
+    def add_comment
+      @error = ErrorLog.find(params[:id])
+      @error.comments.create!(
+        author_name: params[:author_name],
+        body: params[:body]
+      )
+      redirect_to error_path(@error)
+    rescue => e
       redirect_to error_path(@error)
     end
 
@@ -139,7 +227,12 @@ module RailsErrorDashboard
         unresolved: params[:unresolved],
         platform: params[:platform],
         search: params[:search],
-        severity: params[:severity]
+        severity: params[:severity],
+        # Phase 3: Workflow filter params
+        status: params[:status],
+        assigned_to: params[:assigned_to],
+        priority_level: params[:priority_level],
+        hide_snoozed: params[:hide_snoozed]
       }
     end
 

@@ -570,4 +570,249 @@ config.enable_platform_comparison = true     # Platform health comparison
 
 **🎉 That's every feature!** Rails Error Dashboard is a comprehensive, production-ready error tracking solution built specifically for Rails developers who value ownership and privacy.
 
+---
+
+## 🔧 How to Enable/Disable Features
+
+### During Installation
+
+When you run the installer, you'll be prompted to select which optional features to enable:
+
+```bash
+rails generate rails_error_dashboard:install
+```
+
+**Interactive Mode** (default):
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Rails Error Dashboard - Installation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1/16] Slack Notifications
+    Send errors to Slack channels instantly
+    Enable? (y/N): y
+    ✓ Enabled
+
+[2/16] Email Notifications
+    Email error alerts to your team
+    Enable? (y/N): n
+    ✗ Disabled
+
+... (continues for all 16 features)
+```
+
+**Non-Interactive Mode** (for automation/CI):
+```bash
+rails generate rails_error_dashboard:install \
+  --no-interactive \
+  --slack \
+  --async_logging \
+  --baseline_alerts \
+  --platform_comparison
+```
+
+**Available CLI Flags**:
+- `--slack` - Enable Slack notifications
+- `--email` - Enable email notifications
+- `--discord` - Enable Discord notifications
+- `--pagerduty` - Enable PagerDuty notifications
+- `--webhooks` - Enable webhook notifications
+- `--async_logging` - Enable async error logging
+- `--error_sampling` - Enable error sampling
+- `--separate_database` - Use separate database
+- `--baseline_alerts` - Enable baseline anomaly alerts
+- `--similar_errors` - Enable fuzzy error matching
+- `--co_occurring_errors` - Enable co-occurring error detection
+- `--error_cascades` - Enable error cascade detection
+- `--error_correlation` - Enable error correlation analysis
+- `--platform_comparison` - Enable platform comparison
+- `--occurrence_patterns` - Enable occurrence pattern detection
+
+### After Installation
+
+All features can be enabled or disabled at any time by editing your initializer:
+
+**Location**: `config/initializers/rails_error_dashboard.rb`
+
+#### To Enable a Feature
+
+1. Open the initializer file
+2. Find the feature section (use Cmd/Ctrl+F to search)
+3. Uncomment the configuration lines if needed
+4. Set `config.enable_[feature_name] = true`
+5. Add any required settings (webhook URLs, etc.)
+6. Restart your Rails server
+
+**Example** - Enabling Slack notifications:
+```ruby
+# Before:
+# config.enable_slack_notifications = false
+# config.slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
+
+# After:
+config.enable_slack_notifications = true
+config.slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
+config.dashboard_base_url = ENV["DASHBOARD_BASE_URL"]  # For clickable links
+```
+
+**Example** - Enabling baseline alerts:
+```ruby
+# Before:
+# config.enable_baseline_alerts = false
+
+# After:
+config.enable_baseline_alerts = true
+
+# Optional tuning:
+config.baseline_alert_threshold_std_devs = 2.0  # Sensitivity (default: 2.0)
+config.baseline_alert_severities = [:critical, :high]  # Which severities to alert on
+config.baseline_alert_cooldown_minutes = 120  # Minutes between alerts
+```
+
+#### To Disable a Feature
+
+1. Open the initializer file
+2. Find the feature section
+3. Set `config.enable_[feature_name] = false`
+4. Or comment out the entire section
+5. Restart your Rails server
+
+**Example** - Disabling email notifications:
+```ruby
+# Before:
+config.enable_email_notifications = true
+config.notification_email_recipients = ENV.fetch("ERROR_NOTIFICATION_EMAILS", "").split(",")
+
+# After:
+config.enable_email_notifications = false
+# config.notification_email_recipients = ENV.fetch("ERROR_NOTIFICATION_EMAILS", "").split(",")
+```
+
+#### Restart Required
+
+After changing any configuration, you must restart your Rails server:
+
+```bash
+# Development
+rails server
+
+# Production
+systemctl restart myapp
+# or
+touch tmp/restart.txt  # For Passenger
+```
+
+### Feature Combinations
+
+You can enable/disable any combination of features. Here are some recommended configurations:
+
+#### Minimal Setup (Small Apps)
+```ruby
+config.enable_slack_notifications = true  # Just one notification channel
+# Everything else disabled
+```
+
+#### Production SaaS
+```ruby
+# Notifications
+config.enable_slack_notifications = true
+config.enable_pagerduty_notifications = true
+
+# Performance
+config.async_logging = true
+
+# Analytics
+config.enable_baseline_alerts = true
+config.enable_platform_comparison = true
+config.enable_error_correlation = true
+```
+
+#### Enterprise/High-Scale
+```ruby
+# All notifications
+config.enable_slack_notifications = true
+config.enable_email_notifications = true
+config.enable_pagerduty_notifications = true
+
+# All performance features
+config.async_logging = true
+config.sampling_rate = 0.1  # Sample 10% of non-critical errors
+config.use_separate_database = true
+
+# All advanced analytics
+config.enable_baseline_alerts = true
+config.enable_similar_errors = true
+config.enable_co_occurring_errors = true
+config.enable_error_cascades = true
+config.enable_error_correlation = true
+config.enable_platform_comparison = true
+config.enable_occurrence_patterns = true
+```
+
+### Environment-Specific Configuration
+
+You can enable different features per environment:
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  # Core settings (all environments)
+  config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
+  config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
+
+  # Production-only features
+  if Rails.env.production?
+    config.enable_slack_notifications = true
+    config.enable_pagerduty_notifications = true
+    config.async_logging = true
+    config.enable_baseline_alerts = true
+  end
+
+  # Development-only features
+  if Rails.env.development?
+    config.require_authentication = false  # Easier access in dev
+    config.sampling_rate = 0.5  # Reduce noise in development
+  end
+
+  # Staging-specific
+  if Rails.env.staging?
+    config.enable_slack_notifications = true  # Notify #staging-errors channel
+    config.enable_baseline_alerts = true  # Test alert logic
+  end
+end
+```
+
+### Checking Enabled Features
+
+To see which features are currently enabled, you can check in the Rails console:
+
+```ruby
+# Rails console
+config = RailsErrorDashboard.configuration
+
+# Check specific features
+config.enable_slack_notifications  # => true or false
+config.enable_baseline_alerts      # => true or false
+
+# List all advanced analytics features
+{
+  similar_errors: config.enable_similar_errors,
+  co_occurring: config.enable_co_occurring_errors,
+  cascades: config.enable_error_cascades,
+  baselines: config.enable_baseline_alerts,
+  correlation: config.enable_error_correlation,
+  platform_comparison: config.enable_platform_comparison,
+  patterns: config.enable_occurrence_patterns
+}
+```
+
+### Feature Documentation
+
+For detailed information about what each feature does and when to use it, see the relevant sections above:
+
+- **Notifications**: [🚨 Notifications & Alerting](#-notifications--alerting)
+- **Performance**: [⚡ Performance & Scalability](#-performance--scalability)
+- **Advanced Analytics**: [🎯 Advanced Analytics Features](#-advanced-analytics-features)
+
+---
+
 **📚 [Back to Documentation →](README.md)**

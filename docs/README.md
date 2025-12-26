@@ -10,8 +10,8 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Configuration](guides/CONFIGURATION.md)** - Complete configuration reference
 
 ### Core Features
-- **[Dashboard Overview](guides/DASHBOARD_OVERVIEW.md)** - Understanding the main dashboard
-- **[Error Management](guides/ERROR_MANAGEMENT.md)** - Managing and resolving errors
+- **[Error Tracking & Capture](FEATURES.md#error-tracking--capture)** - Understanding the main dashboard
+- **[Workflow Management](FEATURES.md#workflow-management)** - Managing and resolving errors
 - **[Notifications](guides/NOTIFICATIONS.md)** - Setting up alerts (Slack, Email, Discord, PagerDuty)
 
 ### Advanced Features
@@ -32,7 +32,6 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
 
 ### Development
-- **[Contributing](../CONTRIBUTING.md)** - How to contribute to the project
 - **[Changelog](../CHANGELOG.md)** - Version history and updates
 - **[Testing](development/TESTING.md)** - Running and writing tests
 
@@ -85,16 +84,16 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## 💡 Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/rails_error_dashboard/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/rails_error_dashboard/discussions)
+- **Issues**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AnjanJ/rails_error_dashboard/discussions)
 - **Stack Overflow**: Tag your questions with `rails-error-dashboard`
 
 ## 📝 Documentation Versions
 
-This documentation is for **Rails Error Dashboard v1.0.0** (Phase 4 Complete).
+This documentation is for **Rails Error Dashboard v0.1.1** (BETA).
 
-For older versions, see the [Changelog](../CHANGELOG.md).
+For version history, see the [Changelog](../CHANGELOG.md).
 
 ---
 
-**Need help?** Check the [Troubleshooting](#) section or [open an issue](https://github.com/yourusername/rails_error_dashboard/issues).
+**Need help?** Check the guides above or [open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues).

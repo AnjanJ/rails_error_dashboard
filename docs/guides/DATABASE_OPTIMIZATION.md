@@ -23,7 +23,7 @@ add_index :error_logs, :last_seen_at
 add_index :error_logs, :occurrence_count
 ```
 
-### Composite Indexes (Phase 2.3)
+### Composite Indexes
 
 These indexes optimize common query patterns that filter + sort:
 

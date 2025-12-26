@@ -11,6 +11,7 @@ require "httparty"
 # Core library files
 require "rails_error_dashboard/value_objects/error_context"
 require "rails_error_dashboard/services/platform_detector"
+require "rails_error_dashboard/services/backtrace_parser"
 require "rails_error_dashboard/services/similarity_calculator"
 require "rails_error_dashboard/services/cascade_detector"
 require "rails_error_dashboard/services/baseline_calculator"

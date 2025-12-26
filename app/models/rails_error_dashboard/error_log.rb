@@ -15,6 +15,9 @@ module RailsErrorDashboard
     # Association for tracking individual error occurrences
     has_many :error_occurrences, class_name: "RailsErrorDashboard::ErrorOccurrence", dependent: :destroy
 
+    # Association for comment threads (Phase 3: Workflow Integration)
+    has_many :comments, class_name: "RailsErrorDashboard::ErrorComment", foreign_key: :error_log_id, dependent: :destroy
+
     # Cascade pattern associations
     # parent_cascade_patterns: patterns where this error is the CHILD (errors that cause this error)
     has_many :parent_cascade_patterns, class_name: "RailsErrorDashboard::CascadePattern",
@@ -37,6 +40,15 @@ module RailsErrorDashboard
     scope :by_platform, ->(platform) { where(platform: platform) }
     scope :last_24_hours, -> { where("occurred_at >= ?", 24.hours.ago) }
     scope :last_week, -> { where("occurred_at >= ?", 1.week.ago) }
+
+    # Phase 3: Workflow Integration scopes
+    scope :active, -> { where("snoozed_until IS NULL OR snoozed_until < ?", Time.current) }
+    scope :snoozed, -> { where("snoozed_until IS NOT NULL AND snoozed_until >= ?", Time.current) }
+    scope :by_status, ->(status) { where(status: status) }
+    scope :assigned, -> { where.not(assigned_to: nil) }
+    scope :unassigned, -> { where(assigned_to: nil) }
+    scope :by_assignee, ->(name) { where(assigned_to: name) }
+    scope :by_priority, ->(level) { where(priority_level: level) }
 
     # Set defaults and tracking
     before_validation :set_defaults, on: :create
@@ -177,6 +189,139 @@ module RailsErrorDashboard
     # Mark error as resolved (delegates to Command)
     def resolve!(resolution_data = {})
       Commands::ResolveError.call(id, resolution_data)
+    end
+
+    # Phase 3: Workflow Integration methods
+
+    # Assignment methods
+    def assign_to!(assignee_name)
+      update!(
+        assigned_to: assignee_name,
+        assigned_at: Time.current,
+        status: "in_progress" # Auto-transition to in_progress when assigned
+      )
+    end
+
+    def unassign!
+      update!(
+        assigned_to: nil,
+        assigned_at: nil
+      )
+    end
+
+    def assigned?
+      assigned_to.present?
+    end
+
+    # Snooze methods
+    def snooze!(hours, reason: nil)
+      snooze_until = hours.hours.from_now
+      # Store snooze reason in comments if provided
+      if reason.present?
+        comments.create!(
+          author_name: assigned_to || "System",
+          body: "Snoozed for #{hours} hours: #{reason}"
+        )
+      end
+      update!(snoozed_until: snooze_until)
+    end
+
+    def unsnooze!
+      update!(snoozed_until: nil)
+    end
+
+    def snoozed?
+      snoozed_until.present? && snoozed_until >= Time.current
+    end
+
+    # Priority methods
+    def priority_label
+      case priority_level
+      when 3 then "Critical"
+      when 2 then "High"
+      when 1 then "Medium"
+      when 0 then "Low"
+      else "Unset"
+      end
+    end
+
+    def priority_color
+      case priority_level
+      when 3 then "danger"    # Critical = red
+      when 2 then "warning"   # High = orange
+      when 1 then "info"      # Medium = blue
+      when 0 then "secondary" # Low = gray
+      else "light"
+      end
+    end
+
+    def calculate_priority
+      # Automatic priority calculation based on severity and frequency
+      severity_weight = case severity
+      when :critical then 3
+      when :high then 2
+      when :medium then 1
+      else 0
+      end
+
+      frequency_weight = if occurrence_count >= 100
+        3
+      elsif occurrence_count >= 10
+        2
+      elsif occurrence_count >= 5
+        1
+      else
+        0
+      end
+
+      # Take the higher of severity or frequency
+      [severity_weight, frequency_weight].max
+    end
+
+    # Status transition methods
+    def status_badge_color
+      case status
+      when "new" then "primary"
+      when "in_progress" then "info"
+      when "investigating" then "warning"
+      when "resolved" then "success"
+      when "wont_fix" then "secondary"
+      else "light"
+      end
+    end
+
+    def can_transition_to?(new_status)
+      # Define valid status transitions
+      valid_transitions = {
+        "new" => ["in_progress", "investigating", "wont_fix"],
+        "in_progress" => ["investigating", "resolved", "new"],
+        "investigating" => ["resolved", "in_progress", "wont_fix"],
+        "resolved" => ["new"], # Can reopen if error recurs
+        "wont_fix" => ["new"]  # Can reopen
+      }
+
+      valid_transitions[status]&.include?(new_status) || false
+    end
+
+    def update_status!(new_status, comment: nil)
+      return false unless can_transition_to?(new_status)
+
+      transaction do
+        update!(status: new_status)
+
+        # Auto-resolve if status is "resolved"
+        update!(resolved: true) if new_status == "resolved"
+
+        # Add comment about status change
+        if comment.present?
+          comments.create!(
+            author_name: assigned_to || "System",
+            body: "Status changed to #{new_status}: #{comment}"
+          )
+        end
+      end
+
+      true
     end
 
     # Get error statistics
