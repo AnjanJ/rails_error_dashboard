@@ -1,3 +1,35 @@
+<script>
+  // Dynamic chart colors based on theme
+  window.getChartColors = function() {
+    const isDark = document.body.classList.contains('dark-mode');
+    return {
+      textColor: isDark ? '#cdd6f4' : '#1f2937',
+      gridColor: isDark ? 'rgba(88, 91, 112, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+    };
+  };
+
+  window.getChartLibraryOptions = function() {
+    const colors = window.getChartColors();
+    return {
+      scales: {
+        x: {
+          ticks: { color: colors.textColor },
+          title: { color: colors.textColor },
+          grid: { color: colors.gridColor }
+        },
+        y: {
+          ticks: { color: colors.textColor },
+          title: { color: colors.textColor },
+          grid: { color: colors.gridColor }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: colors.textColor } }
+      }
+    };
+  };
+</script>
+
 <div class="py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Error Analytics</h2>
@@ -48,13 +80,37 @@
       <h5 class="mb-0"><i class="bi bi-graph-up"></i> Error Trend (Last <%= @days %> Days)</h5>
     </div>
     <div class="card-body">
-      <%= line_chart @errors_over_time,
-          color: "#8B5CF6",
-          curve: false,
-          points: true,
-          height: "300px",
-          xtitle: "Date",
-          ytitle: "Number of Errors" %>
+      <div id="errors-over-time-chart"></div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const colors = window.getChartColors();
+          new Chartkick.LineChart("errors-over-time-chart", <%= raw @errors_over_time.to_json %>, {
+            color: "#8B5CF6",
+            curve: false,
+            points: true,
+            height: "300px",
+            xtitle: "Date",
+            ytitle: "Number of Errors",
+            library: {
+              scales: {
+                x: {
+                  ticks: { color: colors.textColor },
+                  title: { color: colors.textColor, display: true, text: 'Date' },
+                  grid: { color: colors.gridColor }
+                },
+                y: {
+                  ticks: { color: colors.textColor },
+                  title: { color: colors.textColor, display: true, text: 'Number of Errors' },
+                  grid: { color: colors.gridColor }
+                }
+              },
+              plugins: {
+                legend: { labels: { color: colors.textColor } }
+              }
+            }
+          });
+        });
+      </script>
     </div>
   </div>
 
@@ -69,11 +125,23 @@
             <h5 class="mb-0"><i class="bi bi-phone"></i> Errors by Platform</h5>
           </div>
           <div class="card-body">
-            <%= pie_chart @errors_by_platform,
-                colors: ["#000000", "#3DDC84", "#3B82F6"],
-                height: "300px",
-                legend: "bottom",
-                donut: true %>
+            <div id="errors-by-platform-chart"></div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const colors = window.getChartColors();
+                new Chartkick.PieChart("errors-by-platform-chart", <%= raw @errors_by_platform.to_json %>, {
+                  colors: ["#000000", "#3DDC84", "#3B82F6"],
+                  height: "300px",
+                  legend: "bottom",
+                  donut: true,
+                  library: {
+                    plugins: {
+                      legend: { labels: { color: colors.textColor } }
+                    }
+                  }
+                });
+              });
+            </script>
           </div>
         </div>
       </div>
@@ -88,11 +156,35 @@
           <h5 class="mb-0"><i class="bi bi-bug"></i> Top 10 Error Types</h5>
         </div>
         <div class="card-body">
-          <%= bar_chart @errors_by_type,
-              color: "#EF4444",
-              height: "400px",
-              xtitle: "Error Type",
-              ytitle: "Count" %>
+          <div id="errors-by-type-chart"></div>
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              const colors = window.getChartColors();
+              new Chartkick.BarChart("errors-by-type-chart", <%= raw @errors_by_type.to_json %>, {
+                color: "#EF4444",
+                height: "400px",
+                xtitle: "Error Type",
+                ytitle: "Count",
+                library: {
+                  scales: {
+                    x: {
+                      ticks: { color: colors.textColor },
+                      title: { color: colors.textColor, display: true, text: 'Error Type' },
+                      grid: { color: colors.gridColor }
+                    },
+                    y: {
+                      ticks: { color: colors.textColor },
+                      title: { color: colors.textColor, display: true, text: 'Count' },
+                      grid: { color: colors.gridColor }
+                    }
+                  },
+                  plugins: {
+                    legend: { labels: { color: colors.textColor } }
+                  }
+                }
+              });
+            });
+          </script>
         </div>
       </div>
     </div>
@@ -106,11 +198,35 @@
           <h5 class="mb-0"><i class="bi bi-clock"></i> Errors by Hour of Day</h5>
         </div>
         <div class="card-body">
-          <%= column_chart @errors_by_hour,
-              color: "#8B5CF6",
-              height: "300px",
-              xtitle: "Hour",
-              ytitle: "Number of Errors" %>
+          <div id="errors-by-hour-chart"></div>
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              const colors = window.getChartColors();
+              new Chartkick.ColumnChart("errors-by-hour-chart", <%= raw @errors_by_hour.to_json %>, {
+                color: "#8B5CF6",
+                height: "300px",
+                xtitle: "Hour",
+                ytitle: "Number of Errors",
+                library: {
+                  scales: {
+                    x: {
+                      ticks: { color: colors.textColor },
+                      title: { color: colors.textColor, display: true, text: 'Hour' },
+                      grid: { color: colors.gridColor }
+                    },
+                    y: {
+                      ticks: { color: colors.textColor },
+                      title: { color: colors.textColor, display: true, text: 'Number of Errors' },
+                      grid: { color: colors.gridColor }
+                    }
+                  },
+                  plugins: {
+                    legend: { labels: { color: colors.textColor } }
+                  }
+                }
+              });
+            });
+          </script>
         </div>
       </div>
     </div>

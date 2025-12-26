@@ -1,288 +1,79 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Error Dashboard - Audio Intelli API</title>
+    <title>Error Dashboard</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-
-    <!-- Apply theme immediately to prevent flash of wrong theme -->
-    <script>
-      // This runs BEFORE body renders to prevent flash
-      (function() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-          // Add to html element so we can style body
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      })();
-    </script>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- Chart.js with date adapter -->
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartkick@5.0.1/dist/chartkick.min.js"></script>
 
-    <!-- Turbo for real-time updates -->
-    <script type="module">
-      import * as Turbo from 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/+esm'
-    </script>
-
+    <!-- Catppuccin Mocha Theme - Pure CSS -->
     <style>
+      /* Catppuccin Mocha Color Palette */
       :root {
-        --primary-color: #8B5CF6;
-        --success-color: #10B981;
-        --danger-color: #EF4444;
-        --warning-color: #F59E0B;
-        --info-color: #3B82F6;
+        --ctp-rosewater: #f5e0dc;
+        --ctp-flamingo: #f2cdcd;
+        --ctp-pink: #f5c2e7;
+        --ctp-mauve: #cba6f7;
+        --ctp-red: #f38ba8;
+        --ctp-maroon: #eba0ac;
+        --ctp-peach: #fab387;
+        --ctp-yellow: #f9e2af;
+        --ctp-green: #a6e3a1;
+        --ctp-teal: #94e2d5;
+        --ctp-sky: #89dceb;
+        --ctp-sapphire: #74c7ec;
+        --ctp-blue: #89b4fa;
+        --ctp-lavender: #b4befe;
+        --ctp-text: #cdd6f4;
+        --ctp-subtext1: #bac2de;
+        --ctp-subtext0: #a6adc8;
+        --ctp-overlay2: #9399b2;
+        --ctp-overlay1: #7f849c;
+        --ctp-overlay0: #6c7086;
+        --ctp-surface2: #585b70;
+        --ctp-surface1: #45475a;
+        --ctp-surface0: #313244;
+        --ctp-base: #1e1e2e;
+        --ctp-mantle: #181825;
+        --ctp-crust: #11111b;
       }
 
-      /* Light mode (default) */
+      /* Light Theme (Default) */
       body {
-        --bg-color: #F3F4F6;
-        --text-color: #1F2937;
-        --card-bg: #FFFFFF;
-        --sidebar-bg: #FFFFFF;
-        --sidebar-hover: #F9FAFB;
-        --border-color: #E5E7EB;
-        --table-hover: #F9FAFB;
-        --nav-active-bg: #EDE9FE;
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #f3f4f6;
+        color: #1f2937;
+        transition: background-color 0.3s, color 0.3s;
       }
 
-      /* Dark mode - support both class and data attribute for immediate loading */
-      body.dark-mode,
-      html[data-theme="dark"] body {
-        --bg-color: #1A1B26;
-        --text-color: #E4E5E9;
-        --card-bg: #24283B;
-        --sidebar-bg: #1F2130;
-        --sidebar-hover: #2A2D3E;
-        --border-color: #414868;
-        --table-hover: #2A2D3E;
-        --nav-active-bg: #2A2D3E;
+      /* Dark Theme */
+      body.dark-mode {
+        background-color: var(--ctp-base);
+        color: var(--ctp-text);
       }
 
-      .card {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border-color: var(--border-color);
-      }
-
-      .card-header {
-        background-color: var(--card-bg) !important;
-        color: var(--text-color);
-        border-color: var(--border-color);
-      }
-
+      /* Navbar */
       .navbar {
-        background: linear-gradient(135deg, var(--primary-color), #6D28D9);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #8B5CF6, #6D28D9) !important;
+        color: white !important;
+      }
+      .navbar * {
+        color: white !important;
+      }
+      .navbar-brand {
+        font-weight: bold;
       }
 
-      .sidebar {
-        background: var(--sidebar-bg);
-        min-height: calc(100vh - 56px);
-        box-shadow: 2px 0 4px rgba(0,0,0,0.05);
-      }
-
-      .sidebar .nav-link {
-        color: var(--text-color);
-        padding: 0.75rem 1.5rem;
-        border-left: 3px solid transparent;
-        transition: all 0.2s;
-      }
-
-      .sidebar .nav-link:hover {
-        background-color: var(--sidebar-hover);
-        color: var(--primary-color);
-        border-left-color: var(--primary-color);
-      }
-
-      .sidebar .nav-link.active {
-        background-color: var(--nav-active-bg);
-        color: var(--primary-color);
-        border-left-color: var(--primary-color);
-        font-weight: 600;
-      }
-
-      .stat-card {
-        border-radius: 0.75rem;
-        border: none;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-
-      .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      }
-
-      .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-      }
-
-      .stat-label {
-        color: #6B7280; /* Medium gray for light mode */
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      /* Brighter stat labels in dark mode */
-      body.dark-mode .stat-label,
-      html[data-theme="dark"] body .stat-label {
-        color: #9CA3AF; /* Lighter gray for better visibility in dark mode */
-      }
-
-      .badge-ios {
-        background-color: #000000;
-      }
-
-      .badge-android {
-        background-color: #3DDC84;
-        color: #000;
-      }
-
-      .badge-api {
-        background-color: var(--info-color);
-      }
-
-      .table {
-        color: var(--text-color);
-        background-color: var(--card-bg);
-      }
-
-      .table thead {
-        background-color: var(--sidebar-hover);
-        color: var(--text-color);
-      }
-
-      .table tbody {
-        background-color: var(--card-bg);
-      }
-
-      .table-hover tbody tr {
-        background-color: var(--card-bg);
-      }
-
-      .table-hover tbody tr:hover {
-        background-color: var(--table-hover) !important;
-        cursor: pointer;
-      }
-
-      .table-light {
-        background-color: var(--sidebar-hover) !important;
-        color: var(--text-color) !important;
-      }
-
-      /* Fix table cells in dark mode */
-      .table td, .table th {
-        background-color: var(--card-bg) !important;
-        color: var(--text-color) !important;
-        border-color: var(--border-color) !important;
-      }
-
-      .table thead th {
-        background-color: var(--sidebar-hover) !important;
-      }
-
-      /* List group items (used in platform comparison and correlation pages) */
-      .list-group-item {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border-color: var(--border-color);
-      }
-
-      .list-group-item-action {
-        color: var(--text-color);
-      }
-
-      .list-group-item-action:hover,
-      .list-group-item-action:focus {
-        background-color: var(--table-hover);
-        color: var(--text-color);
-      }
-
-      /* Override Bootstrap's default white backgrounds in dark mode */
-      body.dark-mode .list-group-item,
-      html[data-theme="dark"] body .list-group-item {
-        background-color: var(--card-bg) !important;
-        color: var(--text-color) !important;
-        border-color: var(--border-color) !important;
-      }
-
-      body.dark-mode .list-group-item-action:hover,
-      html[data-theme="dark"] body .list-group-item-action:hover {
-        background-color: var(--table-hover) !important;
-      }
-
-      /* Mobile offcanvas menu dark mode */
-      body.dark-mode .offcanvas,
-      html[data-theme="dark"] body .offcanvas {
-        background-color: var(--sidebar-bg);
-        color: var(--text-color);
-      }
-
-      body.dark-mode .offcanvas-header,
-      html[data-theme="dark"] body .offcanvas-header {
-        border-color: var(--border-color);
-      }
-
-      body.dark-mode .offcanvas-title,
-      html[data-theme="dark"] body .offcanvas-title {
-        color: var(--text-color);
-      }
-
-      .form-control, .form-select {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border-color: var(--border-color);
-      }
-
-      .form-control:focus, .form-select:focus {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border-color: var(--primary-color);
-      }
-
-      .modal-content {
-        background-color: var(--card-bg);
-        color: var(--text-color);
-      }
-
-      .modal-header, .modal-footer {
-        border-color: var(--border-color);
-      }
-
-      .btn-close {
-        filter: brightness(0) invert(1);
-      }
-
-      body.dark-mode .btn-close,
-      html[data-theme="dark"] body .btn-close {
-        filter: brightness(0) invert(1);
-      }
-
-      /* Light mode text-muted */
-      .text-muted {
-        color: #6B7280 !important; /* Medium gray for light mode */
-      }
-
-      /* Dark mode text-muted */
-      body.dark-mode .text-muted,
-      html[data-theme="dark"] body .text-muted {
-        color: #D1D5DB !important; /* Lighter gray for dark mode */
-      }
-
+      /* Theme Toggle Button */
       .theme-toggle {
         cursor: pointer;
         padding: 0.5rem 1rem;
@@ -292,126 +83,668 @@
         border: none;
         transition: background-color 0.2s;
       }
-
       .theme-toggle:hover {
         background-color: rgba(255, 255, 255, 0.2);
       }
 
-      .error-status-resolved {
-        color: var(--success-color);
+      /* Sidebar */
+      .sidebar {
+        background: white;
+        min-height: calc(100vh - 56px);
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+      }
+      body.dark-mode .sidebar {
+        background: var(--ctp-mantle);
+      }
+      .sidebar .nav-link {
+        color: #1f2937;
+        padding: 0.75rem 1.5rem;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+      }
+      body.dark-mode .sidebar .nav-link {
+        color: var(--ctp-text);
+      }
+      .sidebar .nav-link:hover {
+        background-color: #f3f4f6;
+        color: #8B5CF6;
+        border-left-color: #8B5CF6;
+      }
+      body.dark-mode .sidebar .nav-link:hover {
+        background-color: var(--ctp-surface0);
+        color: var(--ctp-mauve);
+        border-left-color: var(--ctp-mauve);
+      }
+      .sidebar .nav-link.active {
+        background-color: #f3f4f6;
+        color: #8B5CF6;
+        border-left-color: #8B5CF6;
+        font-weight: 600;
+      }
+      body.dark-mode .sidebar .nav-link.active {
+        background-color: var(--ctp-surface0);
+        color: var(--ctp-mauve);
+        border-left-color: var(--ctp-mauve);
       }
 
-      .error-status-unresolved {
-        color: var(--danger-color);
+      /* Cards */
+      .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        transition: background-color 0.3s, border-color 0.3s;
+      }
+      body.dark-mode .card {
+        background: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .card-header {
+        background-color: var(--ctp-surface1);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
       }
 
-      .chart-container {
-        position: relative;
-        height: 300px;
-        margin: 1rem 0;
+      /* Tables */
+      body.dark-mode .table {
+        color: var(--ctp-text);
+      }
+      body.dark-mode .table-hover tbody tr:hover {
+        background-color: var(--ctp-surface1);
       }
 
-      /* Real-time updates - new error animation */
-      @keyframes slideInFade {
-        0% {
-          transform: translateY(-20px);
-          opacity: 0;
-          background-color: #FEF3C7;
-        }
-        10% {
-          transform: translateY(0);
-          opacity: 1;
-          background-color: #FEF3C7;
-        }
-        100% {
-          background-color: transparent;
-        }
+      /* Badges - Platform Colors */
+      .badge-ios {
+        background-color: #000;
+        color: white;
+      }
+      body.dark-mode .badge-ios {
+        background-color: var(--ctp-overlay0);
+        color: var(--ctp-text);
+        border: 1px solid var(--ctp-surface2);
+      }
+      .badge-android {
+        background-color: #3DDC84;
+        color: white;
+      }
+      body.dark-mode .badge-android {
+        background-color: rgba(166, 227, 161, 0.2);
+        color: var(--ctp-green);
+        border: 1px solid var(--ctp-green);
+      }
+      .badge-web {
+        background-color: #3B82F6;
+        color: white;
+      }
+      body.dark-mode .badge-web {
+        background-color: rgba(137, 180, 250, 0.2);
+        color: var(--ctp-blue);
+        border: 1px solid var(--ctp-blue);
+      }
+      .badge-api {
+        background-color: #8B5CF6;
+        color: white;
+      }
+      body.dark-mode .badge-api {
+        background-color: rgba(116, 199, 236, 0.2);
+        color: var(--ctp-sapphire);
+        border: 1px solid var(--ctp-sapphire);
       }
 
-      /* Highlight new errors */
-      #error_list tr:first-child.new-error {
-        animation: slideInFade 3s ease-out;
+      /* Forms */
+      body.dark-mode .form-control,
+      body.dark-mode .form-select {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .form-control:focus,
+      body.dark-mode .form-select:focus {
+        background-color: var(--ctp-surface1);
+        border-color: var(--ctp-mauve);
+        color: var(--ctp-text);
       }
 
-      /* Live indicator pulse */
-      @keyframes pulse {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.5;
-        }
+      /* Code Blocks */
+      .code-block,
+      pre,
+      code {
+        background-color: #f9fafb;
+        color: #1f2937;
+      }
+      body.dark-mode .code-block,
+      body.dark-mode pre,
+      body.dark-mode code {
+        background-color: var(--ctp-mantle) !important;
+        color: var(--ctp-text) !important;
       }
 
-      #live-indicator {
-        animation: pulse 2s ease-in-out infinite;
+      /* Alerts */
+      body.dark-mode .alert {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
       }
 
-      /* Updated stat card pulse */
-      @keyframes statPulse {
-        0%, 100% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.05);
-        }
+      /* Text colors */
+      body.dark-mode .text-muted {
+        color: var(--ctp-subtext0) !important;
+      }
+      body.dark-mode .text-primary {
+        color: var(--ctp-mauve) !important;
+      }
+      body.dark-mode .text-danger {
+        color: var(--ctp-red) !important;
+      }
+      body.dark-mode .text-success {
+        color: var(--ctp-green) !important;
+      }
+      body.dark-mode .text-warning {
+        color: var(--ctp-peach) !important;
       }
 
-      .stat-card.updated {
-        animation: statPulse 0.5s ease-out;
+      /* Override Bootstrap bg-white and bg-light */
+      body.dark-mode .bg-white {
+        background-color: var(--ctp-surface0) !important;
+      }
+      body.dark-mode .bg-light {
+        background-color: var(--ctp-surface1) !important;
+        color: var(--ctp-text) !important;
       }
 
-      /* Loading indicator */
-      #loading-indicator {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #8B5CF6 0%, #6D28D9 100%);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.3s ease;
-        z-index: 9999;
-        display: none;
+      /* Borders */
+      body.dark-mode .border {
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode .rounded {
+        border-color: var(--ctp-surface2) !important;
       }
 
-      #loading-indicator.active {
-        display: block;
-        animation: loadingProgress 2s ease-in-out forwards;
+      /* Quick Filters Sidebar Section */
+      .sidebar h6 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.75rem 1.5rem;
+        margin: 0;
+        color: #6B7280;
+      }
+      body.dark-mode .sidebar h6 {
+        color: var(--ctp-subtext0);
       }
 
-      @keyframes loadingProgress {
-        0% { transform: scaleX(0); }
-        50% { transform: scaleX(0.7); }
-        100% { transform: scaleX(1); opacity: 0; }
+      /* Stat Cards */
+      .stat-card {
+        border-radius: 0.75rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Badges for severity */
+      .badge.bg-danger {
+        background-color: #EF4444 !important;
+      }
+      .badge.bg-warning {
+        background-color: #F59E0B !important;
+      }
+      .badge.bg-info {
+        background-color: #3B82F6 !important;
+      }
+      .badge.bg-secondary {
+        background-color: #6B7280 !important;
+      }
+      .badge.bg-success {
+        background-color: #10B981 !important;
+      }
+
+      body.dark-mode .badge.bg-danger {
+        background-color: var(--ctp-red) !important;
+        color: var(--ctp-base) !important;
+      }
+      body.dark-mode .badge.bg-warning {
+        background-color: var(--ctp-peach) !important;
+        color: var(--ctp-base) !important;
+      }
+      body.dark-mode .badge.bg-info {
+        background-color: var(--ctp-blue) !important;
+        color: var(--ctp-base) !important;
+      }
+      body.dark-mode .badge.bg-secondary {
+        background-color: var(--ctp-overlay1) !important;
+      }
+      body.dark-mode .badge.bg-success {
+        background-color: var(--ctp-green) !important;
+        color: var(--ctp-base) !important;
+      }
+
+      /* Links */
+      a {
+        color: #8B5CF6;
+        text-decoration: none;
+      }
+      a:hover {
+        color: #6D28D9;
+        text-decoration: underline;
+      }
+      body.dark-mode a {
+        color: var(--ctp-mauve);
+      }
+      body.dark-mode a:hover {
+        color: var(--ctp-pink);
+      }
+
+      /* Buttons */
+      body.dark-mode .btn-primary {
+        background-color: var(--ctp-mauve);
+        border-color: var(--ctp-mauve);
+        color: var(--ctp-base);
+      }
+      body.dark-mode .btn-primary:hover {
+        background-color: var(--ctp-pink);
+        border-color: var(--ctp-pink);
+      }
+      body.dark-mode .btn-outline-primary {
+        color: var(--ctp-mauve);
+        border-color: var(--ctp-mauve);
+      }
+      body.dark-mode .btn-outline-primary:hover {
+        background-color: var(--ctp-mauve);
+        color: var(--ctp-base);
+      }
+      body.dark-mode .btn-secondary,
+      body.dark-mode .btn-outline-secondary {
+        background-color: var(--ctp-surface1);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+
+      /* Modal dialogs */
+      body.dark-mode .modal-content {
+        background-color: var(--ctp-surface0);
+        color: var(--ctp-text);
+        border-color: var(--ctp-surface2);
+      }
+      body.dark-mode .modal-header {
+        background-color: var(--ctp-surface1);
+        border-bottom-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .modal-footer {
+        background-color: var(--ctp-surface1);
+        border-top-color: var(--ctp-surface2);
+      }
+      body.dark-mode .modal-title {
+        color: var(--ctp-text);
+      }
+      body.dark-mode .btn-close {
+        filter: invert(1);
+      }
+
+      /* Table headers - CRITICAL FIX */
+      body.dark-mode thead,
+      body.dark-mode thead th {
+        background-color: var(--ctp-surface1) !important;
+        color: var(--ctp-text) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode tbody tr {
+        border-color: var(--ctp-surface2) !important;
+        background-color: transparent !important;
+      }
+      body.dark-mode tbody td {
+        border-color: var(--ctp-surface2) !important;
+        background-color: transparent !important;
+        color: var(--ctp-text) !important;
+      }
+      body.dark-mode tbody th {
+        background-color: var(--ctp-surface0) !important;
+        color: var(--ctp-text) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode table {
+        color: var(--ctp-text) !important;
+      }
+
+      /* Chart canvas backgrounds */
+      body.dark-mode canvas {
+        background-color: transparent !important;
+      }
+
+      /* Chart labels and text */
+      body.dark-mode .chart-container text {
+        fill: var(--ctp-text) !important;
+      }
+
+      /* Form placeholders */
+      body.dark-mode .form-control::placeholder,
+      body.dark-mode .form-select::placeholder {
+        color: var(--ctp-overlay0);
+        opacity: 1;
+      }
+
+      /* Dropdown menus */
+      body.dark-mode .dropdown-menu {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+      }
+      body.dark-mode .dropdown-item {
+        color: var(--ctp-text);
+      }
+      body.dark-mode .dropdown-item:hover {
+        background-color: var(--ctp-surface1);
+        color: var(--ctp-mauve);
+      }
+
+      /* Pagination */
+      body.dark-mode .pagination .page-link {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .pagination .page-link:hover {
+        background-color: var(--ctp-surface1);
+        color: var(--ctp-mauve);
+      }
+      body.dark-mode .pagination .page-item.active .page-link {
+        background-color: var(--ctp-mauve);
+        border-color: var(--ctp-mauve);
+        color: var(--ctp-base);
+      }
+
+      /* Progress bars */
+      body.dark-mode .progress {
+        background-color: var(--ctp-surface1);
+      }
+      body.dark-mode .progress-bar {
+        background-color: var(--ctp-mauve);
+      }
+
+      /* Horizontal rules */
+      body.dark-mode hr {
+        border-color: var(--ctp-surface2);
+        opacity: 1;
+      }
+
+      /* List groups */
+      body.dark-mode .list-group-item {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .list-group-item:hover {
+        background-color: var(--ctp-surface1);
+      }
+
+      /* Offcanvas (mobile menu) */
+      body.dark-mode .offcanvas {
+        background-color: var(--ctp-mantle);
+        color: var(--ctp-text);
+      }
+      body.dark-mode .offcanvas-header {
+        border-bottom-color: var(--ctp-surface2);
+      }
+
+      /* Small text and labels */
+      body.dark-mode small {
+        color: var(--ctp-subtext1) !important;
+      }
+      body.dark-mode label {
+        color: var(--ctp-text);
+      }
+
+      /* Breadcrumbs */
+      body.dark-mode .breadcrumb {
+        background-color: var(--ctp-surface0);
+      }
+      body.dark-mode .breadcrumb-item {
+        color: var(--ctp-text);
+      }
+      body.dark-mode .breadcrumb-item.active {
+        color: var(--ctp-subtext0);
+      }
+
+      /* Tooltips */
+      body.dark-mode .tooltip-inner {
+        background-color: var(--ctp-surface0);
+        color: var(--ctp-text);
+      }
+
+      /* Checkboxes and radios */
+      body.dark-mode .form-check-input {
+        background-color: var(--ctp-surface1);
+        border-color: var(--ctp-surface2);
+      }
+      body.dark-mode .form-check-input:checked {
+        background-color: var(--ctp-mauve);
+        border-color: var(--ctp-mauve);
+      }
+      body.dark-mode .form-check-label {
+        color: var(--ctp-text);
+      }
+
+      /* Nav tabs */
+      body.dark-mode .nav-tabs {
+        border-bottom-color: var(--ctp-surface2);
+      }
+      body.dark-mode .nav-tabs .nav-link {
+        color: var(--ctp-text);
+        background-color: transparent;
+        border-color: transparent;
+      }
+      body.dark-mode .nav-tabs .nav-link:hover {
+        border-color: var(--ctp-surface2);
+        background-color: var(--ctp-surface1);
+      }
+      body.dark-mode .nav-tabs .nav-link.active {
+        background-color: var(--ctp-surface0);
+        border-color: var(--ctp-surface2) var(--ctp-surface2) var(--ctp-surface0);
+        color: var(--ctp-mauve);
+      }
+
+      /* Collapsible sections - AGGRESSIVE */
+      body.dark-mode .accordion-item {
+        background-color: var(--ctp-surface0) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode .accordion-button {
+        background-color: var(--ctp-surface1) !important;
+        color: var(--ctp-text) !important;
+      }
+      body.dark-mode .accordion-button.bg-light {
+        background-color: var(--ctp-surface1) !important;
+      }
+      body.dark-mode .accordion-button:not(.collapsed) {
+        background-color: var(--ctp-surface0) !important;
+        color: var(--ctp-mauve) !important;
+      }
+      body.dark-mode .accordion-button::after {
+        filter: invert(1);
+      }
+      body.dark-mode .accordion-body {
+        background-color: var(--ctp-surface0) !important;
+        color: var(--ctp-text) !important;
+      }
+
+      /* Heatmap specific styling - AGGRESSIVE */
+      body.dark-mode .heatmap-cell {
+        border-color: var(--ctp-surface2) !important;
+        color: var(--ctp-text) !important;
+      }
+      body.dark-mode .heatmap-hour {
+        color: var(--ctp-sky) !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+      }
+      body.dark-mode .heatmap-count {
+        color: var(--ctp-peach) !important;
+        font-weight: 600 !important;
+      }
+      body.dark-mode .heatmap-count.text-white {
+        color: var(--ctp-text) !important;
+      }
+      body.dark-mode .heatmap-count.text-dark {
+        color: var(--ctp-peach) !important;
+      }
+      body.dark-mode .heatmap-grid {
+        background-color: var(--ctp-surface0);
+      }
+
+      /* Definition lists (dl, dt, dd) - used in Request Context */
+      body.dark-mode dl {
+        color: var(--ctp-text);
+      }
+      body.dark-mode dt {
+        color: var(--ctp-subtext1);
+        font-weight: 600;
+      }
+      body.dark-mode dd {
+        color: var(--ctp-text);
+        background-color: var(--ctp-surface0);
+      }
+
+      /* Override any remaining white backgrounds */
+      body.dark-mode div[style*="background-color: white"],
+      body.dark-mode div[style*="background-color: #fff"],
+      body.dark-mode div[style*="background-color:#fff"],
+      body.dark-mode div[style*="background: white"],
+      body.dark-mode div[style*="background: #fff"] {
+        background-color: var(--ctp-surface0) !important;
+      }
+
+      /* Chart.js specific fixes for axis labels */
+      body.dark-mode .chartjs-render-monitor {
+        background-color: transparent !important;
+      }
+
+      /* Make sure all headings are visible */
+      body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+      body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+        color: var(--ctp-text);
+      }
+
+      /* Stronger text colors for better visibility */
+      body.dark-mode .text-secondary {
+        color: var(--ctp-subtext1) !important;
+      }
+
+      /* SVG text elements (for charts) - MORE AGGRESSIVE */
+      body.dark-mode svg text {
+        fill: var(--ctp-text) !important;
+      }
+      body.dark-mode svg .domain,
+      body.dark-mode svg .tick line {
+        stroke: var(--ctp-surface2) !important;
+      }
+      body.dark-mode svg tspan {
+        fill: var(--ctp-text) !important;
+      }
+
+      /* Details/Summary (collapsible sections) */
+      body.dark-mode details {
+        background-color: var(--ctp-surface0) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode summary {
+        background-color: var(--ctp-surface0) !important;
+        color: var(--ctp-text) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+      body.dark-mode details[open] summary {
+        background-color: var(--ctp-surface1) !important;
+        border-bottom-color: var(--ctp-surface2) !important;
+      }
+
+      /* Button-like summary elements */
+      body.dark-mode .btn.collapsed,
+      body.dark-mode [data-bs-toggle="collapse"] {
+        background-color: var(--ctp-surface0) !important;
+        color: var(--ctp-text) !important;
+        border-color: var(--ctp-surface2) !important;
+      }
+
+      /* Specific override for white backgrounds in backtrace sections */
+      body.dark-mode .card .card-body > div[style*="background"],
+      body.dark-mode .card-body > button[style*="background"] {
+        background-color: var(--ctp-surface0) !important;
+      }
+
+      /* Error header/banner */
+      body.dark-mode .alert-danger {
+        background-color: rgba(243, 139, 168, 0.2) !important;
+        border-color: var(--ctp-red) !important;
+        color: var(--ctp-text) !important;
+      }
+
+      /* Chartkick specific - force text visibility */
+      body.dark-mode #chart-1 text,
+      body.dark-mode [id^="chart-"] text {
+        fill: var(--ctp-text) !important;
+        color: var(--ctp-text) !important;
+      }
+
+      /* Force all text in charts to be visible */
+      body.dark-mode canvas + div text,
+      body.dark-mode .chartjs-size-monitor text {
+        color: var(--ctp-text) !important;
+      }
+
+      /* ULTRA AGGRESSIVE - Chart.js axis labels and titles */
+      body.dark-mode canvas {
+        color: var(--ctp-text) !important;
+      }
+
+      /* Target Google Charts (alternative library) */
+      body.dark-mode svg > g > g > text,
+      body.dark-mode svg g text {
+        fill: var(--ctp-text) !important;
+        font-size: 12px !important;
+      }
+
+      /* Chart.js specific selectors - NUCLEAR OPTION */
+      body.dark-mode .chartjs-render-monitor + div text,
+      body.dark-mode [class*="chart"] text,
+      body.dark-mode div[id*="chart"] text {
+        fill: var(--ctp-text) !important;
+        color: var(--ctp-text) !important;
+      }
+
+      /* Ensure axis tick labels are visible */
+      body.dark-mode g.tick text,
+      body.dark-mode .tick text,
+      body.dark-mode text.highcharts-axis-title,
+      body.dark-mode .highcharts-axis-labels text {
+        fill: var(--ctp-text) !important;
+        color: var(--ctp-text) !important;
+      }
+
+      /* Force visibility on ALL text elements inside chart containers */
+      body.dark-mode .card-body text,
+      body.dark-mode .card text {
+        fill: var(--ctp-text) !important;
       }
     </style>
   </head>
 
   <body>
-    <!-- Loading Indicator -->
-    <div id="loading-indicator"></div>
-
     <!-- Top Navbar -->
     <nav class="navbar navbar-dark">
       <div class="container-fluid">
         <div class="d-flex align-items-center">
-          <!-- Mobile menu toggle -->
-          <button class="btn btn-link text-white d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+          <button class="btn btn-link text-white d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
             <i class="bi bi-list fs-4"></i>
           </button>
-          <a class="navbar-brand fw-bold" href="<%= root_path %>">
-            <i class="bi bi-bug-fill"></i>
-            Error Dashboard
+          <a class="navbar-brand" href="<%= root_path %>">
+            <i class="bi bi-bug-fill"></i> Error Dashboard
           </a>
         </div>
         <div class="d-flex align-items-center gap-3">
-          <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+          <button class="theme-toggle" id="themeToggle">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
           </button>
           <div class="text-white d-none d-md-block">
-            <small><%= Rails.env.titleize %> Environment</small>
+            <small><%= Rails.env.titleize %></small>
           </div>
         </div>
       </div>
@@ -419,8 +752,8 @@
 
     <div class="container-fluid">
       <div class="row">
-        <!-- Sidebar - Desktop -->
-        <nav class="col-md-2 d-none d-md-block sidebar" id="sidebarDesktop">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block sidebar">
           <div class="position-sticky pt-3">
             <ul class="nav flex-column">
               <li class="nav-item">
@@ -438,31 +771,13 @@
                   <i class="bi bi-graph-up"></i> Analytics
                 <% end %>
               </li>
-              <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-                <li class="nav-item">
-                  <%= link_to platform_comparison_errors_path, class: "nav-link #{request.path == platform_comparison_errors_path ? 'active' : ''}" do %>
-                    <i class="bi bi-phone"></i> Platform Health
-                  <% end %>
-                </li>
-              <% end %>
-              <% if RailsErrorDashboard.configuration.enable_error_correlation %>
-                <li class="nav-item">
-                  <%= link_to correlation_errors_path, class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}" do %>
-                    <i class="bi bi-diagram-3"></i> Correlation
-                  <% end %>
-                </li>
-              <% end %>
             </ul>
 
-            <hr class="my-3">
-
-            <h6 class="sidebar-heading px-3 mt-4 mb-2 text-muted text-uppercase">
-              <small>Quick Filters</small>
-            </h6>
+            <h6 class="mt-4">QUICK FILTERS</h6>
             <ul class="nav flex-column">
               <li class="nav-item">
-                <%= link_to errors_path(unresolved: true), class: "nav-link" do %>
-                  <i class="bi bi-exclamation-circle text-danger"></i> Unresolved
+                <%= link_to errors_path(status: 'unresolved'), class: "nav-link" do %>
+                  <i class="bi bi-exclamation-circle"></i> Unresolved
                 <% end %>
               </li>
               <li class="nav-item">
@@ -479,79 +794,6 @@
           </div>
         </nav>
 
-        <!-- Sidebar - Mobile (Offcanvas) -->
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
-          <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="sidebarMenuLabel">
-              <i class="bi bi-bug-fill"></i> Error Dashboard
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-          </div>
-          <div class="offcanvas-body">
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <%= link_to root_path, class: "nav-link #{request.path == root_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-speedometer2"></i> Overview
-                <% end %>
-              </li>
-              <li class="nav-item">
-                <%= link_to errors_path, class: "nav-link #{request.path == errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-list-ul"></i> All Errors
-                <% end %>
-              </li>
-              <li class="nav-item">
-                <%= link_to analytics_errors_path, class: "nav-link #{request.path == analytics_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-graph-up"></i> Analytics
-                <% end %>
-              </li>
-              <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-                <li class="nav-item">
-                  <%= link_to platform_comparison_errors_path, class: "nav-link #{request.path == platform_comparison_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
-                    <i class="bi bi-phone"></i> Platform Health
-                  <% end %>
-                </li>
-              <% end %>
-              <% if RailsErrorDashboard.configuration.enable_error_correlation %>
-                <li class="nav-item">
-                  <%= link_to correlation_errors_path, class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}", data: { bs_dismiss: "offcanvas" } do %>
-                    <i class="bi bi-diagram-3"></i> Correlation
-                  <% end %>
-                </li>
-              <% end %>
-            </ul>
-
-            <hr class="my-3">
-
-            <h6 class="sidebar-heading px-3 mt-4 mb-2 text-muted text-uppercase">
-              <small>Quick Filters</small>
-            </h6>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <%= link_to errors_path(unresolved: true), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-exclamation-circle text-danger"></i> Unresolved
-                <% end %>
-              </li>
-              <li class="nav-item">
-                <%= link_to errors_path(platform: 'iOS'), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-phone"></i> iOS Errors
-                <% end %>
-              </li>
-              <li class="nav-item">
-                <%= link_to errors_path(platform: 'Android'), class: "nav-link", data: { bs_dismiss: "offcanvas" } do %>
-                  <i class="bi bi-phone"></i> Android Errors
-                <% end %>
-              </li>
-            </ul>
-
-            <hr class="my-3">
-
-            <div class="px-3">
-              <small class="text-muted">Environment</small>
-              <div class="fw-bold"><%= Rails.env.titleize %></div>
-            </div>
-          </div>
-        </div>
-
         <!-- Main content -->
         <main class="col-md-10 ms-sm-auto px-md-4">
           <%= yield %>
@@ -562,97 +804,185 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Theme Toggle Script -->
+    <!-- Pure JavaScript Theme Toggle -->
     <script>
-      // Update Chart.js defaults for dark/light theme
-      function updateChartTheme(isDark) {
-        if (typeof Chart !== 'undefined') {
-          const textColor = isDark ? '#E4E5E9' : '#1F2937';
-          const gridColor = isDark ? 'rgba(65, 72, 104, 0.3)' : 'rgba(0, 0, 0, 0.1)';
-
-          Chart.defaults.color = textColor;
-          Chart.defaults.borderColor = gridColor;
-          Chart.defaults.scale.grid.color = gridColor;
-          Chart.defaults.scale.ticks.color = textColor;
-          Chart.defaults.plugins.legend.labels.color = textColor;
-          Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#24283B' : 'rgba(0, 0, 0, 0.8)';
-          Chart.defaults.plugins.tooltip.titleColor = textColor;
-          Chart.defaults.plugins.tooltip.bodyColor = textColor;
-        }
-      }
-
-      // Load theme from localStorage on page load
-      document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        const isDark = savedTheme === 'dark';
-
-        if (isDark) {
+      // Load saved theme on page load (before DOMContentLoaded to prevent flash)
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
           document.body.classList.add('dark-mode');
-          document.documentElement.setAttribute('data-theme', 'dark');
-          updateThemeIcon(true);
-        } else {
-          // Ensure light mode is clean
-          document.body.classList.remove('dark-mode');
-          document.documentElement.removeAttribute('data-theme');
-          updateThemeIcon(false);
+        }
+      })();
+
+      // Theme toggle after DOM loads
+      document.addEventListener('DOMContentLoaded', function() {
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+
+        // Update icon based on current theme
+        function updateIcon() {
+          if (document.body.classList.contains('dark-mode')) {
+            themeIcon.className = 'bi bi-sun-fill';
+          } else {
+            themeIcon.className = 'bi bi-moon-fill';
+          }
         }
 
-        // Update Chart.js theme
-        updateChartTheme(isDark);
-      });
+        // Set initial icon
+        updateIcon();
 
-      function toggleTheme() {
-        const body = document.body;
-        const isDark = body.classList.toggle('dark-mode');
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', function() {
+          console.log('🎨 Theme toggle clicked');
 
-        // Sync with html data attribute
-        if (isDark) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-          document.documentElement.removeAttribute('data-theme');
+          document.body.classList.toggle('dark-mode');
+          const isDark = document.body.classList.contains('dark-mode');
+
+          console.log('Dark mode:', isDark);
+
+          // Save preference
+          localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          console.log('💾 Saved to localStorage:', isDark ? 'dark' : 'light');
+
+          // Update icon
+          updateIcon();
+          console.log('✅ Theme toggled successfully');
+
+          // Reapply chart theme
+          applyChartTheme();
+
+          // Reload page to update charts properly
+          setTimeout(() => location.reload(), 300);
+        });
+
+        // Chart.js theme colors - ULTRA AGGRESSIVE setup
+        function applyChartTheme() {
+          if (typeof Chart !== 'undefined') {
+            const isDark = document.body.classList.contains('dark-mode');
+            const textColor = isDark ? '#cdd6f4' : '#1f2937';
+            const gridColor = isDark ? 'rgba(88, 91, 112, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+            console.log('📊 Setting Chart.js theme:', isDark ? 'DARK' : 'light', '| Text:', textColor);
+
+            // Global defaults
+            Chart.defaults.color = textColor;
+            Chart.defaults.borderColor = gridColor;
+            Chart.defaults.font = Chart.defaults.font || {};
+            Chart.defaults.font.color = textColor;
+
+            // Scale defaults (axes) - AGGRESSIVE
+            if (Chart.defaults.scale) {
+              Chart.defaults.scale.ticks = Chart.defaults.scale.ticks || {};
+              Chart.defaults.scale.ticks.color = textColor;
+              Chart.defaults.scale.ticks.font = Chart.defaults.scale.ticks.font || {};
+              Chart.defaults.scale.ticks.font.color = textColor;
+
+              Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
+              Chart.defaults.scale.grid.color = gridColor;
+
+              // Axis title (xtitle, ytitle)
+              Chart.defaults.scale.title = Chart.defaults.scale.title || {};
+              Chart.defaults.scale.title.color = textColor;
+              Chart.defaults.scale.title.font = Chart.defaults.scale.title.font || {};
+              Chart.defaults.scale.title.font.size = 14;
+            }
+
+            // X and Y axis specific
+            if (Chart.defaults.scales) {
+              // X axis
+              Chart.defaults.scales.x = Chart.defaults.scales.x || {};
+              Chart.defaults.scales.x.ticks = Chart.defaults.scales.x.ticks || {};
+              Chart.defaults.scales.x.ticks.color = textColor;
+              Chart.defaults.scales.x.title = Chart.defaults.scales.x.title || {};
+              Chart.defaults.scales.x.title.color = textColor;
+              Chart.defaults.scales.x.grid = Chart.defaults.scales.x.grid || {};
+              Chart.defaults.scales.x.grid.color = gridColor;
+
+              // Y axis
+              Chart.defaults.scales.y = Chart.defaults.scales.y || {};
+              Chart.defaults.scales.y.ticks = Chart.defaults.scales.y.ticks || {};
+              Chart.defaults.scales.y.ticks.color = textColor;
+              Chart.defaults.scales.y.title = Chart.defaults.scales.y.title || {};
+              Chart.defaults.scales.y.title.color = textColor;
+              Chart.defaults.scales.y.grid = Chart.defaults.scales.y.grid || {};
+              Chart.defaults.scales.y.grid.color = gridColor;
+            }
+
+            // Plugin defaults
+            if (Chart.defaults.plugins) {
+              // Legend
+              if (Chart.defaults.plugins.legend) {
+                Chart.defaults.plugins.legend.labels = Chart.defaults.plugins.legend.labels || {};
+                Chart.defaults.plugins.legend.labels.color = textColor;
+                Chart.defaults.plugins.legend.labels.font = Chart.defaults.plugins.legend.labels.font || {};
+                Chart.defaults.plugins.legend.labels.font.color = textColor;
+              }
+
+              // Tooltip
+              if (Chart.defaults.plugins.tooltip) {
+                Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#313244' : 'rgba(0, 0, 0, 0.8)';
+                Chart.defaults.plugins.tooltip.titleColor = textColor;
+                Chart.defaults.plugins.tooltip.bodyColor = textColor;
+                Chart.defaults.plugins.tooltip.borderColor = isDark ? '#585b70' : 'rgba(0, 0, 0, 0.1)';
+                Chart.defaults.plugins.tooltip.borderWidth = 1;
+              }
+
+              // Title plugin
+              if (Chart.defaults.plugins.title) {
+                Chart.defaults.plugins.title.color = textColor;
+                Chart.defaults.plugins.title.font = Chart.defaults.plugins.title.font || {};
+                Chart.defaults.plugins.title.font.color = textColor;
+              }
+            }
+
+            console.log('✅ Chart.js theme applied - all text should be:', textColor);
+          } else {
+            console.warn('⚠️ Chart.js not loaded yet');
+          }
+
+          // Also update Google Charts if present
+          if (typeof google !== 'undefined' && google.visualization) {
+            console.log('📊 Google Charts detected - applying theme');
+          }
         }
 
-        // Save preference
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        // Apply chart theme on load
+        applyChartTheme();
 
-        // Update icon
-        updateThemeIcon(isDark);
+        // NUCLEAR OPTION: Watch for chart creation and force colors
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.tagName === 'CANVAS') {
+                console.log('🎨 New chart detected, forcing theme...');
+                setTimeout(applyChartTheme, 100);
+              }
+            });
+          });
+        });
 
-        // Update Chart.js theme
-        updateChartTheme(isDark);
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
 
-        // Reload page to apply chart theme (Chart.js requires re-render)
-        setTimeout(() => location.reload(), 100);
-      }
+        // Also listen for Chartkick chart creation events
+        document.addEventListener('chartkick:load', function() {
+          console.log('📊 Chartkick loaded, applying theme');
+          applyChartTheme();
+        });
 
-      function updateThemeIcon(isDark) {
-        const icon = document.getElementById('themeIcon');
-        if (isDark) {
-          icon.className = 'bi bi-sun-fill';
-        } else {
-          icon.className = 'bi bi-moon-fill';
-        }
-      }
-
-      // Loading indicator for form submissions and link clicks
-      const loadingIndicator = document.getElementById('loading-indicator');
-
-      // Show loading on form submit
-      document.addEventListener('submit', function() {
-        loadingIndicator.classList.add('active');
-      });
-
-      // Show loading on link clicks (except anchors)
-      document.addEventListener('click', function(e) {
-        const link = e.target.closest('a');
-        if (link && link.href && !link.href.startsWith('#') && !link.target) {
-          loadingIndicator.classList.add('active');
-        }
-      });
-
-      // Hide loading when page loads
-      window.addEventListener('load', function() {
-        loadingIndicator.classList.remove('active');
+        // Force reapply every 500ms for the first 3 seconds (in case charts load late)
+        let attempts = 0;
+        const forceInterval = setInterval(function() {
+          attempts++;
+          applyChartTheme();
+          console.log('🔄 Force applying theme (attempt', attempts, ')');
+          if (attempts >= 6) {
+            clearInterval(forceInterval);
+            console.log('✅ Stopped force applying');
+          }
+        }, 500);
       });
     </script>
   </body>
