@@ -71,6 +71,21 @@ module RailsErrorDashboard
           attributes[:backtrace_signature] = calculate_backtrace_signature_from_backtrace(truncated_backtrace)
         end
 
+        #  Add git/release info if columns exist
+        if ErrorLog.column_names.include?("git_sha")
+          attributes[:git_sha] = RailsErrorDashboard.configuration.git_sha ||
+                                  ENV["GIT_SHA"] ||
+                                  ENV["HEROKU_SLUG_COMMIT"] ||
+                                  ENV["RENDER_GIT_COMMIT"] ||
+                                  detect_git_sha_from_command
+        end
+
+        if ErrorLog.column_names.include?("app_version")
+          attributes[:app_version] = RailsErrorDashboard.configuration.app_version ||
+                                      ENV["APP_VERSION"] ||
+                                      detect_version_from_file
+        end
+
         # Find existing error or create new one
         # This ensures accurate occurrence tracking
         error_log = ErrorLog.find_or_increment_by_hash(error_hash, attributes.merge(error_hash: error_hash))
@@ -355,6 +370,25 @@ module RailsErrorDashboard
       rescue => e
         # Don't let baseline alerting cause errors
         RailsErrorDashboard::Logger.error("Failed to check baseline anomaly: #{e.message}")
+      end
+
+      # Detect git SHA from git command (fallback)
+      def detect_git_sha_from_command
+        return nil unless File.exist?(Rails.root.join(".git"))
+        `git rev-parse --short HEAD 2>/dev/null`.strip.presence
+      rescue => e
+        RailsErrorDashboard::Logger.debug("Could not detect git SHA: #{e.message}")
+        nil
+      end
+
+      # Detect app version from VERSION file (fallback)
+      def detect_version_from_file
+        version_file = Rails.root.join("VERSION")
+        return File.read(version_file).strip if File.exist?(version_file)
+        nil
+      rescue => e
+        RailsErrorDashboard::Logger.debug("Could not detect version: #{e.message}")
+        nil
       end
     end
   end
