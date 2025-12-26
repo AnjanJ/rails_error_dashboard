@@ -56,7 +56,7 @@ module RailsErrorDashboard
         # Datadog::Statsd.increment(metric_name, tags: metric_tags(data))
 
         # For demonstration, just log
-        Rails.logger.info("Metrics: #{metric_name} - #{data.is_a?(Hash) ? data : data.class.name}")
+        RailsErrorDashboard::Logger.info("Metrics: #{metric_name} - #{data.is_a?(Hash) ? data : data.class.name}")
       end
 
       def metric_tags(data)

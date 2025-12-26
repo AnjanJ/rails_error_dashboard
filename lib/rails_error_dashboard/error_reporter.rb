@@ -32,10 +32,10 @@ module RailsErrorDashboard
       rescue => e
         # Don't let error logging cause more errors - fail silently
         # Log failure for debugging but NEVER propagate exception
-        Rails.logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")
-        Rails.logger.error("Original error: #{error.class} - #{error.message}") if error
-        Rails.logger.error("Context: #{context.inspect}") if context
-        Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")
+        RailsErrorDashboard::Logger.error("Original error: #{error.class} - #{error.message}") if error
+        RailsErrorDashboard::Logger.error("Context: #{context.inspect}") if context
+        RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
         nil # Explicitly return nil, never raise
       end
     end

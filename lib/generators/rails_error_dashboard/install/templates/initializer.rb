@@ -262,6 +262,27 @@ RailsErrorDashboard.configure do |config|
 
 <% end -%>
   # ============================================================================
+  # INTERNAL LOGGING (Silent by Default)
+  # ============================================================================
+  # Rails Error Dashboard logging is SILENT by default to keep your logs clean.
+  # Enable only for debugging gem issues or troubleshooting setup.
+
+  # Enable internal logging (default: false - silent)
+  config.enable_internal_logging = false
+
+  # Log level (default: :silent)
+  # Options: :debug, :info, :warn, :error, :silent
+  config.log_level = :silent
+
+  # Example: Enable verbose logging for debugging
+  # config.enable_internal_logging = true
+  # config.log_level = :debug
+
+  # Example: Log only errors (troubleshooting)
+  # config.enable_internal_logging = true
+  # config.log_level = :error
+
+  # ============================================================================
   # ADDITIONAL CONFIGURATION
   # ============================================================================
 

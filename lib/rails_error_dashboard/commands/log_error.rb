@@ -86,7 +86,7 @@ module RailsErrorDashboard
               session_id: error_context.session_id
             )
           rescue => e
-            Rails.logger.error("Failed to create error occurrence: #{e.message}")
+            RailsErrorDashboard::Logger.error("Failed to create error occurrence: #{e.message}")
           end
         end
 
@@ -112,10 +112,10 @@ module RailsErrorDashboard
       rescue => e
         # Don't let error logging cause more errors - fail silently
         # CRITICAL: Log but never propagate exception
-        Rails.logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
-        Rails.logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
-        Rails.logger.error("Context: #{@context.inspect}") if @context
-        Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
+        RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
+        RailsErrorDashboard::Logger.error("Context: #{@context.inspect}") if @context
+        RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
         nil # Explicitly return nil, never raise
       end
 
@@ -127,7 +127,7 @@ module RailsErrorDashboard
         RailsErrorDashboard.configuration.notification_callbacks[:error_logged].each do |callback|
           callback.call(error_log)
         rescue => e
-          Rails.logger.error("Error in error_logged callback: #{e.message}")
+          RailsErrorDashboard::Logger.error("Error in error_logged callback: #{e.message}")
         end
 
         # Trigger critical_error callbacks if this is a critical error
@@ -135,7 +135,7 @@ module RailsErrorDashboard
           RailsErrorDashboard.configuration.notification_callbacks[:critical_error].each do |callback|
             callback.call(error_log)
           rescue => e
-            Rails.logger.error("Error in critical_error callback: #{e.message}")
+            RailsErrorDashboard::Logger.error("Error in critical_error callback: #{e.message}")
           end
         end
       end
@@ -210,7 +210,7 @@ module RailsErrorDashboard
           end
         rescue NameError
           # Handle invalid class names in configuration
-          Rails.logger.warn("Invalid ignored exception class: #{ignored}")
+          RailsErrorDashboard::Logger.warn("Invalid ignored exception class: #{ignored}")
           false
         end
       end
@@ -354,7 +354,7 @@ module RailsErrorDashboard
         )
       rescue => e
         # Don't let baseline alerting cause errors
-        Rails.logger.error("Failed to check baseline anomaly: #{e.message}")
+        RailsErrorDashboard::Logger.error("Failed to check baseline anomaly: #{e.message}")
       end
     end
   end

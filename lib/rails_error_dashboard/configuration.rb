@@ -82,6 +82,10 @@ module RailsErrorDashboard
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
+    # Internal logging configuration
+    attr_accessor :enable_internal_logging
+    attr_accessor :log_level
+
     def initialize
       # Default values
       @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
@@ -144,6 +148,10 @@ module RailsErrorDashboard
       @baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
       @baseline_alert_severities = [ :critical, :high ] # Alert on critical and high severity anomalies
       @baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i
+
+      # Internal logging defaults - SILENT by default
+      @enable_internal_logging = false  # Opt-in for debugging
+      @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
 
       @notification_callbacks = {
         error_logged: [],

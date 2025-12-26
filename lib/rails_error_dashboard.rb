@@ -1,6 +1,7 @@
 require "rails_error_dashboard/version"
 require "rails_error_dashboard/engine"
 require "rails_error_dashboard/configuration"
+require "rails_error_dashboard/logger"
 
 # External dependencies
 require "pagy"

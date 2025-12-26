@@ -32,7 +32,7 @@ module RailsErrorDashboard
           errors: []
         }
       rescue => e
-        Rails.logger.error("Batch delete failed: #{e.message}")
+        RailsErrorDashboard::Logger.error("Batch delete failed: #{e.message}")
         { success: false, count: 0, total: @error_ids.size, errors: [ e.message ] }
       end
     end

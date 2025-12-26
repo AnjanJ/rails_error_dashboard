@@ -37,7 +37,7 @@ module RailsErrorDashboard
             resolved_errors << error
           rescue => e
             failed_ids << error.id
-            Rails.logger.error("Failed to resolve error #{error.id}: #{e.message}")
+            RailsErrorDashboard::Logger.error("Failed to resolve error #{error.id}: #{e.message}")
           end
         end
 
@@ -52,7 +52,7 @@ module RailsErrorDashboard
           errors: failed_ids.empty? ? [] : [ "Failed to resolve #{failed_ids.size} error(s)" ]
         }
       rescue => e
-        Rails.logger.error("Batch resolve failed: #{e.message}")
+        RailsErrorDashboard::Logger.error("Batch resolve failed: #{e.message}")
         { success: false, count: 0, total: @error_ids.size, errors: [ e.message ] }
       end
     end

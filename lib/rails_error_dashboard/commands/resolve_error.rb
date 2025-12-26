@@ -32,7 +32,7 @@ module RailsErrorDashboard
         RailsErrorDashboard.configuration.notification_callbacks[:error_resolved].each do |callback|
           callback.call(error)
         rescue => e
-          Rails.logger.error("Error in error_resolved callback: #{e.message}")
+          RailsErrorDashboard::Logger.error("Error in error_resolved callback: #{e.message}")
         end
 
         # Emit ActiveSupport::Notifications instrumentation event

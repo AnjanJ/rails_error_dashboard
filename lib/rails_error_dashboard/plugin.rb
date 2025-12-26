@@ -92,9 +92,9 @@ module RailsErrorDashboard
       send(method_name, *args)
     rescue => e
       # Log plugin failures but never propagate - plugins must not break the app
-      Rails.logger.error("[RailsErrorDashboard] Plugin '#{name}' failed in #{method_name}: #{e.class} - #{e.message}")
-      Rails.logger.error("Plugin version: #{version}")
-      Rails.logger.error(e.backtrace&.first(10)&.join("\n")) if e.backtrace
+      RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Plugin '#{name}' failed in #{method_name}: #{e.class} - #{e.message}")
+      RailsErrorDashboard::Logger.error("Plugin version: #{version}")
+      RailsErrorDashboard::Logger.error(e.backtrace&.first(10)&.join("\n")) if e.backtrace
       nil # Explicitly return nil, never raise
     end
   end

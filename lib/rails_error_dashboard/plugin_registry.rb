@@ -18,13 +18,13 @@ module RailsErrorDashboard
         end
 
         if plugins.any? { |p| p.name == plugin.name }
-          Rails.logger.warn("Plugin '#{plugin.name}' is already registered, skipping")
+          RailsErrorDashboard::Logger.warn("Plugin '#{plugin.name}' is already registered, skipping")
           return false
         end
 
         plugins << plugin
         plugin.on_register
-        Rails.logger.info("Registered plugin: #{plugin.name} (#{plugin.version})")
+        RailsErrorDashboard::Logger.info("Registered plugin: #{plugin.name} (#{plugin.version})")
         true
       end
 

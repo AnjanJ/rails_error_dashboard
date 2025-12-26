@@ -62,7 +62,7 @@ module RailsErrorDashboard
           labels: [ "rails-error-dashboard", error_log.platform ].compact
         }
 
-        Rails.logger.info("Would create Jira ticket: #{ticket_data.to_json}")
+        RailsErrorDashboard::Logger.info("Would create Jira ticket: #{ticket_data.to_json}")
 
         # Actual implementation:
         # require 'httparty'
