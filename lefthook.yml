@@ -1,9 +1,7 @@
 # Lefthook Configuration for Rails Error Dashboard
 # https://github.com/evilmartians/lefthook
-# Version: 2.0.13+
 #
-# This ensures all code meets quality standards BEFORE committing,
-# saving GitHub Actions minutes and providing faster feedback.
+# This runs quality checks on CHANGED files only for fast feedback.
 #
 # Installation:
 #   gem install lefthook
@@ -14,114 +12,103 @@
 #   git commit -m "message" --no-verify
 
 # ============================================================================
-# PRE-COMMIT (Comprehensive checks - mirrors CI)
+# PRE-COMMIT (Fast checks on changed files only)
 # ============================================================================
-# These run before git commit to ensure all code is production-ready
 pre-commit:
-  parallel: false  # Run sequentially for clear output
+  parallel: true  # Run checks in parallel for speed
 
   commands:
-    # 1. RuboCop - Full codebase check
-    rubocop-full:
-      run: bundle exec rubocop
+    # 1. RuboCop - Only staged files
+    rubocop-staged:
+      glob: "*.rb"
+      run: bundle exec rubocop {staged_files}
 
-    # 2. RSpec - Run full test suite
-    rspec-full:
+    # 2. RSpec - Only changed spec files
+    rspec-changed:
+      glob: "*_spec.rb"
       run: |
-        echo "🧪 Running full test suite (this may take a minute)..."
-        COVERAGE=false bundle exec rspec
+        if [ -n "{staged_files}" ]; then
+          echo "🧪 Running tests for changed specs..."
+          COVERAGE=false bundle exec rspec {staged_files}
+        fi
 
     # 3. Bundle audit - Check for vulnerable dependencies
     bundle-audit:
       run: |
         echo "🔒 Checking for vulnerable dependencies..."
-        gem install bundler-audit --conservative || true
-        bundle audit check --update || echo "⚠️  Warning: Bundle audit check failed, continuing..."
+        gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
+        bundle audit check --update
 
-    # 4. Check for debugger statements in Ruby files
+    # 4. Check for debugger statements in staged Ruby files
     no-debuggers:
+      glob: "*.rb"
       run: |
-        if git diff --cached --name-only | grep "\.rb$" | xargs grep -n "binding\.pry\|byebug" 2>/dev/null; then
-          echo "❌ Found Ruby debugger statement! Remove before committing."
+        if echo "{staged_files}" | xargs grep -Hn "binding\.pry\|byebug\|debugger" 2>/dev/null; then
+          echo "❌ Found debugger statement! Remove before committing."
           exit 1
         fi
 
-    # 5. Check for trailing whitespace
+    # 5. Check for trailing whitespace in staged files
     trailing-whitespace:
+      glob: "*.{rb,yml,js,md}"
       run: |
-        if git diff --cached --name-only | xargs grep -n "[[:space:]]$" 2>/dev/null; then
-          echo "❌ Found trailing whitespace!"
+        if echo "{staged_files}" | xargs grep -Hn "[[:space:]]$" 2>/dev/null; then
+          echo "❌ Found trailing whitespace! Run: bundle exec rubocop -A"
           exit 1
         fi
 
 # ============================================================================
-# PRE-PUSH (Minimal safety checks)
+# PRE-PUSH (Disabled - too slow and problematic)
 # ============================================================================
-# These run before git push for final safety checks
-pre-push:
-  commands:
-    # Prevent force push to main
-    no-force-push-main:
-      run: |
-        branch=$(git rev-parse --abbrev-ref HEAD)
-        if [[ "$branch" == "main" ]] && git push --dry-run 2>&1 | grep -q "forced update"; then
-          echo "❌ Force push to main is not allowed!"
-          exit 1
-        fi
-
-    # Check for uncommitted changes
-    check-uncommitted:
-      run: |
-        if [[ -n $(git status -s) ]]; then
-          echo "⚠️  Warning: You have uncommitted changes"
-          git status -s
-        fi
+# We rely on GitHub Actions CI instead of pre-push hooks
 
 # ============================================================================
-# COMMIT-MSG (Validate commit messages)
+# COMMIT-MSG (Validate commit messages - optional)
 # ============================================================================
-commit-msg:
-  commands:
-    # Enforce conventional commits format (optional - commented out by default)
-    # conventional-commits:
-    #   run: |
-    #     commit_msg=$(cat {1})
-    #     if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?: .+"; then
-    #       echo "❌ Commit message must follow conventional commits format:"
-    #       echo "   feat: add new feature"
-    #       echo "   fix: resolve bug"
-    #       echo "   docs: update documentation"
-    #       exit 1
-    #     fi
+# commit-msg:
+#   commands:
+#     conventional-commits:
+#       run: |
+#         commit_msg=$(cat {1})
+#         if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?: .+"; then
+#           echo "❌ Commit message must follow conventional commits format"
+#           exit 1
+#         fi
 
 # ============================================================================
-# CUSTOM COMMANDS (Run manually)
+# CUSTOM COMMANDS (Run manually with: lefthook run <command>)
 # ============================================================================
-# Usage: lefthook run <command-name>
 
-# Run all quality checks (like CI)
+# Run all quality checks like CI (comprehensive)
 qa:
   parallel: false
   commands:
     rubocop:
       run: bundle exec rubocop
     rspec:
-      run: COVERAGE=false bundle exec rspec
+      run: bundle exec rspec
     bundle-audit:
       run: |
-        gem install bundler-audit --conservative || true
+        gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
         bundle audit check --update
 
-# Quick check (fast subset - only changed files)
+# Quick check on changed files only (fast)
 quick:
   parallel: true
   commands:
     rubocop-changed:
-      run: git diff --name-only main... | grep "\.rb$" | xargs bundle exec rubocop || true
+      run: |
+        changed_files=$(git diff --name-only --diff-filter=AM HEAD | grep "\.rb$" || true)
+        if [ -n "$changed_files" ]; then
+          echo "$changed_files" | xargs bundle exec rubocop
+        else
+          echo "No Ruby files changed"
+        fi
     rspec-changed:
       run: |
-        changed_specs=$(git diff --name-only main... | grep "_spec.rb$" || true)
+        changed_specs=$(git diff --name-only --diff-filter=AM HEAD | grep "_spec\.rb$" || true)
         if [ -n "$changed_specs" ]; then
+          echo "🧪 Running changed specs..."
           COVERAGE=false bundle exec rspec $changed_specs
         else
           echo "No spec files changed"
@@ -130,28 +117,41 @@ quick:
 # Fix auto-correctable RuboCop issues
 fix:
   commands:
-    rubocop-fix:
+    rubocop-autofix:
       run: bundle exec rubocop -A
 
-# Multi-version testing (like CI)
-multi-version:
+# Run full test suite (like CI)
+full:
   parallel: false
   commands:
-    rails-7-0:
-      run: RAILS_VERSION=7.0 bundle install && RAILS_VERSION=7.0 bundle exec rspec
-    rails-7-1:
-      run: RAILS_VERSION=7.1 bundle install && RAILS_VERSION=7.1 bundle exec rspec
-    rails-7-2:
-      run: RAILS_VERSION=7.2 bundle install && RAILS_VERSION=7.2 bundle exec rspec
-    rails-8-0:
-      run: RAILS_VERSION=8.0 bundle install && RAILS_VERSION=8.0 bundle exec rspec
+    rubocop:
+      run: bundle exec rubocop
+    rspec:
+      run: bundle exec rspec
+    audit:
+      run: |
+        gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
+        bundle audit check --update
 
 # ============================================================================
-# SKIP OPTIONS (for flexibility)
+# USAGE EXAMPLES
 # ============================================================================
-# Skip all hooks:           LEFTHOOK=0 git commit -m "message"
-# Skip pre-commit:          LEFTHOOK_EXCLUDE=pre-commit git commit -m "message"
-# Skip specific command:    LEFTHOOK_EXCLUDE=rubocop-full git commit
-# Skip verification:        git commit --no-verify -m "message"
+# Fast commit (only changed files):
+#   git add . && git commit -m "message"
 #
-# For CI/automated commits: set LEFTHOOK=0 environment variable
+# Run full checks manually:
+#   lefthook run qa
+#   lefthook run full
+#
+# Quick check on current changes:
+#   lefthook run quick
+#
+# Fix RuboCop issues:
+#   lefthook run fix
+#
+# Skip hooks:
+#   LEFTHOOK=0 git commit -m "message"
+#   git commit --no-verify -m "message"
+#
+# Skip specific command:
+#   LEFTHOOK_EXCLUDE=rspec-changed git commit -m "message"
