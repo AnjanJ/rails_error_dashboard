@@ -129,7 +129,8 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
     end
 
     it "detects uniform pattern when errors are evenly distributed" do
-      freeze_time do
+      # Travel to a Wednesday (middle of the week) to avoid weekend pattern detection
+      travel_to(Time.zone.local(2025, 1, 8, 12, 0, 0)) do  # Wednesday, January 8, 2025
         # Create errors evenly across all hours
         24.times do |hour|
           create(:error_log,
