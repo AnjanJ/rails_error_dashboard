@@ -3,6 +3,13 @@
 require "rails_helper"
 
 RSpec.describe "Backtrace Limiting", type: :integration do
+  before do
+    # Ensure async_logging is disabled for these tests since we need synchronous error logs
+    RailsErrorDashboard.configure do |config|
+      config.async_logging = false
+    end
+  end
+
   after do
     RailsErrorDashboard.reset_configuration!
   end

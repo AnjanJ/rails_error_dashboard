@@ -3,6 +3,17 @@
 require 'rails_helper'
 
 RSpec.describe RailsErrorDashboard::Commands::LogError do
+  before do
+    # Ensure async_logging is disabled for synchronous test expectations
+    RailsErrorDashboard.configure do |config|
+      config.async_logging = false
+    end
+  end
+
+  after do
+    RailsErrorDashboard.reset_configuration!
+  end
+
   describe '.call' do
     let(:exception) do
       begin

@@ -3,6 +3,17 @@
 require "rails_helper"
 
 RSpec.describe "ActiveSupport::Notifications Integration" do
+  before do
+    # Ensure async_logging is disabled for synchronous event testing
+    RailsErrorDashboard.configure do |config|
+      config.async_logging = false
+    end
+  end
+
+  after do
+    RailsErrorDashboard.reset_configuration!
+  end
+
   describe "error_logged.rails_error_dashboard event" do
     it "is emitted when an error is logged" do
       events = []
