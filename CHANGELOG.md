@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2025-12-28
+
+### ✨ Features
+
+#### Configuration Dashboard
+- **Settings Page** - New comprehensive configuration viewer
+  - Read-only view of all 40+ configuration options at `/error_dashboard/settings`
+  - Displays enabled/disabled status with color-coded badges (green/gray)
+  - Shows all notification channels (Slack, Email, Discord, PagerDuty, Webhooks) with status
+  - Lists all advanced analytics features with enable/disable state
+  - Displays active plugins with name, version, description, and status
+  - Shows performance settings (async logging, separate database, sampling rate)
+  - Includes enhanced metrics (app version, git SHA, total users)
+  - Helpful information panel linking to initializer file for configuration changes
+
+#### Navigation Improvements
+- **Deep Links from Analytics Page**
+  - Platform chart now includes quick links to filter errors by platform (iOS, Android, Web, API)
+  - Top 10 Affected Users table adds "View Errors" button for each user (filters by email)
+  - MTTR by Severity table adds "View" button to filter errors by severity level
+  - Error Type breakdown table maintains existing "View Errors" functionality
+
+- **Deep Links from Platform Comparison Page**
+  - Each platform health card now includes "View {Platform} Errors" button in footer
+  - Direct navigation from platform metrics to filtered error list
+
+- **Deep Links from Correlation Page**
+  - Problematic Releases table adds "View" button to filter errors by version
+  - Multi-Error Users table adds "View" button to filter errors by user email
+
+- **Enhanced Quick Filters in Sidebar**
+  - Added "Critical" filter (filters by critical severity with danger icon)
+  - Added "High Priority" filter (filters by high priority with warning icon)
+  - Maintains existing filters: Unresolved, iOS Errors, Android Errors
+  - Color-coded icons for better visual hierarchy and quick identification
+
+### 🎨 UI/UX Enhancements
+
+- **Application Branding**
+  - Navbar now displays Rails application name dynamically
+  - Format: "{AppName} | Error Dashboard" on desktop
+  - Responsive design: Shows only app name on mobile, full branding on desktop
+  - Page title updated to include app name: "{AppName} - Error Dashboard"
+
+- **Settings Navigation**
+  - Added "Settings" link to main sidebar navigation
+  - Accessible from all dashboard pages
+  - Gear icon for easy identification
+
+### 📚 Documentation
+
+- All 16 features now have clear, documented navigation paths
+- Settings page provides visibility into gem configuration without code inspection
+- Improved feature discoverability through enhanced quick filters
+
+### 🔧 Technical Details
+
+This release focuses on improving user experience through better navigation and configuration visibility. No breaking changes or API modifications.
+
+**Key Improvements:**
+- Users can now see all enabled features without inspecting initializer file
+- Every analytics view provides direct navigation to filtered error lists
+- Quick filters make common error queries one-click accessible
+- Application branding improves multi-tenant dashboard identification
+
+**Upgrade Instructions:**
+```ruby
+# Gemfile
+gem "rails_error_dashboard", "~> 0.1.5"
+```
+
+Then run:
+```bash
+bundle update rails_error_dashboard
+```
+
+No migrations or configuration changes required.
+
+**New Routes:**
+- `GET /error_dashboard/settings` - Configuration dashboard (read-only)
+
 ## [0.1.4] - 2025-12-27
 
 ### 🐛 Bug Fixes
