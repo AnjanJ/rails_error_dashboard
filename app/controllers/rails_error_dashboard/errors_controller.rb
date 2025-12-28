@@ -235,6 +235,10 @@ module RailsErrorDashboard
       @platform_specific_errors = correlation.platform_specific_errors
     end
 
+    def settings
+      @config = RailsErrorDashboard.configuration
+    end
+
     private
 
     def calculate_release_comparison

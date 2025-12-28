@@ -79,6 +79,9 @@
                 </div>
               </div>
             </div>
+            <div class="card-footer bg-white border-top">
+              <%= link_to "View #{platform} Errors", errors_path(platform: platform), class: "btn btn-sm btn-outline-primary w-100" %>
+            </div>
           </div>
         </div>
       <% end %>

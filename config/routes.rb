@@ -4,6 +4,9 @@ RailsErrorDashboard::Engine.routes.draw do
   # Dashboard overview
   get "overview", to: "errors#overview", as: :overview
 
+  # Settings page
+  get "settings", to: "errors#settings", as: :settings
+
   resources :errors, only: [ :index, :show ] do
     member do
       post :resolve

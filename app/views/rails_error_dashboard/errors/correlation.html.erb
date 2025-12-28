@@ -82,6 +82,7 @@
                 <th>Critical Errors</th>
                 <th>Unique Error Types</th>
                 <th>Platforms</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -100,6 +101,9 @@
                     <% release[:platforms].each do |platform| %>
                       <span class="badge bg-secondary text-capitalize me-1"><%= platform %></span>
                     <% end %>
+                  </td>
+                  <td>
+                    <%= link_to "View", errors_path(search: release[:version]), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>
@@ -218,6 +222,7 @@
                 <th>Different Error Types</th>
                 <th>Total Errors</th>
                 <th>Error Types</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -237,6 +242,9 @@
                     <% if user_data[:error_types].count > 3 %>
                       <span class="text-muted small">+<%= user_data[:error_types].count - 3 %> more</span>
                     <% end %>
+                  </td>
+                  <td>
+                    <%= link_to "View", errors_path(search: user_data[:user_email]), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>

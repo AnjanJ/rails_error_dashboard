@@ -1,0 +1,575 @@
+<div class="container-fluid py-4">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-gear me-2"></i>
+      Configuration Settings
+    </h1>
+    <div>
+      <%= link_to root_path, class: "btn btn-outline-secondary btn-sm" do %>
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+      <% end %>
+    </div>
+  </div>
+
+  <div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Read-only view</strong> - These settings are configured in your initializer file:
+    <code>config/initializers/rails_error_dashboard.rb</code>
+  </div>
+
+  <!-- Core Features -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-shield-check"></i> Core Features
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Error Middleware</strong>
+              <br><small class="text-muted">Catches unhandled exceptions</small>
+            </div>
+            <% if @config.enable_middleware %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Rails.error Subscriber</strong>
+              <br><small class="text-muted">Subscribes to Rails error events</small>
+            </div>
+            <% if @config.enable_error_subscriber %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Authentication</strong>
+              <br><small class="text-muted">HTTP Basic Auth protection</small>
+            </div>
+            <% if @config.require_authentication %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-lock"></i> Required
+              </span>
+            <% else %>
+              <span class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-unlock"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Data Retention</strong>
+              <br><small class="text-muted">How long errors are kept</small>
+            </div>
+            <span class="badge bg-info fs-6">
+              <%= @config.retention_days %> days
+            </span>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Max Backtrace Lines</strong>
+              <br><small class="text-muted">Stack trace depth limit</small>
+            </div>
+            <span class="badge bg-info fs-6">
+              <%= @config.max_backtrace_lines %> lines
+            </span>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Sampling Rate</strong>
+              <br><small class="text-muted">Percentage of errors captured</small>
+            </div>
+            <span class="badge bg-info fs-6">
+              <%= (@config.sampling_rate * 100).to_i %>%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Settings -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">
+        <i class="bi bi-lightning-charge"></i> Performance Settings
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Async Logging</strong>
+              <br><small class="text-muted">Background job processing</small>
+            </div>
+            <% if @config.async_logging %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+                <% if @config.async_adapter %>
+                  (<%= @config.async_adapter %>)
+                <% end %>
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Separate Database</strong>
+              <br><small class="text-muted">Dedicated DB for error logs</small>
+            </div>
+            <% if @config.use_separate_database %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Channels -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-bell"></i> Notification Channels
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Slack</strong>
+              <br><small class="text-muted">Real-time notifications</small>
+            </div>
+            <% if @config.enable_slack_notifications %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Email</strong>
+              <br><small class="text-muted">Email alerts</small>
+            </div>
+            <% if @config.enable_email_notifications %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+                <% if @config.notification_email_recipients&.any? %>
+                  (<%= @config.notification_email_recipients.count %> recipient<%= @config.notification_email_recipients.count != 1 ? 's' : '' %>)
+                <% end %>
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Discord</strong>
+              <br><small class="text-muted">Discord webhook notifications</small>
+            </div>
+            <% if @config.enable_discord_notifications %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>PagerDuty</strong>
+              <br><small class="text-muted">Critical error escalation</small>
+            </div>
+            <% if @config.enable_pagerduty_notifications %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Custom Webhooks</strong>
+              <br><small class="text-muted">Generic webhook endpoints</small>
+            </div>
+            <% if @config.enable_webhook_notifications %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+                <% if @config.webhook_urls&.any? %>
+                  (<%= @config.webhook_urls.count %> URL<%= @config.webhook_urls.count != 1 ? 's' : '' %>)
+                <% end %>
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Analytics Features -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-graph-up"></i> Advanced Analytics Features
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Similar Errors (Fuzzy Matching)</strong>
+              <br><small class="text-muted">Find related errors by similarity</small>
+            </div>
+            <% if @config.enable_similar_errors %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Co-occurring Errors</strong>
+              <br><small class="text-muted">Errors happening together</small>
+            </div>
+            <% if @config.enable_co_occurring_errors %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Error Cascades</strong>
+              <br><small class="text-muted">Parent→child error chains</small>
+            </div>
+            <% if @config.enable_error_cascades %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Error Correlation</strong>
+              <br><small class="text-muted">Version/user/time analysis</small>
+            </div>
+            <% if @config.enable_error_correlation %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Platform Comparison</strong>
+              <br><small class="text-muted">iOS vs Android analytics</small>
+            </div>
+            <% if @config.enable_platform_comparison %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Occurrence Patterns</strong>
+              <br><small class="text-muted">Cyclical/burst detection</small>
+            </div>
+            <% if @config.enable_occurrence_patterns %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Baseline Alerts</strong>
+              <br><small class="text-muted">Anomaly detection</small>
+            </div>
+            <% if @config.enable_baseline_alerts %>
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+                (± <%= @config.baseline_alert_threshold_std_devs %>σ)
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Plugins -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-puzzle"></i> Active Plugins
+      </h5>
+    </div>
+    <div class="card-body">
+      <% if RailsErrorDashboard::PluginRegistry.any? %>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Plugin Name</th>
+                <th>Version</th>
+                <th>Description</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% RailsErrorDashboard::PluginRegistry.info.each do |plugin| %>
+                <tr>
+                  <td><strong><%= plugin[:name] %></strong></td>
+                  <td><code><%= plugin[:version] %></code></td>
+                  <td><%= plugin[:description] %></td>
+                  <td>
+                    <% if plugin[:enabled] %>
+                      <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Active
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary">
+                        <i class="bi bi-pause-circle"></i> Inactive
+                      </span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="alert alert-secondary mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          No plugins are currently registered. You can create custom plugins to extend functionality.
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Enhanced Metrics -->
+  <% if @config.app_version || @config.git_sha || @config.total_users_for_impact %>
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-speedometer"></i> Enhanced Metrics
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <% if @config.app_version %>
+            <div class="col-md-4 mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>App Version</strong>
+                  <br><small class="text-muted">Current application version</small>
+                </div>
+                <code class="fs-6"><%= @config.app_version %></code>
+              </div>
+            </div>
+          <% end %>
+
+          <% if @config.git_sha %>
+            <div class="col-md-4 mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>Git SHA</strong>
+                  <br><small class="text-muted">Deployed commit</small>
+                </div>
+                <code class="fs-6"><%= @config.git_sha[0..7] %></code>
+              </div>
+            </div>
+          <% end %>
+
+          <% if @config.total_users_for_impact %>
+            <div class="col-md-4 mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>Total Users</strong>
+                  <br><small class="text-muted">For impact % calculation</small>
+                </div>
+                <span class="badge bg-info fs-6"><%= @config.total_users_for_impact %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Internal Logging -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">
+        <i class="bi bi-terminal"></i> Internal Logging
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Internal Logging</strong>
+              <br><small class="text-muted">Gem debugging output</small>
+            </div>
+            <% if @config.enable_internal_logging %>
+              <span class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-check-circle"></i> Enabled
+              </span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">
+                <i class="bi bi-x-circle"></i> Disabled
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Log Level</strong>
+              <br><small class="text-muted">Verbosity level</small>
+            </div>
+            <span class="badge bg-info fs-6">
+              <%= @config.log_level.to_s.upcase %>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Text -->
+  <div class="alert alert-light border">
+    <h6 class="alert-heading">
+      <i class="bi bi-question-circle me-2"></i>
+      Need to change these settings?
+    </h6>
+    <p class="mb-0">
+      Edit your configuration in <code>config/initializers/rails_error_dashboard.rb</code> and restart your application.
+      <br>
+      See the <a href="https://github.com/AnjanJ/rails_error_dashboard" target="_blank" class="alert-link">documentation</a> for more information.
+    </p>
+  </div>
+</div>

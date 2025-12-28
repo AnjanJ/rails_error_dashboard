@@ -143,6 +143,14 @@
               });
             </script>
           </div>
+          <div class="card-footer bg-white border-top-0">
+            <div class="d-flex gap-2 flex-wrap">
+              <small class="text-muted me-2">Quick Links:</small>
+              <% @errors_by_platform.keys.each do |platform| %>
+                <%= link_to platform, errors_path(platform: platform), class: "btn btn-sm btn-outline-secondary" %>
+              <% end %>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -249,6 +257,7 @@
                     <th>User</th>
                     <th>Error Count</th>
                     <th>Percentage</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,6 +277,9 @@
                             <%= (count.to_f / @error_stats[:total] * 100).round(1) %>%
                           </div>
                         </div>
+                      </td>
+                      <td>
+                        <%= link_to "View Errors", errors_path(search: email), class: "btn btn-sm btn-outline-primary" %>
                       </td>
                     </tr>
                   <% end %>
@@ -589,6 +601,7 @@
                   <tr>
                     <th>Severity</th>
                     <th>Average Time to Resolution</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -600,6 +613,9 @@
                         </span>
                       </td>
                       <td><strong><%= hours %> hours</strong></td>
+                      <td>
+                        <%= link_to "View", errors_path(severity: severity), class: "btn btn-sm btn-outline-primary" %>
+                      </td>
                     </tr>
                   <% end %>
                 </tbody>

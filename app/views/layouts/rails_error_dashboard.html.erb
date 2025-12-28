@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Error Dashboard</title>
+    <title><%= Rails.application.class.module_parent_name %> - Error Dashboard</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -736,7 +736,10 @@
             <i class="bi bi-list fs-4"></i>
           </button>
           <a class="navbar-brand" href="<%= root_path %>">
-            <i class="bi bi-bug-fill"></i> Error Dashboard
+            <i class="bi bi-bug-fill"></i>
+            <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
+            <span class="d-none d-md-inline text-white-50 mx-2">|</span>
+            <span class="d-none d-md-inline">Error Dashboard</span>
           </a>
         </div>
         <div class="d-flex align-items-center gap-3">
@@ -771,6 +774,11 @@
                   <i class="bi bi-graph-up"></i> Analytics
                 <% end %>
               </li>
+              <li class="nav-item">
+                <%= link_to settings_path, class: "nav-link #{request.path == settings_path ? 'active' : ''}" do %>
+                  <i class="bi bi-gear"></i> Settings
+                <% end %>
+              </li>
             </ul>
 
             <h6 class="mt-4">QUICK FILTERS</h6>
@@ -778,6 +786,16 @@
               <li class="nav-item">
                 <%= link_to errors_path(status: 'unresolved'), class: "nav-link" do %>
                   <i class="bi bi-exclamation-circle"></i> Unresolved
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to errors_path(severity: 'critical'), class: "nav-link" do %>
+                  <i class="bi bi-exclamation-triangle-fill text-danger"></i> Critical
+                <% end %>
+              </li>
+              <li class="nav-item">
+                <%= link_to errors_path(priority_level: 'high'), class: "nav-link" do %>
+                  <i class="bi bi-flag-fill text-warning"></i> High Priority
                 <% end %>
               </li>
               <li class="nav-item">
