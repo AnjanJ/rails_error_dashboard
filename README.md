@@ -414,6 +414,7 @@ config.webhook_urls = ['https://yourapp.com/hooks/errors']
 
 ### Development
 - **[Testing](docs/development/TESTING.md)** - Multi-version testing
+- **[Smoke Tests](SMOKE_TESTS.md)** - Deployment verification tests
 
 **📖 [View all documentation →](docs/README.md)**
 
