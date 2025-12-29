@@ -5,6 +5,7 @@ require "rails_error_dashboard/logger"
 
 # External dependencies
 require "pagy"
+require "pagy/extras/bootstrap"
 require "browser"
 require "groupdate"
 require "httparty"
