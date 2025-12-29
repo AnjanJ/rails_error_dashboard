@@ -16,6 +16,14 @@ gem 'rails_error_dashboard'
 
 **5-minute setup** · **Works out-of-the-box** · **100% Rails + Postgres** · **No vendor lock-in**
 
+### 🎮 Try the Live Demo
+
+**See it in action:** [https://rails-error-dashboard.anjan.dev](https://rails-error-dashboard.anjan.dev)
+
+Username: `frodo` · Password: `precious`
+
+Experience the full dashboard with 250+ realistic Rails errors, LOTR-themed demo data, and all features enabled.
+
 ---
 
 ### ⚠️ BETA SOFTWARE
