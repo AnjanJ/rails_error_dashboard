@@ -20,7 +20,7 @@ gem 'rails_error_dashboard'
 
 **See it in action:** [https://rails-error-dashboard.anjan.dev](https://rails-error-dashboard.anjan.dev)
 
-Username: `frodo` · Password: `precious`
+Username: `gandalf` · Password: `youshallnotpass`
 
 Experience the full dashboard with 250+ realistic Rails errors, LOTR-themed demo data, and all features enabled.
 

@@ -35,7 +35,7 @@ Gem::Specification.new do |spec|
          http://localhost:3000/error_dashboard
 
     🎮 Try the live demo: https://rails-error-dashboard.anjan.dev
-       (Username: frodo, Password: precious)
+       (Username: gandalf, Password: youshallnotpass)
 
     📖 Documentation: https://github.com/AnjanJ/rails_error_dashboard
     💬 Questions? https://github.com/AnjanJ/rails_error_dashboard/issues
