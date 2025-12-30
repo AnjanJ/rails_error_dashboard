@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10] - 2025-12-30
+
+### Fixed
+- **View Bug**: Fixed `undefined method 'updated_at' for Hash` error on error show page
+  - Added safety checks for baseline and similar_errors data types
+  - Prevents crashes when these features return unexpected data structures
+  - Improves robustness of error detail page display
+
 ## [0.1.9] - 2025-12-30
 
 ### Fixed

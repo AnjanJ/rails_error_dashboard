@@ -178,7 +178,7 @@
       <% if RailsErrorDashboard.configuration.enable_similar_errors && @error.respond_to?(:similar_errors) %>
         <% similar = @error.similar_errors(threshold: 0.6, limit: 5) %>
         <% if similar.any? %>
-          <% cache [@error, 'similar_errors_v1', similar.maximum(:updated_at)] do %>
+          <% cache [@error, 'similar_errors_v1', similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
           <div class="card mb-4">
             <div class="card-header bg-white">
               <h5 class="mb-0">
@@ -809,19 +809,19 @@
                   </div>
                 </div>
 
-                <% if baseline.mean && baseline.std_dev %>
+                <% if baseline.respond_to?(:mean) && baseline.mean && baseline.respond_to?(:std_dev) && baseline.std_dev %>
                   <div class="mt-2">
                     <small class="text-muted">
-                      Threshold (2σ): <strong><%= baseline.threshold(sensitivity: 2)&.round(1) %></strong>
+                      Threshold (2σ): <strong><%= baseline.respond_to?(:threshold) ? baseline.threshold(sensitivity: 2)&.round(1) : 'N/A' %></strong>
                     </small>
                   </div>
                 <% end %>
 
                 <div class="mt-2">
                   <small class="text-muted">
-                    Sample: <%= baseline.sample_size %> periods
+                    Sample: <%= baseline.respond_to?(:sample_size) ? baseline.sample_size : 'N/A' %> periods
                     <span class="text-muted">|</span>
-                    Updated: <%= baseline.updated_at&.strftime("%m/%d %I:%M%p") %>
+                    Updated: <%= baseline.respond_to?(:updated_at) ? baseline.updated_at&.strftime("%m/%d %I:%M%p") : 'N/A' %>
                   </small>
                 </div>
               </div>
