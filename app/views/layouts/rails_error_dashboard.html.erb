@@ -735,10 +735,23 @@
       body.dark-mode .card text {
         fill: var(--ctp-text) !important;
       }
+
+      /* Toast notifications */
+      .toast {
+        min-width: 250px;
+      }
+      .toast-container {
+        max-width: 350px;
+      }
     </style>
   </head>
 
   <body>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+      <!-- Toasts will be dynamically inserted here -->
+    </div>
+
     <!-- Top Navbar -->
     <nav class="navbar navbar-dark">
       <div class="container-fluid">
@@ -1019,12 +1032,15 @@
             // Store original button HTML
             const originalHTML = button.innerHTML;
 
-            // Show success state
+            // Show success state on button
             button.innerHTML = '<i class="bi bi-check"></i> Copied!';
             button.classList.remove('btn-outline-secondary');
             button.classList.add('btn-success');
 
-            // Reset after 2 seconds
+            // Show toast notification
+            showToast('Copied to clipboard!', 'success');
+
+            // Reset button after 2 seconds
             setTimeout(function() {
               button.innerHTML = originalHTML;
               button.classList.remove('btn-success');
@@ -1033,8 +1049,60 @@
           }).catch(function(err) {
             console.error('Failed to copy:', err);
             button.innerHTML = '<i class="bi bi-x"></i> Failed';
+            showToast('Failed to copy to clipboard', 'danger');
           });
         };
+
+        // Toast notification functionality
+        window.showToast = function(message, type) {
+          type = type || 'success';
+
+          const toastId = 'toast-' + Date.now();
+          const iconClass = type === 'success' ? 'bi-check-circle-fill' :
+                           type === 'danger' ? 'bi-exclamation-circle-fill' :
+                           'bi-info-circle-fill';
+          const bgClass = type === 'success' ? 'bg-success' :
+                         type === 'danger' ? 'bg-danger' :
+                         'bg-info';
+
+          const toastHTML = `
+            <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="d-flex">
+                <div class="toast-body">
+                  <i class="bi ${iconClass} me-2"></i>
+                  ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+              </div>
+            </div>
+          `;
+
+          const container = document.querySelector('.toast-container');
+          container.insertAdjacentHTML('beforeend', toastHTML);
+
+          const toastElement = document.getElementById(toastId);
+          const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+          toast.show();
+
+          // Remove toast element after it's hidden
+          toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+          });
+        };
+
+        // Show flash messages as toasts
+        <% if flash[:notice] %>
+          showToast('<%= j flash[:notice] %>', 'success');
+        <% end %>
+        <% if flash[:alert] %>
+          showToast('<%= j flash[:alert] %>', 'danger');
+        <% end %>
+        <% if flash[:success] %>
+          showToast('<%= j flash[:success] %>', 'success');
+        <% end %>
+        <% if flash[:error] %>
+          showToast('<%= j flash[:error] %>', 'danger');
+        <% end %>
       });
     </script>
   </body>
