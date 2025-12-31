@@ -27,6 +27,9 @@
       </h2>
     </div>
     <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary" onclick="downloadErrorJSON()" title="Download error details as JSON">
+        <i class="bi bi-download"></i> Export JSON
+      </button>
       <button type="button" class="btn btn-outline-primary" onclick="copyErrorURL()" title="Copy shareable link to this error">
         <i class="bi bi-share"></i> Share
       </button>
@@ -61,6 +64,58 @@
       }).catch(err => {
         alert('Failed to copy URL: ' + err);
       });
+    }
+
+    function downloadErrorJSON() {
+      const errorData = {
+        id: <%= @error.id %>,
+        error_type: <%= raw @error.error_type.to_json %>,
+        message: <%= raw @error.message.to_json %>,
+        backtrace: <%= raw @error.backtrace.to_json %>,
+        occurred_at: <%= raw @error.occurred_at.to_json %>,
+        first_seen_at: <%= raw @error.first_seen_at.to_json %>,
+        last_seen_at: <%= raw @error.last_seen_at.to_json %>,
+        occurrence_count: <%= @error.occurrence_count %>,
+        resolved: <%= @error.resolved? %>,
+        resolved_at: <%= raw @error.resolved_at.to_json %>,
+        resolved_by: <%= raw @error.resolved_by.to_json %>,
+        platform: <%= raw @error.platform.to_json %>,
+        user_id: <%= raw @error.user_id.to_json %>,
+        severity: <%= raw @error.severity.to_json %>,
+        priority_level: <%= @error.priority_level || 0 %>,
+        <% if @error.respond_to?(:app_version) %>
+        app_version: <%= raw @error.app_version.to_json %>,
+        <% end %>
+        <% if @error.respond_to?(:git_commit) %>
+        git_commit: <%= raw @error.git_commit.to_json %>,
+        <% end %>
+        created_at: <%= raw @error.created_at.to_json %>,
+        updated_at: <%= raw @error.updated_at.to_json %>
+      };
+
+      const jsonString = JSON.stringify(errorData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `error_${errorData.id}_${errorData.error_type.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // Visual feedback
+      const button = event.currentTarget;
+      const originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+      button.classList.remove('btn-outline-secondary');
+      button.classList.add('btn-success');
+
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+      }, 2000);
     }
   </script>
 
