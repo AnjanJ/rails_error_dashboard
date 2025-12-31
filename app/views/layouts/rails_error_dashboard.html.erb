@@ -1012,6 +1012,29 @@
             console.log('✅ Stopped force applying');
           }
         }, 500);
+
+        // Copy to clipboard functionality
+        window.copyToClipboard = function(text, button) {
+          navigator.clipboard.writeText(text).then(function() {
+            // Store original button HTML
+            const originalHTML = button.innerHTML;
+
+            // Show success state
+            button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+
+            // Reset after 2 seconds
+            setTimeout(function() {
+              button.innerHTML = originalHTML;
+              button.classList.remove('btn-success');
+              button.classList.add('btn-outline-secondary');
+            }, 2000);
+          }).catch(function(err) {
+            console.error('Failed to copy:', err);
+            button.innerHTML = '<i class="bi bi-x"></i> Failed';
+          });
+        };
       });
     </script>
   </body>

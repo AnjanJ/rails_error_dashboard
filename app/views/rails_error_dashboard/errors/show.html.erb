@@ -45,25 +45,42 @@
       <% cache [@error, 'error_details_v1'] do %>
       <div class="card mb-4">
         <div class="card-header bg-danger text-white">
-          <h5 class="mb-0"><i class="bi bi-bug-fill"></i> <%= @error.error_type %></h5>
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-bug-fill"></i> <%= @error.error_type %></h5>
+            <button class="btn btn-sm btn-outline-light" onclick="copyToClipboard('<%= j @error.error_type %>', this)" title="Copy error type">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
         </div>
         <div class="card-body">
-          <h6 class="text-muted mb-3">Error Message:</h6>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-muted mb-0">Error Message:</h6>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= j @error.message %>', this)" title="Copy error message">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
           <div class="alert alert-danger">
             <%= @error.message %>
           </div>
 
-          <h6 class="text-muted mb-2 mt-4">
-            Backtrace:
+          <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+            <h6 class="text-muted mb-0">
+              Backtrace:
+              <% if @error.backtrace.present? %>
+                <% frames = parse_backtrace(@error.backtrace) %>
+                <% app_frames = filter_app_code(frames) %>
+                <% framework_frames = filter_framework_code(frames) %>
+                <small class="text-muted">
+                  (<%= app_frames.count %> your code, <%= framework_frames.count %> framework/gems)
+                </small>
+              <% end %>
+            </h6>
             <% if @error.backtrace.present? %>
-              <% frames = parse_backtrace(@error.backtrace) %>
-              <% app_frames = filter_app_code(frames) %>
-              <% framework_frames = filter_framework_code(frames) %>
-              <small class="text-muted">
-                (<%= app_frames.count %> your code, <%= framework_frames.count %> framework/gems)
-              </small>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(`<%= j @error.backtrace %>`, this)" title="Copy full backtrace">
+                <i class="bi bi-clipboard"></i> Copy Full Backtrace
+              </button>
             <% end %>
-          </h6>
+          </div>
           <% if @error.backtrace.present? %>
             <% frames = parse_backtrace(@error.backtrace) %>
             <% app_frames = filter_app_code(frames) %>
@@ -752,7 +769,12 @@
 
           <div>
             <small class="text-muted d-block mb-1">Error ID</small>
-            <code><%= @error.id %></code>
+            <div class="d-flex align-items-center gap-2">
+              <code><%= @error.id %></code>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= @error.id %>', this)" title="Copy error ID">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
