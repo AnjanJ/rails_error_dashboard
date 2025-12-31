@@ -78,7 +78,7 @@
         occurrence_count: <%= @error.occurrence_count %>,
         resolved: <%= @error.resolved? %>,
         resolved_at: <%= raw @error.resolved_at.to_json %>,
-        resolved_by: <%= raw @error.resolved_by.to_json %>,
+        resolved_by_name: <%= raw @error.resolved_by_name.to_json %>,
         platform: <%= raw @error.platform.to_json %>,
         user_id: <%= raw @error.user_id.to_json %>,
         severity: <%= raw @error.severity.to_json %>,
