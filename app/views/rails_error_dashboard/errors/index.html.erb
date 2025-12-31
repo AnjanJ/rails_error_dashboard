@@ -567,4 +567,12 @@
       });
     }
   });
+
+  // Update browser tab title with unresolved error count
+  document.addEventListener('DOMContentLoaded', function() {
+    const unresolvedCount = <%= @stats[:unresolved] || 0 %>;
+    if (unresolvedCount > 0) {
+      document.title = `(${unresolvedCount}) ${document.title}`;
+    }
+  });
 </script>
