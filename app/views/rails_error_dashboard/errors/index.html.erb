@@ -530,11 +530,8 @@
     // '?' - Show keyboard shortcuts help
     if (e.key === '?') {
       e.preventDefault();
-      alert('Keyboard Shortcuts:\n\n' +
-            'r - Refresh page\n' +
-            '/ - Focus search\n' +
-            'a - Analytics page\n' +
-            '? - Show this help');
+      const modal = new bootstrap.Modal(document.getElementById('keyboardShortcutsModal'));
+      modal.show();
     }
   });
 
