@@ -783,12 +783,30 @@
           <button class="btn btn-link text-white d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
             <i class="bi bi-list fs-4"></i>
           </button>
-          <a class="navbar-brand" href="<%= main_app.root_path %>" title="Back to <%= Rails.application.class.module_parent_name %>">
-            <i class="bi bi-bug-fill"></i>
-            <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
-            <span class="d-none d-md-inline text-white-50 mx-2">|</span>
-            <span class="d-none d-md-inline">Error Dashboard</span>
-          </a>
+          <%
+            # Check if main app has a root route defined
+            begin
+              root_url = main_app.root_path
+              has_root = true
+            rescue NoMethodError
+              has_root = false
+            end
+          %>
+          <% if has_root %>
+            <a class="navbar-brand" href="<%= root_url %>" title="Back to <%= Rails.application.class.module_parent_name %>">
+              <i class="bi bi-bug-fill"></i>
+              <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
+              <span class="d-none d-md-inline text-white-50 mx-2">|</span>
+              <span class="d-none d-md-inline">Error Dashboard</span>
+            </a>
+          <% else %>
+            <span class="navbar-brand">
+              <i class="bi bi-bug-fill"></i>
+              <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
+              <span class="d-none d-md-inline text-white-50 mx-2">|</span>
+              <span class="d-none d-md-inline">Error Dashboard</span>
+            </span>
+          <% end %>
         </div>
         <div class="d-flex align-items-center gap-3">
           <button class="theme-toggle" id="themeToggle">
