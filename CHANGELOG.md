@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2025-12-31
+
+### Added
+- **Clickable Git Commit Links** - Easy win UX improvement for developers
+  - Added `git_repository_url` configuration option
+  - Git SHAs now display as clickable links when repository URL is configured
+  - Supports GitHub, GitLab, and Bitbucket URL formats
+  - Links open in new tab with security (`target="_blank" rel="noopener"`)
+  - Graceful fallback to plain code display if no repo URL configured
+  - Updated error show page and settings page to use clickable links
+  - New helper method: `git_commit_link(git_sha, short: true)`
+
+### Fixed
+- Fixed lefthook configuration to exclude ERB templates from RuboCop checks
+
+## [0.1.13] - 2025-12-31
+
+### Changed
+- **Improved Post-Install Message** - Better UX for both fresh installs and upgrades
+  - Clear separation between first-time install instructions and upgrade instructions
+  - First-time users see quick 3-step setup guide
+  - Upgrading users see migration reminder and changelog link
+  - Both audiences get live demo and documentation links
+  - More user-friendly than previous version-agnostic message
+
+### Fixed
+- **CRITICAL**: Fixed SolidCache compatibility issue that prevented error logging
+  - `clear_analytics_cache` now checks if cache store supports `delete_matched` before calling
+  - Added graceful handling for `NotImplementedError` from cache stores
+  - Fixes Rails 8 deployments using SolidCache (default cache in Rails 8)
+  - Database seeding now works correctly in production with SolidCache
+
 ## [0.1.10] - 2025-12-30
 
 ### Fixed
