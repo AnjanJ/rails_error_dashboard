@@ -577,8 +577,16 @@
 
           <div class="mb-3">
             <small class="text-muted d-block mb-1">First Seen</small>
-            <strong><%= @error.first_seen_at&.strftime("%B %d, %Y") || 'N/A' %></strong><br>
-            <small><%= @error.first_seen_at&.strftime("%I:%M:%S %p %Z") || 'N/A' %></small>
+            <% if @related_errors.any? %>
+              <%= link_to "#timeline", class: "text-decoration-none", data: { bs_toggle: "tooltip" }, title: "Jump to timeline" do %>
+                <strong><%= @error.first_seen_at&.strftime("%B %d, %Y") || 'N/A' %></strong><br>
+                <small><%= @error.first_seen_at&.strftime("%I:%M:%S %p %Z") || 'N/A' %></small>
+                <i class="bi bi-arrow-down-circle ms-1"></i>
+              <% end %>
+            <% else %>
+              <strong><%= @error.first_seen_at&.strftime("%B %d, %Y") || 'N/A' %></strong><br>
+              <small><%= @error.first_seen_at&.strftime("%I:%M:%S %p %Z") || 'N/A' %></small>
+            <% end %>
           </div>
 
           <div class="mb-3">
