@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-01-01
+
+### Added
+- **Keyboard Shortcuts Modal** - Enhanced UX with Bootstrap modal
+  - Upgraded from simple alert to full Bootstrap modal display
+  - Shows all available shortcuts: R (refresh), / (search), A (analytics), ? (help)
+  - Professional UI with icons and clear descriptions
+  - Accessible via `?` key from any dashboard page
+
+- **NEW Badge for Recent Errors** - Visual indicator for fresh errors
+  - Green "NEW" badge appears on errors less than 1 hour old
+  - Uses existing `recent?` method (no database changes needed)
+  - Displays on both error list and error detail pages
+  - Includes helpful tooltip explaining the badge
+
+- **Error Count in Browser Tab** - At-a-glance monitoring
+  - Shows unresolved error count in browser tab title: "(123) Errors | App"
+  - Only displays when unresolved count > 0
+  - Updates automatically with page navigation
+  - Helps monitor error volume across multiple tabs
+
+- **Jump to First Occurrence** - Quick timeline navigation
+  - First Seen timestamp now clickable with down arrow icon
+  - Scrolls directly to timeline section showing error history
+  - Only appears when timeline data exists
+  - Includes tooltip: "Jump to timeline"
+
+- **Share Error Link** - Easy error sharing
+  - One-click button to copy error URL to clipboard
+  - Located in error detail header next to "Mark as Resolved"
+  - Visual feedback: button turns green with "Copied!" for 2 seconds
+  - Perfect for sharing via Slack, email, or tickets
+
+- **Export Error as JSON** - Data export capability
+  - Download complete error details as formatted JSON
+  - Filename includes error ID and type: `error_123_TypeError.json`
+  - Includes all fields: backtrace, timestamps, platform, severity, etc.
+  - Useful for bug reports, external systems, or data analysis
+  - Visual feedback on successful download
+
+- **Quick Comment Templates** - Faster error communication
+  - 5 pre-formatted templates for common responses
+  - Templates: Investigating, Found Fix, Need Info, Duplicate, Cannot Reproduce
+  - Each template includes contextual emoji and structured format
+  - One-click insertion into comment textarea
+  - Speeds up triaging and team collaboration
+
+### Fixed
+- **Missing Root Route Handler** - Prevents crash in apps without root route
+  - Added safe check for `main_app.root_path` existence
+  - Dashboard no longer crashes when host app doesn't define root route
+  - Gracefully falls back to non-clickable navbar brand
+  - Fixes compatibility with API-only and minimal Rails apps
+  - Error: `undefined method 'root_path' for ActionDispatch::Routing::RoutesProxy`
+
+- **Incorrect Column Name in JSON Export** - Fixed database field reference
+  - Changed `resolved_by` to `resolved_by_name` in downloadErrorJSON function
+  - Prevents crash when viewing error detail pages
+  - Error: `undefined method 'resolved_by' for ErrorLog`
+
 ## [0.1.14] - 2025-12-31
 
 ### Added
