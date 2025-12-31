@@ -69,6 +69,9 @@ module RailsErrorDashboard
     attr_accessor :git_sha
     attr_accessor :total_users_for_impact # For user impact % calculation
 
+    # Git repository URL for linking commits (e.g., "https://github.com/user/repo")
+    attr_accessor :git_repository_url
+
     # Advanced error analysis features
     attr_accessor :enable_similar_errors          # Fuzzy error matching
     attr_accessor :enable_co_occurring_errors     # Detect errors happening together
@@ -142,6 +145,7 @@ module RailsErrorDashboard
       @app_version = ENV["APP_VERSION"]
       @git_sha = ENV["GIT_SHA"]
       @total_users_for_impact = nil # Auto-detect if not set
+      @git_repository_url = ENV["GIT_REPOSITORY_URL"]
 
       # Advanced error analysis features (all OFF by default - opt-in)
       @enable_similar_errors = false        # Fuzzy error matching

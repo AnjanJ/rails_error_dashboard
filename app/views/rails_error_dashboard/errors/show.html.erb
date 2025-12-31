@@ -745,7 +745,7 @@
             <% if @error.git_sha.present? %>
               <div class="mb-1">
                 <small class="text-muted">Git SHA:</small>
-                <code class="ms-1"><%= @error.git_sha[0..7] %></code>
+                <span class="ms-1"><%= git_commit_link(@error.git_sha) %></span>
               </div>
             <% end %>
 

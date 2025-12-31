@@ -111,5 +111,24 @@ module RailsErrorDashboard
         content_tag(:span, icon, class: "text-muted small")
       end
     end
+
+    # Generates a link to a git commit if repository URL is configured
+    # @param git_sha [String] The git commit SHA
+    # @param short [Boolean] Whether to show short SHA (7 chars) or full SHA
+    # @return [String] HTML safe link to commit or plain text if no repo configured
+    def git_commit_link(git_sha, short: true)
+      return "" if git_sha.blank?
+
+      config = RailsErrorDashboard.configuration
+      display_sha = short ? git_sha[0..6] : git_sha
+
+      if config.git_repository_url.present?
+        # Support GitHub, GitLab, Bitbucket URL formats
+        commit_url = "#{config.git_repository_url.chomp("/")}/commit/#{git_sha}"
+        link_to display_sha, commit_url, class: "text-decoration-none font-monospace", target: "_blank", rel: "noopener"
+      else
+        content_tag(:code, display_sha, class: "font-monospace")
+      end
+    end
   end
 end

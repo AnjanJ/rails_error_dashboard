@@ -296,4 +296,11 @@ RailsErrorDashboard.configure do |config|
   config.app_version = ENV["APP_VERSION"]
   config.git_sha = ENV["GIT_SHA"]
   # config.total_users_for_impact = 10000  # For user impact % calculation
+
+  # Git repository URL for clickable commit links
+  # Examples:
+  #   GitHub: "https://github.com/username/repo"
+  #   GitLab: "https://gitlab.com/username/repo"
+  #   Bitbucket: "https://bitbucket.org/username/repo"
+  # config.git_repository_url = ENV["GIT_REPOSITORY_URL"]
 end

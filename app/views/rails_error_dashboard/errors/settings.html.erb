@@ -499,7 +499,7 @@
                   <strong>Git SHA</strong>
                   <br><small class="text-muted">Deployed commit</small>
                 </div>
-                <code class="fs-6"><%= @config.git_sha[0..7] %></code>
+                <span class="fs-6"><%= git_commit_link(@config.git_sha) %></span>
               </div>
             </div>
           <% end %>

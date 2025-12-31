@@ -18,9 +18,10 @@ pre-commit:
   parallel: true  # Run checks in parallel for speed
 
   commands:
-    # 1. RuboCop - Only staged files
+    # 1. RuboCop - Only staged files (exclude ERB templates)
     rubocop-staged:
       glob: "*.rb"
+      exclude: '(^|/)lib/generators/.*/templates/.*'
       run: bundle exec rubocop {staged_files}
 
     # 2. RSpec - Only changed spec files
