@@ -69,7 +69,7 @@ Gem::Specification.new do |spec|
   # Pin concurrent-ruby for Rails 7.0 compatibility
   # Rails 7.0 has issues with concurrent-ruby 1.3.5+ which removed logger dependency
   # See: https://github.com/rails/rails/issues/54271
-  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.5"
+  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.7"
 
   # Development and testing dependencies
   spec.add_development_dependency "rspec-rails", "~> 7.0"
