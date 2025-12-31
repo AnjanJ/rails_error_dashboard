@@ -673,11 +673,21 @@ module RailsErrorDashboard
     def clear_analytics_cache
       # Use delete_matched to clear all cached analytics regardless of parameters
       # Pattern matches: dashboard_stats/*, analytics_stats/*, platform_comparison/*
-      Rails.cache.delete_matched("dashboard_stats/*")
-      Rails.cache.delete_matched("analytics_stats/*")
-      Rails.cache.delete_matched("platform_comparison/*")
+      # Note: SolidCache doesn't support delete_matched, so we catch NotImplementedError
+      if Rails.cache.respond_to?(:delete_matched)
+        Rails.cache.delete_matched("dashboard_stats/*")
+        Rails.cache.delete_matched("analytics_stats/*")
+        Rails.cache.delete_matched("platform_comparison/*")
+      else
+        # SolidCache or other stores that don't support pattern matching
+        # We can't clear cache patterns, so just skip it
+        Rails.logger.info("Cache store doesn't support delete_matched, skipping cache clear") if Rails.logger
+      end
+    rescue NotImplementedError => e
+      # Some cache stores throw NotImplementedError even if respond_to? returns true
+      Rails.logger.info("Cache store doesn't support delete_matched: #{e.message}") if Rails.logger
     rescue => e
-      # Silently handle cache clearing errors to prevent blocking error logging
+      # Silently handle other cache clearing errors to prevent blocking error logging
       Rails.logger.error("Failed to clear analytics cache: #{e.message}") if Rails.logger
     end
   end
