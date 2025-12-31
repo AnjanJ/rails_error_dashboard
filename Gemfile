@@ -26,7 +26,7 @@ end
 gem "rubocop-rails-omakase", require: false
 
 # Git hooks manager for pre-commit/pre-push quality checks
-gem "lefthook", "~> 1.10", require: false
+gem "lefthook", "~> 2.0", require: false
 
 # Security audit for dependencies
 gem "bundler-audit", require: false
