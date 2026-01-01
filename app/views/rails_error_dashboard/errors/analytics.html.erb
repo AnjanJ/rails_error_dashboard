@@ -131,14 +131,35 @@
             <script>
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
+                // Distinct, accessible colors for 5 platforms with good contrast
+                const platformColors = [
+                  "#2563EB", // Blue - API
+                  "#10B981", // Green - Android
+                  "#F59E0B", // Amber - Background Jobs
+                  "#8B5CF6", // Purple - Web
+                  "#EF4444"  // Red - iOS
+                ];
+
                 new Chartkick.PieChart("errors-by-platform-chart", <%= raw @errors_by_platform.to_json %>, {
-                  colors: ["#000000", "#3DDC84", "#3B82F6"],
+                  colors: platformColors,
                   height: "300px",
                   legend: "bottom",
                   donut: true,
                   library: {
                     plugins: {
-                      legend: { labels: { color: colors.textColor } }
+                      legend: {
+                        labels: {
+                          color: colors.textColor,
+                          font: { size: 12, weight: 'bold' }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#333',
+                        borderWidth: 1
+                      }
                     }
                   }
                 });
