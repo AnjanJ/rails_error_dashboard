@@ -31,8 +31,8 @@ jobs:
       - name: Run smoke tests against demo site
         env:
           DASHBOARD_URL: ${{ github.event.inputs.dashboard_url || 'https://rails-error-dashboard.anjan.dev' }}
-          DASHBOARD_USER: ${{ secrets.DEMO_USER || 'frodo' }}
-          DASHBOARD_PASSWORD: ${{ secrets.DEMO_PASSWORD || 'precious' }}
+          DASHBOARD_USER: ${{ secrets.DEMO_USER || 'gandalf' }}
+          DASHBOARD_PASSWORD: ${{ secrets.DEMO_PASSWORD || 'youshallnotpass' }}
         run: |
           chmod +x ./bin/smoke-test
           ./bin/smoke-test "$DASHBOARD_URL" "$DASHBOARD_USER" "$DASHBOARD_PASSWORD"
