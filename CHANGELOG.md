@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.20] - 2026-01-03
+
+### Added
+- **ManualErrorReporter - Report Errors from Frontend/Mobile Apps** - New API for logging errors without Exception objects
+  - New `RailsErrorDashboard::ManualErrorReporter.report` method for manual error reporting
+  - Clean keyword argument API accepts hash-like parameters (no Exception object needed)
+  - Perfect for logging errors from JavaScript frontends, mobile apps (iOS/Android), or any external source
+  - Supports all major platforms: Web, iOS, Android, API, or custom platforms
+  - Accepts custom metadata, user IDs, app versions, backtraces, and more
+  - Works with existing error grouping and deduplication system
+  - Supports both sync and async logging modes
+  - **Example**: `ManualErrorReporter.report(error_type: "TypeError", message: "Cannot read property 'foo'", platform: "Web", user_id: 123)`
+
+### Improved
+- **SyntheticException** - Internal bridge class for manual errors
+  - Converts manual error reports into Exception-like objects
+  - Seamlessly integrates with existing LogError command
+  - Preserves error type, message, and backtrace information
+  - Mock class returns simple error type name instead of full class path
+
+### Enhanced
+- **Platform Detection** - Respects explicitly provided platform parameter
+  - ErrorContext now prioritizes manually provided platform over auto-detection
+  - Allows accurate platform tracking for mobile/frontend errors
+  - Falls back to user-agent detection when platform not specified
+  - Added comprehensive error handling for edge cases
+
+### Technical Details
+- **New file**: `lib/rails_error_dashboard/manual_error_reporter.rb` (200+ lines)
+  - `ManualErrorReporter.report` class method with keyword arguments
+  - `SyntheticException` class mimics Ruby Exception interface
+  - `MockClass` provides error type name for exception class
+  - Normalizes backtrace input (accepts arrays or newline-separated strings)
+- **Modified**: `lib/rails_error_dashboard/value_objects/error_context.rb`
+  - Enhanced `detect_platform` to check for explicit platform first (line 123-140)
+  - Added robust error handling with debug logging
+- **Modified**: `lib/rails_error_dashboard.rb`
+  - Added require for manual_error_reporter (line 5)
+- **Testing**: 21 new comprehensive test cases, all 916 automated tests passing
+- **Compatibility**: Works perfectly in both full Rails and API-only apps
+
+### Use Cases
+- Log JavaScript errors from React/Vue/Angular frontends
+- Report iOS crashes from Swift/Objective-C apps
+- Track Android exceptions from Kotlin/Java apps
+- Monitor API errors from mobile SDKs
+- Capture validation errors without raising exceptions
+- Integrate with external error monitoring services
+
+### API Parameters
+**Required:**
+- `error_type` - Type of error (e.g., "TypeError", "NSException", "RuntimeException")
+- `message` - Error message
+
+**Optional:**
+- `backtrace` - Array or newline-separated string
+- `platform` - Platform name (e.g., "Web", "iOS", "Android", "API")
+- `user_id` - User identifier
+- `request_url` - URL where error occurred
+- `user_agent` - Browser/app user agent string
+- `ip_address` - Client IP address
+- `app_version` - Application version
+- `metadata` - Hash of custom metadata
+- `occurred_at` - Timestamp (defaults to Time.current)
+- `severity` - Error severity level
+- `source` - Error source (defaults to "manual")
+
 ## [0.1.19] - 2026-01-02
 
 ### Fixed

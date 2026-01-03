@@ -121,6 +121,9 @@ module RailsErrorDashboard
       end
 
       def detect_platform
+        # If platform is explicitly provided in context, use it
+        return @context[:platform] if @context[:platform].present?
+
         # Check if it's from a mobile request
         user_agent = extract_user_agent
 
