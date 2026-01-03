@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.19] - 2026-01-02
+
+### Fixed
+- **CRITICAL: File Permission Error on Railway/Production** - Fixed gem loading failures
+  - Fixed `cannot load such file -- logger.rb` error on Railway and other platforms
+  - Corrected file permissions from 600 (owner-only) to 644 (world-readable)
+  - Fixed 7 files with incorrect permissions:
+    - `lib/rails_error_dashboard/logger.rb`
+    - `lib/rails_error_dashboard/services/backtrace_parser.rb`
+    - `lib/rails_error_dashboard/services/baseline_alert_throttler.rb`
+    - `lib/rails_error_dashboard/services/baseline_calculator.rb`
+    - `lib/rails_error_dashboard/services/pattern_detector.rb`
+    - `lib/rails_error_dashboard/services/similarity_calculator.rb`
+    - `lib/tasks/rails_error_dashboard_tasks.rake`
+  - Gem now loads correctly in production environments (Railway, Heroku, Render, etc.)
+
+### Technical Details
+- File permissions issue caused Bundler::GemRequireError in production
+- Files were created with restrictive permissions (600) preventing read access
+- Changed all library files to standard permissions (644)
+- Resolves zeitwerk autoloading failures in production
+- No functional changes - only permission fixes
+
 ## [0.1.18] - 2026-01-02
 
 ### Added
