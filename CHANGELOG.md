@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.21] - 2026-01-04
+
+### Fixed
+- **CRITICAL: Turbo Helpers Missing in Production** - Fixed `undefined method 'turbo_stream_from'` error
+  - Fixed production-only error when accessing error dashboard pages
+  - Added explicit `require "turbo-rails"` to ensure helpers are available
+  - Resolves initialization order issues in production mode (eager loading)
+  - Error was caused by engine loading before host app's Turbo initialization
+  - Affects real-time updates feature (`turbo_stream_from "error_list"`)
+  - **Impact**: Dashboard now works correctly in production environments
+  - **Credit**: Thanks to @bonniesimon for identifying and fixing this issue! 🎉
+
+### Technical Details
+- **File modified**: `lib/rails_error_dashboard.rb`
+- **Issue**: Production eager loading caused helper unavailability
+- **Solution**: Explicitly require turbo-rails alongside other dependencies
+- **Related**: Similar to [turbo-rails issue #64](https://github.com/hotwired/turbo-rails/issues/64)
+- **Why development worked**: Lazy autoloading masked the problem
+- **Why production failed**: Eager loading exposed initialization race condition
+- 100% backward compatible - turbo-rails already a required dependency
+
+### Community
+- 🎉 **First external contribution** by @bonniesimon
+- Properly identified production-only bug
+- Clean, minimal fix with excellent documentation
+- Followed proper issue → PR workflow
+
 ## [0.1.20] - 2026-01-03
 
 ### Added
