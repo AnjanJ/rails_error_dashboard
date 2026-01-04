@@ -11,6 +11,8 @@ require "browser"
 require "groupdate"
 require "httparty"
 require "chartkick"
+require "turbo-rails"
+
 
 # Core library files
 require "rails_error_dashboard/value_objects/error_context"
