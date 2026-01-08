@@ -769,7 +769,7 @@ RailsErrorDashboard.configure do |config|
 
   # Development-only features
   if Rails.env.development?
-    config.require_authentication = false  # Easier access in dev
+    # Note: Authentication is always required and cannot be disabled
     config.sampling_rate = 0.5  # Reduce noise in development
   end
 

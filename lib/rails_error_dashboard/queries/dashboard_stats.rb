@@ -5,8 +5,12 @@ module RailsErrorDashboard
     # Query: Fetch dashboard statistics
     # This is a read operation that aggregates error data for the dashboard
     class DashboardStats
-      def self.call
-        new.call
+      def initialize(application_id: nil)
+        @application_id = application_id
+      end
+
+      def self.call(application_id: nil)
+        new(application_id: application_id).call
       end
 
       def call
@@ -15,12 +19,12 @@ module RailsErrorDashboard
         begin
           Rails.cache.fetch(cache_key, expires_in: 1.minute) do
             {
-              total_today: ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count,
-              total_week: ErrorLog.where("occurred_at >= ?", 7.days.ago).count,
-              total_month: ErrorLog.where("occurred_at >= ?", 30.days.ago).count,
-              unresolved: ErrorLog.unresolved.count,
-              resolved: ErrorLog.resolved.count,
-              by_platform: ErrorLog.group(:platform).count,
+              total_today: base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count,
+              total_week: base_scope.where("occurred_at >= ?", 7.days.ago).count,
+              total_month: base_scope.where("occurred_at >= ?", 30.days.ago).count,
+              unresolved: base_scope.unresolved.count,
+              resolved: base_scope.resolved.count,
+              by_platform: base_scope.group(:platform).count,
               top_errors: top_errors,
               #  Trend visualizations
               errors_trend_7d: errors_trend_7d,
@@ -40,8 +44,8 @@ module RailsErrorDashboard
         rescue => e
           # If Rails.cache or any stats query fails, return empty stats hash
           # This prevents broadcast failures in API-only mode or when cache is unavailable
-          Rails.logger.error("[RailsErrorDashboard] DashboardStats failed: #{e.class} - #{e.message}")
-          Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
+          RailsErrorDashboard::Logger.error("[RailsErrorDashboard] DashboardStats failed: #{e.class} - #{e.message}")
+          RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
 
           # Return minimal stats hash to prevent nil errors in views
           {
@@ -70,41 +74,49 @@ module RailsErrorDashboard
       def cache_key
         # Cache key includes last error update timestamp for auto-invalidation
         # Also includes current hour to ensure fresh data
+        # Uses base_scope to respect application_id filter for proper cache isolation
         [
           "dashboard_stats",
-          ErrorLog.maximum(:updated_at)&.to_i || 0,
+          @application_id || "all",
+          base_scope.maximum(:updated_at)&.to_i || 0,
           Time.current.hour
         ].join("/")
       end
 
       private
 
+      def base_scope
+        scope = ErrorLog.all
+        scope = scope.where(application_id: @application_id) if @application_id.present?
+        scope
+      end
+
       def top_errors
-        ErrorLog.where("occurred_at >= ?", 7.days.ago)
-                .group(:error_type)
-                .count
-                .sort_by { |_, count| -count }
-                .first(10)
-                .to_h
+        base_scope.where("occurred_at >= ?", 7.days.ago)
+                  .group(:error_type)
+                  .count
+                  .sort_by { |_, count| -count }
+                  .first(10)
+                  .to_h
       end
 
       # Get 7-day error trend (daily counts)
       def errors_trend_7d
-        ErrorLog.where("occurred_at >= ?", 7.days.ago)
-                .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
-                .count
+        base_scope.where("occurred_at >= ?", 7.days.ago)
+                  .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
+                  .count
       end
 
       # Get error counts by severity for last 7 days
       # OPTIMIZED: Use database filtering instead of loading all records into Ruby
       def errors_by_severity_7d
-        base_scope = ErrorLog.where("occurred_at >= ?", 7.days.ago)
+        scoped_errors = base_scope.where("occurred_at >= ?", 7.days.ago)
 
         {
-          critical: base_scope.where(error_type: ErrorLog::CRITICAL_ERROR_TYPES).count,
-          high: base_scope.where(error_type: ErrorLog::HIGH_SEVERITY_ERROR_TYPES).count,
-          medium: base_scope.where(error_type: ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES).count,
-          low: base_scope.where.not(
+          critical: scoped_errors.where(error_type: ErrorLog::CRITICAL_ERROR_TYPES).count,
+          high: scoped_errors.where(error_type: ErrorLog::HIGH_SEVERITY_ERROR_TYPES).count,
+          medium: scoped_errors.where(error_type: ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES).count,
+          low: scoped_errors.where.not(
             error_type: ErrorLog::CRITICAL_ERROR_TYPES +
                        ErrorLog::HIGH_SEVERITY_ERROR_TYPES +
                        ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES
@@ -117,7 +129,7 @@ module RailsErrorDashboard
       def spike_detected?
         return false if errors_trend_7d.empty?
 
-        today_count = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        today_count = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
 
         # Try baseline-based detection first
         if baseline_anomaly_detected?(today_count)
@@ -136,7 +148,7 @@ module RailsErrorDashboard
       def spike_info
         return nil unless spike_detected?
 
-        today_count = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        today_count = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
         avg_count = (errors_trend_7d.values.sum / 7.0).round(1)
 
         info = {
@@ -158,9 +170,9 @@ module RailsErrorDashboard
         return false unless defined?(Queries::BaselineStats)
 
         # Check most common error types for anomalies
-        ErrorLog.distinct.pluck(:error_type, :platform).compact.any? do |(error_type, platform)|
+        base_scope.distinct.pluck(:error_type, :platform).compact.any? do |(error_type, platform)|
           stats = Queries::BaselineStats.new(error_type, platform)
-          error_count = ErrorLog.where(
+          error_count = base_scope.where(
             error_type: error_type,
             platform: platform
           ).where("occurred_at >= ?", Time.current.beginning_of_day).count
@@ -175,9 +187,9 @@ module RailsErrorDashboard
         return nil unless defined?(Queries::BaselineStats)
 
         # Find the most anomalous error type
-        anomalies = ErrorLog.distinct.pluck(:error_type, :platform).compact.map do |(error_type, platform)|
+        anomalies = base_scope.distinct.pluck(:error_type, :platform).compact.map do |(error_type, platform)|
           stats = Queries::BaselineStats.new(error_type, platform)
-          error_count = ErrorLog.where(
+          error_count = base_scope.where(
             error_type: error_type,
             platform: platform
           ).where("occurred_at >= ?", Time.current.beginning_of_day).count
@@ -225,7 +237,7 @@ module RailsErrorDashboard
       # Since we don't track total requests, we'll use error count as proxy
       # In the future, this could be: (errors / total_requests) * 100
       def error_rate
-        today_errors = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        today_errors = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
         return 0.0 if today_errors.zero?
 
         # For now, use a simple heuristic: errors per hour today
@@ -243,20 +255,20 @@ module RailsErrorDashboard
 
       # Count distinct users affected by errors today
       def affected_users_today
-        ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day)
-                .where.not(user_id: nil)
-                .distinct
-                .count(:user_id)
+        base_scope.where("occurred_at >= ?", Time.current.beginning_of_day)
+                  .where.not(user_id: nil)
+                  .distinct
+                  .count(:user_id)
       end
 
       # Count distinct users affected by errors yesterday
       def affected_users_yesterday
-        ErrorLog.where("occurred_at >= ? AND occurred_at < ?",
-                      1.day.ago.beginning_of_day,
-                      Time.current.beginning_of_day)
-                .where.not(user_id: nil)
-                .distinct
-                .count(:user_id)
+        base_scope.where("occurred_at >= ? AND occurred_at < ?",
+                        1.day.ago.beginning_of_day,
+                        Time.current.beginning_of_day)
+                  .where.not(user_id: nil)
+                  .distinct
+                  .count(:user_id)
       end
 
       # Calculate change in affected users (today vs yesterday)
@@ -272,10 +284,10 @@ module RailsErrorDashboard
 
       # Calculate percentage change in errors (today vs yesterday)
       def trend_percentage
-        today = ErrorLog.where("occurred_at >= ?", Time.current.beginning_of_day).count
-        yesterday = ErrorLog.where("occurred_at >= ? AND occurred_at < ?",
-                                  1.day.ago.beginning_of_day,
-                                  Time.current.beginning_of_day).count
+        today = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        yesterday = base_scope.where("occurred_at >= ? AND occurred_at < ?",
+                                     1.day.ago.beginning_of_day,
+                                     Time.current.beginning_of_day).count
 
         return 0.0 if today.zero? && yesterday.zero?
         return 100.0 if yesterday.zero? && today.positive?
@@ -299,7 +311,7 @@ module RailsErrorDashboard
       # Get top 5 errors ranked by impact score
       # Impact = affected_users_count × occurrence_count
       def top_errors_by_impact
-        ErrorLog.where("occurred_at >= ?", 7.days.ago)
+        base_scope.where("occurred_at >= ?", 7.days.ago)
                 .group(:error_type, :id)
                 .select("error_type, id, occurrence_count,
                         COUNT(DISTINCT user_id) as affected_users,

@@ -4,6 +4,9 @@ module RailsErrorDashboard
   class ErrorLog < ErrorLogsRecord
     self.table_name = "rails_error_dashboard_error_logs"
 
+    # Application association
+    belongs_to :application, optional: false
+
     # User association - works with both single and separate database
     # When using separate database, joins are not possible, but Rails
     # will automatically fetch users in a separate query when using includes()
@@ -88,15 +91,17 @@ module RailsErrorDashboard
     end
 
     # Generate unique hash for error grouping
-    # Includes controller/action for better context-aware grouping
+    # Includes controller/action/application for better context-aware grouping
+    # Per-app deduplication: same error in App A vs App B creates separate records
     def generate_error_hash
-      # Hash based on error class, normalized message, first stack frame, controller, and action
+      # Hash based on error class, normalized message, first stack frame, controller, action, and application
       digest_input = [
         error_type,
         message&.gsub(/\d+/, "N")&.gsub(/"[^"]*"/, '""'), # Normalize numbers and strings
         backtrace&.lines&.first&.split(":")&.first, # Just the file, not line number
-        controller_name, # Controller context
-        action_name      # Action context
+        controller_name,  # Controller context
+        action_name,      # Action context
+        application_id.to_s  # Application context (for per-app deduplication)
       ].compact.join("|")
 
       Digest::SHA256.hexdigest(digest_input)[0..15]
@@ -170,12 +175,16 @@ module RailsErrorDashboard
 
     # Find existing error by hash or create new one
     # This is CRITICAL for accurate occurrence tracking
+    # Uses pessimistic locking to prevent race conditions in multi-app scenarios
     def self.find_or_increment_by_hash(error_hash, attributes = {})
       # Look for unresolved error with same hash in last 24 hours
       # (resolved errors are considered "fixed" so new occurrence = new issue)
+      # CRITICAL: Scope by application_id to prevent cross-app locks
       existing = unresolved
                   .where(error_hash: error_hash)
+                  .where(application_id: attributes[:application_id])
                   .where("occurred_at >= ?", 24.hours.ago)
+                  .lock  # Row-level pessimistic lock
                   .order(last_seen_at: :desc)
                   .first
 
@@ -193,9 +202,29 @@ module RailsErrorDashboard
         )
         existing
       else
-        # Create new error record
-        # Ensure resolved has a value (default to false)
-        create!(attributes.reverse_merge(resolved: false))
+        # Create new error record with retry logic for race conditions
+        begin
+          create!(attributes.reverse_merge(resolved: false))
+        rescue ActiveRecord::RecordNotUnique
+          # Race condition: another process created the record
+          # Retry with lock to find and increment
+          retry_existing = unresolved
+                            .where(error_hash: error_hash)
+                            .where(application_id: attributes[:application_id])
+                            .where("occurred_at >= ?", 24.hours.ago)
+                            .lock
+                            .first
+
+          if retry_existing
+            retry_existing.update!(
+              occurrence_count: retry_existing.occurrence_count + 1,
+              last_seen_at: Time.current
+            )
+            retry_existing
+          else
+            raise  # Re-raise if still nil (unexpected scenario)
+          end
+        end
       end
     end
 

@@ -91,6 +91,21 @@
         background-color: rgba(255, 255, 255, 0.2);
       }
 
+      /* App Switcher Button - must override navbar * rule */
+      .app-switcher-btn {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        transition: background-color 0.2s;
+      }
+      .app-switcher-btn:hover {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+      }
+      .app-switcher-btn i,
+      .app-switcher-btn * {
+        color: white !important;
+      }
+
       /* Sidebar */
       .sidebar {
         background: white;
@@ -440,16 +455,38 @@
       }
 
       /* Dropdown menus */
+      .dropdown-menu {
+        background-color: white;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+      }
+      .dropdown-item {
+        color: #1f2937 !important;
+      }
+      .dropdown-item:hover,
+      .dropdown-item:focus {
+        background-color: #f3f4f6;
+        color: #8B5CF6 !important;
+      }
+      .dropdown-item.active {
+        background-color: #8B5CF6;
+        color: white !important;
+      }
+
       body.dark-mode .dropdown-menu {
         background-color: var(--ctp-surface0);
         border-color: var(--ctp-surface2);
       }
       body.dark-mode .dropdown-item {
-        color: var(--ctp-text);
+        color: var(--ctp-text) !important;
       }
-      body.dark-mode .dropdown-item:hover {
+      body.dark-mode .dropdown-item:hover,
+      body.dark-mode .dropdown-item:focus {
         background-color: var(--ctp-surface1);
-        color: var(--ctp-mauve);
+        color: var(--ctp-mauve) !important;
+      }
+      body.dark-mode .dropdown-item.active {
+        background-color: var(--ctp-mauve);
+        color: var(--ctp-base) !important;
       }
 
       /* Pagination */
@@ -813,6 +850,39 @@
           <% end %>
         </div>
         <div class="d-flex align-items-center gap-3">
+          <!-- Application Switcher (only show if multiple apps) -->
+          <% if defined?(@applications) && @applications&.size.to_i > 1 %>
+            <div class="dropdown">
+              <button class="btn btn-sm dropdown-toggle app-switcher-btn"
+                      type="button"
+                      id="appSwitcher"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false">
+                <i class="bi bi-layers"></i>
+                <% if params[:application_id].present? %>
+                  <%= @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first || 'Unknown' %>
+                <% else %>
+                  All Apps
+                <% end %>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="appSwitcher">
+                <li>
+                  <%= link_to "All Applications",
+                      url_for(params.permit!.except(:controller, :action, :application_id)),
+                      class: "dropdown-item #{'active' unless params[:application_id].present?}" %>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <% @applications.each do |app_name, app_id| %>
+                  <li>
+                    <%= link_to app_name,
+                        url_for(params.permit!.except(:controller, :action).merge(application_id: app_id)),
+                        class: "dropdown-item #{params[:application_id].to_s == app_id.to_s ? 'active' : ''}" %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
           <button class="theme-toggle" id="themeToggle">
             <i class="bi bi-moon-fill" id="themeIcon"></i>
           </button>
@@ -1045,10 +1115,10 @@
 
               // Tooltip
               if (Chart.defaults.plugins.tooltip) {
-                Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#313244' : 'rgba(0, 0, 0, 0.8)';
-                Chart.defaults.plugins.tooltip.titleColor = textColor;
-                Chart.defaults.plugins.tooltip.bodyColor = textColor;
-                Chart.defaults.plugins.tooltip.borderColor = isDark ? '#585b70' : 'rgba(0, 0, 0, 0.1)';
+                Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#313244' : 'rgba(255, 255, 255, 0.95)';
+                Chart.defaults.plugins.tooltip.titleColor = isDark ? textColor : '#1f2937';
+                Chart.defaults.plugins.tooltip.bodyColor = isDark ? textColor : '#1f2937';
+                Chart.defaults.plugins.tooltip.borderColor = isDark ? '#585b70' : 'rgba(0, 0, 0, 0.2)';
                 Chart.defaults.plugins.tooltip.borderWidth = 1;
               }
 

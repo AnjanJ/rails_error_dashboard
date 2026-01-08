@@ -46,9 +46,13 @@ module RailsErrorDashboard
 
         error_context = ValueObjects::ErrorContext.new(@context, @context[:source])
 
+        # Find or create application (cached lookup)
+        application = find_or_create_application
+
         # Build error attributes
         truncated_backtrace = truncate_backtrace(@exception.backtrace)
         attributes = {
+          application_id: application.id,
           error_type: @exception.class.name,
           message: @exception.message,
           backtrace: truncated_backtrace,
@@ -63,8 +67,8 @@ module RailsErrorDashboard
           occurred_at: Time.current
         }
 
-        # Generate error hash for deduplication (including controller/action context)
-        error_hash = generate_error_hash(@exception, error_context.controller_name, error_context.action_name)
+        # Generate error hash for deduplication (including controller/action context and application)
+        error_hash = generate_error_hash(@exception, error_context.controller_name, error_context.action_name, application.id)
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
@@ -127,10 +131,6 @@ module RailsErrorDashboard
       rescue => e
         # Don't let error logging cause more errors - fail silently
         # CRITICAL: Log but never propagate exception
-        # Log to Rails logger for visibility during development
-        Rails.logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
-        Rails.logger.error("Backtrace: #{e.backtrace&.first(10)&.join("\n")}")
-
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
         RailsErrorDashboard::Logger.error("Context: #{@context.inspect}") if @context
@@ -139,6 +139,20 @@ module RailsErrorDashboard
       end
 
       private
+
+      # Find or create application for multi-app support
+      def find_or_create_application
+        app_name = RailsErrorDashboard.configuration.application_name ||
+                   ENV['APPLICATION_NAME'] ||
+                   (defined?(Rails) && Rails.application.class.module_parent_name) ||
+                   'Rails Application'
+
+        Application.find_or_create_by_name(app_name)
+      rescue => e
+        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
+        # Fallback: try to find any application or create default
+        Application.first || Application.create!(name: 'Default Application')
+      end
 
       # Trigger notification callbacks for error logging
       def trigger_callbacks(error_log)
@@ -237,13 +251,14 @@ module RailsErrorDashboard
       # Generate consistent hash for error deduplication
       # Same hash = same error type
       # Note: This is also defined in ErrorLog model for backward compatibility
-      def generate_error_hash(exception, controller_name = nil, action_name = nil)
+      def generate_error_hash(exception, controller_name = nil, action_name = nil, application_id = nil)
         # Hash components:
         # 1. Error class (NoMethodError, ArgumentError, etc.)
         # 2. Normalized message (replace numbers, quoted strings)
         # 3. First stack frame file (ignore line numbers)
         # 4. Controller name (for context-aware grouping)
         # 5. Action name (for context-aware grouping)
+        # 6. Application ID (for per-app deduplication)
 
         normalized_message = exception.message
           &.gsub(/\d+/, "N")                    # Replace numbers: "User 123" -> "User N"
@@ -261,13 +276,14 @@ module RailsErrorDashboard
         # Extract just the file path, not line number
         file_path = first_app_frame&.split(":")&.first
 
-        # Generate hash including controller/action for better grouping
+        # Generate hash including controller/action/application for better grouping
         digest_input = [
           exception.class.name,
           normalized_message,
           file_path,
-          controller_name, # Context: which controller
-          action_name      # Context: which action
+          controller_name,      # Context: which controller
+          action_name,          # Context: which action
+          application_id.to_s   # Context: which application (for per-app deduplication)
         ].compact.join("|")
 
         Digest::SHA256.hexdigest(digest_input)[0..15]

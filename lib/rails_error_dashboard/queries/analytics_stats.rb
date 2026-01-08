@@ -5,13 +5,14 @@ module RailsErrorDashboard
     # Query: Fetch analytics statistics for charts and trends
     # This is a read operation that aggregates error data over time
     class AnalyticsStats
-      def self.call(days = 30)
-        new(days).call
+      def initialize(days = 30, application_id: nil)
+        @days = days
+        @application_id = application_id
+        @start_date = days.days.ago
       end
 
-      def initialize(days = 30)
-        @days = days
-        @start_date = days.days.ago
+      def self.call(days = 30, application_id: nil)
+        new(days, application_id: application_id).call
       end
 
       def call
@@ -38,20 +39,28 @@ module RailsErrorDashboard
         # Cache key includes:
         # - Query class name
         # - Days parameter (different time ranges = different caches)
+        # - Application ID (per-app caching)
         # - Last error update timestamp (auto-invalidates when errors change)
         # - Start date (ensures correct time window)
         [
           "analytics_stats",
           @days,
-          ErrorLog.maximum(:updated_at)&.to_i || 0,
+          @application_id || "all",
+          base_scope.maximum(:updated_at)&.to_i || 0,
           @start_date.to_date.to_s
         ].join("/")
       end
 
       private
 
+      def base_scope
+        scope = ErrorLog.all
+        scope = scope.where(application_id: @application_id) if @application_id.present?
+        scope
+      end
+
       def base_query
-        ErrorLog.where("occurred_at >= ?", @start_date)
+        base_scope.where("occurred_at >= ?", @start_date)
       end
 
       def error_statistics

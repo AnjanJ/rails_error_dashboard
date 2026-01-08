@@ -274,10 +274,9 @@ Here's a full configuration using all notification backends:
 ```ruby
 # config/initializers/rails_error_dashboard.rb
 RailsErrorDashboard.configure do |config|
-  # Authentication
+  # Authentication (always required)
   config.dashboard_username = ENV.fetch('ERROR_DASHBOARD_USER', 'admin')
   config.dashboard_password = ENV.fetch('ERROR_DASHBOARD_PASSWORD', 'changeme')
-  config.require_authentication = true
 
   # Dashboard URL (for links in notifications)
   config.dashboard_base_url = ENV['DASHBOARD_BASE_URL'] || 'https://yourapp.com'

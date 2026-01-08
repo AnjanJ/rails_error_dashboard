@@ -9,7 +9,6 @@ RSpec.describe RailsErrorDashboard::Configuration do
     describe "existing configuration defaults" do
       it { expect(config.dashboard_username).to eq("gandalf") }
       it { expect(config.dashboard_password).to eq("youshallnotpass") }
-      it { expect(config.require_authentication).to be true }
       it { expect(config.user_model).to eq("User") }
       it { expect(config.retention_days).to eq(90) }
       it { expect(config.enable_middleware).to be true }

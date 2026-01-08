@@ -126,6 +126,13 @@
   <%
     active_filters = []
     active_filters << { label: "Search: #{params[:search]}", param: :search } if params[:search].present?
+
+    # Application filter pill
+    if params[:application_id].present? && defined?(@applications)
+      app_name = @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first
+      active_filters << { label: "App: #{app_name}", param: :application_id } if app_name
+    end
+
     active_filters << { label: "Platform: #{params[:platform]}", param: :platform } if params[:platform].present?
     active_filters << { label: "Type: #{params[:error_type]}", param: :error_type } if params[:error_type].present?
     active_filters << { label: "Severity: #{params[:severity].titleize}", param: :severity } if params[:severity].present?
@@ -186,6 +193,18 @@
         <div class="col-md-4">
           <%= text_field_tag :search, params[:search], placeholder: "Search errors...", class: "form-control" %>
         </div>
+
+        <!-- Application Filter (only show if multiple apps) -->
+        <% if @applications.size > 1 %>
+          <div class="col-md-2">
+            <%= select_tag :application_id,
+                options_for_select(
+                  [['All Apps', '']] + @applications,
+                  params[:application_id]
+                ),
+                class: "form-select" %>
+          </div>
+        <% end %>
 
         <% if @platforms.size > 1 %>
           <div class="col-md-2">
@@ -341,6 +360,12 @@
                 <th>Message</th>
                 <th><%= sortable_header("Occurrences", "occurrence_count") %></th>
                 <th><%= sortable_header("First / Last Seen", "last_seen_at") %></th>
+
+                <!-- Show App column only when viewing all apps -->
+                <% if @applications.size > 1 && params[:application_id].blank? %>
+                  <th><%= sortable_header("Application", "application_id") %></th>
+                <% end %>
+
                 <% if @platforms.size > 1 %>
                   <th><%= sortable_header("Platform", "platform") %></th>
                 <% end %>
@@ -350,7 +375,7 @@
             </thead>
             <tbody id="error_list">
               <% @errors.each do |error| %>
-                <%= render "error_row", error: error, show_platform: @platforms.size > 1 %>
+                <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
               <% end %>
             </tbody>
           </table>

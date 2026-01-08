@@ -2,14 +2,16 @@
 
 module RailsErrorDashboard
   class Configuration
-    # Dashboard authentication
+    # Dashboard authentication (always required)
     attr_accessor :dashboard_username
     attr_accessor :dashboard_password
-    attr_accessor :require_authentication
-    attr_accessor :require_authentication_in_development
 
     # User model (for associations)
     attr_accessor :user_model
+
+    # Multi-app support - Application name
+    attr_accessor :application_name
+    attr_accessor :database  # Database connection name for shared error dashboard DB
 
     # Notifications
     attr_accessor :slack_webhook_url
@@ -94,13 +96,15 @@ module RailsErrorDashboard
     attr_accessor :log_level
 
     def initialize
-      # Default values
+      # Default values - Authentication is ALWAYS required
       @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
       @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
-      @require_authentication = true
-      @require_authentication_in_development = false
 
       @user_model = "User"
+
+      # Multi-app support defaults
+      @application_name = ENV["APPLICATION_NAME"]  # Auto-detected if not set
+      @database = nil  # Use primary database by default
 
       # Notification settings (disabled by default - enable during installation or in initializer)
       @slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]

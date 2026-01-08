@@ -37,13 +37,14 @@ module RailsErrorDashboard
       # Paginate with Pagy
       @pagy, @errors = pagy(errors_query, items: params[:per_page] || 25)
 
-      # Get dashboard stats using Query
-      @stats = Queries::DashboardStats.call
+      # Get dashboard stats using Query (pass application filter)
+      @stats = Queries::DashboardStats.call(application_id: params[:application_id])
 
       # Get filter options using Query
       filter_options = Queries::FilterOptions.call
       @error_types = filter_options[:error_types]
       @platforms = filter_options[:platforms]
+      @applications = filter_options[:applications]
     end
 
     def show
@@ -137,8 +138,8 @@ module RailsErrorDashboard
       days = (params[:days] || 30).to_i
       @days = days
 
-      # Use Query to get analytics data
-      analytics = Queries::AnalyticsStats.call(days)
+      # Use Query to get analytics data (pass application filter)
+      analytics = Queries::AnalyticsStats.call(days, application_id: params[:application_id])
 
       @error_stats = analytics[:error_stats]
       @errors_over_time = analytics[:errors_over_time]
@@ -269,6 +270,7 @@ module RailsErrorDashboard
         error_type: params[:error_type],
         unresolved: params[:unresolved],
         platform: params[:platform],
+        application_id: params[:application_id],
         search: params[:search],
         severity: params[:severity],
         timeframe: params[:timeframe],
@@ -285,8 +287,7 @@ module RailsErrorDashboard
     end
 
     def authenticate_dashboard_user!
-      return if skip_authentication?
-
+      # Authentication is ALWAYS required - no bypass allowed in any environment
       authenticate_or_request_with_http_basic do |username, password|
         ActiveSupport::SecurityUtils.secure_compare(
           username,
@@ -297,11 +298,6 @@ module RailsErrorDashboard
           RailsErrorDashboard.configuration.dashboard_password
         )
       end
-    end
-
-    def skip_authentication?
-      !RailsErrorDashboard.configuration.require_authentication ||
-        (Rails.env.development? && !RailsErrorDashboard.configuration.require_authentication_in_development)
     end
   end
 end

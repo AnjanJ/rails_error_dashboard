@@ -40,6 +40,13 @@
       <strong>Last:</strong> <%= local_time(error.last_seen_at, format: :short) %>
     </small>
   </td>
+  <% if local_assigns[:show_application] %>
+    <td onclick="window.location='<%= error_path(error) %>';">
+      <span class="badge bg-info">
+        <%= error.application&.name || 'Unknown' %>
+      </span>
+    </td>
+  <% end %>
   <% if local_assigns[:show_platform] %>
     <td onclick="window.location='<%= error_path(error) %>';">
       <% if error.platform == 'iOS' %>

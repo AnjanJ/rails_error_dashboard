@@ -2,19 +2,14 @@
 
 RailsErrorDashboard.configure do |config|
   # ============================================================================
-  # AUTHENTICATION (Always Required)
+  # AUTHENTICATION (Always Required - Cannot Be Disabled)
   # ============================================================================
 
   # Dashboard authentication credentials
   # ⚠️ CHANGE THESE BEFORE PRODUCTION! ⚠️
+  # Authentication is ALWAYS enforced in ALL environments (production, development, test)
   config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
-
-  # Require authentication for dashboard access
-  config.require_authentication = true
-
-  # Require authentication even in development mode
-  config.require_authentication_in_development = false
 
   # ============================================================================
   # CORE FEATURES (Always Enabled)

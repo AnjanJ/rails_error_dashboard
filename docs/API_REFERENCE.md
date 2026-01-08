@@ -34,7 +34,7 @@ Configure credentials in your initializer:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  config.require_authentication = true
+  # Authentication is always required (cannot be disabled)
   config.dashboard_username = "admin"
   config.dashboard_password = "secure_password"
 end

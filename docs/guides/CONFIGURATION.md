@@ -44,10 +44,9 @@ Create an initializer at `config/initializers/rails_error_dashboard.rb`:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Dashboard authentication
+  # Dashboard authentication (always required)
   config.dashboard_username = "admin"
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "changeme")
-  config.require_authentication = true
 
   # Data retention (days)
   config.retention_days = 90
@@ -756,10 +755,9 @@ RailsErrorDashboard.configure do |config|
   # ============================================================================
   # AUTHENTICATION (Always Required)
   # ============================================================================
+  # Authentication is always required in all environments
   config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
-  config.require_authentication = true
-  config.require_authentication_in_development = false
 
   # ============================================================================
   # CORE FEATURES (Always Enabled)
