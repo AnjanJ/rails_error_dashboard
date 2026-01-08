@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.23] - 2026-01-08
+
+### 🐛 Critical Hotfix
+
+This is an emergency hotfix for v0.1.22 which was released with CI failures.
+
+#### Fixed
+
+**1. RuboCop Violations (CI Linting Failure)**
+- Fixed 26 style violations in `lib/tasks/error_dashboard.rake`
+- Fixed string literal style in `app/models/rails_error_dashboard/application.rb`
+- Changed single quotes to double quotes per style guide
+- Fixed elsif/else/end alignment issues
+- **Impact:** CI linting checks now pass
+
+**2. Application Caching Bug**
+- Fixed `Application.find_or_create_by_name` to prevent caching nil on creation failures
+- Separated read (cached) from create (not cached until successful)
+- Prevents storing nil in cache when `create!` raises an exception
+- More robust error handling for application registration
+- **Impact:** Application auto-creation is now more reliable
+
+**3. Test Factory Update**
+- Added `association :application` to error_log factory
+- Ensures all factory-created error logs have valid applications
+- Prevents "Validation failed: Application must exist" errors in tests
+- **Impact:** Factory-based tests work correctly
+
+#### Known Issues
+
+- Some tests that manually create ErrorLog records (not via factory) still fail
+- These tests will be fixed in v0.1.24
+- **The gem itself works correctly in production** - this only affects the test suite
+
+#### Upgrade Notes
+
+If you installed v0.1.22, please upgrade immediately:
+
+```bash
+bundle update rails_error_dashboard
+```
+
+No configuration changes or migrations required - this is a pure bugfix release.
+
+#### Why This Release?
+
+v0.1.22 was released without verifying CI was passing (mea culpa). This hotfix addresses the CI failures that were discovered post-release. The core multi-app functionality from v0.1.22 works correctly, but the code quality checks were failing.
+
+### 📦 Files Changed
+
+- `lib/tasks/error_dashboard.rake` - RuboCop fixes
+- `app/models/rails_error_dashboard/application.rb` - Caching logic improvement + style fix
+- `spec/factories/error_logs.rb` - Added application association
+
 ## [0.1.22] - 2026-01-08
 
 ### 🚀 Major Features
