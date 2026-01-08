@@ -10,11 +10,11 @@ namespace :error_dashboard do
     # Use single SQL query with aggregates to avoid N+1 queries
     # This fetches all app data + error counts in one query instead of 6N queries
     apps = RailsErrorDashboard::Application
-             .select('rails_error_dashboard_applications.*')
-             .select('COUNT(rails_error_dashboard_error_logs.id) as total_errors')
-             .select('COALESCE(SUM(CASE WHEN NOT rails_error_dashboard_error_logs.resolved THEN 1 ELSE 0 END), 0) as unresolved_errors')
-             .joins('LEFT JOIN rails_error_dashboard_error_logs ON rails_error_dashboard_error_logs.application_id = rails_error_dashboard_applications.id')
-             .group('rails_error_dashboard_applications.id')
+             .select("rails_error_dashboard_applications.*")
+             .select("COUNT(rails_error_dashboard_error_logs.id) as total_errors")
+             .select("COALESCE(SUM(CASE WHEN NOT rails_error_dashboard_error_logs.resolved THEN 1 ELSE 0 END), 0) as unresolved_errors")
+             .joins("LEFT JOIN rails_error_dashboard_error_logs ON rails_error_dashboard_error_logs.application_id = rails_error_dashboard_applications.id")
+             .group("rails_error_dashboard_applications.id")
              .order(:name)
 
     if apps.empty?
@@ -27,9 +27,9 @@ namespace :error_dashboard do
     puts "\n#{apps.count} application(s) registered:\n\n"
 
     # Calculate column widths using aggregated data (no additional queries)
-    name_width = [apps.map(&:name).map(&:length).max, 20].max
-    total_width = [apps.map(&:total_errors).map(&:to_s).map(&:length).max, 5].max
-    unresolved_width = [apps.map(&:unresolved_errors).map(&:to_s).map(&:length).max, 10].max
+    name_width = [ apps.map(&:name).map(&:length).max, 20 ].max
+    total_width = [ apps.map(&:total_errors).map(&:to_s).map(&:length).max, 5 ].max
+    unresolved_width = [ apps.map(&:unresolved_errors).map(&:to_s).map(&:length).max, 10 ].max
 
     # Print header
     printf "%-#{name_width}s  %#{total_width}s  %#{unresolved_width}s  %s\n",
@@ -62,9 +62,9 @@ namespace :error_dashboard do
 
   desc "Backfill application_id for existing errors"
   task backfill_application: :environment do
-    app_name = ENV['APP_NAME'] || ENV['APPLICATION_NAME'] ||
+    app_name = ENV["APP_NAME"] || ENV["APPLICATION_NAME"] ||
                (defined?(Rails) && Rails.application.class.module_parent_name) ||
-               'Legacy Application'
+               "Legacy Application"
 
     puts "\n" + "=" * 80
     puts "RAILS ERROR DASHBOARD - BACKFILL APPLICATION"
@@ -94,7 +94,7 @@ namespace :error_dashboard do
     print "\nProceed with backfill? (y/N): "
     confirmation = $stdin.gets.chomp.downcase
 
-    unless confirmation == 'y' || confirmation == 'yes'
+    unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Backfill cancelled"
       puts "\n" + "=" * 80 + "\n"
       next
@@ -125,8 +125,8 @@ namespace :error_dashboard do
 
   desc "Show application statistics and health metrics"
   task app_stats: :environment do
-    app_id = ENV['APP_ID']
-    app_name = ENV['APP_NAME']
+    app_id = ENV["APP_ID"]
+    app_name = ENV["APP_NAME"]
 
     puts "\n" + "=" * 80
     puts "RAILS ERROR DASHBOARD - APPLICATION STATISTICS"
@@ -135,16 +135,16 @@ namespace :error_dashboard do
     # Find application
     app = if app_id
             RailsErrorDashboard::Application.find_by(id: app_id)
-          elsif app_name
+    elsif app_name
             RailsErrorDashboard::Application.find_by(name: app_name)
-          else
+    else
             puts "\n✗ Please specify APP_ID or APP_NAME"
             puts "\nExamples:"
             puts "  rails error_dashboard:app_stats APP_NAME='My App'"
             puts "  rails error_dashboard:app_stats APP_ID=1"
             puts "\n" + "=" * 80 + "\n"
             next
-          end
+    end
 
     unless app
       puts "\n✗ Application not found"
@@ -202,11 +202,11 @@ namespace :error_dashboard do
         time_ago = Time.current - error.occurred_at
         time_str = if time_ago < 3600
                      "#{(time_ago / 60).to_i}m ago"
-                   elsif time_ago < 86400
+        elsif time_ago < 86400
                      "#{(time_ago / 3600).to_i}h ago"
-                   else
+        else
                      "#{(time_ago / 86400).to_i}d ago"
-                   end
+        end
         puts "  • #{error.error_type} (#{time_str}) - #{error.message.truncate(50)}"
       end
     end
@@ -216,8 +216,8 @@ namespace :error_dashboard do
 
   desc "Clean up old resolved errors"
   task cleanup_resolved: :environment do
-    days = ENV['DAYS']&.to_i || 90
-    app_name = ENV['APP_NAME']
+    days = ENV["DAYS"]&.to_i || 90
+    app_name = ENV["APP_NAME"]
 
     puts "\n" + "=" * 80
     puts "RAILS ERROR DASHBOARD - CLEANUP RESOLVED ERRORS"
@@ -225,7 +225,7 @@ namespace :error_dashboard do
     puts "\nCleaning up resolved errors older than #{days} days"
 
     scope = RailsErrorDashboard::ErrorLog.resolved
-                                         .where('resolved_at < ?', days.days.ago)
+                                         .where("resolved_at < ?", days.days.ago)
 
     if app_name
       app = RailsErrorDashboard::Application.find_by(name: app_name)
@@ -252,7 +252,7 @@ namespace :error_dashboard do
     print "\nProceed with deletion? (y/N): "
     confirmation = $stdin.gets.chomp.downcase
 
-    unless confirmation == 'y' || confirmation == 'yes'
+    unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Cleanup cancelled"
       puts "\n" + "=" * 80 + "\n"
       next

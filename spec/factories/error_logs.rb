@@ -2,6 +2,7 @@
 
 FactoryBot.define do
   factory :error_log, class: 'RailsErrorDashboard::ErrorLog' do
+    association :application
     error_type { 'StandardError' }
     message { Faker::Lorem.sentence }
     backtrace { "#{Faker::File.file_name}:#{Faker::Number.between(from: 1, to: 100)}:in `#{Faker::Hacker.verb}'\n" * 5 }
