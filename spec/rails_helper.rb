@@ -13,6 +13,11 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
 
+  # Clear cache before each test to prevent stale associations
+  config.before(:each) do
+    Rails.cache.clear
+  end
+
   # ActiveJob test adapter
   config.include ActiveJob::TestHelper
   config.before(:each) do

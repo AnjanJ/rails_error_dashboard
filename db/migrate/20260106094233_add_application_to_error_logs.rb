@@ -7,11 +7,11 @@ class AddApplicationToErrorLogs < ActiveRecord::Migration[7.0]
     add_index :rails_error_dashboard_error_logs, :application_id
 
     add_index :rails_error_dashboard_error_logs,
-              [:application_id, :occurred_at],
+              [ :application_id, :occurred_at ],
               name: 'index_error_logs_on_app_occurred'
 
     add_index :rails_error_dashboard_error_logs,
-              [:application_id, :resolved],
+              [ :application_id, :resolved ],
               name: 'index_error_logs_on_app_resolved'
   end
 

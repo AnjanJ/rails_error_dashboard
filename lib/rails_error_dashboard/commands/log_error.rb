@@ -143,15 +143,15 @@ module RailsErrorDashboard
       # Find or create application for multi-app support
       def find_or_create_application
         app_name = RailsErrorDashboard.configuration.application_name ||
-                   ENV['APPLICATION_NAME'] ||
+                   ENV["APPLICATION_NAME"] ||
                    (defined?(Rails) && Rails.application.class.module_parent_name) ||
-                   'Rails Application'
+                   "Rails Application"
 
         Application.find_or_create_by_name(app_name)
       rescue => e
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
         # Fallback: try to find any application or create default
-        Application.first || Application.create!(name: 'Default Application')
+        Application.first || Application.create!(name: "Default Application")
       end
 
       # Trigger notification callbacks for error logging
