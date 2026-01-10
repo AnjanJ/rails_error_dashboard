@@ -276,6 +276,12 @@ RSpec.describe RailsErrorDashboard do
     end
 
     describe "callback error handling" do
+      before do
+        # Ensure synchronous logging for callback tests
+        described_class.configuration.async_logging = false
+        described_class.configuration.sampling_rate = 1.0
+      end
+
       it "continues executing other callbacks if one fails" do
         call_count = 0
 
