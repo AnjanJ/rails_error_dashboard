@@ -6,6 +6,23 @@ module RailsErrorDashboard
 
     before_action :authenticate_dashboard_user!
 
+    FILTERABLE_PARAMS = %i[
+      error_type
+      unresolved
+      platform
+      application_id
+      search
+      severity
+      timeframe
+      frequency
+      status
+      assigned_to
+      priority_level
+      hide_snoozed
+      sort_by
+      sort_direction
+    ].freeze
+
     def overview
       # Get dashboard stats using Query
       @stats = Queries::DashboardStats.call
@@ -266,24 +283,7 @@ module RailsErrorDashboard
     end
 
     def filter_params
-      {
-        error_type: params[:error_type],
-        unresolved: params[:unresolved],
-        platform: params[:platform],
-        application_id: params[:application_id],
-        search: params[:search],
-        severity: params[:severity],
-        timeframe: params[:timeframe],
-        frequency: params[:frequency],
-        # Phase 3: Workflow filter params
-        status: params[:status],
-        assigned_to: params[:assigned_to],
-        priority_level: params[:priority_level],
-        hide_snoozed: params[:hide_snoozed],
-        # Sorting params
-        sort_by: params[:sort_by],
-        sort_direction: params[:sort_direction]
-      }
+      params.permit(*FILTERABLE_PARAMS).to_h.symbolize_keys
     end
 
     def authenticate_dashboard_user!

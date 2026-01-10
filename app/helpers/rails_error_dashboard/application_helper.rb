@@ -81,6 +81,15 @@ module RailsErrorDashboard
       RailsErrorDashboard.configuration.dashboard_username || ENV["USER"] || "unknown"
     end
 
+    # Returns a sanitized hash of filter params safe for query links
+    # @param extra_keys [Array<Symbol>] Additional permitted keys for specific contexts
+    # @return [Hash] Whitelisted params for building URLs
+    def permitted_filter_params(extra_keys: [])
+      base_keys = RailsErrorDashboard::ErrorsController::FILTERABLE_PARAMS + %i[page per_page days]
+      allowed_keys = base_keys + Array(extra_keys)
+      params.permit(*allowed_keys).to_h.symbolize_keys
+    end
+
     # Generates a sortable column header link
     # @param label [String] The column label to display
     # @param column [String] The column name to sort by
@@ -103,8 +112,8 @@ module RailsErrorDashboard
         "⇅"  # Unsorted indicator
       end
 
-      # Preserve existing filter params while adding sort params
-      link_params = params.permit!.to_h.merge(sort_by: column, sort_direction: new_direction)
+      # Preserve whitelisted filter params while adding sort params
+      link_params = permitted_filter_params.merge(sort_by: column, sort_direction: new_direction)
 
       link_to errors_path(link_params), class: "text-decoration-none" do
         content_tag(:span, "#{label} ", class: current_sort == column ? "fw-bold" : "") +
