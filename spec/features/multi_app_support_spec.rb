@@ -26,9 +26,9 @@ RSpec.describe "Multi-App Support", type: :feature do
       # First call should hit DB
       app1 = RailsErrorDashboard::Application.find_or_create_by_name(app_name)
 
-      # Second call should use cache (verify by checking cache)
-      cached = Rails.cache.read("error_dashboard/application/#{app_name}")
-      expect(cached).to eq(app1)
+      # Second call should use cache (verify by checking cache contains the ID)
+      cached_id = Rails.cache.read("error_dashboard/application_id/#{app_name}")
+      expect(cached_id).to eq(app1.id)
 
       app2 = RailsErrorDashboard::Application.find_or_create_by_name(app_name)
       expect(app2.id).to eq(app1.id)
@@ -168,6 +168,12 @@ RSpec.describe "Multi-App Support", type: :feature do
   end
 
   describe "LogError command with auto-registration" do
+    before do
+      # Clear all cache to avoid test pollution from previous tests
+      # This prevents stale application_id cache entries
+      Rails.cache.clear
+    end
+
     it "auto-creates application from Rails.application" do
       # Allow configuration to be stubbed
       allow(RailsErrorDashboard.configuration).to receive(:application_name).and_return("AutoApp")
