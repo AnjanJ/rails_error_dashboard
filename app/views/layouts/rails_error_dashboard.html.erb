@@ -866,16 +866,20 @@
                 <% end %>
               </button>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="appSwitcher">
+                <%
+                  base_route_params = request.path_parameters.slice(:controller, :action)
+                  current_filter_params = permitted_filter_params
+                %>
                 <li>
                   <%= link_to "All Applications",
-                      url_for(params.permit!.except(:controller, :action, :application_id)),
+                      url_for(base_route_params.merge(current_filter_params.except(:application_id))),
                       class: "dropdown-item #{'active' unless params[:application_id].present?}" %>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <% @applications.each do |app_name, app_id| %>
                   <li>
                     <%= link_to app_name,
-                        url_for(params.permit!.except(:controller, :action).merge(application_id: app_id)),
+                        url_for(base_route_params.merge(current_filter_params.merge(application_id: app_id))),
                         class: "dropdown-item #{params[:application_id].to_s == app_id.to_s ? 'active' : ''}" %>
                   </li>
                 <% end %>

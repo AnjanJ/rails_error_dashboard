@@ -158,7 +158,7 @@
         <% active_filters.each do |filter| %>
           <%
             # Build URL without this specific filter
-            filter_params = params.permit!.except(:controller, :action, filter[:param])
+            filter_params = permitted_filter_params.except(filter[:param])
           %>
           <%= link_to errors_path(filter_params), class: "badge bg-primary text-decoration-none filter-pill" do %>
             <%= filter[:label] %>
