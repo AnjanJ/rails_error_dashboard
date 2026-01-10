@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_06_094318) do
+ActiveRecord::Schema.define(version: 2026_01_06_094318) do
   create_table "rails_error_dashboard_applications", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.text "description"
