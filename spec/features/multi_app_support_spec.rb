@@ -172,11 +172,22 @@ RSpec.describe "Multi-App Support", type: :feature do
       # Clear all cache to avoid test pollution from previous tests
       # This prevents stale application_id cache entries
       Rails.cache.clear
+
+      # Ensure sampling rate is 100% (other tests may have changed it)
+      RailsErrorDashboard.configuration.sampling_rate = 1.0
+
+      # Ensure async logging is disabled (other tests may have enabled it)
+      RailsErrorDashboard.configuration.async_logging = false
+    end
+
+    after do
+      # Reset configuration to avoid polluting other tests
+      RailsErrorDashboard.configuration.application_name = nil
     end
 
     it "auto-creates application from Rails.application" do
-      # Allow configuration to be stubbed
-      allow(RailsErrorDashboard.configuration).to receive(:application_name).and_return("AutoApp")
+      # Configure application name directly (more reliable than stubbing)
+      RailsErrorDashboard.configuration.application_name = "AutoApp"
 
       exception = StandardError.new("Auto-registered error")
 
@@ -193,7 +204,8 @@ RSpec.describe "Multi-App Support", type: :feature do
 
     it "reuses existing application" do
       existing_app = RailsErrorDashboard::Application.create!(name: "ExistingApp")
-      allow(RailsErrorDashboard.configuration).to receive(:application_name).and_return("ExistingApp")
+      # Configure application name directly (more reliable than stubbing)
+      RailsErrorDashboard.configuration.application_name = "ExistingApp"
 
       exception = StandardError.new("Error in existing app")
 
