@@ -5,6 +5,135 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard-v0.1.5...rails_error_dashboard/v0.2.0) (2026-01-10)
+
+
+### ✨ Features
+
+* add active filter pills with remove functionality ([9a014f5](https://github.com/AnjanJ/rails_error_dashboard/commit/9a014f5c8e76096cc412d3a5d9411a1cea7fe7fd))
+* add breadcrumb navigation to error detail page ([ad8f154](https://github.com/AnjanJ/rails_error_dashboard/commit/ad8f154bf12947acb9fac2098b020789e1ea0ecd))
+* add clickable git commit links ([20de4a9](https://github.com/AnjanJ/rails_error_dashboard/commit/20de4a979d676a7c22f32ae630745396823f48c3))
+* add comprehensive deployment smoke tests ([07e9298](https://github.com/AnjanJ/rails_error_dashboard/commit/07e9298c404f5c35f722c38e6a0cf8fd62cf5e02))
+* add comprehensive orphaned migrations cleanup ([59a6efc](https://github.com/AnjanJ/rails_error_dashboard/commit/59a6efc9e28b9a31395452f14ebab0f59a1edf4a))
+* add comprehensive uninstall system with automated and manual options ([92ef650](https://github.com/AnjanJ/rails_error_dashboard/commit/92ef6506ad70206ecd403870e4b4344f23fcbcda))
+* add copy-to-clipboard buttons for error details ([ace1d56](https://github.com/AnjanJ/rails_error_dashboard/commit/ace1d56b0af8a748e9c3a66ad08f926f9c787126))
+* add dynamic browser tab titles to all pages ([e240f84](https://github.com/AnjanJ/rails_error_dashboard/commit/e240f844803684d5e150d6889f83a9c83f814813))
+* add error count badge to browser tab title ([ec8270c](https://github.com/AnjanJ/rails_error_dashboard/commit/ec8270c07ca858339edba457ccbc12ca5ddcbb97))
+* add JSON export button to error detail page ([2052e64](https://github.com/AnjanJ/rails_error_dashboard/commit/2052e64715cb61fc962a14262aa0742931f6dfd8))
+* add Lefthook git hooks for pre-commit/pre-push quality checks ([492d17d](https://github.com/AnjanJ/rails_error_dashboard/commit/492d17df4e73f731e664e8fd6ee4ce34c7f7c1f3))
+* Add local timezone conversion for all timestamps (v0.1.18) ([3834059](https://github.com/AnjanJ/rails_error_dashboard/commit/383405988f604c88543bff78865bf5581e2667f7))
+* Add ManualErrorReporter for frontend/mobile error logging (v0.1.20) ([c9bed1c](https://github.com/AnjanJ/rails_error_dashboard/commit/c9bed1c18cace0e4ba1d383d57ae1f890a88f12a))
+* add NEW badge for recent errors (&lt; 1 hour old) ([f15a31f](https://github.com/AnjanJ/rails_error_dashboard/commit/f15a31f43f8f874b6681c81e4aa79ce8869f6b3b))
+* add platform icons to badges across all pages ([9558dde](https://github.com/AnjanJ/rails_error_dashboard/commit/9558dde7e6022e507e1f76479718c77a9f9fb4ee))
+* add post-install message and improvements roadmap ([9eae367](https://github.com/AnjanJ/rails_error_dashboard/commit/9eae367b6725085f7fd1cd4685d4b9db5b3a08a8))
+* add quick comment templates to error discussions ([6ddf7c0](https://github.com/AnjanJ/rails_error_dashboard/commit/6ddf7c08179ce9fbae2859c8e55cafe91dfe6a76))
+* add Settings page and enhance navigation with deep links ([9a22a64](https://github.com/AnjanJ/rails_error_dashboard/commit/9a22a64d259e412c3c68be6e0d5f33ef08ae8ade))
+* add shareable URL copy button to error detail page ([b6d3560](https://github.com/AnjanJ/rails_error_dashboard/commit/b6d35605d548aeb6988dd4b6e566050d47e62d50))
+* add silent-by-default internal logging system ([6b60b56](https://github.com/AnjanJ/rails_error_dashboard/commit/6b60b564b58f081319acbe793e310e6e60494c21))
+* Add sticky table header for error list ([3559115](https://github.com/AnjanJ/rails_error_dashboard/commit/3559115f68d048a4b206246c831a104860f8bdd4))
+* add success toast notifications for user feedback ([a499be5](https://github.com/AnjanJ/rails_error_dashboard/commit/a499be596c38e799e49b4cc0e4b8cf2395d6438a))
+* add workflow management, improve documentation, and enhance error tracking ([5e2d195](https://github.com/AnjanJ/rails_error_dashboard/commit/5e2d195c3e7cd2582d4f1a9523339b7c8da21ebc))
+* App name in navbar now links to main application root ([b5199fa](https://github.com/AnjanJ/rails_error_dashboard/commit/b5199fa28ce0a984e39e1e04aa5d1e66d3b55275))
+* enhance error logging with better error handling ([5ee90ec](https://github.com/AnjanJ/rails_error_dashboard/commit/5ee90ec6b47989bc0af4ed24a689db91fb318fe8))
+* improve empty state messages with better visual design ([b28af11](https://github.com/AnjanJ/rails_error_dashboard/commit/b28af11a62d30ed58fa6f7d52563aa8874492775))
+* make first_seen_at clickable to jump to timeline ([3ba0c3b](https://github.com/AnjanJ/rails_error_dashboard/commit/3ba0c3bacd1254add88f80d5f115b85b67ae49ba))
+* multi-app support with performance optimizations and security hardening ([f678cbc](https://github.com/AnjanJ/rails_error_dashboard/commit/f678cbc03ea6a81e0868080f683c79de972fab57))
+* Phase 4 - Add rate limiting middleware ([c6c00dd](https://github.com/AnjanJ/rails_error_dashboard/commit/c6c00dd551c94748b912d2cfc34b06a2632c63e5))
+* Phase 5 - Query caching for analytics + critical performance fix ([a73686e](https://github.com/AnjanJ/rails_error_dashboard/commit/a73686e92a5739aa62abfc756c4194ade0017d58))
+* Phase 6 - View optimization with fragment caching ([78ae7c6](https://github.com/AnjanJ/rails_error_dashboard/commit/78ae7c6e0dd21864f2977f718a265f74dfdcc9d6))
+* Phases 1-3 - Performance improvements and enhanced search ([46f0419](https://github.com/AnjanJ/rails_error_dashboard/commit/46f04197ad4a5babf34028cc96c9b28e817b0782))
+* upgrade keyboard shortcuts from alert to Bootstrap modal ([75e5607](https://github.com/AnjanJ/rails_error_dashboard/commit/75e5607dcf02c6c13f9adbd51d5a45b3af46f9ad))
+
+
+### 🐛 Bug Fixes
+
+* add async_logging=false to log_error_spec.rb to prevent flaky tests ([6ec3129](https://github.com/AnjanJ/rails_error_dashboard/commit/6ec3129b0ba09e62deb7211c8a2767f657fc6a57))
+* add explicit config file paths to release-please action ([c23dcd3](https://github.com/AnjanJ/rails_error_dashboard/commit/c23dcd3b9501952bd2bddd213d99b476a68e5c72))
+* Add full API-only mode compatibility ([36e80d0](https://github.com/AnjanJ/rails_error_dashboard/commit/36e80d0d0e0cfc01f45849ef2092ab0e2ceba5ca))
+* add missing workflow routes (assign, snooze, add_comment, etc) ([9a9595a](https://github.com/AnjanJ/rails_error_dashboard/commit/9a9595ac030037d54ab01c0aa4cb9621af09ff6d))
+* cache application IDs instead of objects for better test isolation ([8b022ba](https://github.com/AnjanJ/rails_error_dashboard/commit/8b022bab33b27e81a92fdda737dc58d81d40a52f))
+* change schema version from 8.0 to 7.0 for Rails 7.0 compatibility ([11595e8](https://github.com/AnjanJ/rails_error_dashboard/commit/11595e81680194df8f3db80b663a3b12b9a723c0))
+* Correct file permissions to resolve Railway deployment error (v0.1.19) ([942edb5](https://github.com/AnjanJ/rails_error_dashboard/commit/942edb5254cb8189f04c051134986679d84979e4))
+* critical hotfix for v0.1.22 - RuboCop and caching issues ([fbf1e27](https://github.com/AnjanJ/rails_error_dashboard/commit/fbf1e27dce20dc5d374ff5a9d128a90a55ad4e95))
+* critical multi-database support bug ([9782ae3](https://github.com/AnjanJ/rails_error_dashboard/commit/9782ae3372cb178fd294602fbcb54c71fc14d9d5))
+* dynamic chart colors for light/dark theme compatibility ([1dd1508](https://github.com/AnjanJ/rails_error_dashboard/commit/1dd1508499f441a2266aca6d69757ec2909cef33))
+* eliminate all flaky tests by disabling async_logging in synchronous specs ([bd1ea94](https://github.com/AnjanJ/rails_error_dashboard/commit/bd1ea94bdb6bb50a4e4bfa2f4ac6a1c1013f59de))
+* ensure test isolation for auto-registration tests ([ca74d98](https://github.com/AnjanJ/rails_error_dashboard/commit/ca74d989bb5e3526de0d839246bade88970fbada))
+* flaky pattern detector test - freeze to weekday to avoid weekend detection ([f263aee](https://github.com/AnjanJ/rails_error_dashboard/commit/f263aee193e7bb479b04c64bd0ae947b915b6768))
+* Handle Hash objects in similar_errors cache key ([a2d70fd](https://github.com/AnjanJ/rails_error_dashboard/commit/a2d70fdd1637b135bda8ea936d86bc5b24b4a46d))
+* handle missing root route in host application gracefully ([ae4cec8](https://github.com/AnjanJ/rails_error_dashboard/commit/ae4cec8cd9f18d632dfa1697bf8e828d44691b97))
+* improve cache lookup in Application.find_or_create_by_name ([1acca42](https://github.com/AnjanJ/rails_error_dashboard/commit/1acca422459ed49c32cf70f0241a016a9fde35a3))
+* improve Chart.js visibility in dark mode ([cf79e3f](https://github.com/AnjanJ/rails_error_dashboard/commit/cf79e3f3b6b07a26d5354e9d24decbe3f04f2a12))
+* improve dark mode readability for list group items ([5b681b3](https://github.com/AnjanJ/rails_error_dashboard/commit/5b681b392a6e44d6605eeb162abc9c54e6ab97fe))
+* improve filter UX - preserve scroll position and checkbox state ([d030ad4](https://github.com/AnjanJ/rails_error_dashboard/commit/d030ad48f19357924e26b4e5d3486b98e7ef6263))
+* improve platform chart colors for better accessibility ([72b1d1b](https://github.com/AnjanJ/rails_error_dashboard/commit/72b1d1b0bd4018ffd8225d12784c774cbe0d3eea))
+* improve stat card label visibility in dark mode ([41966ed](https://github.com/AnjanJ/rails_error_dashboard/commit/41966ed62bf76b155207e8961f4e9d2d45e3d821))
+* improve text-muted contrast in both light and dark modes ([da4e9e5](https://github.com/AnjanJ/rails_error_dashboard/commit/da4e9e51d227cd26734884ae937ba0c4838b8503))
+* improve tooltip visibility and fix undefined functions ([b59a1f8](https://github.com/AnjanJ/rails_error_dashboard/commit/b59a1f81a29cef13d076acf71a1786338d52bdd0))
+* make cache clearing compatible with SolidCache ([8997393](https://github.com/AnjanJ/rails_error_dashboard/commit/89973932eba21fa66008e60277b6f33c48c48c42))
+* make schema.rb compatible with Rails 7.x ([06c3715](https://github.com/AnjanJ/rails_error_dashboard/commit/06c37157532f53e475f5981d997a107f3cb2cf1b))
+* populate git_sha and app_version in LogError command ([e645580](https://github.com/AnjanJ/rails_error_dashboard/commit/e645580cc4258c99d6655a3556a73d1a55443cde))
+* remove Share button feature ([65e159c](https://github.com/AnjanJ/rails_error_dashboard/commit/65e159ccddf0f92bba5d4155eb9dffddc0fddc0f))
+* require pagy bootstrap extras in gem ([2fb121c](https://github.com/AnjanJ/rails_error_dashboard/commit/2fb121cea74717912c3b33ae2c64fa788fa805c3))
+* Require turbo-rails explicitly to fix production helper errors ([#31](https://github.com/AnjanJ/rails_error_dashboard/issues/31)) ([1f00944](https://github.com/AnjanJ/rails_error_dashboard/commit/1f009445500bc8ee0417b28adc64c9f867ebb221))
+* resolve 30 test failures - logging and database issues ([45e8927](https://github.com/AnjanJ/rails_error_dashboard/commit/45e8927de94b9391416b89b4929b6115440ae032))
+* resolve all remaining test failures - test suite now 100% green ([ef494de](https://github.com/AnjanJ/rails_error_dashboard/commit/ef494de7559291ddba020912f1bd0a73c64e9d4d))
+* Resolve broadcast failures in API-only mode (v0.1.17) ([eff25fd](https://github.com/AnjanJ/rails_error_dashboard/commit/eff25fd4a2c1164c95224eb8c185d2f838ead0e5))
+* resolve checkbox filter state transition issue ([a96b6a3](https://github.com/AnjanJ/rails_error_dashboard/commit/a96b6a3c1f142eb4514ecb070c5af42d1722ad3a))
+* resolve final 8 generator test failures - Thor option parsing ([a87b3aa](https://github.com/AnjanJ/rails_error_dashboard/commit/a87b3aaed66a9dcbfdbce015a28f6849b428b688))
+* resolve flaky test in notification callbacks spec ([33ab727](https://github.com/AnjanJ/rails_error_dashboard/commit/33ab7274e36e0ca6acf59fec08e73f0504f43037))
+* resolve test failures and RuboCop violations ([19d51df](https://github.com/AnjanJ/rails_error_dashboard/commit/19d51df82c055ff4cfdc8821394ed2bfee1567f0))
+* skip interactive prompts when not running in TTY ([febd9b8](https://github.com/AnjanJ/rails_error_dashboard/commit/febd9b872a660cec917d2c964ba63d07b466a84c))
+* turbo helpers missing ([#31](https://github.com/AnjanJ/rails_error_dashboard/issues/31)) ([1f00944](https://github.com/AnjanJ/rails_error_dashboard/commit/1f009445500bc8ee0417b28adc64c9f867ebb221))
+* Update smoke test credentials to correct values ([ccdf3b7](https://github.com/AnjanJ/rails_error_dashboard/commit/ccdf3b73e1f7bc33cdbbc02ee55e51ffbd8c70af))
+* use correct column name resolved_by_name in JSON export ([a6c6d3c](https://github.com/AnjanJ/rails_error_dashboard/commit/a6c6d3c599b579396e2c2e13da9adbcce93771a8))
+* use rails_command instead of rake for Rails 8+ compatibility ([587e1b7](https://github.com/AnjanJ/rails_error_dashboard/commit/587e1b7c4e78f334a1b7ae7951b86188f0be8998))
+
+
+### 📚 Documentation
+
+* add changelog entries for v0.1.13 and v0.1.14 ([b435fc7](https://github.com/AnjanJ/rails_error_dashboard/commit/b435fc72e2414ee0c414538b91fbc692e29cdde6))
+* add comprehensive comparison with solid_errors gem ([bcf7903](https://github.com/AnjanJ/rails_error_dashboard/commit/bcf79034a2937aa106dafe24633b921cc6deb832))
+* add live demo link to README ([a653b70](https://github.com/AnjanJ/rails_error_dashboard/commit/a653b70a0b276cdb13a50ff44014291b4dbb9ca0))
+* add missing CHANGELOG entries for v0.1.6 and unreleased changes ([5baf995](https://github.com/AnjanJ/rails_error_dashboard/commit/5baf995cadd81b47950d82727d4414ebeb130eaf))
+* add quick setup guide for automated releases ([0c777b3](https://github.com/AnjanJ/rails_error_dashboard/commit/0c777b30e90118ae2f1562c218933cff06ece4bf))
+* add smoke tests to README ([e00e032](https://github.com/AnjanJ/rails_error_dashboard/commit/e00e032232b09bdb2f357a0b8072200c66f7ac69))
+* clarify CSRF protection and built-in API endpoint roadmap item ([1ec0bab](https://github.com/AnjanJ/rails_error_dashboard/commit/1ec0bab1b2e13d62bbb9b824effb071ae54f271a))
+* enhance API documentation with comprehensive HTTP API reference ([079f983](https://github.com/AnjanJ/rails_error_dashboard/commit/079f98366f00ecc38d6608d86ab6ed9d714fd56a))
+* fix README formatting and broken links across all documentation ([88b6b26](https://github.com/AnjanJ/rails_error_dashboard/commit/88b6b2621ca22afcfdf9493314f5fd3ceb3708da))
+* mark post-install message and backup cleanup as complete ([6ede706](https://github.com/AnjanJ/rails_error_dashboard/commit/6ede7067bc18f6e1e67c0117a43a15f865d20d83))
+* Move internal documentation to knowledge base ([56451d5](https://github.com/AnjanJ/rails_error_dashboard/commit/56451d539a901cfbf8ab7f745b06ca2798feedf1))
+* Move internal testing documentation to knowledge base ([d7e67d0](https://github.com/AnjanJ/rails_error_dashboard/commit/d7e67d06821a188ba23ac337b7d7191462cf1ac0))
+* release v0.1.23 - production-ready with 100% CI coverage ([60cbb9a](https://github.com/AnjanJ/rails_error_dashboard/commit/60cbb9a466d42fa018539dd774b04354c77c9fe6))
+* update roadmap with completed performance improvements ([0d04aea](https://github.com/AnjanJ/rails_error_dashboard/commit/0d04aeaf4d04c809f9fa943d3f23f747f361e228))
+
+
+### ♻️ Refactoring
+
+* improve helpers and view components for better theming ([83ed8a0](https://github.com/AnjanJ/rails_error_dashboard/commit/83ed8a00f6bc94497c6d384e04dd97edad6ea1d1))
+* move comprehensive checks from pre-push to pre-commit ([54fdb32](https://github.com/AnjanJ/rails_error_dashboard/commit/54fdb32659cf9a49f8554d28d7b185c93efcca2c))
+* optimize lefthook to run only changed specs on pre-commit ([a8e7307](https://github.com/AnjanJ/rails_error_dashboard/commit/a8e730744c69c5f8035283766995dbf077e7599c))
+
+
+### 🧹 Maintenance
+
+* add bootstrap SHA to release-please config ([fb190c9](https://github.com/AnjanJ/rails_error_dashboard/commit/fb190c95de9053ce1b1bf1b323c1cffab89d237f))
+* bump version to 0.1.11 and add installation tests ([7f0b534](https://github.com/AnjanJ/rails_error_dashboard/commit/7f0b534116cb51148a1f988f0bb6fc07b47d5985))
+* bump version to 0.1.15 ([e414fd2](https://github.com/AnjanJ/rails_error_dashboard/commit/e414fd2a0c15ac60e3e346c9e7bcc5f8678eee2a))
+* Bump version to 0.1.16 ([760f720](https://github.com/AnjanJ/rails_error_dashboard/commit/760f720d377754b8cf61523e836c860d29925045))
+* bump version to 0.1.23 ([a0e5ce1](https://github.com/AnjanJ/rails_error_dashboard/commit/a0e5ce1ac7b92d625f465d2d6853d2626d46d14e))
+* bump version to 0.1.3 ([324ee28](https://github.com/AnjanJ/rails_error_dashboard/commit/324ee28c3f82894bb81a0315776dfe2e002537d5))
+* bump version to 0.1.5 ([453fb1e](https://github.com/AnjanJ/rails_error_dashboard/commit/453fb1ece608e8d926d15e8031446e284f872b1c))
+* bump version to 0.1.6 ([2a3271a](https://github.com/AnjanJ/rails_error_dashboard/commit/2a3271a88f74eca55229c341e0dc1d20f7a46f73))
+* bump version to 0.1.7 ([37947bc](https://github.com/AnjanJ/rails_error_dashboard/commit/37947bcf6a9c593b6e4d8a9a70153c100b7701fd))
+* bump version to 0.1.9 for critical Rails 8 fix ([c182b83](https://github.com/AnjanJ/rails_error_dashboard/commit/c182b8396f32b7fb7d20ba699d9c539bae064444))
+* clean up codebase - remove unused files and improve organization ([24bd974](https://github.com/AnjanJ/rails_error_dashboard/commit/24bd974b92a38afa4938d8815da1d37d4e02f46b))
+* release 0.1.4 ([cfebeda](https://github.com/AnjanJ/rails_error_dashboard/commit/cfebeda1870e70483ba6f8de4c89a72758df7961))
+* Release v0.1.21 - Fix turbo helpers in production ([b181baa](https://github.com/AnjanJ/rails_error_dashboard/commit/b181baafdce9a80f114664962c6f6c314d41e792))
+* release v0.1.22 - multi-app support and security hardening ([11169ef](https://github.com/AnjanJ/rails_error_dashboard/commit/11169efbad16c43acf81b5339b154f009dde1056))
+* standardize default credentials to gandalf/youshallnotpass ([97ad0d3](https://github.com/AnjanJ/rails_error_dashboard/commit/97ad0d3ee386fdaea541465d983b3f1c879d22b7))
+* update gitignore for temporary development files ([60bc51e](https://github.com/AnjanJ/rails_error_dashboard/commit/60bc51e022ce3b845360389e845fe99cde02662b))
+
 ## [Unreleased]
 
 ## [0.1.23] - 2026-01-10
