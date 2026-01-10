@@ -194,6 +194,14 @@ rails restart
 - All test isolation issues resolved
 - All RuboCop violations resolved
 
+#### Community Contributions
+
+Special thanks to our contributors:
+
+- **[@gundestrup](https://github.com/gundestrup)** (Svend Gundestrup) - Code quality improvements and RuboCop compliance ([#33](https://github.com/AnjanJ/rails_error_dashboard/pull/33))
+
+We appreciate all contributions that help maintain high code quality standards! 🎉
+
 #### Why This Release?
 
 v0.1.23 represents a **production-ready milestone** with:
