@@ -139,7 +139,7 @@ RSpec.describe "Multi-App Support", type: :feature do
       expect(error2.occurrence_count).to eq(2)
     end
 
-    it "handles concurrent creates without duplicates" do
+    it "handles concurrent creates without duplicates", skip: (ActiveRecord::Base.connection.adapter_name == "SQLite") do
       error_hash = "concurrent_hash_789"
 
       attrs = {

@@ -99,7 +99,8 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         it "handles Slack errors gracefully" do
           allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
 
-          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Slack/)
+          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Slack/).and_call_original
+          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)
@@ -139,7 +140,8 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         it "handles Discord errors gracefully" do
           allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
 
-          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Discord/)
+          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Discord/).and_call_original
+          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)
@@ -187,7 +189,8 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         it "handles webhook errors gracefully" do
           allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
 
-          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to webhook/)
+          expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to webhook/).and_call_original
+          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)

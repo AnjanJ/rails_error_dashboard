@@ -201,7 +201,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
             existing_error.error_hash,
             error_type: 'NoMethodError',
             message: 'undefined method',
-            occurred_at: Time.current
+            occurred_at: Time.current,
+            application_id: existing_error.application_id
           )
         }.not_to change(described_class, :count)
 
@@ -217,7 +218,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
           existing_error.error_hash,
           error_type: 'NoMethodError',
           message: 'undefined method',
-          occurred_at: Time.current
+          occurred_at: Time.current,
+          application_id: existing_error.application_id
         )
 
         existing_error.reload
@@ -230,6 +232,7 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
           error_type: 'NoMethodError',
           message: 'undefined method',
           occurred_at: Time.current,
+          application_id: existing_error.application_id,
           user_id: 123,
           request_url: 'http://example.com/new-url'
         )
@@ -255,7 +258,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
             resolved_error.error_hash,
             error_type: 'NoMethodError',
             message: 'undefined method',
-            occurred_at: Time.current
+            occurred_at: Time.current,
+            application_id: resolved_error.application_id
           )
         }.to change(described_class, :count).by(1)
       end
@@ -276,7 +280,8 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
             old_error.error_hash,
             error_type: 'NoMethodError',
             message: 'undefined method',
-            occurred_at: Time.current
+            occurred_at: Time.current,
+            application_id: old_error.application_id
           )
         }.to change(described_class, :count).by(1)
       end
@@ -284,12 +289,14 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
 
     context 'when no matching error exists' do
       it 'creates new error record' do
+        application = create(:application)
         expect {
           described_class.find_or_increment_by_hash(
             'new_hash_12345678',
             error_type: 'ArgumentError',
             message: 'wrong number of arguments',
-            occurred_at: Time.current
+            occurred_at: Time.current,
+            application_id: application.id
           )
         }.to change(described_class, :count).by(1)
       end

@@ -16,7 +16,7 @@ module RailsErrorDashboard
     def self.find_or_create_by_name(name)
       # Try to find in cache or database first
       cached = Rails.cache.read("error_dashboard/application/#{name}")
-      return cached if cached
+      return cached unless cached.nil?
 
       # Try to find existing
       found = find_by(name: name)

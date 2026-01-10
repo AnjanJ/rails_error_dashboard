@@ -47,8 +47,10 @@ RSpec.describe "Optimized Indexes Migration", type: :migration do
   describe "query performance improvements" do
     before do
       # Create test data
+      application = create(:application)
       30.times do |i|
         RailsErrorDashboard::ErrorLog.create!(
+          application_id: application.id,
           error_type: "StandardError",
           message: "Test error #{i}",
           platform: i % 3 == 0 ? "iOS" : "Android",

@@ -18,6 +18,7 @@ module RailsErrorDashboard
       class_option :async_logging, type: :boolean, default: false, desc: "Enable async error logging"
       class_option :error_sampling, type: :boolean, default: false, desc: "Enable error sampling (reduce volume)"
       class_option :separate_database, type: :boolean, default: false, desc: "Use separate database for errors"
+      class_option :database, type: :string, default: nil, desc: "Database name to use for errors (e.g., 'error_dashboard')"
       # Advanced analytics options
       class_option :baseline_alerts, type: :boolean, default: false, desc: "Enable baseline anomaly alerts"
       class_option :similar_errors, type: :boolean, default: false, desc: "Enable fuzzy error matching"
@@ -185,6 +186,7 @@ module RailsErrorDashboard
         @enable_async_logging = @selected_features&.dig(:async_logging) || options[:async_logging]
         @enable_error_sampling = @selected_features&.dig(:error_sampling) || options[:error_sampling]
         @enable_separate_database = @selected_features&.dig(:separate_database) || options[:separate_database]
+        @database_name = options[:database]
 
         # Advanced Analytics
         @enable_baseline_alerts = @selected_features&.dig(:baseline_alerts) || options[:baseline_alerts]
@@ -275,7 +277,14 @@ module RailsErrorDashboard
         say "  → Set PAGERDUTY_INTEGRATION_KEY in .env", :yellow if @enable_pagerduty
         say "  → Set WEBHOOK_URLS in .env", :yellow if @enable_webhooks
         say "  → Ensure Sidekiq/Solid Queue running", :yellow if @enable_async_logging
-        say "  → Configure database.yml (docs/guides/DATABASE_OPTIONS.md)", :yellow if @enable_separate_database
+        if @enable_separate_database
+          if @database_name
+            say "  → Configure '#{@database_name}' database in database.yml", :yellow
+          else
+            say "  → Configure database in database.yml and set config.database", :yellow
+          end
+          say "    See docs/guides/DATABASE_OPTIONS.md for details", :yellow
+        end
 
         say "\n"
         say "Next Steps:", :cyan
