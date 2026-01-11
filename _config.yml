@@ -16,6 +16,8 @@ navigation:
     url: /docs/QUICKSTART
   - name: Documentation
     url: /docs/
+  - name: Multi-App Support
+    url: /docs/MULTI_APP_PERFORMANCE
   - name: API Reference
     url: /docs/API_REFERENCE
   - name: Customization

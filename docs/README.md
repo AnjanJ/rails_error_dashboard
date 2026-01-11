@@ -23,6 +23,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Error Correlation](features/ERROR_CORRELATION.md)** - Release and user correlation analysis
 
 ### Customization
+- **[Multi-App Support](MULTI_APP_PERFORMANCE.md)** - Track multiple applications from one dashboard
 - **[Customization Guide](CUSTOMIZATION.md)** - Customize views, severity rules, and behavior
 - **[Plugin System](PLUGIN_SYSTEM.md)** - Build custom plugins and integrations
 - **[Database Options](guides/DATABASE_OPTIONS.md)** - Using a separate database
@@ -76,6 +77,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### "I want proactive alerting for anomalies"
 → [Baseline Monitoring](features/BASELINE_MONITORING.md)
 
+### "I need to track multiple Rails applications"
+→ [Multi-App Support](MULTI_APP_PERFORMANCE.md)
+
 ### "I need to uninstall Rails Error Dashboard"
 → [Uninstall Guide](UNINSTALL.md)
 
@@ -94,7 +98,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## 📝 Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.1.1** (BETA).
+This documentation is for **Rails Error Dashboard v0.1.24** (Production Ready).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 

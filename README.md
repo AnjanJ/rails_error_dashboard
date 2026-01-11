@@ -16,6 +16,8 @@ gem 'rails_error_dashboard'
 
 **5-minute setup** · **Works out-of-the-box** · **100% Rails + Postgres** · **No vendor lock-in**
 
+📖 **[Full Documentation](https://anjanj.github.io/rails_error_dashboard/)** · 🎮 **[Live Demo](https://rails-error-dashboard.anjan.dev)** · 💎 **[RubyGems](https://rubygems.org/gems/rails_error_dashboard)**
+
 ### 🎮 Try the Live Demo
 
 **See it in action:** [https://rails-error-dashboard.anjan.dev](https://rails-error-dashboard.anjan.dev)
@@ -586,6 +588,7 @@ config.webhook_urls = ['https://yourapp.com/hooks/errors']
 - **[Error Trend Visualizations](docs/guides/ERROR_TREND_VISUALIZATIONS.md)** - Charts & analytics
 
 ### Advanced
+- **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** - Track multiple applications
 - **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Build custom integrations
 - **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
 - **[Customization Guide](docs/CUSTOMIZATION.md)** - Customize everything
