@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.27] - 2026-01-12
+
+### 🔒 Security
+
+**XSS Vulnerability Fix in Error JSON Download** 🛡️
+
+Fixed stored XSS vulnerability where malicious error data could execute arbitrary JavaScript via script tag breakout attack.
+
+**Vulnerability Details:**
+- Error detail page had a "Download JSON" feature that embedded error data in JavaScript
+- Used unsafe `raw` helper with `.to_json`, which doesn't escape forward slashes by default
+- Malicious error messages containing `</script><script>alert('XSS')</script>` could break out of script tags and execute arbitrary JavaScript
+
+**Fix:**
+- Replaced all `raw @error.X.to_json` with `json_escape @error.X.to_json` in error detail view
+- `json_escape` properly escapes `</` as `<\/`, preventing script tag breakout attacks
+- Maintains valid JavaScript syntax while preventing XSS
+
+**Impact:**
+- Prevents XSS attacks via malicious error data
+- Error JSON download functionality works correctly
+- Proper JSON data types preserved (numbers, booleans, strings)
+
+**Security Advisory:**
+- Severity: Medium
+- Attack Vector: Stored XSS via error logging
+- Affected Versions: All versions prior to 0.1.27
+- Recommendation: Update to 0.1.27 or later immediately
+
+**Thanks to @gundestrup for discovering and fixing this vulnerability!** 🙏
+
+### 🐛 Bug Fixes
+
+**App Switcher Visibility** 🔄
+
+Fixed issue where app switcher was only appearing on the index page, not on other dashboard pages.
+
+**Problem:**
+- App switcher dropdown was missing on Analytics, Platform Comparison, Error Correlation pages
+- Users couldn't switch applications when viewing these pages
+- Had to navigate back to index page to change app context
+
+**Solution:**
+- Moved `@applications` initialization from `index` action to `set_application_context` before_action
+- This ensures all controller actions have access to the applications list
+- App switcher now appears consistently on every page
+
+**Impact:**
+- App switcher visible on all dashboard pages (Overview, Index, Analytics, Platform Comparison, Error Correlation)
+- Consistent UX across the entire dashboard
+- Users can switch app context from any page
+
+**Files Changed:**
+- `app/controllers/rails_error_dashboard/errors_controller.rb`
+- `app/views/rails_error_dashboard/errors/show.html.erb`
+
 ## [0.1.26] - 2026-01-11
 
 ### 🐛 Bug Fixes
