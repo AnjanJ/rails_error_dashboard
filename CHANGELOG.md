@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.26] - 2026-01-11
+
+### 🐛 Bug Fixes
+
+**Navigation Context Persistence** 🔗
+
+Fixed issue where application_id parameter was not preserved when navigating between pages.
+
+**Problem:**
+- When selecting an application via the app switcher, the context was lost when navigating to different pages (Overview, Analytics, Settings)
+- Users had to re-select the application on each page
+- Poor UX for multi-app deployments
+
+**Solution:**
+- Updated sidebar navigation links to preserve `application_id` parameter across all page navigation
+- Added `nav_params` helper to extract and maintain application context
+- Quick filter links now merge application_id with filter parameters
+
+**Impact:**
+- Application context now persists across all dashboard pages
+- Consistent multi-app experience
+- No need to re-select application when navigating
+
+**Files Changed:**
+- `app/views/layouts/rails_error_dashboard.html.erb`
+
 ## [0.1.25] - 2026-01-11
 
 ### ✨ Features

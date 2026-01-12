@@ -902,24 +902,28 @@
         <!-- Sidebar -->
         <nav class="col-md-2 d-none d-md-block sidebar">
           <div class="position-sticky pt-3">
+            <%
+              # Preserve application_id across navigation
+              nav_params = params[:application_id].present? ? { application_id: params[:application_id] } : {}
+            %>
             <ul class="nav flex-column">
               <li class="nav-item">
-                <%= link_to root_path, class: "nav-link #{request.path == root_path ? 'active' : ''}" do %>
+                <%= link_to root_path(nav_params), class: "nav-link #{request.path == root_path ? 'active' : ''}" do %>
                   <i class="bi bi-speedometer2"></i> Overview
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to errors_path, class: "nav-link #{request.path == errors_path ? 'active' : ''}" do %>
+                <%= link_to errors_path(nav_params), class: "nav-link #{request.path == errors_path ? 'active' : ''}" do %>
                   <i class="bi bi-list-ul"></i> All Errors
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to analytics_errors_path, class: "nav-link #{request.path == analytics_errors_path ? 'active' : ''}" do %>
+                <%= link_to analytics_errors_path(nav_params), class: "nav-link #{request.path == analytics_errors_path ? 'active' : ''}" do %>
                   <i class="bi bi-graph-up"></i> Analytics
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to settings_path, class: "nav-link #{request.path == settings_path ? 'active' : ''}" do %>
+                <%= link_to settings_path(nav_params), class: "nav-link #{request.path == settings_path ? 'active' : ''}" do %>
                   <i class="bi bi-gear"></i> Settings
                 <% end %>
               </li>
@@ -928,27 +932,27 @@
             <h6 class="mt-4">QUICK FILTERS</h6>
             <ul class="nav flex-column">
               <li class="nav-item">
-                <%= link_to errors_path(status: 'unresolved'), class: "nav-link" do %>
+                <%= link_to errors_path(nav_params.merge(status: 'unresolved')), class: "nav-link" do %>
                   <i class="bi bi-exclamation-circle"></i> Unresolved
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to errors_path(severity: 'critical'), class: "nav-link" do %>
+                <%= link_to errors_path(nav_params.merge(severity: 'critical')), class: "nav-link" do %>
                   <i class="bi bi-exclamation-triangle-fill text-danger"></i> Critical
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to errors_path(priority_level: 'high'), class: "nav-link" do %>
+                <%= link_to errors_path(nav_params.merge(priority_level: 'high')), class: "nav-link" do %>
                   <i class="bi bi-flag-fill text-warning"></i> High Priority
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to errors_path(platform: 'iOS'), class: "nav-link" do %>
+                <%= link_to errors_path(nav_params.merge(platform: 'iOS')), class: "nav-link" do %>
                   <i class="bi bi-phone"></i> iOS Errors
                 <% end %>
               </li>
               <li class="nav-item">
-                <%= link_to errors_path(platform: 'Android'), class: "nav-link" do %>
+                <%= link_to errors_path(nav_params.merge(platform: 'Android')), class: "nav-link" do %>
                   <i class="bi bi-phone"></i> Android Errors
                 <% end %>
               </li>
