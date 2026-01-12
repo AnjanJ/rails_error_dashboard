@@ -52,14 +52,14 @@
         occurred_at: <%= json_escape @error.occurred_at.to_json %>,
         first_seen_at: <%= json_escape @error.first_seen_at.to_json %>,
         last_seen_at: <%= json_escape @error.last_seen_at.to_json %>,
-        occurrence_count: <%= json_escape @error.occurrence_count %>,
-        resolved: <%= json_escape @error.resolved? %>,
+        occurrence_count: <%= @error.occurrence_count %>,
+        resolved: <%= @error.resolved? %>,
         resolved_at: <%= json_escape @error.resolved_at.to_json %>,
         resolved_by_name: <%= json_escape @error.resolved_by_name.to_json %>,
         platform: <%= json_escape @error.platform.to_json %>,
         user_id: <%= json_escape @error.user_id.to_json %>,
         severity: <%= json_escape @error.severity.to_json %>,
-        priority_level: <%= json_escape @error.priority_level || 0 %>,
+        priority_level: <%= @error.priority_level || 0 %>,
         <% if @error.respond_to?(:app_version) %>
         app_version: <%= json_escape @error.app_version.to_json %>,
         <% end %>
