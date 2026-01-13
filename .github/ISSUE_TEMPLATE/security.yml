@@ -1,0 +1,146 @@
+name: Security Vulnerability Report
+description: Report a security vulnerability (will be handled privately)
+title: "[Security]: "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **IMPORTANT: Security Vulnerability Reporting**
+
+        If you've discovered a **critical security vulnerability**, please **DO NOT** open a public issue.
+
+        Instead, please report it privately to: **security@anjan.dev**
+
+        For **non-critical security concerns** or **security enhancement suggestions**, you may use this template.
+
+        We take security seriously and will respond promptly to all reports.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: How severe is this security concern?
+      options:
+        - Critical - Allows unauthorized access or data breach
+        - High - Significant security risk
+        - Medium - Moderate security concern
+        - Low - Minor security improvement
+        - Informational - Security best practice suggestion
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Security Concern Description
+      description: Describe the security concern or vulnerability
+      placeholder: I noticed that...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vulnerability-type
+    attributes:
+      label: Vulnerability Type
+      description: What type of security concern is this?
+      options:
+        - XSS (Cross-Site Scripting)
+        - SQL Injection
+        - CSRF (Cross-Site Request Forgery)
+        - Authentication/Authorization
+        - Information Disclosure
+        - Insecure Configuration
+        - Dependency Vulnerability
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-versions
+    attributes:
+      label: Affected Versions
+      description: Which versions of rails_error_dashboard are affected?
+      placeholder: "0.1.27 and earlier"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could an attacker achieve by exploiting this?
+      placeholder: An attacker could...
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: If applicable, how can this vulnerability be reproduced? (Be careful not to include exploits)
+      placeholder: |
+        1. Configure the gem with...
+        2. Navigate to...
+        3. Observe...
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: If you have ideas on how to fix this, please share (optional)
+      placeholder: This could be mitigated by...
+
+  - type: input
+    id: gem-version
+    attributes:
+      label: Gem Version
+      description: What version of rails_error_dashboard are you using?
+      placeholder: "0.1.27"
+    validations:
+      required: true
+
+  - type: input
+    id: rails-version
+    attributes:
+      label: Rails Version
+      description: What version of Rails are you using?
+      placeholder: "7.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Any relevant environment details (Ruby version, database, etc.)
+      placeholder: |
+        Ruby: 3.2.0
+        Database: PostgreSQL 15
+        Deployment: Production
+
+  - type: checkboxes
+    id: responsible-disclosure
+    attributes:
+      label: Responsible Disclosure
+      description: Please confirm the following
+      options:
+        - label: I agree to responsible disclosure practices and will not publicly disclose details until a fix is available
+          required: true
+        - label: I have not exploited this vulnerability in production systems
+          required: true
+        - label: I understand that critical vulnerabilities should be reported privately to security@anjan.dev
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## What Happens Next?
+
+        1. **Acknowledgment** - We'll respond within 24-48 hours
+        2. **Assessment** - We'll evaluate the severity and impact
+        3. **Fix Development** - We'll work on a patch (with your input if desired)
+        4. **Security Advisory** - We'll publish an advisory after the fix
+        5. **Credit** - We'll credit you in the security advisory (unless you prefer anonymity)
+
+        Thank you for helping keep Rails Error Dashboard secure! 🙏🔒
