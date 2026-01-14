@@ -952,6 +952,287 @@ end
 
 ---
 
+## Troubleshooting
+
+### Configuration Not Taking Effect
+
+**Problem**: Changes to `config/initializers/rails_error_dashboard.rb` don't seem to work.
+
+**Solutions**:
+1. **Restart server** - Configuration is loaded at startup
+   ```bash
+   rails server
+   ```
+
+2. **Check file location** - Must be in `config/initializers/`
+   ```bash
+   ls -la config/initializers/rails_error_dashboard.rb
+   ```
+
+3. **Check for syntax errors**
+   ```bash
+   ruby -c config/initializers/rails_error_dashboard.rb
+   ```
+
+4. **Verify configuration is loaded**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.inspect
+   ```
+
+### Environment Variables Not Working
+
+**Problem**: `ENV['VARIABLE']` returns `nil` in configuration.
+
+**Solutions**:
+1. **Load environment variables before Rails**
+   - Use `dotenv-rails` gem for development
+   - Use system environment variables in production
+
+2. **Check variable is set**
+   ```bash
+   echo $SLACK_WEBHOOK_URL
+   ```
+
+3. **Provide defaults**
+   ```ruby
+   config.slack_webhook_url = ENV.fetch('SLACK_WEBHOOK_URL', nil)
+   ```
+
+### Notifications Not Sending
+
+**Problem**: Slack/Discord notifications aren't working.
+
+**Solutions**:
+1. **Check notifications are enabled**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.enable_slack_notifications
+   # Should return true
+   ```
+
+2. **Verify webhook URL is set**
+   ```ruby
+   RailsErrorDashboard.configuration.slack_webhook_url
+   # Should return your webhook URL
+   ```
+
+3. **Test webhook manually**
+   ```bash
+   curl -X POST YOUR_WEBHOOK_URL \
+     -H 'Content-Type: application/json' \
+     -d '{"text": "Test message"}'
+   ```
+
+4. **Check background jobs are running**
+   ```bash
+   # With Sidekiq
+   bundle exec sidekiq
+
+   # With Solid Queue
+   bin/jobs
+   ```
+
+5. **Check notification thresholds**
+   ```ruby
+   # Critical errors only go to PagerDuty
+   config.severity_thresholds[:pagerduty] = :critical
+   ```
+
+### Custom Severity Rules Not Working
+
+**Problem**: Custom severity rules aren't being applied.
+
+**Solutions**:
+1. **Check rule format** - Use regex or symbol
+   ```ruby
+   # Correct
+   config.custom_severity_rules = {
+     /ActiveRecord::RecordNotFound/ => :low,
+     :timeout_error => :high
+   }
+
+   # Incorrect (string won't match)
+   config.custom_severity_rules = {
+     "ActiveRecord::RecordNotFound" => :low
+   }
+   ```
+
+2. **Test regex patterns**
+   ```ruby
+   # In rails console
+   error_class = "ActiveRecord::RecordNotFound"
+   /ActiveRecord::RecordNotFound/.match?(error_class)
+   # Should return true
+   ```
+
+3. **Check rule order** - First match wins
+   ```ruby
+   # More specific rules should come first
+   config.custom_severity_rules = {
+     /ActiveRecord::RecordNotFound.*User/ => :high,  # Specific
+     /ActiveRecord::RecordNotFound/ => :low          # General
+   }
+   ```
+
+### Background Jobs Not Processing
+
+**Problem**: Async logging enabled but errors not appearing.
+
+**Solutions**:
+1. **Check job adapter configuration**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.async_adapter
+   # Should return :sidekiq, :solid_queue, or :async
+   ```
+
+2. **Verify job processor is running**
+   ```bash
+   # Sidekiq
+   ps aux | grep sidekiq
+
+   # Solid Queue
+   ps aux | grep solid_queue
+   ```
+
+3. **Check failed jobs**
+   ```ruby
+   # Sidekiq
+   require 'sidekiq/api'
+   Sidekiq::RetrySet.new.size
+   Sidekiq::DeadSet.new.size
+
+   # Solid Queue
+   SolidQueue::Job.failed.count
+   ```
+
+4. **Test with sync logging temporarily**
+   ```ruby
+   config.async_logging = false  # For debugging
+   ```
+
+### Sampling Too Aggressive
+
+**Problem**: Too many errors being filtered out.
+
+**Solutions**:
+1. **Check sampling rate**
+   ```ruby
+   RailsErrorDashboard.configuration.sampling_rate
+   # 0.1 = 10% of errors logged
+   ```
+
+2. **Critical errors always logged** - Check severity
+   ```ruby
+   # Critical errors bypass sampling
+   config.severity_thresholds[:critical]
+   ```
+
+3. **Adjust rate** - Start higher, tune down
+   ```ruby
+   config.sampling_rate = 0.5  # Start with 50%
+   ```
+
+4. **Use conditional sampling**
+   ```ruby
+   config.before_log_callback = lambda do |exception, context|
+     # Always log payment errors
+     return true if exception.message.include?("Stripe")
+
+     # Sample others based on environment
+     Rails.env.production? ? rand < 0.1 : true
+   end
+   ```
+
+### Database Performance Issues
+
+**Problem**: Error logging is slow or causing database issues.
+
+**Solutions**:
+1. **Enable async logging**
+   ```ruby
+   config.async_logging = true
+   ```
+
+2. **Use separate database**
+   ```ruby
+   config.database = :errors
+   ```
+
+3. **Add database indexes** - Already included in migrations
+
+4. **Increase backtrace limit**
+   ```ruby
+   config.max_backtrace_lines = 20  # Default is 50
+   ```
+
+5. **Configure retention policy**
+   ```ruby
+   config.retention_days = 30  # Auto-cleanup old errors
+   ```
+
+See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
+
+### Authentication Not Working
+
+**Problem**: Can't access dashboard even with correct credentials.
+
+**Solutions**:
+1. **Check username and password are set**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.dashboard_username
+   RailsErrorDashboard.configuration.dashboard_password
+   ```
+
+2. **Verify HTTP Basic Auth is configured**
+   ```ruby
+   config.dashboard_username = "admin"
+   config.dashboard_password = "secure_password"
+   ```
+
+3. **Test credentials**
+   ```bash
+   curl -u admin:password http://localhost:3000/error_dashboard
+   ```
+
+4. **Check for proxy/load balancer issues**
+   - Some proxies strip Authorization headers
+   - May need to configure pass-through
+
+5. **Clear browser cache** - Old credentials may be cached
+
+### Multi-App Configuration Issues
+
+**Problem**: Errors from multiple apps not showing correctly.
+
+**Solutions**:
+1. **Set APP_NAME environment variable**
+   ```bash
+   APP_NAME=my-api rails server
+   ```
+
+2. **Or configure manually**
+   ```ruby
+   config.application_name = "my-api"
+   ```
+
+3. **Verify application is created**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard::Application.all.pluck(:name)
+   ```
+
+4. **Check errors are tagged correctly**
+   ```ruby
+   RailsErrorDashboard::ErrorLog.last.application.name
+   ```
+
+See [Multi-App Support Guide](../MULTI_APP_PERFORMANCE.md) for more.
+
+---
+
 ## Resetting Configuration
 
 For testing or dynamic reconfiguration:
