@@ -32,6 +32,14 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Integrate with React Native, Flutter, etc.
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
+- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams and live updates
+- **[Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md)** - Configure Solid Queue for async logging
+
+### Performance & Optimization
+- **[Database Optimization](guides/DATABASE_OPTIMIZATION.md)** - Query performance and indexing
+- **[Backtrace Limiting](guides/BACKTRACE_LIMITING.md)** - Reduce storage size
+- **[Error Sampling & Filtering](guides/ERROR_SAMPLING_AND_FILTERING.md)** - High-volume error handling
+- **[Error Trend Visualizations](guides/ERROR_TREND_VISUALIZATIONS.md)** - Analytics and charting
 
 ### Development
 - **[Changelog](../CHANGELOG.md)** - Version history and updates
