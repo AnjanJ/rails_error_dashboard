@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.1.27] - 2026-01-12
+## [0.1.27] - 2025-01-12
 
 ### 🔒 Security
 
@@ -65,7 +65,7 @@ Fixed issue where app switcher was only appearing on the index page, not on othe
 - `app/controllers/rails_error_dashboard/errors_controller.rb`
 - `app/views/rails_error_dashboard/errors/show.html.erb`
 
-## [0.1.26] - 2026-01-11
+## [0.1.26] - 2025-01-11
 
 ### 🐛 Bug Fixes
 
@@ -91,7 +91,7 @@ Fixed issue where application_id parameter was not preserved when navigating bet
 **Files Changed:**
 - `app/views/layouts/rails_error_dashboard.html.erb`
 
-## [0.1.25] - 2026-01-11
+## [0.1.25] - 2025-01-11
 
 ### ✨ Features
 
@@ -144,7 +144,7 @@ Implemented comprehensive app-context filtering across all dashboard pages and o
 - `app/models/rails_error_dashboard/error_log.rb`
 - `spec/features/multi_app_context_filtering_spec.rb` (new)
 
-## [0.1.24] - 2026-01-11
+## [0.1.24] - 2025-01-11
 
 ### 🔒 Security Release
 
@@ -266,7 +266,7 @@ v0.1.24 is a **security-focused patch release** that:
 
 ---
 
-## [0.1.23] - 2026-01-10
+## [0.1.23] - 2025-01-10
 
 ### ✅ Production-Ready Release
 
@@ -472,7 +472,7 @@ v0.1.23 represents a **production-ready milestone** with:
 
 This release completes the multi-app support feature (introduced in v0.1.22) with production-grade quality and reliability.
 
-## [0.1.22] - 2026-01-08
+## [0.1.22] - 2025-01-08
 
 ### 🚀 Major Features
 
@@ -714,7 +714,7 @@ This release includes comprehensive work on:
 - Performance optimization (cache keys, N+1 elimination)
 - UI/UX improvements (theme fixes, progressive disclosure)
 
-## [0.1.21] - 2026-01-04
+## [0.1.21] - 2025-01-04
 
 ### Fixed
 - **CRITICAL: Turbo Helpers Missing in Production** - Fixed `undefined method 'turbo_stream_from'` error
@@ -741,7 +741,7 @@ This release includes comprehensive work on:
 - Clean, minimal fix with excellent documentation
 - Followed proper issue → PR workflow
 
-## [0.1.20] - 2026-01-03
+## [0.1.20] - 2025-01-03
 
 ### Added
 - **ManualErrorReporter - Report Errors from Frontend/Mobile Apps** - New API for logging errors without Exception objects
@@ -808,7 +808,7 @@ This release includes comprehensive work on:
 - `severity` - Error severity level
 - `source` - Error source (defaults to "manual")
 
-## [0.1.19] - 2026-01-02
+## [0.1.19] - 2025-01-02
 
 ### Fixed
 - **CRITICAL: File Permission Error on Railway/Production** - Fixed gem loading failures
@@ -831,7 +831,7 @@ This release includes comprehensive work on:
 - Resolves zeitwerk autoloading failures in production
 - No functional changes - only permission fixes
 
-## [0.1.18] - 2026-01-02
+## [0.1.18] - 2025-01-02
 
 ### Added
 - **Local Timezone Conversion** - All timestamps now display in user's local timezone
@@ -866,7 +866,7 @@ This release includes comprehensive work on:
 - ISO 8601 timestamps passed via data attributes for JavaScript parsing
 - 100% backward compatible - no breaking changes
 
-## [0.1.17] - 2026-01-02
+## [0.1.17] - 2025-01-02
 
 ### Fixed
 - **CRITICAL: Broadcast Failures in API-Only Mode** - Real-time updates now work reliably in API-only apps
@@ -892,7 +892,7 @@ This release includes comprehensive work on:
 - All broadcast errors now logged with class name and message for debugging
 - 100% backward compatible - no breaking changes
 
-## [0.1.16] - 2026-01-02
+## [0.1.16] - 2025-01-02
 
 ### Fixed
 - **CRITICAL: API-Only Mode Compatibility** - Dashboard now works in Rails API-only applications
@@ -921,7 +921,7 @@ This release includes comprehensive work on:
 - No configuration changes required - works automatically in all Rails modes
 - Tested in both Rails 7.0 and Rails 8.1 with API-only mode enabled
 
-## [0.1.15] - 2026-01-01
+## [0.1.15] - 2025-01-01
 
 ### Added
 - **Keyboard Shortcuts Modal** - Enhanced UX with Bootstrap modal

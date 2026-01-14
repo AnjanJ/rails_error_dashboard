@@ -375,9 +375,9 @@ config.use_separate_database = true   # Separate database
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **850+ RSpec tests** with high coverage
-- **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0)
-- **Ruby 3.2+ support**
+- **935+ RSpec tests** with high coverage
+- **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
+- **Ruby 3.2, 3.3, 3.4 support**
 - **CI/CD via GitHub Actions**
 - **RuboCop linting**
 - **Clean, maintainable code** you can understand and modify
