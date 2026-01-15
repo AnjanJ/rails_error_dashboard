@@ -25,6 +25,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Customization
 - **[Multi-App Support](MULTI_APP_PERFORMANCE.md)** - Track multiple applications from one dashboard
 - **[Customization Guide](CUSTOMIZATION.md)** - Customize views, severity rules, and behavior
+- **[Settings Dashboard](guides/SETTINGS.md)** - View current configuration and verify feature status
 - **[Plugin System](PLUGIN_SYSTEM.md)** - Build custom plugins and integrations
 - **[Database Options](guides/DATABASE_OPTIONS.md)** - Using a separate database
 
