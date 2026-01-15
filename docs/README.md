@@ -45,6 +45,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Development
 - **[Changelog](../CHANGELOG.md)** - Version history and updates
 - **[Testing](development/TESTING.md)** - Running and writing tests
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common problems and solutions
 - **[Security Policy](../SECURITY.md)** - Report vulnerabilities and security best practices
 
 ## Quick Links
