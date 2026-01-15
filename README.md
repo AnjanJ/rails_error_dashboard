@@ -117,7 +117,7 @@ HTTP Basic Auth, environment-based settings, optional separate database for isol
 - **Separate Database** - Isolate error data for better performance
 - **Database Indexes** - Composite indexes and PostgreSQL GIN full-text search
 
-#### 🧠 Advanced Analytics (8 Powerful Features)
+#### 🧠 Advanced Analytics (7 Powerful Features)
 
 **1. Baseline Anomaly Alerts** 🔔
 Automatically detect unusual error rate spikes using statistical analysis (mean + std dev). Get proactive notifications when errors exceed expected baselines with intelligent cooldown to avoid alert fatigue.
@@ -140,8 +140,8 @@ Compare iOS vs Android vs Web health metrics side-by-side. Platform-specific err
 **7. Occurrence Pattern Detection** 📈
 Detect cyclical patterns (business hours, nighttime, weekend rhythms) and error bursts (many errors in short time). Understand when and how your errors happen.
 
-**8. Developer Insights** 💡
-AI-powered insights with severity detection, platform stability scoring, actionable recommendations, and recent error activity summaries.
+**Plus: Developer Insights Dashboard** 💡
+Built-in analytics dashboard with severity detection, platform stability scoring, actionable recommendations, and recent error activity summaries (always available, no configuration needed).
 
 #### 🔌 Plugin System
 Extensible architecture with event hooks (`on_error_logged`, `on_error_resolved`, `on_threshold_exceeded`). Built-in examples for Jira integration, metrics tracking, audit logging. Easy to create custom plugins - just drop a file in `config/initializers/error_dashboard_plugins/`.
@@ -169,7 +169,7 @@ rails db:migrate
 The installer will guide you through optional feature selection:
 - **Notifications** (Slack, Email, Discord, PagerDuty, Webhooks)
 - **Performance** (Async Logging, Error Sampling, Separate Database)
-- **Advanced Analytics** (8 powerful features including baseline alerts, fuzzy matching, platform comparison)
+- **Advanced Analytics** (7 powerful features including baseline alerts, fuzzy matching, platform comparison)
 
 **All features are opt-in** - choose what you need during installation, or enable/disable them later in the initializer.
 
