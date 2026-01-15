@@ -14,7 +14,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth, data retention
 
 ### Optional Features (Opt-in)
-**16 powerful features** you can enable during installation or anytime in the initializer:
+**15 powerful features** you can enable during installation or anytime in the initializer:
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -22,14 +22,14 @@ Core features that are always enabled - no configuration needed:
 **⚡ Performance (3 features)**
 - Async Logging, Error Sampling, Separate Database
 
-**📊 Advanced Analytics (8 features)**
+**📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
 All features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](guides/CONFIGURATION.md) for setup.
 
 ---
 
-## 🎯 Error Tracking & Capture
+## Error Tracking & Capture
 
 ### Automatic Error Capture
 - **Rails Controllers** - Catches all unhandled exceptions via Rails error reporting
@@ -61,7 +61,7 @@ All features are disabled by default and can be toggled on/off at any time. See 
 
 ---
 
-## 📊 Dashboard & UI
+## Dashboard & UI
 
 ### Modern Interface
 - **Bootstrap 5** responsive design
@@ -102,7 +102,7 @@ All features are disabled by default and can be toggled on/off at any time. See 
 
 ---
 
-## 📈 Analytics & Insights
+## Analytics & Insights
 
 ### Error Trends
 - **7-day trend chart** showing daily error patterns
@@ -153,7 +153,7 @@ All features are disabled by default and can be toggled on/off at any time. See 
 
 ---
 
-## 🚨 Notifications & Alerting
+## Notifications & Alerting
 
 **⚙️ Optional Features** - All notification channels are disabled by default. Enable them during installation or in the initializer:
 ```ruby
@@ -209,7 +209,7 @@ config.enable_webhook_notifications = true
 
 ---
 
-## ⚡ Performance & Scalability
+## Performance & Scalability
 
 **⚙️ Optional Features** - Performance optimizations are disabled by default. Enable as needed:
 ```ruby
@@ -265,7 +265,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## ✅ Error Management
+## Error Management
 
 ### Resolution Workflow
 - **Mark as resolved** with one click
@@ -299,7 +299,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## 🔌 Plugin System
+## Plugin System
 
 ### Architecture
 - **Event-driven** extensibility
@@ -343,7 +343,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## 🔒 Security & Privacy
+## Security & Privacy
 
 ### Authentication
 - **HTTP Basic Auth** built-in
@@ -375,9 +375,9 @@ config.use_separate_database = true   # Separate database
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **850+ RSpec tests** with high coverage
-- **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0)
-- **Ruby 3.2+ support**
+- **935+ RSpec tests** with high coverage
+- **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
+- **Ruby 3.2, 3.3, 3.4 support**
 - **CI/CD via GitHub Actions**
 - **RuboCop linting**
 - **Clean, maintainable code** you can understand and modify
@@ -419,7 +419,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## 📱 Mobile & Frontend Support
+## Mobile & Frontend Support
 
 ### React Native
 - **Global error handler** setup guide
@@ -446,7 +446,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## 🚀 Production Ready
+## Production Ready
 
 ### Performance
 - **Handles high volume** with async logging and sampling
@@ -468,7 +468,7 @@ config.use_separate_database = true   # Separate database
 
 ---
 
-## 🎯 Advanced Analytics Features
+## Advanced Analytics Features
 
 **⚙️ Optional Features** - All advanced analytics are disabled by default. Enable the ones you need:
 ```ruby
@@ -543,7 +543,7 @@ config.enable_platform_comparison = true     # Platform health comparison
 
 ---
 
-## 📊 Metrics & Reporting
+## Metrics & Reporting
 
 ### Dashboard Metrics
 - **Today's errors** count with trend
@@ -583,7 +583,7 @@ rails generate rails_error_dashboard:install
 ```
 
 **Interactive Mode** (default):
-```
+```text
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Rails Error Dashboard - Installation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

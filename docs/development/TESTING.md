@@ -1,6 +1,6 @@
 # Multi-Version Testing Guide
 
-Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.0, 7.1, 7.2, and 8.0.
+Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.0, 7.1, 7.2, 8.0, and 8.1.
 
 ## Table of Contents
 
@@ -20,11 +20,13 @@ Rails Error Dashboard supports multiple Rails versions and is tested against Rai
 - ✅ **Rails 7.0** (LTS - Long Term Support)
 - ✅ **Rails 7.1** (Stable)
 - ✅ **Rails 7.2** (Stable)
-- ✅ **Rails 8.0** (Latest)
+- ✅ **Rails 8.0** (Stable)
+- ✅ **Rails 8.1** (Latest)
 
 ### Ruby Versions
-- ✅ **Ruby 3.2** (with Rails 7.0, 7.1, 7.2, 8.0)
-- ✅ **Ruby 3.3** (with Rails 7.0, 7.1, 7.2, 8.0)
+- ✅ **Ruby 3.2** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
+- ✅ **Ruby 3.3** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
+- ✅ **Ruby 3.4** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 
 **Note**: Rails Error Dashboard requires **Ruby >= 3.2** due to the browser gem dependency.
 
@@ -55,9 +57,9 @@ bundle exec rspec
 RAILS_VERSION=7.0 bundle install
 RAILS_VERSION=7.0 bundle exec rspec
 
-# Test Rails 8.0
-RAILS_VERSION=8.0 bundle install
-RAILS_VERSION=8.0 bundle exec rspec
+# Test Rails 8.1 (latest)
+RAILS_VERSION=8.1 bundle install
+RAILS_VERSION=8.1 bundle exec rspec
 ```
 
 ---
@@ -90,13 +92,16 @@ RAILS_VERSION=7.2 bundle install && bundle exec rspec
 
 # Rails 8.0
 RAILS_VERSION=8.0 bundle install && bundle exec rspec
+
+# Rails 8.1
+RAILS_VERSION=8.1 bundle install && bundle exec rspec
 ```
 
 ### Test All Versions
 
 ```bash
 #!/bin/bash
-for version in 7.0 7.1 7.2 8.0; do
+for version in 7.0 7.1 7.2 8.0 8.1; do
   echo "======================================="
   echo "Testing Rails $version"
   echo "======================================="
@@ -113,9 +118,10 @@ echo "✅ All versions passed!"
 
 ### GitHub Actions Setup
 
-Every push and pull request is tested against **8 combinations**:
-- Ruby 3.2 × Rails 7.0, 7.1, 7.2, 8.0
-- Ruby 3.3 × Rails 7.0, 7.1, 7.2, 8.0
+Every push and pull request is tested against **15 combinations**:
+- Ruby 3.2 × Rails 7.0, 7.1, 7.2, 8.0, 8.1
+- Ruby 3.3 × Rails 7.0, 7.1, 7.2, 8.0, 8.1
+- Ruby 3.4 × Rails 7.0, 7.1, 7.2, 8.0, 8.1
 
 **Configuration**: `.github/workflows/test.yml`
 
@@ -134,8 +140,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.2', '3.3']
-        rails: ['7.0', '7.1', '7.2', '8.0']
+        ruby: ['3.2', '3.3', '3.4']
+        rails: ['7.0', '7.1', '7.2', '8.0', '8.1']
 
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
 
@@ -192,12 +198,13 @@ gh run view <run-id> --log
 
 ### Compatibility Matrix
 
-| Ruby | Rails 7.0 | Rails 7.1 | Rails 7.2 | Rails 8.0 |
-|------|-----------|-----------|-----------|-----------|
-| 3.2  | ✅        | ✅        | ✅        | ✅        |
-| 3.3  | ✅        | ✅        | ✅        | ✅        |
+| Ruby | Rails 7.0 | Rails 7.1 | Rails 7.2 | Rails 8.0 | Rails 8.1 |
+|------|-----------|-----------|-----------|-----------|-----------|
+| 3.2  | ✅        | ✅        | ✅        | ✅        | ✅        |
+| 3.3  | ✅        | ✅        | ✅        | ✅        | ✅        |
+| 3.4  | ✅        | ✅        | ✅        | ✅        | ✅        |
 
-**All 8 combinations tested in CI!** [![Tests](https://github.com/AnjanJ/rails_error_dashboard/workflows/Tests/badge.svg)](https://github.com/AnjanJ/rails_error_dashboard/actions)
+**All 15 combinations tested in CI!** [![Tests](https://github.com/AnjanJ/rails_error_dashboard/workflows/Tests/badge.svg)](https://github.com/AnjanJ/rails_error_dashboard/actions)
 
 ### Key Compatibility Notes
 
@@ -302,7 +309,7 @@ Common CI issues and their resolutions:
 Test all supported versions:
 
 ```bash
-for version in 7.0 7.1 7.2 8.0; do
+for version in 7.0 7.1 7.2 8.0 8.1; do
   echo "Testing Rails $version..."
   RAILS_VERSION=$version bundle install || exit 1
   RAILS_VERSION=$version bundle exec rspec || exit 1
@@ -315,9 +322,11 @@ done
 - [ ] All specs pass on Rails 7.1
 - [ ] All specs pass on Rails 7.2
 - [ ] All specs pass on Rails 8.0
+- [ ] All specs pass on Rails 8.1
 - [ ] All specs pass on Ruby 3.2 (all Rails)
 - [ ] All specs pass on Ruby 3.3 (all Rails)
-- [ ] GitHub Actions CI passing (8/8 combinations)
+- [ ] All specs pass on Ruby 3.4 (all Rails)
+- [ ] GitHub Actions CI passing (15/15 combinations)
 - [ ] No deprecation warnings
 - [ ] CHANGELOG.md updated
 
@@ -352,7 +361,7 @@ Rails Error Dashboard will:
 ## FAQ
 
 **Q: Which Rails version should I use in development?**
-A: Use Rails 8.0 (latest) unless you have specific version requirements.
+A: Use Rails 8.1 (latest) unless you have specific version requirements.
 
 **Q: Why isn't Gemfile.lock committed?**
 A: For multi-version gems, committed lockfiles conflict with CI matrix testing. We generate a fresh lockfile for each Rails version.
@@ -370,4 +379,4 @@ A: Use Docker or rely on CI. GitHub Actions tests all combinations for you.
 
 **Multi-version testing complete!** 🎉
 
-All 8 Ruby/Rails combinations tested in CI with comprehensive coverage across Rails 7.0 through 8.0.
+All 15 Ruby/Rails combinations tested in CI with comprehensive coverage across Rails 7.0 through 8.1 on Ruby 3.2, 3.3, and 3.4.

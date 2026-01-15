@@ -707,7 +707,7 @@ plugin.enabled?
 
 Plugin errors are automatically logged:
 
-```
+```text
 # log/production.log
 Plugin 'My Plugin' failed in on_error_logged: Connection refused
 /path/to/plugin.rb:45:in `send_to_service'
@@ -924,7 +924,7 @@ end
 
 **A**: Plugins are wrapped in `safe_execute` which catches errors and logs them without breaking the main application:
 
-```
+```text
 Plugin 'My Plugin' failed in on_error_logged: Connection refused
 ```
 

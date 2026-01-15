@@ -91,34 +91,34 @@ namespace :error_logs do
   desc "Migrate error logs from primary database to separate database"
   task migrate_to_separate_db: :environment do
     puts "Starting error logs migration..."
-    
+
     # Count records in primary DB
     ActiveRecord::Base.connected_to(role: :writing) do
       old_count = RailsErrorDashboard::ErrorLog.count
       puts "Found #{old_count} error logs in primary database"
-      
+
       if old_count == 0
         puts "No error logs to migrate!"
         exit
       end
     end
-    
+
     # Temporarily disable separate database to read from primary
     original_setting = RailsErrorDashboard.configuration.use_separate_database
     RailsErrorDashboard.configuration.use_separate_database = false
-    
+
     # Get all error logs from primary database
     old_errors = RailsErrorDashboard::ErrorLog.all.to_a
     puts "Loaded #{old_errors.count} error logs"
-    
+
     # Re-enable separate database
     RailsErrorDashboard.configuration.use_separate_database = true
-    
+
     # Insert into separate database in batches
     batch_size = 1000
     migrated_count = 0
     failed_count = 0
-    
+
     old_errors.each_slice(batch_size) do |batch|
       begin
         ActiveRecord::Base.connected_to(role: :writing, shard: :error_logs) do
@@ -144,7 +144,7 @@ namespace :error_logs do
               created_at: error.created_at,
               updated_at: error.updated_at
             )
-            
+
             if new_error.save
               migrated_count += 1
             else
@@ -153,43 +153,43 @@ namespace :error_logs do
             end
           end
         end
-        
+
         print "."
       rescue => e
         puts "\nError in batch: #{e.message}"
         failed_count += batch.size
       end
     end
-    
+
     puts "\n\nMigration complete!"
     puts "Successfully migrated: #{migrated_count}"
     puts "Failed: #{failed_count}"
-    
+
     # Verify counts
     ActiveRecord::Base.connected_to(role: :reading, shard: :error_logs) do
       new_count = RailsErrorDashboard::ErrorLog.count
       puts "New database now has: #{new_count} error logs"
     end
-    
+
     puts "\nIMPORTANT: Verify the data before running cleanup!"
     puts "Run: rake error_logs:verify_migration"
   end
-  
+
   desc "Verify error logs migration"
   task verify_migration: :environment do
     puts "Verifying migration..."
-    
+
     # Count in primary DB (with separate DB disabled)
     RailsErrorDashboard.configuration.use_separate_database = false
     old_count = RailsErrorDashboard::ErrorLog.count
-    
+
     # Count in separate DB
     RailsErrorDashboard.configuration.use_separate_database = true
     new_count = RailsErrorDashboard::ErrorLog.count
-    
+
     puts "Primary database: #{old_count} error logs"
     puts "Separate database: #{new_count} error logs"
-    
+
     if old_count == new_count
       puts "✅ Counts match! Migration successful."
       puts "\nYou can now:"
@@ -200,39 +200,39 @@ namespace :error_logs do
       puts "Difference: #{(old_count - new_count).abs} records"
     end
   end
-  
+
   desc "Clean up error logs from primary database (DESTRUCTIVE)"
   task cleanup_primary_db: :environment do
     print "This will DELETE all error logs from your primary database. Continue? (yes/no): "
     confirmation = STDIN.gets.chomp
-    
+
     unless confirmation.downcase == 'yes'
       puts "Cleanup cancelled."
       exit
     end
-    
+
     # Disable separate database to access primary
     RailsErrorDashboard.configuration.use_separate_database = false
-    
+
     count = RailsErrorDashboard::ErrorLog.count
     puts "Deleting #{count} error logs from primary database..."
-    
+
     # Delete in batches to avoid locking
     deleted = 0
     batch_size = 1000
-    
+
     loop do
       batch_deleted = RailsErrorDashboard::ErrorLog.limit(batch_size).delete_all
       deleted += batch_deleted
       print "."
       break if batch_deleted < batch_size
     end
-    
+
     puts "\n✅ Deleted #{deleted} error logs from primary database"
-    
+
     # Re-enable separate database
     RailsErrorDashboard.configuration.use_separate_database = true
-    
+
     puts "\nVerifying separate database still has data..."
     new_count = RailsErrorDashboard::ErrorLog.count
     puts "Separate database has #{new_count} error logs"
@@ -265,7 +265,7 @@ rake error_logs:cleanup_primary_db
 RailsErrorDashboard.configure do |config|
   # Enable separate database
   config.use_separate_database = true  # Changed from false to true
-  
+
   # ... other config
 end
 ```
@@ -304,7 +304,7 @@ RailsErrorDashboard::ErrorLog.last
 ### 4.2 Test Dashboard
 
 Visit your error dashboard:
-```
+```text
 http://localhost:3000/error_dashboard
 ```
 

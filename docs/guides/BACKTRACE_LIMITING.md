@@ -116,7 +116,7 @@ config.max_backtrace_lines = 10
 ### Storage Format
 
 Stored in database as text:
-```
+```text
 app/controllers/users_controller.rb:42:in `create'
 app/services/user_service.rb:15:in `register'
 app/models/user.rb:89:in `validate_email'

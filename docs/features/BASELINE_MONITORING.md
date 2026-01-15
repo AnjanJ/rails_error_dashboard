@@ -134,7 +134,7 @@ An anomaly occurs when the **current error count significantly exceeds the basel
 
 We use a **standard deviation-based approach**:
 
-```
+```text
 current_count > baseline_mean + (threshold * std_dev)
 ```
 
@@ -151,7 +151,7 @@ Anomalies are classified by how far above the baseline they are:
 
 ### Example Calculation
 
-```
+```text
 Baseline for "NoMethodError" on iOS, 2-3 PM:
 - Mean: 15 errors
 - Std Dev: 5 errors

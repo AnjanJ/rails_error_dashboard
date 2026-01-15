@@ -197,7 +197,7 @@ end
 - Android: 300 errors, avg resolution 48 hours
 
 **iOS Score**:
-```
+```text
 max_errors = 300
 error_score = 1.0 - (100 / 300) = 0.67
 
@@ -211,7 +211,7 @@ stability_score = (0.67 * 0.7) + (0.86 * 0.3)
 ```
 
 **Android Score**:
-```
+```text
 error_score = 1.0 - (300 / 300) = 0.0
 resolution_score = 1.0 - (48 / 168) = 0.71
 
@@ -229,7 +229,7 @@ stability_score = (0.0 * 0.7) + (0.71 * 0.3)
 Cross-platform errors are the **same error type** occurring on **multiple platforms**.
 
 Example:
-```
+```text
 NoMethodError: undefined method 'name' for nil:NilClass
 - Occurs on: iOS, Android, Web
 - Indicates: Backend API issue (shared code)
@@ -253,7 +253,7 @@ end
 ```
 
 **Output**:
-```
+```text
 NoMethodError:
   Platforms: iOS, Android, API
   Total occurrences: 450
@@ -280,7 +280,7 @@ NoMethodError:
 
 The UI shows this breakdown:
 
-```
+```text
 iOS Errors:
   NetworkTimeoutError (450 occurrences)
     ✓ Platform-Specific
@@ -334,7 +334,7 @@ ErrorBaseline.find_by(
 
 The Platform Health page shows baselines:
 
-```
+```text
 iOS - NoMethodError
   Current: 12 errors (2.3 std devs above baseline)
   Baseline: 5 ± 2 errors
@@ -358,7 +358,7 @@ Android - NoMethodError
 3. Compare error velocity across platforms
 
 **Example**:
-```
+```text
 Release: v2.0.0 deployed Friday 2 PM
 
 Platform Velocity (Fri-Sun vs previous week):
@@ -380,7 +380,7 @@ Platform Velocity (Fri-Sun vs previous week):
 3. Review error velocity trends
 
 **Example**:
-```
+```text
 Platform Metrics (30 days):
                 Stability  Resolution Rate  Velocity
   iOS:          85         75%              -10%
@@ -405,7 +405,7 @@ Platform Metrics (30 days):
 2. Check if error appears on multiple platforms
 
 **Example**:
-```
+```text
 ArgumentError: Missing required parameter 'user_id'
 
 Platforms affected:
@@ -430,7 +430,7 @@ Platforms affected:
 3. Review error details
 
 **Example**:
-```
+```text
 SQLiteException: database locked (code 5)
 
 Platforms:
@@ -453,7 +453,7 @@ Platforms:
 2. Compare current vs previous period
 
 **Example**:
-```
+```text
 iOS Stability Score Trend (90 days):
   60 days ago: 60/100
   30 days ago: 70/100
@@ -553,7 +553,7 @@ After every release:
 ### 5. Use Platform Comparison for Incident Response
 
 During incidents:
-```
+```text
 Step 1: Is it affecting all platforms? (Cross-platform view)
 Step 2: Which platform is worst affected? (Error rates)
 Step 3: Are errors increasing? (Velocity)
@@ -569,7 +569,7 @@ This triage helps you:
 
 Establish "normal" for each platform:
 
-```
+```text
 Our Baselines (example):
   iOS:     Stability 85-95, <100 errors/week
   Android: Stability 70-80, <300 errors/week
@@ -697,7 +697,7 @@ RailsErrorDashboard::Commands::LogError.call(
 **Cause**: Error types don't match exactly across platforms
 
 **Example**:
-```
+```text
 iOS:     "NoMethodError: undefined method 'name'"
 Android: "NoMethodError: undefined method `name`"  # Note: ` vs '
 ```

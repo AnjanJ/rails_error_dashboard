@@ -63,7 +63,7 @@ end
 ```
 
 **Output**:
-```
+```text
 Version: 2.1.0
   Total Errors: 450
   Error Types: 23
@@ -106,7 +106,7 @@ end
 **Use Case**: Identify the exact commit that introduced a bug.
 
 **Example**:
-```
+```text
 Commit: a3b4c5d6
   Total Errors: 280
   Error Types: 15
@@ -142,7 +142,7 @@ end
 3. Sort by error count (worst first)
 
 **Output**:
-```
+```text
 ⚠️  Version 2.1.0
    Errors: 450
    Deviation: +275% from average
@@ -197,7 +197,7 @@ end
 ```
 
 **Output**:
-```
+```text
 User: user@example.com
   Error Types: 5
   Total Errors: 23
@@ -235,7 +235,7 @@ puts "Sample users: #{overlap[:overlapping_user_ids].join(', ')}"
 ```
 
 **Output**:
-```
+```text
 Users with NoMethodError: 150
 Users with ArgumentError: 120
 Users with both: 80
@@ -293,7 +293,7 @@ end
 ```
 
 **Output**:
-```
+```text
 NoMethodError ↔ DatabaseError
   Correlation: 85%
   Strength: strong
@@ -358,21 +358,21 @@ end
 ### Use Cases for Time Correlation
 
 **1. Identify Cascading Failures**:
-```
+```text
 DatabaseError ↔ CacheError (90% correlation)
 → Database issues cause cache to fail
 → Fix database to resolve both
 ```
 
 **2. Find Shared Dependencies**:
-```
+```text
 PaymentError ↔ ExternalAPIError (85% correlation)
 → Both depend on third-party payment API
 → Add retry logic for API timeouts
 ```
 
 **3. Detect Infrastructure Issues**:
-```
+```text
 All errors spike at 2 AM (high correlation)
 → Nightly backup job causing resource contention
 → Reschedule backup or scale infrastructure
@@ -403,7 +403,7 @@ puts "Trend: #{comparison[:trend]}"
 ```
 
 **Output**:
-```
+```text
 Current Period (last 15 days):
   Errors: 1850
   2025-12-10 to 2025-12-25
@@ -453,7 +453,7 @@ puts "Increase: +#{v210[:count] - v205[:count]} errors"
 ```
 
 **Interpretation**:
-```
+```text
 v2.1.0: 450 errors, 23 types
 v2.0.5: 120 errors, 8 types
 Increase: +330 errors
@@ -475,7 +475,7 @@ end
 ```
 
 **Output**:
-```
+```text
 power_user@example.com: 7 types, 45 errors
 affected_user@example.com: 5 types, 23 errors
 casual_user@example.com: 3 types, 8 errors
@@ -507,7 +507,7 @@ end
 ```
 
 **Output**:
-```
+```text
 CacheError: 90% correlation
 NoMethodError: 85% correlation
 TimeoutError: 78% correlation
@@ -537,7 +537,7 @@ puts "Last month: #{month[:trend]} (#{month[:change_percentage]}%)"
 ```
 
 **Output**:
-```
+```text
 This week: decreasing (-12%)
 Last 2 weeks: decreasing (-8%)
 Last month: stable (+2%)
@@ -626,7 +626,7 @@ RailsErrorDashboard::Commands::LogError.call(
 ### 1. Track App Version Consistently
 
 **Use semantic versioning**:
-```
+```text
 ✓ Good: "2.1.0", "2.1.1", "2.2.0"
 ✗ Bad: "v2.1", "2.1-beta", "latest"
 ```
@@ -710,7 +710,7 @@ end
 ### 6. Document Version History
 
 **Maintain a version log**:
-```
+```text
 v2.1.0 (2025-12-20):
   - Added new payment flow
   - Errors: 450 total, 12 critical

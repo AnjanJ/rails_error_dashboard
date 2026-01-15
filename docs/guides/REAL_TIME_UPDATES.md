@@ -36,13 +36,13 @@ Turbo Streams is part of the Hotwire framework and provides efficient, real-time
 
 **Flow:**
 
-```
+```text
 Error Occurs → ErrorLog Created → Turbo Stream Broadcast → Dashboard Updates
 ```
 
 **Diagram:**
 
-```
+```text
 ┌─────────────────┐
 │  Rails App      │
 │  Error occurs   │
@@ -399,7 +399,7 @@ Broadcasts happen in `after_commit` callbacks:
 
 **Calculation:**
 
-```
+```text
 1,000 errors/hour = 800 KB/hour per user
 10 concurrent users = 8 MB/hour total bandwidth
 ```
@@ -427,7 +427,7 @@ typeof Turbo !== 'undefined'
 **Check 2: WebSocket Connected?**
 
 Look for console messages:
-```
+```text
 Turbo Streams connected
 ```
 
@@ -520,7 +520,7 @@ production:
 
 **Check Rails Logs:**
 
-```
+```text
 Failed to broadcast new error: [error message]
 ```
 

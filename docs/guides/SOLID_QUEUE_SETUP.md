@@ -28,6 +28,7 @@ This creates `config/queue.yml` with optimized settings for all environments.
 If not already installed (Rails 8.1+ includes it by default):
 
 ```bash
+```bash
 bundle add solid_queue
 bin/rails solid_queue:install
 bin/rails db:migrate
@@ -186,7 +187,7 @@ production:
 ```
 
 **Formula:**
-```
+```text
 Required connections = (threads_per_worker × processes) + web_server_threads + 5
 ```
 
@@ -278,7 +279,7 @@ worker: bundle exec rake solid_queue:start
 ### Heroku
 
 Add to `Procfile`:
-```
+```procfile
 web: bundle exec rails server
 worker: bundle exec rake solid_queue:start
 ```

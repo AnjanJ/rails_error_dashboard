@@ -276,7 +276,7 @@ Rails.application.config.assets.precompile += %w[rails_error_dashboard_custom.cs
 
 Override dashboard views by creating files in your app:
 
-```
+```text
 app/
 └── views/
     └── rails_error_dashboard/

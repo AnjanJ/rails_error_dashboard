@@ -52,7 +52,7 @@ Once you've selected one or more errors, the batch actions toolbar appears with:
 
 ## UI Workflow
 
-```
+```text
 1. User visits /error_dashboard/errors
    ↓
 2. User clicks checkboxes to select errors
@@ -235,7 +235,7 @@ end
 ## UI Screenshots (Workflow)
 
 ### Step 1: Error List (No Selection)
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  Recent Errors                            25 items      │
 ├─────┬──────┬────────────┬─────────┬─────────┬──────────┤
@@ -248,7 +248,7 @@ end
 ```
 
 ### Step 2: Errors Selected (Toolbar Appears)
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  Recent Errors                            25 items      │
 ├─────────────────────────────────────────────────────────┤

@@ -48,7 +48,7 @@ A line chart showing daily error counts for the past 7 days.
 
 **Example:**
 
-```
+```text
 Errors
   ^
 50|              *
@@ -92,7 +92,7 @@ A donut chart showing error distribution by severity level over the last 7 days.
 
 **Example:**
 
-```
+```text
 Critical: 10% (5 errors)
 High:     40% (20 errors)
 Medium:   30% (15 errors)
@@ -116,7 +116,7 @@ Automatic detection and alerting when error rates surge above normal levels.
 **Detection Algorithm:**
 
 A spike is detected when:
-```
+```text
 Today's error count >= 2x the 7-day average
 ```
 
@@ -131,7 +131,7 @@ Today's error count >= 2x the 7-day average
 
 **Alert Content:**
 
-```
+```text
 🚨 Critical Error Spike Detected!
 Today: 250 errors (7-day avg: 20) — 12.5x normal levels
 ```
@@ -208,25 +208,25 @@ ErrorLog.where("occurred_at >= ?", 7.days.ago)
 ### Interpreting the Chart
 
 **Pattern: Increasing Trend**
-```
+```text
 Errors increasing → Recent changes may have introduced bugs
 Action: Review recent deployments, check error types
 ```
 
 **Pattern: Spike (Single Day)**
-```
+```text
 One-day spike → Temporary issue or deployment problem
 Action: Check what was deployed that day, correlate with logs
 ```
 
 **Pattern: Flat/Decreasing**
-```
+```text
 Stable or improving → App is healthy or fixes are working
 Action: Continue monitoring, celebrate wins!
 ```
 
 **Pattern: Weekend Drop**
-```
+```text
 Errors lower on weekends → User-generated errors (good sign)
 Action: Confirms errors are from real usage, not background jobs
 ```
@@ -276,7 +276,7 @@ last_7_days = ErrorLog.where("occurred_at >= ?", 7.days.ago)
 ### Interpreting the Chart
 
 **Healthy Distribution:**
-```
+```text
 Critical: 0-5%
 High:     10-20%
 Medium:   30-40%
@@ -285,7 +285,7 @@ Low:      40-50%
 Most errors are low/medium severity = Good health
 
 **Unhealthy Distribution:**
-```
+```text
 Critical: > 20%
 High:     > 40%
 Medium:   < 20%

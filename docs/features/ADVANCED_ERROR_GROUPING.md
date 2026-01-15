@@ -70,7 +70,7 @@ end
    - Example: "User 123 not found" → "User N not found"
 
 3. **Combined Score**:
-   ```
+   ```text
    similarity = (backtrace_score * 0.7) + (message_score * 0.3)
    ```
 
@@ -196,7 +196,7 @@ end
 1. **Time Window**: Looks 0-60 seconds before/after each error
 2. **Pattern Tracking**: If A then B happens >70% of time = cascade
 3. **Probability Calculation**:
-   ```
+   ```text
    probability = times_B_after_A / total_A_occurrences
    ```
 4. **Minimum Frequency**: Requires 3+ occurrences to confirm pattern

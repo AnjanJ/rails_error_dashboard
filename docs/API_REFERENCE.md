@@ -18,7 +18,7 @@ The Rails Error Dashboard provides HTTP endpoints for error logging and manageme
 
 All HTTP endpoints are mounted under `/error_dashboard` by default (configurable).
 
-```
+```text
 https://your-app.com/error_dashboard
 ```
 
@@ -231,6 +231,22 @@ curl -X POST -u admin:password \
   https://your-app.com/error_dashboard/errors/123/assign
 ```
 
+### Unassign Error
+
+Remove assignment from an error.
+
+**Endpoint:** `POST /error_dashboard/errors/:id/unassign`
+
+**Parameters:** None required.
+
+**Example:**
+```bash
+curl -X POST -u admin:password \
+  https://your-app.com/error_dashboard/errors/123/unassign
+```
+
+---
+
 ### Update Priority
 
 Change error priority level.
@@ -277,6 +293,22 @@ curl -X POST -u admin:password \
   -d "reason=Waiting for third-party API fix" \
   https://your-app.com/error_dashboard/errors/123/snooze
 ```
+
+### Unsnooze Error
+
+Resume showing a snoozed error (unsnooze before the snooze duration expires).
+
+**Endpoint:** `POST /error_dashboard/errors/:id/unsnooze`
+
+**Parameters:** None required.
+
+**Example:**
+```bash
+curl -X POST -u admin:password \
+  https://your-app.com/error_dashboard/errors/123/unsnooze
+```
+
+---
 
 ### Update Status
 
@@ -436,6 +468,24 @@ Analyze error patterns and correlations.
 curl -u admin:password \
   "https://your-app.com/error_dashboard/errors/correlation?days=7"
 ```
+
+### Settings
+
+View current configuration settings (read-only).
+
+**Endpoint:** `GET /error_dashboard/settings`
+
+**Parameters:** None
+
+**Example:**
+```bash
+curl -u admin:password \
+  https://your-app.com/error_dashboard/settings
+```
+
+**Note:** This endpoint returns HTML by default (web UI). For programmatic access to configuration, use the Ruby API (`RailsErrorDashboard.configuration`) instead. See [Settings Dashboard Guide](guides/SETTINGS.md) for details.
+
+---
 
 ## Error Response Codes
 

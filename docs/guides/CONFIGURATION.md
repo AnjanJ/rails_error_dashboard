@@ -4,6 +4,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Table of Contents
 
+- [Configuration Defaults Reference](#configuration-defaults-reference)
 - [Opt-in Feature System](#opt-in-feature-system)
 - [Basic Configuration](#basic-configuration)
 - [Notification Features](#notification-features)
@@ -16,6 +17,205 @@ This guide covers all configuration options for Rails Error Dashboard, including
 - [ActiveSupport Notifications](#activesupport-notifications)
 - [Backtrace Configuration](#backtrace-configuration)
 - [Complete Configuration Example](#complete-configuration-example)
+
+---
+
+## Configuration Defaults Reference
+
+Complete reference of all 43+ configuration options with defaults, types, and descriptions.
+
+### Authentication & Access
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `dashboard_username` | String | `"gandalf"` | Username for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_USER`) |
+| `dashboard_password` | String | `"youshallnotpass"` | Password for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_PASSWORD`) |
+| `user_model` | String | `"User"` | Model name for user associations |
+
+### Multi-App Support
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `application_name` | String | Auto-detected | Application identifier (ENV: `APPLICATION_NAME`) |
+| `database` | Symbol/String | `nil` | Database connection name (nil = primary database) |
+| `use_separate_database` | Boolean | `false` | Use separate database for errors (ENV: `USE_SEPARATE_ERROR_DB`) |
+
+### Notifications - Slack
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_slack_notifications` | Boolean | `false` | Enable Slack webhooks |
+| `slack_webhook_url` | String | `nil` | Slack webhook URL (ENV: `SLACK_WEBHOOK_URL`) |
+
+### Notifications - Email
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_email_notifications` | Boolean | `false` | Enable email notifications |
+| `notification_email_recipients` | Array | `[]` | Email recipients (ENV: `ERROR_NOTIFICATION_EMAILS`, comma-separated) |
+| `notification_email_from` | String | `"errors@example.com"` | From address (ENV: `ERROR_NOTIFICATION_FROM`) |
+| `dashboard_base_url` | String | `nil` | Base URL for links in emails (ENV: `DASHBOARD_BASE_URL`) |
+
+### Notifications - Discord
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_discord_notifications` | Boolean | `false` | Enable Discord webhooks |
+| `discord_webhook_url` | String | `nil` | Discord webhook URL (ENV: `DISCORD_WEBHOOK_URL`) |
+
+### Notifications - PagerDuty
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_pagerduty_notifications` | Boolean | `false` | Enable PagerDuty (critical errors only) |
+| `pagerduty_integration_key` | String | `nil` | PagerDuty integration key (ENV: `PAGERDUTY_INTEGRATION_KEY`) |
+
+### Notifications - Webhooks
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_webhook_notifications` | Boolean | `false` | Enable custom webhooks |
+| `webhook_urls` | Array | `[]` | Custom webhook URLs (ENV: `WEBHOOK_URLS`, comma-separated) |
+
+### Core Features
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_middleware` | Boolean | `true` | Enable error catching middleware |
+| `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
+| `retention_days` | Integer | `90` | Days to keep errors before auto-deletion |
+
+### Error Classification
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `custom_severity_rules` | Hash | `{}` | Custom error type → severity mappings |
+| `ignored_exceptions` | Array | `[]` | Exception classes/patterns to ignore |
+
+### Performance Optimization
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `async_logging` | Boolean | `false` | Log errors asynchronously in background jobs |
+| `async_adapter` | Symbol | `:sidekiq` | Background job adapter (`:sidekiq`, `:solid_queue`, `:async`) |
+| `sampling_rate` | Float | `1.0` | Percentage of errors to log (0.0-1.0, critical always logged) |
+| `max_backtrace_lines` | Integer | `50` | Maximum backtrace lines to store |
+
+### API & Rate Limiting
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_rate_limiting` | Boolean | `false` | Enable API rate limiting (opt-in) |
+| `rate_limit_per_minute` | Integer | `100` | Max requests per minute per IP |
+
+### Enhanced Metrics
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `app_version` | String | `nil` | Application version (ENV: `APP_VERSION`) |
+| `git_sha` | String | `nil` | Git commit SHA (ENV: `GIT_SHA`) |
+| `git_repository_url` | String | `nil` | Git repository URL for commit links (ENV: `GIT_REPOSITORY_URL`) |
+| `total_users_for_impact` | Integer | `nil` | Total users for impact % calculation (auto-detected if nil) |
+
+### Advanced Analytics - Error Analysis
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_similar_errors` | Boolean | `false` | Fuzzy error matching with Jaccard/Levenshtein similarity |
+| `enable_co_occurring_errors` | Boolean | `false` | Detect errors happening together |
+| `enable_error_cascades` | Boolean | `false` | Detect parent→child error relationships |
+| `enable_error_correlation` | Boolean | `false` | Version/user/time correlation analysis |
+| `enable_platform_comparison` | Boolean | `false` | iOS vs Android vs Web health comparison |
+| `enable_occurrence_patterns` | Boolean | `false` | Cyclical and burst pattern detection |
+
+### Advanced Analytics - Baseline Monitoring
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_baseline_alerts` | Boolean | `false` | Statistical anomaly detection and alerts |
+| `baseline_alert_threshold_std_devs` | Float | `2.0` | Standard deviations to trigger alert (ENV: `BASELINE_ALERT_THRESHOLD`) |
+| `baseline_alert_severities` | Array | `[:critical, :high]` | Severities to alert on |
+| `baseline_alert_cooldown_minutes` | Integer | `120` | Minutes between alerts for same error (ENV: `BASELINE_ALERT_COOLDOWN`) |
+
+### Internal Logging & Debugging
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_internal_logging` | Boolean | `false` | Enable internal gem logging for debugging |
+| `log_level` | Symbol | `:silent` | Log level (`:debug`, `:info`, `:warn`, `:error`, `:silent`) |
+
+### Read-Only Attributes
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `notification_callbacks` | Hash | See below | Notification callback registry (use helper methods, not direct assignment) |
+
+---
+
+### Environment Variables Quick Reference
+
+All environment variables that can be used instead of or alongside configuration:
+
+```bash
+# Authentication
+ERROR_DASHBOARD_USER=admin
+ERROR_DASHBOARD_PASSWORD=secure_password
+
+# Multi-App
+APPLICATION_NAME=my-api
+
+# Database
+USE_SEPARATE_ERROR_DB=true  # "true" or "false"
+
+# Notifications
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+ERROR_NOTIFICATION_EMAILS=team@example.com,ops@example.com
+ERROR_NOTIFICATION_FROM=errors@myapp.com
+DASHBOARD_BASE_URL=https://dashboard.example.com
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+PAGERDUTY_INTEGRATION_KEY=abc123...
+WEBHOOK_URLS=https://hook1.example.com,https://hook2.example.com
+
+# Enhanced Metrics
+APP_VERSION=1.2.3
+GIT_SHA=abc123def456
+GIT_REPOSITORY_URL=https://github.com/user/repo
+
+# Baseline Alerts
+BASELINE_ALERT_THRESHOLD=2.0  # Standard deviations
+BASELINE_ALERT_COOLDOWN=120   # Minutes
+```
+
+---
+
+### Practical Defaults Guidance
+
+**For Development:**
+```ruby
+config.async_logging = false          # Sync for easier debugging
+config.sampling_rate = 1.0             # Log all errors
+config.enable_internal_logging = true  # See what's happening
+config.log_level = :debug             # Verbose logging
+```
+
+**For Production (Low Traffic):**
+```ruby
+config.async_logging = true           # Background jobs
+config.async_adapter = :sidekiq       # Battle-tested
+config.sampling_rate = 1.0            # Log all errors
+config.retention_days = 90            # 3 months
+config.max_backtrace_lines = 50       # Full context
+```
+
+**For Production (High Traffic >1000 errors/day):**
+```ruby
+config.async_logging = true           # REQUIRED
+config.async_adapter = :sidekiq       # Recommended
+config.sampling_rate = 0.1            # 10% (critical always logged)
+config.retention_days = 30            # 1 month
+config.max_backtrace_lines = 20       # Reduce storage
+config.use_separate_database = true   # Isolate errors
+```
 
 ---
 
@@ -949,6 +1149,287 @@ RailsErrorDashboard.configure do |config|
   end
 end
 ```
+
+---
+
+## Troubleshooting
+
+### Configuration Not Taking Effect
+
+**Problem**: Changes to `config/initializers/rails_error_dashboard.rb` don't seem to work.
+
+**Solutions**:
+1. **Restart server** - Configuration is loaded at startup
+   ```bash
+   rails server
+   ```
+
+2. **Check file location** - Must be in `config/initializers/`
+   ```bash
+   ls -la config/initializers/rails_error_dashboard.rb
+   ```
+
+3. **Check for syntax errors**
+   ```bash
+   ruby -c config/initializers/rails_error_dashboard.rb
+   ```
+
+4. **Verify configuration is loaded**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.inspect
+   ```
+
+### Environment Variables Not Working
+
+**Problem**: `ENV['VARIABLE']` returns `nil` in configuration.
+
+**Solutions**:
+1. **Load environment variables before Rails**
+   - Use `dotenv-rails` gem for development
+   - Use system environment variables in production
+
+2. **Check variable is set**
+   ```bash
+   echo $SLACK_WEBHOOK_URL
+   ```
+
+3. **Provide defaults**
+   ```ruby
+   config.slack_webhook_url = ENV.fetch('SLACK_WEBHOOK_URL', nil)
+   ```
+
+### Notifications Not Sending
+
+**Problem**: Slack/Discord notifications aren't working.
+
+**Solutions**:
+1. **Check notifications are enabled**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.enable_slack_notifications
+   # Should return true
+   ```
+
+2. **Verify webhook URL is set**
+   ```ruby
+   RailsErrorDashboard.configuration.slack_webhook_url
+   # Should return your webhook URL
+   ```
+
+3. **Test webhook manually**
+   ```bash
+   curl -X POST YOUR_WEBHOOK_URL \
+     -H 'Content-Type: application/json' \
+     -d '{"text": "Test message"}'
+   ```
+
+4. **Check background jobs are running**
+   ```bash
+   # With Sidekiq
+   bundle exec sidekiq
+
+   # With Solid Queue
+   bin/jobs
+   ```
+
+5. **Check notification thresholds**
+   ```ruby
+   # Critical errors only go to PagerDuty
+   config.severity_thresholds[:pagerduty] = :critical
+   ```
+
+### Custom Severity Rules Not Working
+
+**Problem**: Custom severity rules aren't being applied.
+
+**Solutions**:
+1. **Check rule format** - Use regex or symbol
+   ```ruby
+   # Correct
+   config.custom_severity_rules = {
+     /ActiveRecord::RecordNotFound/ => :low,
+     :timeout_error => :high
+   }
+
+   # Incorrect (string won't match)
+   config.custom_severity_rules = {
+     "ActiveRecord::RecordNotFound" => :low
+   }
+   ```
+
+2. **Test regex patterns**
+   ```ruby
+   # In rails console
+   error_class = "ActiveRecord::RecordNotFound"
+   /ActiveRecord::RecordNotFound/.match?(error_class)
+   # Should return true
+   ```
+
+3. **Check rule order** - First match wins
+   ```ruby
+   # More specific rules should come first
+   config.custom_severity_rules = {
+     /ActiveRecord::RecordNotFound.*User/ => :high,  # Specific
+     /ActiveRecord::RecordNotFound/ => :low          # General
+   }
+   ```
+
+### Background Jobs Not Processing
+
+**Problem**: Async logging enabled but errors not appearing.
+
+**Solutions**:
+1. **Check job adapter configuration**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.async_adapter
+   # Should return :sidekiq, :solid_queue, or :async
+   ```
+
+2. **Verify job processor is running**
+   ```bash
+   # Sidekiq
+   ps aux | grep sidekiq
+
+   # Solid Queue
+   ps aux | grep solid_queue
+   ```
+
+3. **Check failed jobs**
+   ```ruby
+   # Sidekiq
+   require 'sidekiq/api'
+   Sidekiq::RetrySet.new.size
+   Sidekiq::DeadSet.new.size
+
+   # Solid Queue
+   SolidQueue::Job.failed.count
+   ```
+
+4. **Test with sync logging temporarily**
+   ```ruby
+   config.async_logging = false  # For debugging
+   ```
+
+### Sampling Too Aggressive
+
+**Problem**: Too many errors being filtered out.
+
+**Solutions**:
+1. **Check sampling rate**
+   ```ruby
+   RailsErrorDashboard.configuration.sampling_rate
+   # 0.1 = 10% of errors logged
+   ```
+
+2. **Critical errors always logged** - Check severity
+   ```ruby
+   # Critical errors bypass sampling
+   config.severity_thresholds[:critical]
+   ```
+
+3. **Adjust rate** - Start higher, tune down
+   ```ruby
+   config.sampling_rate = 0.5  # Start with 50%
+   ```
+
+4. **Use conditional sampling**
+   ```ruby
+   config.before_log_callback = lambda do |exception, context|
+     # Always log payment errors
+     return true if exception.message.include?("Stripe")
+
+     # Sample others based on environment
+     Rails.env.production? ? rand < 0.1 : true
+   end
+   ```
+
+### Database Performance Issues
+
+**Problem**: Error logging is slow or causing database issues.
+
+**Solutions**:
+1. **Enable async logging**
+   ```ruby
+   config.async_logging = true
+   ```
+
+2. **Use separate database**
+   ```ruby
+   config.database = :errors
+   ```
+
+3. **Add database indexes** - Already included in migrations
+
+4. **Increase backtrace limit**
+   ```ruby
+   config.max_backtrace_lines = 20  # Default is 50
+   ```
+
+5. **Configure retention policy**
+   ```ruby
+   config.retention_days = 30  # Auto-cleanup old errors
+   ```
+
+See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
+
+### Authentication Not Working
+
+**Problem**: Can't access dashboard even with correct credentials.
+
+**Solutions**:
+1. **Check username and password are set**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard.configuration.dashboard_username
+   RailsErrorDashboard.configuration.dashboard_password
+   ```
+
+2. **Verify HTTP Basic Auth is configured**
+   ```ruby
+   config.dashboard_username = "admin"
+   config.dashboard_password = "secure_password"
+   ```
+
+3. **Test credentials**
+   ```bash
+   curl -u admin:password http://localhost:3000/error_dashboard
+   ```
+
+4. **Check for proxy/load balancer issues**
+   - Some proxies strip Authorization headers
+   - May need to configure pass-through
+
+5. **Clear browser cache** - Old credentials may be cached
+
+### Multi-App Configuration Issues
+
+**Problem**: Errors from multiple apps not showing correctly.
+
+**Solutions**:
+1. **Set APP_NAME environment variable**
+   ```bash
+   APP_NAME=my-api rails server
+   ```
+
+2. **Or configure manually**
+   ```ruby
+   config.application_name = "my-api"
+   ```
+
+3. **Verify application is created**
+   ```ruby
+   # In rails console
+   RailsErrorDashboard::Application.all.pluck(:name)
+   ```
+
+4. **Check errors are tagged correctly**
+   ```ruby
+   RailsErrorDashboard::ErrorLog.last.application.name
+   ```
+
+See [Multi-App Support Guide](../MULTI_APP_PERFORMANCE.md) for more.
 
 ---
 

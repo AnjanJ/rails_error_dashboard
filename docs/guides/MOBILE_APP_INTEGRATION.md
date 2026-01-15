@@ -12,12 +12,12 @@ The gem provides a centralized error tracking system that works seamlessly with 
 
 ## Benefits
 
-✅ **Centralized error tracking** - All errors (API + iOS + Android) in one place  
-✅ **Platform detection** - Automatically tagged as iOS or Android  
-✅ **Real-time notifications** - Team gets alerted via Slack/Email  
-✅ **Offline support** - Errors stored locally and synced when online  
-✅ **Batch processing** - Multiple errors sent efficiently  
-✅ **User context** - Errors associated with logged-in user  
+✅ **Centralized error tracking** - All errors (API + iOS + Android) in one place
+✅ **Platform detection** - Automatically tagged as iOS or Android
+✅ **Real-time notifications** - Team gets alerted via Slack/Email
+✅ **Offline support** - Errors stored locally and synced when online
+✅ **Batch processing** - Multiple errors sent efficiently
+✅ **User context** - Errors associated with logged-in user
 
 ## Backend Setup (Rails API)
 
@@ -141,7 +141,7 @@ import { api } from './api';
 class ErrorLogger {
   async syncErrors(): Promise<void> {
     const unsyncedErrors = (await this.getLocalErrors()).filter(e => !e.synced);
-    
+
     if (unsyncedErrors.length === 0) return;
 
     const batches = this.chunkArray(unsyncedErrors, 10);
@@ -207,7 +207,7 @@ class ErrorBoundary extends React.Component {
 
 ## Error Flow
 
-```
+```text
 ┌─────────────────┐
 │   Mobile App    │
 │   Error Occurs  │
@@ -267,7 +267,7 @@ Once integrated, you'll see:
 When a mobile error occurs:
 
 ### Slack Notification:
-```
+```text
 🚨 Error Alert
 ━━━━━━━━━━━━━━━━━━━━━
 Error Type: TypeError

@@ -68,7 +68,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 ---
 
-## Discord Notifications (NEW! 🎉)
+## Discord Notifications (NEW)
 
 Post rich error notifications to Discord channels with color-coded severity.
 
@@ -114,7 +114,7 @@ Discord notifications include:
 
 ---
 
-## PagerDuty Notifications (NEW! 🚨)
+## PagerDuty Notifications (NEW)
 
 Create PagerDuty incidents for **critical errors only** to alert on-call engineers.
 
@@ -178,7 +178,7 @@ This prevents alert fatigue from non-critical errors.
 
 ---
 
-## Webhook Notifications (NEW! 🔗)
+## Webhook Notifications (NEW)
 
 Send error notifications to custom webhook URLs for integration with any service.
 
@@ -254,7 +254,7 @@ Webhooks receive a JSON payload with complete error details:
 
 Webhooks include these headers:
 
-```
+```text
 Content-Type: application/json
 User-Agent: RailsErrorDashboard/1.0
 X-Error-Dashboard-Event: error.created

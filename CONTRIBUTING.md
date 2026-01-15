@@ -19,7 +19,7 @@ Following these guidelines helps communicate that you respect the time of the de
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [your contact method - replace this].
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to conduct@anjan.dev.
 
 ## How Can I Contribute?
 
@@ -37,7 +37,7 @@ Before creating bug reports, please check the [existing issues](https://github.c
 - **Stack trace** - Full error backtrace if applicable
 - **Additional context** - Screenshots, configuration snippets, or related issues
 
-**Note:** If you find a **security vulnerability**, do NOT open an issue. Please follow our [Security Policy](.github/SECURITY.md) instead.
+**Note:** If you find a **security vulnerability**, do NOT open an issue. Please follow our [Security Policy](SECURITY.md) instead.
 
 ### Suggesting Features
 

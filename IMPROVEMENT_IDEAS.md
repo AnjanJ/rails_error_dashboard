@@ -570,7 +570,7 @@ Comprehensive list of potential improvements across all areas: features, docs, D
 **Effort:** Ongoing
 **Impact:** High
 
-**Target:** 95%+ coverage (currently 850+ tests)
+**Target:** 95%+ coverage (currently 935+ tests)
 
 ---
 

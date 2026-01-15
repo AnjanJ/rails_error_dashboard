@@ -93,7 +93,7 @@ end
 - Likely legitimate use triggering bugs
 
 **Example**:
-```
+```text
 Hourly Distribution:
   9 AM: ████████████████ 45 errors
   10 AM: ███████████████ 42 errors
@@ -119,7 +119,7 @@ Hourly Distribution:
 - Cron jobs, ETL processes
 
 **Example**:
-```
+```text
 Hourly Distribution:
   2 AM: ████████████████ 120 errors (data sync)
   3 AM: ███████████████ 95 errors
@@ -145,7 +145,7 @@ Hourly Distribution:
 - Different device types (personal vs work)
 
 **Example**:
-```
+```text
 Weekday Distribution:
   Saturday: ████████████████ 250 errors
   Sunday: ███████████████ 230 errors
@@ -171,7 +171,7 @@ Weekday Distribution:
 - System-level issues
 
 **Example**:
-```
+```text
 Hourly Distribution:
   All hours: ███████ ~25 errors (consistent)
 ```
@@ -209,7 +209,7 @@ end
 - **0.0 - 0.3**: Weak pattern (not very predictable)
 
 **Example**:
-```
+```text
 Business hours pattern: strength = 0.85 (very strong)
 → Errors very predictable, always 9 AM - 5 PM
 
@@ -264,7 +264,7 @@ Error bursts are **rapid sequences of errors** occurring in a short time window.
 - At least 5 errors in sequence
 
 **Example**:
-```
+```text
 Normal errors:
   10:00:00 - Error 1
   10:05:00 - Error 2  (5 min gap)
@@ -414,7 +414,7 @@ bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(
 
 The UI displays a **24-hour heatmap** showing error concentration:
 
-```
+```text
 Hour  Count  Visualization
 00:00   5    ░░░░░
 01:00   3    ░░░
@@ -441,7 +441,7 @@ The error show page displays:
 - **Recommendations**: Actionable suggestions based on pattern
 
 **Example**:
-```
+```text
 ┌─────────────────────────────────────┐
 │ 🕒 Occurrence Pattern               │
 ├─────────────────────────────────────┤
@@ -463,7 +463,7 @@ The error show page displays:
 
 Bursts are displayed in a timeline table:
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │ 💥 Error Bursts (Last 7 Days)                       │
 ├─────────────────────────────────────────────────────┤
@@ -680,7 +680,7 @@ BURST_MIN_ERROR_COUNT = 3
 - Infrastructure metrics (CPU, memory)
 
 **Example**:
-```
+```text
 Business hours pattern with high errors:
 - Error rate: 45 errors/hour at 10 AM
 - Traffic: 1000 requests/hour at 10 AM
@@ -732,7 +732,7 @@ alert if error_count > baseline * 2
 
 Maintain a "pattern knowledge base":
 
-```
+```text
 Error: DataSyncError
 Pattern: Night (2-3 AM)
 Cause: Scheduled nightly data sync

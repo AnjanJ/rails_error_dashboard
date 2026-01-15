@@ -2,7 +2,7 @@
 
 Welcome to the Rails Error Dashboard documentation! This guide will help you get started, customize your setup, and make the most of the advanced features.
 
-## 📚 Documentation Structure
+## Documentation Structure
 
 ### Getting Started
 - **[Quickstart Guide](QUICKSTART.md)** - Get up and running in 5 minutes
@@ -25,6 +25,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Customization
 - **[Multi-App Support](MULTI_APP_PERFORMANCE.md)** - Track multiple applications from one dashboard
 - **[Customization Guide](CUSTOMIZATION.md)** - Customize views, severity rules, and behavior
+- **[Settings Dashboard](guides/SETTINGS.md)** - View current configuration and verify feature status
 - **[Plugin System](PLUGIN_SYSTEM.md)** - Build custom plugins and integrations
 - **[Database Options](guides/DATABASE_OPTIONS.md)** - Using a separate database
 
@@ -32,12 +33,22 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Integrate with React Native, Flutter, etc.
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
+- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams and live updates
+- **[Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md)** - Configure Solid Queue for async logging
+
+### Performance & Optimization
+- **[Database Optimization](guides/DATABASE_OPTIMIZATION.md)** - Query performance and indexing
+- **[Backtrace Limiting](guides/BACKTRACE_LIMITING.md)** - Reduce storage size
+- **[Error Sampling & Filtering](guides/ERROR_SAMPLING_AND_FILTERING.md)** - High-volume error handling
+- **[Error Trend Visualizations](guides/ERROR_TREND_VISUALIZATIONS.md)** - Analytics and charting
 
 ### Development
 - **[Changelog](../CHANGELOG.md)** - Version history and updates
 - **[Testing](development/TESTING.md)** - Running and writing tests
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common problems and solutions
+- **[Security Policy](../SECURITY.md)** - Report vulnerabilities and security best practices
 
-## 🚀 Quick Links
+## Quick Links
 
 ### For New Users
 1. [Quickstart Guide](QUICKSTART.md) - 5-minute setup
@@ -54,7 +65,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 2. [Plugin Development](PLUGIN_SYSTEM.md#creating-plugins) - Build plugins
 3. [Testing Guide](development/TESTING.md) - Test your setup
 
-## 📖 Documentation by Use Case
+## Documentation by Use Case
 
 ### "I want to get started quickly"
 → [Quickstart Guide](QUICKSTART.md)
@@ -83,22 +94,24 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### "I need to uninstall Rails Error Dashboard"
 → [Uninstall Guide](UNINSTALL.md)
 
-## 🔍 Searching the Documentation
+## Searching the Documentation
 
 - **Configuration options**: See [Configuration Guide](guides/CONFIGURATION.md)
 - **API methods**: See [API Reference](API_REFERENCE.md)
+- **Term definitions**: See [Glossary](GLOSSARY.md)
 - **Code examples**: Most guides include code examples
 - **Troubleshooting**: Each guide has a troubleshooting section
 
-## 💡 Getting Help
+## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/AnjanJ/rails_error_dashboard/discussions)
+- **Security**: [Security Policy](../SECURITY.md) - Report security vulnerabilities
 - **Stack Overflow**: Tag your questions with `rails-error-dashboard`
 
-## 📝 Documentation Versions
+## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.1.24** (Production Ready).
+This documentation is for **Rails Error Dashboard v0.1.27** (Production Ready).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 

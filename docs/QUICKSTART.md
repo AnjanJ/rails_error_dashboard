@@ -28,19 +28,19 @@ rails db:migrate
 
 The installer will guide you through **15 optional features** organized in 3 categories:
 
-**📧 Notifications (5 features)**
+**Notifications (5 features)**
 - Slack - Real-time error notifications to Slack channels
 - Email - Send error alerts via email
 - Discord - Push errors to Discord channels
 - PagerDuty - Critical error escalation for on-call teams
 - Webhooks - Send errors to custom endpoints
 
-**⚡ Performance & Scalability (3 features)**
+**Performance & Scalability (3 features)**
 - Async Logging - Non-blocking error capture via background jobs
 - Error Sampling - Reduce volume by sampling non-critical errors
 - Separate Database - Isolate error data in dedicated database
 
-**📊 Advanced Analytics (7 features)**
+**Advanced Analytics (7 features)**
 - Baseline Anomaly Alerts - Detect unusual error patterns automatically
 - Fuzzy Error Matching - Find similar errors across different hashes
 - Co-occurring Errors - Identify errors that happen together
@@ -284,7 +284,7 @@ rails routes | grep error
 ```
 
 **Should see**:
-```
+```ruby
 Rails.application.routes.draw do
   mount RailsErrorDashboard::Engine => "/error_dashboard"
 end
