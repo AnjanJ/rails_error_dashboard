@@ -67,9 +67,11 @@ Gem::Specification.new do |spec|
   spec.add_dependency "turbo-rails", "~> 2.0"
 
   # Pin concurrent-ruby for Rails 7.0 compatibility
-  # Rails 7.0 has issues with concurrent-ruby 1.3.5+ which removed logger dependency
+  # Rails 7.0 had issues with concurrent-ruby 1.3.5+ which removed logger dependency
+  # Fixed in Rails 7.0.10+ (https://github.com/rails/rails/pull/54264)
+  # Allowing up to < 1.3.7 as tests pass with Rails 7.0.10+
   # See: https://github.com/rails/rails/issues/54271
-  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.5"
+  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.7"
 
   # Development and testing dependencies
   spec.add_development_dependency "rspec-rails", "~> 7.0"

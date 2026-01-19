@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.1.28] - 2026-01-19
+
+### 🔧 Dependencies
+
+**Updated concurrent-ruby and lefthook** 📦
+
+Updated gem dependencies to their latest versions for improved compatibility and features.
+
+**Changes:**
+- Updated `concurrent-ruby` constraint from `< 1.3.5` to `< 1.3.7`
+  - Allows concurrent-ruby 1.3.5 and 1.3.6
+  - Previously blocked due to Rails 7.0 compatibility issues
+  - Now safe as Rails 7.0.10+ includes the logger fix (https://github.com/rails/rails/pull/54264)
+  - All CI tests pass across Rails 7.0-8.1
+- Updated `lefthook` from `~> 1.10` to `~> 2.0`
+  - Major version upgrade to lefthook 2.0
+  - Development dependency for git hooks management
+  - Provides improved performance and features
+
+**Thanks to @gundestrup for keeping our dependencies up to date!** 🙏
+
 ## [0.1.27] - 2025-01-12
 
 ### 🔒 Security
