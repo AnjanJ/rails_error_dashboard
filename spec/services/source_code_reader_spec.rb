@@ -150,8 +150,11 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
 
       before do
         # Create file larger than MAX_FILE_SIZE (10 MB)
+        allow(File).to receive(:size).and_call_original
         allow(File).to receive(:size).with(large_file).and_return(11 * 1024 * 1024)
+        allow(File).to receive(:exist?).and_call_original
         allow(File).to receive(:exist?).with(large_file).and_return(true)
+        allow(File).to receive(:readable?).and_call_original
         allow(File).to receive(:readable?).with(large_file).and_return(true)
       end
 
@@ -263,7 +266,8 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
 
     context "error handling" do
       it "handles file read errors gracefully" do
-        allow(File).to receive(:open).and_raise(Errno::EACCES, "Permission denied")
+        # Mock the private method to simulate file read error
+        allow(reader).to receive(:read_specific_lines).and_raise(Errno::EACCES, "Permission denied")
 
         lines = reader.read_lines
 
@@ -310,7 +314,8 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
     end
 
     it "handles exceptions gracefully" do
-      allow(File).to receive(:exist?).and_raise(StandardError, "Unexpected error")
+      # Stub only for the specific call, then restore
+      allow(reader).to receive(:resolve_absolute_path).and_raise(StandardError, "Unexpected error")
 
       expect(reader.file_exists?).to be false
     end
