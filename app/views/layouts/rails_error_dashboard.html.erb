@@ -923,6 +923,11 @@
                 <% end %>
               </li>
               <li class="nav-item">
+                <%= link_to correlation_errors_path(nav_params), class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}" do %>
+                  <i class="bi bi-diagram-3"></i> Correlation
+                <% end %>
+              </li>
+              <li class="nav-item">
                 <%= link_to settings_path(nav_params), class: "nav-link #{request.path == settings_path ? 'active' : ''}" do %>
                   <i class="bi bi-gear"></i> Settings
                 <% end %>
