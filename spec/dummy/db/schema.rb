@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_01_06_094318) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_06_094318) do
   create_table "rails_error_dashboard_applications", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.text "description"
@@ -93,10 +93,10 @@ ActiveRecord::Schema.define(version: 2026_01_06_094318) do
     t.float "similarity_score"
     t.string "backtrace_signature"
     t.integer "application_id", null: false
+    t.index [ "app_version" ], name: "index_rails_error_dashboard_error_logs_on_app_version"
     t.index [ "application_id", "occurred_at" ], name: "index_error_logs_on_app_occurred"
     t.index [ "application_id", "resolved" ], name: "index_error_logs_on_app_resolved"
     t.index [ "application_id" ], name: "index_rails_error_dashboard_error_logs_on_application_id"
-    t.index [ "app_version" ], name: "index_rails_error_dashboard_error_logs_on_app_version"
     t.index [ "backtrace_signature" ], name: "index_rails_error_dashboard_error_logs_on_backtrace_signature"
     t.index [ "controller_name", "action_name", "error_hash" ], name: "index_error_logs_on_controller_action_hash"
     t.index [ "error_hash", "resolved", "occurred_at" ], name: "index_error_logs_on_hash_resolved_occurred"

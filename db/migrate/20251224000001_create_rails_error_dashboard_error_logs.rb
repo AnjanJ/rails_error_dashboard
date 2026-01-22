@@ -2,6 +2,11 @@
 
 class CreateRailsErrorDashboardErrorLogs < ActiveRecord::Migration[7.0]
   def change
+    # Skip if squashed migration already ran (checks for column added in later migration)
+    # If application_id column exists, the squashed migration created the table
+    return if table_exists?(:rails_error_dashboard_error_logs) &&
+              column_exists?(:rails_error_dashboard_error_logs, :application_id)
+
     create_table :rails_error_dashboard_error_logs do |t|
       # Error details
       t.string :error_type, null: false
