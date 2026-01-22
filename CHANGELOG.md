@@ -7,6 +7,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.29] - 2026-01-22
+
+### 🐛 Bug Fixes
+
+**Export JSON Button Fixed** 📥
+
+Fixed multiple issues with the Export JSON button on error detail pages that prevented it from working correctly.
+
+**Problems:**
+1. `ReferenceError: downloadErrorJSON is not defined` - Function was defined after the button element
+2. `SyntaxError: Unexpected token '&'` - Double-escaping issue in JavaScript context
+3. Function couldn't be called due to incorrect placement in HTML
+
+**Solutions:**
+1. **Function Placement**: Moved `<script>` tag with `downloadErrorJSON()` function to the top of the file (before the button element)
+   - Ensures function is defined before the onclick handler tries to call it
+   - Prevents ReferenceError on button click
+2. **Escaping Fix**: Changed from `json_escape` to `raw` for JSON data in script context
+   - `json_escape` output was being HTML-escaped again in ERB, turning quotes into `&quot;` entities
+   - Using `raw` is safe here because `.to_json` already properly escapes for JSON context
+   - Prevents JavaScript syntax errors from malformed JSON
+
+**Impact:**
+- Export JSON button now works correctly on all error detail pages
+- Downloads properly formatted JSON file with error details
+- No more console errors when clicking the button
+
+**Files Changed:**
+- `app/views/rails_error_dashboard/errors/show.html.erb`
+
+---
+
+**User Filter Links Fixed & DRYed Up** 🔗
+
+Fixed broken user filter links on Correlation page and eliminated code duplication between Analytics and Correlation pages.
+
+**Problem:**
+- Correlation page's "View" button for multi-error users was passing `search=User+%2336` instead of filtering by user_id
+- This searched error messages instead of filtering by the specific user
+- Analytics page had the correct implementation with `user_id` filter
+- Both pages had nearly identical user table HTML (74 lines of duplicate code)
+
+**Solution:**
+1. **Fixed Correlation Link**: Changed from `errors_path(search: user_data[:user_email])` to `errors_path(user_id: user_data[:user_id])`
+2. **Created Shared Partial**: Extracted user table into `_user_errors_table.html.erb` with configurable columns:
+   - `show_rank`: Shows ranking numbers (Analytics)
+   - `show_error_type_count`: Shows distinct error types (Correlation)
+   - `show_percentage`: Shows percentage bar (Analytics)
+   - `show_error_types`: Shows error type badges (Correlation)
+
+**Impact:**
+- User filter links work correctly from both Analytics and Correlation pages
+- 74 lines of duplicate code eliminated
+- Single source of truth for user table rendering
+- Future fixes automatically apply to both pages
+- Consistent user filtering behavior across dashboard
+
+**Files Changed:**
+- `app/views/rails_error_dashboard/errors/correlation.html.erb`
+- `app/views/rails_error_dashboard/errors/analytics.html.erb`
+- `app/views/rails_error_dashboard/errors/_user_errors_table.html.erb` (new)
+
+---
+
+**Analytics "View Errors" Links Fixed** 👁️
+
+Fixed multiple issues with "View Errors" links from Analytics page that were showing incorrect data.
+
+**Problems:**
+1. Links were passing `search` parameter instead of `user_id`, searching error text instead of filtering by user
+2. Default filter behavior was inconsistent - sometimes showing all errors, sometimes only unresolved
+3. Users couldn't see resolved errors when investigating from Analytics
+
+**Solutions:**
+1. **User Filter Fix**: Changed from `search` to `user_id` parameter for precise user filtering
+2. **Unresolved Filter Fix**: Explicitly pass `unresolved=false` to show both resolved and unresolved errors
+3. **Consistent Behavior**: Analytics links now show complete error history for better investigation
+
+**Impact:**
+- "View Errors" links from Analytics page now show the correct filtered error list
+- Users can see full error history (both resolved and unresolved) when investigating from Analytics
+- More intuitive workflow for error investigation
+
+**Files Changed:**
+- `app/views/rails_error_dashboard/errors/analytics.html.erb`
+- `lib/rails_error_dashboard/queries/errors_list.rb`
+- `spec/queries/rails_error_dashboard/queries/errors_list_spec.rb`
+
+### ✨ Features
+
+**Correlation Link in Sidebar Navigation** 🔗
+
+Added Correlation link to the sidebar navigation for easier access to correlation analysis.
+
+**Changes:**
+- Added Correlation link between Analytics and Settings in left sidebar
+- Uses `bi-diagram-3` icon for visual consistency
+- Shows active state when on correlation page
+- Preserves application context when navigating
+
+**Impact:**
+- Easier navigation to Correlation page
+- Consistent with other primary navigation items
+- Better discoverability of correlation features
+
+**Files Changed:**
+- `app/views/layouts/rails_error_dashboard.html.erb`
+
+### 🎨 Improvements
+
+**Workflow Status Badge Contrast** 🎨
+
+Improved text contrast for workflow status badges in light theme.
+
+**Problem:**
+- Yellow/gold status badges had poor text contrast in light theme
+- Difficult to read status text in "investigating" and "monitoring" states
+
+**Solution:**
+- Changed text color from `text-dark` to `text-body` for better contrast
+- Maintains readability across both light and dark themes
+
+**Impact:**
+- Better accessibility for users in light theme
+- Status badges easier to read
+
+**Files Changed:**
+- `app/views/rails_error_dashboard/errors/show.html.erb`
+
 ### 🔧 CI/CD
 
 **Updated GitHub Actions Workflow** 🤖
