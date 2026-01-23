@@ -1227,3 +1227,56 @@ body.dark-mode .timeline-item:hover .timeline-content {
   border-color: var(--ctp-mauve);
   background: var(--ctp-surface1);
 }
+
+/* ============================================================================
+   Collapsible Sidebar
+   ============================================================================ */
+
+/* Sidebar collapse transitions */
+.sidebar {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+/* Collapsed sidebar state */
+.sidebar.sidebar-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Expanded main content when sidebar is collapsed */
+.content-expanded {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+/* Hide sidebar content when collapsed */
+.sidebar.sidebar-collapsed .position-sticky {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Smooth toggle button animation */
+#sidebarToggle {
+  transition: transform 0.2s ease-in-out;
+}
+
+#sidebarToggle i {
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Responsive: Don't apply collapse on mobile */
+@media (max-width: 767.98px) {
+  .sidebar.sidebar-collapsed {
+    width: auto !important;
+  }
+}
+
+/* Add visual feedback on hover */
+#sidebarToggle:hover i {
+  transform: scale(1.1);
+}
+

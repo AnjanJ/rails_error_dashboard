@@ -40,8 +40,13 @@
     <nav class="navbar navbar-dark">
       <div class="container-fluid">
         <div class="d-flex align-items-center">
+          <!-- Mobile menu toggle -->
           <button class="btn btn-link text-white d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
             <i class="bi bi-list fs-4"></i>
+          </button>
+          <!-- Desktop sidebar toggle -->
+          <button class="btn btn-link text-white d-none d-md-block me-2" type="button" id="sidebarToggle" title="Toggle sidebar">
+            <i class="bi bi-layout-sidebar-inset fs-5"></i>
           </button>
           <%
             # Check if main app has a root route defined
@@ -119,7 +124,7 @@
     <div class="container-fluid">
       <div class="row">
         <!-- Sidebar -->
-        <nav class="col-md-2 d-none d-md-block sidebar">
+        <nav class="col-md-2 d-none d-md-block sidebar" id="sidebar">
           <div class="position-sticky pt-3">
             <%
               # Preserve application_id across navigation
@@ -205,7 +210,7 @@
         </nav>
 
         <!-- Main content -->
-        <main class="col-md-10 ms-sm-auto px-md-4">
+        <main class="col-md-10 ms-sm-auto px-md-4" id="mainContent">
           <%= yield %>
         </main>
       </div>
@@ -234,6 +239,10 @@
               <div class="list-group-item d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-graph-up text-primary"></i> Go to analytics</span>
                 <kbd class="bg-secondary text-white px-2 py-1 rounded">A</kbd>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-layout-sidebar text-primary"></i> Toggle sidebar</span>
+                <kbd class="bg-secondary text-white px-2 py-1 rounded">S</kbd>
               </div>
               <div class="list-group-item d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-question-circle text-primary"></i> Show this help</span>
@@ -269,6 +278,7 @@
     <script src="/rails_error_dashboard/js/syntax-highlighting.js"></script>
     <script src="/rails_error_dashboard/js/theme-toggle.js"></script>
     <script src="/rails_error_dashboard/js/utilities.js"></script>
+    <script src="/rails_error_dashboard/js/sidebar-toggle.js"></script>
     
     <!-- Flash Messages -->
     <script>
