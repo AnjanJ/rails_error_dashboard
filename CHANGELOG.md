@@ -7,7 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.30] - 2026-01-23
+
+### ✨ Features
+
+**Enhanced Overview Dashboard with 6 Metrics & Correlation Insights** 📊
+
+The overview page now provides comprehensive insights with additional metrics and correlation analysis.
+
+**What's New:**
+- **6 Key Metrics** (was 4):
+  - Error Rate
+  - Affected Users
+  - **NEW: Unresolved Errors** - Quick view of pending issues
+  - Error Trend
+  - **NEW: Resolution Rate** - Percentage with color-coded status (green ≥80%, yellow 50-79%, red <50%)
+  - Average Resolution Time
+- **Top 6 Errors by Impact** (was Top 5)
+- **Correlation Insights Section**:
+  - Problematic Releases (top 3 versions/commits with high error counts)
+  - Time-Correlated Errors (errors occurring together)
+  - Users with Multiple Errors (users experiencing multiple error types)
+  - Dynamic layout: columns adjust based on available data (1=full width, 2=half, 3=third)
+
+**Commit:** `537622d`
+
+---
+
+**Better Default Configuration Values** ⚙️
+
+Improved default settings to prevent accidental data loss and provide better debugging context.
+
+**What's Changed:**
+- **Data Retention**: Default changed from 90 days to `nil` (keep forever)
+  - No automatic deletion - users explicitly opt-in via rake task
+  - Manual cleanup: `rails error_dashboard:cleanup_resolved DAYS=90`
+  - Settings UI shows green "♾️ Keep Forever" badge with helpful instructions
+- **Backtrace Limit**: Increased from 50 to 100 lines
+  - Matches industry standard (Rollbar, Airbrake: 100 lines; Bugsnag: 200 lines)
+  - Better debugging context while still reducing storage by ~90%
+
+**Commit:** `b504b18`
+
+---
+
 ### 🐛 Bug Fixes
+
+**Improved Color Contrast in Settings Page** 🎨
+
+Fixed readability issues with yellow backgrounds in both light and dark themes.
+
+**What's Fixed:**
+- Performance Settings header: yellow → dark gray (better contrast)
+- Advanced Configuration header: yellow → gray (better contrast)
+- Data Retention warning text: yellow → red (readable in light theme)
+- Warning badge: added dark text for better readability
+
+**Before:**
+- Yellow text on white (light theme) - poor contrast
+- White text on yellow (dark theme) - unreadable
+
+**After:**
+- Readable in both light and dark themes
+- WCAG compliant color contrast ratios
+
+**Commit:** `b64aa81`
+
+---
+
+**Fixed Empty Chart.js Resolution Time Display** 📈
+
+Fixed Chart.js v4 compatibility issue causing empty "Average Resolution Time" chart on Platform Health page.
+
+**What's Fixed:**
+- Changed deprecated `type: 'horizontalBar'` to `type: 'bar'` with `indexAxis: 'y'`
+- Chart.js v4 removed `horizontalBar` type in favor of indexAxis option
+- Platform Health page now correctly displays resolution time charts
+
+**Commit:** `537622d` (included in overview page enhancement)
+
+---
+
+**CRITICAL: Multi-Database Support Fixed**
 
 **CRITICAL: Multi-Database Support Fixed**
 
