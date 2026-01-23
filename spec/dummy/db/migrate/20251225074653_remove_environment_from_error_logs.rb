@@ -1,4 +1,4 @@
-class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[8.1]
+class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[7.0]
   def up
     # Skip if squashed migration already ran
     return if connection.table_exists?(:rails_error_dashboard_schema_markers)
