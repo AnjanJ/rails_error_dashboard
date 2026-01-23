@@ -11,7 +11,8 @@ Gem::Specification.new do |spec|
                      "for solo founders, indie hackers, and small teams. Professional error tracking with " \
                      "beautiful UI, multi-channel notifications (Slack, Email, Discord, PagerDuty), " \
                      "platform detection (iOS/Android/Web/API), and analytics. 5-minute setup, works " \
-                     "out-of-the-box. Rails 7.0-8.1 compatible. ⚠️ BETA: API may change before v1.0.0."
+                     "out-of-the-box. Rails 7.0-8.1 compatible. ⚠️ BETA: API may change before v1.0.0. " \
+                     "🎮 Live demo: https://rails-error-dashboard.anjan.dev (gandalf/youshallnotpass)"
   spec.license     = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
