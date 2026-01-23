@@ -33,7 +33,7 @@
     },
     "Performance Settings" => {
       icon: "bi-lightning-charge",
-      color: "warning",
+      color: "dark",
       settings: {
         async_logging: { label: "Async Logging", description: "Background job processing", type: :boolean, extra: :async_adapter },
         async_adapter: { label: "Async Adapter", description: "Job queue adapter", type: :symbol, show_if: :async_logging },
@@ -98,7 +98,7 @@
     },
     "Advanced Configuration" => {
       icon: "bi-sliders",
-      color: "warning",
+      color: "secondary",
       settings: {
         custom_severity_rules: { label: "Custom Severity Rules", description: "Error type → severity mapping", type: :hash },
         ignored_exceptions: { label: "Ignored Exceptions", description: "Exceptions to ignore", type: :array }
