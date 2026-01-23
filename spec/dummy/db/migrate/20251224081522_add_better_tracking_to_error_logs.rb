@@ -1,5 +1,8 @@
 class AddBetterTrackingToErrorLogs < ActiveRecord::Migration[8.1]
   def change
+    # Skip if squashed migration already ran
+    return if connection.table_exists?(:rails_error_dashboard_schema_markers)
+
     add_column :rails_error_dashboard_error_logs, :error_hash, :string
     add_column :rails_error_dashboard_error_logs, :first_seen_at, :datetime
     add_column :rails_error_dashboard_error_logs, :last_seen_at, :datetime

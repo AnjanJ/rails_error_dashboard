@@ -2,6 +2,9 @@
 
 class AddOptimizedIndexesToErrorLogs < ActiveRecord::Migration[8.1]
   def change
+    # Skip if squashed migration already ran
+    return if connection.table_exists?(:rails_error_dashboard_schema_markers)
+
     # Composite indexes for common query patterns
     # These improve performance when filtering and sorting together
 

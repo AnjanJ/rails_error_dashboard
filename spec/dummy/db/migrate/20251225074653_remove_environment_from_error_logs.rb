@@ -1,5 +1,8 @@
 class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[8.1]
   def up
+    # Skip if squashed migration already ran
+    return if connection.table_exists?(:rails_error_dashboard_schema_markers)
+
     # Remove composite index first
     remove_index :rails_error_dashboard_error_logs,
                  name: 'index_error_logs_on_environment_and_occurred_at',
