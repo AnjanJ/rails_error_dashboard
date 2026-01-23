@@ -1,5 +1,5 @@
 module RailsErrorDashboard
-  class Application < ActiveRecord::Base
+  class Application < ErrorLogsRecord
     self.table_name = "rails_error_dashboard_applications"
 
     # Associations
