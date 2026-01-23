@@ -9,7 +9,7 @@ RSpec.describe RailsErrorDashboard::Configuration do
     describe "existing configuration defaults" do
       it { expect(config.dashboard_username).to eq("gandalf") }
       it { expect(config.dashboard_password).to eq("youshallnotpass") }
-      it { expect(config.user_model).to eq("User") }
+      it { expect(config.user_model).to be_nil } # Auto-detected if not set
       it { expect(config.retention_days).to eq(90) }
       it { expect(config.enable_middleware).to be true }
       it { expect(config.enable_error_subscriber).to be true }
@@ -221,6 +221,109 @@ RSpec.describe RailsErrorDashboard::Configuration do
 
     it "provides a reader" do
       expect(config).to respond_to(:notification_callbacks)
+    end
+  end
+
+  describe "#effective_user_model" do
+    context "when user_model is explicitly configured" do
+      before do
+        config.user_model = "Account"
+      end
+
+      it "returns the configured value" do
+        expect(config.effective_user_model).to eq("Account")
+      end
+    end
+
+    context "when user_model is not configured" do
+      before do
+        config.user_model = nil
+      end
+
+      it "delegates to UserModelDetector" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_user_model).and_return("User")
+
+        expect(config.effective_user_model).to eq("User")
+      end
+
+      it "returns nil if no model detected" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_user_model).and_return(nil)
+
+        expect(config.effective_user_model).to be_nil
+      end
+    end
+  end
+
+  describe "#effective_total_users" do
+    context "when total_users_for_impact is explicitly configured" do
+      before do
+        config.total_users_for_impact = 5000
+      end
+
+      it "returns the configured value" do
+        expect(config.effective_total_users).to eq(5000)
+      end
+    end
+
+    context "when total_users_for_impact is not configured" do
+      before do
+        config.total_users_for_impact = nil
+      end
+
+      it "delegates to UserModelDetector" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(1000)
+
+        expect(config.effective_total_users).to eq(1000)
+      end
+
+      it "caches the result for 5 minutes" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(1000)
+
+        # First call
+        first_result = config.effective_total_users
+        expect(first_result).to eq(1000)
+
+        # Second call should use cache (detector not called again)
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(2000)
+        second_result = config.effective_total_users
+        expect(second_result).to eq(1000) # Still cached value
+      end
+
+      it "refreshes cache after 5 minutes" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(1000)
+
+        # First call
+        first_result = config.effective_total_users
+        expect(first_result).to eq(1000)
+
+        # Simulate 6 minutes passing
+        travel 6.minutes do
+          allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(2000)
+          refreshed_result = config.effective_total_users
+          expect(refreshed_result).to eq(2000) # Fresh value after cache expiry
+        end
+      end
+
+      it "returns nil if no users detected" do
+        allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(nil)
+
+        expect(config.effective_total_users).to be_nil
+      end
+    end
+  end
+
+  describe "#clear_total_users_cache!" do
+    before do
+      config.total_users_for_impact = nil
+      allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(1000)
+      config.effective_total_users # Populate cache
+    end
+
+    it "clears the cached total users value" do
+      config.clear_total_users_cache!
+
+      allow(RailsErrorDashboard::Helpers::UserModelDetector).to receive(:detect_total_users).and_return(2000)
+      expect(config.effective_total_users).to eq(2000)
     end
   end
 end

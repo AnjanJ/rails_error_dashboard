@@ -115,6 +115,136 @@
 <%
     end
 
+  when :application_name
+    # Show both configured and auto-detected application name
+    configured_value = value
+    auto_detected = defined?(Rails) ? Rails.application.class.module_parent_name : nil
+    effective_value = configured_value.presence || auto_detected
+    is_auto_detected = configured_value.blank? && auto_detected.present?
+
+    if effective_value.present?
+%>
+    <div>
+      <code class="fs-6"><%= effective_value %></code>
+      <% if is_auto_detected %>
+        <small class="text-success d-block">
+          <i class="bi bi-magic"></i> Auto-detected
+        </small>
+      <% else %>
+        <small class="text-muted d-block">(Configured)</small>
+      <% end %>
+    </div>
+<%
+    else
+%>
+    <div>
+      <span class="badge bg-secondary fs-6">Not set</span>
+      <small class="text-muted d-block">Rails app name unavailable</small>
+    </div>
+<%
+    end
+
+  when :database_name
+    # Show the active database connection name
+    begin
+      if RailsErrorDashboard.configuration.use_separate_database
+        # Using separate database
+        db_config_name = RailsErrorDashboard.configuration.database || 'error_dashboard'
+        db_config = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: db_config_name.to_s)
+        if db_config
+          db_name = db_config.database
+          status_badge = 'bg-success'
+          status_text = "Separate DB: #{db_config_name}"
+        else
+          db_name = db_config_name
+          status_badge = 'bg-warning'
+          status_text = "Configured but not found"
+        end
+      else
+        # Using primary database
+        db_config = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
+        if db_config
+          db_name = db_config.database
+          status_badge = 'bg-info'
+          status_text = "Shared DB (primary)"
+        else
+          # Fallback to current connection
+          db_name = RailsErrorDashboard::ErrorLog.connection.current_database rescue 'Unknown'
+          status_badge = 'bg-info'
+          status_text = "Shared DB"
+        end
+      end
+%>
+    <div>
+      <span class="badge <%= status_badge %> fs-6"><%= File.basename(db_name.to_s) %></span>
+      <small class="text-muted d-block"><%= status_text %></small>
+    </div>
+<%
+    rescue => e
+%>
+    <div>
+      <span class="badge bg-secondary fs-6">Unknown</span>
+      <small class="text-muted d-block">Unable to detect</small>
+    </div>
+<%
+    end
+
+  when :user_model
+    # Show both configured and auto-detected values
+    configured_value = value
+    effective_value = RailsErrorDashboard.configuration.effective_user_model
+    is_auto_detected = configured_value.blank? && effective_value.present?
+
+    if effective_value.present?
+%>
+    <div>
+      <code class="fs-6"><%= effective_value %></code>
+      <% if is_auto_detected %>
+        <small class="text-success d-block">
+          <i class="bi bi-magic"></i> Auto-detected
+        </small>
+      <% else %>
+        <small class="text-muted d-block">(Configured)</small>
+      <% end %>
+    </div>
+<%
+    else
+%>
+    <div>
+      <span class="badge bg-secondary fs-6">Not found</span>
+      <small class="text-muted d-block">No User model detected</small>
+    </div>
+<%
+    end
+
+  when :total_users
+    # Show both configured and auto-detected values
+    configured_value = value
+    effective_value = RailsErrorDashboard.configuration.effective_total_users
+    is_auto_detected = configured_value.blank? && effective_value.present?
+
+    if effective_value.present?
+%>
+    <div>
+      <span class="badge <%= is_auto_detected ? 'bg-success' : 'bg-info' %> fs-6"><%= number_with_delimiter(effective_value) %> users</span>
+      <% if is_auto_detected %>
+        <small class="text-success d-block">
+          <i class="bi bi-magic"></i> Auto-detected
+        </small>
+      <% else %>
+        <small class="text-muted d-block">(Configured)</small>
+      <% end %>
+    </div>
+<%
+    else
+%>
+    <div>
+      <span class="badge bg-secondary fs-6">Not available</span>
+      <small class="text-muted d-block">Unable to query count</small>
+    </div>
+<%
+    end
+
   else
     # Default rendering
     if value.present?

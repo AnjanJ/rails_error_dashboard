@@ -108,7 +108,7 @@ module RailsErrorDashboard
       @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
       @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
 
-      @user_model = "User"
+      @user_model = nil  # Auto-detect if not set
 
       # Multi-app support defaults
       @application_name = ENV["APPLICATION_NAME"]  # Auto-detected if not set
@@ -296,6 +296,44 @@ module RailsErrorDashboard
       raise ConfigurationError, errors if errors.any?
 
       true
+    end
+
+    # Get the effective user model (auto-detected if not configured)
+    #
+    # @return [String, nil] User model class name
+    def effective_user_model
+      return @user_model if @user_model.present?
+
+      RailsErrorDashboard::Helpers::UserModelDetector.detect_user_model
+    end
+
+    # Get the effective total users count (auto-detected if not configured)
+    # Caches the result for 5 minutes to avoid repeated queries
+    #
+    # @return [Integer, nil] Total users count
+    def effective_total_users
+      return @total_users_for_impact if @total_users_for_impact.present?
+
+      # Cache auto-detected value for 5 minutes
+      @total_users_cache ||= {}
+      cache_key = :auto_detected_count
+      cached_at = @total_users_cache[:cached_at]
+
+      if cached_at && (Time.current - cached_at) < 300 # 5 minutes
+        return @total_users_cache[cache_key]
+      end
+
+      count = RailsErrorDashboard::Helpers::UserModelDetector.detect_total_users
+
+      @total_users_cache[cache_key] = count
+      @total_users_cache[:cached_at] = Time.current
+
+      count
+    end
+
+    # Clear the total users cache
+    def clear_total_users_cache!
+      @total_users_cache = {}
     end
   end
 end

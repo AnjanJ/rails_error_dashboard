@@ -40,6 +40,53 @@ If you experienced issues with multi-database setup in v0.1.23-v0.1.28, please u
 
 ### ✨ Features
 
+**Auto-Detection of User Model, Total Users, and Application Settings** 🤖
+
+The dashboard now automatically detects your User model, total users count, application name, and database configuration without manual setup.
+
+**What's New:**
+- **Application Name Auto-Detection**: Automatically detects from `Rails.application.class.module_parent_name`
+  - Shows with green "Auto-detected" badge when not manually configured
+  - Falls back to environment variable or manual configuration
+- **Database Connection Display**: Always shows the active database being used
+  - Single DB: Shows "Shared DB (primary)" with database filename
+  - Separate DB: Shows "Separate DB: [name]" with separate database filename
+  - Color-coded badges (blue for shared, green for separate)
+- **User Model Auto-Detection**: Automatically detects if `User` model exists
+  - Falls back to checking `Account`, `Member`, or `Person` models
+  - Works with both single database and separate database setups
+  - Only requires manual configuration for non-standard model names
+- **Total Users Auto-Detection**: Automatically queries `User.count` for impact calculations
+  - Caches results for 5 minutes to avoid performance impact
+  - Handles database connection properly (always queries main app DB)
+  - Gracefully handles timeouts and errors
+- **Settings Page Enhancements**: Shows whether values are configured or auto-detected
+  - Green "Auto-detected" badge with magic icon for detected values
+  - Clear indication of manual configuration vs auto-detection
+  - Shows "Not available" when detection fails
+
+**Configuration Changes:**
+- `config.user_model` now defaults to `nil` (auto-detect) instead of `"User"`
+- `config.total_users_for_impact` remains optional and auto-detects if not set
+- Existing manual configurations continue to work without changes
+
+**New Files:**
+- `lib/rails_error_dashboard/helpers/user_model_detector.rb` - Auto-detection logic
+- `spec/helpers/user_model_detector_spec.rb` - Comprehensive test coverage
+
+**Modified Files:**
+- `lib/rails_error_dashboard/configuration.rb` - Added `effective_user_model` and `effective_total_users` methods
+- `app/views/rails_error_dashboard/errors/settings.html.erb` - Updated User Integration section
+- `app/views/rails_error_dashboard/errors/settings/_value_badge.html.erb` - New rendering for auto-detected values
+
+**Benefits:**
+- Zero configuration required for 90% of Rails apps
+- Intelligent fallback for non-standard setups
+- Performance optimized with caching
+- Clear UI feedback for debugging
+
+---
+
 **Source Code Integration** 🔍
 
 View actual source code directly in error backtraces with git blame information and repository links.

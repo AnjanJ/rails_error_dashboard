@@ -18,8 +18,8 @@
       icon: "bi-collection",
       color: "info",
       settings: {
-        application_name: { label: "Application Name", description: "Name of this application", type: :string },
-        database: { label: "Database Connection", description: "Database connection name for shared error DB", type: :string },
+        application_name: { label: "Application Name", description: "Name of this application (auto-detected if not set)", type: :application_name },
+        database: { label: "Database Connection", description: "Active database for error logs", type: :database_name },
         use_separate_database: { label: "Separate Database", description: "Use dedicated DB for error logs", type: :boolean }
       }
     },
@@ -27,8 +27,8 @@
       icon: "bi-people",
       color: "secondary",
       settings: {
-        user_model: { label: "User Model", description: "Model name for user associations", type: :string },
-        total_users_for_impact: { label: "Total Users", description: "For impact % calculation", type: :integer }
+        user_model: { label: "User Model", description: "Model name for user associations (auto-detected if not set)", type: :user_model },
+        total_users_for_impact: { label: "Total Users", description: "For impact % calculation (auto-detected if not set)", type: :total_users }
       }
     },
     "Performance Settings" => {
