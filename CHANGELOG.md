@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+
+**CRITICAL: Multi-Database Support Fixed**
+
+Fixed a critical bug that broke multi-database support completely. The `Application` model was incorrectly inheriting from `ActiveRecord::Base` instead of `ErrorLogsRecord`, causing it to query the wrong database.
+
+**Impact:**
+- Affected ALL users attempting to use separate databases (v0.1.23-v0.1.28)
+- Affected multi-app shared database setups
+- Caused "Could not find table 'rails_error_dashboard_applications'" errors
+
+**Fix:**
+- `Application` model now correctly inherits from `ErrorLogsRecord`
+- Multi-database routing now works as intended
+- Database isolation properly enforced
+
+**Testing:**
+- Verified with fresh install using separate database
+- Verified with shared database across multiple apps
+- All CRUD operations confirmed working
+- Comprehensive test suite created
+
+**Files Changed:**
+- `app/models/rails_error_dashboard/application.rb` - Changed base class inheritance
+
+**Commit:** `d83f8aa`
+
+If you experienced issues with multi-database setup in v0.1.23-v0.1.28, please upgrade to this version.
+
+---
+
 ### ✨ Features
 
 **Source Code Integration** 🔍
