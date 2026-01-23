@@ -26,7 +26,7 @@ rails db:migrate
 
 ### Interactive Feature Selection
 
-The installer will guide you through **15 optional features** organized in 3 categories:
+The installer will guide you through **17 optional features** organized in 4 categories:
 
 **Notifications (5 features)**
 - Slack - Real-time error notifications to Slack channels
@@ -49,6 +49,10 @@ The installer will guide you through **15 optional features** organized in 3 cat
 - Platform Comparison - Compare iOS vs Android vs Web health
 - Occurrence Patterns - Detect cyclical patterns and error bursts
 
+**Developer Tools (2 features)** 🆕
+- Source Code Integration - View actual source code in error backtraces with repository links
+- Git Blame - See who last modified the code that caused the error
+
 **All features are opt-in** - you can say "no" to everything and just use the core dashboard, or enable specific features you need.
 
 ### Example Installation Flow
@@ -69,11 +73,11 @@ Choose the features you want to enable:
 📧  NOTIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/15] Slack Notifications
+[1/17] Slack Notifications
     Send real-time error notifications to Slack channels
     Enable? (y/N): y
 
-[2/15] Email Notifications
+[2/17] Email Notifications
     Send error alerts via email to your team
     Enable? (y/N): n
 

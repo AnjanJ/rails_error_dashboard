@@ -13,6 +13,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 - [Notification Issues](#notification-issues)
 - [Performance Problems](#performance-problems)
 - [Advanced Features Not Working](#advanced-features-not-working)
+- [Source Code Integration Issues](#source-code-integration-issues)
 - [Database Issues](#database-issues)
 - [Multi-App Setup Problems](#multi-app-setup-problems)
 - [Debugging Techniques](#debugging-techniques)
@@ -717,6 +718,258 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    - Ensure errors are tagged with platform
    - Mobile apps should send platform parameter
    - Browser gem detects web platforms
+
+---
+
+## Source Code Integration Issues
+
+### Source Code Not Showing
+
+**Problem**: "View Source" button not appearing on error details.
+
+**Quick Check**:
+```ruby
+# In Rails console
+RailsErrorDashboard.configuration.enable_source_code_integration
+# Should return: true
+```
+
+**Common Causes**:
+1. Feature not enabled in configuration
+2. File path is outside Rails.root
+3. Frame category is not `:app` (gem frames don't show source)
+4. File doesn't exist or isn't readable
+
+**Solutions**:
+1. Enable in initializer:
+   ```ruby
+   config.enable_source_code_integration = true
+   ```
+
+2. Restart Rails server (required for initializer changes)
+
+3. Verify file exists and is readable:
+   ```bash
+   ls -la app/controllers/users_controller.rb
+   ```
+
+4. Check Rails.root is correct:
+   ```ruby
+   Rails.root
+   # => /Users/you/myapp
+   ```
+
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#troubleshooting) for 10+ specific scenarios and solutions.
+
+---
+
+### Git Blame Not Working
+
+**Problem**: Source code shows but no git blame information.
+
+**Quick Check**:
+```bash
+git --version
+# Should output: git version 2.x.x
+```
+
+**Common Causes**:
+1. Git not installed or not in PATH
+2. Not a git repository
+3. File not committed to git
+4. Git blame not enabled in config
+
+**Solutions**:
+1. Enable git blame:
+   ```ruby
+   config.enable_git_blame = true
+   ```
+
+2. Verify git repository:
+   ```bash
+   git rev-parse --git-dir
+   # Should output: .git
+   ```
+
+3. Check file is committed:
+   ```bash
+   git log -- app/controllers/users_controller.rb
+   # Should show commit history
+   ```
+
+4. Test git blame manually:
+   ```bash
+   git blame -L 42,42 --porcelain app/controllers/users_controller.rb
+   ```
+
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#git-blame-not-working)
+
+---
+
+### Repository Links Not Generating
+
+**Problem**: No "View on GitHub" button appearing.
+
+**Quick Check**:
+```ruby
+RailsErrorDashboard.configuration.git_repository_url
+# Should return your repository URL
+```
+
+**Common Causes**:
+1. Repository URL not configured
+2. URL format incorrect (has .git suffix)
+3. Git branch strategy misconfigured
+
+**Solutions**:
+1. Set repository URL:
+   ```ruby
+   config.git_repository_url = "https://github.com/myorg/myapp"
+   # Remove .git suffix if present!
+   ```
+
+2. Choose branch strategy:
+   ```ruby
+   config.git_branch_strategy = :current_branch  # or :commit_sha, :main
+   ```
+
+3. Verify URL format (no .git):
+   ```ruby
+   # ✅ Correct:
+   "https://github.com/user/repo"
+   "https://gitlab.com/user/repo"
+
+   # ❌ Wrong:
+   "https://github.com/user/repo.git"  # Remove .git!
+   "git@github.com:user/repo.git"      # Use HTTPS format
+   ```
+
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#repository-links-not-generating)
+
+---
+
+### Permission Denied Errors
+
+**Problem**: Getting "Permission denied" when reading source files.
+
+**Check Permissions**:
+```bash
+ls -la app/controllers/users_controller.rb
+# Should show: -rw-r--r-- or similar readable permissions
+```
+
+**Solutions**:
+1. Fix file permissions:
+   ```bash
+   chmod 644 app/controllers/**/*.rb
+   ```
+
+2. Check Rails server user:
+   ```bash
+   ps aux | grep rails
+   # Note which user is running Rails
+   ```
+
+3. Ensure that user can read files:
+   ```bash
+   sudo -u rails-user cat app/controllers/users_controller.rb
+   ```
+
+4. Docker users - check volume permissions:
+   ```dockerfile
+   RUN chown -R app:app /app
+   USER app
+   ```
+
+---
+
+### Dark Mode Styling Issues
+
+**Problem**: Source code viewer not styled correctly in dark mode.
+
+**Solutions**:
+1. Ensure you're on v0.1.30+:
+   ```bash
+   bundle update rails_error_dashboard
+   ```
+
+2. Clear browser cache:
+   - Chrome/Firefox: Cmd+Shift+R (Mac) or Ctrl+F5 (Windows)
+
+3. Verify dark mode CSS loaded:
+   ```javascript
+   // In browser console
+   document.body.classList.contains('dark-mode')
+   // Should return: true when dark mode is active
+   ```
+
+---
+
+### Performance Issues with Source Code
+
+**Problem**: Error details page loads slowly with source code integration.
+
+**Quick Fixes**:
+1. Reduce context lines:
+   ```ruby
+   config.source_code_context_lines = 3  # Default: 5
+   ```
+
+2. Increase cache TTL:
+   ```ruby
+   config.source_code_cache_ttl = 7200  # 2 hours
+   ```
+
+3. Disable git blame in production:
+   ```ruby
+   if Rails.env.production?
+     config.enable_git_blame = false  # Faster without git commands
+   end
+   ```
+
+4. Use Redis cache for better performance:
+   ```ruby
+   # config/application.rb
+   config.cache_store = :redis_cache_store, { url: ENV["REDIS_URL"] }
+   ```
+
+---
+
+### Caching Issues (Stale Code)
+
+**Problem**: Seeing old/stale source code after making changes.
+
+**Quick Fix**:
+```ruby
+# In Rails console
+Rails.cache.clear
+# Or specifically:
+Rails.cache.delete_matched("source_code/*")
+```
+
+**Development Setup**:
+```ruby
+# Shorter cache in development
+if Rails.env.development?
+  config.source_code_cache_ttl = 60  # 1 minute instead of 1 hour
+end
+```
+
+---
+
+### Complete Troubleshooting Guide
+
+For comprehensive troubleshooting with 10+ scenarios, solutions, and examples, see:
+**[Source Code Integration Documentation - Troubleshooting Section](SOURCE_CODE_INTEGRATION.md#troubleshooting)**
+
+Includes solutions for:
+- File not found errors
+- Symlink issues
+- Docker volume problems
+- SELinux/AppArmor restrictions
+- Git blame showing wrong author
+- Configuration mistakes
+- And more...
 
 ---
 

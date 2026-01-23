@@ -143,9 +143,11 @@ Complete reference of all 43+ configuration options with defaults, types, and de
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_source_code_integration` | Boolean | `false` | View source code directly in error details |
+| `source_code_context_lines` | Integer | `5` | Lines of context before/after error line |
 | `enable_git_blame` | Boolean | `false` | Show git blame info (author, commit, timestamp) |
-| `repository_url` | String | Auto-detected | Git repository URL for links (ENV: `REPOSITORY_URL`) |
-| `repository_branch` | String | `"main"` | Default branch for repository links (ENV: `REPOSITORY_BRANCH`) |
+| `source_code_cache_ttl` | Integer | `3600` | Cache TTL in seconds (1 hour default) |
+| `only_show_app_code_source` | Boolean | `true` | Hide gem/vendor code (security) |
+| `git_branch_strategy` | Symbol | `:commit_sha` | Branch strategy (`:commit_sha`, `:current_branch`, `:main`) |
 
 ### Internal Logging & Debugging
 
@@ -194,10 +196,6 @@ GIT_REPOSITORY_URL=https://github.com/user/repo
 # Baseline Alerts
 BASELINE_ALERT_THRESHOLD=2.0  # Standard deviations
 BASELINE_ALERT_COOLDOWN=120   # Minutes
-
-# Source Code Integration (NEW!)
-REPOSITORY_URL=https://github.com/user/repo
-REPOSITORY_BRANCH=main
 ```
 
 ---
@@ -243,11 +241,11 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 - ✅ Real-time updates via Turbo Streams
 - ✅ Analytics and trend charts
 
-**Optional Features (16 total):**
+**Optional Features (17 total):**
 - 📧 **5 Notification Channels** (Slack, Email, Discord, PagerDuty, Webhooks)
 - ⚡ **3 Performance Features** (Async Logging, Error Sampling, Separate Database)
 - 📊 **7 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
-- 🔍 **1 Developer Tool** (Source Code Integration)
+- 🔍 **2 Developer Tools** (Source Code Integration, Git Blame)
 
 All features can be enabled during installation via the interactive installer, or toggled on/off at any time in the initializer.
 
@@ -504,17 +502,27 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-### Repository Configuration
-
-Most settings are auto-detected from your git repository, but you can override them:
+### Advanced Configuration
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Auto-detected from git remote (optional override)
-  config.repository_url = ENV["REPOSITORY_URL"]
+  # Enable source code viewer
+  config.enable_source_code_integration = true
 
-  # Default branch for repository links (default: "main")
-  config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"
+  # Enable git blame
+  config.enable_git_blame = true
+
+  # Context lines (±N lines around error)
+  config.source_code_context_lines = 5  # Default: 5
+
+  # Cache TTL in seconds
+  config.source_code_cache_ttl = 3600  # Default: 1 hour
+
+  # Security: only show app code (hide gems/vendor)
+  config.only_show_app_code_source = true  # Default: true
+
+  # Branch strategy for repository links
+  config.git_branch_strategy = :commit_sha  # Options: :commit_sha, :current_branch, :main
 end
 ```
 
@@ -1142,12 +1150,20 @@ RailsErrorDashboard.configure do |config|
   # Enable source code viewer
   config.enable_source_code_integration = true
 
+  # Context lines around error (default: 5)
+  config.source_code_context_lines = 5
+
   # Enable git blame integration
   config.enable_git_blame = true
 
-  # Repository settings (optional, auto-detected from git)
-  config.repository_url = ENV["REPOSITORY_URL"]
-  config.repository_branch = ENV.fetch("REPOSITORY_BRANCH", "main")
+  # Cache TTL in seconds (default: 3600 = 1 hour)
+  config.source_code_cache_ttl = 3600
+
+  # Security: only show app code (default: true)
+  config.only_show_app_code_source = true
+
+  # Branch strategy for repository links (default: :commit_sha)
+  config.git_branch_strategy = :commit_sha
 
   # ============================================================================
   # ADDITIONAL CONFIGURATION

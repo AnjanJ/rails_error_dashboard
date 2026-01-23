@@ -14,7 +14,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth, data retention
 
 ### Optional Features (Opt-in)
-**16 powerful features** you can enable during installation or anytime in the initializer:
+**17 powerful features** you can enable during installation or anytime in the initializer:
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -25,8 +25,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (1 feature)**
-- Source Code Integration (NEW!)
+**🔍 Developer Tools (2 features)** 🆕
+- Source Code Integration, Git Blame
 
 All features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](guides/CONFIGURATION.md) for setup.
 

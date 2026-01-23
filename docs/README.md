@@ -16,6 +16,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Notifications](guides/NOTIFICATIONS.md)** - Setting up alerts (Slack, Email, Discord, PagerDuty)
 
 ### Advanced Features
+- **[Source Code Integration](SOURCE_CODE_INTEGRATION.md)** 🆕 - View source code, git blame, and repository links in errors
 - **[Advanced Error Grouping](features/ADVANCED_ERROR_GROUPING.md)** - Fuzzy matching, co-occurring errors, cascades
 - **[Baseline Monitoring](features/BASELINE_MONITORING.md)** - Statistical anomaly detection and alerts
 - **[Platform Comparison](features/PLATFORM_COMPARISON.md)** - iOS vs Android vs API health analysis
@@ -56,9 +57,10 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 3. [Notifications](guides/NOTIFICATIONS.md) - Set up Slack alerts
 
 ### For Advanced Users
-1. [Baseline Monitoring](features/BASELINE_MONITORING.md) - Proactive alerting
-2. [Platform Comparison](features/PLATFORM_COMPARISON.md) - Cross-platform analysis
-3. [Plugin System](PLUGIN_SYSTEM.md) - Custom integrations
+1. [Source Code Integration](SOURCE_CODE_INTEGRATION.md) - View code, blame, and repo links 🆕
+2. [Baseline Monitoring](features/BASELINE_MONITORING.md) - Proactive alerting
+3. [Platform Comparison](features/PLATFORM_COMPARISON.md) - Cross-platform analysis
+4. [Plugin System](PLUGIN_SYSTEM.md) - Custom integrations
 
 ### For Developers
 1. [API Reference](API_REFERENCE.md) - Complete API docs
@@ -88,6 +90,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### "I want proactive alerting for anomalies"
 → [Baseline Monitoring](features/BASELINE_MONITORING.md)
 
+### "I want to see source code directly in error details" 🆕
+→ [Source Code Integration](SOURCE_CODE_INTEGRATION.md)
+
 ### "I need to track multiple Rails applications"
 → [Multi-App Support](MULTI_APP_PERFORMANCE.md)
 
@@ -111,7 +116,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.1.27** (Production Ready).
+This documentation is for **Rails Error Dashboard v0.1.30** (Latest).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 
