@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.36] - 2026-02-10
+
+### 🐛 Bug Fixes
+
+**Fix NoMethodError crashes on overview and error detail pages** 🔧
+
+Two dashboard pages crashed with `NoMethodError` when advanced features were enabled:
+
+1. **Overview page** — `no implicit conversion of Symbol into Integer` when time-correlated errors existed. The template iterated `@time_correlated_errors` as an array, but `ErrorCorrelation#time_correlated_errors` returns a hash of `{key => {error_type_a:, error_type_b:, correlation:, strength:}}` pairs.
+
+2. **Error detail page** — `undefined method 'repository_url'` when viewing an error with comments and `git_repository_url` configured. The `auto_link_urls` helper called `error.application.repository_url`, but the `Application` model has no `repository_url` column. Added `respond_to?` guard to fall back to the global config.
+
+**Fix Ruby 4.0 compatibility** 💎
+
+Replaced `OpenStruct` usage in test factory with `Struct` — `ostruct` was removed from Ruby 4.0's stdlib. Added `save!` stub for FactoryBot `create()` compatibility.
+
+### 🧪 Tests
+
+- Added `spec/helpers/application_helper_spec.rb` with 13 specs covering `auto_link_urls`: blank input, URL linking, inline code highlighting, file path GitHub linking, error parameter handling (the bug fix), and HTML escaping in code blocks.
+
+**Commits:** `f2562fb`
+
+---
+
 ## [0.1.35] - 2026-02-10
 
 ### 🐛 Bug Fixes
