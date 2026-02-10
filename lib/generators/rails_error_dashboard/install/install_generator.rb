@@ -170,7 +170,7 @@ module RailsErrorDashboard
 
         features.each_with_index do |feature, index|
           say "\n[#{index + 1}/#{features.length}] #{feature[:name]}", :cyan
-          say "    #{feature[:description]}", :light_black
+          say "    #{feature[:description]}", :white
 
           # Check if feature was passed via command line option
           if options[feature[:key]]
@@ -183,7 +183,7 @@ module RailsErrorDashboard
             if @selected_features[feature[:key]]
               say "    ✓ Enabled", :green
             else
-              say "    ✗ Disabled", :light_black
+              say "    ✗ Disabled", :white
             end
           end
         end
@@ -325,13 +325,13 @@ module RailsErrorDashboard
         say "  3. Restart your Rails server"
         say "  4. Visit http://localhost:3000/error_dashboard"
         say "\n"
-        say "📖 Documentation:", :light_black
-        say "   • Quick Start: docs/QUICKSTART.md", :light_black
-        say "   • Complete Feature Guide: docs/FEATURES.md", :light_black
-        say "   • All Docs: docs/README.md", :light_black
+        say "📖 Documentation:", :white
+        say "   • Quick Start: docs/QUICKSTART.md", :white
+        say "   • Complete Feature Guide: docs/FEATURES.md", :white
+        say "   • All Docs: docs/README.md", :white
         say "\n"
-        say "⚙️  To enable/disable features later:", :light_black
-        say "   Edit config/initializers/rails_error_dashboard.rb", :light_black
+        say "⚙️  To enable/disable features later:", :white
+        say "   Edit config/initializers/rails_error_dashboard.rb", :white
         say "\n"
       end
 

@@ -66,7 +66,7 @@ module RailsErrorDashboard
           say "Step 4: Remove migrations", :yellow
           say "  Delete migration files from db/migrate/:"
           migration_files.each do |file|
-            say "    - #{File.basename(file)}", :light_black
+            say "    - #{File.basename(file)}", :white
           end
           say "\n"
         end
@@ -75,12 +75,12 @@ module RailsErrorDashboard
           say "Step 5: Drop database tables (⚠️  DESTRUCTIVE - will delete all error data)", :yellow
           say "  Run: rails rails_error_dashboard:db:drop"
           say "  Or manually in rails console:"
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_logs')", :light_black
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_occurrences')", :light_black
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_cascade_patterns')", :light_black
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_baselines')", :light_black
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_comments')", :light_black
-          say "    ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_logs) rescue nil", :light_black
+          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_logs')", :white
+          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_occurrences')", :white
+          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_cascade_patterns')", :white
+          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_baselines')", :white
+          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_comments')", :white
+          say "    ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_logs) rescue nil", :white
           say "\n"
         end
 
@@ -146,7 +146,7 @@ module RailsErrorDashboard
         say "\n"
         say "Database tables to be dropped:", :yellow
         table_names.each do |table|
-          say "  • #{table}", :light_black
+          say "  • #{table}", :white
         end
         say "\n"
         say "This action CANNOT be undone!", :red
