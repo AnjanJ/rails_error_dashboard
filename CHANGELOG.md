@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.35] - 2026-02-10
+
+### 🐛 Bug Fixes
+
+**Fix CSS/JS not loading in production (Thruster compatibility)** 🎨
+
+Dashboard CSS and JavaScript files were returning 404 in production when the host app uses Thruster (Rails 8 default proxy). The navbar, sidebar styling, dark mode, and all interactive features were completely broken.
+
+**Root Cause:**
+- CSS/JS files were in the engine's `public/` directory, served via `ActionDispatch::Static` middleware
+- The `public/` directory was never included in the gemspec, so files didn't ship with the gem
+- Even if they did, Thruster intercepts static file requests before they reach Rails middleware
+
+**What's Fixed:**
+- Inlined all CSS and JS directly into the layout ERB (same approach used pre-v0.1.29 that worked everywhere)
+- Removed `ActionDispatch::Static` middleware from engine.rb (no longer needed)
+- Removed broken `highlightjs-line-numbers.js` CSS CDN link (MIME type mismatch)
+- Deleted external `public/rails_error_dashboard/` directory
+
+**Result:** Dashboard is now fully self-contained — works with Thruster, Puma, Nginx, any proxy setup, zero asset pipeline dependency.
+
+---
+
 ## [0.1.34] - 2026-02-10
 
 ### 🐛 Bug Fixes

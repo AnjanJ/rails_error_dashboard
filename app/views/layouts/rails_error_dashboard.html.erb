@@ -22,12 +22,1289 @@
 
     <!-- Syntax Highlighting for Source Code Viewer -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@catppuccin/highlightjs@1.0.0/css/catppuccin-mocha.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.8.0/dist/styles.min.css">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.8.0/dist/highlightjs-line-numbers.min.js"></script>
 
-    <!-- Dashboard CSS -->
-    <link rel="stylesheet" href="/rails_error_dashboard/css/dashboard.css">
+    <!-- Dashboard CSS (inline for production compatibility) -->
+    <style>
+/* Catppuccin Mocha Color Palette */
+:root {
+  --ctp-rosewater: #f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink: #f5c2e7;
+  --ctp-mauve: #cba6f7;
+  --ctp-red: #f38ba8;
+  --ctp-maroon: #eba0ac;
+  --ctp-peach: #fab387;
+  --ctp-yellow: #f9e2af;
+  --ctp-green: #a6e3a1;
+  --ctp-teal: #94e2d5;
+  --ctp-sky: #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue: #89b4fa;
+  --ctp-lavender: #b4befe;
+  --ctp-text: #cdd6f4;
+  --ctp-subtext1: #bac2de;
+  --ctp-subtext0: #a6adc8;
+  --ctp-overlay2: #9399b2;
+  --ctp-overlay1: #7f849c;
+  --ctp-overlay0: #6c7086;
+  --ctp-surface2: #585b70;
+  --ctp-surface1: #45475a;
+  --ctp-surface0: #313244;
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+}
+
+/* Light Theme (Default) */
+body {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark Theme */
+body.dark-mode {
+  background-color: var(--ctp-base);
+  color: var(--ctp-text);
+}
+
+/* Navbar */
+.navbar {
+  background: linear-gradient(135deg, #8B5CF6, #6D28D9) !important;
+  color: white !important;
+}
+.navbar * {
+  color: white !important;
+}
+.navbar-brand {
+  font-weight: bold;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  transition: background-color 0.2s;
+}
+.theme-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* App Switcher Button - must override navbar * rule */
+.app-switcher-btn {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  transition: background-color 0.2s;
+}
+.app-switcher-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+.app-switcher-btn i,
+.app-switcher-btn * {
+  color: white !important;
+}
+
+/* Sidebar */
+.sidebar {
+  background: white;
+  min-height: calc(100vh - 56px);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+body.dark-mode .sidebar {
+  background: var(--ctp-mantle);
+}
+.sidebar .nav-link {
+  color: #1f2937;
+  padding: 0.75rem 1.5rem;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+}
+body.dark-mode .sidebar .nav-link {
+  color: var(--ctp-text);
+}
+.sidebar .nav-link:hover {
+  background-color: #f3f4f6;
+  color: #8B5CF6;
+  border-left-color: #8B5CF6;
+}
+body.dark-mode .sidebar .nav-link:hover {
+  background-color: var(--ctp-surface0);
+  color: var(--ctp-mauve);
+  border-left-color: var(--ctp-mauve);
+}
+.sidebar .nav-link.active {
+  background-color: #f3f4f6;
+  color: #8B5CF6;
+  border-left-color: #8B5CF6;
+  font-weight: 600;
+}
+body.dark-mode .sidebar .nav-link.active {
+  background-color: var(--ctp-surface0);
+  color: var(--ctp-mauve);
+  border-left-color: var(--ctp-mauve);
+}
+
+/* Cards */
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+body.dark-mode .card {
+  background: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+body.dark-mode .card-header {
+  background-color: var(--ctp-surface1);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+
+/* Tables */
+body.dark-mode .table {
+  color: var(--ctp-text);
+}
+body.dark-mode .table-hover tbody tr:hover {
+  background-color: var(--ctp-surface1);
+}
+
+/* Sticky table header for error list */
+.table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8f9fa;
+}
+body.dark-mode .table-responsive thead th {
+  background-color: var(--ctp-mantle);
+}
+
+/* Badges - Platform Colors */
+.badge-ios {
+  background-color: #000;
+  color: white;
+}
+body.dark-mode .badge-ios {
+  background-color: var(--ctp-overlay0);
+  color: var(--ctp-text);
+  border: 1px solid var(--ctp-surface2);
+}
+.badge-android {
+  background-color: #3DDC84;
+  color: white;
+}
+body.dark-mode .badge-android {
+  background-color: rgba(166, 227, 161, 0.2);
+  color: var(--ctp-green);
+  border: 1px solid var(--ctp-green);
+}
+.badge-web {
+  background-color: #3B82F6;
+  color: white;
+}
+body.dark-mode .badge-web {
+  background-color: rgba(137, 180, 250, 0.2);
+  color: var(--ctp-blue);
+  border: 1px solid var(--ctp-blue);
+}
+.badge-api {
+  background-color: #8B5CF6;
+  color: white;
+}
+body.dark-mode .badge-api {
+  background-color: rgba(116, 199, 236, 0.2);
+  color: var(--ctp-sapphire);
+  border: 1px solid var(--ctp-sapphire);
+}
+
+/* Forms */
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+  background-color: var(--ctp-surface1);
+  border-color: var(--ctp-mauve);
+  color: var(--ctp-text);
+}
+
+/* Code Blocks */
+.code-block,
+pre,
+code {
+  background-color: #f9fafb;
+  color: #1f2937;
+}
+body.dark-mode .code-block,
+body.dark-mode pre,
+body.dark-mode code {
+  background-color: var(--ctp-mantle) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Inline Code Highlighting (for backticks in comments/text) */
+.inline-code-highlight {
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+  font-size: 0.9em;
+  background-color: #f3f4f6;
+  color: #6d28d9;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+body.dark-mode .inline-code-highlight {
+  background-color: var(--ctp-surface0);
+  color: var(--ctp-mauve);
+  border: 1px solid var(--ctp-surface2);
+}
+
+/* File Path Links (elvish magic for GitHub linking) */
+.file-path-link {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-path-link:hover {
+  background-color: #e0e7ff !important;
+  color: #4c1d95 !important;
+  border-color: #c7d2fe !important;
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
+}
+
+body.dark-mode .file-path-link:hover {
+  background-color: var(--ctp-surface2) !important;
+  color: var(--ctp-lavender) !important;
+  border-color: var(--ctp-mauve) !important;
+  box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.2);
+}
+
+/* Alerts */
+body.dark-mode .alert {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+
+/* Text colors */
+body.dark-mode .text-muted {
+  color: var(--ctp-subtext0) !important;
+}
+body.dark-mode .text-primary {
+  color: var(--ctp-mauve) !important;
+}
+body.dark-mode .text-danger {
+  color: var(--ctp-red) !important;
+}
+body.dark-mode .text-success {
+  color: var(--ctp-green) !important;
+}
+body.dark-mode .text-warning {
+  color: var(--ctp-peach) !important;
+}
+
+/* Override Bootstrap bg-white and bg-light */
+body.dark-mode .bg-white {
+  background-color: var(--ctp-surface0) !important;
+}
+body.dark-mode .bg-light {
+  background-color: var(--ctp-surface1) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Borders */
+body.dark-mode .border {
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode .rounded {
+  border-color: var(--ctp-surface2) !important;
+}
+
+/* Quick Filters Sidebar Section */
+.sidebar h6 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1.5rem;
+  margin: 0;
+  color: #6B7280;
+}
+body.dark-mode .sidebar h6 {
+  color: var(--ctp-subtext0);
+}
+
+/* Stat Cards */
+.stat-card {
+  border-radius: 0.75rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Badges for severity */
+.badge.bg-danger {
+  background-color: #EF4444 !important;
+}
+.badge.bg-warning {
+  background-color: #F59E0B !important;
+}
+.badge.bg-info {
+  background-color: #3B82F6 !important;
+}
+.badge.bg-secondary {
+  background-color: #6B7280 !important;
+}
+.badge.bg-success {
+  background-color: #10B981 !important;
+}
+
+body.dark-mode .badge.bg-danger {
+  background-color: var(--ctp-red) !important;
+  color: var(--ctp-base) !important;
+}
+body.dark-mode .badge.bg-warning {
+  background-color: var(--ctp-peach) !important;
+  color: var(--ctp-base) !important;
+}
+body.dark-mode .badge.bg-info {
+  background-color: var(--ctp-blue) !important;
+  color: var(--ctp-base) !important;
+}
+body.dark-mode .badge.bg-secondary {
+  background-color: var(--ctp-overlay1) !important;
+}
+body.dark-mode .badge.bg-success {
+  background-color: var(--ctp-green) !important;
+  color: var(--ctp-base) !important;
+}
+
+/* Links */
+a {
+  color: #8B5CF6;
+  text-decoration: none;
+}
+a:hover {
+  color: #6D28D9;
+  text-decoration: underline;
+}
+body.dark-mode a {
+  color: var(--ctp-mauve);
+}
+body.dark-mode a:hover {
+  color: var(--ctp-pink);
+}
+
+/* Buttons */
+body.dark-mode .btn-primary {
+  background-color: var(--ctp-mauve);
+  border-color: var(--ctp-mauve);
+  color: var(--ctp-base);
+}
+body.dark-mode .btn-primary:hover {
+  background-color: var(--ctp-pink);
+  border-color: var(--ctp-pink);
+}
+body.dark-mode .btn-outline-primary {
+  color: var(--ctp-mauve);
+  border-color: var(--ctp-mauve);
+}
+body.dark-mode .btn-outline-primary:hover {
+  background-color: var(--ctp-mauve);
+  color: var(--ctp-base);
+}
+body.dark-mode .btn-secondary,
+body.dark-mode .btn-outline-secondary {
+  background-color: var(--ctp-surface1);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+
+/* Modal dialogs */
+body.dark-mode .modal-content {
+  background-color: var(--ctp-surface0);
+  color: var(--ctp-text);
+  border-color: var(--ctp-surface2);
+}
+body.dark-mode .modal-header {
+  background-color: var(--ctp-surface1);
+  border-bottom-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+body.dark-mode .modal-footer {
+  background-color: var(--ctp-surface1);
+  border-top-color: var(--ctp-surface2);
+}
+body.dark-mode .modal-title {
+  color: var(--ctp-text);
+}
+body.dark-mode .btn-close {
+  filter: invert(1);
+}
+
+/* Table headers - CRITICAL FIX */
+body.dark-mode thead,
+body.dark-mode thead th {
+  background-color: var(--ctp-surface1) !important;
+  color: var(--ctp-text) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode tbody tr {
+  border-color: var(--ctp-surface2) !important;
+  background-color: transparent !important;
+}
+body.dark-mode tbody td {
+  border-color: var(--ctp-surface2) !important;
+  background-color: transparent !important;
+  color: var(--ctp-text) !important;
+}
+body.dark-mode tbody th {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-text) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode table {
+  color: var(--ctp-text) !important;
+}
+
+/* Chart canvas backgrounds */
+body.dark-mode canvas {
+  background-color: transparent !important;
+}
+
+/* Chart labels and text */
+body.dark-mode .chart-container text {
+  fill: var(--ctp-text) !important;
+}
+
+/* Form placeholders */
+body.dark-mode .form-control::placeholder,
+body.dark-mode .form-select::placeholder {
+  color: var(--ctp-overlay0);
+  opacity: 1;
+}
+
+/* Dropdown menus */
+.dropdown-menu {
+  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.dropdown-item {
+  color: #1f2937 !important;
+}
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: #f3f4f6;
+  color: #8B5CF6 !important;
+}
+.dropdown-item.active {
+  background-color: #8B5CF6;
+  color: white !important;
+}
+
+body.dark-mode .dropdown-menu {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+}
+body.dark-mode .dropdown-item {
+  color: var(--ctp-text) !important;
+}
+body.dark-mode .dropdown-item:hover,
+body.dark-mode .dropdown-item:focus {
+  background-color: var(--ctp-surface1);
+  color: var(--ctp-mauve) !important;
+}
+body.dark-mode .dropdown-item.active {
+  background-color: var(--ctp-mauve);
+  color: var(--ctp-base) !important;
+}
+
+/* Pagination */
+body.dark-mode .pagination .page-link {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+body.dark-mode .pagination .page-link:hover {
+  background-color: var(--ctp-surface1);
+  color: var(--ctp-mauve);
+}
+body.dark-mode .pagination .page-item.active .page-link {
+  background-color: var(--ctp-mauve);
+  border-color: var(--ctp-mauve);
+  color: var(--ctp-base);
+}
+
+/* Progress bars */
+body.dark-mode .progress {
+  background-color: var(--ctp-surface1);
+}
+body.dark-mode .progress-bar {
+  background-color: var(--ctp-mauve);
+}
+
+/* Horizontal rules */
+body.dark-mode hr {
+  border-color: var(--ctp-surface2);
+  opacity: 1;
+}
+
+/* List groups */
+body.dark-mode .list-group-item {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2);
+  color: var(--ctp-text);
+}
+body.dark-mode .list-group-item:hover {
+  background-color: var(--ctp-surface1);
+}
+
+/* Offcanvas (mobile menu) */
+body.dark-mode .offcanvas {
+  background-color: var(--ctp-mantle);
+  color: var(--ctp-text);
+}
+body.dark-mode .offcanvas-header {
+  border-bottom-color: var(--ctp-surface2);
+}
+
+/* Small text and labels */
+body.dark-mode small {
+  color: var(--ctp-subtext1) !important;
+}
+body.dark-mode label {
+  color: var(--ctp-text);
+}
+
+/* Breadcrumbs */
+body.dark-mode .breadcrumb {
+  background-color: var(--ctp-surface0);
+}
+body.dark-mode .breadcrumb-item {
+  color: var(--ctp-text);
+}
+body.dark-mode .breadcrumb-item.active {
+  color: var(--ctp-subtext0);
+}
+
+/* Tooltips */
+body.dark-mode .tooltip-inner {
+  background-color: var(--ctp-surface0);
+  color: var(--ctp-text);
+}
+
+/* Checkboxes and radios */
+body.dark-mode .form-check-input {
+  background-color: var(--ctp-surface1);
+  border-color: var(--ctp-surface2);
+}
+body.dark-mode .form-check-input:checked {
+  background-color: var(--ctp-mauve);
+  border-color: var(--ctp-mauve);
+}
+body.dark-mode .form-check-label {
+  color: var(--ctp-text);
+}
+
+/* Nav tabs */
+body.dark-mode .nav-tabs {
+  border-bottom-color: var(--ctp-surface2);
+}
+body.dark-mode .nav-tabs .nav-link {
+  color: var(--ctp-text);
+  background-color: transparent;
+  border-color: transparent;
+}
+body.dark-mode .nav-tabs .nav-link:hover {
+  border-color: var(--ctp-surface2);
+  background-color: var(--ctp-surface1);
+}
+body.dark-mode .nav-tabs .nav-link.active {
+  background-color: var(--ctp-surface0);
+  border-color: var(--ctp-surface2) var(--ctp-surface2) var(--ctp-surface0);
+  color: var(--ctp-mauve);
+}
+
+/* Collapsible sections - AGGRESSIVE */
+body.dark-mode .accordion-item {
+  background-color: var(--ctp-surface0) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode .accordion-button {
+  background-color: var(--ctp-surface1) !important;
+  color: var(--ctp-text) !important;
+}
+body.dark-mode .accordion-button.bg-light {
+  background-color: var(--ctp-surface1) !important;
+}
+body.dark-mode .accordion-button:not(.collapsed) {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-mauve) !important;
+}
+body.dark-mode .accordion-button::after {
+  filter: invert(1);
+}
+body.dark-mode .accordion-body {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Heatmap specific styling - AGGRESSIVE */
+body.dark-mode .heatmap-cell {
+  border-color: var(--ctp-surface2) !important;
+  color: var(--ctp-text) !important;
+}
+body.dark-mode .heatmap-hour {
+  color: var(--ctp-sky) !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+}
+body.dark-mode .heatmap-count {
+  color: var(--ctp-peach) !important;
+  font-weight: 600 !important;
+}
+body.dark-mode .heatmap-count.text-white {
+  color: var(--ctp-text) !important;
+}
+body.dark-mode .heatmap-count.text-dark {
+  color: var(--ctp-peach) !important;
+}
+body.dark-mode .heatmap-grid {
+  background-color: var(--ctp-surface0);
+}
+
+/* Definition lists (dl, dt, dd) - used in Request Context */
+body.dark-mode dl {
+  color: var(--ctp-text);
+}
+body.dark-mode dt {
+  color: var(--ctp-subtext1);
+  font-weight: 600;
+}
+body.dark-mode dd {
+  color: var(--ctp-text);
+  background-color: var(--ctp-surface0);
+}
+
+/* Override any remaining white backgrounds */
+body.dark-mode div[style*="background-color: white"],
+body.dark-mode div[style*="background-color: #fff"],
+body.dark-mode div[style*="background-color:#fff"],
+body.dark-mode div[style*="background: white"],
+body.dark-mode div[style*="background: #fff"] {
+  background-color: var(--ctp-surface0) !important;
+}
+
+/* Chart.js specific fixes for axis labels */
+body.dark-mode .chartjs-render-monitor {
+  background-color: transparent !important;
+}
+
+/* Make sure all headings are visible */
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+  color: var(--ctp-text);
+}
+
+/* Stronger text colors for better visibility */
+body.dark-mode .text-secondary {
+  color: var(--ctp-subtext1) !important;
+}
+
+/* SVG text elements (for charts) - MORE AGGRESSIVE */
+body.dark-mode svg text {
+  fill: var(--ctp-text) !important;
+}
+body.dark-mode svg .domain,
+body.dark-mode svg .tick line {
+  stroke: var(--ctp-surface2) !important;
+}
+body.dark-mode svg tspan {
+  fill: var(--ctp-text) !important;
+}
+
+/* Details/Summary (collapsible sections) */
+body.dark-mode details {
+  background-color: var(--ctp-surface0) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode summary {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-text) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+body.dark-mode details[open] summary {
+  background-color: var(--ctp-surface1) !important;
+  border-bottom-color: var(--ctp-surface2) !important;
+}
+
+/* Button-like summary elements */
+body.dark-mode .btn.collapsed,
+body.dark-mode [data-bs-toggle="collapse"] {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-text) !important;
+  border-color: var(--ctp-surface2) !important;
+}
+
+/* Specific override for white backgrounds in backtrace sections */
+body.dark-mode .card .card-body > div[style*="background"],
+body.dark-mode .card-body > button[style*="background"] {
+  background-color: var(--ctp-surface0) !important;
+}
+
+/* Error header/banner */
+body.dark-mode .alert-danger {
+  background-color: rgba(243, 139, 168, 0.2) !important;
+  border-color: var(--ctp-red) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Chartkick specific - force text visibility */
+body.dark-mode #chart-1 text,
+body.dark-mode [id^="chart-"] text {
+  fill: var(--ctp-text) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Force all text in charts to be visible */
+body.dark-mode canvas + div text,
+body.dark-mode .chartjs-size-monitor text {
+  color: var(--ctp-text) !important;
+}
+
+/* ULTRA AGGRESSIVE - Chart.js axis labels and titles */
+body.dark-mode canvas {
+  color: var(--ctp-text) !important;
+}
+
+/* Target Google Charts (alternative library) */
+body.dark-mode svg > g > g > text,
+body.dark-mode svg g text {
+  fill: var(--ctp-text) !important;
+  font-size: 12px !important;
+}
+
+/* Chart.js specific selectors - NUCLEAR OPTION */
+body.dark-mode .chartjs-render-monitor + div text,
+body.dark-mode [class*="chart"] text,
+body.dark-mode div[id*="chart"] text {
+  fill: var(--ctp-text) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Ensure axis tick labels are visible */
+body.dark-mode g.tick text,
+body.dark-mode .tick text,
+body.dark-mode text.highcharts-axis-title,
+body.dark-mode .highcharts-axis-labels text {
+  fill: var(--ctp-text) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Force visibility on ALL text elements inside chart containers */
+body.dark-mode .card-body text,
+body.dark-mode .card text {
+  fill: var(--ctp-text) !important;
+}
+
+/* Toast notifications */
+.toast {
+  min-width: 250px;
+}
+.toast-container {
+  max-width: 350px;
+}
+
+/* Filter pills */
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+.filter-pill:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.filter-pill .bi-x {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+body.dark-mode .filter-pill.bg-primary {
+  background-color: var(--ctp-mauve) !important;
+}
+body.dark-mode .filter-pill.bg-secondary {
+  background-color: var(--ctp-surface2) !important;
+}
+
+/* Syntax Highlighting Styles - Polished & Professional */
+
+/* Source Code Viewer Container */
+.source-code-viewer {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+body.dark-mode .source-code-viewer {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  border-color: #45475a;
+}
+
+/* Header Styling */
+.source-code-viewer .source-code-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+  font-weight: 500;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+body.dark-mode .source-code-viewer .source-code-header {
+  background: linear-gradient(135deg, #313244 0%, #282a36 100%);
+  border-bottom-color: #45475a;
+}
+
+/* Git Blame Info */
+.source-code-viewer .git-blame-info {
+  background-color: #fafbfc;
+  border-top: 1px solid #e9ecef;
+}
+
+body.dark-mode .source-code-viewer .git-blame-info {
+  background-color: #1e1e2e;
+  border-top-color: #45475a;
+}
+
+/* Code Content Area */
+.source-code-content {
+  background-color: #ffffff;
+}
+
+body.dark-mode .source-code-content {
+  background-color: #1e1e2e;
+}
+
+.source-code-content pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  overflow: auto;
+}
+
+.source-code-content pre code {
+  display: block;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  color: #1f2937;
+  background: transparent;
+  letter-spacing: -0.01em;
+}
+
+body.dark-mode .source-code-content pre code {
+  color: #cdd6f4;
+}
+
+/* Line Number Table */
+.source-code-content table.hljs-ln {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  background: transparent;
+}
+
+/* Individual Line Rows */
+.source-code-content .hljs-ln-line,
+.source-code-content tr {
+  transition: all 0.2s ease;
+}
+
+.source-code-content .hljs-ln-line:hover,
+.source-code-content tr:hover {
+  background-color: rgba(139, 92, 246, 0.04);
+}
+
+body.dark-mode .source-code-content .hljs-ln-line:hover,
+body.dark-mode .source-code-content tr:hover {
+  background-color: rgba(203, 166, 247, 0.08);
+}
+
+/* Error Line Highlighting - Enhanced Visibility */
+.source-code-content tr.error-line,
+.source-code-content .hljs-ln-line.error-line {
+  background: linear-gradient(90deg,
+    rgba(250, 179, 135, 0.25) 0%,
+    rgba(250, 179, 135, 0.12) 4px,
+    rgba(250, 179, 135, 0.08) 100%) !important;
+  border-left: 4px solid #fab387;
+  position: relative;
+}
+
+/* Add pulse animation to error line */
+@keyframes error-pulse {
+  0%, 100% { border-left-color: #fab387; }
+  50% { border-left-color: #f9e2af; }
+}
+
+.source-code-content tr.error-line {
+  animation: error-pulse 2s ease-in-out infinite;
+}
+
+body.dark-mode .source-code-content tr.error-line,
+body.dark-mode .source-code-content .hljs-ln-line.error-line {
+  background: linear-gradient(90deg,
+    rgba(249, 226, 175, 0.20) 0%,
+    rgba(249, 226, 175, 0.12) 4px,
+    rgba(249, 226, 175, 0.06) 100%) !important;
+  border-left-color: #f9e2af;
+}
+
+.source-code-content tr.error-line td,
+.source-code-content .hljs-ln-line.error-line td {
+  background-color: transparent;
+}
+
+/* Error Line Number - More Prominent */
+.source-code-content tr.error-line .hljs-ln-numbers {
+  background: linear-gradient(90deg, #fab387 0%, rgba(250, 179, 135, 0.4) 100%) !important;
+  color: #1f2937 !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.source-code-content tr.error-line .hljs-ln-numbers::before {
+  content: '\2192';
+  position: absolute;
+  left: 4px;
+  color: #dc2626;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+body.dark-mode .source-code-content tr.error-line .hljs-ln-numbers {
+  background: linear-gradient(90deg, #f9e2af 0%, rgba(249, 226, 175, 0.3) 100%) !important;
+  color: #11111b !important;
+  text-shadow: none;
+}
+
+body.dark-mode .source-code-content tr.error-line .hljs-ln-numbers::before {
+  color: #f38ba8;
+}
+
+.source-code-content tr.error-line .hljs-ln-code {
+  background-color: transparent;
+  font-weight: 500;
+}
+
+/* Line Numbers Column - Enhanced */
+.source-code-content .hljs-ln-numbers {
+  width: 70px;
+  min-width: 70px;
+  text-align: right;
+  padding: 0.6rem 1rem;
+  color: #9ca3af;
+  user-select: none;
+  background: linear-gradient(90deg, #f9fafb 0%, #f3f4f6 100%);
+  border-right: 3px solid #e5e7eb;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+
+body.dark-mode .source-code-content .hljs-ln-numbers {
+  color: #7f849c;
+  background: linear-gradient(90deg, #313244 0%, #282a36 100%);
+  border-right-color: #45475a;
+}
+
+/* Code Content Column */
+.source-code-content .hljs-ln-code {
+  padding: 0.6rem 1.25rem;
+  white-space: pre;
+  vertical-align: top;
+}
+
+/* Table Cells */
+.source-code-content td.hljs-ln-numbers,
+.source-code-content td.hljs-ln-code {
+  border: none;
+}
+
+/* Highlighted Code Block */
+.source-code-content code.hljs {
+  background: transparent;
+  padding: 0;
+}
+
+/* Scrollbar Styling for Code Block */
+.source-code-content .code-block {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.source-code-content .code-block::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.source-code-content .code-block::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 0 0 0.75rem 0;
+}
+
+.source-code-content .code-block::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+.source-code-content .code-block::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+body.dark-mode .source-code-content .code-block {
+  scrollbar-color: #45475a #1e1e2e;
+}
+
+body.dark-mode .source-code-content .code-block::-webkit-scrollbar-track {
+  background: #1e1e2e;
+}
+
+body.dark-mode .source-code-content .code-block::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-color: #1e1e2e;
+}
+
+body.dark-mode .source-code-content .code-block::-webkit-scrollbar-thumb:hover {
+  background: #585b70;
+}
+
+/* Syntax Highlighting Token Colors - Light Mode Override */
+.source-code-content .hljs-keyword,
+.source-code-content .hljs-selector-tag,
+.source-code-content .hljs-literal,
+.source-code-content .hljs-section,
+.source-code-content .hljs-link {
+  color: #7c3aed !important;
+}
+
+.source-code-content .hljs-string,
+.source-code-content .hljs-attr {
+  color: #059669 !important;
+}
+
+.source-code-content .hljs-name,
+.source-code-content .hljs-type,
+.source-code-content .hljs-title {
+  color: #dc2626 !important;
+}
+
+.source-code-content .hljs-comment,
+.source-code-content .hljs-quote {
+  color: #6b7280 !important;
+  font-style: italic;
+}
+
+.source-code-content .hljs-number,
+.source-code-content .hljs-symbol {
+  color: #ea580c !important;
+}
+
+.source-code-content .hljs-built_in,
+.source-code-content .hljs-builtin-name {
+  color: #0891b2 !important;
+}
+
+/* Dark mode uses Catppuccin Mocha (from CDN) - no override needed */
+
+/* Source code file path styling */
+.source-file-path {
+  color: #212529 !important; /* Dark text for light mode */
+}
+
+[data-theme="dark"] .source-file-path,
+body.dark-mode .source-file-path {
+  color: var(--ctp-text) !important; /* Bright text for dark mode */
+}
+
+/* Backtrace method name styling - override Bootstrap text-info */
+span.backtrace-method-name {
+  color: #0066cc !important; /* Darker blue for better readability in light mode */
+}
+
+[data-theme="dark"] span.backtrace-method-name,
+body.dark-mode span.backtrace-method-name,
+html[data-theme="dark"] span.backtrace-method-name {
+  color: var(--ctp-sky) !important; /* Catppuccin sky for dark mode */
+}
+
+/* Timeline styles */
+.timeline {
+  position: relative;
+  padding-left: 0;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 40px;
+  padding-bottom: 30px;
+}
+
+.timeline-item-last {
+  padding-bottom: 0;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 30px;
+  bottom: 0;
+  width: 2px;
+  background: #dee2e6;
+}
+
+[data-theme="dark"] .timeline-item::before,
+body.dark-mode .timeline-item::before {
+  background: var(--border-color);
+}
+
+.timeline-item-last::before {
+  display: none;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 2px solid #dee2e6;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+[data-theme="dark"] .timeline-marker,
+body.dark-mode .timeline-marker {
+  background: var(--ctp-surface0);
+  border-color: var(--border-color);
+}
+
+.timeline-marker-current {
+  border-color: #dc3545;
+  background: #f8d7da;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.15);
+}
+
+[data-theme="dark"] .timeline-marker-current,
+body.dark-mode .timeline-marker-current {
+  border-color: var(--ctp-red);
+  background: rgba(243, 139, 168, 0.2);
+  box-shadow: 0 0 0 4px rgba(243, 139, 168, 0.1);
+}
+
+.timeline-marker i {
+  font-size: 12px;
+}
+
+.timeline-content {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+[data-theme="dark"] .timeline-content,
+body.dark-mode .timeline-content {
+  background: var(--ctp-surface0);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+.timeline-item:hover .timeline-content {
+  border-color: #0d6efd;
+  background: #cfe2ff;
+}
+
+[data-theme="dark"] .timeline-item:hover .timeline-content,
+body.dark-mode .timeline-item:hover .timeline-content {
+  border-color: var(--ctp-mauve);
+  background: var(--ctp-surface1);
+}
+
+/* Collapsible Sidebar */
+.sidebar {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+/* Collapsed sidebar state */
+.sidebar.sidebar-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Expanded main content when sidebar is collapsed */
+.content-expanded {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+/* Hide sidebar content when collapsed */
+.sidebar.sidebar-collapsed .position-sticky {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Smooth toggle button animation */
+#sidebarToggle {
+  transition: transform 0.2s ease-in-out;
+}
+
+#sidebarToggle i {
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Responsive: Don't apply collapse on mobile */
+@media (max-width: 767.98px) {
+  .sidebar.sidebar-collapsed {
+    width: auto !important;
+  }
+}
+
+/* Add visual feedback on hover */
+#sidebarToggle:hover i {
+  transform: scale(1.1);
+}
+    </style>
   </head>
 
   <body>
@@ -274,12 +1551,413 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 
-    <!-- Dashboard JavaScript -->
-    <script src="/rails_error_dashboard/js/syntax-highlighting.js"></script>
-    <script src="/rails_error_dashboard/js/theme-toggle.js"></script>
-    <script src="/rails_error_dashboard/js/utilities.js"></script>
-    <script src="/rails_error_dashboard/js/sidebar-toggle.js"></script>
-    
+    <!-- Dashboard JavaScript (inline for production compatibility) -->
+
+    <!-- Syntax Highlighting -->
+    <script>
+(function() {
+  'use strict';
+  if (typeof hljs === 'undefined') return;
+
+  function initHighlighting() {
+    var codeBlocks = document.querySelectorAll('.source-code-content pre code');
+    if (codeBlocks.length === 0) return;
+
+    codeBlocks.forEach(function(block) {
+      try { hljs.highlightElement(block); } catch (e) { /* skip */ }
+    });
+
+    if (typeof hljs.lineNumbersBlock === 'function') {
+      codeBlocks.forEach(function(block) { hljs.lineNumbersBlock(block); });
+    } else if (typeof hljs.initLineNumbersOnLoad === 'function') {
+      hljs.initLineNumbersOnLoad();
+    }
+
+    setTimeout(function() {
+      codeBlocks.forEach(function(codeBlock) {
+        var errorLine = parseInt(codeBlock.dataset.errorLine);
+        var startLine = parseInt(codeBlock.dataset.startLine) || 1;
+
+        if (errorLine && !isNaN(errorLine)) {
+          var table = codeBlock.querySelector('table.hljs-ln');
+          if (table) {
+            var rows = table.querySelectorAll('tr');
+            rows.forEach(function(row, index) {
+              if ((startLine + index) === errorLine) {
+                row.classList.add('error-line');
+              }
+            });
+          }
+        }
+      });
+    }, 300);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHighlighting);
+  } else {
+    initHighlighting();
+  }
+})();
+    </script>
+
+    <!-- Theme Toggle -->
+    <script>
+// Load saved theme on page load (before DOMContentLoaded to prevent flash)
+(function() {
+  var savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
+})();
+
+// Theme toggle after DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+  var themeToggle = document.getElementById('themeToggle');
+  var themeIcon = document.getElementById('themeIcon');
+
+  function updateIcon() {
+    if (document.body.classList.contains('dark-mode')) {
+      themeIcon.className = 'bi bi-sun-fill';
+    } else {
+      themeIcon.className = 'bi bi-moon-fill';
+    }
+  }
+
+  updateIcon();
+
+  themeToggle.addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+    var isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateIcon();
+    applyChartTheme();
+    setTimeout(function() { location.reload(); }, 300);
+  });
+
+  function applyChartTheme() {
+    if (typeof Chart !== 'undefined') {
+      var isDark = document.body.classList.contains('dark-mode');
+      var textColor = isDark ? '#cdd6f4' : '#1f2937';
+      var gridColor = isDark ? 'rgba(88, 91, 112, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+      Chart.defaults.color = textColor;
+      Chart.defaults.borderColor = gridColor;
+      Chart.defaults.font = Chart.defaults.font || {};
+      Chart.defaults.font.color = textColor;
+
+      if (Chart.defaults.scale) {
+        Chart.defaults.scale.ticks = Chart.defaults.scale.ticks || {};
+        Chart.defaults.scale.ticks.color = textColor;
+        Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
+        Chart.defaults.scale.grid.color = gridColor;
+        Chart.defaults.scale.title = Chart.defaults.scale.title || {};
+        Chart.defaults.scale.title.color = textColor;
+      }
+
+      if (Chart.defaults.scales) {
+        Chart.defaults.scales.x = Chart.defaults.scales.x || {};
+        Chart.defaults.scales.x.ticks = Chart.defaults.scales.x.ticks || {};
+        Chart.defaults.scales.x.ticks.color = textColor;
+        Chart.defaults.scales.x.grid = Chart.defaults.scales.x.grid || {};
+        Chart.defaults.scales.x.grid.color = gridColor;
+
+        Chart.defaults.scales.y = Chart.defaults.scales.y || {};
+        Chart.defaults.scales.y.ticks = Chart.defaults.scales.y.ticks || {};
+        Chart.defaults.scales.y.ticks.color = textColor;
+        Chart.defaults.scales.y.grid = Chart.defaults.scales.y.grid || {};
+        Chart.defaults.scales.y.grid.color = gridColor;
+      }
+
+      if (Chart.defaults.plugins) {
+        if (Chart.defaults.plugins.legend) {
+          Chart.defaults.plugins.legend.labels = Chart.defaults.plugins.legend.labels || {};
+          Chart.defaults.plugins.legend.labels.color = textColor;
+        }
+        if (Chart.defaults.plugins.tooltip) {
+          Chart.defaults.plugins.tooltip.backgroundColor = isDark ? '#313244' : 'rgba(255, 255, 255, 0.95)';
+          Chart.defaults.plugins.tooltip.titleColor = isDark ? textColor : '#1f2937';
+          Chart.defaults.plugins.tooltip.bodyColor = isDark ? textColor : '#1f2937';
+          Chart.defaults.plugins.tooltip.borderColor = isDark ? '#585b70' : 'rgba(0, 0, 0, 0.2)';
+          Chart.defaults.plugins.tooltip.borderWidth = 1;
+        }
+        if (Chart.defaults.plugins.title) {
+          Chart.defaults.plugins.title.color = textColor;
+        }
+      }
+    }
+  }
+
+  applyChartTheme();
+
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(function(node) {
+        if (node.tagName === 'CANVAS') {
+          setTimeout(applyChartTheme, 100);
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener('chartkick:load', function() { applyChartTheme(); });
+
+  var attempts = 0;
+  var forceInterval = setInterval(function() {
+    attempts++;
+    applyChartTheme();
+    if (attempts >= 6) { clearInterval(forceInterval); }
+  }, 500);
+});
+    </script>
+
+    <!-- Utilities -->
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  function initializeTooltips() {
+    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
+  }
+
+  initializeTooltips();
+
+  if (typeof Turbo !== 'undefined') {
+    document.addEventListener('turbo:load', initializeTooltips);
+    document.addEventListener('turbo:frame-load', initializeTooltips);
+  }
+
+  window.copyToClipboard = function(text, button) {
+    navigator.clipboard.writeText(text).then(function() {
+      var originalHTML = button.innerHTML;
+      button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+      button.classList.remove('btn-outline-secondary');
+      button.classList.add('btn-success');
+      showToast('Copied to clipboard!', 'success');
+      setTimeout(function() {
+        button.innerHTML = originalHTML;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+      }, 2000);
+    }).catch(function(err) {
+      button.innerHTML = '<i class="bi bi-x"></i> Failed';
+      showToast('Failed to copy to clipboard', 'danger');
+    });
+  };
+
+  window.showToast = function(message, type) {
+    type = type || 'success';
+    var toastId = 'toast-' + Date.now();
+    var iconClass = type === 'success' ? 'bi-check-circle-fill' :
+                   type === 'danger' ? 'bi-exclamation-circle-fill' :
+                   'bi-info-circle-fill';
+    var bgClass = type === 'success' ? 'bg-success' :
+                 type === 'danger' ? 'bg-danger' :
+                 'bg-info';
+
+    var toastHTML =
+      '<div id="' + toastId + '" class="toast align-items-center text-white ' + bgClass + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
+        '<div class="d-flex">' +
+          '<div class="toast-body">' +
+            '<i class="bi ' + iconClass + ' me-2"></i>' +
+            message +
+          '</div>' +
+          '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+        '</div>' +
+      '</div>';
+
+    var container = document.querySelector('.toast-container');
+    container.insertAdjacentHTML('beforeend', toastHTML);
+
+    var toastElement = document.getElementById(toastId);
+    var toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+    toast.show();
+
+    toastElement.addEventListener('hidden.bs.toast', function() {
+      toastElement.remove();
+    });
+  };
+
+  function convertToLocalTime() {
+    document.querySelectorAll('.local-time').forEach(function(element) {
+      var utcString = element.dataset.utc;
+      var formatString = element.dataset.format;
+      if (!utcString) return;
+
+      try {
+        var date = new Date(utcString);
+        if (isNaN(date.getTime())) return;
+        var formatted = formatDateTime(date, formatString);
+        var timezone = getTimezoneAbbreviation(date);
+        element.textContent = formatted + ' ' + timezone;
+        element.title = 'Your local time (click to see UTC)';
+        element.style.cursor = 'pointer';
+        element.dataset.originalUtc = utcString;
+        element.dataset.localFormatted = formatted + ' ' + timezone;
+        element.dataset.showingLocal = 'true';
+
+        element.addEventListener('click', function() {
+          if (this.dataset.showingLocal === 'true') {
+            var utcDate = new Date(this.dataset.originalUtc);
+            var utcFormatted = formatDateTime(utcDate, formatString);
+            this.textContent = utcFormatted + ' UTC';
+            this.title = 'UTC time (click to see local time)';
+            this.dataset.showingLocal = 'false';
+          } else {
+            this.textContent = this.dataset.localFormatted;
+            this.title = 'Your local time (click to see UTC)';
+            this.dataset.showingLocal = 'true';
+          }
+        });
+      } catch (e) { /* skip */ }
+    });
+
+    document.querySelectorAll('.local-time-ago').forEach(function(element) {
+      var utcString = element.dataset.utc;
+      if (!utcString) return;
+
+      try {
+        var date = new Date(utcString);
+        if (isNaN(date.getTime())) return;
+        var now = new Date();
+        var diffMs = now - date;
+        var formatted = formatRelativeTime(diffMs);
+        element.textContent = formatted;
+        element.title = 'Click to see exact time';
+        element.style.cursor = 'pointer';
+        element.dataset.originalUtc = utcString;
+        element.dataset.showingRelative = 'true';
+
+        element.addEventListener('click', function() {
+          if (this.dataset.showingRelative === 'true') {
+            var absoluteDate = new Date(this.dataset.originalUtc);
+            var absoluteFormatted = formatDateTime(absoluteDate, '%B %d, %Y %I:%M:%S %p');
+            var tz = getTimezoneAbbreviation(absoluteDate);
+            this.textContent = absoluteFormatted + ' ' + tz;
+            this.title = 'Click to see relative time';
+            this.dataset.showingRelative = 'false';
+          } else {
+            var now = new Date();
+            var d = new Date(this.dataset.originalUtc);
+            this.textContent = formatRelativeTime(now - d);
+            this.title = 'Click to see exact time';
+            this.dataset.showingRelative = 'true';
+          }
+        });
+      } catch (e) { /* skip */ }
+    });
+  }
+
+  function formatDateTime(date, formatString) {
+    var months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+    var monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    var year = date.getFullYear();
+    var month = date.getMonth();
+    var day = date.getDate();
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    var dayOfWeek = date.getDay();
+    var hours12 = hours % 12 || 12;
+    var ampm = hours >= 12 ? 'PM' : 'AM';
+    var pad = function(n) { return n.toString().padStart(2, '0'); };
+
+    return formatString
+      .replace('%Y', year)
+      .replace('%y', year.toString().substr(2))
+      .replace('%B', months[month])
+      .replace('%b', monthsShort[month])
+      .replace('%m', pad(month + 1))
+      .replace('%d', pad(day))
+      .replace('%e', day)
+      .replace('%A', days[dayOfWeek])
+      .replace('%a', daysShort[dayOfWeek])
+      .replace('%H', pad(hours))
+      .replace('%I', pad(hours12))
+      .replace('%M', pad(minutes))
+      .replace('%S', pad(seconds))
+      .replace('%p', ampm)
+      .replace('%P', ampm.toLowerCase());
+  }
+
+  function getTimezoneAbbreviation(date) {
+    var timeZoneString = date.toLocaleTimeString('en-US', { timeZoneName: 'short' });
+    var parts = timeZoneString.split(' ');
+    return parts[parts.length - 1];
+  }
+
+  function formatRelativeTime(diffMs) {
+    var seconds = Math.floor(diffMs / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    var months = Math.floor(days / 30);
+    var years = Math.floor(days / 365);
+
+    if (seconds < 60) return seconds <= 1 ? '1 second ago' : seconds + ' seconds ago';
+    if (minutes < 60) return minutes === 1 ? '1 minute ago' : minutes + ' minutes ago';
+    if (hours < 24) return hours === 1 ? '1 hour ago' : hours + ' hours ago';
+    if (days < 30) return days === 1 ? '1 day ago' : days + ' days ago';
+    if (months < 12) return months === 1 ? '1 month ago' : months + ' months ago';
+    return years === 1 ? '1 year ago' : years + ' years ago';
+  }
+
+  convertToLocalTime();
+
+  if (typeof Turbo !== 'undefined') {
+    document.addEventListener('turbo:load', convertToLocalTime);
+    document.addEventListener('turbo:frame-load', convertToLocalTime);
+  }
+});
+    </script>
+
+    <!-- Sidebar Toggle -->
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  var sidebarToggle = document.getElementById('sidebarToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mainContent = document.getElementById('mainContent');
+  var STORAGE_KEY = 'rails_error_dashboard_sidebar_collapsed';
+
+  if (!sidebarToggle || !sidebar || !mainContent) return;
+
+  var isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+  if (isCollapsed) {
+    sidebar.classList.add('sidebar-collapsed');
+    mainContent.classList.add('content-expanded');
+  }
+
+  sidebarToggle.addEventListener('click', function() {
+    var willBeCollapsed = !sidebar.classList.contains('sidebar-collapsed');
+    sidebar.classList.toggle('sidebar-collapsed');
+    mainContent.classList.toggle('content-expanded');
+    localStorage.setItem(STORAGE_KEY, willBeCollapsed);
+
+    var icon = sidebarToggle.querySelector('i');
+    if (icon) {
+      icon.style.transform = 'rotate(180deg)';
+      setTimeout(function() { icon.style.transform = ''; }, 200);
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable) {
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        sidebarToggle.click();
+      }
+    }
+  });
+});
+    </script>
+
     <!-- Flash Messages -->
     <script>
       // Show flash messages as toasts

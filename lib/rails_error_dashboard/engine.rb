@@ -2,11 +2,6 @@ module RailsErrorDashboard
   class Engine < ::Rails::Engine
     isolate_namespace RailsErrorDashboard
 
-    # Serve static files from engine's public directory
-    initializer "rails_error_dashboard.assets" do |app|
-      app.middleware.use ::ActionDispatch::Static, "#{root}/public"
-    end
-
     # Configure database connection for error models
     # This runs early, before middleware setup, but after database.yml is loaded
     initializer "rails_error_dashboard.database", before: :load_config_initializers do
