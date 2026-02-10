@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.34] - 2026-02-10
+
+### 🐛 Bug Fixes
+
+**Fix Thor `:light_black` Color Crash in Generators** 🎨
+
+The install and uninstall generators crashed with `NameError: uninitialized constant Thor::Shell::Color::LIGHT_BLACK` when run in a terminal. Thor doesn't define a `:light_black` color constant.
+
+**What's Fixed:**
+- Replaced all 16 occurrences of `:light_black` with `:white` across both generators
+- Install generator (`rails generate rails_error_dashboard:install`) no longer crashes
+- Uninstall generator (`rails generate rails_error_dashboard:uninstall`) no longer crashes
+
+**Note:** The bug only surfaced in real terminals (TTY) because Thor silently skips color lookup in non-TTY environments (CI/pipes), which is why it wasn't caught in tests.
+
+**Fixes:** [#60](https://github.com/AnjanJ/rails_error_dashboard/issues/60)
+**Commit:** `537fb1d`
+
+---
+
+## [0.1.33] - 2026-02-08
+
+### 🎨 Improvements
+
+**GitHub Pages Documentation URIs** 📄
+
+- Updated `homepage_uri` and `documentation_uri` in gemspec to point to GitHub Pages site
+- Documentation now served at: https://anjanj.github.io/rails_error_dashboard/
+
+**Commit:** `be506b3`
+
+---
+
+## [0.1.32] - 2026-02-07
+
+### 🎨 Improvements
+
+**Gem Discoverability Improvements** 🔍
+
+- Added `bug_tracker_uri` to gemspec metadata for better RubyGems discoverability
+- Added GitHub Pages homepage (`index.md`)
+- Removed unsupported `demo_uri` metadata key
+
+**Commits:** `32e373c`, `94df3ac`, `969df47`
+
+---
+
+## [0.1.31] - 2026-02-06
+
+### 🎨 Improvements
+
+**Demo URL Visibility** 🌐
+
+- Added live demo URL to gem description for visibility on RubyGems
+- Added demo URL to gemspec metadata
+
+**Commits:** `650c122`, `a130fb4`
+
+---
+
 ## [0.1.30] - 2026-01-23
 
 ### ✨ Features
