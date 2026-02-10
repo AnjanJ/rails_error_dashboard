@@ -207,7 +207,7 @@ module RailsErrorDashboard
       return "" if text.blank?
 
       # Get repository URL from error's application or global config
-      repo_url = if error&.application&.repository_url.present?
+      repo_url = if error&.application.respond_to?(:repository_url) && error.application.repository_url.present?
         error.application.repository_url
       elsif RailsErrorDashboard.configuration.git_repository_url.present?
         RailsErrorDashboard.configuration.git_repository_url

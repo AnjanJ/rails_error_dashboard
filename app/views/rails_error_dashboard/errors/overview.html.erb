@@ -293,20 +293,17 @@
                     Time-Correlated Errors
                   </h6>
                   <div class="list-group list-group-flush">
-                    <% @time_correlated_errors.each do |group| %>
+                    <% @time_correlated_errors.each do |_, data| %>
                       <div class="list-group-item px-0 py-2">
                         <div class="small">
-                          <strong><%= group[:error_types].size %> error types</strong>
-                          <div class="text-muted">
-                            occurred together <%= group[:occurrences] %> time<%= group[:occurrences] != 1 ? 's' : '' %>
+                          <div class="d-flex align-items-center gap-1">
+                            <code class="text-truncate"><%= data[:error_type_a] %></code>
+                            <i class="bi bi-arrow-left-right text-muted"></i>
+                            <code class="text-truncate"><%= data[:error_type_b] %></code>
                           </div>
-                          <div class="mt-1">
-                            <% group[:error_types].first(2).each do |type| %>
-                              <code class="small d-block text-truncate"><%= type %></code>
-                            <% end %>
-                            <% if group[:error_types].size > 2 %>
-                              <small class="text-muted">+<%= group[:error_types].size - 2 %> more</small>
-                            <% end %>
+                          <div class="text-muted mt-1">
+                            Correlation: <strong><%= (data[:correlation] * 100).round(0) %>%</strong>
+                            (<%= data[:strength] %>)
                           </div>
                         </div>
                       </div>
