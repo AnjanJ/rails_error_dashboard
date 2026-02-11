@@ -743,4 +743,42 @@ RSpec.describe "Query Integration", type: :system do
       end
     end
   end
+
+  describe "BacktraceProcessor service (Phase 10)" do
+    let!(:app) { create(:application) }
+
+    it "truncates backtrace and error renders correctly on show page" do
+      # Create error with long backtrace via LogError (which uses BacktraceProcessor.truncate)
+      error = StandardError.new("Phase 10 backtrace test")
+      error.set_backtrace(200.times.map { |i| "app/models/model_#{i}.rb:#{i}:in `method_#{i}'" })
+
+      RailsErrorDashboard.configuration.max_backtrace_lines = 15
+      error_log = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "phase10_test" })
+      RailsErrorDashboard.reset_configuration!
+
+      visit_error(error_log)
+      wait_for_page_load
+
+      expect(page).to have_content("Phase 10 backtrace test")
+      # Backtrace was truncated to 15 lines — the collapsed section shows 15 framework frames
+      expect(page).to have_content("15 framework/gems")
+      # Verify the truncation notice is in the page source (inside collapsed section)
+      expect(page.html).to include("185 more lines truncated")
+    end
+
+    it "computes backtrace signature used for similar error matching" do
+      sig = RailsErrorDashboard::Services::BacktraceProcessor.calculate_signature(
+        "app/models/user.rb:10:in `save'\napp/controllers/users_controller.rb:20:in `create'"
+      )
+
+      expect(sig).to be_a(String)
+      expect(sig.length).to eq(16)
+
+      # Same backtrace with different line numbers → same signature
+      sig2 = RailsErrorDashboard::Services::BacktraceProcessor.calculate_signature(
+        "app/models/user.rb:99:in `save'\napp/controllers/users_controller.rb:1:in `create'"
+      )
+      expect(sig).to eq(sig2)
+    end
+  end
 end

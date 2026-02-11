@@ -46,7 +46,7 @@ module RailsErrorDashboard
         application = find_or_create_application
 
         # Build error attributes
-        truncated_backtrace = truncate_backtrace(@exception.backtrace)
+        truncated_backtrace = Services::BacktraceProcessor.truncate(@exception.backtrace)
         attributes = {
           application_id: application.id,
           error_type: @exception.class.name,
@@ -73,7 +73,7 @@ module RailsErrorDashboard
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
-          attributes[:backtrace_signature] = calculate_backtrace_signature_from_backtrace(truncated_backtrace)
+          attributes[:backtrace_signature] = Services::BacktraceProcessor.calculate_signature(truncated_backtrace)
         end
 
         #  Add git/release info if columns exist
@@ -194,51 +194,6 @@ module RailsErrorDashboard
         if error_log.critical?
           ActiveSupport::Notifications.instrument("critical_error.rails_error_dashboard", payload)
         end
-      end
-
-
-      # Truncate backtrace to configured maximum lines
-      # This reduces database storage and improves performance
-      def truncate_backtrace(backtrace)
-        return nil if backtrace.nil?
-
-        max_lines = RailsErrorDashboard.configuration.max_backtrace_lines
-
-        # Limit backtrace to max_lines
-        limited_backtrace = backtrace.first(max_lines)
-
-        # Join into string
-        result = limited_backtrace.join("\n")
-
-        # Add truncation notice if we cut lines
-        if backtrace.length > max_lines
-          truncation_notice = "... (#{backtrace.length - max_lines} more lines truncated)"
-          result = result.empty? ? truncation_notice : result + "\n" + truncation_notice
-        end
-
-        result
-      end
-
-      #  Calculate backtrace signature from backtrace string/array
-      # This matches the algorithm in ErrorLog#calculate_backtrace_signature
-      def calculate_backtrace_signature_from_backtrace(backtrace)
-        return nil if backtrace.blank?
-
-        lines = backtrace.is_a?(String) ? backtrace.split("\n") : backtrace
-        frames = lines.first(20).map do |line|
-          # Extract file path and method name, ignore line numbers
-          if line =~ %r{([^/]+\.rb):.*?in `(.+)'$}
-            "#{Regexp.last_match(1)}:#{Regexp.last_match(2)}"
-          elsif line =~ %r{([^/]+\.rb)}
-            Regexp.last_match(1)
-          end
-        end.compact.uniq
-
-        return nil if frames.empty?
-
-        # Create signature from sorted file paths (order-independent)
-        file_paths = frames.map { |frame| frame.split(":").first }.sort
-        Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
       end
 
       #  Check if error exceeds baseline and send alert if needed

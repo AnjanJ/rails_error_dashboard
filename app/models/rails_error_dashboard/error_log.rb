@@ -357,15 +357,9 @@ module RailsErrorDashboard
       end.compact.uniq
     end
 
-    # Calculate backtrace signature for fast similarity matching
-    # Signature is a hash of the unique file paths in the backtrace
+    # Calculate backtrace signature — delegates to Service
     def calculate_backtrace_signature
-      frames = backtrace_frames
-      return nil if frames.empty?
-
-      # Create signature from sorted file paths (order-independent)
-      file_paths = frames.map { |frame| frame.split(":").first }.sort
-      Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
+      Services::BacktraceProcessor.calculate_signature(backtrace)
     end
 
     # Find similar errors using fuzzy matching
