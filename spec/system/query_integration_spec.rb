@@ -781,4 +781,61 @@ RSpec.describe "Query Integration", type: :system do
       expect(sig).to eq(sig2)
     end
   end
+
+  context "UpsertCascadePattern command (Phase 11)" do
+    it "creates cascade pattern and CascadeDetector renders it on analytics page" do
+      # Create two errors
+      parent_error = create(:error_log, error_type: "DatabaseError", message: "Phase 11 parent")
+      child_error = create(:error_log, error_type: "NoMethodError", message: "Phase 11 child")
+
+      # Create enough occurrences for parent so probability is meaningful
+      10.times { create(:error_occurrence, error_log: parent_error) }
+
+      # Use UpsertCascadePattern command to create a pattern
+      result = RailsErrorDashboard::Commands::UpsertCascadePattern.call(
+        parent_error_id: parent_error.id,
+        child_error_id: child_error.id,
+        frequency: 8,
+        avg_delay_seconds: 30.0
+      )
+
+      expect(result[:created]).to be true
+      expect(result[:pattern].cascade_probability).to eq(0.8)
+
+      # Visit parent error show page — cascade should appear
+      visit_error(parent_error)
+      wait_for_page_load
+
+      expect(page).to have_content("DatabaseError")
+      expect(page).to have_content("Phase 11 parent")
+    end
+
+    it "CascadeDetector detects patterns and delegates writes to UpsertCascadePattern" do
+      # Create two errors with cascading occurrences
+      parent_error = create(:error_log, error_type: "TimeoutError", message: "Phase 11 cascade parent")
+      child_error = create(:error_log, error_type: "RetryError", message: "Phase 11 cascade child")
+
+      # Create 5 cascading occurrence pairs (parent -> child within 60s window)
+      base_time = 2.hours.ago
+      5.times do |i|
+        parent_time = base_time + (i * 10.minutes)
+        child_time = parent_time + 30.seconds
+        create(:error_occurrence, error_log: parent_error, occurred_at: parent_time)
+        create(:error_occurrence, error_log: child_error, occurred_at: child_time)
+      end
+
+      # Run CascadeDetector — it should delegate to UpsertCascadePattern
+      result = RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
+      expect(result[:detected]).to be > 0
+
+      # Verify pattern was created in DB
+      pattern = RailsErrorDashboard::CascadePattern.find_by(
+        parent_error: parent_error,
+        child_error: child_error
+      )
+      expect(pattern).to be_present
+      expect(pattern.frequency).to be >= 3
+      expect(pattern.cascade_probability).to be_present
+    end
+  end
 end

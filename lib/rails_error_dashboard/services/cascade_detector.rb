@@ -52,33 +52,25 @@ module RailsErrorDashboard
           end
         end
 
-        # Filter and save cascade patterns
+        # Filter and persist cascade patterns via Command
         updated_count = 0
         patterns_found.each do |(parent_id, child_id), data|
           next if data[:count] < MIN_CASCADE_FREQUENCY
 
-          # Find or create cascade pattern
-          pattern = CascadePattern.find_or_initialize_by(
-            parent_error_id: parent_id,
-            child_error_id: child_id
-          )
-
           avg_delay = data[:delays].sum / data[:delays].size
 
-          if pattern.new_record?
-            pattern.frequency = data[:count]
-            pattern.avg_delay_seconds = avg_delay
-            pattern.last_detected_at = Time.current
-            pattern.save
+          result = Commands::UpsertCascadePattern.call(
+            parent_error_id: parent_id,
+            child_error_id: child_id,
+            frequency: data[:count],
+            avg_delay_seconds: avg_delay
+          )
+
+          if result[:created]
             @detected_count += 1
           else
-            # Update existing pattern
-            pattern.increment_detection!(avg_delay)
             updated_count += 1
           end
-
-          # Calculate probability
-          pattern.calculate_probability!
         end
 
         { detected: @detected_count, updated: updated_count }
