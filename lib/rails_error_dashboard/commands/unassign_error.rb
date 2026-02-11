@@ -15,7 +15,10 @@ module RailsErrorDashboard
 
       def call
         error = ErrorLog.find(@error_id)
-        error.unassign!
+        error.update!(
+          assigned_to: nil,
+          assigned_at: nil
+        )
         error
       end
     end

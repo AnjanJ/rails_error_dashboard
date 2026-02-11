@@ -18,8 +18,27 @@ module RailsErrorDashboard
 
       def call
         error = ErrorLog.find(@error_id)
-        success = error.update_status!(@status, comment: @comment)
-        { success: success, error: error }
+
+        unless error.can_transition_to?(@status)
+          return { success: false, error: error }
+        end
+
+        error.transaction do
+          error.update!(status: @status)
+
+          # Auto-resolve if status is "resolved"
+          error.update!(resolved: true) if @status == "resolved"
+
+          # Add comment about status change
+          if @comment.present?
+            error.comments.create!(
+              author_name: error.assigned_to || "System",
+              body: "Status changed to #{@status}: #{@comment}"
+            )
+          end
+        end
+
+        { success: true, error: error }
       end
     end
   end

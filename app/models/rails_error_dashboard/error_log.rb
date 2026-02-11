@@ -255,43 +255,12 @@ module RailsErrorDashboard
 
     # Phase 3: Workflow Integration methods
 
-    # Assignment methods
-    def assign_to!(assignee_name)
-      update!(
-        assigned_to: assignee_name,
-        assigned_at: Time.current,
-        status: "in_progress" # Auto-transition to in_progress when assigned
-      )
-    end
-
-    def unassign!
-      update!(
-        assigned_to: nil,
-        assigned_at: nil
-      )
-    end
-
+    # Assignment query
     def assigned?
       assigned_to.present?
     end
 
-    # Snooze methods
-    def snooze!(hours, reason: nil)
-      snooze_until = hours.hours.from_now
-      # Store snooze reason in comments if provided
-      if reason.present?
-        comments.create!(
-          author_name: assigned_to || "System",
-          body: "Snoozed for #{hours} hours: #{reason}"
-        )
-      end
-      update!(snoozed_until: snooze_until)
-    end
-
-    def unsnooze!
-      update!(snoozed_until: nil)
-    end
-
+    # Snooze query
     def snoozed?
       snoozed_until.present? && snoozed_until >= Time.current
     end
@@ -376,27 +345,6 @@ module RailsErrorDashboard
       }
 
       valid_transitions[status]&.include?(new_status) || false
-    end
-
-    def update_status!(new_status, comment: nil)
-      return false unless can_transition_to?(new_status)
-
-      transaction do
-        update!(status: new_status)
-
-        # Auto-resolve if status is "resolved"
-        update!(resolved: true) if new_status == "resolved"
-
-        # Add comment about status change
-        if comment.present?
-          comments.create!(
-            author_name: assigned_to || "System",
-            body: "Status changed to #{new_status}: #{comment}"
-          )
-        end
-      end
-
-      true
     end
 
     # Get error statistics

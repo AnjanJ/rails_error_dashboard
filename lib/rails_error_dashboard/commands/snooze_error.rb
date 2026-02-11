@@ -17,7 +17,17 @@ module RailsErrorDashboard
 
       def call
         error = ErrorLog.find(@error_id)
-        error.snooze!(@hours, reason: @reason)
+        snooze_until = @hours.hours.from_now
+
+        # Store snooze reason in comments if provided
+        if @reason.present?
+          error.comments.create!(
+            author_name: error.assigned_to || "System",
+            body: "Snoozed for #{@hours} hours: #{@reason}"
+          )
+        end
+
+        error.update!(snoozed_until: snooze_until)
         error
       end
     end

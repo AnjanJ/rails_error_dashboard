@@ -233,6 +233,131 @@ RSpec.describe "Query Integration", type: :system do
     end
   end
 
+  describe "Command-driven workflow actions" do
+    let!(:workflow_error) do
+      create(:error_log,
+        application: application,
+        error_type: "WorkflowTestError",
+        message: "Testing command write logic",
+        status: "new",
+        resolved: false,
+        assigned_to: nil,
+        snoozed_until: nil)
+    end
+
+    it "assign auto-transitions status to in_progress" do
+      visit_error(workflow_error)
+      wait_for_page_load
+
+      assign_error_to("aragorn")
+      wait_for_page_load
+
+      # The status badge should show "In Progress" (auto-set by AssignError command)
+      expect(page).to have_content("In Progress")
+      expect(page).to have_content("aragorn")
+
+      # Verify DB state
+      workflow_error.reload
+      expect(workflow_error.status).to eq("in_progress")
+      expect(workflow_error.assigned_to).to eq("aragorn")
+      expect(workflow_error.assigned_at).to be_present
+    end
+
+    it "unassign clears assignment fields in the database" do
+      # Pre-assign via command
+      RailsErrorDashboard::Commands::AssignError.call(workflow_error.id, assigned_to: "gandalf")
+
+      visit_error(workflow_error)
+      wait_for_page_load
+      expect(page).to have_content("gandalf")
+
+      unassign_error
+      wait_for_page_load
+
+      # Assign button should be back
+      expect(page).to have_css("[data-bs-target='#assignModal']")
+
+      # Verify DB state
+      workflow_error.reload
+      expect(workflow_error.assigned_to).to be_nil
+      expect(workflow_error.assigned_at).to be_nil
+    end
+
+    it "snooze without reason does not create a comment" do
+      visit_error(workflow_error)
+      wait_for_page_load
+
+      comment_count_before = workflow_error.comments.count
+
+      snooze_error_for("1 hour")
+      wait_for_page_load
+
+      expect(page).to have_content("Snoozed")
+
+      # No comment should have been created (reason was blank)
+      workflow_error.reload
+      expect(workflow_error.comments.count).to eq(comment_count_before)
+      expect(workflow_error.snoozed_until).to be_present
+    end
+
+    it "snooze with reason creates a comment attributed to assignee" do
+      # Pre-assign so comment is attributed to the assignee
+      RailsErrorDashboard::Commands::AssignError.call(workflow_error.id, assigned_to: "legolas")
+
+      visit_error(workflow_error)
+      wait_for_page_load
+
+      snooze_error_for("4 hours", reason: "Deploy pending")
+      wait_for_page_load
+
+      expect(page).to have_content("Snoozed")
+      expect(page).to have_content("Deploy pending")
+
+      # Verify comment was attributed to the assignee
+      comment = workflow_error.comments.last
+      expect(comment.author_name).to eq("legolas")
+      expect(comment.body).to include("Snoozed for 4 hours")
+    end
+
+    it "unsnooze clears snoozed_until in the database" do
+      # Pre-snooze via command
+      RailsErrorDashboard::Commands::SnoozeError.call(workflow_error.id, hours: 8)
+
+      visit_error(workflow_error)
+      wait_for_page_load
+      expect(page).to have_content("Snoozed")
+
+      unsnooze_error
+      wait_for_page_load
+
+      expect(page).not_to have_css(".alert-warning", text: "Snoozed")
+
+      # Verify DB state
+      workflow_error.reload
+      expect(workflow_error.snoozed_until).to be_nil
+    end
+
+    it "resolve sets resolved flag via Command" do
+      # Move to in_progress first (required for valid transition path)
+      RailsErrorDashboard::Commands::AssignError.call(workflow_error.id, assigned_to: "gandalf")
+
+      visit_error(workflow_error)
+      wait_for_page_load
+
+      resolve_error(name: "gandalf", comment: "Root cause fixed")
+      wait_for_page_load
+
+      expect(page).to have_content("Resolved")
+
+      # Verify DB state — ResolveError sets resolved flag and resolved_at
+      workflow_error.reload
+      expect(workflow_error.resolved).to be true
+      expect(workflow_error.resolved_at).to be_present
+      expect(workflow_error.resolved_by_name).to eq("gandalf")
+      expect(workflow_error.resolution_comment).to eq("Root cause fixed")
+    end
+  end
+
   describe "Overview page with DashboardStats integration" do
     context "when spike detection runs through BaselineCalculator" do
       before do

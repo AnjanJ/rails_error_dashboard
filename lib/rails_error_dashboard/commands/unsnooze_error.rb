@@ -15,7 +15,7 @@ module RailsErrorDashboard
 
       def call
         error = ErrorLog.find(@error_id)
-        error.unsnooze!
+        error.update!(snoozed_until: nil)
         error
       end
     end

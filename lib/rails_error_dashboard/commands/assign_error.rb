@@ -16,7 +16,11 @@ module RailsErrorDashboard
 
       def call
         error = ErrorLog.find(@error_id)
-        error.assign_to!(@assigned_to)
+        error.update!(
+          assigned_to: @assigned_to,
+          assigned_at: Time.current,
+          status: "in_progress" # Auto-transition to in_progress when assigned
+        )
         error
       end
     end
