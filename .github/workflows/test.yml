@@ -44,11 +44,11 @@ jobs:
         RAILS_ENV=test bundle exec rake db:migrate
         cd ../..
 
-    - name: Run tests
+    - name: Run unit and integration tests
       env:
         RAILS_VERSION: ${{ matrix.rails }}
         COVERAGE: false
-      run: bundle exec rspec
+      run: bundle exec rspec --exclude-pattern "spec/system/**/*"
 
     - name: Upload coverage reports (Ruby 3.4 / Rails 8.1 only)
       if: matrix.ruby == '3.4' && matrix.rails == '8.1'
@@ -56,3 +56,40 @@ jobs:
       with:
         files: ./coverage/coverage.xml
         fail_ci_if_error: false
+
+  system-test:
+    runs-on: ubuntu-latest
+    name: System Tests (Chrome)
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+
+    - name: Install dependencies
+      env:
+        RAILS_VERSION: '8.1'
+      run: |
+        rm -f Gemfile.lock
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3
+
+    - name: Setup test database
+      env:
+        RAILS_VERSION: '8.1'
+      run: |
+        mkdir -p spec/dummy/db
+        cd spec/dummy
+        rm -f db/*.sqlite3
+        RAILS_ENV=test bundle exec rake db:migrate
+        cd ../..
+
+    - name: Run system tests
+      env:
+        RAILS_VERSION: '8.1'
+        COVERAGE: false
+      run: bundle exec rspec spec/system/ --format documentation

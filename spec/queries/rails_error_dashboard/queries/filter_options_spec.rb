@@ -64,6 +64,65 @@ RSpec.describe RailsErrorDashboard::Queries::FilterOptions do
       end
     end
 
+    describe "assignees" do
+      before do
+        RailsErrorDashboard::ErrorLog.destroy_all
+      end
+
+      it "returns distinct assigned_to values" do
+        create(:error_log, assigned_to: "gandalf")
+        create(:error_log, assigned_to: "aragorn")
+        create(:error_log, assigned_to: "gandalf")
+
+        result = described_class.call
+
+        expect(result[:assignees]).to contain_exactly("aragorn", "gandalf")
+      end
+
+      it "sorts assignees alphabetically" do
+        create(:error_log, assigned_to: "gandalf")
+        create(:error_log, assigned_to: "aragorn")
+
+        result = described_class.call
+
+        expect(result[:assignees]).to eq([ "aragorn", "gandalf" ])
+      end
+
+      it "excludes errors with nil assigned_to" do
+        create(:error_log, assigned_to: nil)
+        create(:error_log, assigned_to: "gandalf")
+
+        result = described_class.call
+
+        expect(result[:assignees]).to eq([ "gandalf" ])
+      end
+
+      it "returns empty array when no assignments exist" do
+        create(:error_log, assigned_to: nil)
+
+        result = described_class.call
+
+        expect(result[:assignees]).to eq([])
+      end
+
+      context "with application_id filter" do
+        let!(:app1) { create(:application) }
+        let!(:app2) { create(:application) }
+
+        before do
+          create(:error_log, application: app1, assigned_to: "gandalf")
+          create(:error_log, application: app2, assigned_to: "sauron")
+        end
+
+        it "filters assignees by application" do
+          result = described_class.call(application_id: app1.id)
+
+          expect(result[:assignees]).to eq([ "gandalf" ])
+          expect(result[:assignees]).not_to include("sauron")
+        end
+      end
+    end
+
     context "with no errors" do
       before do
         RailsErrorDashboard::ErrorLog.destroy_all

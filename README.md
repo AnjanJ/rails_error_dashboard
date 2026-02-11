@@ -29,9 +29,9 @@ Experience the full dashboard with 250+ realistic Rails errors, LOTR-themed demo
 ---
 
 ### ⚠️ BETA SOFTWARE
-This Rails Engine is in beta and under active development. While functional and tested (935+ tests passing), the API may change before v1.0.0. Use in production at your own discretion.
+This Rails Engine is in beta and under active development. While functional and tested (1,300+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
 
-**Supports**: Rails 7.0 - 8.0 (+ edge 8.1) | Ruby 3.2 - 3.4
+**Supports**: Rails 7.0 - 8.1 | Ruby 3.2 - 4.0
 
 ---
 
@@ -635,6 +635,47 @@ Built with **Service Objects + CQRS Principles**:
 - **Plugins**: Event-driven extensibility
 
 Clean, maintainable, testable architecture you can understand and modify.
+
+---
+
+## 🧪 Testing
+
+1,300+ tests covering unit, integration, and browser-based system tests.
+
+### Running Tests
+
+```bash
+# Run all tests
+bundle exec rspec
+
+# Run unit/integration tests only (fast)
+bundle exec rspec --exclude-pattern "spec/system/**/*"
+
+# Run system tests only (requires Chrome)
+bundle exec rspec spec/system/
+
+# Run with visible browser for debugging
+HEADLESS=false bundle exec rspec spec/system/
+
+# Run with Chrome DevTools inspector
+INSPECTOR=true HEADLESS=false bundle exec rspec spec/system/
+
+# Run with coverage report
+COVERAGE=true bundle exec rspec
+```
+
+### System Tests (Browser-Based)
+
+System tests use **Capybara + Cuprite** (Chrome DevTools Protocol) to simulate real user interactions — opening modals, filling forms, clicking buttons, and verifying page content. No Selenium or chromedriver management needed.
+
+**Requirements:** Chrome or Chromium installed locally.
+
+```bash
+# Verify Chrome is available
+which google-chrome || which chromium-browser || which chromium
+
+# macOS: Chrome is typically at /Applications/Google Chrome.app
+```
 
 ---
 

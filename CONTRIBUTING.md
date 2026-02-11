@@ -195,7 +195,7 @@ We have comprehensive test coverage and require tests for all changes.
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (unit + integration + system)
 bundle exec rspec
 
 # Run specific test file
@@ -204,9 +204,30 @@ bundle exec rspec spec/lib/rails_error_dashboard/commands/log_error_spec.rb
 # Run specific test (by line number)
 bundle exec rspec spec/lib/rails_error_dashboard/commands/log_error_spec.rb:42
 
+# Run unit/integration tests only (no browser needed)
+bundle exec rspec --exclude-pattern "spec/system/**/*"
+
+# Run system tests only (requires Chrome/Chromium)
+bundle exec rspec spec/system/
+
+# Run system tests with visible browser (for debugging)
+HEADLESS=false bundle exec rspec spec/system/
+
+# Run with Chrome DevTools inspector
+INSPECTOR=true HEADLESS=false bundle exec rspec spec/system/
+
 # Run with coverage report
 COVERAGE=true bundle exec rspec
 ```
+
+### System Tests
+
+System tests use **Capybara + Cuprite** to automate real browser interactions (opening Bootstrap modals, filling forms, clicking buttons, verifying page content). They require Chrome or Chromium installed locally.
+
+System test files live in `spec/system/`. Helper modules:
+- `spec/support/system_helpers.rb` — Authentication and navigation helpers
+- `spec/support/modal_helpers.rb` — Bootstrap modal interaction helpers
+- `spec/support/capybara.rb` — Cuprite driver configuration
 
 ### Test Coverage
 

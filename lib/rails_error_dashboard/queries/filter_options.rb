@@ -17,8 +17,17 @@ module RailsErrorDashboard
         {
           error_types: base_scope.distinct.pluck(:error_type).compact.sort,
           platforms: base_scope.distinct.pluck(:platform).compact,
-          applications: Application.ordered_by_name.pluck(:name, :id)
+          applications: Application.ordered_by_name.pluck(:name, :id),
+          assignees: assignees
         }
+      end
+
+      def assignees
+        base_scope.where.not(assigned_to: nil)
+                  .select(:assigned_to)
+                  .distinct
+                  .pluck(:assigned_to)
+                  .sort
       end
 
       private

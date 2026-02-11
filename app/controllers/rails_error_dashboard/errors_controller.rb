@@ -51,14 +51,8 @@ module RailsErrorDashboard
         @multi_error_users = []
       end
 
-      # Get critical alerts (critical/high severity errors from last hour)
-      # Filter by priority_level in database instead of loading all records into memory
-      @critical_alerts = ErrorLog
-        .where("occurred_at >= ?", 1.hour.ago)
-        .where(resolved_at: nil)
-        .where(priority_level: [ 3, 4 ]) # 3 = high, 4 = critical (based on severity enum)
-      @critical_alerts = @critical_alerts.where(application_id: @current_application_id) if @current_application_id.present?
-      @critical_alerts = @critical_alerts.order(occurred_at: :desc).limit(10)
+      # Get critical alerts using Query
+      @critical_alerts = Queries::CriticalAlerts.call(application_id: @current_application_id)
     end
 
     def index
@@ -75,15 +69,7 @@ module RailsErrorDashboard
       filter_options = Queries::FilterOptions.call(application_id: @current_application_id)
       @error_types = filter_options[:error_types]
       @platforms = filter_options[:platforms]
-
-      # Get all distinct assignees for the assignee filter dropdown
-      assignee_query = ErrorLog.where.not(assigned_to: nil)
-      # Filter by application if specified
-      assignee_query = assignee_query.where(application_id: @current_application_id) if @current_application_id.present?
-      @assignees = assignee_query.select(:assigned_to)
-                                 .distinct
-                                 .pluck(:assigned_to)
-                                 .sort
+      @assignees = filter_options[:assignees]
     end
 
     def show
@@ -109,67 +95,40 @@ module RailsErrorDashboard
       redirect_to error_path(@error)
     end
 
-    # Phase 3: Workflow Integration Actions
+    # Phase 3: Workflow Integration Actions (via Commands)
 
     def assign
-      @error = ErrorLog.find(params[:id])
-      @error.assign_to!(params[:assigned_to])
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
       redirect_to error_path(@error)
     end
 
     def unassign
-      @error = ErrorLog.find(params[:id])
-      @error.unassign!
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::UnassignError.call(params[:id])
       redirect_to error_path(@error)
     end
 
     def update_priority
-      @error = ErrorLog.find(params[:id])
-      @error.update!(priority_level: params[:priority_level])
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
       redirect_to error_path(@error)
     end
 
     def snooze
-      @error = ErrorLog.find(params[:id])
-      @error.snooze!(params[:hours].to_i, reason: params[:reason])
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::SnoozeError.call(params[:id], hours: params[:hours].to_i, reason: params[:reason])
       redirect_to error_path(@error)
     end
 
     def unsnooze
-      @error = ErrorLog.find(params[:id])
-      @error.unsnooze!
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::UnsnoozeError.call(params[:id])
       redirect_to error_path(@error)
     end
 
     def update_status
-      @error = ErrorLog.find(params[:id])
-      if @error.update_status!(params[:status], comment: params[:comment])
-        redirect_to error_path(@error)
-      else
-        redirect_to error_path(@error)
-      end
-    rescue => e
-      redirect_to error_path(@error)
+      result = Commands::UpdateErrorStatus.call(params[:id], status: params[:status], comment: params[:comment])
+      redirect_to error_path(result[:error])
     end
 
     def add_comment
-      @error = ErrorLog.find(params[:id])
-      @error.comments.create!(
-        author_name: params[:author_name],
-        body: params[:body]
-      )
-      redirect_to error_path(@error)
-    rescue => e
+      @error = Commands::AddErrorComment.call(params[:id], author_name: params[:author_name], body: params[:body])
       redirect_to error_path(@error)
     end
 

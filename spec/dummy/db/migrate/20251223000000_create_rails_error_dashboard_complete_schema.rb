@@ -70,6 +70,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       # Workflow fields (from 20251226020000)
       t.string :status, default: "new"
       t.string :assigned_to
+      t.datetime :assigned_at
       t.datetime :snoozed_until
       t.integer :priority_level, default: 0
 
