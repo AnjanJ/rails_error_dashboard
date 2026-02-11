@@ -659,4 +659,88 @@ RSpec.describe "Query Integration", type: :system do
       end
     end
   end
+
+  describe "FindOrIncrementError and FindOrCreateApplication commands (Phase 9)" do
+    let!(:app) { create(:application) }
+
+    context "when FindOrIncrementError creates a new error" do
+      it "displays the newly created error on the errors page" do
+        error = RailsErrorDashboard::Commands::FindOrIncrementError.call(
+          "system_test_hash_phase9",
+          {
+            application_id: app.id,
+            error_type: "Phase9SystemTestError",
+            message: "FindOrIncrementError system test",
+            backtrace: "app/controllers/test_controller.rb:42",
+            platform: "Web",
+            occurred_at: Time.current,
+            error_hash: "system_test_hash_phase9"
+          }
+        )
+
+        visit_error(error)
+        wait_for_page_load
+
+        expect(page).to have_content("Phase9SystemTestError")
+        expect(page).to have_content("FindOrIncrementError system test")
+        expect(page).to have_content("1x")
+      end
+    end
+
+    context "when FindOrIncrementError increments an existing error" do
+      it "displays updated occurrence count on the error page" do
+        # Create initial error
+        error = RailsErrorDashboard::Commands::FindOrIncrementError.call(
+          "system_test_hash_incr",
+          {
+            application_id: app.id,
+            error_type: "IncrementTestError",
+            message: "Testing increment behavior",
+            platform: "API",
+            occurred_at: Time.current,
+            error_hash: "system_test_hash_incr"
+          }
+        )
+
+        # Increment 4 more times
+        4.times do
+          RailsErrorDashboard::Commands::FindOrIncrementError.call(
+            "system_test_hash_incr",
+            {
+              application_id: app.id,
+              error_type: "IncrementTestError",
+              message: "Testing increment behavior",
+              platform: "API",
+              occurred_at: Time.current,
+              error_hash: "system_test_hash_incr"
+            }
+          )
+        end
+
+        visit_error(error)
+        wait_for_page_load
+
+        expect(page).to have_content("IncrementTestError")
+        expect(page).to have_content("5x")
+      end
+    end
+
+    context "when FindOrCreateApplication creates a new application" do
+      it "creates application that can be associated with errors" do
+        new_app = RailsErrorDashboard::Commands::FindOrCreateApplication.call("Phase9TestApp")
+
+        error = create(:error_log,
+          application: new_app,
+          error_type: "AppCreationTest",
+          message: "Testing new application creation",
+          occurred_at: Time.current)
+
+        visit_error(error)
+        wait_for_page_load
+
+        expect(page).to have_content("AppCreationTest")
+        expect(page).to have_content("Testing new application creation")
+      end
+    end
+  end
 end

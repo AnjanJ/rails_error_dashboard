@@ -188,59 +188,9 @@ module RailsErrorDashboard
       Errno::ECONNREFUSED
     ].freeze
 
-    # Find existing error by hash or create new one
-    # This is CRITICAL for accurate occurrence tracking
-    # Uses pessimistic locking to prevent race conditions in multi-app scenarios
+    # Find existing error by hash or create new one — delegates to Command
     def self.find_or_increment_by_hash(error_hash, attributes = {})
-      # Look for unresolved error with same hash in last 24 hours
-      # (resolved errors are considered "fixed" so new occurrence = new issue)
-      # CRITICAL: Scope by application_id to prevent cross-app locks
-      existing = unresolved
-                  .where(error_hash: error_hash)
-                  .where(application_id: attributes[:application_id])
-                  .where("occurred_at >= ?", 24.hours.ago)
-                  .lock  # Row-level pessimistic lock
-                  .order(last_seen_at: :desc)
-                  .first
-
-      if existing
-        # Increment existing error
-        existing.update!(
-          occurrence_count: existing.occurrence_count + 1,
-          last_seen_at: Time.current,
-          # Update context from latest occurrence
-          user_id: attributes[:user_id] || existing.user_id,
-          request_url: attributes[:request_url] || existing.request_url,
-          request_params: attributes[:request_params] || existing.request_params,
-          user_agent: attributes[:user_agent] || existing.user_agent,
-          ip_address: attributes[:ip_address] || existing.ip_address
-        )
-        existing
-      else
-        # Create new error record with retry logic for race conditions
-        begin
-          create!(attributes.reverse_merge(resolved: false))
-        rescue ActiveRecord::RecordNotUnique
-          # Race condition: another process created the record
-          # Retry with lock to find and increment
-          retry_existing = unresolved
-                            .where(error_hash: error_hash)
-                            .where(application_id: attributes[:application_id])
-                            .where("occurred_at >= ?", 24.hours.ago)
-                            .lock
-                            .first
-
-          if retry_existing
-            retry_existing.update!(
-              occurrence_count: retry_existing.occurrence_count + 1,
-              last_seen_at: Time.current
-            )
-            retry_existing
-          else
-            raise  # Re-raise if still nil (unexpected scenario)
-          end
-        end
-      end
+      Commands::FindOrIncrementError.call(error_hash, attributes)
     end
 
     # Log an error with context (delegates to Command)
