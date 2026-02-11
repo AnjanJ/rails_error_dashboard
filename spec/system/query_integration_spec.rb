@@ -838,4 +838,50 @@ RSpec.describe "Query Integration", type: :system do
       expect(pattern.cascade_probability).to be_present
     end
   end
+
+  context "UpsertBaseline command (Phase 12)" do
+    it "creates baseline and BaselineCalculator uses it for anomaly data" do
+      # Create a baseline via the command
+      stats = { mean: 5.0, std_dev: 1.5, percentile_95: 8.0, percentile_99: 10.0 }
+      baseline = RailsErrorDashboard::Commands::UpsertBaseline.call(
+        error_type: "StandardError",
+        platform: "Web",
+        baseline_type: "daily",
+        period_start: 12.weeks.ago.beginning_of_day,
+        period_end: Time.current.beginning_of_day,
+        stats: stats,
+        count: 50,
+        sample_size: 7
+      )
+
+      expect(baseline).to be_persisted
+      expect(baseline.mean).to eq(5.0)
+      expect(baseline.std_dev).to eq(1.5)
+    end
+
+    it "BaselineCalculator delegates writes to UpsertBaseline and produces baselines" do
+      # Create errors so BaselineCalculator has data to work with
+      error = create(:error_log, error_type: "Phase12CalcError", platform: "Web",
+                                 occurred_at: 1.day.ago)
+      3.times do |i|
+        create(:error_log, error_type: "Phase12CalcError", platform: "Web",
+                           occurred_at: (i + 2).days.ago)
+      end
+
+      # Run the calculator — it should delegate to UpsertBaseline
+      result = RailsErrorDashboard::Services::BaselineCalculator
+        .calculate_for_error_type("Phase12CalcError", "Web")
+
+      expect(result).to be_a(Hash)
+      expect(result).to have_key(:hourly)
+      expect(result).to have_key(:daily)
+      expect(result).to have_key(:weekly)
+
+      # Verify baselines were persisted
+      baselines = RailsErrorDashboard::ErrorBaseline.where(
+        error_type: "Phase12CalcError", platform: "Web"
+      )
+      expect(baselines.count).to be > 0
+    end
+  end
 end

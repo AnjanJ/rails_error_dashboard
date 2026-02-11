@@ -86,26 +86,13 @@ module RailsErrorDashboard
 
         return nil if hourly_counts.empty?
 
-        # Calculate statistics
         counts = hourly_counts.values
         stats = calculate_statistics(counts)
 
-        # Create or update baseline
-        baseline = ErrorBaseline.find_or_initialize_by(
-          error_type: error_type,
-          platform: platform,
-          baseline_type: "hourly",
-          period_start: period_start
-        )
-
-        baseline.update!(
-          period_end: period_end,
-          count: counts.sum,
-          mean: stats[:mean],
-          std_dev: stats[:std_dev],
-          percentile_95: stats[:percentile_95],
-          percentile_99: stats[:percentile_99],
-          sample_size: counts.size
+        baseline = Commands::UpsertBaseline.call(
+          error_type: error_type, platform: platform, baseline_type: "hourly",
+          period_start: period_start, period_end: period_end,
+          stats: stats, count: counts.sum, sample_size: counts.size
         )
 
         @calculated_count += 1
@@ -126,26 +113,13 @@ module RailsErrorDashboard
 
         return nil if daily_counts.empty?
 
-        # Calculate statistics
         counts = daily_counts.values
         stats = calculate_statistics(counts)
 
-        # Create or update baseline
-        baseline = ErrorBaseline.find_or_initialize_by(
-          error_type: error_type,
-          platform: platform,
-          baseline_type: "daily",
-          period_start: period_start
-        )
-
-        baseline.update!(
-          period_end: period_end,
-          count: counts.sum,
-          mean: stats[:mean],
-          std_dev: stats[:std_dev],
-          percentile_95: stats[:percentile_95],
-          percentile_99: stats[:percentile_99],
-          sample_size: counts.size
+        baseline = Commands::UpsertBaseline.call(
+          error_type: error_type, platform: platform, baseline_type: "daily",
+          period_start: period_start, period_end: period_end,
+          stats: stats, count: counts.sum, sample_size: counts.size
         )
 
         @calculated_count += 1
@@ -166,26 +140,13 @@ module RailsErrorDashboard
 
         return nil if weekly_counts.empty?
 
-        # Calculate statistics
         counts = weekly_counts.values
         stats = calculate_statistics(counts)
 
-        # Create or update baseline
-        baseline = ErrorBaseline.find_or_initialize_by(
-          error_type: error_type,
-          platform: platform,
-          baseline_type: "weekly",
-          period_start: period_start
-        )
-
-        baseline.update!(
-          period_end: period_end,
-          count: counts.sum,
-          mean: stats[:mean],
-          std_dev: stats[:std_dev],
-          percentile_95: stats[:percentile_95],
-          percentile_99: stats[:percentile_99],
-          sample_size: counts.size
+        baseline = Commands::UpsertBaseline.call(
+          error_type: error_type, platform: platform, baseline_type: "weekly",
+          period_start: period_start, period_end: period_end,
+          stats: stats, count: counts.sum, sample_size: counts.size
         )
 
         @calculated_count += 1
