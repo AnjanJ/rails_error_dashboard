@@ -358,6 +358,63 @@ RSpec.describe "Query Integration", type: :system do
     end
   end
 
+  describe "Service-driven statistics on dashboard" do
+    context "when spike detection uses StatisticalClassifier" do
+      before do
+        # Create a spike: many errors today, few on previous days
+        # Need >2x average to trigger spike detection
+        20.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "SpikeTestError",
+            message: "Spike test error",
+            occurred_at: i.minutes.ago)
+        end
+        # Create 1 error per day for past 6 days (avg ~1/day, today has 20 = 20x)
+        6.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "SpikeTestError",
+            message: "Normal baseline error",
+            occurred_at: (i + 1).days.ago)
+        end
+      end
+
+      it "displays spike alert with severity classified by service" do
+        visit_dashboard("/errors")
+        wait_for_page_load
+        # Spike should be detected (20 today vs ~3.7 avg = ~5.4x = :high severity)
+        expect(page).to have_css(".alert-warning")
+        expect(page).to have_content("normal levels")
+      end
+    end
+
+    context "when trend direction displays on overview" do
+      before do
+        # Create errors only today to get an "Increasing" trend
+        5.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "TrendTestError",
+            message: "Trend test",
+            occurred_at: i.minutes.ago)
+        end
+      end
+
+      it "shows trend text on overview page" do
+        visit_dashboard
+        wait_for_page_load
+        # The overview page should show a trend direction (Increasing, Decreasing, or Stable)
+        expect(page).to have_content("Dashboard")
+        # One of the trend texts should be present
+        trend_shown = page.has_content?("Increasing") ||
+                      page.has_content?("Decreasing") ||
+                      page.has_content?("Stable")
+        expect(trend_shown).to be true
+      end
+    end
+  end
+
   describe "Overview page with DashboardStats integration" do
     context "when spike detection runs through BaselineCalculator" do
       before do

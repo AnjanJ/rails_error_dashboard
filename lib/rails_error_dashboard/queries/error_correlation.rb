@@ -194,7 +194,7 @@ module RailsErrorDashboard
         # Calculate correlation between error type pairs
         correlations = {}
         error_types.combination(2).each do |type_a, type_b|
-          correlation = calculate_time_correlation(
+          correlation = Services::PearsonCorrelation.call(
             hourly_distributions[type_a],
             hourly_distributions[type_b]
           )
@@ -205,7 +205,7 @@ module RailsErrorDashboard
               error_type_a: type_a,
               error_type_b: type_b,
               correlation: correlation,
-              strength: classify_correlation_strength(correlation)
+              strength: Services::StatisticalClassifier.correlation_strength(correlation)
             }
           end
         end
@@ -247,7 +247,7 @@ module RailsErrorDashboard
           },
           change: current_errors - previous_errors,
           change_percentage: change_percentage,
-          trend: determine_trend(change_percentage)
+          trend: Services::StatisticalClassifier.trend_direction(change_percentage)
         }
       end
 
@@ -315,64 +315,6 @@ module RailsErrorDashboard
       def calculate_percentage(part, whole)
         return 0.0 if whole.zero?
         (part.to_f / whole * 100).round(1)
-      end
-
-      # Calculate Pearson correlation coefficient between two time series
-      def calculate_time_correlation(series_a, series_b)
-        return 0.0 if series_a.sum.zero? || series_b.sum.zero?
-
-        n = series_a.length
-        return 0.0 if n.zero?
-
-        # Calculate means
-        mean_a = series_a.sum.to_f / n
-        mean_b = series_b.sum.to_f / n
-
-        # Calculate covariance and standard deviations
-        covariance = 0.0
-        std_a = 0.0
-        std_b = 0.0
-
-        n.times do |i|
-          diff_a = series_a[i] - mean_a
-          diff_b = series_b[i] - mean_b
-          covariance += diff_a * diff_b
-          std_a += diff_a**2
-          std_b += diff_b**2
-        end
-
-        # Avoid division by zero
-        denominator = Math.sqrt(std_a * std_b)
-        return 0.0 if denominator.zero?
-
-        (covariance / denominator).round(3)
-      end
-
-      # Classify correlation strength
-      def classify_correlation_strength(correlation)
-        abs_corr = correlation.abs
-        if abs_corr >= 0.8
-          :strong
-        elsif abs_corr >= 0.5
-          :moderate
-        else
-          :weak
-        end
-      end
-
-      # Determine trend based on change percentage
-      def determine_trend(change_percentage)
-        if change_percentage > 20
-          :increasing_significantly
-        elsif change_percentage > 5
-          :increasing
-        elsif change_percentage < -20
-          :decreasing_significantly
-        elsif change_percentage < -5
-          :decreasing
-        else
-          :stable
-        end
       end
     end
   end

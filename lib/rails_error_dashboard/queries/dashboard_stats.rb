@@ -157,7 +157,7 @@ module RailsErrorDashboard
           today_count: today_count,
           avg_count: avg_count,
           multiplier: (today_count / avg_count).round(1),
-          severity: spike_severity(today_count / avg_count)
+          severity: Services::StatisticalClassifier.spike_severity(today_count / avg_count)
         }
 
         # Add baseline info if available
@@ -219,20 +219,6 @@ module RailsErrorDashboard
           anomaly_level: worst[:level],
           std_devs_above: worst[:std_devs_above]&.round(1)
         }
-      end
-
-      # Determine spike severity based on multiplier
-      def spike_severity(multiplier)
-        case multiplier
-        when 0...2
-          :normal
-        when 2...5
-          :elevated
-        when 5...10
-          :high
-        else
-          :critical
-        end
       end
 
       # Calculate error rate as a percentage
