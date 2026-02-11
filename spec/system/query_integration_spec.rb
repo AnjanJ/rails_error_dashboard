@@ -480,6 +480,64 @@ RSpec.describe "Query Integration", type: :system do
     end
   end
 
+  describe "Notification payload builders (Phase 7)" do
+    after { RailsErrorDashboard.reset_configuration! }
+
+    context "when error is created and notifications are dispatched" do
+      it "logs error with correct details even when Slack notifications enabled" do
+        RailsErrorDashboard.configure do |c|
+          c.enable_slack_notifications = true
+          c.slack_webhook_url = "https://hooks.slack.com/test-fake"
+        end
+
+        error = RuntimeError.new("Payload builder integration test")
+        error.set_backtrace([ "#{Rails.root}/app/controllers/payments_controller.rb:15:in `charge'" ])
+
+        # LogError delegates to ErrorNotificationDispatcher which enqueues SlackErrorNotificationJob
+        # which uses SlackPayloadBuilder — the full chain should not raise
+        result = RailsErrorDashboard::Commands::LogError.call(error, {
+          controller_name: "payments", action_name: "charge"
+        })
+
+        expect(result).to be_present
+        expect(result.error_type).to eq("RuntimeError")
+
+        visit_error(result)
+        wait_for_page_load
+
+        expect(page).to have_content("RuntimeError")
+        expect(page).to have_content("Payload builder integration test")
+        expect(page).to have_content("payments_controller.rb")
+      end
+    end
+
+    context "when payload builders produce valid data" do
+      let!(:payload_error) do
+        create(:error_log,
+          application: application,
+          error_type: "WebhookTestError",
+          message: "Testing webhook payload structure",
+          controller_name: "api",
+          action_name: "submit",
+          platform: "API",
+          occurrence_count: 5,
+          backtrace: "app/controllers/api_controller.rb:20:in `submit'")
+      end
+
+      it "renders error with all fields that payload builders extract" do
+        visit_error(payload_error)
+        wait_for_page_load
+
+        # These are the same fields that SlackPayloadBuilder, DiscordPayloadBuilder,
+        # WebhookPayloadBuilder, and PagerdutyPayloadBuilder read from error_log
+        expect(page).to have_content("WebhookTestError")
+        expect(page).to have_content("Testing webhook payload structure")
+        expect(page).to have_content("API")
+        expect(page).to have_content("5x")
+      end
+    end
+  end
+
   describe "Overview page with DashboardStats integration" do
     context "when spike detection runs through BaselineCalculator" do
       before do
