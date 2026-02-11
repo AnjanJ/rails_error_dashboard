@@ -143,19 +143,22 @@ module RailsErrorDashboard
                               .max_by { |_, count| count }
                               &.first || "API"
 
-          # Analyze pattern for this error type
+          # Fetch timestamps for this error type+platform (Query fetches, Service computes)
+          pattern_scope = base_query.where(error_type: error_type, platform: platform)
+          timestamps = pattern_scope.pluck(:occurred_at)
+
+          # Analyze pattern using pure algorithm
           pattern = Services::PatternDetector.analyze_cyclical_pattern(
-            error_type: error_type,
-            platform: platform,
+            timestamps: timestamps,
             days: @days
           )
 
-          # Detect bursts
-          bursts = Services::PatternDetector.detect_bursts(
-            error_type: error_type,
-            platform: platform,
-            days: [ 7, @days ].min # Use 7 days for burst detection, or less if analyzing shorter period
-          )
+          # Detect bursts using pure algorithm
+          burst_days = [ 7, @days ].min
+          burst_timestamps = base_query.where(error_type: error_type, platform: platform)
+                                       .where("occurred_at >= ?", burst_days.days.ago)
+                                       .pluck(:occurred_at)
+          bursts = Services::PatternDetector.detect_bursts(timestamps: burst_timestamps)
 
           insights[error_type] = {
             pattern: pattern,

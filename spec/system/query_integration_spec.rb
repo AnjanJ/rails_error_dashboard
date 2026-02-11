@@ -181,4 +181,78 @@ RSpec.describe "Query Integration", type: :system do
       end
     end
   end
+
+  describe "Analytics page with PatternDetector integration" do
+    context "when errors exist for analytics" do
+      before do
+        # Create errors with varied timestamps to exercise PatternDetector
+        15.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "RecurringError",
+            message: "Keeps happening",
+            occurred_at: i.days.ago,
+            occurrence_count: 5 + i)
+        end
+        5.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "RareError",
+            message: "Seldom seen",
+            occurred_at: (i * 3).days.ago,
+            occurrence_count: 1)
+        end
+      end
+
+      it "loads analytics page with recurring issues section" do
+        visit_dashboard("/errors/analytics")
+        wait_for_page_load
+        expect(page).to have_content("Analytics")
+        expect(page).to have_content("Recurring Issues")
+      end
+
+      it "displays resolution rate from analytics stats" do
+        visit_dashboard("/errors/analytics")
+        wait_for_page_load
+        expect(page).to have_content("Resolution Rate")
+      end
+
+      it "displays errors by type breakdown" do
+        visit_dashboard("/errors/analytics")
+        wait_for_page_load
+        expect(page).to have_content("RecurringError")
+      end
+    end
+
+    context "with no errors" do
+      it "loads analytics page without crashing" do
+        visit_dashboard("/errors/analytics")
+        wait_for_page_load
+        expect(page).to have_content("Analytics")
+      end
+    end
+  end
+
+  describe "Overview page with DashboardStats integration" do
+    context "when spike detection runs through BaselineCalculator" do
+      before do
+        # Create enough errors today to trigger spike detection
+        10.times do |i|
+          create(:error_log,
+            application: application,
+            error_type: "SpikeError",
+            message: "Error spike today",
+            occurred_at: i.minutes.ago)
+        end
+      end
+
+      it "loads overview page with stats" do
+        visit_dashboard
+        wait_for_page_load
+        expect(page).to have_content("Dashboard")
+        expect(page).to have_content("ERROR RATE")
+        expect(page).to have_content("UNRESOLVED ERRORS")
+      end
+    end
+  end
 end

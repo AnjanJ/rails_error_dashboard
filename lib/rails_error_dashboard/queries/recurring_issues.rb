@@ -85,9 +85,9 @@ module RailsErrorDashboard
         top_error_types = base_query.group(:error_type).count.sort_by { |_, count| -count }.first(5).to_h.keys
 
         top_error_types.each_with_object({}) do |error_type, result|
+          timestamps = base_query.where(error_type: error_type).pluck(:occurred_at)
           pattern = Services::PatternDetector.analyze_cyclical_pattern(
-            error_type: error_type,
-            platform: nil,
+            timestamps: timestamps,
             days: @days
           )
           result[error_type] = pattern if pattern[:pattern_strength] > 0.6

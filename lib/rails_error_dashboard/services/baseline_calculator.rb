@@ -192,11 +192,19 @@ module RailsErrorDashboard
         baseline
       end
 
+      # === Pure algorithm methods (no database access) ===
+      # These can be called directly as class methods for testability
+
       # Calculate statistical metrics from an array of counts
       # Removes outliers (> 3 std devs from mean)
       # @param counts [Array<Integer>] Array of error counts
-      # @return [Hash] Statistics hash
+      # @return [Hash] Statistics hash with :mean, :std_dev, :percentile_95, :percentile_99
       def calculate_statistics(counts)
+        self.class.calculate_statistics(counts)
+      end
+
+      # Class-level pure algorithm: calculate statistics from counts
+      def self.calculate_statistics(counts)
         return default_stats if counts.empty?
 
         # Remove outliers
@@ -222,7 +230,7 @@ module RailsErrorDashboard
       # Remove outliers from counts (values > 3 std devs from mean)
       # @param counts [Array<Integer>] Raw counts
       # @return [Array<Integer>] Counts with outliers removed
-      def remove_outliers(counts)
+      def self.remove_outliers(counts)
         return counts if counts.size < 3
 
         mean = counts.sum.to_f / counts.size
@@ -233,15 +241,15 @@ module RailsErrorDashboard
         counts.select { |c| (c - mean).abs <= (OUTLIER_THRESHOLD * std_dev) }
       end
 
-      # Calculate percentile value
+      # Calculate percentile value using linear interpolation
       # @param sorted_array [Array] Sorted array of numbers
-      # @param percentile [Integer] Percentile to calculate (0-100)
+      # @param pct [Integer] Percentile to calculate (0-100)
       # @return [Float] Percentile value
-      def percentile(sorted_array, percentile)
+      def self.percentile(sorted_array, pct)
         return 0 if sorted_array.empty?
         return sorted_array.first if sorted_array.size == 1
 
-        rank = (percentile / 100.0) * (sorted_array.size - 1)
+        rank = (pct / 100.0) * (sorted_array.size - 1)
         lower_index = rank.floor
         upper_index = rank.ceil
 
@@ -256,7 +264,9 @@ module RailsErrorDashboard
         end
       end
 
-      def default_stats
+      # Default statistics for empty datasets
+      # @return [Hash] Zero-valued statistics hash
+      def self.default_stats
         {
           mean: 0.0,
           std_dev: 0.0,

@@ -541,9 +541,13 @@ module RailsErrorDashboard
       return {} unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return {} unless defined?(Services::PatternDetector)
 
+      timestamps = self.class
+        .where(error_type: error_type, platform: platform)
+        .where("occurred_at >= ?", days.days.ago)
+        .pluck(:occurred_at)
+
       Services::PatternDetector.analyze_cyclical_pattern(
-        error_type: error_type,
-        platform: platform,
+        timestamps: timestamps,
         days: days
       )
     end
@@ -555,11 +559,13 @@ module RailsErrorDashboard
       return [] unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return [] unless defined?(Services::PatternDetector)
 
-      Services::PatternDetector.detect_bursts(
-        error_type: error_type,
-        platform: platform,
-        days: days
-      )
+      timestamps = self.class
+        .where(error_type: error_type, platform: platform)
+        .where("occurred_at >= ?", days.days.ago)
+        .order(:occurred_at)
+        .pluck(:occurred_at)
+
+      Services::PatternDetector.detect_bursts(timestamps: timestamps)
     end
 
     private

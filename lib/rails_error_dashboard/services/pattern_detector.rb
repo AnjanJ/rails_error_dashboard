@@ -2,40 +2,27 @@
 
 module RailsErrorDashboard
   module Services
-    # Service object for detecting occurrence patterns in errors
+    # Pure algorithm service for detecting occurrence patterns in errors
+    #
+    # All methods accept data as input and return analysis results — no database access.
+    # Callers (Queries, Models) are responsible for fetching data and passing it in.
     #
     # Provides two main pattern detection capabilities:
     # 1. Cyclical patterns - Daily/weekly rhythms (e.g., business hours pattern)
     # 2. Burst detection - Many errors in short time period
     #
     # @example Cyclical pattern
+    #   timestamps = ErrorLog.where(...).pluck(:occurred_at)
     #   pattern = PatternDetector.analyze_cyclical_pattern(
-    #     error_type: "NoMethodError",
-    #     platform: "ios",
+    #     timestamps: timestamps,
     #     days: 30
     #   )
-    #   # => {
-    #   #   pattern_type: :business_hours,
-    #   #   peak_hours: [9, 10, 11, 14, 15],
-    #   #   hourly_distribution: { 0 => 5, 1 => 3, ... },
-    #   #   pattern_strength: 0.8
-    #   # }
     #
     # @example Burst detection
-    #   bursts = PatternDetector.detect_bursts(
-    #     error_type: "NoMethodError",
-    #     platform: "ios",
-    #     days: 7
-    #   )
-    #   # => [{
-    #   #   start_time: <Time>,
-    #   #   end_time: <Time>,
-    #   #   duration_seconds: 300,
-    #   #   error_count: 25,
-    #   #   burst_intensity: :high
-    #   # }]
+    #   timestamps = ErrorLog.where(...).pluck(:occurred_at)
+    #   bursts = PatternDetector.detect_bursts(timestamps: timestamps)
     class PatternDetector
-      # Analyze cyclical patterns in error occurrences
+      # Analyze cyclical patterns from an array of timestamps
       #
       # Detects:
       # - Business hours pattern (9am-5pm peak)
@@ -43,27 +30,19 @@ module RailsErrorDashboard
       # - Weekend pattern (Sat-Sun peak)
       # - Uniform pattern (no clear pattern)
       #
-      # @param error_type [String] The error type to analyze
-      # @param platform [String] The platform (iOS, Android, API, etc.)
-      # @param days [Integer] Number of days to analyze (default: 30)
+      # @param timestamps [Array<Time>] Array of error occurrence timestamps
+      # @param days [Integer] Number of days being analyzed (for metadata)
       # @return [Hash] Pattern analysis with type, peaks, distribution, and strength
-      def self.analyze_cyclical_pattern(error_type:, platform:, days: 30)
-        start_date = days.days.ago
-
-        # Get all error occurrences for this error type/platform
-        errors = ErrorLog
-          .where(error_type: error_type, platform: platform)
-          .where("occurred_at >= ?", start_date)
-
-        return empty_pattern if errors.empty?
+      def self.analyze_cyclical_pattern(timestamps:, days: 30, **_opts)
+        return empty_pattern if timestamps.empty?
 
         # Group by hour of day (0-23)
         hourly_distribution = Hash.new(0)
         weekday_distribution = Hash.new(0)
 
-        errors.each do |error|
-          hour = error.occurred_at.hour
-          wday = error.occurred_at.wday # 0 = Sunday, 6 = Saturday
+        timestamps.each do |timestamp|
+          hour = timestamp.hour
+          wday = timestamp.wday # 0 = Sunday, 6 = Saturday
           hourly_distribution[hour] += 1
           weekday_distribution[wday] += 1
         end
@@ -79,12 +58,12 @@ module RailsErrorDashboard
           hourly_distribution: hourly_distribution,
           weekday_distribution: weekday_distribution,
           pattern_strength: pattern_strength,
-          total_errors: errors.count,
+          total_errors: timestamps.size,
           analysis_days: days
         }
       end
 
-      # Detect error bursts (sequences where errors occur rapidly)
+      # Detect error bursts from an array of timestamps
       #
       # A burst is defined as a sequence where inter-arrival time < 1 minute
       # Burst intensity:
@@ -92,49 +71,27 @@ module RailsErrorDashboard
       # - :medium - 10-19 errors
       # - :low - 5-9 errors
       #
-      # @param error_type [String] The error type to analyze
-      # @param platform [String] The platform
-      # @param days [Integer] Number of days to analyze (default: 7)
+      # @param timestamps [Array<Time>] Sorted array of error occurrence timestamps
       # @return [Array<Hash>] Array of burst metadata
-      def self.detect_bursts(error_type:, platform:, days: 7)
-        start_date = days.days.ago
-
-        # Get all error occurrences sorted by time
-        errors = ErrorLog
-          .where(error_type: error_type, platform: platform)
-          .where("occurred_at >= ?", start_date)
-          .order(:occurred_at)
-
-        return [] if errors.count < 5 # Need at least 5 errors to detect a burst
-
-        # Get all occurrence timestamps
-        timestamps = errors.flat_map do |error|
-          # If error has error_occurrences, use those timestamps
-          if error.respond_to?(:error_occurrences) && error.error_occurrences.any?
-            error.error_occurrences.pluck(:occurred_at)
-          else
-            # Otherwise use the error's occurred_at repeated by occurrence_count
-            Array.new(error.occurrence_count || 1, error.occurred_at)
-          end
-        end.sort
-
-        return [] if timestamps.size < 5
+      def self.detect_bursts(timestamps:, **_opts)
+        sorted_timestamps = timestamps.sort
+        return [] if sorted_timestamps.size < 5
 
         # Detect bursts: sequences where inter-arrival < 60 seconds
         bursts = []
         current_burst = nil
 
-        timestamps.each_with_index do |timestamp, i|
+        sorted_timestamps.each_with_index do |timestamp, i|
           next if i.zero?
 
-          inter_arrival = timestamp - timestamps[i - 1]
+          inter_arrival = timestamp - sorted_timestamps[i - 1]
 
           if inter_arrival <= 60 # 60 seconds threshold
             # Start new burst or continue existing
             if current_burst.nil?
               current_burst = {
-                start_time: timestamps[i - 1],
-                timestamps: [ timestamps[i - 1], timestamp ]
+                start_time: sorted_timestamps[i - 1],
+                timestamps: [ sorted_timestamps[i - 1], timestamp ]
               }
             else
               current_burst[:timestamps] << timestamp
@@ -156,22 +113,10 @@ module RailsErrorDashboard
         bursts
       end
 
-      private
-
-      # Empty pattern result
-      def self.empty_pattern
-        {
-          pattern_type: :none,
-          peak_hours: [],
-          hourly_distribution: {},
-          weekday_distribution: {},
-          pattern_strength: 0.0,
-          total_errors: 0,
-          analysis_days: 0
-        }
-      end
-
       # Determine the pattern type based on hour and weekday distributions
+      # @param hourly_dist [Hash] Hour (0-23) => count
+      # @param weekday_dist [Hash] Weekday (0-6) => count
+      # @return [Symbol] Pattern type (:business_hours, :night, :weekend, :uniform, :none)
       def self.determine_pattern_type(hourly_dist, weekday_dist)
         return :none if hourly_dist.empty?
 
@@ -209,6 +154,8 @@ module RailsErrorDashboard
       end
 
       # Find peak hours (hours with >2x average)
+      # @param hourly_dist [Hash] Hour (0-23) => count
+      # @return [Array<Integer>] Sorted peak hour numbers
       def self.find_peak_hours(hourly_dist)
         return [] if hourly_dist.empty?
 
@@ -218,6 +165,8 @@ module RailsErrorDashboard
 
       # Calculate pattern strength (0.0-1.0)
       # Measures how concentrated the errors are in peak hours
+      # @param hourly_dist [Hash] Hour (0-23) => count
+      # @return [Float] Pattern strength from 0.0 (uniform) to 1.0 (concentrated)
       def self.calculate_pattern_strength(hourly_dist)
         return 0.0 if hourly_dist.empty?
 
@@ -232,12 +181,26 @@ module RailsErrorDashboard
         std_dev = Math.sqrt(variance)
 
         # Normalize to 0-1 scale (coefficient of variation)
-        # Divide by sqrt(mean) to get a rough 0-1 scale
         cv = mean > 0 ? std_dev / mean : 0
         [ cv.round(2), 1.0 ].min
       end
 
-      # Finalize burst metadata
+      # Classify burst intensity based on error count
+      # @param count [Integer] Number of errors in burst
+      # @return [Symbol] Intensity (:high, :medium, :low)
+      def self.classify_burst_intensity(count)
+        if count >= 20
+          :high
+        elsif count >= 10
+          :medium
+        else
+          :low
+        end
+      end
+
+      # Finalize burst metadata from raw tracking data
+      # @param burst_data [Hash] Raw burst data with :start_time and :timestamps
+      # @return [Hash] Finalized burst with start_time, end_time, duration, count, intensity
       def self.finalize_burst(burst_data)
         start_time = burst_data[:start_time]
         end_time = burst_data[:timestamps].last
@@ -253,15 +216,18 @@ module RailsErrorDashboard
         }
       end
 
-      # Classify burst intensity based on error count
-      def self.classify_burst_intensity(count)
-        if count >= 20
-          :high
-        elsif count >= 10
-          :medium
-        else
-          :low
-        end
+      # Empty pattern result
+      # @return [Hash] Default empty pattern hash
+      def self.empty_pattern
+        {
+          pattern_type: :none,
+          peak_hours: [],
+          hourly_distribution: {},
+          weekday_distribution: {},
+          pattern_strength: 0.0,
+          total_errors: 0,
+          analysis_days: 0
+        }
       end
     end
   end

@@ -4,12 +4,8 @@ require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Services::PatternDetector do
   describe ".analyze_cyclical_pattern" do
-    it "returns empty pattern when no errors exist" do
-      result = described_class.analyze_cyclical_pattern(
-        error_type: "NoMethodError",
-        platform: "ios",
-        days: 30
-      )
+    it "returns empty pattern when no timestamps" do
+      result = described_class.analyze_cyclical_pattern(timestamps: [], days: 30)
 
       expect(result[:pattern_type]).to eq(:none)
       expect(result[:peak_hours]).to eq([])
@@ -19,29 +15,19 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "detects business hours pattern (9am-5pm)" do
       freeze_time do
-        # Create errors during business hours (9am-5pm)
+        timestamps = []
+        # Create timestamps during business hours (9am-5pm)
         30.times do
           hour = [ 9, 10, 11, 14, 15, 16 ].sample
-          create(:error_log,
-            error_type: "BusinessError",
-            platform: "ios",
-            occurred_at: Time.current.change(hour: hour))
+          timestamps << Time.current.change(hour: hour)
         end
-
-        # Create few errors outside business hours
+        # Create few timestamps outside business hours
         5.times do
           hour = [ 0, 1, 2, 22, 23 ].sample
-          create(:error_log,
-            error_type: "BusinessError",
-            platform: "ios",
-            occurred_at: Time.current.change(hour: hour))
+          timestamps << Time.current.change(hour: hour)
         end
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "BusinessError",
-          platform: "ios",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:pattern_type]).to eq(:business_hours)
         expect(result[:peak_hours]).to be_present
@@ -52,29 +38,19 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "detects night pattern (midnight-6am)" do
       freeze_time do
-        # Create errors during night hours
+        timestamps = []
+        # Create timestamps during night hours
         25.times do
           hour = [ 0, 1, 2, 3, 4, 5 ].sample
-          create(:error_log,
-            error_type: "NightError",
-            platform: "api",
-            occurred_at: Time.current.change(hour: hour))
+          timestamps << Time.current.change(hour: hour)
         end
-
-        # Create few errors during day
+        # Create few timestamps during day
         5.times do
           hour = [ 12, 13, 14 ].sample
-          create(:error_log,
-            error_type: "NightError",
-            platform: "api",
-            occurred_at: Time.current.change(hour: hour))
+          timestamps << Time.current.change(hour: hour)
         end
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "NightError",
-          platform: "api",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:pattern_type]).to eq(:night)
         expect(result[:peak_hours] & (0..6).to_a).to be_present
@@ -84,7 +60,8 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "detects weekend pattern" do
       freeze_time do
-        # Create errors on weekends (Saturday=6, Sunday=0)
+        timestamps = []
+        # Create timestamps on weekends (Saturday=6, Sunday=0)
         20.times do
           days_offset = rand(0..29)
           time = days_offset.days.ago
@@ -92,33 +69,19 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
           until time.wday.in?([ 0, 6 ])
             time += 1.day
           end
-
-          create(:error_log,
-            error_type: "WeekendError",
-            platform: "ios",
-            occurred_at: time)
+          timestamps << time
         end
-
-        # Create few errors on weekdays
+        # Create few timestamps on weekdays
         5.times do
           days_offset = rand(0..29)
           time = days_offset.days.ago
-          # Find next weekday
           until time.wday.in?([ 1, 2, 3, 4, 5 ])
             time += 1.day
           end
-
-          create(:error_log,
-            error_type: "WeekendError",
-            platform: "ios",
-            occurred_at: time)
+          timestamps << time
         end
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "WeekendError",
-          platform: "ios",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:pattern_type]).to eq(:weekend)
         expect(result[:total_errors]).to eq(25)
@@ -129,21 +92,11 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
     end
 
     it "detects uniform pattern when errors are evenly distributed" do
-      # Travel to a Wednesday (middle of the week) to avoid weekend pattern detection
-      travel_to(Time.zone.local(2025, 1, 8, 12, 0, 0)) do  # Wednesday, January 8, 2025
-        # Create errors evenly across all hours
-        24.times do |hour|
-          create(:error_log,
-            error_type: "UniformError",
-            platform: "api",
-            occurred_at: Time.current.change(hour: hour))
-        end
+      # Travel to a Wednesday to avoid weekend pattern detection
+      travel_to(Time.zone.local(2025, 1, 8, 12, 0, 0)) do
+        timestamps = (0..23).map { |hour| Time.current.change(hour: hour) }
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "UniformError",
-          platform: "api",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:pattern_type]).to eq(:uniform)
         expect(result[:pattern_strength]).to be < 0.3
@@ -154,31 +107,17 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
     it "calculates pattern strength correctly" do
       freeze_time do
         # Strong pattern: all errors at hour 10
-        10.times do
-          create(:error_log,
-            error_type: "StrongPattern",
-            platform: "ios",
-            occurred_at: Time.current.change(hour: 10))
-        end
+        strong_timestamps = Array.new(10) { Time.current.change(hour: 10) }
 
         strong_result = described_class.analyze_cyclical_pattern(
-          error_type: "StrongPattern",
-          platform: "ios",
-          days: 30
+          timestamps: strong_timestamps, days: 30
         )
 
         # Weak pattern: errors evenly distributed
-        24.times do |hour|
-          create(:error_log,
-            error_type: "WeakPattern",
-            platform: "ios",
-            occurred_at: Time.current.change(hour: hour))
-        end
+        weak_timestamps = (0..23).map { |hour| Time.current.change(hour: hour) }
 
         weak_result = described_class.analyze_cyclical_pattern(
-          error_type: "WeakPattern",
-          platform: "ios",
-          days: 30
+          timestamps: weak_timestamps, days: 30
         )
 
         expect(strong_result[:pattern_strength]).to be > weak_result[:pattern_strength]
@@ -187,14 +126,11 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "includes hourly distribution" do
       freeze_time do
-        5.times { create(:error_log, error_type: "Test", platform: "ios", occurred_at: Time.current.change(hour: 10)) }
-        3.times { create(:error_log, error_type: "Test", platform: "ios", occurred_at: Time.current.change(hour: 15)) }
+        timestamps = []
+        5.times { timestamps << Time.current.change(hour: 10) }
+        3.times { timestamps << Time.current.change(hour: 15) }
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "Test",
-          platform: "ios",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:hourly_distribution][10]).to eq(5)
         expect(result[:hourly_distribution][15]).to eq(3)
@@ -202,56 +138,19 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
       end
     end
 
-    it "respects days parameter" do
-      # Create error 10 days ago
-      create(:error_log,
-        error_type: "OldError",
-        platform: "ios",
-        occurred_at: 10.days.ago)
-
-      # Analyze last 7 days (should not include 10-day-old error)
-      result_7 = described_class.analyze_cyclical_pattern(
-        error_type: "OldError",
-        platform: "ios",
-        days: 7
-      )
-
-      # Analyze last 14 days (should include it)
-      result_14 = described_class.analyze_cyclical_pattern(
-        error_type: "OldError",
-        platform: "ios",
-        days: 14
-      )
-
-      expect(result_7[:total_errors]).to eq(0)
-      expect(result_14[:total_errors]).to eq(1)
-    end
-
     it "includes weekday distribution" do
       freeze_time do
         # Find a Monday within the last 30 days
         monday = Time.current
-        until monday.wday == 1
-          monday -= 1.day
-        end
+        monday -= 1.day until monday.wday == 1
 
         # Find a Friday within the last 30 days
         friday = Time.current
-        until friday.wday == 5
-          friday -= 1.day
-        end
+        friday -= 1.day until friday.wday == 5
 
-        # Create errors on Monday
-        create(:error_log, error_type: "Test", platform: "ios", occurred_at: monday)
-        create(:error_log, error_type: "Test", platform: "ios", occurred_at: monday + 1.hour)
-        # Create error on Friday
-        create(:error_log, error_type: "Test", platform: "ios", occurred_at: friday)
+        timestamps = [ monday, monday + 1.hour, friday ]
 
-        result = described_class.analyze_cyclical_pattern(
-          error_type: "Test",
-          platform: "ios",
-          days: 30
-        )
+        result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 
         expect(result[:weekday_distribution][1]).to eq(2) # Monday
         expect(result[:weekday_distribution][5]).to eq(1) # Friday
@@ -260,48 +159,23 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
   end
 
   describe ".detect_bursts" do
-    it "returns empty array when no errors exist" do
-      result = described_class.detect_bursts(
-        error_type: "NoMethodError",
-        platform: "ios",
-        days: 7
-      )
-
+    it "returns empty array when no timestamps" do
+      result = described_class.detect_bursts(timestamps: [])
       expect(result).to eq([])
     end
 
-    it "returns empty array with fewer than 5 errors" do
-      3.times do
-        create(:error_log, error_type: "FewErrors", platform: "ios")
-      end
-
-      result = described_class.detect_bursts(
-        error_type: "FewErrors",
-        platform: "ios",
-        days: 7
-      )
-
+    it "returns empty array with fewer than 5 timestamps" do
+      timestamps = 3.times.map { |i| i.seconds.ago }
+      result = described_class.detect_bursts(timestamps: timestamps)
       expect(result).to eq([])
     end
 
     it "detects a burst when errors occur rapidly" do
       freeze_time do
         base_time = 2.days.ago
+        timestamps = 10.times.map { |i| base_time + i.seconds }
 
-        # Create a burst: 10 errors within 5 minutes
-        10.times do |i|
-          create(:error_log,
-            error_type: "BurstError",
-            platform: "ios",
-            occurred_at: base_time + i.seconds,
-            occurrence_count: 1)
-        end
-
-        result = described_class.detect_bursts(
-          error_type: "BurstError",
-          platform: "ios",
-          days: 7
-        )
+        result = described_class.detect_bursts(timestamps: timestamps)
 
         expect(result.count).to eq(1)
         burst = result.first
@@ -313,30 +187,12 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "detects multiple bursts" do
       freeze_time do
-        # First burst: 6 errors
-        6.times do |i|
-          create(:error_log,
-            error_type: "MultiBurst",
-            platform: "ios",
-            occurred_at: 3.days.ago + i.seconds,
-            occurrence_count: 1)
-        end
+        # First burst: 6 timestamps
+        burst1 = 6.times.map { |i| 3.days.ago + i.seconds }
+        # Second burst: 8 timestamps (after a 2-hour gap)
+        burst2 = 8.times.map { |i| 3.days.ago + 2.hours + i.seconds }
 
-        # Gap of 2 hours
-        # Second burst: 8 errors
-        8.times do |i|
-          create(:error_log,
-            error_type: "MultiBurst",
-            platform: "ios",
-            occurred_at: 3.days.ago + 2.hours + i.seconds,
-            occurrence_count: 1)
-        end
-
-        result = described_class.detect_bursts(
-          error_type: "MultiBurst",
-          platform: "ios",
-          days: 7
-        )
+        result = described_class.detect_bursts(timestamps: burst1 + burst2)
 
         expect(result.count).to eq(2)
         expect(result.map { |b| b[:error_count] }).to match_array([ 6, 8 ])
@@ -345,20 +201,9 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
 
     it "does not detect burst when errors are too far apart" do
       freeze_time do
-        # Create 10 errors but spaced 2 minutes apart (beyond 60s threshold)
-        10.times do |i|
-          create(:error_log,
-            error_type: "SpacedError",
-            platform: "ios",
-            occurred_at: 2.days.ago + (i * 2).minutes,
-            occurrence_count: 1)
-        end
+        timestamps = 10.times.map { |i| 2.days.ago + (i * 2).minutes }
 
-        result = described_class.detect_bursts(
-          error_type: "SpacedError",
-          platform: "ios",
-          days: 7
-        )
+        result = described_class.detect_bursts(timestamps: timestamps)
 
         expect(result).to eq([])
       end
@@ -368,36 +213,13 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
       freeze_time do
         base_time = 2.days.ago
 
-        # High intensity: 25 errors
-        25.times do |i|
-          create(:error_log,
-            error_type: "HighBurst",
-            platform: "ios",
-            occurred_at: base_time + i.seconds,
-            occurrence_count: 1)
-        end
+        high_timestamps = 25.times.map { |i| base_time + i.seconds }
+        medium_timestamps = 15.times.map { |i| base_time + i.seconds }
+        low_timestamps = 7.times.map { |i| base_time + i.seconds }
 
-        # Medium intensity: 15 errors
-        15.times do |i|
-          create(:error_log,
-            error_type: "MediumBurst",
-            platform: "ios",
-            occurred_at: base_time + i.seconds,
-            occurrence_count: 1)
-        end
-
-        # Low intensity: 7 errors
-        7.times do |i|
-          create(:error_log,
-            error_type: "LowBurst",
-            platform: "ios",
-            occurred_at: base_time + i.seconds,
-            occurrence_count: 1)
-        end
-
-        high_result = described_class.detect_bursts(error_type: "HighBurst", platform: "ios", days: 7)
-        medium_result = described_class.detect_bursts(error_type: "MediumBurst", platform: "ios", days: 7)
-        low_result = described_class.detect_bursts(error_type: "LowBurst", platform: "ios", days: 7)
+        high_result = described_class.detect_bursts(timestamps: high_timestamps)
+        medium_result = described_class.detect_bursts(timestamps: medium_timestamps)
+        low_result = described_class.detect_bursts(timestamps: low_timestamps)
 
         expect(high_result.first[:burst_intensity]).to eq(:high)
         expect(medium_result.first[:burst_intensity]).to eq(:medium)
@@ -408,21 +230,9 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
     it "includes start_time, end_time, and duration" do
       freeze_time do
         base_time = 2.days.ago
+        timestamps = 10.times.map { |i| base_time + (i * 5).seconds }
 
-        # Create burst
-        10.times do |i|
-          create(:error_log,
-            error_type: "TimedBurst",
-            platform: "ios",
-            occurred_at: base_time + (i * 5).seconds, # 5 seconds apart
-            occurrence_count: 1)
-        end
-
-        result = described_class.detect_bursts(
-          error_type: "TimedBurst",
-          platform: "ios",
-          days: 7
-        )
+        result = described_class.detect_bursts(timestamps: timestamps)
 
         expect(result.count).to eq(1)
         burst = result.first
@@ -432,55 +242,65 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
       end
     end
 
-    it "respects days parameter" do
-      # Create burst 10 days ago
-      10.times do |i|
-        create(:error_log,
-          error_type: "OldBurst",
-          platform: "ios",
-          occurred_at: 10.days.ago + i.seconds,
-          occurrence_count: 1)
-      end
-
-      # Analyze last 7 days (should not find burst)
-      result_7 = described_class.detect_bursts(
-        error_type: "OldBurst",
-        platform: "ios",
-        days: 7
-      )
-
-      # Analyze last 14 days (should find burst)
-      result_14 = described_class.detect_bursts(
-        error_type: "OldBurst",
-        platform: "ios",
-        days: 14
-      )
-
-      expect(result_7).to eq([])
-      expect(result_14.count).to eq(1)
-    end
-
-    it "requires at least 5 errors in a burst" do
+    it "requires at least 5 timestamps in a burst" do
       freeze_time do
-        base_time = 2.days.ago
+        timestamps = 4.times.map { |i| 2.days.ago + i.seconds }
 
-        # Create sequence of only 4 errors within threshold
-        4.times do |i|
-          create(:error_log,
-            error_type: "SmallBurst",
-            platform: "ios",
-            occurred_at: base_time + i.seconds,
-            occurrence_count: 1)
-        end
-
-        result = described_class.detect_bursts(
-          error_type: "SmallBurst",
-          platform: "ios",
-          days: 7
-        )
+        result = described_class.detect_bursts(timestamps: timestamps)
 
         expect(result).to eq([])
       end
+    end
+  end
+
+  describe ".determine_pattern_type" do
+    it "returns :none for empty distribution" do
+      expect(described_class.determine_pattern_type({}, {})).to eq(:none)
+    end
+
+    it "returns :business_hours when peaks in 9-17 range" do
+      hourly = Hash.new(1)
+      [ 9, 10, 11, 14, 15, 16 ].each { |h| hourly[h] = 20 }
+      expect(described_class.determine_pattern_type(hourly, {})).to eq(:business_hours)
+    end
+
+    it "returns :night when peaks in 0-6 range" do
+      hourly = Hash.new(1)
+      [ 0, 1, 2, 3, 4 ].each { |h| hourly[h] = 20 }
+      expect(described_class.determine_pattern_type(hourly, {})).to eq(:night)
+    end
+
+    it "returns :weekend when >50% on Sat/Sun" do
+      hourly = { 12 => 10 }
+      weekday = { 0 => 30, 6 => 30, 1 => 5, 2 => 5, 3 => 5, 4 => 5, 5 => 5 }
+      expect(described_class.determine_pattern_type(hourly, weekday)).to eq(:weekend)
+    end
+  end
+
+  describe ".calculate_pattern_strength" do
+    it "returns 0.0 for empty distribution" do
+      expect(described_class.calculate_pattern_strength({})).to eq(0.0)
+    end
+
+    it "returns higher strength for concentrated distribution" do
+      concentrated = { 10 => 100 }
+      spread = (0..23).each_with_object({}) { |h, d| d[h] = 4 }
+
+      expect(described_class.calculate_pattern_strength(concentrated)).to be > described_class.calculate_pattern_strength(spread)
+    end
+  end
+
+  describe ".classify_burst_intensity" do
+    it "returns :high for 20+ errors" do
+      expect(described_class.classify_burst_intensity(25)).to eq(:high)
+    end
+
+    it "returns :medium for 10-19 errors" do
+      expect(described_class.classify_burst_intensity(15)).to eq(:medium)
+    end
+
+    it "returns :low for 5-9 errors" do
+      expect(described_class.classify_burst_intensity(7)).to eq(:low)
     end
   end
 end
