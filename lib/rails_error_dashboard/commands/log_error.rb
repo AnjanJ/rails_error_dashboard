@@ -37,12 +37,8 @@ module RailsErrorDashboard
       end
 
       def call
-        # Check if this exception should be ignored
-        return nil if should_ignore_exception?(@exception)
-
-        # Check sampling rate for non-critical errors
-        # Critical errors are ALWAYS logged regardless of sampling
-        return nil if should_skip_due_to_sampling?(@exception)
+        # Check if this exception should be logged (ignore list + sampling)
+        return nil unless Services::ExceptionFilter.should_log?(@exception)
 
         error_context = ValueObjects::ErrorContext.new(@context, @context[:source])
 
@@ -68,7 +64,12 @@ module RailsErrorDashboard
         }
 
         # Generate error hash for deduplication (including controller/action context and application)
-        error_hash = generate_error_hash(@exception, error_context.controller_name, error_context.action_name, application.id)
+        error_hash = Services::ErrorHashGenerator.call(
+          @exception,
+          controller_name: error_context.controller_name,
+          action_name: error_context.action_name,
+          application_id: application.id
+        )
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
@@ -112,7 +113,7 @@ module RailsErrorDashboard
         # Send notifications only for new errors (not increments)
         # Check if this is first occurrence or error was just created
         if error_log.occurrence_count == 1
-          send_notifications(error_log)
+          Services::ErrorNotificationDispatcher.call(error_log)
           # Dispatch plugin event for new error
           PluginRegistry.dispatch(:on_error_logged, error_log)
           # Trigger notification callbacks
@@ -195,99 +196,6 @@ module RailsErrorDashboard
         end
       end
 
-      # Check if error should be skipped due to sampling rate
-      # Critical errors are ALWAYS logged, sampling only applies to non-critical errors
-      def should_skip_due_to_sampling?(exception)
-        sampling_rate = RailsErrorDashboard.configuration.sampling_rate
-
-        # If sampling is 100% (1.0) or higher, log everything
-        return false if sampling_rate >= 1.0
-
-        # Always log critical errors regardless of sampling rate
-        # Check this BEFORE checking for 0% sampling
-        return false if is_critical_error?(exception)
-
-        # If sampling is 0% or negative, skip all non-critical errors
-        return true if sampling_rate <= 0.0
-
-        # For non-critical errors, use probabilistic sampling
-        # rand returns 0.0 to 1.0, so if sampling_rate is 0.1 (10%),
-        # we skip 90% of errors (when rand > 0.1)
-        rand > sampling_rate
-      end
-
-      # Check if exception is a critical error type
-      def is_critical_error?(exception)
-        exception_class_name = exception.class.name
-        RailsErrorDashboard::ErrorLog::CRITICAL_ERROR_TYPES.include?(exception_class_name)
-      end
-
-      # Check if exception should be ignored based on configuration
-      # Supports both string class names and regex patterns
-      def should_ignore_exception?(exception)
-        ignored_exceptions = RailsErrorDashboard.configuration.ignored_exceptions
-        return false if ignored_exceptions.blank?
-
-        exception_class_name = exception.class.name
-
-        ignored_exceptions.any? do |ignored|
-          case ignored
-          when String
-            # Exact class name match (supports inheritance)
-            exception.is_a?(ignored.constantize)
-          when Regexp
-            # Regex pattern match on class name
-            exception_class_name.match?(ignored)
-          else
-            false
-          end
-        rescue NameError
-          # Handle invalid class names in configuration
-          RailsErrorDashboard::Logger.warn("Invalid ignored exception class: #{ignored}")
-          false
-        end
-      end
-
-      # Generate consistent hash for error deduplication
-      # Same hash = same error type
-      # Note: This is also defined in ErrorLog model for backward compatibility
-      def generate_error_hash(exception, controller_name = nil, action_name = nil, application_id = nil)
-        # Hash components:
-        # 1. Error class (NoMethodError, ArgumentError, etc.)
-        # 2. Normalized message (replace numbers, quoted strings)
-        # 3. First stack frame file (ignore line numbers)
-        # 4. Controller name (for context-aware grouping)
-        # 5. Action name (for context-aware grouping)
-        # 6. Application ID (for per-app deduplication)
-
-        normalized_message = exception.message
-          &.gsub(/\d+/, "N")                    # Replace numbers: "User 123" -> "User N"
-          &.gsub(/"[^"]*"/, '""')               # Replace quoted strings: "foo" -> ""
-          &.gsub(/'[^']*'/, "''")               # Replace single quoted strings
-          &.gsub(/0x[0-9a-f]+/i, "0xHEX")       # Replace hex addresses
-          &.gsub(/#<[^>]+>/, "#<OBJ>")          # Replace object inspections
-
-        # Get first meaningful stack frame (skip gems, focus on app code)
-        first_app_frame = exception.backtrace&.find { |frame|
-          # Look for app code, not gems
-          frame.include?("/app/") || frame.include?("/lib/") || !frame.include?("/gems/")
-        }
-
-        # Extract just the file path, not line number
-        file_path = first_app_frame&.split(":")&.first
-
-        # Generate hash including controller/action/application for better grouping
-        digest_input = [
-          exception.class.name,
-          normalized_message,
-          file_path,
-          controller_name,      # Context: which controller
-          action_name,          # Context: which action
-          application_id.to_s   # Context: which application (for per-app deduplication)
-        ].compact.join("|")
-
-        Digest::SHA256.hexdigest(digest_input)[0..15]
-      end
 
       # Truncate backtrace to configured maximum lines
       # This reduces database storage and improves performance
@@ -309,35 +217,6 @@ module RailsErrorDashboard
         end
 
         result
-      end
-
-      def send_notifications(error_log)
-        config = RailsErrorDashboard.configuration
-
-        # Send Slack notification
-        if config.enable_slack_notifications && config.slack_webhook_url.present?
-          SlackErrorNotificationJob.perform_later(error_log.id)
-        end
-
-        # Send email notification
-        if config.enable_email_notifications && config.notification_email_recipients.present?
-          EmailErrorNotificationJob.perform_later(error_log.id)
-        end
-
-        # Send Discord notification
-        if config.enable_discord_notifications && config.discord_webhook_url.present?
-          DiscordErrorNotificationJob.perform_later(error_log.id)
-        end
-
-        # Send PagerDuty notification (critical errors only)
-        if config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?
-          PagerdutyErrorNotificationJob.perform_later(error_log.id)
-        end
-
-        # Send webhook notifications
-        if config.enable_webhook_notifications && config.webhook_urls.present?
-          WebhookErrorNotificationJob.perform_later(error_log.id)
-        end
       end
 
       #  Calculate backtrace signature from backtrace string/array

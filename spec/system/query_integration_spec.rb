@@ -415,6 +415,71 @@ RSpec.describe "Query Integration", type: :system do
     end
   end
 
+  describe "LogError service delegation (Phase 6)" do
+    after { RailsErrorDashboard.reset_configuration! }
+
+    context "when ErrorHashGenerator deduplicates errors" do
+      it "groups errors with same normalized message into one row" do
+        # Use LogError.call directly — it now delegates to ErrorHashGenerator
+        error1 = RuntimeError.new("User 100 not found")
+        error1.set_backtrace([ "#{Rails.root}/app/models/user.rb:5:in `find'" ])
+        error2 = RuntimeError.new("User 999 not found")
+        error2.set_backtrace([ "#{Rails.root}/app/models/user.rb:5:in `find'" ])
+
+        RailsErrorDashboard::Commands::LogError.call(error1, { controller_name: "users", action_name: "show" })
+        RailsErrorDashboard::Commands::LogError.call(error2, { controller_name: "users", action_name: "show" })
+
+        visit_dashboard("/errors")
+        wait_for_page_load
+
+        # Both errors should be grouped under one row with occurrence_count = 2
+        expect(page).to have_content("RuntimeError")
+        # The occurrence count badge should show 2
+        expect(page).to have_content("2")
+      end
+    end
+
+    context "when ExceptionFilter blocks ignored exceptions" do
+      it "does not show ignored exceptions on the dashboard" do
+        RailsErrorDashboard.configure { |c| c.ignored_exceptions = [ "ArgumentError" ] }
+
+        # This should be filtered out by ExceptionFilter
+        ignored = ArgumentError.new("bad arg")
+        ignored.set_backtrace([ "#{Rails.root}/app/controllers/test_controller.rb:1" ])
+        RailsErrorDashboard::Commands::LogError.call(ignored, {})
+
+        # This should go through
+        allowed = TypeError.new("wrong type")
+        allowed.set_backtrace([ "#{Rails.root}/app/controllers/test_controller.rb:2" ])
+        RailsErrorDashboard::Commands::LogError.call(allowed, {})
+
+        visit_dashboard("/errors")
+        wait_for_page_load
+
+        expect(page).to have_content("TypeError")
+        expect(page).not_to have_content("ArgumentError")
+      end
+    end
+
+    context "when LogError creates error with proper hash" do
+      it "shows the error on the detail page with correct attributes" do
+        error = NameError.new("undefined local variable 'x'")
+        error.set_backtrace([ "#{Rails.root}/app/controllers/widgets_controller.rb:10:in `show'" ])
+
+        result = RailsErrorDashboard::Commands::LogError.call(error, {
+          controller_name: "widgets", action_name: "show"
+        })
+
+        visit_error(result)
+        wait_for_page_load
+
+        expect(page).to have_content("NameError")
+        expect(page).to have_content("undefined local variable 'x'")
+        expect(page).to have_content("widgets_controller.rb")
+      end
+    end
+  end
+
   describe "Overview page with DashboardStats integration" do
     context "when spike detection runs through BaselineCalculator" do
       before do
