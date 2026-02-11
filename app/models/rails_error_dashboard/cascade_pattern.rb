@@ -33,29 +33,14 @@ module RailsErrorDashboard
     scope :by_parent, ->(error_id) { where(parent_error_id: error_id) }
     scope :by_child, ->(error_id) { where(child_error_id: error_id) }
 
-    # Update cascade pattern stats
+    # Update cascade pattern stats — delegates to Command
     def increment_detection!(delay_seconds)
-      self.frequency += 1
-
-      # Update average delay using incremental formula
-      if avg_delay_seconds.present?
-        self.avg_delay_seconds = ((avg_delay_seconds * (frequency - 1)) + delay_seconds) / frequency
-      else
-        self.avg_delay_seconds = delay_seconds
-      end
-
-      self.last_detected_at = Time.current
-      save
+      Commands::IncrementCascadeDetection.call(self, delay_seconds)
     end
 
-    # Calculate cascade probability based on frequency
-    # Probability = (times child follows parent) / (total parent occurrences)
+    # Calculate cascade probability — delegates to Command
     def calculate_probability!
-      parent_occurrence_count = parent_error.error_occurrences.count
-      return if parent_occurrence_count.zero?
-
-      self.cascade_probability = (frequency.to_f / parent_occurrence_count).round(3)
-      save
+      Commands::CalculateCascadeProbability.call(self)
     end
 
     # Check if this is a strong cascade pattern

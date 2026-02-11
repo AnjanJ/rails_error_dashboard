@@ -560,4 +560,103 @@ RSpec.describe "Query Integration", type: :system do
       end
     end
   end
+
+  describe "Cascade pattern commands (Phase 8)" do
+    let!(:parent_error) do
+      create(:error_log,
+        application: application,
+        error_type: "DatabaseConnectionError",
+        message: "Connection pool exhausted",
+        occurred_at: 30.minutes.ago)
+    end
+
+    let!(:child_error) do
+      create(:error_log,
+        application: application,
+        error_type: "NoMethodError",
+        message: "undefined method for nil:NilClass",
+        occurred_at: 29.minutes.ago)
+    end
+
+    context "when cascade patterns exist and are displayed on error show page" do
+      before do
+        RailsErrorDashboard.configuration.enable_error_cascades = true
+
+        # Create cascade pattern with high frequency
+        pattern = RailsErrorDashboard::CascadePattern.create!(
+          parent_error: parent_error,
+          child_error: child_error,
+          frequency: 7,
+          avg_delay_seconds: 10.0,
+          last_detected_at: Time.current
+        )
+
+        # Use IncrementCascadeDetection command (via model delegation) → frequency becomes 8
+        pattern.increment_detection!(14.0)
+
+        # Create parent occurrences for probability calculation (total = 10)
+        10.times { |i| create(:error_occurrence, error_log: parent_error, occurred_at: (i + 1).minutes.ago) }
+
+        # Use CalculateCascadeProbability command (via model delegation)
+        # probability = 8 / 10 = 0.8 (above 0.5 threshold)
+        pattern.calculate_probability!
+      end
+
+      after do
+        RailsErrorDashboard.configuration.enable_error_cascades = false
+      end
+
+      it "displays cascade pattern data computed by commands on the error detail page" do
+        visit_error(child_error)
+        wait_for_page_load
+
+        # The cascade section should show parent→child relationship
+        expect(page).to have_content("Error Cascades")
+        expect(page).to have_content("Triggered By")
+        expect(page).to have_content("DatabaseConnectionError")
+
+        # Verify frequency: started at 7, incremented once = 8
+        expect(page).to have_content("8x")
+
+        # Verify avg_delay: ((10.0 * 7) + 14.0) / 8 = 84/8 = 10.5
+        expect(page).to have_content("10.5s")
+      end
+    end
+
+    context "when IncrementCascadeDetection and CalculateCascadeProbability commands work correctly" do
+      it "increments frequency and computes probability through model delegation" do
+        pattern = RailsErrorDashboard::CascadePattern.create!(
+          parent_error: parent_error,
+          child_error: child_error,
+          frequency: 5,
+          avg_delay_seconds: 20.0,
+          last_detected_at: 1.hour.ago
+        )
+
+        # Increment via model delegation (calls Commands::IncrementCascadeDetection)
+        pattern.increment_detection!(32.0)
+        expect(pattern.frequency).to eq(6)
+        # ((20.0 * 5) + 32.0) / 6 = 132/6 = 22.0
+        expect(pattern.avg_delay_seconds).to eq(22.0)
+
+        # Create occurrences and calculate probability (calls Commands::CalculateCascadeProbability)
+        12.times { |i| create(:error_occurrence, error_log: parent_error, occurred_at: (i + 1).minutes.ago) }
+        pattern.calculate_probability!
+
+        total_occ = parent_error.error_occurrences.count
+        expected_prob = (6.0 / total_occ).round(3)
+        expect(pattern.cascade_probability).to eq(expected_prob)
+
+        # Verify the data appears on the show page
+        RailsErrorDashboard.configuration.enable_error_cascades = true
+        visit_error(child_error)
+        wait_for_page_load
+
+        expect(page).to have_content("Error Cascades")
+        expect(page).to have_content("6x")
+      ensure
+        RailsErrorDashboard.configuration.enable_error_cascades = false
+      end
+    end
+  end
 end
