@@ -17,6 +17,8 @@ RSpec.describe RailsErrorDashboard::Services::NotificationHelpers do
   end
 
   describe ".dashboard_url" do
+    before { RailsErrorDashboard.reset_configuration! }
+
     it "returns URL with default base" do
       expect(described_class.dashboard_url(error_log)).to eq(
         "http://localhost:3000/error_dashboard/errors/#{error_log.id}"
@@ -28,7 +30,6 @@ RSpec.describe RailsErrorDashboard::Services::NotificationHelpers do
       expect(described_class.dashboard_url(error_log)).to eq(
         "https://app.example.com/error_dashboard/errors/#{error_log.id}"
       )
-      RailsErrorDashboard.reset_configuration!
     end
   end
 
