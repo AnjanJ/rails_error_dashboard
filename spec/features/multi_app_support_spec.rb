@@ -138,7 +138,6 @@ RSpec.describe "Multi-App Support", type: :feature do
       expect(error2.id).to eq(error1.id)
       expect(error2.occurrence_count).to eq(2)
     end
-
   end
 
   describe "LogError command with auto-registration" do

@@ -40,7 +40,7 @@ RailsErrorDashboard.configure do |config|
 
   # Webhook notifications (fake URL — tests path without crashing)
   config.enable_webhook_notifications = true
-  config.webhook_urls = ["http://localhost:9999/fake-webhook"]
+  config.webhook_urls = [ "http://localhost:9999/fake-webhook" ]
 
   # Middleware and subscriber — the core capture mechanisms
   config.enable_middleware = true

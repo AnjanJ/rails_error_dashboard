@@ -41,7 +41,7 @@ RailsErrorDashboard.configure do |config|
 
   # Webhook notifications (fake URL)
   config.enable_webhook_notifications = true
-  config.webhook_urls = ["http://localhost:9999/fake-webhook"]
+  config.webhook_urls = [ "http://localhost:9999/fake-webhook" ]
 
   # Middleware and subscriber — critical for Phase F testing
   config.enable_middleware = true
