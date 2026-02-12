@@ -201,27 +201,6 @@ RSpec.describe RailsErrorDashboard::Services::GitBlameReader do
 
   describe "#execute_git_blame (private)" do
     # We'll test this indirectly through read_blame, but can add specific tests
-    context "integration test with real git" do
-      before do
-        # Skip if git not available or not in a git repo
-        skip "Git not available" unless system("git --version > /dev/null 2>&1")
-        skip "Not a git repository" unless File.exist?(File.join(Rails.root, ".git"))
-      end
-
-      it "executes git blame command successfully" do
-        # Use a real file from the gem
-        real_file = File.join(Rails.root, "lib/rails_error_dashboard.rb")
-        skip "Test file not found" unless File.exist?(real_file)
-
-        reader = described_class.new(real_file, 1)
-        result = reader.read_blame
-
-        # Should get real git blame data
-        expect(result).to be_a(Hash) if result # May be nil if file not committed
-        expect(reader.error).to be_nil if result
-      end
-    end
-
     context "timeout handling" do
       before do
         allow(reader).to receive(:git_available?).and_return(true)

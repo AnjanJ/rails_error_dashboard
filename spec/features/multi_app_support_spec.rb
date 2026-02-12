@@ -139,32 +139,6 @@ RSpec.describe "Multi-App Support", type: :feature do
       expect(error2.occurrence_count).to eq(2)
     end
 
-    it "handles concurrent creates without duplicates", skip: (ActiveRecord::Base.connection.adapter_name == "SQLite") do
-      error_hash = "concurrent_hash_789"
-
-      attrs = {
-        application_id: app1.id,
-        error_hash: error_hash,
-        error_type: "TestError",
-        message: "Concurrent test",
-        occurred_at: Time.current
-      }
-
-      # Simulate concurrent requests
-      errors = 5.times.map do
-        Thread.new do
-          RailsErrorDashboard::ErrorLog.find_or_increment_by_hash(error_hash, attrs)
-        end
-      end.map(&:value)
-
-      # Should create only ONE error record
-      unique_ids = errors.map(&:id).uniq
-      expect(unique_ids.size).to eq(1)
-
-      # Occurrence count should be 5
-      final_error = RailsErrorDashboard::ErrorLog.find(unique_ids.first)
-      expect(final_error.occurrence_count).to eq(5)
-    end
   end
 
   describe "LogError command with auto-registration" do

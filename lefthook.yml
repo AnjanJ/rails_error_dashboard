@@ -12,51 +12,67 @@
 #   git commit -m "message" --no-verify
 
 # ============================================================================
-# PRE-COMMIT (Fast checks on changed files only)
+# PRE-COMMIT (Piped stages: fast checks first, chaos tests last)
 # ============================================================================
 pre-commit:
-  parallel: true  # Run checks in parallel for speed
+  piped: true  # Run stages sequentially — if fast checks fail, chaos tests don't run
 
   commands:
+    # Stage 1: Fast parallel checks on changed files
     # 1. RuboCop - Only staged files (exclude ERB templates)
     rubocop-staged:
+      priority: 1
       glob: "*.rb"
       exclude: '(^|/)lib/generators/.*/templates/.*'
       run: bundle exec rubocop {staged_files}
 
     # 2. RSpec - Only changed spec files
     rspec-changed:
+      priority: 1
       glob: "*_spec.rb"
       run: |
         if [ -n "{staged_files}" ]; then
-          echo "🧪 Running tests for changed specs..."
+          echo "Running tests for changed specs..."
           COVERAGE=false bundle exec rspec {staged_files}
         fi
 
     # 3. Bundle audit - Check for vulnerable dependencies
     bundle-audit:
+      priority: 1
       run: |
-        echo "🔒 Checking for vulnerable dependencies..."
+        echo "Checking for vulnerable dependencies..."
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
         bundle audit check --update
 
     # 4. Check for debugger statements in staged Ruby files
     no-debuggers:
+      priority: 1
       glob: "*.rb"
       run: |
         if echo "{staged_files}" | xargs grep -Hn "binding\.pry\|byebug\|debugger" 2>/dev/null; then
-          echo "❌ Found debugger statement! Remove before committing."
+          echo "Found debugger statement! Remove before committing."
           exit 1
         fi
 
     # 5. Check for trailing whitespace in staged files
     trailing-whitespace:
+      priority: 1
       glob: "*.{rb,yml,js,md}"
       run: |
         if echo "{staged_files}" | xargs grep -Hn "[[:space:]]$" 2>/dev/null; then
-          echo "❌ Found trailing whitespace! Run: bundle exec rubocop -A"
+          echo "Found trailing whitespace! Run: bundle exec rubocop -A"
           exit 1
         fi
+
+    # Stage 2: Full pre-release chaos tests (runs AFTER fast checks pass)
+    # Builds 4 temp Rails apps, runs 1000+ assertions in production mode.
+    # Takes ~4-5 min. Skip with: LEFTHOOK_EXCLUDE=chaos-tests git commit -m "msg"
+    chaos-tests:
+      priority: 2
+      run: |
+        echo "Running pre-release chaos tests (4 apps, 1000+ assertions)..."
+        echo "Skip with: LEFTHOOK_EXCLUDE=chaos-tests git commit -m \"msg\""
+        bin/pre-release-test all
 
 # ============================================================================
 # PRE-PUSH (Disabled - too slow and problematic)
@@ -137,12 +153,19 @@ full:
 # ============================================================================
 # USAGE EXAMPLES
 # ============================================================================
-# Fast commit (only changed files):
+# Normal commit (fast checks + chaos tests):
 #   git add . && git commit -m "message"
+#
+# Skip chaos tests only (fast checks still run):
+#   LEFTHOOK_EXCLUDE=chaos-tests git commit -m "message"
 #
 # Run full checks manually:
 #   lefthook run qa
 #   lefthook run full
+#
+# Run chaos tests standalone:
+#   bin/pre-release-test all
+#   bin/pre-release-test full_http    # just HTTP tests
 #
 # Quick check on current changes:
 #   lefthook run quick
@@ -150,7 +173,7 @@ full:
 # Fix RuboCop issues:
 #   lefthook run fix
 #
-# Skip hooks:
+# Skip all hooks:
 #   LEFTHOOK=0 git commit -m "message"
 #   git commit --no-verify -m "message"
 #
