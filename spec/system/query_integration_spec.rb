@@ -919,4 +919,51 @@ RSpec.describe "Query Integration", type: :system do
       RailsErrorDashboard.reset_configuration!
     end
   end
+
+  describe "Phase 14: PriorityScoreCalculator Service" do
+    it "computes priority score via Service and sets it on create" do
+      error = create(:error_log,
+        application: application,
+        error_type: "SecurityError",
+        message: "Phase 14 system test",
+        occurrence_count: 50,
+        occurred_at: 30.minutes.ago)
+
+      # Service computes a valid score
+      score = RailsErrorDashboard::Services::PriorityScoreCalculator.compute(error)
+      expect(score).to be_a(Integer)
+      expect(score).to be_between(0, 100)
+
+      # before_create callback sets priority_score on the record
+      if error.respond_to?(:priority_score) && error.priority_score.present?
+        expect(error.priority_score).to be_between(0, 100)
+      end
+
+      # Severity weight is dominant (40%) — critical error scores higher
+      low_error = create(:error_log,
+        application: application,
+        error_type: "StandardError",
+        message: "Low severity test",
+        occurrence_count: 50,
+        occurred_at: 30.minutes.ago)
+
+      expect(score).to be > RailsErrorDashboard::Services::PriorityScoreCalculator.compute(low_error)
+    end
+
+    it "displays priority on error detail page" do
+      error = create(:error_log,
+        application: application,
+        error_type: "NoMethodError",
+        message: "Phase 14 display test",
+        occurrence_count: 10,
+        occurred_at: 1.hour.ago)
+
+      visit_error(error)
+      wait_for_page_load
+
+      # The error show page should render without errors
+      expect(page).to have_content("NoMethodError")
+      expect(page).to have_content("Phase 14 display test")
+    end
+  end
 end

@@ -66,7 +66,7 @@ module RailsErrorDashboard
     before_validation :set_defaults, on: :create
     before_create :set_tracking_fields
     before_create :set_release_info
-    after_create :calculate_priority_score
+    before_create :set_priority_score
 
     # Turbo Stream broadcasting
     after_create_commit :broadcast_new_error
@@ -93,10 +93,9 @@ module RailsErrorDashboard
       self.git_sha ||= fetch_git_sha
     end
 
-    def calculate_priority_score
+    def set_priority_score
       return unless respond_to?(:priority_score=)
-      self.priority_score = compute_priority_score
-      save if persisted?
+      self.priority_score = Services::PriorityScoreCalculator.compute(self)
     end
 
     # Generate unique hash for error grouping
@@ -527,68 +526,11 @@ module RailsErrorDashboard
       nil
     end
 
-    # Enhanced Metrics: Smart Priority Scoring
-    # Score: 0-100 based on severity, frequency, recency, and user impact
-    def compute_priority_score
-      severity_score = severity_to_score(severity)
-      frequency_score = frequency_to_score(occurrence_count)
-      recency_score = recency_to_score(occurred_at)
-      user_impact_score = user_impact_to_score
-
-      # Weighted average
-      (severity_score * 0.4 + frequency_score * 0.25 + recency_score * 0.2 + user_impact_score * 0.15).round
-    end
-
-    def severity_to_score(sev)
-      case sev
-      when :critical then 100
-      when :high then 75
-      when :medium then 50
-      when :low then 25
-      else 10
-      end
-    end
-
-    def frequency_to_score(count)
-      # Logarithmic scale: 1 occurrence = 10, 10 = 50, 100 = 90, 1000+ = 100
-      return 10 if count <= 1
-      return 100 if count >= 1000
-
-      (10 + (Math.log10(count) * 30)).clamp(10, 100).round
-    end
-
-    def recency_to_score(time)
-      hours_ago = ((Time.current - time) / 1.hour).to_i
-      return 100 if hours_ago < 1      # Last hour = 100
-      return 80 if hours_ago < 24      # Last 24h = 80
-      return 50 if hours_ago < 168     # Last week = 50
-      return 20 if hours_ago < 720     # Last month = 20
-      10                                # Older = 10
-    end
-
-    def user_impact_to_score
-      return 0 unless user_id.present?
-
-      # Calculate what % of users are affected by this error type
-      total_users = unique_users_affected
-      return 0 if total_users.zero?
-
-      # Scale: 1 user = 10, 10 users = 50, 100+ users = 100
-      (10 + (Math.log10(total_users + 1) * 30)).clamp(0, 100).round
-    end
-
-    def unique_users_affected
-      ErrorLog.where(error_type: error_type, resolved: false)
-              .where.not(user_id: nil)
-              .distinct
-              .count(:user_id)
-    end
-
     # Public method: Get user impact percentage
     def user_impact_percentage
       return 0 unless user_id.present?
 
-      affected_users = unique_users_affected
+      affected_users = Services::PriorityScoreCalculator.unique_users_affected(error_type)
       return 0 if affected_users.zero?
 
       # Get total active users from config or estimate
