@@ -1009,4 +1009,37 @@ RSpec.describe "Query Integration", type: :system do
       expect(page).to have_content("Phase 15 system test")
     end
   end
+
+  describe "Phase 16: ErrorBroadcaster Service" do
+    it "creating and updating errors does not raise broadcasting errors" do
+      error = create(:error_log,
+        application: application,
+        error_type: "NoMethodError",
+        message: "Phase 16 broadcast test",
+        occurrence_count: 1,
+        occurred_at: 5.minutes.ago)
+
+      # after_create_commit fires broadcast_new — should not raise
+      expect(error).to be_persisted
+
+      # after_update_commit fires broadcast_update — should not raise
+      error.update(occurrence_count: 2)
+      expect(error.reload.occurrence_count).to eq(2)
+
+      # Verify error is visible on dashboard
+      visit_error(error)
+      wait_for_page_load
+      expect(page).to have_content("NoMethodError")
+      expect(page).to have_content("Phase 16 broadcast test")
+    end
+
+    it "old broadcast methods are removed from the model" do
+      error = create(:error_log, application: application)
+
+      expect(error).not_to respond_to(:broadcast_new_error)
+      expect(error).not_to respond_to(:broadcast_error_update)
+      expect(error).not_to respond_to(:broadcast_replace_stats)
+      expect(error).not_to respond_to(:broadcast_available?)
+    end
+  end
 end

@@ -69,8 +69,8 @@ module RailsErrorDashboard
     before_create :set_priority_score
 
     # Turbo Stream broadcasting
-    after_create_commit :broadcast_new_error
-    after_update_commit :broadcast_error_update
+    after_create_commit -> { Services::ErrorBroadcaster.broadcast_new(self) }
+    after_update_commit -> { Services::ErrorBroadcaster.broadcast_update(self) }
 
     # Cache invalidation - clear analytics caches when errors are created/updated/deleted
     after_save :clear_analytics_cache
@@ -411,85 +411,6 @@ module RailsErrorDashboard
         options[:class_name] = user_model if user_model.present?
       end
       super
-    end
-
-    # Turbo Stream broadcasting methods
-    def broadcast_new_error
-      # Skip broadcasting in API-only mode or if Turbo is not available
-      return unless defined?(Turbo)
-      return unless broadcast_available?
-
-      platforms = ErrorLog.distinct.pluck(:platform).compact
-      show_platform = platforms.size > 1
-
-      Turbo::StreamsChannel.broadcast_prepend_to(
-        "error_list",
-        target: "error_list",
-        partial: "rails_error_dashboard/errors/error_row",
-        locals: { error: self, show_platform: show_platform }
-      )
-      broadcast_replace_stats
-    rescue => e
-      Rails.logger.error("[RailsErrorDashboard] Failed to broadcast new error: #{e.class} - #{e.message}")
-      Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
-    end
-
-    def broadcast_error_update
-      # Skip broadcasting in API-only mode or if Turbo is not available
-      return unless defined?(Turbo)
-      return unless broadcast_available?
-
-      platforms = ErrorLog.distinct.pluck(:platform).compact
-      show_platform = platforms.size > 1
-
-      Turbo::StreamsChannel.broadcast_replace_to(
-        "error_list",
-        target: "error_#{id}",
-        partial: "rails_error_dashboard/errors/error_row",
-        locals: { error: self, show_platform: show_platform }
-      )
-      broadcast_replace_stats
-    rescue => e
-      Rails.logger.error("[RailsErrorDashboard] Failed to broadcast error update: #{e.class} - #{e.message}")
-      Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
-    end
-
-    def broadcast_replace_stats
-      # Skip broadcasting in API-only mode or if Turbo is not available
-      return unless defined?(Turbo)
-      return unless broadcast_available?
-
-      stats = Queries::DashboardStats.call
-      # Safety check: ensure stats is not nil before broadcasting
-      return unless stats.is_a?(Hash) && stats.present?
-
-      Turbo::StreamsChannel.broadcast_replace_to(
-        "error_list",
-        target: "dashboard_stats",
-        partial: "rails_error_dashboard/errors/stats",
-        locals: { stats: stats }
-      )
-    rescue => e
-      Rails.logger.error("[RailsErrorDashboard] Failed to broadcast stats update: #{e.class} - #{e.message}")
-      Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
-    end
-
-    # Check if broadcast functionality is available and properly configured
-    # In API-only apps, ActionCable might not be configured or Rails.cache might not be available
-    def broadcast_available?
-      # Check if ActionCable is available (required for Turbo Streams)
-      return false unless defined?(ActionCable)
-
-      # Check if Rails.cache is configured and working
-      # This prevents errors when cache is not available in API-only mode
-      begin
-        Rails.cache.write("rails_error_dashboard_broadcast_test", true, expires_in: 1.second)
-        Rails.cache.delete("rails_error_dashboard_broadcast_test")
-        true
-      rescue => e
-        Rails.logger.debug("[RailsErrorDashboard] Broadcast not available: #{e.message}")
-        false
-      end
     end
 
     # Enhanced Metrics: Release/Version Tracking
