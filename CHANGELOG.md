@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.37] - 2026-02-12
+
+### ♻️ Refactoring
+
+**Complete CQRS Architecture Refactor (Phases 1-17)**
+
+Restructured the entire codebase from a model-heavy architecture to clean CQRS (Command Query Responsibility Segregation):
+
+- **Commands** (17 files) — All write operations extracted from models: `LogError`, `FindOrIncrementError`, `FindOrCreateApplication`, `ResolveError`, `AssignError`, `BatchResolveErrors`, `UpsertBaseline`, `UpsertCascadePattern`, and more
+- **Queries** (13 files) — All read operations: `ErrorsList`, `DashboardStats`, `AnalyticsStats`, `SimilarErrors`, `ErrorCorrelation`, `PlatformComparison`, `BaselineStats`, and more
+- **Services** (25+ files) — Pure algorithms with no database access: `SeverityClassifier`, `PriorityScoreCalculator`, `ErrorHashGenerator`, `ErrorNormalizer`, `BacktraceProcessor`, `CascadeDetector`, `ErrorBroadcaster`, `AnalyticsCacheManager`, all notification payload builders, and more
+
+Every service is a pure function, every command handles a single write concern, and every query is composable and side-effect-free.
+
+### 🐛 Bug Fixes
+
+- Fix `Float::Infinity`, `Float::NaN`, and non-numeric inputs in `frequency_to_score` causing crashes
+- Fix defensive guards and edge case handling across refactored services (Phases 12-17)
+- Fix 3 issues found during chaos testing in production mode
+- Fix flaky CI by resetting configuration before `dashboard_url` test
+- Fix RuboCop lint failures (array bracket spacing, trailing commas)
+- Fix cross-platform `sed -i` incompatibility in integration test route injection (macOS vs Linux)
+
+### 🧪 Testing
+
+- **Full integration test suite** (`bin/full-integration-test`) — Spins up 2 fresh Rails apps in production mode (shared DB + separate DB), installs the gem with all features ON, seeds diverse test data, and runs 272 HTTP-level assertions covering every dashboard page, action, filter, edge case, and error capture path with CSRF-aware form submissions
+- **Chaos tests** added to lefthook pre-commit hooks — 4 integration scenarios (~1000+ assertions) run before every commit
+- Added integration tests to CI pipeline (GitHub Actions)
+- Cleaned up dead specs
+
+### 🧹 Maintenance
+
+- Exclude bash scripts from RuboCop linting
+- Delete dead code identified during refactoring
+
+---
+
 ## [0.1.36] - 2026-02-10
 
 ### 🐛 Bug Fixes
