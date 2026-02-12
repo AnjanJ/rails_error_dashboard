@@ -18,6 +18,11 @@ RSpec.describe RailsErrorDashboard::Commands::ResolveError do
       expect(error_log.reload.resolved).to be true
     end
 
+    it 'sets status to resolved' do
+      described_class.call(error_log.id, params)
+      expect(error_log.reload.status).to eq('resolved')
+    end
+
     it 'sets the resolver name' do
       described_class.call(error_log.id, params)
       expect(error_log.reload.resolved_by_name).to eq('John Doe')

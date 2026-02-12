@@ -17,6 +17,8 @@ module RailsErrorDashboard
 
     # CRITICAL: Ensure dashboard errors never break the app
     # Catch all exceptions and render user-friendly error page
+    # NOTE: rescue_from is checked in reverse declaration order (last = highest priority).
+    # The generic handler must be declared FIRST so specific handlers below take precedence.
     rescue_from StandardError do |exception|
       # Log the error for debugging
       Rails.logger.error("[RailsErrorDashboard] Dashboard controller error: #{exception.class} - #{exception.message}")
@@ -31,6 +33,22 @@ module RailsErrorDashboard
                     "Check Rails logs for details: [RailsErrorDashboard]",
              status: :internal_server_error,
              layout: false
+    end
+
+    # Handle record not found — return 404 instead of 500
+    rescue_from ActiveRecord::RecordNotFound do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Record not found: #{exception.message}")
+      render plain: "The requested error was not found.\n\n" \
+                    "It may have been deleted or the ID is invalid.\n\n" \
+                    "Error: #{exception.message}",
+             status: :not_found,
+             layout: false
+    end
+
+    # Handle Pagy pagination errors — redirect to page 1
+    rescue_from Pagy::OverflowError, Pagy::VariableError do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Pagination error: #{exception.message}")
+      redirect_to request.path, status: :moved_permanently
     end
   end
 end

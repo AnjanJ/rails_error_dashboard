@@ -1074,4 +1074,63 @@ RSpec.describe "Query Integration", type: :system do
       expect(page).to have_content("Phase 17 system test")
     end
   end
+
+  # ===== Chaos Testing Fixes =====
+
+  describe "ResolveError sets status to resolved" do
+    let!(:error) do
+      create(:error_log,
+        application: application,
+        error_type: "RuntimeError",
+        message: "resolve status test",
+        status: "new",
+        resolved: false)
+    end
+
+    it "sets both resolved flag and status field" do
+      result = RailsErrorDashboard::Commands::ResolveError.call(
+        error.id,
+        resolved_by_name: "Tester",
+        resolution_comment: "Fixed"
+      )
+      expect(result.resolved).to be true
+      expect(result.status).to eq("resolved")
+
+      visit_error(error)
+      wait_for_page_load
+      expect(page).to have_content("resolved")
+    end
+  end
+
+  describe "RecordNotFound returns 404" do
+    it "returns 404 for non-existent error ID" do
+      visit_dashboard("/errors/999999999")
+      expect(page).to have_content("The requested error was not found")
+    end
+  end
+
+  describe "Pagy pagination edge cases" do
+    let!(:errors) do
+      3.times.map do |i|
+        create(:error_log,
+          application: application,
+          error_type: "PaginationError",
+          message: "page test #{i}",
+          error_hash: SecureRandom.hex(8))
+      end
+    end
+
+    it "redirects page=0 to page 1" do
+      visit_dashboard("/errors?page=0")
+      wait_for_page_load
+      expect(page).to have_content("PaginationError")
+    end
+
+    it "redirects out-of-range page to page 1" do
+      visit_dashboard("/errors?page=999999")
+      wait_for_page_load
+      # Should redirect to page 1, showing actual content
+      expect(page).to have_content("PaginationError")
+    end
+  end
 end

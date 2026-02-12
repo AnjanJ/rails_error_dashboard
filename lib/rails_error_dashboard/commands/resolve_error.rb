@@ -22,7 +22,8 @@ module RailsErrorDashboard
           resolved_at: Time.current,
           resolved_by_name: @resolution_data[:resolved_by_name],
           resolution_comment: @resolution_data[:resolution_comment],
-          resolution_reference: @resolution_data[:resolution_reference]
+          resolution_reference: @resolution_data[:resolution_reference],
+          status: "resolved"
         )
 
         # Dispatch plugin event for resolved error
