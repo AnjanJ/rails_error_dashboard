@@ -65,7 +65,6 @@ module RailsErrorDashboard
     # Set defaults and tracking
     before_validation :set_defaults, on: :create
     before_create :set_tracking_fields
-    before_create :set_release_info
     before_create :set_priority_score
 
     # Turbo Stream broadcasting
@@ -73,8 +72,8 @@ module RailsErrorDashboard
     after_update_commit -> { Services::ErrorBroadcaster.broadcast_update(self) }
 
     # Cache invalidation - clear analytics caches when errors are created/updated/deleted
-    after_save :clear_analytics_cache
-    after_destroy :clear_analytics_cache
+    after_save -> { Services::AnalyticsCacheManager.clear }
+    after_destroy -> { Services::AnalyticsCacheManager.clear }
 
     def set_defaults
       self.platform ||= "API"
@@ -85,12 +84,6 @@ module RailsErrorDashboard
       self.first_seen_at ||= Time.current
       self.last_seen_at ||= Time.current
       self.occurrence_count ||= 1
-    end
-
-    def set_release_info
-      return unless respond_to?(:app_version=)
-      self.app_version ||= fetch_app_version
-      self.git_sha ||= fetch_git_sha
     end
 
     def set_priority_score
@@ -191,29 +184,6 @@ module RailsErrorDashboard
       end
     end
 
-    def calculate_priority
-      # Automatic priority calculation based on severity and frequency
-      severity_weight = case severity
-      when :critical then 3
-      when :high then 2
-      when :medium then 1
-      else 0
-      end
-
-      frequency_weight = if occurrence_count >= 100
-        3
-      elsif occurrence_count >= 10
-        2
-      elsif occurrence_count >= 5
-        1
-      else
-        0
-      end
-
-      # Take the higher of severity or frequency
-      [ severity_weight, frequency_weight ].max
-    end
-
     # Status transition methods
     def status_badge_color
       case status
@@ -237,24 +207,6 @@ module RailsErrorDashboard
       }
 
       valid_transitions[status]&.include?(new_status) || false
-    end
-
-    # Get error statistics
-    def self.statistics(days = 7)
-      start_date = days.days.ago
-
-      {
-        total: where("occurred_at >= ?", start_date).count,
-        unresolved: where("occurred_at >= ?", start_date).unresolved.count,
-        by_type: where("occurred_at >= ?", start_date)
-          .group(:error_type)
-          .count
-          .sort_by { |_, count| -count }
-          .to_h,
-        by_day: where("occurred_at >= ?", start_date)
-          .group("DATE(occurred_at)")
-          .count
-      }
     end
 
     # Find related errors of the same type
@@ -413,29 +365,6 @@ module RailsErrorDashboard
       super
     end
 
-    # Enhanced Metrics: Release/Version Tracking
-    def fetch_app_version
-      RailsErrorDashboard.configuration.app_version || ENV["APP_VERSION"] || detect_version_from_file
-    end
-
-    def fetch_git_sha
-      RailsErrorDashboard.configuration.git_sha || ENV["GIT_SHA"] || detect_git_sha
-    end
-
-    def detect_version_from_file
-      version_file = Rails.root.join("VERSION")
-      return File.read(version_file).strip if File.exist?(version_file)
-      nil
-    end
-
-    def detect_git_sha
-      return nil unless File.exist?(Rails.root.join(".git"))
-      `git rev-parse --short HEAD 2>/dev/null`.strip.presence
-    rescue => e
-      Rails.logger.debug("Could not detect git SHA: #{e.message}")
-      nil
-    end
-
     # Public method: Get user impact percentage
     def user_impact_percentage
       return 0 unless user_id.present?
@@ -457,29 +386,6 @@ module RailsErrorDashboard
       else
         100 # Default fallback
       end
-    end
-
-    # Clear analytics caches when errors are created, updated, or destroyed
-    # This ensures dashboard and analytics always show fresh data
-    def clear_analytics_cache
-      # Use delete_matched to clear all cached analytics regardless of parameters
-      # Pattern matches: dashboard_stats/*, analytics_stats/*, platform_comparison/*
-      # Note: SolidCache doesn't support delete_matched, so we catch NotImplementedError
-      if Rails.cache.respond_to?(:delete_matched)
-        Rails.cache.delete_matched("dashboard_stats/*")
-        Rails.cache.delete_matched("analytics_stats/*")
-        Rails.cache.delete_matched("platform_comparison/*")
-      else
-        # SolidCache or other stores that don't support pattern matching
-        # We can't clear cache patterns, so just skip it
-        Rails.logger.info("Cache store doesn't support delete_matched, skipping cache clear") if Rails.logger
-      end
-    rescue NotImplementedError => e
-      # Some cache stores throw NotImplementedError even if respond_to? returns true
-      Rails.logger.info("Cache store doesn't support delete_matched: #{e.message}") if Rails.logger
-    rescue => e
-      # Silently handle other cache clearing errors to prevent blocking error logging
-      Rails.logger.error("Failed to clear analytics cache: #{e.message}") if Rails.logger
     end
   end
 end

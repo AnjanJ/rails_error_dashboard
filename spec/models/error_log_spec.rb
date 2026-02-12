@@ -465,37 +465,6 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
     end
   end
 
-  describe '.statistics' do
-    before do
-      create(:error_log, error_type: 'NoMethodError', occurred_at: 2.days.ago)
-      create(:error_log, error_type: 'NoMethodError', occurred_at: 3.days.ago)
-      create(:error_log, error_type: 'ArgumentError', occurred_at: 1.day.ago)
-      create(:error_log, :resolved, error_type: 'TypeError', occurred_at: 4.days.ago)
-      create(:error_log, occurred_at: 10.days.ago) # Outside 7 day window
-    end
-
-    it 'returns total count within time period' do
-      stats = described_class.statistics(7)
-      expect(stats[:total]).to eq(4) # 4 errors in last 7 days
-    end
-
-    it 'returns unresolved count' do
-      stats = described_class.statistics(7)
-      expect(stats[:unresolved]).to eq(3)
-    end
-
-    it 'returns errors grouped by type' do
-      stats = described_class.statistics(7)
-      expect(stats[:by_type]['NoMethodError']).to eq(2)
-      expect(stats[:by_type]['ArgumentError']).to eq(1)
-    end
-
-    it 'returns errors grouped by day' do
-      stats = described_class.statistics(7)
-      expect(stats[:by_day]).to be_a(Hash)
-    end
-  end
-
   describe '#related_errors' do
     let!(:error1) { create(:error_log, error_type: 'NoMethodError', occurred_at: 2.days.ago) }
     let!(:error2) { create(:error_log, error_type: 'NoMethodError', occurred_at: 1.day.ago) }

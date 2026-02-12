@@ -1042,4 +1042,36 @@ RSpec.describe "Query Integration", type: :system do
       expect(error).not_to respond_to(:broadcast_available?)
     end
   end
+
+  describe "Phase 17: Dead code removal + AnalyticsCacheManager" do
+    it "dead methods are removed from ErrorLog" do
+      error = create(:error_log, application: application)
+
+      expect(error).not_to respond_to(:calculate_priority)
+      expect(RailsErrorDashboard::ErrorLog).not_to respond_to(:statistics)
+      expect(error).not_to respond_to(:clear_analytics_cache)
+    end
+
+    it "AnalyticsCacheManager.clear works without error" do
+      expect { RailsErrorDashboard::Services::AnalyticsCacheManager.clear }.not_to raise_error
+    end
+
+    it "error creation still works after dead code removal" do
+      error = create(:error_log,
+        application: application,
+        error_type: "ArgumentError",
+        message: "Phase 17 system test",
+        occurrence_count: 5,
+        occurred_at: 1.hour.ago)
+
+      expect(error).to be_persisted
+      expect(error.error_hash).to be_present
+      expect(error.severity).to be_a(Symbol)
+
+      visit_error(error)
+      wait_for_page_load
+      expect(page).to have_content("ArgumentError")
+      expect(page).to have_content("Phase 17 system test")
+    end
+  end
 end
