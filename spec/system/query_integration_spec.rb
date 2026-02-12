@@ -966,4 +966,47 @@ RSpec.describe "Query Integration", type: :system do
       expect(page).to have_content("Phase 14 display test")
     end
   end
+
+  describe "Phase 15: ErrorHashGenerator.from_attributes" do
+    it "generates consistent hashes via from_attributes for deduplication" do
+      hash1 = RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+        error_type: "NoMethodError",
+        message: "undefined method 'foo'",
+        backtrace: "app/models/user.rb:10:in `name'",
+        controller_name: "users",
+        action_name: "show",
+        application_id: application.id
+      )
+
+      hash2 = RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+        error_type: "NoMethodError",
+        message: "undefined method 'foo'",
+        backtrace: "app/models/user.rb:10:in `name'",
+        controller_name: "users",
+        action_name: "show",
+        application_id: application.id
+      )
+
+      expect(hash1).to eq(hash2)
+      expect(hash1.length).to eq(16)
+      expect(hash1).to match(/\A[0-9a-f]+\z/)
+    end
+
+    it "model delegates generate_error_hash and error appears on dashboard" do
+      error = create(:error_log,
+        application: application,
+        error_type: "RuntimeError",
+        message: "Phase 15 system test",
+        occurrence_count: 1,
+        occurred_at: 5.minutes.ago)
+
+      expect(error.error_hash).to be_present
+      expect(error.error_hash.length).to eq(16)
+
+      visit_error(error)
+      wait_for_page_load
+      expect(page).to have_content("RuntimeError")
+      expect(page).to have_content("Phase 15 system test")
+    end
+  end
 end

@@ -85,6 +85,80 @@ RSpec.describe RailsErrorDashboard::Services::ErrorHashGenerator do
     end
   end
 
+  describe ".from_attributes" do
+    let(:backtrace) { "app/models/user.rb:10:in `name'\napp/controllers/users_controller.rb:5:in `show'" }
+
+    it "returns a 16-character hex string" do
+      result = described_class.from_attributes(error_type: "NoMethodError", message: "test")
+
+      expect(result).to be_a(String)
+      expect(result.length).to eq(16)
+      expect(result).to match(/\A[0-9a-f]+\z/)
+    end
+
+    it "produces same hash for same attributes" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", message: "test", backtrace: backtrace)
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", message: "test", backtrace: backtrace)
+
+      expect(hash1).to eq(hash2)
+    end
+
+    it "produces different hash for different error types" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", message: "test")
+      hash2 = described_class.from_attributes(error_type: "ArgumentError", message: "test")
+
+      expect(hash1).not_to eq(hash2)
+    end
+
+    it "produces different hash for different controllers" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", controller_name: "users")
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", controller_name: "posts")
+
+      expect(hash1).not_to eq(hash2)
+    end
+
+    it "produces different hash for different actions" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", action_name: "show")
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", action_name: "create")
+
+      expect(hash1).not_to eq(hash2)
+    end
+
+    it "produces different hash for different applications" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", application_id: 1)
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", application_id: 2)
+
+      expect(hash1).not_to eq(hash2)
+    end
+
+    it "normalizes dynamic values using ErrorNormalizer" do
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", message: "User #123 not found")
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", message: "User #456 not found")
+
+      expect(hash1).to eq(hash2)
+    end
+
+    it "extracts significant backtrace frames" do
+      bt = "app/models/user.rb:10:in `name'\nvendor/bundle/gems/activesupport/lib/core.rb:5:in `call'"
+      hash1 = described_class.from_attributes(error_type: "NoMethodError", backtrace: bt)
+      hash2 = described_class.from_attributes(error_type: "NoMethodError", backtrace: nil)
+
+      expect(hash1).not_to eq(hash2)
+    end
+
+    it "handles nil message gracefully" do
+      result = described_class.from_attributes(error_type: "NoMethodError", message: nil)
+      expect(result).to be_a(String)
+      expect(result.length).to eq(16)
+    end
+
+    it "handles nil backtrace gracefully" do
+      result = described_class.from_attributes(error_type: "NoMethodError", backtrace: nil)
+      expect(result).to be_a(String)
+      expect(result.length).to eq(16)
+    end
+  end
+
   describe ".extract_app_frame" do
     it "finds app code frames" do
       backtrace = [

@@ -7,10 +7,15 @@ module RailsErrorDashboard
     # No database access — accepts exception data, returns a hash string.
     # Same hash = same error type for grouping purposes.
     #
+    # Two entry points:
+    # - `.call(exception, ...)` — used by LogError command (exception-based)
+    # - `.from_attributes(...)` — used by ErrorLog model callback (attribute-based)
+    #
     # @example
     #   ErrorHashGenerator.call(exception, controller_name: "users", action_name: "show", application_id: 1)
     #   # => "a1b2c3d4e5f6g7h8"
     class ErrorHashGenerator
+      # Generate hash from an exception object (used by LogError command)
       # @param exception [Exception] The exception to hash
       # @param controller_name [String, nil] Controller context
       # @param action_name [String, nil] Action context
@@ -24,6 +29,31 @@ module RailsErrorDashboard
           exception.class.name,
           normalized_message,
           file_path,
+          controller_name,
+          action_name,
+          application_id.to_s
+        ].compact.join("|")
+
+        Digest::SHA256.hexdigest(digest_input)[0..15]
+      end
+
+      # Generate hash from error attributes (used by ErrorLog model callback)
+      # Uses ErrorNormalizer for smarter normalization and significant frame extraction
+      # @param error_type [String] The error class name
+      # @param message [String, nil] The error message
+      # @param backtrace [String, nil] The backtrace as a string
+      # @param controller_name [String, nil] Controller context
+      # @param action_name [String, nil] Action context
+      # @param application_id [Integer, nil] Application for per-app deduplication
+      # @return [String] 16-character hex hash
+      def self.from_attributes(error_type:, message: nil, backtrace: nil, controller_name: nil, action_name: nil, application_id: nil)
+        normalized_message = ErrorNormalizer.normalize(message)
+        significant_frames = ErrorNormalizer.extract_significant_frames(backtrace, count: 3)
+
+        digest_input = [
+          error_type,
+          normalized_message,
+          significant_frames,
           controller_name,
           action_name,
           application_id.to_s

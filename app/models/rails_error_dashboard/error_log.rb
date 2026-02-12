@@ -98,27 +98,16 @@ module RailsErrorDashboard
       self.priority_score = Services::PriorityScoreCalculator.compute(self)
     end
 
-    # Generate unique hash for error grouping
-    # Includes controller/action/application for better context-aware grouping
-    # Per-app deduplication: same error in App A vs App B creates separate records
+    # Generate unique hash for error grouping — delegates to ErrorHashGenerator Service
     def generate_error_hash
-      # Use smart normalization to improve error grouping accuracy
-      normalized_message = Services::ErrorNormalizer.normalize(message)
-
-      # Extract significant backtrace frames (skips gem/vendor code)
-      significant_frames = Services::ErrorNormalizer.extract_significant_frames(backtrace, count: 3)
-
-      # Hash based on error class, normalized message, significant frames, controller, action, and application
-      digest_input = [
-        error_type,
-        normalized_message,
-        significant_frames,
-        controller_name,  # Controller context
-        action_name,      # Action context
-        application_id.to_s  # Application context (for per-app deduplication)
-      ].compact.join("|")
-
-      Digest::SHA256.hexdigest(digest_input)[0..15]
+      Services::ErrorHashGenerator.from_attributes(
+        error_type: error_type,
+        message: message,
+        backtrace: backtrace,
+        controller_name: controller_name,
+        action_name: action_name,
+        application_id: application_id
+      )
     end
 
     # Check if this is a critical error — delegates to SeverityClassifier
