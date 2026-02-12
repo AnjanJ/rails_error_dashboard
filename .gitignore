@@ -48,3 +48,11 @@ app/assets/stylesheets/rails_error_dashboard/*.scss
 app/assets/stylesheets/rails_error_dashboard/*.css.map
 .DS_Store
 spec/dummy/db/schema.rb
+
+# Private research/planning docs (not for public repo)
+DEEP_INTROSPECTION_ANALYSIS.md
+FAULTLINE_COMPARISON.md
+HOST_APP_SAFETY.md
+ROADMAP.md
+TIMESERIES_ANALYSIS.md
+blog/

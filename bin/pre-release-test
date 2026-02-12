@@ -1,0 +1,706 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+# ============================================================================
+# Pre-Release Integration Test Suite v2
+# Creates temporary Rails apps with ALL features enabled and runs chaos tests
+# that verify real error capture via middleware + subscriber.
+#
+# ALL apps run in PRODUCTION mode — because that's how our users run the gem.
+#
+# Usage:
+#   bin/pre-release-test [all|full_sync|full_async|full_http|full_separate_db]
+#
+# Examples:
+#   bin/pre-release-test full_sync       # Test sync config only (~1 min)
+#   bin/pre-release-test full_http       # Test HTTP error capture (~2 min)
+#   bin/pre-release-test all             # Test all 4 configs (~4 min)
+#   bin/pre-release-test                 # Same as 'all'
+# ============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GEM_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+TEMPLATES_DIR="$GEM_DIR/test/pre_release/templates"
+CHAOS_DIR="$GEM_DIR/test/pre_release/chaos"
+TEST_DIR="/tmp/pre_release_test_$$"
+TARGET="${1:-all}"
+
+# ALL test apps run in production mode — this is how users run the gem
+export RAILS_ENV=production
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Results file (shared across subshells)
+RESULTS_FILE="$TEST_DIR/.results"
+
+log_header() {
+  echo ""
+  echo -e "${BOLD}${CYAN}======================================================================${NC}"
+  echo -e "${BOLD}${CYAN}  $1${NC}"
+  echo -e "${BOLD}${CYAN}======================================================================${NC}"
+  echo ""
+}
+
+log_step() {
+  echo -e "  ${CYAN}→${NC} $1"
+}
+
+log_success() {
+  echo -e "  ${GREEN}✓${NC} $1"
+}
+
+log_error() {
+  echo -e "  ${RED}✗${NC} $1"
+}
+
+# ---------------------------------------------------------------------------
+# Create a fresh Rails app with the gem installed (runs in subshell)
+# Args: app_name [rails_flags...]
+# ---------------------------------------------------------------------------
+create_app() {
+  local app_name=$1
+  shift
+  local app_dir="$TEST_DIR/$app_name"
+
+  log_step "Creating Rails app: $app_name"
+
+  (
+    cd "$TEST_DIR"
+    # rails new always runs in development — that's fine, we switch to production after
+    # NOTE: Do NOT skip action-mailer — our gem has mailer classes that require
+    # ActionMailer::Base, and production eager_load=true will crash without it.
+    RAILS_ENV=development rails new "$app_name" \
+      --skip-git \
+      --skip-docker \
+      --skip-action-mailbox \
+      --skip-action-text \
+      --skip-active-storage \
+      --skip-action-cable \
+      --skip-hotwire \
+      --skip-jbuilder \
+      --skip-test \
+      --skip-system-test \
+      --skip-bootsnap \
+      --skip-bundle \
+      "$@" \
+      2>&1 | tail -1
+  )
+
+  # Add our gem to the Gemfile (path reference to test local code)
+  echo "" >> "$app_dir/Gemfile"
+  echo "gem 'rails_error_dashboard', path: '$GEM_DIR'" >> "$app_dir/Gemfile"
+
+  log_step "Running bundle install (this may take a moment)..."
+  (cd "$app_dir" && bundle install 2>&1 | tail -5)
+
+  # Configure app for production mode
+  configure_for_production "$app_dir"
+
+  log_success "App created: $app_dir"
+}
+
+# ---------------------------------------------------------------------------
+# Configure a Rails app for production mode
+# Sets secret_key_base, SQLite for production, and minimal production config
+# Args: app_dir
+# ---------------------------------------------------------------------------
+configure_for_production() {
+  local app_dir=$1
+
+  log_step "Configuring for production mode..."
+
+  # Set a secret_key_base (required in production)
+  cat > "$app_dir/config/initializers/secret_key_base.rb" << 'RUBY'
+Rails.application.config.secret_key_base = "test_secret_key_base_for_pre_release_chaos_testing_only_not_for_real_use_" + "a" * 64
+RUBY
+
+  # Add production database config with ABSOLUTE paths.
+  # Puma -d (daemonize) changes CWD to /, so relative paths like
+  # "storage/production.sqlite3" resolve to /storage/production.sqlite3
+  # in the server but to $app_dir/storage/production.sqlite3 in rails runner.
+  # Using absolute paths ensures both processes use the same file.
+  cat > "$app_dir/config/database.yml" << YAML
+development:
+  adapter: sqlite3
+  database: $app_dir/storage/development.sqlite3
+  pool: 5
+  timeout: 5000
+
+test:
+  adapter: sqlite3
+  database: $app_dir/storage/test.sqlite3
+  pool: 5
+  timeout: 5000
+
+production:
+  adapter: sqlite3
+  database: $app_dir/storage/production.sqlite3
+  pool: 5
+  timeout: 5000
+YAML
+
+  # Ensure storage directory exists
+  mkdir -p "$app_dir/storage"
+
+  # Overwrite production.rb with a minimal config for chaos testing
+  # The default production.rb has settings that break testing
+  # (force_ssl, require_master_key, etc.)
+  cat > "$app_dir/config/environments/production.rb" << 'RUBY'
+require "active_support/core_ext/integer/time"
+
+Rails.application.configure do
+  config.enable_reloading = false
+  config.eager_load = true
+  config.consider_all_requests_local = false
+  config.public_file_server.enabled = true
+  config.log_level = :warn
+  config.log_tags = [ :request_id ]
+  config.action_dispatch.show_exceptions = :all
+  config.force_ssl = false
+  config.hosts.clear
+  config.active_support.report_deprecations = false
+  config.active_record.dump_schema_after_migration = false
+
+  # ActionMailer config (required since we don't skip it)
+  config.action_mailer.delivery_method = :test
+end
+RUBY
+}
+
+# ---------------------------------------------------------------------------
+# Install the gem in an app (runs in subshell)
+# Args: app_dir initializer_file [extra_generator_flags...]
+# ---------------------------------------------------------------------------
+install_gem() {
+  local app_dir=$1
+  local initializer_file=$2
+  shift 2
+
+  log_step "Running generator..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
+
+  # Overwrite the initializer with our template
+  log_step "Applying initializer template: $(basename "$initializer_file")"
+  cp "$initializer_file" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  log_step "Running migrations..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  log_success "Gem installed and configured"
+}
+
+# ---------------------------------------------------------------------------
+# Run chaos test phases in an app (runs in subshell)
+# Args: app_dir phase_files...
+# ---------------------------------------------------------------------------
+run_chaos_tests() {
+  local app_dir=$1
+  shift
+  local phase_files=("$@")
+  local app_pass=0
+  local app_fail=0
+
+  for phase_file in "${phase_files[@]}"; do
+    local phase_name
+    phase_name=$(basename "$phase_file" .rb)
+    log_step "Running $phase_name..."
+
+    # Run the chaos test in a subshell and capture output + exit code
+    local output
+    local exit_code=0
+    output=$(cd "$app_dir" && bin/rails runner "$phase_file" 2>&1) || exit_code=$?
+
+    # Extract pass/fail counts from the last RESULTS line
+    local results_line
+    results_line=$(echo "$output" | grep "RESULTS:" | tail -1)
+    local phase_pass
+    local phase_fail
+    phase_pass=$(echo "$results_line" | grep -o '[0-9]* passed' | grep -o '[0-9]*')
+    phase_fail=$(echo "$results_line" | grep -o '[0-9]* failed' | grep -o '[0-9]*')
+
+    if [ -n "$phase_pass" ] && [ -n "$phase_fail" ]; then
+      app_pass=$((app_pass + phase_pass))
+      app_fail=$((app_fail + phase_fail))
+
+      if [ "$phase_fail" -eq 0 ]; then
+        log_success "$phase_name: ${phase_pass} passed, ${phase_fail} failed"
+      else
+        log_error "$phase_name: ${phase_pass} passed, ${phase_fail} failed"
+        echo "$output" | grep "FAIL:" | head -10
+      fi
+    else
+      # Could not parse results — show output
+      log_error "$phase_name: Could not parse results (exit code: $exit_code)"
+      echo "$output" | tail -20
+      app_fail=$((app_fail + 1))
+    fi
+  done
+
+  echo ""
+  if [ "$app_fail" -eq 0 ]; then
+    log_success "App total: ${app_pass} passed, ${app_fail} failed"
+    echo "${app_pass}:${app_fail}:OK" >> "$RESULTS_FILE"
+  else
+    log_error "App total: ${app_pass} passed, ${app_fail} failed"
+    echo "${app_pass}:${app_fail}:ERR" >> "$RESULTS_FILE"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Run HTTP tests against a running server
+# Args: app_dir port
+# ---------------------------------------------------------------------------
+run_http_tests() {
+  local app_dir=$1
+  local port=${2:-3000}
+
+  # Kill any stale server on this port from previous test runs
+  lsof -ti :"$port" | xargs kill -9 2>/dev/null || true
+  sleep 1
+
+  log_step "Starting Rails server on port $port..."
+  (cd "$app_dir" && bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
+  local server_pid=$!
+  sleep 3
+
+  # Check if server started
+  if ! curl -s -o /dev/null "http://localhost:$port/up" 2>/dev/null; then
+    sleep 5
+    if ! curl -s -o /dev/null "http://localhost:$port/up" 2>/dev/null; then
+      log_error "Server failed to start on port $port"
+      log_error "Server log:"
+      tail -20 "$app_dir/log/server.log" 2>/dev/null || true
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      kill "$server_pid" 2>/dev/null || true
+      return 1
+    fi
+  fi
+  log_success "Server running on port $port (pid: $server_pid)"
+
+  # Seed some test data first
+  log_step "Seeding test data..."
+  (cd "$app_dir" && bin/rails runner - 2>&1 <<'RUBY' | tail -1
+    5.times do |i|
+      begin
+        raise RuntimeError, "seed error #{SecureRandom.hex(4)}"
+      rescue => e
+        RailsErrorDashboard::Commands::LogError.call(e, { platform: %w[Web iOS Android].sample })
+      end
+    end
+    puts "Seeded #{RailsErrorDashboard::ErrorLog.count} errors"
+RUBY
+  )
+
+  # Run Phase D with the correct port
+  PORT="$port" run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_d_http_endpoints.rb"
+
+  # Stop server
+  log_step "Stopping server..."
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  sleep 1
+}
+
+# ---------------------------------------------------------------------------
+# Inject test controller, model, migration, and routes for Phase F
+# Args: app_dir
+# ---------------------------------------------------------------------------
+inject_test_fixtures() {
+  local app_dir=$1
+
+  log_step "Injecting test controller, model, routes for Phase F..."
+
+  # Create test controller
+  mkdir -p "$app_dir/app/controllers"
+  cat > "$app_dir/app/controllers/test_errors_controller.rb" << 'RUBY'
+# Custom error class for testing custom severity rules
+class CustomTestError < StandardError; end
+
+class TestErrorsController < ApplicationController
+  skip_forgery_protection
+
+  def not_found
+    TestWidget.find(999999)
+  end
+
+  def validation_error
+    TestWidget.create!(name: nil)
+  end
+
+  def param_missing
+    params.require(:widget).require(:name)
+  end
+
+  def nil_error
+    nil.nonexistent_method
+  end
+
+  def divide_by_zero
+    1 / 0
+  end
+
+  def timeout
+    require "timeout"
+    Timeout.timeout(0.01) { sleep 1 }
+  end
+
+  def json_parse
+    JSON.parse("{ invalid json !!!")
+  end
+
+  def type_error
+    Integer(nil)
+  end
+
+  def name_error
+    SomeCompletelyUndefinedConstant
+  end
+
+  def custom_error
+    raise CustomTestError, "Custom test error from controller"
+  end
+
+  def runtime_error
+    raise RuntimeError, "Runtime error from test controller"
+  end
+
+  # Verification endpoint — returns error count as JSON (no error raised)
+  def error_count
+    count = RailsErrorDashboard::ErrorLog.count
+    types = RailsErrorDashboard::ErrorLog.group(:error_type).count
+    db_path = ActiveRecord::Base.connection.pool.db_config.database
+    render json: { total: count, by_type: types, db_path: db_path }
+  rescue => e
+    render json: { error: e.class.name, message: e.message, backtrace: e.backtrace&.first(5) }, status: 500
+  end
+end
+RUBY
+
+  # Create test model
+  cat > "$app_dir/app/models/test_widget.rb" << 'RUBY'
+class TestWidget < ApplicationRecord
+  validates :name, presence: true
+end
+RUBY
+
+  # Create migration for test_widgets table
+  local timestamp
+  timestamp=$(date +%Y%m%d%H%M%S)
+  cat > "$app_dir/db/migrate/${timestamp}_create_test_widgets.rb" << 'RUBY'
+class CreateTestWidgets < ActiveRecord::Migration[7.2]
+  def change
+    create_table :test_widgets do |t|
+      t.string :name
+      t.timestamps
+    end
+  end
+end
+RUBY
+
+  # Append test routes to routes.rb
+  # The generator already added the engine mount, so we just append test routes
+  # inside the existing Rails.application.routes.draw block
+  local routes_file="$app_dir/config/routes.rb"
+  # Remove the trailing 'end' line, add routes, then re-add 'end'
+  sed -i '' '$ d' "$routes_file"
+  cat >> "$routes_file" << 'ROUTES'
+
+  # Phase F test error routes
+  get "test/not_found"        => "test_errors#not_found"
+  get "test/validation_error" => "test_errors#validation_error"
+  get "test/param_missing"    => "test_errors#param_missing"
+  get "test/nil_error"        => "test_errors#nil_error"
+  get "test/divide_by_zero"   => "test_errors#divide_by_zero"
+  get "test/timeout"          => "test_errors#timeout"
+  get "test/json_parse"       => "test_errors#json_parse"
+  get "test/type_error"       => "test_errors#type_error"
+  get "test/name_error"       => "test_errors#name_error"
+  get "test/custom_error"     => "test_errors#custom_error"
+  get "test/runtime_error"    => "test_errors#runtime_error"
+  get "test/error_count"     => "test_errors#error_count"
+end
+ROUTES
+
+  log_success "Test fixtures injected (controller, model, routes)"
+}
+
+# ---------------------------------------------------------------------------
+# Run Phase F HTTP error capture tests against a running server
+# Args: app_dir port
+# ---------------------------------------------------------------------------
+run_http_error_tests() {
+  local app_dir=$1
+  local port=${2:-3098}
+
+  # Kill any stale server on this port from previous test runs
+  lsof -ti :"$port" | xargs kill -9 2>/dev/null || true
+  sleep 1
+
+  log_step "Starting Rails server on port $port for Phase F..."
+  # Do NOT daemonize (-d) — daemonizing can cause issues with DB connections
+  # and file descriptor inheritance. Run in background instead.
+  (cd "$app_dir" && bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
+  local server_pid=$!
+  sleep 3
+
+  # Check if server started
+  if ! curl -s -o /dev/null "http://localhost:$port/up" 2>/dev/null; then
+    sleep 5
+    if ! curl -s -o /dev/null "http://localhost:$port/up" 2>/dev/null; then
+      log_error "Server failed to start on port $port"
+      log_error "Server log:"
+      tail -20 "$app_dir/log/server.log" 2>/dev/null || true
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      kill "$server_pid" 2>/dev/null || true
+      return 1
+    fi
+  fi
+  log_success "Server running on port $port (pid: $server_pid)"
+
+  # Run Phase F
+  PORT="$port" run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_f_http_error_capture.rb"
+
+  # Stop server
+  log_step "Stopping server..."
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  sleep 1
+}
+
+# ---------------------------------------------------------------------------
+# Test configurations (v2: 4 apps, ALL features on, ALL in production mode)
+# ---------------------------------------------------------------------------
+
+test_full_sync() {
+  log_header "APP 1/4: full_sync_app — Sync + Shared DB + All Features (production)"
+
+  create_app "full_sync_app"
+  install_gem "$TEST_DIR/full_sync_app" "$TEMPLATES_DIR/full_sync_initializer.rb"
+
+  run_chaos_tests "$TEST_DIR/full_sync_app" \
+    "$CHAOS_DIR/phase_e_error_capture.rb" \
+    "$CHAOS_DIR/phase_a_data_integrity.rb" \
+    "$CHAOS_DIR/phase_b_edge_cases.rb" \
+    "$CHAOS_DIR/phase_c_queries.rb"
+}
+
+test_full_async() {
+  log_header "APP 2/4: full_async_app — Async (Sidekiq inline) + All Features (production)"
+
+  create_app "full_async_app"
+
+  local app_dir="$TEST_DIR/full_async_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_async_initializer.rb"
+
+  # Set ActiveJob to inline adapter AFTER install (no real Redis needed)
+  cat > "$app_dir/config/initializers/active_job_inline.rb" << 'RUBY'
+Rails.application.config.active_job.queue_adapter = :inline
+RUBY
+
+  run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_e_error_capture.rb" \
+    "$CHAOS_DIR/phase_a_data_integrity.rb" \
+    "$CHAOS_DIR/phase_c_queries.rb"
+}
+
+test_full_http() {
+  log_header "APP 3/4: full_http_app — HTTP Error Capture + Dashboard (production)"
+
+  create_app "full_http_app"
+
+  local app_dir="$TEST_DIR/full_http_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_http_initializer.rb"
+
+  # Inject test controller, model, migration, routes
+  inject_test_fixtures "$app_dir"
+
+  # Run the test_widgets migration
+  log_step "Running test fixture migration..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  # Run Phase F (HTTP error capture) — requires running server
+  run_http_error_tests "$app_dir" 3098
+
+  # Run Phase D (dashboard endpoints) — also requires running server
+  run_http_tests "$app_dir" 3098
+}
+
+test_full_separate_db() {
+  log_header "APP 4/4: full_separate_db_app — Separate DB + All Features (production)"
+
+  create_app "full_separate_db_app"
+
+  local app_dir="$TEST_DIR/full_separate_db_app"
+
+  # Generate separate DB config with absolute paths
+  mkdir -p "$app_dir/storage"
+  cat > "$app_dir/config/database.yml" << YAML
+development:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/development.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_development.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+test:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/test.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_test.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+production:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/production.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_production.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+YAML
+
+  # Run generator with separate-database flag
+  log_step "Running generator..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+
+  # Apply our initializer template
+  log_step "Applying initializer template: full_separate_db_initializer.rb"
+  cp "$TEMPLATES_DIR/full_separate_db_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Move gem migrations from db/migrate/ to db/error_dashboard_migrate/
+  log_step "Moving migrations to error_dashboard_migrate/..."
+  mkdir -p "$app_dir/db/error_dashboard_migrate"
+  (cd "$app_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
+
+  # Migrate primary DB first (no gem migrations there now)
+  log_step "Migrating primary database..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  # Migrate error_dashboard DB (where our migrations live)
+  log_step "Migrating error_dashboard database..."
+  (cd "$app_dir" && bin/rails db:migrate:error_dashboard 2>&1 | tail -3)
+
+  log_success "Gem installed and configured (separate DB)"
+
+  run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_e_error_capture.rb" \
+    "$CHAOS_DIR/phase_a_data_integrity.rb" \
+    "$CHAOS_DIR/phase_c_queries.rb"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+log_header "Rails Error Dashboard — Pre-Release Integration Tests v2"
+echo -e "  Gem directory: ${BOLD}$GEM_DIR${NC}"
+echo -e "  Test directory: ${BOLD}$TEST_DIR${NC}"
+echo -e "  Target: ${BOLD}$TARGET${NC}"
+echo -e "  Environment: ${BOLD}${YELLOW}PRODUCTION${NC}"
+echo ""
+
+# Create test directory
+mkdir -p "$TEST_DIR"
+echo -n "" > "$RESULTS_FILE"
+
+# Track start time
+START_TIME=$(date +%s)
+
+case "$TARGET" in
+  full_sync)
+    test_full_sync
+    ;;
+  full_async)
+    test_full_async
+    ;;
+  full_http)
+    test_full_http
+    ;;
+  full_separate_db)
+    test_full_separate_db
+    ;;
+  all)
+    test_full_sync
+    test_full_async
+    test_full_http
+    test_full_separate_db
+    ;;
+  *)
+    echo "Usage: bin/pre-release-test [all|full_sync|full_async|full_http|full_separate_db]"
+    exit 1
+    ;;
+esac
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+
+# ---------------------------------------------------------------------------
+# Final summary — aggregate from results file
+# ---------------------------------------------------------------------------
+TOTAL_PASS=0
+TOTAL_FAIL=0
+APPS_TESTED=0
+APPS_PASSED=0
+
+while IFS=: read -r pass fail status; do
+  TOTAL_PASS=$((TOTAL_PASS + pass))
+  TOTAL_FAIL=$((TOTAL_FAIL + fail))
+  APPS_TESTED=$((APPS_TESTED + 1))
+  if [ "$status" = "OK" ]; then
+    APPS_PASSED=$((APPS_PASSED + 1))
+  fi
+done < "$RESULTS_FILE"
+
+log_header "FINAL RESULTS"
+
+echo -e "  Apps tested: ${BOLD}$APPS_TESTED${NC}"
+echo -e "  Apps passed: ${BOLD}${GREEN}$APPS_PASSED${NC}"
+echo -e "  Apps failed: ${BOLD}${RED}$((APPS_TESTED - APPS_PASSED))${NC}"
+echo ""
+echo -e "  Total assertions: ${BOLD}$((TOTAL_PASS + TOTAL_FAIL))${NC}"
+echo -e "  Passed: ${BOLD}${GREEN}$TOTAL_PASS${NC}"
+echo -e "  Failed: ${BOLD}${RED}$TOTAL_FAIL${NC}"
+echo ""
+echo -e "  Duration: ${BOLD}${ELAPSED}s${NC}"
+echo ""
+
+if [ "$TOTAL_FAIL" -eq 0 ] && [ "$APPS_TESTED" -eq "$APPS_PASSED" ]; then
+  echo -e "  ${GREEN}${BOLD}ALL TESTS PASSED${NC} ✓"
+  echo ""
+
+  # Clean up on success
+  log_step "Cleaning up test directory..."
+  rm -rf "$TEST_DIR"
+  log_success "Done!"
+
+  exit 0
+else
+  echo -e "  ${RED}${BOLD}SOME TESTS FAILED${NC}"
+  echo ""
+  echo -e "  Test directory preserved for debugging: ${BOLD}$TEST_DIR${NC}"
+  exit 1
+fi
