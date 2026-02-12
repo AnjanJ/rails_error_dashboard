@@ -884,4 +884,39 @@ RSpec.describe "Query Integration", type: :system do
       expect(baselines.count).to be > 0
     end
   end
+
+  context "SeverityClassifier service (Phase 13)" do
+    it "classifies error severity and model delegates correctly" do
+      # Create errors of different types
+      critical_error = create(:error_log, error_type: "SecurityError", message: "Phase 13 critical")
+      high_error = create(:error_log, error_type: "NoMethodError", message: "Phase 13 high")
+      low_error = create(:error_log, error_type: "StandardError", message: "Phase 13 low")
+
+      # Service classifies correctly
+      expect(RailsErrorDashboard::Services::SeverityClassifier.classify("SecurityError")).to eq(:critical)
+      expect(RailsErrorDashboard::Services::SeverityClassifier.classify("NoMethodError")).to eq(:high)
+      expect(RailsErrorDashboard::Services::SeverityClassifier.classify("StandardError")).to eq(:low)
+
+      # Model delegates correctly
+      expect(critical_error.severity).to eq(:critical)
+      expect(critical_error.critical?).to be true
+      expect(high_error.severity).to eq(:high)
+      expect(high_error.critical?).to be false
+      expect(low_error.severity).to eq(:low)
+
+      # Visit error show page — severity should display
+      visit_error(critical_error)
+      wait_for_page_load
+      expect(page).to have_content("SecurityError")
+    end
+
+    it "custom severity rules override defaults" do
+      RailsErrorDashboard.configuration.custom_severity_rules["RuntimeError"] = "critical"
+
+      expect(RailsErrorDashboard::Services::SeverityClassifier.classify("RuntimeError")).to eq(:critical)
+      expect(RailsErrorDashboard::Services::SeverityClassifier.critical?("RuntimeError")).to be true
+    ensure
+      RailsErrorDashboard.reset_configuration!
+    end
+  end
 end

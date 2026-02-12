@@ -123,16 +123,16 @@ module RailsErrorDashboard
         # Map severity levels to error types
         error_types = case @filters[:severity].to_sym
         when :critical
-          ErrorLog::CRITICAL_ERROR_TYPES
+          Services::SeverityClassifier::CRITICAL_ERROR_TYPES
         when :high
-          ErrorLog::HIGH_SEVERITY_ERROR_TYPES
+          Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
         when :medium
-          ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES
+          Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
         when :low
           # Low severity = everything NOT in the other categories
-          all_categorized = ErrorLog::CRITICAL_ERROR_TYPES +
-                           ErrorLog::HIGH_SEVERITY_ERROR_TYPES +
-                           ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES
+          all_categorized = Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
+                           Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES +
+                           Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
           # Use NOT IN to filter out categorized errors
           return query.where.not(error_type: all_categorized)
         else

@@ -115,13 +115,13 @@ module RailsErrorDashboard
         scoped_errors = base_scope.where("occurred_at >= ?", 7.days.ago)
 
         {
-          critical: scoped_errors.where(error_type: ErrorLog::CRITICAL_ERROR_TYPES).count,
-          high: scoped_errors.where(error_type: ErrorLog::HIGH_SEVERITY_ERROR_TYPES).count,
-          medium: scoped_errors.where(error_type: ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES).count,
+          critical: scoped_errors.where(error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES).count,
+          high: scoped_errors.where(error_type: Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES).count,
+          medium: scoped_errors.where(error_type: Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES).count,
           low: scoped_errors.where.not(
-            error_type: ErrorLog::CRITICAL_ERROR_TYPES +
-                       ErrorLog::HIGH_SEVERITY_ERROR_TYPES +
-                       ErrorLog::MEDIUM_SEVERITY_ERROR_TYPES
+            error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
+                       Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES +
+                       Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
           ).count
         }
       end

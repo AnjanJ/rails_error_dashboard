@@ -62,7 +62,7 @@ module RailsErrorDashboard
       # @param exception [Exception] The exception to check
       # @return [Boolean] true if the exception is critical
       def self.critical?(exception)
-        ErrorLog::CRITICAL_ERROR_TYPES.include?(exception.class.name)
+        SeverityClassifier.critical?(exception.class.name)
       end
     end
   end

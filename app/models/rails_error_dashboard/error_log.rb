@@ -122,9 +122,9 @@ module RailsErrorDashboard
       Digest::SHA256.hexdigest(digest_input)[0..15]
     end
 
-    # Check if this is a critical error
+    # Check if this is a critical error — delegates to SeverityClassifier
     def critical?
-      CRITICAL_ERROR_TYPES.include?(error_type)
+      Services::SeverityClassifier.critical?(error_type)
     end
 
     # Check if error is recent (< 1 hour)
@@ -137,56 +137,10 @@ module RailsErrorDashboard
       !resolved? && occurred_at < 7.days.ago
     end
 
-    # Get severity level
-    # Checks custom severity rules first, then falls back to default classification
+    # Get severity level — delegates to SeverityClassifier
     def severity
-      # Check custom severity rules first
-      custom_severity = RailsErrorDashboard.configuration.custom_severity_rules[error_type]
-      return custom_severity.to_sym if custom_severity.present?
-
-      # Fall back to default classification
-      return :critical if CRITICAL_ERROR_TYPES.include?(error_type)
-      return :high if HIGH_SEVERITY_ERROR_TYPES.include?(error_type)
-      return :medium if MEDIUM_SEVERITY_ERROR_TYPES.include?(error_type)
-      :low
+      Services::SeverityClassifier.classify(error_type)
     end
-
-    CRITICAL_ERROR_TYPES = %w[
-      SecurityError
-      NoMemoryError
-      SystemStackError
-      SignalException
-      ActiveRecord::StatementInvalid
-      LoadError
-      SyntaxError
-      ActiveRecord::ConnectionNotEstablished
-      Redis::ConnectionError
-      OpenSSL::SSL::SSLError
-    ].freeze
-
-    HIGH_SEVERITY_ERROR_TYPES = %w[
-      ActiveRecord::RecordNotFound
-      ArgumentError
-      TypeError
-      NoMethodError
-      NameError
-      ZeroDivisionError
-      FloatDomainError
-      IndexError
-      KeyError
-      RangeError
-    ].freeze
-
-    MEDIUM_SEVERITY_ERROR_TYPES = %w[
-      ActiveRecord::RecordInvalid
-      Timeout::Error
-      Net::ReadTimeout
-      Net::OpenTimeout
-      ActiveRecord::RecordNotUnique
-      JSON::ParserError
-      CSV::MalformedCSVError
-      Errno::ECONNREFUSED
-    ].freeze
 
     # Find existing error by hash or create new one — delegates to Command
     def self.find_or_increment_by_hash(error_hash, attributes = {})
