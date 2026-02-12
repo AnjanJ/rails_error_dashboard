@@ -99,6 +99,18 @@ RSpec.describe RailsErrorDashboard::Services::PriorityScoreCalculator do
     it "handles negative count safely" do
       expect(described_class.frequency_to_score(-5)).to eq(10)
     end
+
+    it "handles Float::INFINITY safely" do
+      expect(described_class.frequency_to_score(Float::INFINITY)).to eq(10)
+    end
+
+    it "handles Float::NAN safely" do
+      expect(described_class.frequency_to_score(Float::NAN)).to eq(10)
+    end
+
+    it "handles string count safely" do
+      expect(described_class.frequency_to_score("abc")).to eq(10)
+    end
   end
 
   describe ".recency_to_score" do
