@@ -152,7 +152,7 @@ filter_tests = [
   [ { hide_snoozed: "true" }, "hide_snoozed=true" ],
   [ { per_page: "10" }, "per_page=10" ],
   [ { per_page: "50" }, "per_page=50" ],
-  [ { page: "2", per_page: "5" }, "page=2 with per_page=5" ],
+  [ { page: "2", per_page: "5" }, "page=2 with per_page=5" ]
 ]
 
 filter_tests.each do |params, label|
@@ -421,7 +421,7 @@ test_error_endpoints = [
   [ "/test/divide_by_zero", "ZeroDivisionError" ],
   [ "/test/type_error", "TypeError" ],
   [ "/test/runtime_error", "RuntimeError" ],
-  [ "/test/json_parse", "JSON::ParserError" ],
+  [ "/test/json_parse", "JSON::ParserError" ]
 ]
 
 # Hit each error endpoint (these are outside the engine mount, no auth needed)

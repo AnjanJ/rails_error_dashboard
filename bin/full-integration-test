@@ -229,9 +229,14 @@ class TestErrorsController < ApplicationController
 end
 RUBY
 
-  # Append test routes
+  # Append test routes — remove trailing 'end' and re-add with our routes
+  # Uses Ruby for cross-platform compatibility (sed -i differs on macOS vs Linux)
   local routes_file="$app_dir/config/routes.rb"
-  sed -i '' '$ d' "$routes_file"
+  ruby -e "
+    lines = File.readlines('$routes_file')
+    lines.pop while lines.last&.strip&.empty? || lines.last&.strip == 'end'
+    File.write('$routes_file', lines.join)
+  "
   cat >> "$routes_file" << 'ROUTES'
 
   # Integration test error routes
