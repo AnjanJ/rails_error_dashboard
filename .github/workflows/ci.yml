@@ -34,3 +34,23 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+  integration:
+    runs-on: ubuntu-latest
+    name: Integration Tests (shared + separate DB)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Install Rails CLI
+        run: gem install rails --no-document
+
+      - name: Run full integration tests
+        run: bin/full-integration-test all
+

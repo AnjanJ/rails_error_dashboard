@@ -1,0 +1,654 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+# ============================================================================
+# Full Integration Test Suite
+# Creates fresh Rails apps, installs the gem with ALL features ON, seeds
+# diverse test data, and runs comprehensive HTTP-level tests against every
+# dashboard page, action, filter, and edge case.
+#
+# Tests both shared DB and separate DB modes.
+#
+# Usage:
+#   bin/full-integration-test [all|shared_db|separate_db]
+#
+# Examples:
+#   bin/full-integration-test all          # Both apps (~3 min)
+#   bin/full-integration-test shared_db    # Shared DB only (~1.5 min)
+#   bin/full-integration-test separate_db  # Separate DB only (~1.5 min)
+# ============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GEM_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+TEMPLATES_DIR="$GEM_DIR/test/pre_release/templates"
+INTEGRATION_TEST="$GEM_DIR/test/pre_release/chaos/integration_tests.rb"
+TEST_DIR="/tmp/integration_test_$$"
+TARGET="${1:-all}"
+
+# ALL test apps run in production mode
+export RAILS_ENV=production
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+RESULTS_FILE="$TEST_DIR/.results"
+
+log_header() {
+  echo ""
+  echo -e "${BOLD}${CYAN}======================================================================${NC}"
+  echo -e "${BOLD}${CYAN}  $1${NC}"
+  echo -e "${BOLD}${CYAN}======================================================================${NC}"
+  echo ""
+}
+
+log_step() {
+  echo -e "  ${CYAN}→${NC} $1"
+}
+
+log_success() {
+  echo -e "  ${GREEN}✓${NC} $1"
+}
+
+log_error() {
+  echo -e "  ${RED}✗${NC} $1"
+}
+
+# ---------------------------------------------------------------------------
+# Create a fresh Rails app (reused from bin/pre-release-test)
+# ---------------------------------------------------------------------------
+create_app() {
+  local app_name=$1
+  local app_dir="$TEST_DIR/$app_name"
+
+  log_step "Creating Rails app: $app_name"
+
+  (
+    cd "$TEST_DIR"
+    RAILS_ENV=development rails new "$app_name" \
+      --skip-git \
+      --skip-docker \
+      --skip-action-mailbox \
+      --skip-action-text \
+      --skip-active-storage \
+      --skip-action-cable \
+      --skip-hotwire \
+      --skip-jbuilder \
+      --skip-test \
+      --skip-system-test \
+      --skip-bootsnap \
+      --skip-bundle \
+      2>&1 | tail -1
+  )
+
+  echo "" >> "$app_dir/Gemfile"
+  echo "gem 'rails_error_dashboard', path: '$GEM_DIR'" >> "$app_dir/Gemfile"
+
+  log_step "Running bundle install..."
+  (cd "$app_dir" && bundle install 2>&1 | tail -3)
+
+  configure_for_production "$app_dir"
+  log_success "App created: $app_dir"
+}
+
+# ---------------------------------------------------------------------------
+# Configure for production mode
+# ---------------------------------------------------------------------------
+configure_for_production() {
+  local app_dir=$1
+
+  cat > "$app_dir/config/initializers/secret_key_base.rb" << 'RUBY'
+Rails.application.config.secret_key_base = "integration_test_secret_key_base_" + "a" * 64
+RUBY
+
+  cat > "$app_dir/config/database.yml" << YAML
+development:
+  adapter: sqlite3
+  database: $app_dir/storage/development.sqlite3
+  pool: 5
+  timeout: 5000
+
+test:
+  adapter: sqlite3
+  database: $app_dir/storage/test.sqlite3
+  pool: 5
+  timeout: 5000
+
+production:
+  adapter: sqlite3
+  database: $app_dir/storage/production.sqlite3
+  pool: 5
+  timeout: 5000
+YAML
+
+  mkdir -p "$app_dir/storage"
+
+  cat > "$app_dir/config/environments/production.rb" << 'RUBY'
+require "active_support/core_ext/integer/time"
+
+Rails.application.configure do
+  config.enable_reloading = false
+  config.eager_load = true
+  config.consider_all_requests_local = false
+  config.public_file_server.enabled = true
+  config.log_level = :warn
+  config.log_tags = [ :request_id ]
+  config.action_dispatch.show_exceptions = :all
+  config.force_ssl = false
+  config.hosts.clear
+  config.active_support.report_deprecations = false
+  config.active_record.dump_schema_after_migration = false
+  config.action_mailer.delivery_method = :test
+end
+RUBY
+}
+
+# ---------------------------------------------------------------------------
+# Install gem with initializer template
+# ---------------------------------------------------------------------------
+install_gem() {
+  local app_dir=$1
+  local initializer_file=$2
+  shift 2
+
+  log_step "Running generator..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
+
+  log_step "Applying initializer template: $(basename "$initializer_file")"
+  cp "$initializer_file" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  log_step "Running migrations..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  log_success "Gem installed and configured"
+}
+
+# ---------------------------------------------------------------------------
+# Inject test controller + routes for error capture testing
+# ---------------------------------------------------------------------------
+inject_test_fixtures() {
+  local app_dir=$1
+
+  log_step "Injecting test controller and routes..."
+
+  mkdir -p "$app_dir/app/controllers"
+  cat > "$app_dir/app/controllers/test_errors_controller.rb" << 'RUBY'
+class CustomTestError < StandardError; end
+
+class TestErrorsController < ApplicationController
+  skip_forgery_protection
+
+  def nil_error
+    nil.nonexistent_method
+  end
+
+  def divide_by_zero
+    1 / 0
+  end
+
+  def type_error
+    Integer(nil)
+  end
+
+  def name_error
+    SomeCompletelyUndefinedConstant
+  end
+
+  def json_parse
+    JSON.parse("{ invalid json !!!")
+  end
+
+  def runtime_error
+    raise RuntimeError, "Runtime error from test controller"
+  end
+
+  def custom_error
+    raise CustomTestError, "Custom test error from controller"
+  end
+
+  def report_error
+    begin
+      raise ArgumentError, "Reported via Rails.error"
+    rescue => e
+      Rails.error.report(e, handled: false, severity: :error)
+    end
+    render plain: "reported"
+  end
+
+  def error_count
+    count = RailsErrorDashboard::ErrorLog.count
+    types = RailsErrorDashboard::ErrorLog.group(:error_type).count
+    render json: { total: count, by_type: types }
+  rescue => e
+    render json: { error: e.class.name, message: e.message }, status: 500
+  end
+end
+RUBY
+
+  # Append test routes
+  local routes_file="$app_dir/config/routes.rb"
+  sed -i '' '$ d' "$routes_file"
+  cat >> "$routes_file" << 'ROUTES'
+
+  # Integration test error routes
+  get "test/nil_error"        => "test_errors#nil_error"
+  get "test/divide_by_zero"   => "test_errors#divide_by_zero"
+  get "test/type_error"       => "test_errors#type_error"
+  get "test/name_error"       => "test_errors#name_error"
+  get "test/json_parse"       => "test_errors#json_parse"
+  get "test/runtime_error"    => "test_errors#runtime_error"
+  get "test/custom_error"     => "test_errors#custom_error"
+  get "test/report_error"     => "test_errors#report_error"
+  get "test/error_count"      => "test_errors#error_count"
+end
+ROUTES
+
+  log_success "Test fixtures injected"
+}
+
+# ---------------------------------------------------------------------------
+# Seed diverse test data via rails runner
+# ---------------------------------------------------------------------------
+seed_test_data() {
+  local app_dir=$1
+
+  log_step "Seeding diverse test data..."
+  (cd "$app_dir" && bin/rails runner - 2>&1 <<'RUBY'
+# Seed diverse errors for integration testing
+errors_data = [
+  # [error_type, message, platform, severity_hint, occurrence_count]
+  ["NoMethodError", "undefined method 'email' for nil:NilClass", "Web", nil, 50],
+  ["NoMethodError", "undefined method 'name' for nil", "iOS", nil, 10],
+  ["ArgumentError", "wrong number of arguments (given 3, expected 2)", "Web", nil, 5],
+  ["ArgumentError", "invalid byte sequence in UTF-8", "Android", nil, 200],
+  ["RuntimeError", "Connection timeout after 30s", "API", nil, 30],
+  ["RuntimeError", "Rate limit exceeded", "API", nil, 15],
+  ["TypeError", "no implicit conversion of String into Integer", "Web", nil, 8],
+  ["TypeError", "nil can't be coerced into Integer", "iOS", nil, 3],
+  ["SecurityError", "Insecure operation - can't modify frozen String", "Web", nil, 1],
+  ["SecurityError", "Unauthorized access attempt", "API", nil, 2],
+  ["NameError", "uninitialized constant FooBar", "Web", nil, 12],
+  ["ZeroDivisionError", "divided by 0", "Android", nil, 7],
+  ["JSON::ParserError", "unexpected token at '{ invalid'", "API", nil, 20],
+  ["LoadError", "cannot load such file -- missing_gem", "Web", nil, 1],
+  ["StandardError", "Generic application error", "Web", nil, 4],
+]
+
+app1 = RailsErrorDashboard::Commands::FindOrCreateApplication.call("MainApp")
+app2 = RailsErrorDashboard::Commands::FindOrCreateApplication.call("MobileAPI")
+
+created = []
+errors_data.each_with_index do |(error_type, message, platform, _, occ_count), idx|
+  begin
+    klass = Object.const_get(error_type)
+    raise klass, message
+  rescue Exception => e
+    app_id = idx < 10 ? app1.id : app2.id
+    user_id = [nil, "user_1", "user_2", "user_3", "admin@example.com"].sample
+
+    error_log = RailsErrorDashboard::Commands::LogError.call(e, {
+      controller_name: "test_controller",
+      action_name: "action_#{idx}",
+      platform: platform,
+      user_id: user_id,
+      ip_address: "192.168.1.#{idx + 1}",
+      request_url: "https://myapp.com/test/#{idx}",
+      application_id: app_id
+    })
+
+    # If async, look up the record
+    unless error_log.is_a?(RailsErrorDashboard::ErrorLog)
+      error_log = RailsErrorDashboard::ErrorLog
+        .where(error_type: error_type)
+        .order(id: :desc)
+        .first
+    end
+
+    if error_log
+      # Set occurrence_count
+      if occ_count > 1
+        error_log.update_columns(occurrence_count: occ_count)
+      end
+
+      # Set git_sha and app_version
+      error_log.update_columns(
+        git_sha: "abc#{idx.to_s.rjust(4, '0')}",
+        app_version: idx < 8 ? "1.0.0" : "1.1.0"
+      )
+
+      created << error_log
+    end
+  end
+end
+
+# Set various statuses
+if created.length >= 15
+  # Investigating
+  created[2]&.update_columns(status: "investigating")
+
+  # In progress
+  created[3]&.update_columns(status: "in_progress")
+
+  # Resolved
+  created[4]&.update_columns(
+    status: "resolved",
+    resolved: true,
+    resolved_at: 2.hours.ago,
+    resolved_by_name: "Dev Team",
+    resolution_comment: "Fixed in v1.1.0"
+  )
+  created[5]&.update_columns(
+    status: "resolved",
+    resolved: true,
+    resolved_at: 1.day.ago,
+    resolved_by_name: "Jane Doe",
+    resolution_comment: "Rate limiting adjusted"
+  )
+
+  # Won't fix
+  created[14]&.update_columns(status: "wont_fix")
+
+  # Assigned
+  created[0]&.update_columns(assigned_to: "alice@example.com", assigned_at: 1.hour.ago)
+  created[1]&.update_columns(assigned_to: "bob@example.com", assigned_at: 3.hours.ago)
+
+  # Snoozed
+  created[6]&.update_columns(snoozed_until: 24.hours.from_now)
+
+  # Priority levels
+  created[0]&.update_columns(priority_level: 0) # P0 Critical
+  created[8]&.update_columns(priority_level: 0) # P0 Critical
+  created[1]&.update_columns(priority_level: 1) # P1 High
+  created[2]&.update_columns(priority_level: 2) # P2 Medium
+  created[14]&.update_columns(priority_level: 3) # P3 Low
+
+  # Add comments
+  RailsErrorDashboard::ErrorComment.create!(
+    error_log: created[0],
+    author_name: "Alice",
+    body: "This is happening on every page load",
+    created_at: 2.hours.ago
+  )
+  RailsErrorDashboard::ErrorComment.create!(
+    error_log: created[0],
+    author_name: "Bob",
+    body: "I think it's related to the user model refactor",
+    created_at: 1.hour.ago
+  )
+  RailsErrorDashboard::ErrorComment.create!(
+    error_log: created[4],
+    author_name: "Jane",
+    body: "Fixed by updating the connection pool settings",
+    created_at: 3.hours.ago
+  )
+end
+
+puts "Seeded #{created.length} errors, #{RailsErrorDashboard::ErrorComment.count} comments"
+puts "Applications: #{RailsErrorDashboard::Application.pluck(:name).join(', ')}"
+puts "Statuses: #{RailsErrorDashboard::ErrorLog.group(:status).count.inspect}"
+puts "Platforms: #{RailsErrorDashboard::ErrorLog.group(:platform).count.inspect}"
+RUBY
+  )
+}
+
+# ---------------------------------------------------------------------------
+# Start server, run tests, stop server
+# ---------------------------------------------------------------------------
+run_integration_tests() {
+  local app_dir=$1
+  local port=$2
+  local label=$3
+
+  # Kill any stale server on this port
+  lsof -ti :"$port" | xargs kill -9 2>/dev/null || true
+  sleep 1
+
+  log_step "Starting Rails server on port $port..."
+  (cd "$app_dir" && bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
+  local server_pid=$!
+
+  # Wait for server to start
+  local max_wait=20
+  local waited=0
+  while [ $waited -lt $max_wait ]; do
+    if curl -s -o /dev/null "http://localhost:$port/up" 2>/dev/null; then
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if [ $waited -ge $max_wait ]; then
+    log_error "Server failed to start on port $port"
+    tail -30 "$app_dir/log/server.log" 2>/dev/null || true
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    kill "$server_pid" 2>/dev/null || true
+    return 1
+  fi
+  log_success "Server running on port $port (pid: $server_pid)"
+
+  # Run integration tests
+  log_step "Running integration tests..."
+  local output
+  local exit_code=0
+  output=$(PORT="$port" ruby "$INTEGRATION_TEST" 2>&1) || exit_code=$?
+
+  # Parse results
+  local results_line
+  results_line=$(echo "$output" | grep "RESULTS:" | tail -1)
+  local test_pass
+  local test_fail
+  test_pass=$(echo "$results_line" | grep -o '[0-9]* passed' | grep -o '[0-9]*')
+  test_fail=$(echo "$results_line" | grep -o '[0-9]* failed' | grep -o '[0-9]*')
+
+  if [ -n "$test_pass" ] && [ -n "$test_fail" ]; then
+    if [ "$test_fail" -eq 0 ]; then
+      log_success "$label: ${test_pass} passed, ${test_fail} failed"
+    else
+      log_error "$label: ${test_pass} passed, ${test_fail} failed"
+      echo "$output" | grep "FAIL:" | head -20
+    fi
+    echo "${test_pass}:${test_fail}:$([ "$test_fail" -eq 0 ] && echo OK || echo ERR)" >> "$RESULTS_FILE"
+  else
+    log_error "$label: Could not parse results (exit code: $exit_code)"
+    echo "$output" | tail -30
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+  fi
+
+  # Stop server
+  log_step "Stopping server..."
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+  lsof -ti :"$port" | xargs kill -9 2>/dev/null || true
+  sleep 1
+}
+
+# ---------------------------------------------------------------------------
+# Test App 1: Shared DB
+# ---------------------------------------------------------------------------
+test_shared_db() {
+  log_header "APP 1: Shared DB — Sync + All Features (production)"
+
+  create_app "shared_db_app"
+
+  local app_dir="$TEST_DIR/shared_db_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_sync_initializer.rb"
+  inject_test_fixtures "$app_dir"
+  seed_test_data "$app_dir"
+
+  run_integration_tests "$app_dir" 3100 "Shared DB"
+}
+
+# ---------------------------------------------------------------------------
+# Test App 2: Separate DB
+# ---------------------------------------------------------------------------
+test_separate_db() {
+  log_header "APP 2: Separate DB — Async + All Features (production)"
+
+  create_app "separate_db_app"
+
+  local app_dir="$TEST_DIR/separate_db_app"
+
+  # Configure separate DB
+  mkdir -p "$app_dir/storage"
+  cat > "$app_dir/config/database.yml" << YAML
+development:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/development.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_development.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+test:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/test.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_test.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+production:
+  primary:
+    adapter: sqlite3
+    database: $app_dir/storage/production.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $app_dir/storage/error_dashboard_production.sqlite3
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+YAML
+
+  # Run generator with separate-database flag
+  log_step "Running generator with --separate-database..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+
+  # Apply initializer
+  log_step "Applying initializer template: full_separate_db_initializer.rb"
+  cp "$TEMPLATES_DIR/full_separate_db_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Move gem migrations to error_dashboard_migrate
+  log_step "Moving migrations to error_dashboard_migrate/..."
+  mkdir -p "$app_dir/db/error_dashboard_migrate"
+  (cd "$app_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
+
+  # Set async logging with inline adapter
+  cat > "$app_dir/config/initializers/active_job_inline.rb" << 'RUBY'
+Rails.application.config.active_job.queue_adapter = :inline
+RUBY
+
+  # Patch initializer for async
+  sed -i '' 's/config.async_logging = false/config.async_logging = true/' "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Migrate both databases
+  log_step "Migrating primary database..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  log_step "Migrating error_dashboard database..."
+  (cd "$app_dir" && bin/rails db:migrate:error_dashboard 2>&1 | tail -3)
+
+  log_success "Gem installed and configured (separate DB + async)"
+
+  inject_test_fixtures "$app_dir"
+  seed_test_data "$app_dir"
+
+  run_integration_tests "$app_dir" 3101 "Separate DB"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+log_header "Rails Error Dashboard — Full Integration Test Suite"
+echo -e "  Gem directory: ${BOLD}$GEM_DIR${NC}"
+echo -e "  Test directory: ${BOLD}$TEST_DIR${NC}"
+echo -e "  Target: ${BOLD}$TARGET${NC}"
+echo -e "  Environment: ${BOLD}${YELLOW}PRODUCTION${NC}"
+echo ""
+
+mkdir -p "$TEST_DIR"
+echo -n "" > "$RESULTS_FILE"
+
+START_TIME=$(date +%s)
+
+case "$TARGET" in
+  shared_db)
+    test_shared_db
+    ;;
+  separate_db)
+    test_separate_db
+    ;;
+  all)
+    test_shared_db
+    test_separate_db
+    ;;
+  *)
+    echo "Usage: bin/full-integration-test [all|shared_db|separate_db]"
+    exit 1
+    ;;
+esac
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+
+# ---------------------------------------------------------------------------
+# Final summary
+# ---------------------------------------------------------------------------
+TOTAL_PASS=0
+TOTAL_FAIL=0
+APPS_TESTED=0
+APPS_PASSED=0
+
+while IFS=: read -r pass fail status; do
+  TOTAL_PASS=$((TOTAL_PASS + pass))
+  TOTAL_FAIL=$((TOTAL_FAIL + fail))
+  APPS_TESTED=$((APPS_TESTED + 1))
+  if [ "$status" = "OK" ]; then
+    APPS_PASSED=$((APPS_PASSED + 1))
+  fi
+done < "$RESULTS_FILE"
+
+log_header "FINAL RESULTS"
+
+echo -e "  Apps tested: ${BOLD}$APPS_TESTED${NC}"
+echo -e "  Apps passed: ${BOLD}${GREEN}$APPS_PASSED${NC}"
+echo -e "  Apps failed: ${BOLD}${RED}$((APPS_TESTED - APPS_PASSED))${NC}"
+echo ""
+echo -e "  Total assertions: ${BOLD}$((TOTAL_PASS + TOTAL_FAIL))${NC}"
+echo -e "  Passed: ${BOLD}${GREEN}$TOTAL_PASS${NC}"
+echo -e "  Failed: ${BOLD}${RED}$TOTAL_FAIL${NC}"
+echo ""
+echo -e "  Duration: ${BOLD}${ELAPSED}s${NC}"
+echo ""
+
+if [ "$TOTAL_FAIL" -eq 0 ] && [ "$APPS_TESTED" -eq "$APPS_PASSED" ]; then
+  echo -e "  ${GREEN}${BOLD}ALL TESTS PASSED${NC}"
+  echo ""
+  log_step "Cleaning up test directory..."
+  rm -rf "$TEST_DIR"
+  log_success "Done!"
+  exit 0
+else
+  echo -e "  ${RED}${BOLD}SOME TESTS FAILED${NC}"
+  echo ""
+  echo -e "  Test directory preserved for debugging: ${BOLD}$TEST_DIR${NC}"
+  exit 1
+fi
