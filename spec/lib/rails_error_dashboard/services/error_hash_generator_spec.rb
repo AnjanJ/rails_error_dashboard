@@ -157,6 +157,24 @@ RSpec.describe RailsErrorDashboard::Services::ErrorHashGenerator do
       expect(result).to be_a(String)
       expect(result.length).to eq(16)
     end
+
+    it "handles nil error_type" do
+      result = described_class.from_attributes(error_type: nil, message: "test")
+      expect(result).to be_a(String)
+      expect(result.length).to eq(16)
+    end
+
+    it "handles empty string backtrace same as nil" do
+      hash_empty = described_class.from_attributes(error_type: "NoMethodError", backtrace: "")
+      hash_nil = described_class.from_attributes(error_type: "NoMethodError", backtrace: nil)
+      expect(hash_empty).to eq(hash_nil)
+    end
+
+    it "handles nil application_id" do
+      result = described_class.from_attributes(error_type: "NoMethodError", application_id: nil)
+      expect(result).to be_a(String)
+      expect(result.length).to eq(16)
+    end
   end
 
   describe ".extract_app_frame" do

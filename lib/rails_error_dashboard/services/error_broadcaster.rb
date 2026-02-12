@@ -13,6 +13,7 @@ module RailsErrorDashboard
       # Broadcast a new error (prepend to error list + refresh stats)
       # @param error_log [ErrorLog] The newly created error
       def self.broadcast_new(error_log)
+        return unless error_log
         return unless available?
 
         platforms = ErrorLog.distinct.pluck(:platform).compact
@@ -33,6 +34,7 @@ module RailsErrorDashboard
       # Broadcast an error update (replace in error list + refresh stats)
       # @param error_log [ErrorLog] The updated error
       def self.broadcast_update(error_log)
+        return unless error_log
         return unless available?
 
         platforms = ErrorLog.distinct.pluck(:platform).compact

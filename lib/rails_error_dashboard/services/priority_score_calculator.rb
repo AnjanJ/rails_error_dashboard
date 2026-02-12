@@ -46,6 +46,7 @@ module RailsErrorDashboard
       # @param count [Integer] Occurrence count
       # @return [Integer] Score 0-100
       def self.frequency_to_score(count)
+        count = count.to_i
         return 10 if count <= 1
         return 100 if count >= 1000
 

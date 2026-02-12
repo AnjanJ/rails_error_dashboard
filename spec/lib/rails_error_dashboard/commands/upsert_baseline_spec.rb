@@ -96,6 +96,35 @@ RSpec.describe RailsErrorDashboard::Commands::UpsertBaseline do
       end
     end
 
+    context "with missing stats keys" do
+      it "persists with nil for missing stat fields" do
+        baseline = described_class.call(**base_params.merge(stats: { mean: 5.0 }))
+
+        expect(baseline).to be_persisted
+        expect(baseline.mean).to eq(5.0)
+        expect(baseline.std_dev).to be_nil
+        expect(baseline.percentile_95).to be_nil
+        expect(baseline.percentile_99).to be_nil
+      end
+
+      it "persists with empty stats hash" do
+        baseline = described_class.call(**base_params.merge(stats: {}))
+
+        expect(baseline).to be_persisted
+        expect(baseline.mean).to be_nil
+      end
+    end
+
+    context "with zero count and sample_size" do
+      it "persists zero count" do
+        baseline = described_class.call(**base_params.merge(count: 0, sample_size: 0))
+
+        expect(baseline).to be_persisted
+        expect(baseline.count).to eq(0)
+        expect(baseline.sample_size).to eq(0)
+      end
+    end
+
     context "with different baseline types" do
       it "creates hourly baseline" do
         baseline = described_class.call(**base_params.merge(baseline_type: "hourly"))

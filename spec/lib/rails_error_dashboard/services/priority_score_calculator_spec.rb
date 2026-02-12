@@ -64,6 +64,10 @@ RSpec.describe RailsErrorDashboard::Services::PriorityScoreCalculator do
     it "returns 10 for unknown" do
       expect(described_class.severity_to_score(:unknown)).to eq(10)
     end
+
+    it "returns 10 for nil severity" do
+      expect(described_class.severity_to_score(nil)).to eq(10)
+    end
   end
 
   describe ".frequency_to_score" do
@@ -82,6 +86,18 @@ RSpec.describe RailsErrorDashboard::Services::PriorityScoreCalculator do
 
       expect(score_10).to be > 10
       expect(score_100).to be > score_10
+    end
+
+    it "handles nil count safely" do
+      expect(described_class.frequency_to_score(nil)).to eq(10)
+    end
+
+    it "handles zero count" do
+      expect(described_class.frequency_to_score(0)).to eq(10)
+    end
+
+    it "handles negative count safely" do
+      expect(described_class.frequency_to_score(-5)).to eq(10)
     end
   end
 
@@ -104,6 +120,10 @@ RSpec.describe RailsErrorDashboard::Services::PriorityScoreCalculator do
 
     it "returns 10 for nil time" do
       expect(described_class.recency_to_score(nil)).to eq(10)
+    end
+
+    it "returns 100 for future timestamps" do
+      expect(described_class.recency_to_score(1.hour.from_now)).to eq(100)
     end
   end
 

@@ -25,6 +25,10 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
   end
 
   describe ".broadcast_new" do
+    it "handles nil error_log safely" do
+      expect { described_class.broadcast_new(nil) }.not_to raise_error
+    end
+
     context "when broadcasting is not available" do
       before { hide_const("Turbo") }
 
@@ -47,6 +51,10 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
   end
 
   describe ".broadcast_update" do
+    it "handles nil error_log safely" do
+      expect { described_class.broadcast_update(nil) }.not_to raise_error
+    end
+
     context "when broadcasting is not available" do
       before { hide_const("Turbo") }
 

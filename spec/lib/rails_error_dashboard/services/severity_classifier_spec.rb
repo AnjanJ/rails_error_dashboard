@@ -28,6 +28,14 @@ RSpec.describe RailsErrorDashboard::Services::SeverityClassifier do
       expect(described_class.classify("RuntimeError")).to eq(:low)
     end
 
+    it "returns :low for nil error_type" do
+      expect(described_class.classify(nil)).to eq(:low)
+    end
+
+    it "returns :low for empty string error_type" do
+      expect(described_class.classify("")).to eq(:low)
+    end
+
     context "with custom severity rules" do
       before do
         RailsErrorDashboard.configuration.custom_severity_rules["CustomPaymentError"] = "critical"
@@ -62,6 +70,10 @@ RSpec.describe RailsErrorDashboard::Services::SeverityClassifier do
     it "returns false for non-critical error types" do
       expect(described_class.critical?("StandardError")).to be false
       expect(described_class.critical?("ArgumentError")).to be false
+    end
+
+    it "returns false for nil error_type" do
+      expect(described_class.critical?(nil)).to be false
     end
 
     it "respects custom severity rules" do
