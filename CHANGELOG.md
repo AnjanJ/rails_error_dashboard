@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.38] - 2026-02-18
+
+### ⬆️ Dependencies
+
+**Upgrade Pagy from ~> 9.0 to ~> 43.0**
+
+Pagy 43 is a complete redesign with a new simplified API. Updated all integration points:
+
+- `Pagy::Backend`/`Pagy::Frontend` replaced with unified `Pagy::Method`
+- `pagy(query, items:)` replaced with `pagy(:offset, query, limit:)`
+- `pagy_info(@pagy)` replaced with `@pagy.info_tag`
+- `pagy_bootstrap_nav(@pagy)` replaced with `@pagy.series_nav(:bootstrap)`
+- `Pagy::OverflowError`/`Pagy::VariableError` replaced with `Pagy::RangeError`/`Pagy::OptionError`
+- Bootstrap extras now built-in (no separate `require "pagy/extras/bootstrap"`)
+
+### 🐛 Bug Fixes
+
+- Fix flaky `backtrace_limiting_spec` caused by dummy app config leaking `max_backtrace_lines = 50` into tests expecting the default of 100. Added `reset_configuration!` to the `before` block so tests always start from a clean default state regardless of random execution order.
+
+---
+
 ## [0.1.37] - 2026-02-12
 
 ### ♻️ Refactoring
