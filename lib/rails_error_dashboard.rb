@@ -7,7 +7,6 @@ require "rails_error_dashboard/manual_error_reporter"
 
 # External dependencies
 require "pagy"
-require "pagy/extras/bootstrap"
 require "browser"
 require "groupdate"
 require "httparty"

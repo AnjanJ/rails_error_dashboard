@@ -1,6 +1,6 @@
 module RailsErrorDashboard
   class ApplicationController < ActionController::Base
-    include Pagy::Backend
+    include Pagy::Method
 
     # Enable features that are disabled in API-only mode
     # These are ONLY enabled for Error Dashboard routes, not the entire app
@@ -11,9 +11,6 @@ module RailsErrorDashboard
     layout "rails_error_dashboard"
 
     protect_from_forgery with: :exception
-
-    # Make Pagy helpers available in views
-    helper Pagy::Frontend
 
     # CRITICAL: Ensure dashboard errors never break the app
     # Catch all exceptions and render user-friendly error page
@@ -46,7 +43,7 @@ module RailsErrorDashboard
     end
 
     # Handle Pagy pagination errors — redirect to page 1
-    rescue_from Pagy::OverflowError, Pagy::VariableError do |exception|
+    rescue_from Pagy::RangeError, Pagy::OptionError do |exception|
       Rails.logger.warn("[RailsErrorDashboard] Pagination error: #{exception.message}")
       redirect_to request.path, status: :moved_permanently
     end

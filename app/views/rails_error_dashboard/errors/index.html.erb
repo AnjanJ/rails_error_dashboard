@@ -329,7 +329,7 @@
   <div class="card">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Recent Errors</h5>
-      <small class="text-muted"><%== pagy_info(@pagy) %></small>
+      <small class="text-muted"><%== @pagy.info_tag %></small>
     </div>
 
     <!-- Batch Actions Toolbar -->
@@ -395,7 +395,7 @@
 
         <!-- Pagination -->
         <div class="p-3">
-          <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
         </div>
       <% else %>
         <div class="text-center py-5">

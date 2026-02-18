@@ -53,7 +53,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rails", ">= 7.0.0"
 
   # Pagination
-  spec.add_dependency "pagy", "~> 9.0"
+  spec.add_dependency "pagy", "~> 43.0"
 
   # Platform detection
   spec.add_dependency "browser", "~> 6.0"

@@ -2,8 +2,6 @@
 
 module RailsErrorDashboard
   class ErrorsController < ApplicationController
-    include Pagy::Backend
-
     before_action :authenticate_dashboard_user!
     before_action :set_application_context
 
@@ -60,7 +58,7 @@ module RailsErrorDashboard
       errors_query = Queries::ErrorsList.call(filter_params)
 
       # Paginate with Pagy
-      @pagy, @errors = pagy(errors_query, items: params[:per_page] || 25)
+      @pagy, @errors = pagy(:offset, errors_query, limit: params[:per_page] || 25)
 
       # Get dashboard stats using Query (pass application filter)
       @stats = Queries::DashboardStats.call(application_id: @current_application_id)
