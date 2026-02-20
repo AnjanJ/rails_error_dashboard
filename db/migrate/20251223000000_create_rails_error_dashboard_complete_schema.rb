@@ -179,6 +179,27 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
     add_index :rails_error_dashboard_error_comments, :error_log_id
     add_index :rails_error_dashboard_error_comments, [ :error_log_id, :created_at ], name: "index_error_comments_on_error_and_time"
 
+    # PostgreSQL-specific indexes (BRIN + functional for time-series optimization)
+    if ActiveRecord::Base.connection.adapter_name.downcase == "postgresql"
+      execute <<-SQL
+        CREATE INDEX index_error_logs_on_occurred_at_brin
+        ON rails_error_dashboard_error_logs
+        USING brin (occurred_at)
+      SQL
+
+      execute <<-SQL
+        CREATE INDEX index_error_logs_on_occurred_at_day
+        ON rails_error_dashboard_error_logs
+        (DATE_TRUNC('day', occurred_at))
+      SQL
+
+      execute <<-SQL
+        CREATE INDEX index_error_logs_on_occurred_at_hour
+        ON rails_error_dashboard_error_logs
+        (DATE_TRUNC('hour', occurred_at))
+      SQL
+    end
+
     # Add foreign keys
     add_foreign_key :rails_error_dashboard_error_logs, :rails_error_dashboard_applications, column: :application_id
     add_foreign_key :rails_error_dashboard_error_occurrences, :rails_error_dashboard_error_logs, column: :error_log_id
