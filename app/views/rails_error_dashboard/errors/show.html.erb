@@ -54,7 +54,7 @@
   }
 </script>
 
-<div class="py-4">
+<div class="py-4" data-controller="loading">
   <!-- Breadcrumbs -->
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
@@ -1083,7 +1083,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Mark as Resolved", class: "btn btn-success" %>
+          <%= submit_tag "Mark as Resolved", class: "btn btn-success", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -1110,7 +1110,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Assign", class: "btn btn-primary" %>
+          <%= submit_tag "Assign", class: "btn btn-primary", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -1142,7 +1142,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Update Priority", class: "btn btn-warning" %>
+          <%= submit_tag "Update Priority", class: "btn btn-warning", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -1184,7 +1184,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Snooze", class: "btn btn-warning" %>
+          <%= submit_tag "Snooze", class: "btn btn-warning", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>

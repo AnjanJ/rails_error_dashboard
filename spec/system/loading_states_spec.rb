@@ -39,4 +39,25 @@ RSpec.describe "Loading States", type: :system do
       expect(page).to have_css("[data-loading-target='submitButton']")
     end
   end
+
+  describe "async action button loading states" do
+    let!(:unresolved_error) do
+      create(:error_log,
+        application: application,
+        resolved: false,
+        status: "new",
+        priority_level: 0)
+    end
+
+    it "has loading action on modal submit buttons" do
+      visit_error(unresolved_error)
+      wait_for_page_load
+
+      # The resolve button opens a modal
+      expect(page).to have_css("[data-bs-target='#resolveModal']")
+
+      # Modal submit buttons should have loading actions
+      expect(page).to have_css("input[data-action='click->loading#click']", visible: :hidden)
+    end
+  end
 end
