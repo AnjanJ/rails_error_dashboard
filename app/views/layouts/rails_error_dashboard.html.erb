@@ -1148,6 +1148,22 @@ body.dark-mode .source-file-path {
   color: var(--ctp-text) !important; /* Bright text for dark mode */
 }
 
+/* Backtrace frame number styling */
+.backtrace-frame-number {
+  display: inline-block;
+  min-width: 2em;
+  text-align: right;
+  margin-right: 0.5em;
+  color: #9ca3af;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.85em;
+  user-select: none;
+}
+
+body.dark-mode .backtrace-frame-number {
+  color: var(--ctp-overlay1);
+}
+
 /* Backtrace method name styling - override Bootstrap text-info */
 span.backtrace-method-name {
   color: #0066cc !important; /* Darker blue for better readability in light mode */
