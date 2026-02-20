@@ -51,7 +51,8 @@ module RailsErrorDashboard
       def extract_user_id
         @context[:current_user]&.id ||
           @context[:user_id] ||
-          @context[:user]&.id
+          @context[:user]&.id ||
+          current_attributes_user_id
       end
 
       def build_request_url
@@ -185,7 +186,8 @@ module RailsErrorDashboard
         return @context[:job]&.job_id if @context[:job]
         return @context[:jid] if @context[:jid]
 
-        nil
+        # From CurrentAttributes (if app defines Current.request_id)
+        current_attributes_value(:request_id)
       end
 
       def extract_session_id
@@ -236,6 +238,31 @@ module RailsErrorDashboard
 
         return @context[:request_duration_ms] if @context[:request_duration_ms]
 
+        nil
+      end
+
+      # Auto-detect user_id from ActiveSupport::CurrentAttributes
+      # Checks for common patterns: Current.user, Current.account (with .id)
+      # Returns nil if CurrentAttributes is not used or user is not set
+      def current_attributes_user_id
+        return nil unless defined?(::Current)
+        return ::Current.user.id if ::Current.respond_to?(:user) && ::Current.user.respond_to?(:id)
+
+        nil
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] CurrentAttributes user_id detection failed: #{e.message}")
+        nil
+      end
+
+      # Read a single attribute from CurrentAttributes
+      # Returns nil if not available
+      def current_attributes_value(attribute_name)
+        return nil unless defined?(::Current)
+        return ::Current.public_send(attribute_name) if ::Current.respond_to?(attribute_name)
+
+        nil
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] CurrentAttributes #{attribute_name} detection failed: #{e.message}")
         nil
       end
     end

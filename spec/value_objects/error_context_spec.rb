@@ -186,6 +186,100 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
     end
   end
 
+    context 'with CurrentAttributes auto-detection' do
+      let(:context) { {} }
+      subject { described_class.new(context) }
+
+      context 'when Current.user is defined' do
+        let(:current_user) { double('User', id: 789) }
+
+        before do
+          current_class = Class.new do
+            def self.user; end
+            def self.request_id; end
+          end
+          stub_const('Current', current_class)
+          allow(Current).to receive(:user).and_return(current_user)
+          allow(Current).to receive(:request_id).and_return('req-from-current')
+        end
+
+        it 'extracts user_id from CurrentAttributes' do
+          expect(subject.user_id).to eq(789)
+        end
+
+        it 'extracts request_id from CurrentAttributes' do
+          expect(subject.request_id).to eq('req-from-current')
+        end
+      end
+
+      context 'when explicit context takes priority over CurrentAttributes' do
+        let(:explicit_user) { double('User', id: 111) }
+        let(:current_user) { double('User', id: 999) }
+        let(:context) { { current_user: explicit_user } }
+
+        before do
+          current_class = Class.new do
+            def self.user; end
+          end
+          stub_const('Current', current_class)
+          allow(Current).to receive(:user).and_return(current_user)
+        end
+
+        it 'uses explicit user_id over CurrentAttributes' do
+          expect(subject.user_id).to eq(111)
+        end
+      end
+
+      context 'when Current.user is nil' do
+        before do
+          current_class = Class.new do
+            def self.user; end
+          end
+          stub_const('Current', current_class)
+          allow(Current).to receive(:user).and_return(nil)
+        end
+
+        it 'returns nil for user_id' do
+          expect(subject.user_id).to be_nil
+        end
+      end
+
+      context 'when Current does not define user' do
+        before do
+          stub_const('Current', Class.new)
+        end
+
+        it 'returns nil for user_id' do
+          expect(subject.user_id).to be_nil
+        end
+      end
+
+      context 'when Current is not defined' do
+        it 'returns nil for user_id' do
+          expect(subject.user_id).to be_nil
+        end
+
+        it 'returns nil for request_id' do
+          expect(subject.request_id).to be_nil
+        end
+      end
+
+      context 'when CurrentAttributes raises an error' do
+        before do
+          current_class = Class.new do
+            def self.user
+              raise "database connection lost"
+            end
+          end
+          stub_const('Current', current_class)
+        end
+
+        it 'returns nil gracefully' do
+          expect(subject.user_id).to be_nil
+        end
+      end
+    end
+
   describe '#to_h' do
     let(:context) { { user_id: 456 } }
     subject { described_class.new(context) }
