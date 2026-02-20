@@ -20,6 +20,9 @@ module RailsErrorDashboard
       end
 
       def call(env)
+        # Record request start time for duration calculation
+        env["rails_error_dashboard.request_start"] = Time.now.to_f
+
         @app.call(env)
       rescue => exception
         # Report to Rails.error (will be logged by our ErrorReporter)

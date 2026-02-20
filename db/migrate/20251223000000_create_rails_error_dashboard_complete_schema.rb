@@ -71,6 +71,12 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       # Exception cause chain (from 20260220000001)
       t.text :exception_cause
 
+      # Enriched request context (from 20260220000002)
+      t.string :http_method, limit: 10
+      t.string :hostname, limit: 255
+      t.string :content_type, limit: 100
+      t.integer :request_duration_ms
+
       t.timestamps
     end
 

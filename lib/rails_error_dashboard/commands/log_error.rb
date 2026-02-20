@@ -95,6 +95,9 @@ module RailsErrorDashboard
           occurred_at: Time.current
         }
 
+        # Enriched request context (if columns exist)
+        enrich_with_request_context(attributes, error_context)
+
         # Extract exception cause chain (if column exists)
         if ErrorLog.column_names.include?("exception_cause")
           cause_json = Services::CauseChainExtractor.call(@exception)
@@ -264,6 +267,16 @@ module RailsErrorDashboard
       rescue => e
         # Don't let baseline alerting cause errors
         RailsErrorDashboard::Logger.error("Failed to check baseline anomaly: #{e.message}")
+      end
+
+      # Add enriched request context fields if columns exist
+      def enrich_with_request_context(attributes, error_context)
+        column_names = ErrorLog.column_names
+
+        attributes[:http_method] = error_context.http_method if column_names.include?("http_method")
+        attributes[:hostname] = error_context.hostname if column_names.include?("hostname")
+        attributes[:content_type] = error_context.content_type if column_names.include?("content_type")
+        attributes[:request_duration_ms] = error_context.request_duration_ms if column_names.include?("request_duration_ms")
       end
 
       # Build cause chain JSON from pre-serialized async job context

@@ -286,7 +286,7 @@
       <% end %>
 
       <!-- Request Context -->
-      <% cache [@error, 'request_context_v1'] do %>
+      <% cache [@error, 'request_context_v2'] do %>
       <div class="card mb-4">
         <div class="card-header bg-white">
           <h5 class="mb-0"><i class="bi bi-globe"></i> Request Context</h5>
@@ -295,8 +295,36 @@
           <table class="table table-sm">
             <tr>
               <th width="200">Request URL:</th>
-              <td><code><%= @error.request_url || 'N/A' %></code></td>
+              <td>
+                <% if @error.respond_to?(:http_method) && @error.http_method.present? %>
+                  <span class="badge bg-primary me-1"><%= @error.http_method %></span>
+                <% end %>
+                <code><%= @error.request_url || 'N/A' %></code>
+              </td>
             </tr>
+            <% if @error.respond_to?(:hostname) && @error.hostname.present? %>
+              <tr>
+                <th>Hostname:</th>
+                <td><code><%= @error.hostname %></code></td>
+              </tr>
+            <% end %>
+            <% if @error.respond_to?(:content_type) && @error.content_type.present? %>
+              <tr>
+                <th>Content Type:</th>
+                <td><code><%= @error.content_type %></code></td>
+              </tr>
+            <% end %>
+            <% if @error.respond_to?(:request_duration_ms) && @error.request_duration_ms.present? %>
+              <tr>
+                <th>Request Duration:</th>
+                <td>
+                  <% duration = @error.request_duration_ms %>
+                  <span class="badge bg-<%= duration > 5000 ? 'danger' : duration > 1000 ? 'warning' : 'success' %>">
+                    <%= duration > 1000 ? "#{(duration / 1000.0).round(1)}s" : "#{duration}ms" %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
             <tr>
               <th>Request Params:</th>
               <td>

@@ -75,7 +75,11 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
           user_agent: 'Chrome',
           remote_ip: '127.0.0.1',
           request_id: 'req-test-123',
-          session: double('Session', id: 'sess-test-456')
+          session: double('Session', id: 'sess-test-456'),
+          method: 'GET',
+          host: 'localhost',
+          content_type: nil,
+          env: {}
         )
       end
       let(:context) { { request: request } }

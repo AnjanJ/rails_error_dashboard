@@ -13,7 +13,11 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
           user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
           remote_ip: '192.168.1.1',
           request_id: 'req-abc-123',
-          session: double('Session', id: 'sess-xyz-456')
+          session: double('Session', id: 'sess-xyz-456'),
+          method: 'POST',
+          host: 'example.com',
+          content_type: 'application/json',
+          env: { "rails_error_dashboard.request_start" => Time.now.to_f - 0.150 }
         )
       end
       let(:context) { { current_user: user, request: request } }
@@ -44,6 +48,23 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
         expect(subject.request_params).to be_a(String)
         params = JSON.parse(subject.request_params)
         expect(params['id']).to eq(123)
+      end
+
+      it 'extracts http_method' do
+        expect(subject.http_method).to eq('POST')
+      end
+
+      it 'extracts hostname' do
+        expect(subject.hostname).to eq('example.com')
+      end
+
+      it 'extracts content_type' do
+        expect(subject.content_type).to eq('application/json')
+      end
+
+      it 'calculates request_duration_ms' do
+        expect(subject.request_duration_ms).to be_a(Integer)
+        expect(subject.request_duration_ms).to be_between(100, 300)
       end
     end
 
@@ -117,6 +138,10 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
         expect(subject.user_agent).to eq('Rails Application')
         expect(subject.ip_address).to eq('application_layer')
         expect(subject.platform).to eq('API')
+        expect(subject.http_method).to be_nil
+        expect(subject.hostname).to be_nil
+        expect(subject.content_type).to be_nil
+        expect(subject.request_duration_ms).to be_nil
       end
     end
 
@@ -130,6 +155,35 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
         expect(subject.request_url).to eq('Custom Service')
       end
     end
+
+    context 'with explicit enriched context (no request object)' do
+      let(:context) do
+        {
+          http_method: 'DELETE',
+          hostname: 'api.example.com',
+          content_type: 'text/html',
+          request_duration_ms: 250
+        }
+      end
+
+      subject { described_class.new(context) }
+
+      it 'extracts http_method from explicit context' do
+        expect(subject.http_method).to eq('DELETE')
+      end
+
+      it 'extracts hostname from explicit context' do
+        expect(subject.hostname).to eq('api.example.com')
+      end
+
+      it 'extracts content_type from explicit context' do
+        expect(subject.content_type).to eq('text/html')
+      end
+
+      it 'extracts request_duration_ms from explicit context' do
+        expect(subject.request_duration_ms).to eq(250)
+      end
+    end
   end
 
   describe '#to_h' do
@@ -139,7 +193,10 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
     it 'returns a hash with all attributes' do
       result = subject.to_h
       expect(result).to be_a(Hash)
-      expect(result.keys).to contain_exactly(:user_id, :request_url, :request_params, :user_agent, :ip_address, :platform, :controller_name, :action_name)
+      expect(result.keys).to contain_exactly(
+        :user_id, :request_url, :request_params, :user_agent, :ip_address, :platform,
+        :controller_name, :action_name, :http_method, :hostname, :content_type, :request_duration_ms
+      )
     end
   end
 end

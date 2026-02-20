@@ -6,7 +6,8 @@ module RailsErrorDashboard
     # Extracts and normalizes context information from various sources
     class ErrorContext
       attr_reader :user_id, :request_url, :request_params, :user_agent, :ip_address, :platform,
-                  :controller_name, :action_name, :request_id, :session_id
+                  :controller_name, :action_name, :request_id, :session_id,
+                  :http_method, :hostname, :content_type, :request_duration_ms
 
       def initialize(context, source = nil)
         @context = context
@@ -22,6 +23,10 @@ module RailsErrorDashboard
         @action_name = extract_action_name
         @request_id = extract_request_id
         @session_id = extract_session_id
+        @http_method = extract_http_method
+        @hostname = extract_hostname
+        @content_type = extract_content_type
+        @request_duration_ms = extract_request_duration_ms
       end
 
       def to_h
@@ -33,7 +38,11 @@ module RailsErrorDashboard
           ip_address: ip_address,
           platform: platform,
           controller_name: controller_name,
-          action_name: action_name
+          action_name: action_name,
+          http_method: http_method,
+          hostname: hostname,
+          content_type: content_type,
+          request_duration_ms: request_duration_ms
         }
       end
 
@@ -185,6 +194,47 @@ module RailsErrorDashboard
 
         # From explicit context
         return @context[:session_id] if @context[:session_id]
+
+        nil
+      end
+
+      def extract_http_method
+        return @context[:request]&.method if @context[:request]&.respond_to?(:method)
+        return @context[:http_method] if @context[:http_method]
+
+        nil
+      end
+
+      def extract_hostname
+        return @context[:request]&.host if @context[:request]&.respond_to?(:host)
+        return @context[:hostname] if @context[:hostname]
+
+        nil
+      end
+
+      def extract_content_type
+        if @context[:request]&.respond_to?(:content_type)
+          ct = @context[:request].content_type
+          # content_type can return a MIME::Type object or string depending on Rails version
+          return ct.to_s.presence
+        end
+
+        return @context[:content_type] if @context[:content_type]
+
+        nil
+      end
+
+      def extract_request_duration_ms
+        # Duration is calculated from the start time stored in the Rack env
+        if @context[:request]&.respond_to?(:env)
+          start_time = @context[:request].env["rails_error_dashboard.request_start"]
+          if start_time
+            elapsed = (Time.now.to_f - start_time.to_f) * 1000
+            return elapsed.round
+          end
+        end
+
+        return @context[:request_duration_ms] if @context[:request_duration_ms]
 
         nil
       end
