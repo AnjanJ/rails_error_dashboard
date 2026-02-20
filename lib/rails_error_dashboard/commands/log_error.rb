@@ -111,7 +111,8 @@ module RailsErrorDashboard
           @exception,
           controller_name: error_context.controller_name,
           action_name: error_context.action_name,
-          application_id: application.id
+          application_id: application.id,
+          context: @context
         )
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)

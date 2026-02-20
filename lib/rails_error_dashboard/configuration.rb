@@ -52,6 +52,12 @@ module RailsErrorDashboard
     # Exceptions to ignore (array of strings, regexes, or classes)
     attr_accessor :ignored_exceptions
 
+    # Custom fingerprint lambda for error deduplication
+    # When set, overrides the default ErrorHashGenerator logic.
+    # Receives (exception, context) and must return a String.
+    # Example: ->(exception, context) { "#{exception.class.name}:#{context[:controller_name]}" }
+    attr_accessor :custom_fingerprint
+
     # Sampling rate for non-critical errors (0.0 to 1.0, default 1.0 = 100%)
     attr_accessor :sampling_rate
 
@@ -146,6 +152,7 @@ module RailsErrorDashboard
       # Advanced configuration defaults
       @custom_severity_rules = {}
       @ignored_exceptions = []
+      @custom_fingerprint = nil # Lambda: ->(exception, context) { "custom_key" }
       @sampling_rate = 1.0 # 100% by default
       @async_logging = false
       @async_adapter = :sidekiq # Battle-tested default
@@ -253,6 +260,11 @@ module RailsErrorDashboard
         unless valid_adapters.include?(async_adapter)
           errors << "async_adapter must be one of #{valid_adapters.inspect} (got: #{async_adapter.inspect})"
         end
+      end
+
+      # Validate custom_fingerprint (must respond to .call if set)
+      if custom_fingerprint && !custom_fingerprint.respond_to?(:call)
+        errors << "custom_fingerprint must respond to .call (lambda, proc, or object with .call method)"
       end
 
       # Validate notification dependencies

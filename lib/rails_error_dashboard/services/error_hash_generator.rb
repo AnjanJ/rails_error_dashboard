@@ -20,8 +20,13 @@ module RailsErrorDashboard
       # @param controller_name [String, nil] Controller context
       # @param action_name [String, nil] Action context
       # @param application_id [Integer, nil] Application for per-app deduplication
+      # @param context [Hash] Full error context (passed to custom fingerprint lambda)
       # @return [String] 16-character hex hash
-      def self.call(exception, controller_name: nil, action_name: nil, application_id: nil)
+      def self.call(exception, controller_name: nil, action_name: nil, application_id: nil, context: {})
+        # Check for custom fingerprint lambda
+        custom = try_custom_fingerprint(exception, context)
+        return custom if custom
+
         normalized_message = normalize_message(exception.message)
         file_path = extract_app_frame(exception.backtrace)
 
@@ -86,6 +91,28 @@ module RailsErrorDashboard
 
         first_app_frame&.split(":")&.first
       end
+
+      # Try custom fingerprint lambda if configured
+      # Returns 16-char hex hash from custom key, or nil to fall back to default
+      # @param exception [Exception] The exception
+      # @param context [Hash] Error context
+      # @return [String, nil] 16-character hex hash or nil
+      def self.try_custom_fingerprint(exception, context)
+        fingerprint_fn = RailsErrorDashboard.configuration.custom_fingerprint
+        return nil unless fingerprint_fn
+
+        result = fingerprint_fn.call(exception, context)
+        return nil unless result.is_a?(String) && !result.empty?
+
+        Digest::SHA256.hexdigest(result)[0..15]
+      rescue => e
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] Custom fingerprint lambda failed: #{e.class} - #{e.message}. " \
+          "Falling back to default hash."
+        )
+        nil
+      end
+      private_class_method :try_custom_fingerprint
     end
   end
 end

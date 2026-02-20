@@ -504,6 +504,45 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "custom_fingerprint validation" do
+    it "accepts nil (default)" do
+      config.custom_fingerprint = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts a lambda" do
+      config.custom_fingerprint = ->(ex, ctx) { ex.class.name }
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts a proc" do
+      config.custom_fingerprint = proc { |ex, ctx| ex.class.name }
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts any object responding to .call" do
+      callable = Class.new { def call(ex, ctx) = ex.class.name }.new
+      config.custom_fingerprint = callable
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "rejects non-callable values" do
+      config.custom_fingerprint = "not a lambda"
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /custom_fingerprint must respond to .call/
+      )
+    end
+
+    it "rejects integer values" do
+      config.custom_fingerprint = 42
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /custom_fingerprint must respond to .call/
+      )
+    end
+  end
+
   describe "multiple validation errors" do
     it "reports all errors at once" do
       config.sampling_rate = 2.0
