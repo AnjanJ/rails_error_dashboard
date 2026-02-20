@@ -23,13 +23,45 @@ module RailsErrorDashboard
         exception_data = {
           class_name: exception.class.name,
           message: exception.message,
-          backtrace: exception.backtrace
+          backtrace: exception.backtrace,
+          cause_chain: serialize_cause_chain(exception)
         }
 
         # Enqueue the async job using ActiveJob
         # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
         AsyncErrorLoggingJob.perform_later(exception_data, context)
       end
+
+      # Serialize cause chain for async job serialization
+      # Returns an array of hashes (not JSON string) for ActiveJob compatibility
+      def self.serialize_cause_chain(exception)
+        return nil unless exception.respond_to?(:cause) && exception.cause
+
+        chain = []
+        current = exception.cause
+        seen = Set.new
+        depth = 0
+
+        while current && depth < 5
+          break if seen.include?(current.object_id)
+          seen.add(current.object_id)
+
+          chain << {
+            class_name: current.class.name,
+            message: current.message&.to_s,
+            backtrace: current.backtrace&.first(20)
+          }
+
+          current = current.respond_to?(:cause) ? current.cause : nil
+          depth += 1
+        end
+
+        chain.empty? ? nil : chain
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Cause chain serialization failed: #{e.message}")
+        nil
+      end
+      private_class_method :serialize_cause_chain
 
       def initialize(exception, context = {})
         @exception = exception
@@ -62,6 +94,14 @@ module RailsErrorDashboard
           action_name: error_context.action_name,
           occurred_at: Time.current
         }
+
+        # Extract exception cause chain (if column exists)
+        if ErrorLog.column_names.include?("exception_cause")
+          cause_json = Services::CauseChainExtractor.call(@exception)
+          # Fall back to pre-serialized cause chain from async job context
+          cause_json ||= build_cause_json_from_context
+          attributes[:exception_cause] = cause_json
+        end
 
         # Generate error hash for deduplication (including controller/action context and application)
         error_hash = Services::ErrorHashGenerator.call(
@@ -224,6 +264,27 @@ module RailsErrorDashboard
       rescue => e
         # Don't let baseline alerting cause errors
         RailsErrorDashboard::Logger.error("Failed to check baseline anomaly: #{e.message}")
+      end
+
+      # Build cause chain JSON from pre-serialized async job context
+      # Used when exception was reconstructed and has no Ruby cause
+      def build_cause_json_from_context
+        serialized = @context[:_serialized_cause_chain]
+        return nil unless serialized.is_a?(Array) && serialized.any?
+
+        chain = serialized.map do |entry|
+          entry = entry.symbolize_keys if entry.respond_to?(:symbolize_keys)
+          {
+            class_name: entry[:class_name],
+            message: entry[:message]&.to_s&.slice(0, 1000),
+            backtrace: entry[:backtrace]&.first(20)
+          }
+        end
+
+        chain.to_json
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Failed to build cause JSON from context: #{e.message}")
+        nil
       end
 
       # Detect git SHA from git command (fallback)

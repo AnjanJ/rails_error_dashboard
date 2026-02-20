@@ -18,6 +18,9 @@
       user_id: <%= raw @error.user_id.to_json %>,
       severity: <%= raw @error.severity.to_json %>,
       priority_level: <%= raw (@error.priority_level || 0).to_json %>,
+      <% if @error.respond_to?(:exception_cause) && @error.exception_cause.present? %>
+      exception_cause: <%= raw @error.exception_cause %>,
+      <% end %>
       <% if @error.respond_to?(:app_version) %>
       app_version: <%= raw @error.app_version.to_json %>,
       <% end %>
@@ -124,6 +127,57 @@
           <div class="alert alert-danger">
             <%= @error.message %>
           </div>
+
+          <% if @error.respond_to?(:exception_cause) && @error.exception_cause.present? %>
+            <% begin %>
+              <% cause_chain = JSON.parse(@error.exception_cause) %>
+              <% if cause_chain.is_a?(Array) && cause_chain.any? %>
+                <div class="mt-4 mb-3">
+                  <h6 class="text-muted mb-2">
+                    <i class="bi bi-link-45deg"></i> Exception Cause Chain
+                    <span class="badge bg-secondary ms-1"><%= cause_chain.length %></span>
+                  </h6>
+                  <div class="cause-chain">
+                    <% cause_chain.each_with_index do |cause, index| %>
+                      <div class="card mb-2 border-warning">
+                        <div class="card-header bg-warning bg-opacity-10 py-2">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                              <small class="text-muted">Caused by<%= " (##{index + 1})" if cause_chain.length > 1 %>:</small>
+                              <strong class="ms-1"><code><%= cause["class_name"] %></code></strong>
+                            </div>
+                            <% if cause["backtrace"].present? %>
+                              <button class="btn btn-sm btn-outline-secondary py-0" type="button"
+                                      data-bs-toggle="collapse"
+                                      data-bs-target="#cause-backtrace-<%= index %>"
+                                      aria-expanded="false">
+                                <small><i class="bi bi-code-slash"></i> Backtrace</small>
+                              </button>
+                            <% end %>
+                          </div>
+                        </div>
+                        <div class="card-body py-2">
+                          <small><%= cause["message"] %></small>
+                        </div>
+                        <% if cause["backtrace"].present? %>
+                          <div class="collapse" id="cause-backtrace-<%= index %>">
+                            <div class="card-body p-0 border-top">
+                              <div class="code-block p-2" style="max-height: 200px; overflow-y: auto; overflow-x: auto; font-size: 0.8rem;">
+                                <pre class="mb-0"><code><% cause["backtrace"].each do |line| %><%= line %>
+<% end %></code></pre>
+                              </div>
+                            </div>
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            <% rescue JSON::ParserError %>
+              <%# Silently skip invalid JSON — safety first %>
+            <% end %>
+          <% end %>
 
           <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
             <h6 class="text-muted mb-0">

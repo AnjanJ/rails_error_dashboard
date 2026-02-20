@@ -63,7 +63,31 @@ RSpec.describe "Async Error Logging", type: :integration do
         hash_including(
           class_name: "StandardError",
           message: "Async error",
-          backtrace: [ "test.rb:1" ]
+          backtrace: [ "test.rb:1" ],
+          cause_chain: nil
+        ),
+        {}
+      )
+
+      RailsErrorDashboard::Commands::LogError.call(error, {})
+    end
+
+    it "serializes cause chain for async processing" do
+      error = begin
+        begin
+          raise ArgumentError, "root cause"
+        rescue
+          raise StandardError, "wrapper"
+        end
+      rescue => e
+        e
+      end
+
+      expect(RailsErrorDashboard::AsyncErrorLoggingJob).to receive(:perform_later).with(
+        hash_including(
+          class_name: "StandardError",
+          message: "wrapper",
+          cause_chain: [ hash_including(class_name: "ArgumentError", message: "root cause") ]
         ),
         {}
       )
@@ -120,6 +144,30 @@ RSpec.describe "Async Error Logging", type: :integration do
       expect(error_log.error_type).to eq("StandardError")
       expect(error_log.message).to eq("E2E async error")
       expect(error_log.user_id).to eq(456)
+    end
+
+    it "preserves cause chain through async job" do
+      error = begin
+        begin
+          raise ArgumentError, "database connection failed"
+        rescue
+          raise StandardError, "user lookup failed"
+        end
+      rescue => e
+        e
+      end
+
+      RailsErrorDashboard::Commands::LogError.call(error, {})
+
+      perform_enqueued_jobs
+
+      error_log = RailsErrorDashboard::ErrorLog.last
+      expect(error_log.exception_cause).to be_present
+
+      parsed = JSON.parse(error_log.exception_cause)
+      expect(parsed.length).to eq(1)
+      expect(parsed[0]["class_name"]).to eq("ArgumentError")
+      expect(parsed[0]["message"]).to eq("database connection failed")
     end
 
     it "handles critical errors asynchronously" do

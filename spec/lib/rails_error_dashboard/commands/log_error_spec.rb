@@ -369,6 +369,69 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    describe "exception cause chain capture" do
+      context "when exception has a cause" do
+        it "stores the cause chain as JSON" do
+          error = begin
+            begin
+              raise ArgumentError, "original problem"
+            rescue
+              raise StandardError, "wrapper error"
+            end
+          rescue => e
+            e
+          end
+
+          result = described_class.call(error, context)
+
+          expect(result).to be_present
+          expect(result.exception_cause).to be_present
+
+          parsed = JSON.parse(result.exception_cause)
+          expect(parsed).to be_an(Array)
+          expect(parsed.length).to eq(1)
+          expect(parsed[0]["class_name"]).to eq("ArgumentError")
+          expect(parsed[0]["message"]).to eq("original problem")
+        end
+      end
+
+      context "when exception has no cause" do
+        it "stores nil for exception_cause" do
+          error = StandardError.new("simple error")
+
+          result = described_class.call(error, context)
+
+          expect(result).to be_present
+          expect(result.exception_cause).to be_nil
+        end
+      end
+
+      context "when exception has a multi-level cause chain" do
+        it "captures the full chain" do
+          error = begin
+            begin
+              begin
+                raise RuntimeError, "root cause"
+              rescue
+                raise IOError, "middle error"
+              end
+            rescue
+              raise StandardError, "top error"
+            end
+          rescue => e
+            e
+          end
+
+          result = described_class.call(error, context)
+
+          parsed = JSON.parse(result.exception_cause)
+          expect(parsed.length).to eq(2)
+          expect(parsed[0]["class_name"]).to eq("IOError")
+          expect(parsed[1]["class_name"]).to eq("RuntimeError")
+        end
+      end
+    end
+
     # Phase 4.3: Baseline Alert Integration Tests
     describe "baseline alert integration" do
       let(:exception) { create_unique_exception(StandardError, "Test error", 0) }

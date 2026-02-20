@@ -10,8 +10,18 @@ module RailsErrorDashboard
     # @param exception_data [Hash] Serialized exception data
     # @param context [Hash] Error context (request, user, etc.)
     def perform(exception_data, context)
+      # Normalize string keys (ActiveJob may deserialize with string keys)
+      exception_data = exception_data.symbolize_keys if exception_data.respond_to?(:symbolize_keys)
+      context = context.symbolize_keys if context.respond_to?(:symbolize_keys)
+
       # Reconstruct the exception from serialized data
       exception = reconstruct_exception(exception_data)
+
+      # Pass pre-extracted cause chain via context so LogError can use it
+      # (reconstructed exceptions don't have Ruby's built-in cause set)
+      if exception_data[:cause_chain]
+        context[:_serialized_cause_chain] = exception_data[:cause_chain]
+      end
 
       # Log the error synchronously in the background job
       # Call .new().call to bypass async check (we're already async)

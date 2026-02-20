@@ -68,6 +68,9 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       # Application association (from 20260106094233)
       t.integer :application_id, null: false
 
+      # Exception cause chain (from 20260220000001)
+      t.text :exception_cause
+
       t.timestamps
     end
 
