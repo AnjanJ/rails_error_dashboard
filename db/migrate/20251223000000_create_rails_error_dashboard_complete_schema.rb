@@ -77,6 +77,9 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       t.string :content_type, limit: 100
       t.integer :request_duration_ms
 
+      # Environment info snapshot (from 20260221000001)
+      t.text :environment_info
+
       t.timestamps
     end
 

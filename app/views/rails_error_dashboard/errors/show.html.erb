@@ -975,22 +975,51 @@
               </div>
             <% end %>
 
+            <% env_info = @error.respond_to?(:environment_info) && @error.environment_info.present? ?
+                 JSON.parse(@error.environment_info, symbolize_names: true) : nil rescue nil %>
+
             <div class="mb-1">
               <small class="text-muted">Rails:</small>
-              <code class="ms-1"><%= Rails.version %></code>
+              <code class="ms-1"><%= env_info&.dig(:rails_version) || Rails.version %></code>
             </div>
 
             <div class="mb-1">
               <small class="text-muted">Ruby:</small>
-              <code class="ms-1"><%= RUBY_VERSION %></code>
+              <code class="ms-1"><%= env_info&.dig(:ruby_version) || RUBY_VERSION %></code>
             </div>
 
             <div class="mb-1">
               <small class="text-muted">Environment:</small>
-              <span class="badge bg-<%= Rails.env.production? ? 'danger' : Rails.env.development? ? 'success' : 'warning' %> ms-1">
-                <%= Rails.env.titleize %>
+              <% env_name = env_info&.dig(:rails_env) || Rails.env.to_s %>
+              <span class="badge bg-<%= env_name == 'production' ? 'danger' : env_name == 'development' ? 'success' : 'warning' %> ms-1">
+                <%= env_name.titleize %>
               </span>
             </div>
+
+            <% if env_info&.dig(:server).present? && env_info[:server] != "unknown" %>
+              <div class="mb-1">
+                <small class="text-muted">Server:</small>
+                <code class="ms-1"><%= env_info[:server].capitalize %></code>
+              </div>
+            <% end %>
+
+            <% if env_info&.dig(:database_adapter).present? && env_info[:database_adapter] != "unknown" %>
+              <div class="mb-1">
+                <small class="text-muted">Database:</small>
+                <code class="ms-1"><%= env_info[:database_adapter] %></code>
+              </div>
+            <% end %>
+
+            <% if env_info&.dig(:gem_versions)&.any? %>
+              <div class="mb-1">
+                <small class="text-muted d-block">Key Gems:</small>
+                <div class="ps-2">
+                  <% env_info[:gem_versions].each do |name, version| %>
+                    <small><code><%= name %> <%= version %></code></small><br>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
           </div>
 
           <div>

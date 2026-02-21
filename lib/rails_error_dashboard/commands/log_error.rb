@@ -138,6 +138,11 @@ module RailsErrorDashboard
                                       detect_version_from_file
         end
 
+        # Add environment snapshot (if column exists)
+        if ErrorLog.column_names.include?("environment_info")
+          attributes[:environment_info] = Services::EnvironmentSnapshot.snapshot.to_json
+        end
+
         # Find existing error or create new one
         # This ensures accurate occurrence tracking
         error_log = ErrorLog.find_or_increment_by_hash(error_hash, attributes.merge(error_hash: error_hash))

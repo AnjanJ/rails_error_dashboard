@@ -176,6 +176,31 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    context 'environment info capture' do
+      it 'stores environment_info as JSON when column exists' do
+        skip "column not present" unless RailsErrorDashboard::ErrorLog.column_names.include?("environment_info")
+
+        described_class.call(exception, context)
+        error_log = RailsErrorDashboard::ErrorLog.last
+
+        expect(error_log.environment_info).to be_present
+        parsed = JSON.parse(error_log.environment_info)
+        expect(parsed["ruby_version"]).to eq(RUBY_VERSION)
+        expect(parsed["rails_version"]).to eq(Rails.version)
+        expect(parsed["gem_versions"]).to be_a(Hash)
+      end
+
+      it 'includes database adapter in environment info' do
+        skip "column not present" unless RailsErrorDashboard::ErrorLog.column_names.include?("environment_info")
+
+        described_class.call(exception, context)
+        error_log = RailsErrorDashboard::ErrorLog.last
+
+        parsed = JSON.parse(error_log.environment_info)
+        expect(parsed["database_adapter"]).to be_present
+      end
+    end
+
     context 'error deduplication' do
       let(:exception) do
         begin
