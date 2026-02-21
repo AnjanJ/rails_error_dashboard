@@ -487,7 +487,8 @@ test_full_sync() {
     "$CHAOS_DIR/phase_e_error_capture.rb" \
     "$CHAOS_DIR/phase_a_data_integrity.rb" \
     "$CHAOS_DIR/phase_b_edge_cases.rb" \
-    "$CHAOS_DIR/phase_c_queries.rb"
+    "$CHAOS_DIR/phase_c_queries.rb" \
+    "$CHAOS_DIR/phase_g_quick_wins.rb"
 }
 
 test_full_async() {
