@@ -35,9 +35,11 @@ puts ""
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("H2: Database connection")
 
-assert_no_crash("H2: ErrorLogsRecord connection active") do
-  active = RailsErrorDashboard::ErrorLogsRecord.connection.active?
-  assert "H2: connection is active", active
+assert_no_crash("H2: ErrorLogsRecord connection works") do
+  # Note: SQLite's active? returns nil (not true), so we test that the
+  # connection can execute a query instead of checking active? truthiness
+  RailsErrorDashboard::ErrorLogsRecord.connection.execute("SELECT 1")
+  assert "H2: connection is usable", true
 end
 
 assert_no_crash("H2: adapter name accessible") do
