@@ -72,7 +72,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.7"
 
   # Development and testing dependencies
-  spec.add_development_dependency "rspec-rails", "~> 7.0"
+  spec.add_development_dependency "rspec-rails", "~> 8.0"
   spec.add_development_dependency "factory_bot_rails", "~> 6.4"
   spec.add_development_dependency "faker", "~> 3.0"
   spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
