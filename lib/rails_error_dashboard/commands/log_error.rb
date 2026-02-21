@@ -165,21 +165,31 @@ module RailsErrorDashboard
           end
         end
 
-        # Send notifications for new errors and reopened errors
+        # Send notifications for new errors and reopened errors (with throttling)
         if error_log.occurrence_count == 1
-          # Brand new error
-          Services::ErrorNotificationDispatcher.call(error_log)
+          # Brand new error — notify if severity meets minimum
+          if Services::NotificationThrottler.severity_meets_minimum?(error_log)
+            Services::ErrorNotificationDispatcher.call(error_log)
+            Services::NotificationThrottler.record_notification(error_log)
+          end
           PluginRegistry.dispatch(:on_error_logged, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         elsif error_log.just_reopened
-          # Previously resolved/wont_fix error has recurred — treat like new for notifications
-          Services::ErrorNotificationDispatcher.call(error_log)
+          # Reopened error — notify if meets severity + not in cooldown
+          if Services::NotificationThrottler.should_notify?(error_log)
+            Services::ErrorNotificationDispatcher.call(error_log)
+            Services::NotificationThrottler.record_notification(error_log)
+          end
           PluginRegistry.dispatch(:on_error_reopened, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         else
-          # Recurring unresolved error — no notification
+          # Recurring unresolved error — check threshold milestones
+          if Services::NotificationThrottler.threshold_reached?(error_log)
+            Services::ErrorNotificationDispatcher.call(error_log)
+            Services::NotificationThrottler.record_notification(error_log)
+          end
           PluginRegistry.dispatch(:on_error_recurred, error_log)
         end
 

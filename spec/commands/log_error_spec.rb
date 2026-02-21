@@ -341,6 +341,9 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         error1 = described_class.call(exception, context)
         error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
 
+        # Clear cooldown from first notification so reopened error can notify
+        RailsErrorDashboard::Services::NotificationThrottler.clear!
+
         # Reopened — should send notification
         expect {
           described_class.call(exception, context)
@@ -424,6 +427,66 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         error2 = described_class.call(exception, { current_user: user2 })
         expect(error2.id).to eq(error1.id)
         expect(error2.user_id).to eq(456)
+      end
+    end
+
+    context 'notification throttling' do
+      before do
+        allow(RailsErrorDashboard.configuration).to receive(:enable_slack_notifications).and_return(true)
+        allow(RailsErrorDashboard.configuration).to receive(:slack_webhook_url).and_return('https://hooks.slack.com/test')
+        RailsErrorDashboard::Services::NotificationThrottler.clear!
+      end
+
+      after do
+        RailsErrorDashboard::Services::NotificationThrottler.clear!
+      end
+
+      it 'does not notify when severity is below minimum' do
+        RailsErrorDashboard.configuration.notification_minimum_severity = :critical
+
+        # StandardError is :high severity, not :critical
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'does not notify reopened error within cooldown' do
+        RailsErrorDashboard.configuration.notification_cooldown_minutes = 60
+
+        # First occurrence
+        error1 = described_class.call(exception, context)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
+
+        # Reopened — should be throttled because first occurrence was just notified
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'notifies recurring error at threshold milestone' do
+        RailsErrorDashboard.configuration.notification_threshold_alerts = [ 3 ]
+
+        # Create error with occurrence_count at 2 (next will be 3 = threshold)
+        error1 = described_class.call(exception, context)
+        error1.update!(occurrence_count: 2)
+
+        # Third occurrence hits threshold → should notify
+        expect {
+          described_class.call(exception, context)
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'does not notify recurring error that is not at milestone' do
+        RailsErrorDashboard.configuration.notification_threshold_alerts = [ 10, 50, 100 ]
+
+        # Create error with occurrence_count at 4 (next will be 5 = no milestone)
+        error1 = described_class.call(exception, context)
+        error1.update!(occurrence_count: 4)
+
+        # Fifth occurrence — no threshold match → no notification
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
       end
     end
   end

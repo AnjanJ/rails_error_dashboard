@@ -109,6 +109,11 @@ module RailsErrorDashboard
     attr_accessor :filter_sensitive_data
     attr_accessor :sensitive_data_patterns # Additional patterns beyond Rails' filter_parameters
 
+    # Notification throttling (prevents alert fatigue)
+    attr_accessor :notification_minimum_severity   # Minimum severity to notify (default: :low = notify all)
+    attr_accessor :notification_cooldown_minutes    # Per-error cooldown in minutes (default: 5, 0 = disabled)
+    attr_accessor :notification_threshold_alerts    # Occurrence milestones that trigger notification (default: [10, 50, 100, 500, 1000])
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -200,6 +205,11 @@ module RailsErrorDashboard
       # Sensitive data filtering defaults - ON by default (filters passwords, tokens, credit cards, etc.)
       @filter_sensitive_data = true
       @sensitive_data_patterns = []
+
+      # Notification throttling defaults
+      @notification_minimum_severity = :low  # Notify on all severities (current behavior)
+      @notification_cooldown_minutes = 5     # 5 min cooldown per error_hash (0 = disabled)
+      @notification_threshold_alerts = [ 10, 50, 100, 500, 1000 ] # Occurrence milestones
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
@@ -315,6 +325,25 @@ module RailsErrorDashboard
       # Validate total_users_for_impact (must be positive if set)
       if total_users_for_impact && total_users_for_impact < 1
         errors << "total_users_for_impact must be at least 1 (got: #{total_users_for_impact})"
+      end
+
+      # Validate notification_minimum_severity (must be valid symbol)
+      if notification_minimum_severity
+        valid_notification_severities = %i[critical high medium low]
+        unless valid_notification_severities.include?(notification_minimum_severity)
+          errors << "notification_minimum_severity must be one of #{valid_notification_severities.inspect} " \
+                    "(got: #{notification_minimum_severity.inspect})"
+        end
+      end
+
+      # Validate notification_cooldown_minutes (must be non-negative if set)
+      if notification_cooldown_minutes && notification_cooldown_minutes < 0
+        errors << "notification_cooldown_minutes must be 0 or greater (got: #{notification_cooldown_minutes})"
+      end
+
+      # Validate notification_threshold_alerts (must be array of positive integers if set)
+      if notification_threshold_alerts && !notification_threshold_alerts.is_a?(Array)
+        errors << "notification_threshold_alerts must be an Array (got: #{notification_threshold_alerts.class})"
       end
 
       # Raise exception if any errors found
