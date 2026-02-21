@@ -1,7 +1,7 @@
 <% content_for :page_title, "Errors" %>
 
 <!-- Subscribe to Turbo Stream updates (only if Turbo Streams is available) -->
-<% if defined?(Turbo::StreamsHelper) && respond_to?(:turbo_stream_from) %>
+<% if defined?(Turbo::StreamsHelper) && defined?(ActionCable) && respond_to?(:turbo_stream_from) %>
   <%= turbo_stream_from "error_list" %>
 <% end %>
 
