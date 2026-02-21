@@ -180,7 +180,7 @@ namespace :error_dashboard do
       next
     end
 
-    puts "\n#{apps.count} application(s) registered:\n\n"
+    puts "\n#{apps.length} application(s) registered:\n\n"
 
     # Calculate column widths using aggregated data (no additional queries)
     name_width = [ apps.map(&:name).map(&:length).max, 20 ].max
@@ -208,7 +208,7 @@ namespace :error_dashboard do
     total_unresolved = apps.sum(&:unresolved_errors)
 
     puts "\nSUMMARY:"
-    puts "  Total Applications: #{apps.count}"
+    puts "  Total Applications: #{apps.length}"
     puts "  Total Errors: #{total_errors}"
     puts "  Total Unresolved: #{total_unresolved}"
     puts "  Resolution Rate: #{total_errors.zero? ? 'N/A' : "#{((total_errors - total_unresolved).to_f / total_errors * 100).round(1)}%"}"
