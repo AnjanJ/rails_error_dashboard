@@ -117,7 +117,10 @@ module RailsErrorDashboard
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
-          attributes[:backtrace_signature] = Services::BacktraceProcessor.calculate_signature(truncated_backtrace)
+          attributes[:backtrace_signature] = Services::BacktraceProcessor.calculate_signature(
+            truncated_backtrace,
+            locations: @exception.backtrace_locations
+          )
         end
 
         #  Add git/release info if columns exist

@@ -160,6 +160,78 @@ RSpec.describe RailsErrorDashboard::Services::ErrorHashGenerator do
     end
   end
 
+  describe ".extract_app_frame_from_locations" do
+    it "extracts the first non-gem frame from backtrace_locations" do
+      exception = begin
+        raise StandardError, "Test error"
+      rescue => e
+        e
+      end
+
+      # Real exception should have backtrace_locations
+      expect(exception.backtrace_locations).not_to be_nil
+
+      result = described_class.extract_app_frame_from_locations(exception)
+      # Should return a file path (this spec file)
+      expect(result).to be_a(String)
+      expect(result).to include(".rb")
+    end
+
+    it "returns nil when backtrace_locations is nil" do
+      exception = StandardError.new("No backtrace")
+      allow(exception).to receive(:backtrace_locations).and_return(nil)
+
+      result = described_class.extract_app_frame_from_locations(exception)
+      expect(result).to be_nil
+    end
+
+    it "skips gem frames and returns first app frame" do
+      exception = begin
+        raise StandardError, "Test error"
+      rescue => e
+        e
+      end
+
+      result = described_class.extract_app_frame_from_locations(exception)
+      # Should not include /gems/ path
+      expect(result).not_to include("/gems/") if result
+    end
+
+    it "returns nil gracefully if extraction raises" do
+      exception = StandardError.new("Bad exception")
+      allow(exception).to receive(:backtrace_locations).and_raise(RuntimeError, "unexpected")
+
+      result = described_class.extract_app_frame_from_locations(exception)
+      expect(result).to be_nil
+    end
+  end
+
+  describe ".call with backtrace_locations" do
+    it "uses backtrace_locations when available for app frame extraction" do
+      exception = begin
+        raise StandardError, "Test error"
+      rescue => e
+        e
+      end
+
+      # Should produce a valid hash regardless of path used
+      result = described_class.call(exception)
+      expect(result).to match(/\A[0-9a-f]{16}\z/)
+    end
+
+    it "falls back to string backtrace when backtrace_locations is nil" do
+      exception = begin
+        raise StandardError, "Test error"
+      rescue => e
+        e
+      end
+      allow(exception).to receive(:backtrace_locations).and_return(nil)
+
+      result = described_class.call(exception)
+      expect(result).to match(/\A[0-9a-f]{16}\z/)
+    end
+  end
+
   describe ".from_attributes" do
     it "returns a 16-character hex hash" do
       result = described_class.from_attributes(error_type: "StandardError", message: "test")

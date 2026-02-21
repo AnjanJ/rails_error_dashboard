@@ -29,8 +29,14 @@ module RailsErrorDashboard
       # Extracts file paths and method names, ignoring line numbers,
       # then produces an order-independent SHA256 digest.
       # @param backtrace [String, Array<String>, nil] The backtrace
+      # @param locations [Array<Thread::Backtrace::Location>, nil] Optional structured locations
       # @return [String, nil] 16-character hex signature
-      def self.calculate_signature(backtrace)
+      def self.calculate_signature(backtrace, locations: nil)
+        # Try structured locations first (more reliable, no regex)
+        if locations && !locations.empty?
+          return signature_from_locations(locations)
+        end
+
         return nil if backtrace.blank?
 
         lines = backtrace.is_a?(String) ? backtrace.split("\n") : backtrace
@@ -47,6 +53,30 @@ module RailsErrorDashboard
         file_paths = frames.map { |frame| frame.split(":").first }.sort
         Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
       end
+
+      # Calculate signature directly from Location objects
+      # @param locations [Array<Thread::Backtrace::Location>] Backtrace locations
+      # @return [String, nil] 16-character hex signature
+      def self.signature_from_locations(locations)
+        frames = locations.first(20).map do |loc|
+          path = loc.absolute_path || loc.path
+          next nil unless path&.end_with?(".rb")
+          file_name = File.basename(path)
+          method_name = loc.label
+          method_name ? "#{file_name}:#{method_name}" : file_name
+        end.compact.uniq
+
+        return nil if frames.empty?
+
+        file_paths = frames.map { |frame| frame.split(":").first }.sort
+        Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
+      rescue => e
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] signature_from_locations failed: #{e.message}"
+        )
+        nil
+      end
+      private_class_method :signature_from_locations
     end
   end
 end

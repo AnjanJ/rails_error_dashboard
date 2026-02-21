@@ -134,5 +134,54 @@ RSpec.describe RailsErrorDashboard::Services::BacktraceProcessor do
 
       expect(described_class.calculate_signature(bt_25)).to eq(described_class.calculate_signature(bt_20))
     end
+
+    context "with locations: parameter" do
+      def capture_locations
+        caller_locations(1, 10)
+      end
+
+      it "accepts locations keyword param" do
+        locations = capture_locations
+        result = described_class.calculate_signature("", locations: locations)
+
+        expect(result).to be_a(String)
+        expect(result.length).to eq(16)
+        expect(result).to match(/\A[0-9a-f]+\z/)
+      end
+
+      it "produces consistent signature from locations" do
+        locations = capture_locations
+        sig1 = described_class.calculate_signature("", locations: locations)
+        sig2 = described_class.calculate_signature("", locations: locations)
+
+        expect(sig1).to eq(sig2)
+      end
+
+      it "falls back to string parsing when locations is nil" do
+        backtrace = "app/models/user.rb:10:in `save'"
+        sig_without = described_class.calculate_signature(backtrace)
+        sig_with_nil = described_class.calculate_signature(backtrace, locations: nil)
+
+        expect(sig_without).to eq(sig_with_nil)
+      end
+
+      it "extracts file paths directly from Location objects" do
+        locations = capture_locations
+        result = described_class.calculate_signature("", locations: locations)
+
+        # Should produce a non-nil result from location objects
+        expect(result).not_to be_nil
+      end
+
+      it "only uses first 20 locations" do
+        # Create a real backtrace with enough frames
+        locations = caller_locations(0, 25)
+        if locations.length >= 20
+          sig_all = described_class.calculate_signature("", locations: locations)
+          sig_20 = described_class.calculate_signature("", locations: locations.first(20))
+          expect(sig_all).to eq(sig_20)
+        end
+      end
+    end
   end
 end

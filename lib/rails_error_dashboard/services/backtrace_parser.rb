@@ -14,6 +14,19 @@ module RailsErrorDashboard
         new(backtrace_string).parse
       end
 
+      # Convert Thread::Backtrace::Location objects to frame hashes
+      # Uses structured data directly — no regex needed.
+      # @param locations [Array<Thread::Backtrace::Location>, nil] Backtrace locations
+      # @return [Array<Hash>] Parsed frames with same structure as .parse
+      def self.from_locations(locations)
+        return [] if locations.nil? || locations.empty?
+
+        new(nil).send(:convert_locations, locations)
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BacktraceParser.from_locations failed: #{e.message}")
+        []
+      end
+
       def initialize(backtrace_string)
         @backtrace_string = backtrace_string
       end
@@ -28,6 +41,24 @@ module RailsErrorDashboard
       end
 
       private
+
+      def convert_locations(locations)
+        locations.map.with_index do |loc, index|
+          file_path = loc.absolute_path || loc.path
+          line_number = loc.lineno
+          method_name = loc.label || "(unknown)"
+
+          {
+            index: index,
+            file_path: file_path,
+            line_number: line_number,
+            method_name: method_name,
+            category: categorize_frame(file_path),
+            full_line: loc.to_s,
+            short_path: shorten_path(file_path)
+          }
+        end
+      end
 
       def parse_frame(line, index)
         match = line.match(FRAME_PATTERN)

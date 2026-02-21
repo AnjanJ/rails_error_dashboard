@@ -158,6 +158,24 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    context 'backtrace_locations pass-through' do
+      it 'passes backtrace_locations to BacktraceProcessor.calculate_signature' do
+        expect(RailsErrorDashboard::Services::BacktraceProcessor).to receive(:calculate_signature)
+          .with(anything, locations: exception.backtrace_locations)
+          .and_call_original
+
+        described_class.call(exception, context)
+      end
+
+      it 'works when exception has nil backtrace_locations' do
+        allow(exception).to receive(:backtrace_locations).and_return(nil)
+
+        expect {
+          described_class.call(exception, context)
+        }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+      end
+    end
+
     context 'error deduplication' do
       let(:exception) do
         begin

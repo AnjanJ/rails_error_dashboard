@@ -28,7 +28,7 @@ module RailsErrorDashboard
         return custom if custom
 
         normalized_message = normalize_message(exception.message)
-        file_path = extract_app_frame(exception.backtrace)
+        file_path = extract_app_frame_from_locations(exception) || extract_app_frame(exception.backtrace)
 
         digest_input = [
           exception.class.name,
@@ -77,6 +77,27 @@ module RailsErrorDashboard
           &.gsub(/\d+/, "N")                     # Replace numbers
           &.gsub(/"[^"]*"/, '""')                # Replace double-quoted strings
           &.gsub(/'[^']*'/, "''")                # Replace single-quoted strings
+      end
+
+      # Extract first meaningful app code frame using backtrace_locations
+      # More reliable than string parsing — uses Location#absolute_path directly.
+      # @param exception [Exception] The exception with backtrace_locations
+      # @return [String, nil] File path of first app code frame, or nil
+      def self.extract_app_frame_from_locations(exception)
+        locations = exception.backtrace_locations
+        return nil if locations.nil? || locations.empty?
+
+        first_app_location = locations.find { |loc|
+          path = loc.absolute_path || loc.path
+          !path&.include?("/gems/")
+        }
+
+        first_app_location && (first_app_location.absolute_path || first_app_location.path)
+      rescue => e
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] extract_app_frame_from_locations failed: #{e.message}"
+        )
+        nil
       end
 
       # Extract first meaningful app code frame from backtrace
