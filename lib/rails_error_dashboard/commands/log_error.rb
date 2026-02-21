@@ -165,18 +165,21 @@ module RailsErrorDashboard
           end
         end
 
-        # Send notifications only for new errors (not increments)
-        # Check if this is first occurrence or error was just created
+        # Send notifications for new errors and reopened errors
         if error_log.occurrence_count == 1
+          # Brand new error
           Services::ErrorNotificationDispatcher.call(error_log)
-          # Dispatch plugin event for new error
           PluginRegistry.dispatch(:on_error_logged, error_log)
-          # Trigger notification callbacks
           trigger_callbacks(error_log)
-          # Emit ActiveSupport::Notifications instrumentation events
+          emit_instrumentation_events(error_log)
+        elsif error_log.just_reopened
+          # Previously resolved/wont_fix error has recurred — treat like new for notifications
+          Services::ErrorNotificationDispatcher.call(error_log)
+          PluginRegistry.dispatch(:on_error_reopened, error_log)
+          trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         else
-          # Dispatch plugin event for error recurrence
+          # Recurring unresolved error — no notification
           PluginRegistry.dispatch(:on_error_recurred, error_log)
         end
 

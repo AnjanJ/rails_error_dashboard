@@ -4,6 +4,10 @@ module RailsErrorDashboard
   class ErrorLog < ErrorLogsRecord
     self.table_name = "rails_error_dashboard_error_logs"
 
+    # Transient flag: set to true when a resolved/wont_fix error is reopened by FindOrIncrementError.
+    # Not persisted — used by LogError to decide notification behavior.
+    attr_accessor :just_reopened
+
     # Priority level constants
     # Using industry standard: P0 = Critical (highest), P3 = Low (lowest)
     PRIORITY_LEVELS = {

@@ -319,16 +319,42 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
       end
 
-      it 'creates new error when resolved error recurs' do
+      it 'reopens resolved error when same error recurs' do
         # First occurrence
         error1 = described_class.call(exception, context)
-        error1.update!(resolved: true, resolved_at: Time.current)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
 
-        # Second occurrence (regression)
+        # Second occurrence (regression) — should reopen, not create new
         error2 = described_class.call(exception, context)
-        expect(error2.id).not_to eq(error1.id)
-        expect(error2.occurrence_count).to eq(1)
+        expect(error2.id).to eq(error1.id)
         expect(error2.resolved).to be false
+        expect(error2.status).to eq("new")
+        expect(error2.resolved_at).to be_nil
+        expect(error2.occurrence_count).to eq(2)
+      end
+
+      it 'sends notifications when a resolved error is reopened' do
+        allow(RailsErrorDashboard.configuration).to receive(:enable_slack_notifications).and_return(true)
+        allow(RailsErrorDashboard.configuration).to receive(:slack_webhook_url).and_return('https://hooks.slack.com/test')
+
+        # First occurrence
+        error1 = described_class.call(exception, context)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
+
+        # Reopened — should send notification
+        expect {
+          described_class.call(exception, context)
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'dispatches on_error_reopened plugin event when reopened' do
+        # First occurrence
+        error1 = described_class.call(exception, context)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
+
+        expect(RailsErrorDashboard::PluginRegistry).to receive(:dispatch).with(:on_error_reopened, anything)
+
+        described_class.call(exception, context)
       end
 
       it 'creates new error when old error (>24h) recurs' do
