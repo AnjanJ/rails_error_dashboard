@@ -56,6 +56,7 @@ module RailsErrorDashboard
         @selected_features = {}
 
         # Feature definitions with descriptions - organized by category
+        # Note: separate_database is handled separately via select_database_mode
         features = [
           # === NOTIFICATIONS ===
           {
@@ -100,12 +101,6 @@ module RailsErrorDashboard
             key: :error_sampling,
             name: "Error Sampling",
             description: "Log only % of non-critical errors (reduce volume)",
-            category: "Performance"
-          },
-          {
-            key: :separate_database,
-            name: "Separate Error Database",
-            description: "Store errors in dedicated database",
             category: "Performance"
           },
 
@@ -191,6 +186,55 @@ module RailsErrorDashboard
         say "\n"
       end
 
+      def select_database_mode
+        # Skip if not interactive or if --separate_database was passed via CLI
+        if options[:separate_database]
+          @database_mode = :separate
+          @database_name = options[:database] || "error_dashboard"
+          @application_name = detect_application_name
+          return
+        end
+
+        return unless options[:interactive] && behavior == :invoke
+        return unless $stdin.tty?
+
+        say "-" * 70
+        say "  Database Setup", :cyan
+        say "-" * 70
+        say "\n"
+        say "  How do you want to store error data?\n", :white
+        say "  1) Same database (default) - store errors in your app's primary database", :white
+        say "  2) Separate database       - dedicated database for error data (recommended for production)", :white
+        say "  3) Shared database          - connect to an existing error database shared by multiple apps", :white
+        say "\n"
+
+        response = ask("  Choose (1/2/3):", :yellow, limited_to: [ "1", "2", "3", "" ])
+
+        case response
+        when "2"
+          @database_mode = :separate
+          @database_name = "error_dashboard"
+          @application_name = detect_application_name
+
+          say "\n  Database key: error_dashboard", :green
+          say "  Application name: #{@application_name}", :green
+          say "\n"
+        when "3"
+          @database_mode = :multi_app
+          @database_name = "error_dashboard"
+          @application_name = detect_application_name
+
+          say "\n  Database key: error_dashboard", :green
+          say "  Application name: #{@application_name}", :green
+          say "  This app will share the error database with your other apps.", :white
+          say "\n"
+        else
+          @database_mode = :same
+          @database_name = nil
+          @application_name = detect_application_name
+        end
+      end
+
       def create_initializer_file
         # Notifications
         @enable_slack = @selected_features&.dig(:slack) || options[:slack]
@@ -202,8 +246,12 @@ module RailsErrorDashboard
         # Performance
         @enable_async_logging = @selected_features&.dig(:async_logging) || options[:async_logging]
         @enable_error_sampling = @selected_features&.dig(:error_sampling) || options[:error_sampling]
-        @enable_separate_database = @selected_features&.dig(:separate_database) || options[:separate_database]
-        @database_name = options[:database]
+
+        # Database mode (set by select_database_mode or CLI flags)
+        @database_mode ||= :same
+        @enable_separate_database = @database_mode == :separate || @database_mode == :multi_app
+        @enable_multi_app = @database_mode == :multi_app
+        # @database_name and @application_name are set by select_database_mode
 
         # Advanced Analytics
         @enable_baseline_alerts = @selected_features&.dig(:baseline_alerts) || options[:baseline_alerts]
@@ -234,7 +282,7 @@ module RailsErrorDashboard
 
         say "\n"
         say "=" * 70
-        say "  ✓ Installation Complete!", :green
+        say "  Installation Complete!", :green
         say "=" * 70
         say "\n"
 
@@ -309,34 +357,107 @@ module RailsErrorDashboard
         say "  → Set PAGERDUTY_INTEGRATION_KEY in .env", :yellow if @enable_pagerduty
         say "  → Set WEBHOOK_URLS in .env", :yellow if @enable_webhooks
         say "  → Ensure Sidekiq/Solid Queue running", :yellow if @enable_async_logging
+
+        # Database-specific instructions
         if @enable_separate_database
-          if @database_name
-            say "  → Configure '#{@database_name}' database in database.yml", :yellow
-          else
-            say "  → Configure database in database.yml and set config.database", :yellow
-          end
-          say "    See docs/guides/DATABASE_OPTIONS.md for details", :yellow
+          show_database_setup_instructions
         end
 
         say "\n"
         say "Next Steps:", :cyan
-        say "  1. Run: rails db:migrate"
-        say "  2. Update credentials in config/initializers/rails_error_dashboard.rb"
-        say "  3. Restart your Rails server"
-        say "  4. Visit http://localhost:3000/error_dashboard"
+        if @enable_separate_database
+          say "  1. Add the database.yml entry shown above"
+          say "  2. Run: rails db:create:error_dashboard"
+          if @enable_multi_app
+            say "  3. Run migrations (only needed on the FIRST app):"
+            say "     rails db:migrate:error_dashboard"
+          else
+            say "  3. Run: rails db:migrate:error_dashboard"
+          end
+          say "  4. Update credentials in config/initializers/rails_error_dashboard.rb"
+          say "  5. Restart your Rails server"
+          say "  6. Visit http://localhost:3000/error_dashboard"
+          say "  7. Verify: rails error_dashboard:verify"
+        else
+          say "  1. Run: rails db:migrate"
+          say "  2. Update credentials in config/initializers/rails_error_dashboard.rb"
+          say "  3. Restart your Rails server"
+          say "  4. Visit http://localhost:3000/error_dashboard"
+        end
         say "\n"
-        say "📖 Documentation:", :white
-        say "   • Quick Start: docs/QUICKSTART.md", :white
-        say "   • Complete Feature Guide: docs/FEATURES.md", :white
-        say "   • All Docs: docs/README.md", :white
+        say "Documentation:", :white
+        say "   Quick Start: docs/QUICKSTART.md", :white
+        say "   Database Setup: docs/guides/DATABASE_OPTIONS.md", :white
+        say "   Complete Feature Guide: docs/FEATURES.md", :white
         say "\n"
-        say "⚙️  To enable/disable features later:", :white
+        say "To enable/disable features later:", :white
         say "   Edit config/initializers/rails_error_dashboard.rb", :white
         say "\n"
       end
 
       def show_readme
         # Skip the old README display since we have the new summary
+      end
+
+      private
+
+      def detect_application_name
+        if defined?(Rails) && Rails.application
+          Rails.application.class.module_parent_name
+        else
+          "MyApp"
+        end
+      end
+
+      def show_database_setup_instructions
+        app_name_snake = @application_name.to_s.underscore
+
+        say "\n"
+        say "-" * 70
+        say "  Database Setup Required", :yellow
+        say "-" * 70
+        say "\n"
+        say "  Add this to your config/database.yml:\n", :white
+
+        if @enable_multi_app
+          say "  # Shared error database (same physical DB across all your apps)", :white
+        else
+          say "  # Separate error database", :white
+        end
+
+        say "\n  development:", :cyan
+        say "    primary:", :white
+        say "      <<: *default", :white
+        say "      database: #{app_name_snake}_development", :white
+        say "    error_dashboard:", :white
+        say "      <<: *default", :white
+        if @enable_multi_app
+          say "      database: shared_errors_development", :white
+        else
+          say "      database: #{app_name_snake}_errors_development", :white
+        end
+        say "      migrations_paths: db/error_dashboard_migrate", :white
+
+        say "\n  production:", :cyan
+        say "    primary:", :white
+        say "      <<: *default", :white
+        say "      database: #{app_name_snake}_production", :white
+        say "    error_dashboard:", :white
+        say "      <<: *default", :white
+        if @enable_multi_app
+          say "      database: shared_errors_production", :white
+        else
+          say "      database: #{app_name_snake}_errors_production", :white
+        end
+        say "      migrations_paths: db/error_dashboard_migrate", :white
+        say "\n"
+
+        if @enable_multi_app
+          say "  For multi-app: all apps must point to the same physical database.", :yellow
+          say "  Only the FIRST app needs to run migrations.", :yellow
+          say "  Other apps just need the database.yml entry and 'rails error_dashboard:verify'.", :yellow
+          say "\n"
+        end
       end
     end
   end

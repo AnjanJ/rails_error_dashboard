@@ -450,9 +450,9 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
         expect(initializer_content).to include("config.use_separate_database = true")
       end
 
-      it "includes commented database configuration hint" do
+      it "defaults database name to error_dashboard" do
         initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
-        expect(initializer_content).to include("# config.database = :error_dashboard")
+        expect(initializer_content).to include("config.database = :error_dashboard")
       end
     end
 
@@ -464,7 +464,80 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       it "does not set database configuration" do
         initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
         expect(initializer_content).to include("config.use_separate_database = false")
-        expect(initializer_content).to include("# config.database = :error_dashboard  # Database name when using separate database")
+        expect(initializer_content).to include("# config.database = :error_dashboard")
+      end
+    end
+  end
+
+  describe "database mode selection" do
+    context "separate database mode via CLI flag" do
+      before do
+        run_generator [ "--no-interactive", "--separate_database" ]
+      end
+
+      it "always sets config.database when separate_database is enabled" do
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("config.database = :error_dashboard")
+        expect(initializer_content).not_to include("# config.database = :error_dashboard  # Uncomment")
+      end
+
+      it "includes setup instructions reference" do
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("docs/guides/DATABASE_OPTIONS.md")
+      end
+    end
+
+    context "separate database with custom database name" do
+      before do
+        options = { interactive: false, separate_database: true, database: "my_errors" }
+        generator = described_class.new([], options, { destination_root: destination_root })
+        generator.invoke_all
+      end
+
+      it "uses the custom database name" do
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("config.database = :my_errors")
+      end
+    end
+
+    context "interactive database mode selection" do
+      it "sets separate mode variables when database mode is :separate" do
+        generator = described_class.new([], { interactive: true }, { destination_root: destination_root })
+        generator.instance_variable_set(:@selected_features, {})
+        generator.instance_variable_set(:@database_mode, :separate)
+        generator.instance_variable_set(:@database_name, "error_dashboard")
+        generator.instance_variable_set(:@application_name, "TestApp")
+        generator.create_initializer_file
+
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("config.use_separate_database = true")
+        expect(initializer_content).to include("config.database = :error_dashboard")
+        expect(initializer_content).not_to include("config.application_name")
+      end
+
+      it "sets multi-app mode variables when database mode is :multi_app" do
+        generator = described_class.new([], { interactive: true }, { destination_root: destination_root })
+        generator.instance_variable_set(:@selected_features, {})
+        generator.instance_variable_set(:@database_mode, :multi_app)
+        generator.instance_variable_set(:@database_name, "error_dashboard")
+        generator.instance_variable_set(:@application_name, "BlogApi")
+        generator.create_initializer_file
+
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("config.use_separate_database = true")
+        expect(initializer_content).to include("config.database = :error_dashboard")
+        expect(initializer_content).to include('config.application_name = "BlogApi"')
+        expect(initializer_content).to include("Multi-app mode")
+      end
+
+      it "uses same database mode by default" do
+        generator = described_class.new([], { interactive: true }, { destination_root: destination_root })
+        generator.instance_variable_set(:@selected_features, {})
+        generator.instance_variable_set(:@database_mode, :same)
+        generator.create_initializer_file
+
+        initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+        expect(initializer_content).to include("config.use_separate_database = false")
       end
     end
   end

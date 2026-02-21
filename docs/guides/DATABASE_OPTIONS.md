@@ -1,599 +1,337 @@
-# Migrating to Separate Database for Error Logs
+# Database Setup Guide
 
-This guide helps you migrate existing error logs from your primary database to a separate database.
+This guide covers all database configurations for Rails Error Dashboard: single-app, separate database, and multi-app setups.
 
-## Why Migrate to Separate Database?
-
-### Benefits
-- ✅ **Performance isolation** - Error logging doesn't impact main application queries
-- ✅ **Independent scaling** - Different hardware/resources for error logs
-- ✅ **Flexible retention** - Easily delete old errors without affecting main DB
-- ✅ **Security isolation** - Separate access controls and backups
-- ✅ **Easier maintenance** - Can drop/recreate error logs DB without affecting app
-
-### When to Migrate
-Consider migrating when:
-- You have 10,000+ error logs in your database
-- Error dashboard queries are slowing down your app
-- You want different backup/retention policies for errors
-- You're running high-traffic production applications
-
-## Migration Process
-
-### Overview
-The migration involves 4 steps:
-1. Set up separate database configuration
-2. Copy existing error logs to new database
-3. Verify data integrity
-4. Clean up old data from primary database
+> **Quick verification:** Run `rails error_dashboard:verify` at any time to check your setup.
 
 ---
 
-## Step 1: Configure Separate Database
+## Option 1: Same Database (Default)
 
-### 1.1 Update database.yml
+No extra configuration needed. Error data is stored in your app's primary database.
 
-Add the `error_logs` database configuration:
+```ruby
+# config/initializers/rails_error_dashboard.rb
+RailsErrorDashboard.configure do |config|
+  config.use_separate_database = false  # default
+end
+```
+
+```bash
+rails db:migrate
+```
+
+**Best for:** Small apps, development, getting started quickly.
+
+---
+
+## Option 2: Separate Database (Single App)
+
+Isolate error data in its own database. Recommended for production.
+
+### Step 1: Update initializer
+
+```ruby
+# config/initializers/rails_error_dashboard.rb
+RailsErrorDashboard.configure do |config|
+  config.use_separate_database = true
+  config.database = :error_dashboard
+end
+```
+
+### Step 2: Add database.yml entry
+
+The key name (`error_dashboard:`) must match `config.database`:
 
 ```yaml
 # config/database.yml
 
+development:
+  primary:
+    <<: *default
+    database: myapp_development
+  error_dashboard:
+    <<: *default
+    database: myapp_errors_development
+    migrations_paths: db/error_dashboard_migrate
+
 production:
   primary:
+    <<: *default
     database: myapp_production
-    # ... your existing primary DB config
-
-  # NEW: Separate database for error logs
-  error_logs:
-    database: myapp_error_logs_production
-    adapter: postgresql  # or mysql2, sqlite3
-    encoding: utf8
+  error_dashboard:
+    <<: *default
+    database: myapp_errors_production
+    migrations_paths: db/error_dashboard_migrate
     pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
-    username: <%= ENV['ERROR_LOGS_DATABASE_USER'] %>
-    password: <%= ENV['ERROR_LOGS_DATABASE_PASSWORD'] %>
-    host: <%= ENV['ERROR_LOGS_DATABASE_HOST'] %>
-    migrations_paths: db/error_logs_migrate
 ```
 
-### 1.2 Set Environment Variables
+### Step 3: Create and migrate
 
 ```bash
-# .env or production environment
-ERROR_LOGS_DATABASE_USER=error_logs_user
-ERROR_LOGS_DATABASE_PASSWORD=secure_password_here
-ERROR_LOGS_DATABASE_HOST=localhost  # or separate server
+rails db:create:error_dashboard
+rails db:migrate:error_dashboard
 ```
 
-### 1.3 Create the Database
+### Step 4: Verify
 
 ```bash
-# Create the new database
-rails db:create:error_logs
-
-# Run migrations to create the table structure
-rails db:migrate:error_logs
+rails error_dashboard:verify
 ```
 
-This creates the `rails_error_dashboard_error_logs` table in the new database.
+**Best for:** Production apps that want error data isolated from application data.
 
 ---
 
-## Step 2: Migrate Existing Data
+## Option 3: Shared Database (Multi-App)
 
-### 2.1 Create Migration Task
+Multiple Rails apps write errors to one shared database. One dashboard to monitor all apps.
 
-Create a Rake task to copy data:
+### How it works
 
-```ruby
-# lib/tasks/migrate_error_logs.rake
-
-namespace :error_logs do
-  desc "Migrate error logs from primary database to separate database"
-  task migrate_to_separate_db: :environment do
-    puts "Starting error logs migration..."
-
-    # Count records in primary DB
-    ActiveRecord::Base.connected_to(role: :writing) do
-      old_count = RailsErrorDashboard::ErrorLog.count
-      puts "Found #{old_count} error logs in primary database"
-
-      if old_count == 0
-        puts "No error logs to migrate!"
-        exit
-      end
-    end
-
-    # Temporarily disable separate database to read from primary
-    original_setting = RailsErrorDashboard.configuration.use_separate_database
-    RailsErrorDashboard.configuration.use_separate_database = false
-
-    # Get all error logs from primary database
-    old_errors = RailsErrorDashboard::ErrorLog.all.to_a
-    puts "Loaded #{old_errors.count} error logs"
-
-    # Re-enable separate database
-    RailsErrorDashboard.configuration.use_separate_database = true
-
-    # Insert into separate database in batches
-    batch_size = 1000
-    migrated_count = 0
-    failed_count = 0
-
-    old_errors.each_slice(batch_size) do |batch|
-      begin
-        ActiveRecord::Base.connected_to(role: :writing, shard: :error_logs) do
-          batch.each do |error|
-            # Create new record in separate database
-            new_error = RailsErrorDashboard::ErrorLog.new(
-              error_type: error.error_type,
-              message: error.message,
-              backtrace: error.backtrace,
-              user_id: error.user_id,
-              request_url: error.request_url,
-              request_params: error.request_params,
-              user_agent: error.user_agent,
-              ip_address: error.ip_address,
-              environment: error.environment,
-              platform: error.platform,
-              resolved: error.resolved,
-              resolution_comment: error.resolution_comment,
-              resolution_reference: error.resolution_reference,
-              resolved_by_name: error.resolved_by_name,
-              resolved_at: error.resolved_at,
-              occurred_at: error.occurred_at,
-              created_at: error.created_at,
-              updated_at: error.updated_at
-            )
-
-            if new_error.save
-              migrated_count += 1
-            else
-              failed_count += 1
-              puts "Failed to migrate error #{error.id}: #{new_error.errors.full_messages.join(', ')}"
-            end
-          end
-        end
-
-        print "."
-      rescue => e
-        puts "\nError in batch: #{e.message}"
-        failed_count += batch.size
-      end
-    end
-
-    puts "\n\nMigration complete!"
-    puts "Successfully migrated: #{migrated_count}"
-    puts "Failed: #{failed_count}"
-
-    # Verify counts
-    ActiveRecord::Base.connected_to(role: :reading, shard: :error_logs) do
-      new_count = RailsErrorDashboard::ErrorLog.count
-      puts "New database now has: #{new_count} error logs"
-    end
-
-    puts "\nIMPORTANT: Verify the data before running cleanup!"
-    puts "Run: rake error_logs:verify_migration"
-  end
-
-  desc "Verify error logs migration"
-  task verify_migration: :environment do
-    puts "Verifying migration..."
-
-    # Count in primary DB (with separate DB disabled)
-    RailsErrorDashboard.configuration.use_separate_database = false
-    old_count = RailsErrorDashboard::ErrorLog.count
-
-    # Count in separate DB
-    RailsErrorDashboard.configuration.use_separate_database = true
-    new_count = RailsErrorDashboard::ErrorLog.count
-
-    puts "Primary database: #{old_count} error logs"
-    puts "Separate database: #{new_count} error logs"
-
-    if old_count == new_count
-      puts "✅ Counts match! Migration successful."
-      puts "\nYou can now:"
-      puts "1. Enable separate database in config/initializers/rails_error_dashboard.rb"
-      puts "2. Run: rake error_logs:cleanup_primary_db"
-    else
-      puts "⚠️  Counts don't match! Review the migration."
-      puts "Difference: #{(old_count - new_count).abs} records"
-    end
-  end
-
-  desc "Clean up error logs from primary database (DESTRUCTIVE)"
-  task cleanup_primary_db: :environment do
-    print "This will DELETE all error logs from your primary database. Continue? (yes/no): "
-    confirmation = STDIN.gets.chomp
-
-    unless confirmation.downcase == 'yes'
-      puts "Cleanup cancelled."
-      exit
-    end
-
-    # Disable separate database to access primary
-    RailsErrorDashboard.configuration.use_separate_database = false
-
-    count = RailsErrorDashboard::ErrorLog.count
-    puts "Deleting #{count} error logs from primary database..."
-
-    # Delete in batches to avoid locking
-    deleted = 0
-    batch_size = 1000
-
-    loop do
-      batch_deleted = RailsErrorDashboard::ErrorLog.limit(batch_size).delete_all
-      deleted += batch_deleted
-      print "."
-      break if batch_deleted < batch_size
-    end
-
-    puts "\n✅ Deleted #{deleted} error logs from primary database"
-
-    # Re-enable separate database
-    RailsErrorDashboard.configuration.use_separate_database = true
-
-    puts "\nVerifying separate database still has data..."
-    new_count = RailsErrorDashboard::ErrorLog.count
-    puts "Separate database has #{new_count} error logs"
-  end
-end
+```
+  App 1 (BlogAPI)          App 2 (AdminPanel)       App 3 (MobileAPI)
+  config.database =        config.database =        config.database =
+    :error_dashboard         :error_dashboard         :error_dashboard
+         |                        |                        |
+         +------------------------+------------------------+
+                                  |
+                    Shared error_dashboard database
+                    (6 tables, all prefixed rails_error_dashboard_)
+                                  |
+                    Dashboard shows app switcher:
+                    [All Apps] [BlogAPI] [AdminPanel] [MobileAPI]
 ```
 
-### 2.2 Run the Migration
-
-```bash
-# Step 1: Copy data to separate database
-rake error_logs:migrate_to_separate_db
-
-# Step 2: Verify the migration
-rake error_logs:verify_migration
-
-# Step 3: If verification passes, clean up primary database
-rake error_logs:cleanup_primary_db
-```
-
----
-
-## Step 3: Enable Separate Database
-
-### 3.1 Update Initializer
+### App 1 setup (first install)
 
 ```ruby
 # config/initializers/rails_error_dashboard.rb
-
 RailsErrorDashboard.configure do |config|
-  # Enable separate database
-  config.use_separate_database = true  # Changed from false to true
-
-  # ... other config
+  config.use_separate_database = true
+  config.database = :error_dashboard
+  config.application_name = "BlogAPI"  # optional, auto-detected from Rails.application
 end
 ```
 
-### 3.2 Restart Application
+```yaml
+# config/database.yml
+production:
+  primary:
+    <<: *default
+    database: blog_api_production
+
+  error_dashboard:
+    <<: *default
+    database: shared_errors_production     # <-- the shared database
+    host: errors-db.example.com
+    migrations_paths: db/error_dashboard_migrate
+```
 
 ```bash
-# Restart your Rails app to pick up the new configuration
+rails db:create:error_dashboard
+rails db:migrate:error_dashboard     # <-- only App 1 needs to run migrations
 ```
 
----
-
-## Step 4: Verify Everything Works
-
-### 4.1 Test Error Logging
-
-Create a test error to ensure new errors go to the separate database:
-
-```bash
-rails console
-```
-
-```ruby
-# Create a test error
-begin
-  raise "Test error for separate database"
-rescue => e
-  Rails.error.report(e)
-end
-
-# Verify it was created in separate database
-RailsErrorDashboard::ErrorLog.last
-# Should show your test error
-```
-
-### 4.2 Test Dashboard
-
-Visit your error dashboard:
-```text
-http://localhost:3000/error_dashboard
-```
-
-- ✅ All old errors should be visible
-- ✅ New errors should be created
-- ✅ Analytics should work
-- ✅ Search and filtering should work
-
----
-
-## Rollback Plan
-
-If something goes wrong, you can rollback:
-
-### Option 1: Disable Separate Database
+### App 2 setup (joining existing)
 
 ```ruby
 # config/initializers/rails_error_dashboard.rb
-config.use_separate_database = false
+RailsErrorDashboard.configure do |config|
+  config.use_separate_database = true
+  config.database = :error_dashboard
+  config.application_name = "AdminPanel"
+end
 ```
 
-This will immediately switch back to using the primary database. If you haven't run cleanup yet, all your data will still be there.
+```yaml
+# config/database.yml — point to the SAME physical database as App 1
+production:
+  primary:
+    <<: *default
+    database: admin_panel_production
 
-### Option 2: Restore from Backup
-
-Always take a database backup before migration:
-
-```bash
-# PostgreSQL
-pg_dump myapp_production > backup_before_migration.sql
-
-# MySQL
-mysqldump myapp_production > backup_before_migration.sql
+  error_dashboard:
+    <<: *default
+    database: shared_errors_production     # <-- same DB as App 1
+    host: errors-db.example.com
+    migrations_paths: db/error_dashboard_migrate
 ```
 
-Restore if needed:
+```bash
+# No need to create or migrate — App 1 already did that.
+# Just verify the connection:
+rails error_dashboard:verify
+```
+
+### App 3 and beyond
+
+Same pattern as App 2. Point `database.yml` to the same physical database. Set a unique `application_name` (or let it auto-detect from `Rails.application.class.module_parent_name`).
+
+### What auto-detection produces
+
+If you don't set `config.application_name`, the gem detects it from your Rails app:
+
+| App class | Auto-detected name |
+|-----------|-------------------|
+| `BlogApi::Application` | `BlogApi` |
+| `AdminPanel::Application` | `AdminPanel` |
+| `MyApp::Application` | `MyApp` |
+
+### Tables in the shared database
+
+All 6 tables are shared. Errors are separated by `application_id`:
+
+| Table | Purpose |
+|-------|---------|
+| `rails_error_dashboard_applications` | Registry of app names |
+| `rails_error_dashboard_error_logs` | All errors (filtered by `application_id`) |
+| `rails_error_dashboard_error_occurrences` | Per-occurrence tracking |
+| `rails_error_dashboard_error_comments` | Comment threads |
+| `rails_error_dashboard_error_baselines` | Anomaly detection data |
+| `rails_error_dashboard_cascade_patterns` | Error cascade relationships |
+
+### Dashboard app switcher
+
+When 2+ applications exist, the dashboard shows an app switcher dropdown. You can view errors for a single app or "All Apps" combined.
+
+---
+
+## Migrating From Primary to Separate Database
+
+If you started with Option 1 and want to move to Option 2 or 3:
+
+### 1. Configure the separate database
+
+Follow Option 2 or 3 above to set up `database.yml` and the initializer.
+
+### 2. Create and migrate the new database
 
 ```bash
-# PostgreSQL
-psql myapp_production < backup_before_migration.sql
+rails db:create:error_dashboard
+rails db:migrate:error_dashboard
+```
 
-# MySQL
-mysql myapp_production < backup_before_migration.sql
+### 3. Copy existing data
+
+Create a rake task to copy data from primary to separate database:
+
+```ruby
+# lib/tasks/migrate_errors.rake
+namespace :error_dashboard do
+  desc "Copy error data from primary to separate database"
+  task migrate_data: :environment do
+    # Temporarily read from primary
+    RailsErrorDashboard.configuration.use_separate_database = false
+    old_errors = RailsErrorDashboard::ErrorLog.all.to_a
+    puts "Found #{old_errors.count} errors in primary database"
+
+    # Switch to separate database and insert
+    RailsErrorDashboard.configuration.use_separate_database = true
+    count = 0
+    old_errors.each_slice(1000) do |batch|
+      batch.each do |error|
+        attrs = error.attributes.except("id")
+        RailsErrorDashboard::ErrorLog.create!(attrs)
+        count += 1
+      end
+      print "."
+    end
+    puts "\nMigrated #{count} errors"
+  end
+end
+```
+
+### 4. Verify and clean up
+
+```bash
+rails error_dashboard:verify
+# Once verified, remove old data from primary database if desired
 ```
 
 ---
 
-## Advanced: Different Database Server
+## Upgrading the Gem
 
-If you want to host error logs on a completely different server:
+When you upgrade `rails_error_dashboard` to a new version:
 
-### 1. Update database.yml
+**Single database users:**
+```bash
+bundle update rails_error_dashboard
+rails db:migrate
+```
+
+**Separate database users:**
+```bash
+bundle update rails_error_dashboard
+rails db:migrate:error_dashboard
+```
+
+**Multi-app users:** Only one app needs to run migrations. The shared database schema is updated once — all other apps will use the new schema automatically.
+
+---
+
+## Using a Different Database Server
+
+You can host the error database on a completely separate server:
 
 ```yaml
 production:
   primary:
     database: myapp_production
-    host: db1.example.com
-    # ... main DB config
+    host: app-db.example.com
 
-  error_logs:
-    database: myapp_error_logs_production
-    host: db2.example.com  # Different server!
-    # ... separate server config
+  error_dashboard:
+    database: myapp_errors_production
+    host: errors-db.example.com    # different server
+    adapter: postgresql
+    encoding: utf8
+    pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+    username: <%= ENV['ERROR_DASHBOARD_DB_USER'] %>
+    password: <%= ENV['ERROR_DASHBOARD_DB_PASSWORD'] %>
+    migrations_paths: db/error_dashboard_migrate
 ```
 
-### 2. Benefits
-
-- ✅ **True isolation** - Completely separate infrastructure
-- ✅ **Independent scaling** - Different server specs for error logs
-- ✅ **Zero impact** - Error logging has ZERO impact on main app
-- ✅ **Flexible retention** - Can drop entire server without affecting app
+**Trade-offs of separate server:**
+- No foreign keys between error tables and app tables (e.g., users)
+- No cross-database joins (the gem handles this with separate queries)
+- Need to manage backup/maintenance for an additional database
 
 ---
 
 ## Troubleshooting
 
-### Issue: Migration fails with "database doesn't exist"
+Run `rails error_dashboard:verify` first — it checks everything automatically.
 
-**Solution:**
-```bash
-rails db:create:error_logs
-rails db:migrate:error_logs
-```
+### "database configuration is required when use_separate_database is true"
 
-### Issue: "No such table: rails_error_dashboard_error_logs"
+You set `config.use_separate_database = true` but forgot `config.database`:
 
-**Solution:**
-```bash
-# Run migrations on the separate database
-rails db:migrate:error_logs
-```
-
-### Issue: Counts don't match after migration
-
-**Solution:**
-1. Check for errors in the migration output
-2. Look for failed records
-3. Re-run migration for failed records only
-4. Verify database connections are working
-
-### Issue: Dashboard shows no errors after migration
-
-**Checklist:**
-1. Is `use_separate_database = true` in initializer?
-2. Did you restart the Rails app?
-3. Is the error_logs database configured correctly?
-4. Can you connect to the error_logs database?
-
-```bash
-# Test connection
-rails dbconsole -d error_logs
-```
-
-### Issue: New errors still going to primary database
-
-**Solution:**
-1. Verify `config.use_separate_database = true`
-2. Restart Rails application
-3. Check Rails logs for connection errors
-
----
-
-## Performance Considerations
-
-### Before Migration
-
-- Take database backup
-- Run during low-traffic period
-- Monitor database performance during migration
-- Consider using read replicas if available
-
-### During Migration
-
-- Migration runs in batches of 1000 to avoid memory issues
-- Uses transactions per batch for safety
-- Progress indicator (dots) shows migration is running
-- Failed records are logged for review
-
-### After Migration
-
-- Monitor separate database performance
-- Set up separate backup schedule
-- Configure retention policies
-- Consider different hardware for error logs DB
-
----
-
-## FAQ
-
-### Q: Can I migrate back from separate DB to primary DB?
-
-**A:** Yes, reverse the rake tasks:
-1. Set `use_separate_database = false`
-2. Read from separate DB
-3. Write to primary DB
-4. Verify counts match
-5. Drop separate database if desired
-
-### Q: Will this cause downtime?
-
-**A:** No downtime required! The migration can run while your app is running. Just:
-1. Run migration task (reads from primary, writes to separate)
-2. Verify data
-3. Enable separate DB in config
-4. Restart app
-5. Clean up primary DB
-
-### Q: What about disk space?
-
-**A:** During migration, data exists in BOTH databases. After cleanup, only the separate database has error logs. Plan for:
-- 2x disk space during migration
-- Normal disk space after cleanup
-
-### Q: Can I use this with Heroku/AWS RDS/Google Cloud SQL?
-
-**A:** Yes! Just configure the `error_logs` database to point to your hosted database. Works with:
-- Heroku Postgres (use different DATABASE_URL)
-- AWS RDS (different endpoint)
-- Google Cloud SQL (different connection string)
-- Any PostgreSQL/MySQL/SQLite database
-
-### Q: What if I have millions of error logs?
-
-**A:** For very large datasets:
-1. Consider filtering old errors before migration
-2. Increase batch size (change `batch_size = 1000` to higher value)
-3. Run migration during maintenance window
-4. Use database replication if available
-5. Consider parallel migration with multiple workers
-
----
-
-## Best Practices
-
-### 1. Always Backup First
-
-```bash
-# Before migration
-pg_dump myapp_production > pre_migration_backup.sql
-```
-
-### 2. Test in Staging First
-
-Run the entire migration process in your staging environment before production.
-
-### 3. Monitor Database Performance
-
-```bash
-# During migration, monitor:
-# - Connection counts
-# - Query performance
-# - Disk I/O
-# - Memory usage
-```
-
-### 4. Gradual Cleanup
-
-Instead of deleting all at once:
 ```ruby
-# Delete old errors first (already in separate DB)
-RailsErrorDashboard::ErrorLog.where('created_at < ?', 30.days.ago).delete_all
-
-# Then delete recent errors
-RailsErrorDashboard::ErrorLog.delete_all
+config.use_separate_database = true
+config.database = :error_dashboard  # <-- add this
 ```
 
-### 5. Set Up Separate Backups
+### "No such table: rails_error_dashboard_error_logs"
+
+Tables haven't been created yet:
 
 ```bash
-# Separate backup schedule for error logs
-# Can have different retention policies
-0 2 * * * pg_dump myapp_error_logs_production > /backups/error_logs.sql
+# Separate database:
+rails db:create:error_dashboard
+rails db:migrate:error_dashboard
+
+# Primary database:
+rails db:migrate
 ```
 
----
+### Dashboard shows no errors after switching to separate database
 
-## Example: Complete Migration Session
+1. Verify `config.use_separate_database = true` in your initializer
+2. Restart your Rails server
+3. Run `rails error_dashboard:verify` to check the connection
+4. If migrating, make sure you copied data to the new database
 
-```bash
-# 1. Backup
-pg_dump myapp_production > backup_$(date +%Y%m%d).sql
+### Multi-app: App 2 doesn't see App 1's errors
 
-# 2. Configure database.yml (add error_logs database)
-
-# 3. Create separate database
-rails db:create:error_logs
-rails db:migrate:error_logs
-
-# 4. Run migration
-rake error_logs:migrate_to_separate_db
-# Output:
-# Starting error logs migration...
-# Found 15432 error logs in primary database
-# Loaded 15432 error logs
-# ................
-# Migration complete!
-# Successfully migrated: 15432
-# Failed: 0
-
-# 5. Verify
-rake error_logs:verify_migration
-# Output:
-# Primary database: 15432 error logs
-# Separate database: 15432 error logs
-# ✅ Counts match! Migration successful.
-
-# 6. Enable in initializer
-# config.use_separate_database = true
-
-# 7. Restart app
-systemctl restart myapp  # or however you restart
-
-# 8. Verify dashboard works
-curl http://localhost:3000/error_dashboard
-
-# 9. Clean up primary DB
-rake error_logs:cleanup_primary_db
-# Output:
-# This will DELETE all error logs from your primary database. Continue? (yes/no): yes
-# Deleting 15432 error logs from primary database...
-# ................
-# ✅ Deleted 15432 error logs from primary database
-# Separate database has 15432 error logs
-
-# 10. Verify everything still works
-# Visit dashboard, create test error, check analytics
-```
-
----
-
-**Made with ❤️  by Anjan for the Rails community**
+Both apps must point to the **same physical database** in their `database.yml`. The database key name (`error_dashboard:`) must be the same, and the `database:` value must point to the same DB.

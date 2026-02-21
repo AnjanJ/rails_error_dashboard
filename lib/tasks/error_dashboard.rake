@@ -1,6 +1,162 @@
 # frozen_string_literal: true
 
 namespace :error_dashboard do
+  desc "Verify Rails Error Dashboard setup (database, tables, configuration)"
+  task verify: :environment do
+    puts "\n" + "=" * 70
+    puts "  RAILS ERROR DASHBOARD - SETUP VERIFICATION"
+    puts "=" * 70
+
+    checks_passed = 0
+    checks_failed = 0
+    warnings = 0
+
+    # 1. Configuration check
+    print "\n  Checking configuration... "
+    config = RailsErrorDashboard.configuration
+    begin
+      config.validate!
+      puts "OK"
+      checks_passed += 1
+    rescue RailsErrorDashboard::ConfigurationError => e
+      puts "FAILED"
+      puts "    Error: #{e.message}"
+      checks_failed += 1
+    end
+
+    # 2. Database mode
+    print "  Database mode... "
+    if config.use_separate_database
+      db_name = config.database || :error_dashboard
+      puts "SEPARATE (key: #{db_name})"
+    else
+      puts "SHARED (using primary database)"
+    end
+    checks_passed += 1
+
+    # 3. Database connection
+    print "  Database connection... "
+    begin
+      RailsErrorDashboard::ErrorLogsRecord.connection.active?
+      adapter = RailsErrorDashboard::ErrorLogsRecord.connection.adapter_name
+      puts "OK (#{adapter})"
+      checks_passed += 1
+    rescue => e
+      puts "FAILED"
+      puts "    Error: #{e.message}"
+      if config.use_separate_database
+        db_name = config.database || :error_dashboard
+        puts "    Hint: Make sure '#{db_name}:' is configured in config/database.yml"
+        puts "    Hint: Run 'rails db:create:#{db_name}' to create the database"
+      end
+      checks_failed += 1
+    end
+
+    # 4. Tables check
+    print "  Required tables... "
+    required_tables = %w[
+      rails_error_dashboard_applications
+      rails_error_dashboard_error_logs
+      rails_error_dashboard_error_occurrences
+      rails_error_dashboard_error_comments
+      rails_error_dashboard_error_baselines
+      rails_error_dashboard_cascade_patterns
+    ]
+
+    begin
+      conn = RailsErrorDashboard::ErrorLogsRecord.connection
+      existing = required_tables.select { |t| conn.table_exists?(t) }
+      missing = required_tables - existing
+
+      if missing.empty?
+        puts "OK (#{existing.size} tables found)"
+        checks_passed += 1
+      else
+        puts "INCOMPLETE"
+        missing.each { |t| puts "    Missing: #{t}" }
+        if config.use_separate_database
+          db_name = config.database || :error_dashboard
+          puts "    Hint: Run 'rails db:migrate:#{db_name}'"
+        else
+          puts "    Hint: Run 'rails db:migrate'"
+        end
+        checks_failed += 1
+      end
+    rescue => e
+      puts "SKIPPED (no connection)"
+    end
+
+    # 5. Application registration
+    print "  Application registration... "
+    begin
+      app_name = config.application_name ||
+                 ENV["APPLICATION_NAME"] ||
+                 (defined?(Rails) && Rails.application.class.module_parent_name) ||
+                 "Unknown"
+
+      current_app = RailsErrorDashboard::Application.find_by(name: app_name)
+      if current_app
+        puts "OK"
+        puts "    This app: \"#{app_name}\" (ID: #{current_app.id})"
+        checks_passed += 1
+      else
+        puts "PENDING"
+        puts "    App \"#{app_name}\" will be registered on first error"
+        warnings += 1
+      end
+
+      # List other registered apps
+      all_apps = RailsErrorDashboard::Application.order(:name).pluck(:name, :id)
+      other_apps = all_apps.reject { |name, _| name == app_name }
+      if other_apps.any?
+        puts "    Other apps in this database:"
+        other_apps.each { |name, id| puts "      - \"#{name}\" (ID: #{id})" }
+      end
+    rescue => e
+      puts "SKIPPED (#{e.message.truncate(60)})"
+    end
+
+    # 6. Error count
+    print "  Error data... "
+    begin
+      total = RailsErrorDashboard::ErrorLog.count
+      unresolved = RailsErrorDashboard::ErrorLog.where(resolved: false).count
+      puts "#{total} total errors (#{unresolved} unresolved)"
+      checks_passed += 1
+    rescue => e
+      puts "SKIPPED (#{e.message.truncate(60)})"
+    end
+
+    # 7. Authentication check
+    print "  Authentication... "
+    if config.dashboard_username == "gandalf" && config.dashboard_password == "youshallnotpass"
+      if Rails.env.production?
+        puts "WARNING - using default credentials in production!"
+        checks_failed += 1
+      else
+        puts "OK (default credentials - change before production)"
+        warnings += 1
+      end
+    else
+      puts "OK (custom credentials)"
+      checks_passed += 1
+    end
+
+    # Summary
+    puts "\n" + "-" * 70
+    puts "  Results: #{checks_passed} passed, #{checks_failed} failed, #{warnings} warnings"
+
+    if checks_failed > 0
+      puts "  Status: NEEDS ATTENTION"
+    elsif warnings > 0
+      puts "  Status: OK (with warnings)"
+    else
+      puts "  Status: ALL GOOD"
+    end
+
+    puts "=" * 70 + "\n"
+  end
+
   desc "List all registered applications with error counts"
   task list_applications: :environment do
     puts "\n" + "=" * 80

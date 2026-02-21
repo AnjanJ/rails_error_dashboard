@@ -23,7 +23,8 @@ pre-commit:
     rubocop-staged:
       priority: 1
       glob: "*.rb"
-      exclude: '(^|/)lib/generators/.*/templates/.*'
+      exclude:
+        - "lib/generators/**/templates/*"
       run: bundle exec rubocop {staged_files}
 
     # 2. RSpec - Only changed spec files
