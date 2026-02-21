@@ -55,20 +55,14 @@ Gem::Specification.new do |spec|
   # Pagination
   spec.add_dependency "pagy", "~> 43.0"
 
-  # Platform detection
-  spec.add_dependency "browser", "~> 6.0"
-
   # Grouping and time-based queries
   spec.add_dependency "groupdate", "~> 6.0"
 
-  # Charts for analytics
-  spec.add_dependency "chartkick", "~> 5.0"
-
-  # HTTP client for notifications (Discord, PagerDuty, Webhooks)
-  spec.add_dependency "httparty", ">= 0.24.0"
-
-  # Real-time updates via Turbo Streams
-  spec.add_dependency "turbo-rails", "~> 2.0"
+  # Optional dependencies — features degrade gracefully without these:
+  # browser (~> 6.0)    — richer platform detection (falls back to regex)
+  # chartkick (~> 5.0)  — chart helpers (falls back to CDN-only JS)
+  # httparty (>= 0.24)  — Discord/PagerDuty/webhook notifications (falls back to Net::HTTP)
+  # turbo-rails (~> 2.0) — real-time Turbo Stream updates (falls back to page refresh)
 
   # Pin concurrent-ruby for Rails 7.0 compatibility
   # Rails 7.0 had issues with concurrent-ruby 1.3.5+ which removed logger dependency

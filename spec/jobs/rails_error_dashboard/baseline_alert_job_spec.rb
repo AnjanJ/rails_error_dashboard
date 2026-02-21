@@ -30,7 +30,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
   describe "#perform" do
     context "when error log does not exist" do
       it "does not send notifications" do
-        expect(HTTParty).not_to receive(:post)
+        expect_any_instance_of(described_class).not_to receive(:post_json)
         described_class.new.perform(999_999, anomaly_data)
       end
     end
@@ -45,7 +45,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
       end
 
       it "does not send notifications" do
-        expect(HTTParty).not_to receive(:post)
+        expect_any_instance_of(described_class).not_to receive(:post_json)
         described_class.new.perform(error_log.id, anomaly_data)
       end
 
@@ -73,34 +73,32 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
           RailsErrorDashboard.configuration.slack_webhook_url = "https://hooks.slack.com/test"
         end
 
-        it "sends Slack notification" do
-          expect(HTTParty).to receive(:post).with(
+        it "sends Slack notification via post_json" do
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://hooks.slack.com/test",
-            hash_including(
-              headers: { "Content-Type" => "application/json" }
-            )
+            hash_including(text: "🚨 Baseline Anomaly Alert")
           )
 
           described_class.new.perform(error_log.id, anomaly_data)
         end
 
         it "includes error information in payload" do
-          payload = nil
-          allow(HTTParty).to receive(:post) do |_url, options|
-            payload = JSON.parse(options[:body])
+          captured_payload = nil
+          allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+            captured_payload = payload
           end
 
           described_class.new.perform(error_log.id, anomaly_data)
 
-          expect(payload["text"]).to eq("🚨 Baseline Anomaly Alert")
-          expect(payload["blocks"]).to be_present
+          expect(captured_payload[:text]).to eq("🚨 Baseline Anomaly Alert")
+          expect(captured_payload[:blocks]).to be_present
         end
 
         it "handles Slack errors gracefully" do
-          allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
+          allow_any_instance_of(described_class).to receive(:post_json).and_raise(StandardError.new("Network error"))
 
           expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Slack/).and_call_original
-          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
+          allow(Rails.logger).to receive(:error).and_call_original
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)
@@ -114,34 +112,32 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
           RailsErrorDashboard.configuration.discord_webhook_url = "https://discord.com/api/webhooks/test"
         end
 
-        it "sends Discord notification" do
-          expect(HTTParty).to receive(:post).with(
+        it "sends Discord notification via post_json" do
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://discord.com/api/webhooks/test",
-            hash_including(
-              headers: { "Content-Type" => "application/json" }
-            )
+            hash_including(embeds: anything)
           )
 
           described_class.new.perform(error_log.id, anomaly_data)
         end
 
         it "includes embeds in Discord payload" do
-          payload = nil
-          allow(HTTParty).to receive(:post) do |_url, options|
-            payload = JSON.parse(options[:body])
+          captured_payload = nil
+          allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+            captured_payload = payload
           end
 
           described_class.new.perform(error_log.id, anomaly_data)
 
-          expect(payload["embeds"]).to be_present
-          expect(payload["embeds"].first["title"]).to eq("🚨 Baseline Anomaly Detected")
+          expect(captured_payload[:embeds]).to be_present
+          expect(captured_payload[:embeds].first[:title]).to eq("🚨 Baseline Anomaly Detected")
         end
 
         it "handles Discord errors gracefully" do
-          allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
+          allow_any_instance_of(described_class).to receive(:post_json).and_raise(StandardError.new("Network error"))
 
           expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to Discord/).and_call_original
-          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
+          allow(Rails.logger).to receive(:error).and_call_original
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)
@@ -159,38 +155,38 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         end
 
         it "sends notifications to all webhook URLs" do
-          expect(HTTParty).to receive(:post).with(
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://example.com/webhook1",
-            hash_including(headers: { "Content-Type" => "application/json" })
+            anything
           )
 
-          expect(HTTParty).to receive(:post).with(
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://example.com/webhook2",
-            hash_including(headers: { "Content-Type" => "application/json" })
+            anything
           )
 
           described_class.new.perform(error_log.id, anomaly_data)
         end
 
         it "includes structured payload" do
-          payload = nil
-          allow(HTTParty).to receive(:post) do |_url, options|
-            payload = JSON.parse(options[:body])
+          captured_payload = nil
+          allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+            captured_payload = payload
           end
 
           described_class.new.perform(error_log.id, anomaly_data)
 
-          expect(payload["event"]).to eq("baseline_anomaly")
-          expect(payload["error"]["type"]).to eq(error_log.error_type)
-          expect(payload["anomaly"]["level"]).to eq("high")
-          expect(payload["anomaly"]["std_devs_above"]).to eq(3.2)
+          expect(captured_payload[:event]).to eq("baseline_anomaly")
+          expect(captured_payload[:error][:type]).to eq(error_log.error_type)
+          expect(captured_payload[:anomaly][:level]).to eq("high")
+          expect(captured_payload[:anomaly][:std_devs_above]).to eq(3.2)
         end
 
         it "handles webhook errors gracefully" do
-          allow(HTTParty).to receive(:post).and_raise(StandardError.new("Network error"))
+          allow_any_instance_of(described_class).to receive(:post_json).and_raise(StandardError.new("Network error"))
 
           expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to webhook/).and_call_original
-          allow(Rails.logger).to receive(:error).and_call_original  # Allow other error logs
+          allow(Rails.logger).to receive(:error).and_call_original
 
           expect {
             described_class.new.perform(error_log.id, anomaly_data)
@@ -242,12 +238,12 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         end
 
         it "sends to all enabled channels" do
-          expect(HTTParty).to receive(:post).with(
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://hooks.slack.com/test",
             anything
           )
 
-          expect(HTTParty).to receive(:post).with(
+          expect_any_instance_of(described_class).to receive(:post_json).with(
             "https://discord.com/api/webhooks/test",
             anything
           )
@@ -258,42 +254,37 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
     end
 
     context "with different anomaly levels" do
-      it "formats elevated anomaly correctly" do
-        elevated_anomaly = anomaly_data.merge(level: :elevated)
-        payload = nil
-        allow(HTTParty).to receive(:post) do |_url, options|
-          payload = JSON.parse(options[:body])
-        end
-
+      before do
         RailsErrorDashboard.configuration.enable_slack_notifications = true
         RailsErrorDashboard.configuration.slack_webhook_url = "https://hooks.slack.com/test"
+      end
+
+      it "formats elevated anomaly correctly" do
+        elevated_anomaly = anomaly_data.merge(level: :elevated)
+        captured_payload = nil
+        allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+          captured_payload = payload
+        end
 
         described_class.new.perform(error_log.id, elevated_anomaly)
 
-        severity_field = payload["blocks"].find { |b| b["type"] == "section" }&.dig("fields")&.find { |f| f["text"].include?("Severity") }
-        expect(severity_field["text"]).to include("ELEVATED")
+        severity_field = captured_payload[:blocks].find { |b| b[:type] == "section" }&.dig(:fields)&.find { |f| f[:text].include?("Severity") }
+        expect(severity_field[:text]).to include("ELEVATED")
       end
 
       it "formats critical anomaly correctly" do
         critical_anomaly = anomaly_data.merge(level: :critical)
-        payload = nil
-        allow(HTTParty).to receive(:post) do |_url, options|
-          payload = JSON.parse(options[:body])
+        captured_payload = nil
+        allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+          captured_payload = payload
         end
-
-        RailsErrorDashboard.configuration.enable_slack_notifications = true
-        RailsErrorDashboard.configuration.slack_webhook_url = "https://hooks.slack.com/test"
 
         described_class.new.perform(error_log.id, critical_anomaly)
 
-        severity_field = payload["blocks"].find { |b| b["type"] == "section" }&.dig("fields")&.find { |f| f["text"].include?("Severity") }
-        expect(severity_field["text"]).to include("CRITICAL")
-        expect(severity_field["text"]).to include("🔴")
+        severity_field = captured_payload[:blocks].find { |b| b[:type] == "section" }&.dig(:fields)&.find { |f| f[:text].include?("Severity") }
+        expect(severity_field[:text]).to include("CRITICAL")
+        expect(severity_field[:text]).to include("🔴")
       end
     end
-
-    # Note: Custom cooldown period test removed due to timing issues with freeze_time.
-    # The cooldown configuration parameter is verified to be passed to the throttler
-    # in the throttling tests above.
   end
 end

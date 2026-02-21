@@ -5,13 +5,15 @@ require "rails_error_dashboard/configuration"
 require "rails_error_dashboard/logger"
 require "rails_error_dashboard/manual_error_reporter"
 
-# External dependencies
+# Required dependencies
 require "pagy"
-require "browser"
 require "groupdate"
-require "httparty"
-require "chartkick"
-require "turbo-rails"
+
+# Optional dependencies — features degrade gracefully without these
+begin; require "browser"; rescue LoadError; end
+begin; require "httparty"; rescue LoadError; end
+begin; require "chartkick"; rescue LoadError; end
+begin; require "turbo-rails"; rescue LoadError; end
 
 
 # Core library files

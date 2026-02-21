@@ -31,5 +31,11 @@ gem "lefthook", "~> 2.0", require: false
 # Security audit for dependencies
 gem "bundler-audit", require: false
 
+# Optional gem dependencies — needed in development/test for full feature coverage
+gem "browser", "~> 6.0"
+gem "chartkick", "~> 5.0"
+gem "httparty", ">= 0.24"
+gem "turbo-rails", "~> 2.0"
+
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"

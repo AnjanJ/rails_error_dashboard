@@ -73,11 +73,7 @@ module RailsErrorDashboard
     def send_slack_notification(error_log, anomaly_data, config)
       payload = Services::BaselineAlertPayloadBuilder.slack_payload(error_log, anomaly_data)
 
-      HTTParty.post(
-        config.slack_webhook_url,
-        body: payload.to_json,
-        headers: { "Content-Type" => "application/json" }
-      )
+      post_json(config.slack_webhook_url, payload)
     rescue => e
       Rails.logger.error("Failed to send baseline alert to Slack: #{e.message}")
     end
@@ -93,11 +89,7 @@ module RailsErrorDashboard
     def send_discord_notification(error_log, anomaly_data, config)
       payload = Services::BaselineAlertPayloadBuilder.discord_payload(error_log, anomaly_data)
 
-      HTTParty.post(
-        config.discord_webhook_url,
-        body: payload.to_json,
-        headers: { "Content-Type" => "application/json" }
-      )
+      post_json(config.discord_webhook_url, payload)
     rescue => e
       Rails.logger.error("Failed to send baseline alert to Discord: #{e.message}")
     end
@@ -106,14 +98,26 @@ module RailsErrorDashboard
       payload = Services::BaselineAlertPayloadBuilder.webhook_payload(error_log, anomaly_data)
 
       config.webhook_urls.each do |url|
-        HTTParty.post(
-          url,
-          body: payload.to_json,
-          headers: { "Content-Type" => "application/json" }
-        )
+        post_json(url, payload)
       end
     rescue => e
       Rails.logger.error("Failed to send baseline alert to webhook: #{e.message}")
+    end
+
+    def post_json(url, payload)
+      if defined?(HTTParty)
+        HTTParty.post(url, body: payload.to_json,
+          headers: { "Content-Type" => "application/json" }, timeout: 10)
+      else
+        uri = URI(url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == "https"
+        http.open_timeout = 5
+        http.read_timeout = 10
+        request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
+        request.body = payload.to_json
+        http.request(request)
+      end
     end
 
     def send_pagerduty_notification(error_log, _anomaly_data, _config)

@@ -1,7 +1,7 @@
 <% content_for :page_title, "Errors" %>
 
-<!-- Subscribe to Turbo Stream updates (only if ActionCable is available) -->
-<% if defined?(ActionCable) %>
+<!-- Subscribe to Turbo Stream updates (only if Turbo Streams is available) -->
+<% if defined?(Turbo::StreamsHelper) && respond_to?(:turbo_stream_from) %>
   <%= turbo_stream_from "error_list" %>
 <% end %>
 
@@ -74,8 +74,8 @@
     </div>
   <% end %>
 
-  <!-- 7-Day Error Trend -->
-  <% if @stats[:errors_trend_7d]&.any? %>
+  <!-- 7-Day Error Trend (requires chartkick gem) -->
+  <% if @stats[:errors_trend_7d]&.any? && respond_to?(:line_chart) %>
     <div class="row g-4 mb-4">
       <div class="col-md-8">
         <div class="card">

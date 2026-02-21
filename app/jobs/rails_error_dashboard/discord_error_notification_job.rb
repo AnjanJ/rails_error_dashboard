@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "httparty"
-
 module RailsErrorDashboard
   # Job to send error notifications to Discord via webhook
   class DiscordErrorNotificationJob < ApplicationJob
@@ -14,16 +12,28 @@ module RailsErrorDashboard
       return unless webhook_url.present?
 
       payload = Services::DiscordPayloadBuilder.call(error_log)
-
-      HTTParty.post(
-        webhook_url,
-        body: payload.to_json,
-        headers: { "Content-Type" => "application/json" },
-        timeout: 10  # CRITICAL: 10 second timeout to prevent hanging
-      )
+      post_json(webhook_url, payload)
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Failed to send Discord notification: #{e.message}")
       Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+    end
+
+    private
+
+    def post_json(url, payload)
+      if defined?(HTTParty)
+        HTTParty.post(url, body: payload.to_json,
+          headers: { "Content-Type" => "application/json" }, timeout: 10)
+      else
+        uri = URI(url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == "https"
+        http.open_timeout = 5
+        http.read_timeout = 10
+        request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
+        request.body = payload.to_json
+        http.request(request)
+      end
     end
   end
 end

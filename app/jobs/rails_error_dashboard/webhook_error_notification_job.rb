@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "httparty"
-
 module RailsErrorDashboard
   # Job to send error notifications to custom webhook URLs
   # Supports multiple webhooks for different integrations
@@ -30,23 +28,47 @@ module RailsErrorDashboard
     private
 
     def send_webhook(url, payload, error_log)
-      response = HTTParty.post(
-        url,
-        body: payload.to_json,
-        headers: {
-          "Content-Type" => "application/json",
-          "User-Agent" => "RailsErrorDashboard/1.0",
-          "X-Error-Dashboard-Event" => "error.created",
-          "X-Error-Dashboard-ID" => error_log.id.to_s
-        },
-        timeout: 10  # CRITICAL: 10 second timeout to prevent hanging
-      )
+      headers = {
+        "Content-Type" => "application/json",
+        "User-Agent" => "RailsErrorDashboard/1.0",
+        "X-Error-Dashboard-Event" => "error.created",
+        "X-Error-Dashboard-ID" => error_log.id.to_s
+      }
 
-      unless response.success?
-        Rails.logger.warn("[RailsErrorDashboard] Webhook failed for #{url}: #{response.code}")
+      response = post_json(url, payload, headers)
+
+      unless response_success?(response)
+        Rails.logger.warn("[RailsErrorDashboard] Webhook failed for #{url}: #{response_code(response)}")
       end
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Webhook error for #{url}: #{e.message}")
+    end
+
+    def post_json(url, payload, headers)
+      if defined?(HTTParty)
+        HTTParty.post(url, body: payload.to_json, headers: headers, timeout: 10)
+      else
+        uri = URI(url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == "https"
+        http.open_timeout = 5
+        http.read_timeout = 10
+        request = Net::HTTP::Post.new(uri.path, headers)
+        request.body = payload.to_json
+        http.request(request)
+      end
+    end
+
+    def response_success?(response)
+      if response.respond_to?(:success?)
+        response.success?
+      else
+        response.is_a?(Net::HTTPSuccess)
+      end
+    end
+
+    def response_code(response)
+      response.respond_to?(:code) ? response.code : response&.code
     end
   end
 end

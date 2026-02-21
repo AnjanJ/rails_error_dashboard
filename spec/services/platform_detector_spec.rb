@@ -71,5 +71,44 @@ RSpec.describe RailsErrorDashboard::Services::PlatformDetector do
         expect(described_class.detect(user_agent)).to eq('API')
       end
     end
+
+    context 'without browser gem (regex fallback)' do
+      before { hide_const('Browser') }
+
+      it 'detects iPhone via regex' do
+        user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)'
+        expect(described_class.detect(user_agent)).to eq('iOS')
+      end
+
+      it 'detects iPad via regex' do
+        user_agent = 'Mozilla/5.0 (iPad; CPU OS 16_0 like Mac OS X)'
+        expect(described_class.detect(user_agent)).to eq('iOS')
+      end
+
+      it 'detects Android via regex' do
+        user_agent = 'Mozilla/5.0 (Linux; Android 13; Pixel 7)'
+        expect(described_class.detect(user_agent)).to eq('Android')
+      end
+
+      it 'returns API for blank user agent' do
+        expect(described_class.detect(nil)).to eq('API')
+        expect(described_class.detect('')).to eq('API')
+      end
+
+      it 'returns API for desktop browsers' do
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0'
+        expect(described_class.detect(user_agent)).to eq('API')
+      end
+
+      it 'detects Expo iOS via regex' do
+        user_agent = 'Expo/1.0.0 iOS/16.0'
+        expect(described_class.detect(user_agent)).to eq('iOS')
+      end
+
+      it 'detects Expo Android via regex' do
+        user_agent = 'Expo/1.0.0 Android/13'
+        expect(described_class.detect(user_agent)).to eq('Android')
+      end
+    end
   end
 end
