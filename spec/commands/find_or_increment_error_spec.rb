@@ -130,6 +130,15 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
         expect(result.just_reopened).to be true
       end
 
+      it "sets reopened_at timestamp" do
+        freeze_time do
+          result = described_class.call(error_hash, base_attributes)
+          if RailsErrorDashboard::ErrorLog.column_names.include?("reopened_at")
+            expect(result.reopened_at).to be_within(1.second).of(Time.current)
+          end
+        end
+      end
+
       it "reopens even if resolved more than 24h ago" do
         resolved_error.update!(occurred_at: 1.month.ago, last_seen_at: 1.month.ago)
 

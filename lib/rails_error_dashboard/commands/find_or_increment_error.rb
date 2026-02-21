@@ -68,7 +68,7 @@ module RailsErrorDashboard
       end
 
       def reopen_existing(error)
-        error.update!(
+        attrs = {
           resolved: false,
           status: "new",
           resolved_at: nil,
@@ -79,7 +79,9 @@ module RailsErrorDashboard
           request_params: @attributes[:request_params] || error.request_params,
           user_agent: @attributes[:user_agent] || error.user_agent,
           ip_address: @attributes[:ip_address] || error.ip_address
-        )
+        }
+        attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
+        error.update!(attrs)
         error.just_reopened = true
         error
       end

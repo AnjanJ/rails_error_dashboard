@@ -111,6 +111,11 @@
               <% if @error.recent? %>
                 <span class="badge bg-success ms-2" data-bs-toggle="tooltip" title="Error occurred within the last hour">NEW</span>
               <% end %>
+              <% if @error.reopened? %>
+                <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip" title="Previously resolved, recurred <%= @error.reopened_at&.strftime('%b %d, %Y %H:%M') %>">
+                  <i class="bi bi-arrow-counterclockwise"></i> Reopened
+                </span>
+              <% end %>
             </h5>
             <button class="btn btn-sm btn-outline-light" onclick="copyToClipboard('<%= j @error.error_type %>', this)" title="Copy error type">
               <i class="bi bi-clipboard"></i>
@@ -870,6 +875,20 @@
               </span>
             <% end %>
           </div>
+
+          <!-- Reopened indicator -->
+          <% if @error.reopened? %>
+            <div class="mb-3">
+              <small class="text-muted d-block mb-1">Reopened</small>
+              <span class="badge bg-warning text-dark">
+                <i class="bi bi-arrow-counterclockwise"></i> Reopened
+              </span>
+              <br>
+              <small class="text-muted mt-1 d-block">
+                <%= local_time(@error.reopened_at, format: :full) %>
+              </small>
+            </div>
+          <% end %>
 
           <!-- Phase 3: Assignment -->
           <% if @error.respond_to?(:assigned_to) %>

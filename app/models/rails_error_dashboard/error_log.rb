@@ -8,6 +8,12 @@ module RailsErrorDashboard
     # Not persisted — used by LogError to decide notification behavior.
     attr_accessor :just_reopened
 
+    # Was this error previously resolved and then reopened due to recurrence?
+    # Uses the persisted `reopened_at` column (set by FindOrIncrementError).
+    def reopened?
+      respond_to?(:reopened_at) && reopened_at.present?
+    end
+
     # Priority level constants
     # Using industry standard: P0 = Critical (highest), P3 = Low (lowest)
     PRIORITY_LEVELS = {

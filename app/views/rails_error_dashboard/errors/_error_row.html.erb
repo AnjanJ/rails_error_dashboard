@@ -87,6 +87,9 @@
     <% else %>
       <i class="bi bi-exclamation-circle-fill text-danger" data-bs-toggle="tooltip" title="Unresolved"></i>
     <% end %>
+    <% if error.reopened? %>
+      <i class="bi bi-arrow-counterclockwise text-warning ms-1" data-bs-toggle="tooltip" title="Reopened"></i>
+    <% end %>
   </td>
   <td onclick="event.stopPropagation();">
     <%= link_to error_path(error), class: "btn btn-sm btn-outline-primary" do %>
