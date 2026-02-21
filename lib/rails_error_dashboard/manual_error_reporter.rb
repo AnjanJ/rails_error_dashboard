@@ -136,6 +136,18 @@ module RailsErrorDashboard
         @backtrace = backtrace
       end
 
+      # SyntheticExceptions don't have real backtrace_locations (Ruby Thread::Backtrace::Location objects).
+      # LogError calls this for backtrace_signature calculation — returning nil is safe.
+      def backtrace_locations
+        nil
+      end
+
+      # SyntheticExceptions don't have a cause chain.
+      # LogError calls this for CauseChainExtractor — returning nil skips extraction.
+      def cause
+        nil
+      end
+
       # Returns a mock class object that represents the error type
       # @return [Object] A class-like object with the error type as its name
       def class
