@@ -102,6 +102,13 @@ module RailsErrorDashboard
     attr_accessor :only_show_app_code_source       # Hide gems/stdlib (default: true)
     attr_accessor :git_branch_strategy             # :commit_sha, :current_branch, :main (default: :commit_sha)
 
+    # Sensitive data filtering (on by default)
+    # Redacts passwords, tokens, credit cards, SSNs, etc. before storage.
+    # Uses built-in defaults + Rails' filter_parameters + custom patterns.
+    # Set to false if you want raw data stored (you own your database).
+    attr_accessor :filter_sensitive_data
+    attr_accessor :sensitive_data_patterns # Additional patterns beyond Rails' filter_parameters
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -189,6 +196,10 @@ module RailsErrorDashboard
       @source_code_cache_ttl = 3600  # 1 hour cache
       @only_show_app_code_source = true  # Hide gem/vendor code for security
       @git_branch_strategy = :commit_sha  # Use error's git_sha (most accurate)
+
+      # Sensitive data filtering defaults - ON by default (filters passwords, tokens, credit cards, etc.)
+      @filter_sensitive_data = true
+      @sensitive_data_patterns = []
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging

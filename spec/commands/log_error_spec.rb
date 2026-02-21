@@ -176,6 +176,52 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    context 'sensitive data filtering' do
+      let(:request) do
+        double('Request',
+          fullpath: '/login?password=secret123',
+          params: ActionController::Parameters.new(
+            password: 'secret123', username: 'alice', controller: 'sessions', action: 'create'
+          ),
+          user_agent: 'Chrome',
+          remote_ip: '127.0.0.1',
+          request_id: 'req-test',
+          session: double('Session', id: 'sess-test'),
+          method: 'POST',
+          host: 'localhost',
+          content_type: nil,
+          env: {}
+        )
+      end
+      let(:context) { { request: request } }
+
+      it 'does not filter when filter_sensitive_data is false' do
+        RailsErrorDashboard.configuration.filter_sensitive_data = false
+        RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+
+        described_class.call(exception, context)
+        error_log = RailsErrorDashboard::ErrorLog.last
+
+        expect(error_log.request_params).to include('secret123')
+
+        RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+      end
+
+      it 'filters sensitive params when filter_sensitive_data is true (default)' do
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+        RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+
+        described_class.call(exception, context)
+        error_log = RailsErrorDashboard::ErrorLog.last
+
+        expect(error_log.request_params).to include('[FILTERED]')
+        expect(error_log.request_params).not_to include('secret123')
+        expect(error_log.request_params).to include('alice')
+
+        RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+      end
+    end
+
     context 'environment info capture' do
       it 'stores environment_info as JSON when column exists' do
         skip "column not present" unless RailsErrorDashboard::ErrorLog.column_names.include?("environment_info")
