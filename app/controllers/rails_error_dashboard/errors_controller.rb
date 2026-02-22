@@ -19,6 +19,7 @@ module RailsErrorDashboard
       assignee_name
       priority_level
       hide_snoozed
+      reopened
       sort_by
       sort_direction
     ].freeze

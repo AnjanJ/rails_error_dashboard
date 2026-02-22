@@ -24,6 +24,7 @@ module RailsErrorDashboard
               total_month: base_scope.where("occurred_at >= ?", 30.days.ago).count,
               unresolved: base_scope.unresolved.count,
               resolved: base_scope.resolved.count,
+              reopened: reopened_count,
               by_platform: base_scope.group(:platform).count,
               top_errors: top_errors,
               #  Trend visualizations
@@ -55,6 +56,7 @@ module RailsErrorDashboard
             total_month: 0,
             unresolved: 0,
             resolved: 0,
+            reopened: 0,
             by_platform: {},
             top_errors: {},
             errors_trend_7d: {},
@@ -91,6 +93,12 @@ module RailsErrorDashboard
         scope = ErrorLog.all
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
+      end
+
+      def reopened_count
+        return 0 unless ErrorLog.column_names.include?("reopened_at")
+
+        base_scope.where.not(reopened_at: nil).count
       end
 
       def top_errors

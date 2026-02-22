@@ -39,6 +39,7 @@ module RailsErrorDashboard
         query = filter_by_assignment(query)
         query = filter_by_priority(query)
         query = filter_by_snoozed(query)
+        query = filter_by_reopened(query)
         query
       end
 
@@ -193,6 +194,13 @@ module RailsErrorDashboard
         else
           query
         end
+      end
+
+      def filter_by_reopened(query)
+        return query unless @filters[:reopened] == "true"
+        return query unless ErrorLog.column_names.include?("reopened_at")
+
+        query.where.not(reopened_at: nil)
       end
 
       def filter_by_timeframe(query)

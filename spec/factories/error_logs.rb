@@ -42,6 +42,11 @@ FactoryBot.define do
       user_id { rand(1..100) }
     end
 
+    trait :reopened do
+      resolved { false }
+      reopened_at { Time.current }
+    end
+
     trait :with_backtrace do
       backtrace { "app/models/user.rb:10:in `save'\napp/controllers/users_controller.rb:20:in `create'\napp/services/user_service.rb:5:in `process'" }
     end

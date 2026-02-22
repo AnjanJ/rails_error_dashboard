@@ -186,9 +186,11 @@
       <!-- Quick Filter Buttons -->
       <div class="d-flex gap-2 mb-3">
         <%= link_to "All Errors", errors_path,
-            class: "btn btn-sm #{params[:assigned_to].blank? ? 'btn-primary' : 'btn-outline-primary'}" %>
+            class: "btn btn-sm #{params[:assigned_to].blank? && params[:reopened].blank? ? 'btn-primary' : 'btn-outline-primary'}" %>
         <%= link_to "Unassigned", errors_path(assigned_to: '__unassigned__'),
             class: "btn btn-sm #{params[:assigned_to] == '__unassigned__' ? 'btn-primary' : 'btn-outline-primary'}" %>
+        <%= link_to "Reopened", errors_path(reopened: 'true'),
+            class: "btn btn-sm #{params[:reopened] == 'true' ? 'btn-primary' : 'btn-outline-primary'}" %>
       </div>
 
       <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false } do %>

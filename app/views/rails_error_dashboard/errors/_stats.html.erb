@@ -1,5 +1,5 @@
 <div class="row g-4">
-  <div class="col-md-3">
+  <div class="col">
     <div class="card stat-card">
       <div class="card-body">
         <div class="stat-label mb-2">Today</div>
@@ -7,7 +7,7 @@
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col">
     <div class="card stat-card">
       <div class="card-body">
         <div class="stat-label mb-2">This Week</div>
@@ -15,7 +15,7 @@
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col">
     <div class="card stat-card">
       <div class="card-body">
         <div class="stat-label mb-2">Unresolved</div>
@@ -23,11 +23,19 @@
       </div>
     </div>
   </div>
-  <div class="col-md-3">
+  <div class="col">
     <div class="card stat-card">
       <div class="card-body">
         <div class="stat-label mb-2">Resolved</div>
         <div class="stat-value text-success"><%= stats[:resolved] %></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-label mb-2">Reopened</div>
+        <div class="stat-value text-warning"><%= stats[:reopened] %></div>
       </div>
     </div>
   </div>
