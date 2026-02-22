@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add line numbers to backtrace frames in error detail view (#69) @midwire
+
 ### v0.2 Quick Wins
 
 #### 🔗 Exception Cause Chain Capture

@@ -54,6 +54,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 
 ### Error Context
 - **Full backtrace** with file paths, line numbers, and method names
+- **Numbered backtrace frames** 🆕 — Each frame displays a numbered indicator for easy reference during debugging
 - **Structured backtrace** 🆕 — Uses `backtrace_locations` for richer path/line/method data when available
 - **Request details**: URL, HTTP method, params, headers
 - **Enriched HTTP context** 🆕 — `http_method`, `hostname`, `content_type`, `request_duration_ms` captured automatically
@@ -318,7 +319,7 @@ config.use_separate_database = true   # Separate database
 - **First/last seen** timestamps
 
 ### Error Details Page
-- **Full backtrace** with syntax highlighting
+- **Full backtrace** with syntax highlighting and numbered frames
 - **Request metadata** (URL, params, headers)
 - **User information** (if tracked)
 - **Platform and version details**
