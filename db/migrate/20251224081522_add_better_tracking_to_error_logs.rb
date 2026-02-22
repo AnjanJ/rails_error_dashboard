@@ -1,4 +1,4 @@
-class AddBetterTrackingToErrorLogs < ActiveRecord::Migration[8.1]
+class AddBetterTrackingToErrorLogs < ActiveRecord::Migration[7.0]
   def change
     # Skip if squashed migration already added these columns
     return if column_exists?(:rails_error_dashboard_error_logs, :error_hash)

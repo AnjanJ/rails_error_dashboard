@@ -1,4 +1,4 @@
-class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[8.1]
+class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[7.0]
   def up
     # Skip if squashed migration ran (column never existed) or already removed
     return unless column_exists?(:rails_error_dashboard_error_logs, :environment)

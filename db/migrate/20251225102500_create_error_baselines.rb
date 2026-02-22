@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateErrorBaselines < ActiveRecord::Migration[8.0]
+class CreateErrorBaselines < ActiveRecord::Migration[7.0]
   def change
     # Skip if squashed migration already created this table
     return if table_exists?(:rails_error_dashboard_error_baselines)

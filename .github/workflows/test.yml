@@ -41,7 +41,7 @@ jobs:
         mkdir -p spec/dummy/db
         cd spec/dummy
         rm -f db/*.sqlite3
-        RAILS_ENV=test bundle exec rake db:migrate
+        RAILS_ENV=test bundle exec rake db:schema:load
         cd ../..
 
     - name: Run unit and integration tests
@@ -85,7 +85,7 @@ jobs:
         mkdir -p spec/dummy/db
         cd spec/dummy
         rm -f db/*.sqlite3
-        RAILS_ENV=test bundle exec rake db:migrate
+        RAILS_ENV=test bundle exec rake db:schema:load
         cd ../..
 
     - name: Run system tests

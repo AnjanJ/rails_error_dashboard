@@ -12,7 +12,7 @@
 # - Up to 70x speedup on analytics dashboard queries
 #
 # All PostgreSQL-specific — gracefully skipped on SQLite/MySQL.
-class AddTimeSeriesIndexesToErrorLogs < ActiveRecord::Migration[8.0]
+class AddTimeSeriesIndexesToErrorLogs < ActiveRecord::Migration[7.0]
   def up
     return unless postgresql?
 
