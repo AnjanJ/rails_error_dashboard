@@ -463,6 +463,9 @@ RSpec.describe "Query Integration", type: :system do
 
     context "when LogError creates error with proper hash" do
       it "shows the error on the detail page with correct attributes" do
+        # Ensure synchronous logging so LogError.call returns an ErrorLog record
+        RailsErrorDashboard.configuration.async_logging = false
+
         error = NameError.new("undefined local variable 'x'")
         error.set_backtrace([ "#{Rails.root}/app/controllers/widgets_controller.rb:10:in `show'" ])
 
