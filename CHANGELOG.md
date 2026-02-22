@@ -7,6 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### v0.2 Quick Wins
+
+#### 🔗 Exception Cause Chain Capture
+
+Automatically walk the full exception `cause` chain and store it as structured JSON. When a `SocketError` causes a `RuntimeError`, you'll see both — not just the wrapper.
+
+- Stores each cause's class name, message, and backtrace
+- Displayed on the error detail page with collapsible cause chain viewer
+- New `exception_cause` text column on `error_logs`
+
+#### 🌐 Enriched Error Context
+
+Every HTTP error now captures richer request context automatically:
+
+- `http_method` — GET, POST, PUT, PATCH, DELETE
+- `hostname` — the server that handled the request
+- `content_type` — request content type
+- `request_duration_ms` — how long the request took before it errored
+
+No configuration needed — captured automatically from the Rack environment.
+
+#### 🔑 Custom Fingerprint Lambda
+
+Override the default error grouping with your own logic:
+
+```ruby
+config.custom_fingerprint = ->(exception, context) {
+  case exception
+  when ActiveRecord::RecordNotFound
+    "record-not-found-#{context[:controller]}"
+  else
+    nil # fall back to default fingerprinting
+  end
+}
+```
+
+Return `nil` to use the default fingerprint, or return a string to group errors your way.
+
+#### 👤 CurrentAttributes Integration
+
+Automatically captures `Current.user`, `Current.account`, `Current.request_id` (and any other attributes) from your `ActiveSupport::CurrentAttributes` subclasses. Zero configuration — if you use `Current`, we capture it.
+
+#### ⚡ BRIN Indexes for Time-Series Performance
+
+Added PostgreSQL BRIN index on `occurred_at` for dramatically faster time-range queries:
+
+- 72KB index vs 676MB B-tree on large tables
+- Functional index on `DATE(occurred_at)` for 70x faster Groupdate queries
+- Falls back to standard B-tree indexes on MySQL/SQLite
+
+#### 📦 Reduced Dependencies
+
+Made 4 runtime dependencies optional instead of required:
+
+- `browser` — only needed if platform detection is used
+- `chartkick` — only needed for chart rendering
+- `httparty` — only needed for webhook/Slack/Discord/PagerDuty notifications
+- `turbo-rails` — only needed for real-time Turbo Stream updates
+
+Core gem now requires only `rails` and `pagy`.
+
+#### 🔍 Structured Backtrace Parsing
+
+Uses `backtrace_locations` (when available) for richer backtrace data with proper `path`, `lineno`, and `label` fields. Falls back to string parsing for exceptions that only provide string backtraces.
+
+#### 🖥️ Environment Info Capture
+
+Automatically captures the runtime environment at error time:
+
+- Ruby version, Rails version
+- Key gem versions (puma, sidekiq, etc.)
+- Server software (Puma, Unicorn, Passenger)
+- Database adapter (postgresql, mysql2, sqlite3)
+
+Stored as JSON in the `environment_info` column. Displayed on the error detail page.
+
+#### 🔒 Sensitive Data Filtering
+
+Automatically filters passwords, tokens, secrets, and API keys from error context before storage:
+
+- Default patterns: `password`, `token`, `secret`, `api_key`, `authorization`, `credit_card`, `ssn`
+- Configurable pattern list via `config.sensitive_data_patterns`
+- Enable/disable with `config.filter_sensitive_data` (enabled by default)
+- Replaces sensitive values with `[FILTERED]`
+
+#### 🔄 Auto-Reopen on Recurrence
+
+When a resolved error recurs, it automatically reopens instead of staying resolved:
+
+- Sets `reopened_at` timestamp and clears `resolved` status
+- Increments occurrence count
+- Visual "Reopened" badge in the dashboard UI
+- New `reopened_at` datetime column on `error_logs`
+
+#### 🔕 Notification Throttling
+
+Three layers of notification control to prevent alert fatigue:
+
+- **Severity filter** — `config.notification_minimum_severity` (default: `:low`) — skip notifications for low-severity errors
+- **Per-error cooldown** — `config.notification_cooldown_minutes` (default: `5`) — don't re-notify for the same error within the cooldown window
+- **Threshold alerts** — `config.notification_threshold_alerts` (default: `[10, 50, 100, 500, 1000]`) — get milestone notifications when an error hits occurrence thresholds
+
+#### 🐛 Bug Fixes
+
+- Guard `turbo_stream_from` against missing ActionCable in host apps that use Turbo but don't load ActionCable engine
+- Add `backtrace_locations` and `cause` to `SyntheticException` for testing
+- Fix Phase H chaos test connection check for SQLite compatibility (`active?` returns `nil` on SQLite)
+
+#### 🧪 Testing
+
+- 1,826+ RSpec specs (up from 1,300+), 0 pending
+- Added system tests for v0.2 quick wins UI features
+- Added Phase G chaos tests for v0.2 quick wins
+- Added unit, system, and chaos tests for database setup features
+- Enhanced installer with 3 database modes and verify rake task
+
+---
+
 ## [0.1.38] - 2026-02-18
 
 ### ⬆️ Dependencies

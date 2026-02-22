@@ -25,10 +25,16 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (2 features)** 🆕
+**🔍 Developer Tools (2 features)**
 - Source Code Integration, Git Blame
 
-All features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](guides/CONFIGURATION.md) for setup.
+**🆕 v0.2 Smart Defaults (Always ON)**
+- Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
+
+**🆕 v0.2 Configurable**
+- Custom Fingerprint Lambda, Notification Throttling (severity filter, cooldown, threshold alerts)
+
+All optional features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](guides/CONFIGURATION.md) for setup.
 
 ---
 
@@ -48,7 +54,12 @@ All features are disabled by default and can be toggled on/off at any time. See 
 
 ### Error Context
 - **Full backtrace** with file paths, line numbers, and method names
+- **Structured backtrace** 🆕 — Uses `backtrace_locations` for richer path/line/method data when available
 - **Request details**: URL, HTTP method, params, headers
+- **Enriched HTTP context** 🆕 — `http_method`, `hostname`, `content_type`, `request_duration_ms` captured automatically
+- **Exception cause chain** 🆕 — Full `cause` chain stored as structured JSON (e.g., `SocketError` → `RuntimeError`)
+- **Environment info** 🆕 — Ruby version, Rails version, gem versions, server, database adapter captured at error time
+- **CurrentAttributes integration** 🆕 — Auto-captures `Current.user`, `Current.account`, and any other `ActiveSupport::CurrentAttributes`
 - **User tracking**: Associate errors with specific users
 - **Custom context**: Add any metadata you need (component, screen, action, etc.)
 - **App version tracking**: Git SHA and version number
@@ -204,6 +215,17 @@ config.enable_webhook_notifications = true
 - **Retry logic** for failed webhooks
 - **Integrate with**: Zapier, IFTTT, custom services
 
+### Notification Throttling 🆕
+- **Severity filter** — `config.notification_minimum_severity` skips notifications for low-priority errors
+- **Per-error cooldown** — `config.notification_cooldown_minutes` (default: 5) prevents duplicate notifications for the same error
+- **Threshold alerts** — `config.notification_threshold_alerts` (default: `[10, 50, 100, 500, 1000]`) sends milestone notifications when errors hit occurrence thresholds
+
+```ruby
+config.notification_minimum_severity = :medium  # Skip :low severity
+config.notification_cooldown_minutes = 10       # 10-minute cooldown per error
+config.notification_threshold_alerts = [10, 50, 100, 500, 1000]  # Milestone alerts
+```
+
 ### Notification Callbacks
 - **Ruby code hooks** for custom logic
 - **Event types**: error_logged, critical_error, error_resolved
@@ -254,6 +276,8 @@ config.use_separate_database = true   # Separate database
 
 ### Database Optimization
 - **Composite indexes** for 100-2500x query speedups
+- **BRIN indexes** 🆕 — PostgreSQL BRIN index on `occurred_at` (72KB vs 676MB B-tree)
+- **Functional indexes** 🆕 — `DATE(occurred_at)` index for 70x faster time-group queries
 - **Partial indexes** for unresolved errors (PostgreSQL)
 - **GIN indexes** for full-text search (PostgreSQL)
 - **Query optimization** using CQRS pattern
@@ -287,8 +311,10 @@ config.use_separate_database = true   # Separate database
 
 ### Error Grouping
 - **Automatic grouping** by error type and message
+- **Custom fingerprint lambda** 🆕 — Override grouping logic for specific error types
 - **Smart de-duplication** to reduce noise
 - **Occurrence counting** for grouped errors
+- **Auto-reopen** 🆕 — Resolved errors automatically reopen when they recur (with "Reopened" badge)
 - **First/last seen** timestamps
 
 ### Error Details Page
@@ -436,6 +462,8 @@ config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"  # Default branch
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure
+- **Sensitive data filtering** 🆕 — Passwords, tokens, secrets, API keys auto-filtered before storage
+- **Configurable filter patterns** 🆕 — Add custom patterns via `config.sensitive_data_patterns`
 - **No external API calls** (except notifications you configure)
 - **No telemetry or tracking**
 - **Full control** over who sees error data
@@ -458,9 +486,9 @@ config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"  # Default branch
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **935+ RSpec tests** with high coverage
+- **1,800+ RSpec tests** with high coverage
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
-- **Ruby 3.2, 3.3, 3.4 support**
+- **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
 - **RuboCop linting**
 - **Clean, maintainable code** you can understand and modify
@@ -566,7 +594,7 @@ config.enable_source_code_integration = true # Source code viewer (NEW!)
 config.enable_git_blame = true               # Git blame integration (NEW!)
 ```
 
-*All code is complete and tested (847+ tests passing). These advanced features provide powerful insights for production debugging.*
+*All code is complete and tested (1,800+ tests passing). These advanced features provide powerful insights for production debugging.*
 
 ### Fuzzy Error Matching
 - **Find similar errors** even with different error hashes
@@ -625,6 +653,132 @@ config.enable_git_blame = true               # Git blame integration (NEW!)
 - **Platform health comparison**
 - **Cross-platform correlation**
 - **Platform stability scores**
+
+---
+
+## v0.2 Quick Wins (NEW!)
+
+All v0.2 features are production-safe and designed around the core principle: **never break the host app**.
+
+### Exception Cause Chain
+
+When exceptions wrap other exceptions (common with network errors, database failures, etc.), the full cause chain is captured:
+
+```
+RuntimeError: Failed to load user profile
+  └── caused by: SocketError: Connection refused
+        └── caused by: Errno::ECONNREFUSED: Connection refused - connect(2) for 127.0.0.1:6379
+```
+
+Stored as structured JSON in the `exception_cause` column. Displayed on the error detail page with a collapsible cause chain viewer. No configuration needed.
+
+### Custom Fingerprint Lambda
+
+Override the default error grouping with a lambda:
+
+```ruby
+config.custom_fingerprint = ->(exception, context) {
+  case exception
+  when ActiveRecord::RecordNotFound
+    "record-not-found-#{context[:controller]}"
+  when ActionController::RoutingError
+    "routing-error"  # Group all 404s together
+  else
+    nil  # Fall back to default fingerprinting
+  end
+}
+```
+
+### CurrentAttributes Integration
+
+Automatically captures all values from your `ActiveSupport::CurrentAttributes` subclasses:
+
+```ruby
+# Your app defines:
+class Current < ActiveSupport::CurrentAttributes
+  attribute :user, :account, :request_id
+end
+
+# We auto-capture: { user: ..., account: ..., request_id: ... }
+# Zero configuration needed
+```
+
+### Enriched HTTP Context
+
+Every error from an HTTP request automatically captures:
+
+| Field | Example | Description |
+|-------|---------|-------------|
+| `http_method` | `GET` | Request method |
+| `hostname` | `api.myapp.com` | Server hostname |
+| `content_type` | `application/json` | Request content type |
+| `request_duration_ms` | `342` | Time elapsed before error |
+
+### Environment Info
+
+Captured once at error time, so you can see exactly what was running:
+
+```json
+{
+  "ruby_version": "3.3.0",
+  "rails_version": "8.1.1",
+  "gem_versions": { "puma": "6.4.0", "sidekiq": "7.2.0" },
+  "server": "Puma",
+  "database_adapter": "postgresql"
+}
+```
+
+### Sensitive Data Filtering
+
+Automatically scrubs sensitive data from error context before storage:
+
+```ruby
+# Enabled by default. Configure patterns:
+config.filter_sensitive_data = true
+config.sensitive_data_patterns = [
+  /password/i, /token/i, /secret/i, /api_key/i,
+  /authorization/i, /credit_card/i, /ssn/i
+]
+```
+
+Values matching these patterns are replaced with `[FILTERED]`.
+
+### Auto-Reopen on Recurrence
+
+When a resolved error occurs again, it automatically:
+1. Sets `resolved = false` and `status = "new"`
+2. Records `reopened_at` timestamp
+3. Increments `occurrence_count`
+4. Shows a "Reopened" badge in the dashboard
+
+### Notification Throttling
+
+Three layers to prevent alert fatigue:
+
+- **Severity filter** — Only notify for errors above a minimum severity
+- **Per-error cooldown** — Don't re-notify for the same error within N minutes
+- **Threshold alerts** — Notify at milestone occurrence counts (10, 50, 100, 500, 1000)
+
+### BRIN Indexes
+
+PostgreSQL BRIN index on `occurred_at` for time-series performance:
+- 72KB index vs 676MB B-tree equivalent
+- Functional index on `DATE(occurred_at)` for 70x faster dashboard queries
+- Automatic retention cleanup job for old errors
+
+### Structured Backtrace
+
+Uses `backtrace_locations` (Ruby 2.0+) when available for richer data:
+- Proper `path`, `lineno`, and `label` fields
+- Falls back gracefully to string parsing
+
+### Reduced Dependencies
+
+Core gem now requires only 2 gems: `rails` and `pagy`. Four previously-required dependencies are now optional:
+- `browser` — for User-Agent platform detection
+- `chartkick` — for chart rendering
+- `httparty` — for webhook/notification HTTP calls
+- `turbo-rails` — for real-time Turbo Stream updates
 
 ---
 
@@ -889,6 +1043,15 @@ config.enable_baseline_alerts      # => true or false
   correlation: config.enable_error_correlation,
   platform_comparison: config.enable_platform_comparison,
   patterns: config.enable_occurrence_patterns
+}
+
+# v0.2 features
+{
+  filter_sensitive_data: config.filter_sensitive_data,
+  custom_fingerprint: config.custom_fingerprint.present?,
+  notification_minimum_severity: config.notification_minimum_severity,
+  notification_cooldown_minutes: config.notification_cooldown_minutes,
+  notification_threshold_alerts: config.notification_threshold_alerts
 }
 ```
 

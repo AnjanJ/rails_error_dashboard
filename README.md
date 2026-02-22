@@ -24,12 +24,12 @@ gem 'rails_error_dashboard'
 
 Username: `gandalf` · Password: `youshallnotpass`
 
-Experience the full dashboard with 250+ realistic Rails errors, LOTR-themed demo data, and all features enabled.
+Experience the full dashboard with 480+ realistic Rails errors, LOTR-themed demo data, cause chains, enriched context, auto-reopened errors, and all features enabled.
 
 ---
 
 ### ⚠️ BETA SOFTWARE
-This Rails Engine is in beta and under active development. While functional and tested (1,300+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
+This Rails Engine is in beta and under active development. While functional and tested (1,800+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
 
 **Supports**: Rails 7.0 - 8.1 | Ruby 3.2 - 4.0
 
@@ -168,6 +168,22 @@ config.git_repository_url = "https://github.com/user/repo"
 ```
 
 **📖 [Complete documentation →](docs/SOURCE_CODE_INTEGRATION.md)**
+
+#### 🆕 v0.2 Quick Wins (NEW!)
+
+**11 features that make error tracking smarter, safer, and more actionable:**
+
+- **Exception Cause Chains** — Automatically captures the full `cause` chain (e.g., `SocketError` → `RuntimeError`) so you see root causes, not just wrappers
+- **Enriched Context** — Every HTTP error captures `http_method`, `hostname`, `content_type`, and `request_duration_ms` automatically
+- **Custom Fingerprint** — Override error grouping with a lambda: group `RecordNotFound` by controller, or any custom logic
+- **CurrentAttributes Integration** — Zero-config capture of `Current.user`, `Current.account`, `Current.request_id`
+- **Environment Info** — Ruby version, Rails version, gem versions, server, and database adapter captured at error time
+- **Sensitive Data Filtering** — Passwords, tokens, secrets, and API keys auto-filtered from error context before storage
+- **Auto-Reopen** — Resolved errors automatically reopen when they recur, with a "Reopened" badge in the UI
+- **Notification Throttling** — Severity filters, per-error cooldown, and milestone threshold alerts prevent alert fatigue
+- **BRIN Indexes** — PostgreSQL BRIN index on `occurred_at` for dramatically faster time-range queries (72KB vs 676MB)
+- **Structured Backtrace** — Uses `backtrace_locations` for richer backtrace data with proper path/line/method fields
+- **Reduced Dependencies** — Core gem now requires only `rails` + `pagy`; `browser`, `chartkick`, `httparty`, `turbo-rails` are optional
 
 #### 🔌 Plugin System
 Extensible architecture with event hooks (`on_error_logged`, `on_error_resolved`, `on_threshold_exceeded`). Built-in examples for Jira integration, metrics tracking, audit logging. Easy to create custom plugins - just drop a file in `config/initializers/error_dashboard_plugins/`.
@@ -640,7 +656,7 @@ Clean, maintainable, testable architecture you can understand and modify.
 
 ## 🧪 Testing
 
-1,300+ tests covering unit, integration, and browser-based system tests.
+1,800+ tests covering unit, integration, and browser-based system tests.
 
 ### Running Tests
 
@@ -733,7 +749,7 @@ Rails Error Dashboard is available as open source under the terms of the [MIT Li
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 935+ passing tests across Rails 7.0-8.0 and Ruby 3.2-3.4. Many users are running it in production. See [production requirements](docs/FEATURES.md#production-readiness).
+This is currently in **beta** but actively tested with 1,800+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](docs/FEATURES.md#production-readiness).
 </details>
 
 <details>
