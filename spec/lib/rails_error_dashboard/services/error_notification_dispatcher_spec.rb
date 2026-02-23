@@ -86,6 +86,8 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
     end
 
     it "enqueues nothing when all notifications disabled" do
+      RailsErrorDashboard.reset_configuration!
+
       expect {
         described_class.call(error_log)
       }.not_to have_enqueued_job
