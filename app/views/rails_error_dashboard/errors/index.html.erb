@@ -194,6 +194,9 @@
       </div>
 
       <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false } do %>
+        <% if params[:reopened].present? %>
+          <%= hidden_field_tag :reopened, params[:reopened] %>
+        <% end %>
         <div class="col-md-4">
           <%= text_field_tag :search, params[:search], placeholder: "Search errors...", class: "form-control" %>
         </div>

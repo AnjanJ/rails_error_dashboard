@@ -187,5 +187,53 @@ RSpec.describe "Quick Wins UI Features", type: :system do
 
       expect(page).to have_css(".bi-arrow-counterclockwise")
     end
+
+    context "Reopened quick filter persistence" do
+      let!(:normal_error) do
+        create(:error_log,
+          application: application,
+          error_type: "RuntimeError",
+          message: "normal error that was never reopened",
+          reopened_at: nil,
+          resolved: false,
+          status: "new")
+      end
+
+      it "keeps reopened filter active after unchecking 'Unresolved only' and applying filters" do
+        visit_dashboard("/errors")
+        wait_for_page_load
+
+        # Both errors should be visible initially
+        expect(page).to have_content(reopened_error.message)
+        expect(page).to have_content(normal_error.message)
+
+        # Click the "Reopened" quick filter badge
+        click_link "Reopened"
+        wait_for_page_load
+
+        # Only the reopened error should be visible
+        expect(page).to have_content(reopened_error.message)
+        expect(page).not_to have_content(normal_error.message)
+
+        # The "Reopened" badge should be active (btn-primary, not btn-outline-primary)
+        reopened_btn = find("a.btn", text: "Reopened")
+        expect(reopened_btn[:class]).to include("btn-primary")
+        expect(reopened_btn[:class]).not_to include("btn-outline-primary")
+
+        # Uncheck "Unresolved only" and apply filters
+        find("#unresolved_checkbox").uncheck
+        click_button "Apply Filters"
+        wait_for_page_load
+
+        # The reopened filter should STILL be active
+        reopened_btn = find("a.btn", text: "Reopened")
+        expect(reopened_btn[:class]).to include("btn-primary")
+        expect(reopened_btn[:class]).not_to include("btn-outline-primary")
+
+        # Only the reopened error should still be shown
+        expect(page).to have_content(reopened_error.message)
+        expect(page).not_to have_content(normal_error.message)
+      end
+    end
   end
 end
