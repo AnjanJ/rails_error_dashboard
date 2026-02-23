@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.2.0] - 2026-02-23
+
 ### Added
 - Add line numbers to backtrace frames in error detail view (#69) @midwire
 
@@ -125,6 +129,11 @@ Three layers of notification control to prevent alert fatigue:
 - Added Phase G chaos tests for v0.2 quick wins
 - Added unit, system, and chaos tests for database setup features
 - Enhanced installer with 3 database modes and verify rake task
+- **New: 8-app release audit** (`bin/pre-release-test release_audit`) — comprehensive pre-release validation
+  - Kitchen Sink: every config option enabled simultaneously (Phase K)
+  - Multi-App: two Rails apps sharing one error database (Phase I)
+  - SolidQueue: async logging via `:solid_queue` adapter path
+  - Upgrade Path: v0.1.38 → v0.2.0 migration verification (Phases J0/J)
 
 ---
 

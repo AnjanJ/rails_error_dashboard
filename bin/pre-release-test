@@ -2,20 +2,27 @@
 set -uo pipefail
 
 # ============================================================================
-# Pre-Release Integration Test Suite v2
+# Pre-Release Integration Test Suite v3
 # Creates temporary Rails apps with ALL features enabled and runs chaos tests
 # that verify real error capture via middleware + subscriber.
 #
 # ALL apps run in PRODUCTION mode — because that's how our users run the gem.
 #
 # Usage:
-#   bin/pre-release-test [all|full_sync|full_async|full_http|full_separate_db]
+#   bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|
+#                         full_separate_db|full_kitchen_sink|full_multi_app|
+#                         full_solid_queue|full_upgrade]
 #
 # Examples:
-#   bin/pre-release-test full_sync       # Test sync config only (~1 min)
-#   bin/pre-release-test full_http       # Test HTTP error capture (~2 min)
-#   bin/pre-release-test all             # Test all 4 configs (~4 min)
-#   bin/pre-release-test                 # Same as 'all'
+#   bin/pre-release-test full_sync         # Test sync config only (~1 min)
+#   bin/pre-release-test full_http         # Test HTTP error capture (~2 min)
+#   bin/pre-release-test all               # Original 4 apps (~4 min, lefthook)
+#   bin/pre-release-test release_audit     # All 8 apps (~12-15 min, manual)
+#   bin/pre-release-test full_kitchen_sink # Every config option at once
+#   bin/pre-release-test full_multi_app    # Two apps sharing one DB
+#   bin/pre-release-test full_solid_queue  # Async via SolidQueue adapter
+#   bin/pre-release-test full_upgrade      # v0.1.38 → v0.2.0 upgrade path
+#   bin/pre-release-test                   # Same as 'all'
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -616,6 +623,283 @@ YAML
 }
 
 # ---------------------------------------------------------------------------
+# Release audit test configurations (4 new apps)
+# ---------------------------------------------------------------------------
+
+test_full_kitchen_sink() {
+  log_header "APP 5/8: full_kitchen_sink — Every Config Option Enabled (production)"
+
+  create_app "full_kitchen_sink_app"
+
+  local app_dir="$TEST_DIR/full_kitchen_sink_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_kitchen_sink_initializer.rb"
+
+  # Note: Phase E is NOT run here because the kitchen sink config overrides
+  # severity rules and ignored_exceptions, which would conflict with E's
+  # hardcoded severity expectations. Phase K covers config-specific behavior.
+  run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_k_kitchen_sink.rb" \
+    "$CHAOS_DIR/phase_g_quick_wins.rb" \
+    "$CHAOS_DIR/phase_h_database_setup.rb"
+}
+
+test_full_multi_app() {
+  log_header "APP 6/8: full_multi_app — Two Apps Sharing One DB (production)"
+
+  # Create the shared error dashboard DB path
+  local shared_db="$TEST_DIR/shared_error_dashboard.sqlite3"
+
+  # --- Alpha app ---
+  create_app "multi_app_alpha"
+
+  local alpha_dir="$TEST_DIR/multi_app_alpha"
+
+  # Override database.yml to point error_dashboard at the shared DB
+  cat > "$alpha_dir/config/database.yml" << YAML
+development:
+  primary:
+    adapter: sqlite3
+    database: $alpha_dir/storage/development.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+test:
+  primary:
+    adapter: sqlite3
+    database: $alpha_dir/storage/test.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+production:
+  primary:
+    adapter: sqlite3
+    database: $alpha_dir/storage/production.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+YAML
+
+  # Run generator with separate-database flag
+  log_step "Running generator for Alpha..."
+  (cd "$alpha_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+
+  # Apply Alpha initializer
+  log_step "Applying Alpha initializer..."
+  cp "$TEMPLATES_DIR/multi_app_alpha_initializer.rb" "$alpha_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Add separate DB config to Alpha initializer
+  cat >> "$alpha_dir/config/initializers/rails_error_dashboard.rb" << 'RUBY'
+
+# Separate database config (appended by test harness)
+RailsErrorDashboard.configure do |config|
+  config.use_separate_database = true
+  config.database = :error_dashboard
+end
+RUBY
+
+  # Move migrations to error_dashboard_migrate
+  mkdir -p "$alpha_dir/db/error_dashboard_migrate"
+  (cd "$alpha_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
+
+  log_step "Migrating Alpha primary database..."
+  (cd "$alpha_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  log_step "Migrating shared error_dashboard database..."
+  (cd "$alpha_dir" && bin/rails db:migrate:error_dashboard 2>&1 | tail -3)
+
+  log_success "Alpha app installed"
+
+  # Seed Alpha errors via Phase E
+  run_chaos_tests "$alpha_dir" "$CHAOS_DIR/phase_e_error_capture.rb"
+
+  # --- Beta app ---
+  create_app "multi_app_beta"
+
+  local beta_dir="$TEST_DIR/multi_app_beta"
+
+  # Override database.yml to point at SAME shared DB
+  cat > "$beta_dir/config/database.yml" << YAML
+development:
+  primary:
+    adapter: sqlite3
+    database: $beta_dir/storage/development.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+test:
+  primary:
+    adapter: sqlite3
+    database: $beta_dir/storage/test.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+
+production:
+  primary:
+    adapter: sqlite3
+    database: $beta_dir/storage/production.sqlite3
+    pool: 5
+    timeout: 5000
+  error_dashboard:
+    adapter: sqlite3
+    database: $shared_db
+    pool: 5
+    timeout: 5000
+    migrations_paths: db/error_dashboard_migrate
+YAML
+
+  # Run generator (skip migrations — tables already exist from Alpha)
+  log_step "Running generator for Beta..."
+  (cd "$beta_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+
+  # Apply Beta initializer
+  log_step "Applying Beta initializer..."
+  cp "$TEMPLATES_DIR/multi_app_beta_initializer.rb" "$beta_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Add separate DB config to Beta initializer
+  cat >> "$beta_dir/config/initializers/rails_error_dashboard.rb" << 'RUBY'
+
+# Separate database config (appended by test harness)
+RailsErrorDashboard.configure do |config|
+  config.use_separate_database = true
+  config.database = :error_dashboard
+end
+RUBY
+
+  # Move migrations (but don't run them — tables exist)
+  mkdir -p "$beta_dir/db/error_dashboard_migrate"
+  (cd "$beta_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
+
+  log_step "Migrating Beta primary database..."
+  (cd "$beta_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  # Skip db:migrate:error_dashboard — tables already exist from Alpha
+  log_step "Skipping error_dashboard migration (tables exist from Alpha)"
+
+  log_success "Beta app installed"
+
+  # Seed Beta errors via Phase E
+  run_chaos_tests "$beta_dir" "$CHAOS_DIR/phase_e_error_capture.rb"
+
+  # Run Phase I from Alpha (verifies both apps' data in shared DB)
+  log_step "Running Phase I multi-app isolation from Alpha..."
+  BETA_APP_NAME="MultiAppBeta" run_chaos_tests "$alpha_dir" \
+    "$CHAOS_DIR/phase_i_multi_app.rb"
+}
+
+test_full_solid_queue() {
+  log_header "APP 7/8: full_solid_queue — Async via SolidQueue Adapter (production)"
+
+  create_app "full_solid_queue_app"
+
+  local app_dir="$TEST_DIR/full_solid_queue_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_solid_queue_initializer.rb"
+
+  # Use :inline queue adapter — no SolidQueue infrastructure needed.
+  # This tests our :solid_queue serialization/deserialization path through ActiveJob.
+  cat > "$app_dir/config/initializers/active_job_inline.rb" << 'RUBY'
+Rails.application.config.active_job.queue_adapter = :inline
+RUBY
+
+  run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_e_error_capture.rb" \
+    "$CHAOS_DIR/phase_a_data_integrity.rb" \
+    "$CHAOS_DIR/phase_c_queries.rb"
+}
+
+test_full_upgrade() {
+  log_header "APP 8/8: full_upgrade — Upgrade Path v0.1.38 → v0.2.0 (production)"
+
+  create_app "full_upgrade_app"
+
+  local app_dir="$TEST_DIR/full_upgrade_app"
+
+  # --- Phase 1: Install published v0.1.38 from RubyGems ---
+  log_step "Installing published v0.1.38 from RubyGems..."
+
+  # Replace the local gem path with the published version
+  sed -i '' "s|gem 'rails_error_dashboard', path: '.*'|gem 'rails_error_dashboard', '0.1.38'|" "$app_dir/Gemfile"
+
+  log_step "Running bundle install for v0.1.38..."
+  (cd "$app_dir" && bundle install 2>&1 | tail -5)
+
+  # Run generator
+  log_step "Running v0.1.38 generator..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
+
+  # Apply minimal initializer compatible with v0.1.38
+  log_step "Applying v0.1.38 initializer..."
+  cp "$TEMPLATES_DIR/upgrade_pre_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  # Run migrations
+  log_step "Running v0.1.38 migrations..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+
+  log_success "v0.1.38 installed"
+
+  # Seed data under old schema
+  run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_j0_seed_old_data.rb"
+
+  # --- Phase 2: Upgrade to local gem (v0.2.0) ---
+  log_step "Upgrading to local v0.2.0..."
+
+  # Swap Gemfile back to local gem
+  sed -i '' "s|gem 'rails_error_dashboard', '0.1.38'|gem 'rails_error_dashboard', path: '$GEM_DIR'|" "$app_dir/Gemfile"
+
+  log_step "Running bundle install for v0.2.0..."
+  (cd "$app_dir" && bundle install 2>&1 | tail -5)
+
+  # Re-run generator to copy new migration files from v0.2.0
+  log_step "Re-running generator to pick up new migrations..."
+  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
+
+  # Run new migrations
+  log_step "Running v0.2.0 migrations..."
+  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -5)
+
+  # Apply full initializer with v0.2 features
+  log_step "Applying v0.2.0 initializer..."
+  cp "$TEMPLATES_DIR/full_sync_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
+
+  log_success "Upgraded to v0.2.0"
+
+  # Verify upgrade
+  run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_j_upgrade_verification.rb" \
+    "$CHAOS_DIR/phase_c_queries.rb"
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -646,14 +930,38 @@ case "$TARGET" in
   full_separate_db)
     test_full_separate_db
     ;;
+  full_kitchen_sink)
+    test_full_kitchen_sink
+    ;;
+  full_multi_app)
+    test_full_multi_app
+    ;;
+  full_solid_queue)
+    test_full_solid_queue
+    ;;
+  full_upgrade)
+    test_full_upgrade
+    ;;
   all)
+    # Original 4 apps — backward compatible for lefthook pre-commit
     test_full_sync
     test_full_async
     test_full_http
     test_full_separate_db
     ;;
+  release_audit)
+    # All 8 apps — comprehensive pre-release validation (~12-15 min)
+    test_full_sync
+    test_full_async
+    test_full_http
+    test_full_separate_db
+    test_full_kitchen_sink
+    test_full_multi_app
+    test_full_solid_queue
+    test_full_upgrade
+    ;;
   *)
-    echo "Usage: bin/pre-release-test [all|full_sync|full_async|full_http|full_separate_db]"
+    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade]"
     exit 1
     ;;
 esac
