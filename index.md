@@ -70,14 +70,18 @@ The installer will guide you through:
 - Database configuration (shared or separate database)
 - Advanced features (error correlation, platform comparison, etc.)
 
-## 📦 What's New in v0.1.32
+## 📦 What's New in v0.2.0
 
-- ✨ Enhanced overview dashboard with 6 key metrics
-- 📊 Correlation insights section
-- ⚙️ Better default configuration (retention: nil, backtrace: 100 lines)
-- 🎨 Improved color contrast for accessibility
-- 🐛 Fixed Chart.js v4 compatibility
-- 🔗 Added bug tracker metadata for RubyGems
+- 🔗 Exception cause chain tracking with root cause analysis
+- 📋 Enriched error context — HTTP method, hostname, request duration
+- 🔒 Sensitive data filtering (24 built-in patterns)
+- 🔄 Auto-reopen resolved errors on recurrence
+- 🔔 Notification throttling with per-error cooldown
+- 🧬 Custom fingerprint lambda for error grouping
+- 🌍 Environment info — Ruby, Rails, gem versions captured automatically
+- 📍 Backtrace line numbers in error detail view
+- ⏳ Loading states & skeleton screens with Stimulus controller
+- 📉 Reduced dependencies from 9 to 2 required
 
 [View Full Changelog](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md)
 

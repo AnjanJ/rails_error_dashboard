@@ -116,7 +116,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.1.30** (Latest).
+This documentation is for **Rails Error Dashboard v0.2.0** (Latest).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 

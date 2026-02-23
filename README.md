@@ -29,7 +29,7 @@ Experience the full dashboard with 480+ realistic Rails errors, LOTR-themed demo
 ---
 
 ### ⚠️ BETA SOFTWARE
-This Rails Engine is in beta and under active development. While functional and tested (1,800+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
+This Rails Engine is in beta and under active development. While functional and tested (1,895+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
 
 **Supports**: Rails 7.0 - 8.1 | Ruby 3.2 - 4.0
 
