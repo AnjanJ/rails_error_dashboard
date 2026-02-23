@@ -4,6 +4,9 @@ require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Queries::DashboardStats do
   describe ".call" do
+    # Freeze at noon to avoid midnight boundary flakes with relative times
+    around { |example| travel_to(Time.current.noon) { example.run } }
+
     let!(:error_today1) { create(:error_log, occurred_at: 2.hours.ago, resolved: false) }
     let!(:error_today2) { create(:error_log, occurred_at: 1.hour.ago, resolved: true) }
     let!(:error_this_week) { create(:error_log, occurred_at: 3.days.ago, resolved: false) }
@@ -149,13 +152,11 @@ RSpec.describe RailsErrorDashboard::Queries::DashboardStats do
 
     context "at different times of day" do
       it "counts errors occurring on current day boundary" do
-        freeze_time do
-          create(:error_log, occurred_at: Time.current.beginning_of_day)
+        create(:error_log, occurred_at: Time.current.beginning_of_day)
 
-          result = described_class.call
+        result = described_class.call
 
-          expect(result[:total_today]).to be >= 1
-        end
+        expect(result[:total_today]).to be >= 1
       end
     end
   end
