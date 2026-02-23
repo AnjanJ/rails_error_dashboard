@@ -950,6 +950,7 @@ Thank you to everyone who has contributed to Rails Error Dashboard!
 Special thanks to:
 - [@bonniesimon](https://github.com/bonniesimon) - Turbo helpers production fix
 - [@gundestrup](https://github.com/gundestrup) - Security fixes, dependency updates, CI/CD improvements
+- [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
 
 See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the complete list of contributors and their contributions.
 

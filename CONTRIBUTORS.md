@@ -35,6 +35,13 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Chris Blackburn ([@midwire](https://github.com/midwire))
+
+- ✨ [#69](https://github.com/AnjanJ/rails_error_dashboard/pull/69) - Added line numbers to backtrace frames in error detail view (v0.2.0)
+- 🎨 [#71](https://github.com/AnjanJ/rails_error_dashboard/pull/71) - Added loading states and skeleton screens with Stimulus controller (#43)
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -105,12 +112,12 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 3 (including maintainer)
-**External Contributors:** 2
-**Total PRs Merged:** 46+
-**Total Issues Resolved:** 30+
-**Lines of Code:** 10,000+
-**Tests Written:** 850+
+**Total Contributors:** 4 (including maintainer)
+**External Contributors:** 3
+**Total PRs Merged:** 55+
+**Total Issues Resolved:** 40+
+**Lines of Code:** 15,000+
+**Tests Written:** 1,900+
 
 ---
 
@@ -137,7 +144,7 @@ When you contribute to Rails Error Dashboard, you get:
 - *Your name could be here!*
 
 ### ✨ Feature Creators
-- *Your name could be here!*
+- [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
 
 ---
 
@@ -153,4 +160,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: January 20, 2026*
+*This page is updated with each release. Last updated: February 24, 2026*
