@@ -1320,6 +1320,65 @@ body.dark-mode .timeline-item:hover .timeline-content {
 #sidebarToggle:hover i {
   transform: scale(1.1);
 }
+
+/* Skeleton Loading Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+body.dark-mode .skeleton {
+  background: linear-gradient(90deg, #313244 25%, #45475a 50%, #313244 75%);
+  background-size: 200% 100%;
+}
+
+.skeleton-text {
+  height: 1em;
+  width: 60%;
+  margin-bottom: 0.5em;
+}
+
+.skeleton-text-short {
+  width: 40%;
+}
+
+.skeleton-card {
+  height: 80px;
+}
+
+.skeleton-row {
+  height: 48px;
+  margin-bottom: 2px;
+}
+
+.skeleton-chart {
+  height: 250px;
+}
+
+/* Hide skeleton containers by default */
+.loading-skeleton {
+  display: none;
+}
+
+/* Loading spinner for buttons */
+.btn .loading-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.25em;
+}
     </style>
   </head>
 
@@ -1566,6 +1625,98 @@ body.dark-mode .timeline-item:hover .timeline-content {
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- Stimulus (for loading state management) -->
+    <script src="https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.min.js"></script>
+
+    <!-- Loading State Controller -->
+    <script>
+(function() {
+  'use strict';
+  if (typeof Stimulus === 'undefined') return;
+
+  var application = Stimulus.Application.start();
+
+  application.register('loading', class extends Stimulus.Controller {
+    static get targets() {
+      return ['skeleton', 'content', 'submitButton'];
+    }
+
+    connect() {
+      this._boundHideSkeletons = this.hideSkeletons.bind(this);
+      document.addEventListener('turbo:before-stream-render', this._boundHideSkeletons);
+      document.addEventListener('turbo:load', this._boundHideSkeletons);
+    }
+
+    disconnect() {
+      document.removeEventListener('turbo:before-stream-render', this._boundHideSkeletons);
+      document.removeEventListener('turbo:load', this._boundHideSkeletons);
+      if (this._safetyTimeout) clearTimeout(this._safetyTimeout);
+    }
+
+    // Called on filter form submit
+    submit() {
+      this.showSkeletons();
+      this.disableSubmitButtons();
+      this.startSafetyTimeout();
+    }
+
+    // Called on async action button click
+    click(event) {
+      var button = event.currentTarget;
+      if (button.disabled) return;
+
+      button.disabled = true;
+      var originalHTML = button.dataset.loadingOriginalHtml;
+      if (!originalHTML) {
+        button.dataset.loadingOriginalHtml = button.innerHTML;
+      }
+      var spinnerHTML = '<span class="loading-spinner"></span>';
+      var buttonText = button.textContent.trim();
+      button.innerHTML = spinnerHTML + ' ' + buttonText;
+    }
+
+    showSkeletons() {
+      this.skeletonTargets.forEach(function(el) { el.style.display = ''; });
+      this.contentTargets.forEach(function(el) { el.style.display = 'none'; });
+    }
+
+    hideSkeletons() {
+      this.skeletonTargets.forEach(function(el) { el.style.display = 'none'; });
+      this.contentTargets.forEach(function(el) { el.style.display = ''; });
+      this.enableSubmitButtons();
+      if (this._safetyTimeout) clearTimeout(this._safetyTimeout);
+    }
+
+    disableSubmitButtons() {
+      this.submitButtonTargets.forEach(function(btn) {
+        btn.disabled = true;
+        if (!btn.dataset.loadingOriginalHtml) {
+          btn.dataset.loadingOriginalHtml = btn.innerHTML;
+        }
+        var spinnerHTML = '<span class="loading-spinner"></span>';
+        btn.innerHTML = spinnerHTML + ' Loading...';
+      });
+    }
+
+    enableSubmitButtons() {
+      this.submitButtonTargets.forEach(function(btn) {
+        btn.disabled = false;
+        if (btn.dataset.loadingOriginalHtml) {
+          btn.innerHTML = btn.dataset.loadingOriginalHtml;
+          delete btn.dataset.loadingOriginalHtml;
+        }
+      });
+    }
+
+    startSafetyTimeout() {
+      var self = this;
+      this._safetyTimeout = setTimeout(function() {
+        self.hideSkeletons();
+      }, 10000);
+    }
+  });
+})();
+    </script>
 
     <!-- Dashboard JavaScript (inline for production compatibility) -->
 

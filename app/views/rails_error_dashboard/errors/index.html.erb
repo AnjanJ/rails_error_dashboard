@@ -5,7 +5,7 @@
   <%= turbo_stream_from "error_list" %>
 <% end %>
 
-<div class="py-4">
+<div class="py-4" data-controller="loading">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0"><i class="bi bi-bug-fill text-primary"></i> Error Overview</h2>
     <div class="text-muted">
@@ -20,7 +20,23 @@
 
   <!-- Stats Cards -->
   <div id="dashboard_stats" class="mb-4">
-    <%= render "stats", stats: @stats %>
+    <div data-loading-target="content">
+      <%= render "stats", stats: @stats %>
+    </div>
+    <div class="loading-skeleton" data-loading-target="skeleton">
+      <div class="row g-4">
+        <% 4.times do %>
+          <div class="col-md-3">
+            <div class="card stat-card">
+              <div class="card-body">
+                <div class="skeleton skeleton-text skeleton-text-short mb-2"></div>
+                <div class="skeleton skeleton-card"></div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
   </div>
 
   <!-- Top Error Types (Only show if there are errors) -->
@@ -77,7 +93,7 @@
   <!-- 7-Day Error Trend (requires chartkick gem) -->
   <% if @stats[:errors_trend_7d]&.any? && respond_to?(:line_chart) %>
     <div class="row g-4 mb-4">
-      <div class="col-md-8">
+      <div class="col-md-8" data-loading-target="content">
         <div class="card">
           <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-graph-up"></i> 7-Day Error Trend</h5>
@@ -105,7 +121,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-4" data-loading-target="content">
         <div class="card">
           <div class="card-header bg-white">
             <h5 class="mb-0"><i class="bi bi-pie-chart"></i> By Severity (7d)</h5>
@@ -116,6 +132,31 @@
                 height: "250px",
                 legend: "bottom",
                 donut: true %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading-skeleton" data-loading-target="skeleton">
+      <div class="row g-4 mb-4">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header bg-white">
+              <div class="skeleton skeleton-text" style="width: 200px;"></div>
+            </div>
+            <div class="card-body">
+              <div class="skeleton skeleton-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header bg-white">
+              <div class="skeleton skeleton-text" style="width: 150px;"></div>
+            </div>
+            <div class="card-body">
+              <div class="skeleton skeleton-chart"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -193,7 +234,7 @@
             class: "btn btn-sm #{params[:reopened] == 'true' ? 'btn-primary' : 'btn-outline-primary'}" %>
       </div>
 
-      <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false } do %>
+      <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false, action: "submit->loading#submit" } do %>
         <% if params[:reopened].present? %>
           <%= hidden_field_tag :reopened, params[:reopened] %>
         <% end %>
@@ -323,7 +364,7 @@
         </div>
 
         <div class="col-12 mt-3">
-          <%= submit_tag "Apply Filters", class: "btn btn-primary" %>
+          <%= submit_tag "Apply Filters", class: "btn btn-primary", data: { loading_target: "submitButton" } %>
           <%= link_to "Clear", errors_path, class: "btn btn-outline-secondary" %>
         </div>
       <% end %>
@@ -365,42 +406,52 @@
 
     <div class="card-body p-0">
       <% if @errors.any? %>
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 40px;">
-                  <input type="checkbox" id="select-all" class="form-check-input">
-                </th>
-                <th><%= sortable_header("Severity", "severity") %></th>
-                <th><%= sortable_header("Error Type", "error_type") %></th>
-                <th>Message</th>
-                <th><%= sortable_header("Occurrences", "occurrence_count") %></th>
-                <th><%= sortable_header("First / Last Seen", "last_seen_at") %></th>
+        <div data-loading-target="content">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 40px;">
+                    <input type="checkbox" id="select-all" class="form-check-input">
+                  </th>
+                  <th><%= sortable_header("Severity", "severity") %></th>
+                  <th><%= sortable_header("Error Type", "error_type") %></th>
+                  <th>Message</th>
+                  <th><%= sortable_header("Occurrences", "occurrence_count") %></th>
+                  <th><%= sortable_header("First / Last Seen", "last_seen_at") %></th>
 
-                <!-- Show App column only when viewing all apps -->
-                <% if @applications.size > 1 && params[:application_id].blank? %>
-                  <th><%= sortable_header("Application", "application_id") %></th>
-                <% end %>
+                  <!-- Show App column only when viewing all apps -->
+                  <% if @applications.size > 1 && params[:application_id].blank? %>
+                    <th><%= sortable_header("Application", "application_id") %></th>
+                  <% end %>
 
-                <% if @platforms.size > 1 %>
-                  <th><%= sortable_header("Platform", "platform") %></th>
+                  <% if @platforms.size > 1 %>
+                    <th><%= sortable_header("Platform", "platform") %></th>
+                  <% end %>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="error_list">
+                <% @errors.each do |error| %>
+                  <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
                 <% end %>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="error_list">
-              <% @errors.each do |error| %>
-                <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
-              <% end %>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="p-3">
+            <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+          </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="p-3">
-          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        <div class="loading-skeleton" data-loading-target="skeleton">
+          <div class="p-3">
+            <% 5.times do %>
+              <div class="skeleton skeleton-row mb-2"></div>
+            <% end %>
+          </div>
         </div>
       <% else %>
         <div class="text-center py-5">
