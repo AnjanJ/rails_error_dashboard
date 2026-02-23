@@ -80,6 +80,9 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       # Environment info snapshot (from 20260221000001)
       t.text :environment_info
 
+      # Auto-reopen tracking (from 20260221000002)
+      t.datetime :reopened_at
+
       t.timestamps
     end
 
