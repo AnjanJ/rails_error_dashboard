@@ -410,12 +410,19 @@ v0.1.23
   ├─ 20251229111223  ← Performance indexes
   └─ 20251230075315  ← Cleanup
 
-v0.1.29 (Current)
-  ├─ 20251223000000  ← SQUASHED MIGRATION (NEW!)
+v0.1.29
+  ├─ 20251223000000  ← SQUASHED MIGRATION
   ├─ 20260106094220  ← Applications table
   ├─ 20260106094233  ← Add application_id
   ├─ 20260106094256  ← Backfill application
   └─ 20260106094318  ← Finalize foreign key
+
+v0.2.0 (Current)
+  ├─ 20260220000001  ← Exception cause chain (cause_class, cause_message, exception_chain)
+  ├─ 20260220000002  ← Enriched context (http_method, hostname, content_type, etc.)
+  ├─ 20260220000003  ← Time-series indexes (BRIN + functional, PostgreSQL only)
+  ├─ 20260221000001  ← Environment info (ruby_version, rails_version, gem_version)
+  └─ 20260221000002  ← Reopened tracking (reopened_at)
 ```
 
 ---
@@ -496,6 +503,72 @@ The migration will automatically:
 
 ### Updating Squashed Migration
 When releasing a new major version, update the squashed migration to include all new columns/tables. This ensures new users get everything in one migration.
+
+---
+
+## Upgrading to v0.2.0
+
+v0.2.0 adds 5 new migrations. The upgrade path depends on your database setup.
+
+### Shared Database (default)
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+rails db:migrate
+```
+
+Rails will only copy and run migrations that haven't been applied yet. All 5 new migrations have `column_exists?` guards, so they're safe to re-run.
+
+### Separate Database (`use_separate_database = true`)
+
+```bash
+bundle update rails_error_dashboard
+
+# Copy new migrations (Rails skips already-copied ones by class name)
+rails rails_error_dashboard:install:migrations
+
+# Move new migrations to your error dashboard migrate directory
+# (adjust the directory name to match your database.yml key)
+mv db/migrate/*_add_exception_cause_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_enriched_context_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_time_series_indexes_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_environment_info_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_reopened_at_to_error_logs.rb db/error_dashboard_migrate/
+
+# Run migrations against the error dashboard database
+rails db:migrate:error_dashboard
+```
+
+### New v0.2.0 Columns
+
+| Migration | Columns Added | Purpose |
+|-----------|---------------|---------|
+| `add_exception_cause` | `cause_class`, `cause_message`, `exception_chain` | Root cause analysis |
+| `add_enriched_context` | `http_method`, `hostname`, `content_type`, `request_duration`, `custom_fingerprint` | Richer error context |
+| `add_time_series_indexes` | *(indexes only, PostgreSQL)* | BRIN + functional indexes for analytics |
+| `add_environment_info` | `ruby_version`, `rails_version`, `gem_version` | Environment snapshots |
+| `add_reopened_at` | `reopened_at` | Auto-reopen tracking |
+
+### New Configuration Options
+
+After upgrading, review the new options in your initializer:
+
+```ruby
+# Sensitive data filtering (enabled by default)
+config.filter_sensitive_data = true
+
+# Auto-reopen resolved errors on recurrence
+config.auto_reopen_resolved_errors = true
+
+# Notification throttling
+config.notification_cooldown_minutes = 60
+
+# Custom fingerprint for error grouping
+# config.custom_fingerprint = ->(exception, context) { "custom-key" }
+```
+
+Run `rails generate rails_error_dashboard:install` to see the full initializer template with all new options.
 
 ---
 

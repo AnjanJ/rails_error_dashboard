@@ -27,4 +27,9 @@ RSpec.describe "AddTimeSeriesIndexes migration" do
     migration = AddTimeSeriesIndexesToErrorLogs.new
     expect(migration).to respond_to(:up).or respond_to(:change)
   end
+
+  it "disables DDL transaction (required for CREATE INDEX CONCURRENTLY on PostgreSQL)" do
+    require migration_file
+    expect(AddTimeSeriesIndexesToErrorLogs.disable_ddl_transaction).to be true
+  end
 end

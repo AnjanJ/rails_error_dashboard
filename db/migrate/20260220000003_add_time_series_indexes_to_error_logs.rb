@@ -13,6 +13,8 @@
 #
 # All PostgreSQL-specific — gracefully skipped on SQLite/MySQL.
 class AddTimeSeriesIndexesToErrorLogs < ActiveRecord::Migration[7.0]
+  disable_ddl_transaction!
+
   def up
     return unless postgresql?
 
