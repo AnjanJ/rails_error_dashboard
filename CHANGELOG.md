@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-02-24
+
+### Fixed
+- **PostgreSQL migration fix:** Added `disable_ddl_transaction!` to `add_time_series_indexes_to_error_logs` migration — `CREATE INDEX CONCURRENTLY` cannot run inside a transaction block (#75)
+- **Reopened filter persistence:** Fixed reopened quick filter being lost when unchecking "Unresolved only" and applying filters (#73)
+- **Flaky test fix:** Fixed notification dispatcher spec that could fail depending on test ordering
+
+### Added
+- **Loading states & skeleton screens:** Added Stimulus-powered loading indicators, skeleton placeholders for dashboard stats and error lists, and button loading states (#71) @midwire
+- **Regression test:** Added spec to verify `disable_ddl_transaction!` is declared on the time-series indexes migration
+
+### Changed
+- **Upgrade guide:** Added v0.2.0 upgrade instructions to `docs/MIGRATION_STRATEGY.md` with step-by-step guidance for separate database users (#76)
+- **Contributors:** Added @midwire to CONTRIBUTORS.md and README.md for backtrace line numbers (#69) and loading states (#71)
+- **Docs cleanup:** Removed 18 obsolete v0.1.x test reports and internal notes, updated version references across all documentation to v0.2.0
+
+---
+
 ## [0.2.0] - 2026-02-23
 
 ### Added
