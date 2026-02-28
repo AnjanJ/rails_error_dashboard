@@ -679,7 +679,7 @@
                             </div>
                           </td>
                           <td>
-                            <% probability_pct = (cascade[:probability] * 100).round(1) %>
+                            <% probability_pct = ((cascade[:probability] || 0) * 100).round(1) %>
                             <span class="badge <%= probability_pct >= 70 ? 'bg-danger' : 'bg-warning' %>">
                               <%= probability_pct %>%
                             </span>
@@ -689,7 +689,7 @@
                           </td>
                           <td>
                             <small class="text-muted">
-                              <%= cascade[:avg_delay_seconds].round(1) %>s
+                              <%= (cascade[:avg_delay_seconds] || 0).round(1) %>s
                             </small>
                           </td>
                           <td>
@@ -737,7 +737,7 @@
                             </div>
                           </td>
                           <td>
-                            <% probability_pct = (cascade[:probability] * 100).round(1) %>
+                            <% probability_pct = ((cascade[:probability] || 0) * 100).round(1) %>
                             <span class="badge <%= probability_pct >= 70 ? 'bg-danger' : 'bg-warning' %>">
                               <%= probability_pct %>%
                             </span>
@@ -747,7 +747,7 @@
                           </td>
                           <td>
                             <small class="text-muted">
-                              +<%= cascade[:avg_delay_seconds].round(1) %>s
+                              +<%= (cascade[:avg_delay_seconds] || 0).round(1) %>s
                             </small>
                           </td>
                           <td>

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.2] - 2026-02-28
+
+### Fixed
+- **Error detail page crash:** Fixed 500 error on the show page when cascade patterns have NULL `cascade_probability` or `avg_delay_seconds` values — added nil guards in the view (#80)
+
+---
+
 ## [0.2.1] - 2026-02-24
 
 ### Fixed
