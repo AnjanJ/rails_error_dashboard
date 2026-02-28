@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.3] - 2026-02-28
+
+### Fixed
+- **Error detail page crash (cause chain):** Fixed `undefined method 'each' for an instance of String` when cause chain backtrace data is stored as a string instead of an array — the view now coerces strings to arrays before iterating
+
+---
+
 ## [0.2.2] - 2026-02-28
 
 ### Fixed
