@@ -224,7 +224,29 @@ module RailsErrorDashboard
           @database_name = "error_dashboard"
           @application_name = detect_application_name
 
+          say "\n  Is this the first app using the shared error database,", :white
+          say "  or are you connecting to one that already exists?\n", :white
+          say "  a) First app  - create a new shared error database", :white
+          say "  b) Existing   - connect to a database already used by another app", :white
+          say "\n"
+
+          shared_response = ask("  Choose (a/b):", :yellow, limited_to: [ "a", "A", "b", "B", "" ])
+
+          if shared_response.downcase == "b"
+            say "\n  Enter the base database name from your other app's database.yml.", :white
+            say "  We'll append _development/_production automatically.", :white
+            say "  (e.g., if your DB is 'my_errors_development', enter 'my_errors'):\n", :white
+            @shared_db_name = ask("  Database name:", :yellow)
+            @shared_db_name = @shared_db_name.strip
+            # Strip environment suffixes in case the user pasted the full name
+            @shared_db_name = @shared_db_name.sub(/_(development|production|test)$/, "")
+            @shared_db_name = "shared_errors" if @shared_db_name.empty?
+          else
+            @shared_db_name = "shared_errors"
+          end
+
           say "\n  Database key: error_dashboard", :green
+          say "  Shared database: #{@shared_db_name}", :green
           say "  Application name: #{@application_name}", :green
           say "  This app will share the error database with your other apps.", :white
           say "\n"
@@ -270,7 +292,31 @@ module RailsErrorDashboard
       end
 
       def copy_migrations
-        rails_command "rails_error_dashboard:install:migrations"
+        source_dir = File.expand_path("../../../../db/migrate", __dir__)
+        migrate_subdir = @enable_separate_database ? "db/error_dashboard_migrate" : "db/migrate"
+        target_dir = File.join(destination_root, migrate_subdir)
+
+        FileUtils.mkdir_p(target_dir)
+
+        # Check which migrations are already installed (by descriptive name, ignoring timestamp)
+        existing = Dir.glob(File.join(target_dir, "*rails_error_dashboard*.rb")).map { |f|
+          File.basename(f).sub(/^\d+_/, "")
+        }.to_set
+
+        timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S").to_i
+
+        Dir.glob(File.join(source_dir, "*.rb")).sort.each do |source_file|
+          basename = File.basename(source_file)
+          name_without_ts = basename.sub(/^\d+_/, "")
+          suffixed = name_without_ts.sub(/\.rb$/, ".rails_error_dashboard.rb")
+
+          next if existing.include?(suffixed)
+
+          FileUtils.cp(source_file, File.join(target_dir, "#{timestamp}_#{suffixed}"))
+          timestamp += 1
+        end
+
+        say_status "copied", "migrations to #{migrate_subdir}", :green
       end
 
       def add_route
@@ -432,7 +478,8 @@ module RailsErrorDashboard
         say "    error_dashboard:", :white
         say "      <<: *default", :white
         if @enable_multi_app
-          say "      database: shared_errors_development", :white
+          shared_db_base = @shared_db_name || "shared_errors"
+          say "      database: #{shared_db_base}_development", :white
         else
           say "      database: #{app_name_snake}_errors_development", :white
         end
@@ -445,7 +492,8 @@ module RailsErrorDashboard
         say "    error_dashboard:", :white
         say "      <<: *default", :white
         if @enable_multi_app
-          say "      database: shared_errors_production", :white
+          shared_db_base = @shared_db_name || "shared_errors"
+          say "      database: #{shared_db_base}_production", :white
         else
           say "      database: #{app_name_snake}_errors_production", :white
         end

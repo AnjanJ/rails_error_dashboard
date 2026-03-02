@@ -12,6 +12,8 @@
 # Ignore dummy app artifacts
 spec/dummy/db/*.sqlite3
 spec/dummy/db/*.sqlite3-*
+spec/dummy/db/migrate/*rails_error_dashboard*
+spec/dummy/db/error_dashboard_migrate/
 spec/dummy/log/*.log
 spec/dummy/tmp/
 spec/dummy/storage/

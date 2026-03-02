@@ -320,14 +320,50 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
   end
 
   describe "migrations" do
-    before do
-      run_generator [ "--no-interactive" ]
+    context "with default (same) database" do
+      before do
+        run_generator [ "--no-interactive" ]
+      end
+
+      it "copies migrations to db/migrate" do
+        migration_files = Dir.glob("#{destination_root}/db/migrate/*rails_error_dashboard*.rb")
+        expect(migration_files).not_to be_empty
+      end
+
+      it "does not create db/error_dashboard_migrate" do
+        expect(Dir.exist?("#{destination_root}/db/error_dashboard_migrate")).to be false
+      end
+
+      it "adds .rails_error_dashboard suffix to migration filenames" do
+        migration_files = Dir.glob("#{destination_root}/db/migrate/*.rb")
+        migration_files.each do |f|
+          expect(File.basename(f)).to match(/\.rails_error_dashboard\.rb$/)
+        end
+      end
+
+      it "is idempotent (skips already-installed migrations)" do
+        first_count = Dir.glob("#{destination_root}/db/migrate/*rails_error_dashboard*.rb").size
+        # Run generator again
+        run_generator [ "--no-interactive" ]
+        second_count = Dir.glob("#{destination_root}/db/migrate/*rails_error_dashboard*.rb").size
+        expect(second_count).to eq(first_count)
+      end
     end
 
-    it "copies migrations from the engine" do
-      # The generator calls: rake "rails_error_dashboard:install:migrations"
-      # This is handled by Rails engine, so we just verify the call is made
-      expect(File).to exist("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+    context "with separate database" do
+      before do
+        run_generator [ "--no-interactive", "--separate_database" ]
+      end
+
+      it "copies migrations to db/error_dashboard_migrate" do
+        migration_files = Dir.glob("#{destination_root}/db/error_dashboard_migrate/*rails_error_dashboard*.rb")
+        expect(migration_files).not_to be_empty
+      end
+
+      it "does not copy migrations to db/migrate" do
+        migration_files = Dir.glob("#{destination_root}/db/migrate/*rails_error_dashboard*.rb")
+        expect(migration_files).to be_empty
+      end
     end
   end
 
