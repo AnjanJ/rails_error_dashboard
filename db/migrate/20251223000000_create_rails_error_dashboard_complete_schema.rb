@@ -66,7 +66,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       t.integer :priority_level, default: 0
 
       # Application association (from 20260106094233)
-      t.integer :application_id, null: false
+      t.bigint :application_id, null: false
 
       # Exception cause chain (from 20260220000001)
       t.text :exception_cause
@@ -129,7 +129,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
 
     # Create error_occurrences table (from 20251225100236)
     create_table :rails_error_dashboard_error_occurrences do |t|
-      t.integer :error_log_id, null: false
+      t.bigint :error_log_id, null: false
       t.datetime :occurred_at, null: false
       t.integer :user_id
       t.string :request_id
@@ -143,8 +143,8 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
 
     # Create cascade_patterns table (from 20251225101920)
     create_table :rails_error_dashboard_cascade_patterns do |t|
-      t.integer :parent_error_id, null: false
-      t.integer :child_error_id, null: false
+      t.bigint :parent_error_id, null: false
+      t.bigint :child_error_id, null: false
       t.integer :frequency, default: 1, null: false
       t.float :avg_delay_seconds
       t.float :cascade_probability
@@ -177,7 +177,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
 
     # Create error_comments table (from 20251226020100)
     create_table :rails_error_dashboard_error_comments do |t|
-      t.integer :error_log_id, null: false
+      t.bigint :error_log_id, null: false
       t.string :author_name, null: false
       t.text :body, null: false
       t.timestamps
