@@ -33,6 +33,7 @@ module RailsErrorDashboard
           @subscriptions << subscribe_cache_write
           @subscriptions << subscribe_job
           @subscriptions << subscribe_mailer
+          @subscriptions << subscribe_deprecation
 
           @subscriptions
         end
@@ -98,6 +99,15 @@ module RailsErrorDashboard
           ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
             event = ActiveSupport::Notifications::Event.new(*args)
             handle_mailer(event)
+          rescue => e
+            nil
+          end
+        end
+
+        def subscribe_deprecation
+          ActiveSupport::Notifications.subscribe("deprecation.rails") do |*args|
+            event = ActiveSupport::Notifications::Event.new(*args)
+            handle_deprecation(event)
           rescue => e
             nil
           end
@@ -172,6 +182,22 @@ module RailsErrorDashboard
           message = "#{mailer} to: [#{to}]"
 
           Services::BreadcrumbCollector.add("mailer", message, duration_ms: event.duration)
+        end
+
+        def handle_deprecation(event)
+          return unless Services::BreadcrumbCollector.current_buffer
+
+          payload = event.payload
+          return unless payload
+
+          message = payload[:message].to_s
+          metadata = nil
+
+          if payload[:callstack].is_a?(Array) && payload[:callstack].first
+            metadata = { caller: payload[:callstack].first.to_s }
+          end
+
+          Services::BreadcrumbCollector.add("deprecation", message, metadata: metadata)
         end
       end
     end

@@ -20,7 +20,7 @@ RSpec.describe RailsErrorDashboard::Subscribers::BreadcrumbSubscriber do
     it "registers all expected event subscribers" do
       subscriptions = described_class.subscribe!
       expect(subscriptions).to be_an(Array)
-      expect(subscriptions.size).to eq(6)
+      expect(subscriptions.size).to eq(7)
     end
 
     it "stores subscriptions for later cleanup" do
@@ -168,6 +168,53 @@ RSpec.describe RailsErrorDashboard::Subscribers::BreadcrumbSubscriber do
       expect(mailer_crumbs).not_to be_empty
       expect(mailer_crumbs.last[:m]).to include("UserMailer")
       expect(mailer_crumbs.last[:m]).to include("user@example.com")
+    end
+  end
+
+  describe "deprecation.rails subscriber" do
+    before { described_class.subscribe! }
+
+    it "adds deprecation breadcrumb with message" do
+      ActiveSupport::Notifications.instrument("deprecation.rails", {
+        message: "Method #foo is deprecated",
+        callstack: [ "app/models/user.rb:42:in `bar'", "app/controllers/users_controller.rb:10:in `show'" ]
+      }) { }
+
+      breadcrumbs = collector.harvest
+      dep_crumbs = breadcrumbs.select { |c| c[:c] == "deprecation" }
+      expect(dep_crumbs).not_to be_empty
+
+      crumb = dep_crumbs.last
+      expect(crumb[:m]).to eq("Method #foo is deprecated")
+      expect(crumb[:d]).to be_nil
+    end
+
+    it "stores first callstack frame in metadata" do
+      ActiveSupport::Notifications.instrument("deprecation.rails", {
+        message: "Using #old_method",
+        callstack: [ "app/models/user.rb:42:in `bar'", "app/controllers/users_controller.rb:10:in `show'" ]
+      }) { }
+
+      breadcrumbs = collector.harvest
+      crumb = breadcrumbs.select { |c| c[:c] == "deprecation" }.last
+      expect(crumb[:meta]).to eq({ caller: "app/models/user.rb:42:in `bar'" })
+    end
+
+    it "handles missing callstack gracefully" do
+      ActiveSupport::Notifications.instrument("deprecation.rails", {
+        message: "Something deprecated"
+      }) { }
+
+      breadcrumbs = collector.harvest
+      crumb = breadcrumbs.select { |c| c[:c] == "deprecation" }.last
+      expect(crumb[:m]).to eq("Something deprecated")
+      expect(crumb[:meta]).to be_nil
+    end
+
+    it "handles nil payload without raising" do
+      expect {
+        ActiveSupport::Notifications.instrument("deprecation.rails", nil) { }
+      }.not_to raise_error
     end
   end
 

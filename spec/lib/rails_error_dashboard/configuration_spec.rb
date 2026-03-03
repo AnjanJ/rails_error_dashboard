@@ -70,6 +70,22 @@ RSpec.describe RailsErrorDashboard::Configuration do
       end
     end
 
+    describe "N+1 detection configuration defaults" do
+      it "sets enable_n_plus_one_detection to true" do
+        expect(config.enable_n_plus_one_detection).to be true
+      end
+
+      it "sets n_plus_one_threshold to 3" do
+        expect(config.n_plus_one_threshold).to eq(3)
+      end
+    end
+
+    describe "system health configuration defaults" do
+      it "sets enable_system_health to false (opt-in)" do
+        expect(config.enable_system_health).to be false
+      end
+    end
+
     describe "Phase 4.3: baseline alert configuration defaults" do
       it "sets enable_baseline_alerts to false (opt-in)" do
         expect(config.enable_baseline_alerts).to be false
@@ -340,6 +356,25 @@ RSpec.describe RailsErrorDashboard::Configuration do
     it "does not raise when breadcrumbs are disabled even with invalid buffer size" do
       config.enable_breadcrumbs = false
       config.breadcrumb_buffer_size = 0
+
+      expect { config.validate! }.not_to raise_error
+    end
+  end
+
+  describe "n_plus_one_threshold validation" do
+    it "raises when n_plus_one_threshold is less than 2 and detection is enabled" do
+      config.enable_n_plus_one_detection = true
+      config.n_plus_one_threshold = 1
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /n_plus_one_threshold must be at least 2/
+      )
+    end
+
+    it "does not raise when N+1 detection is disabled even with invalid threshold" do
+      config.enable_n_plus_one_detection = false
+      config.n_plus_one_threshold = 0
 
       expect { config.validate! }.not_to raise_error
     end

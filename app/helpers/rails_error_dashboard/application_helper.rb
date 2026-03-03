@@ -207,6 +207,7 @@ module RailsErrorDashboard
       when "job"        then "warning"
       when "mailer"     then "secondary"
       when "custom"     then "dark"
+      when "deprecation" then "danger"
       else "light"
       end
     end
