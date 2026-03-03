@@ -5,6 +5,7 @@ module RailsErrorDashboard
     # Dashboard authentication (always required)
     attr_accessor :dashboard_username
     attr_accessor :dashboard_password
+    attr_accessor :authenticate_with
 
     # User model (for associations)
     attr_accessor :user_model
@@ -137,6 +138,7 @@ module RailsErrorDashboard
       # Default values - Authentication is ALWAYS required
       @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
       @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
+      @authenticate_with = nil
 
       @user_model = nil  # Auto-detect if not set
 
@@ -311,6 +313,11 @@ module RailsErrorDashboard
       # Validate custom_fingerprint (must respond to .call if set)
       if custom_fingerprint && !custom_fingerprint.respond_to?(:call)
         errors << "custom_fingerprint must respond to .call (lambda, proc, or object with .call method)"
+      end
+
+      # Validate authenticate_with (must respond to .call if set)
+      if authenticate_with && !authenticate_with.respond_to?(:call)
+        errors << "authenticate_with must respond to .call (lambda, proc, or object with .call method)"
       end
 
       # Validate breadcrumb_buffer_size (must be positive if breadcrumbs enabled)

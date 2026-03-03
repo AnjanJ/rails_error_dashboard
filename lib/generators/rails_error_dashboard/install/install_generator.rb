@@ -453,6 +453,11 @@ module RailsErrorDashboard
           say "  3. Restart your Rails server"
           say "  4. Visit http://localhost:3000/error_dashboard"
         end
+        say "Authentication:", :cyan
+        say "  Default: HTTP Basic Auth (gandalf/youshallnotpass)", :white
+        say "  Devise/Warden: config.authenticate_with = -> { warden.authenticated? }", :white
+        say "  Session-based: config.authenticate_with = -> { session[:admin] == true }", :white
+        say "  See: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#custom-authentication", :white
         say "\n"
         say "Documentation:", :white
         say "   Quick Start: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/QUICKSTART.md", :white

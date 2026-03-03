@@ -144,7 +144,10 @@ namespace :error_dashboard do
 
     # 8. Authentication check
     print "  Authentication... "
-    if config.dashboard_username == "gandalf" && config.dashboard_password == "youshallnotpass"
+    if config.authenticate_with
+      puts "OK (custom authentication)"
+      checks_passed += 1
+    elsif config.dashboard_username == "gandalf" && config.dashboard_password == "youshallnotpass"
       if Rails.env.production?
         puts "WARNING - using default credentials in production!"
         checks_failed += 1

@@ -272,7 +272,33 @@ module RailsErrorDashboard
     end
 
     def authenticate_dashboard_user!
-      # Authentication is ALWAYS required - no bypass allowed in any environment
+      auth_lambda = RailsErrorDashboard.configuration.authenticate_with
+
+      if auth_lambda
+        authenticate_with_lambda(auth_lambda)
+      else
+        authenticate_with_basic_auth
+      end
+    end
+
+    def authenticate_with_lambda(auth_lambda)
+      authorized = begin
+        instance_exec(&auth_lambda)
+      rescue => e
+        Rails.logger.error(
+          "[RailsErrorDashboard] authenticate_with lambda raised #{e.class}: #{e.message}"
+        )
+        false
+      end
+
+      return if performed?
+
+      unless authorized
+        render plain: "Access Denied", status: :forbidden
+      end
+    end
+
+    def authenticate_with_basic_auth
       authenticate_or_request_with_http_basic do |username, password|
         ActiveSupport::SecurityUtils.secure_compare(
           username,

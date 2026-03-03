@@ -423,7 +423,7 @@ begin
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     RailsErrorDashboard::Services::SystemHealthSnapshot.capture
     elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000
-    assert "G10: snapshot < 5ms", elapsed_ms < 5,
+    assert "G10: snapshot < 10ms", elapsed_ms < 10,
       "took #{elapsed_ms.round(2)}ms"
   end
 

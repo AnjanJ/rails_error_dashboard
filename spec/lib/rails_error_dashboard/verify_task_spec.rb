@@ -72,6 +72,21 @@ RSpec.describe "error_dashboard:verify rake task" do
     end
   end
 
+  describe "with custom authenticate_with" do
+    around do |example|
+      original = RailsErrorDashboard.configuration.authenticate_with
+      RailsErrorDashboard.configuration.authenticate_with = -> { true }
+      example.run
+      RailsErrorDashboard.configuration.authenticate_with = original
+    end
+
+    it "reports custom authentication as OK" do
+      output = capture_stdout { task.invoke }
+      expect(output).to include("Authentication...")
+      expect(output).to include("custom authentication")
+    end
+  end
+
   describe "with custom credentials" do
     around do |example|
       original_user = RailsErrorDashboard.configuration.dashboard_username

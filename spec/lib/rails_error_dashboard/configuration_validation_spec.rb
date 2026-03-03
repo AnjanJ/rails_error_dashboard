@@ -504,6 +504,45 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "authenticate_with validation" do
+    it "accepts nil (default)" do
+      config.authenticate_with = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts a lambda" do
+      config.authenticate_with = -> { true }
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts a proc" do
+      config.authenticate_with = proc { true }
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts any object responding to .call" do
+      callable = Class.new { def call = true }.new
+      config.authenticate_with = callable
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "rejects non-callable values (string)" do
+      config.authenticate_with = "not a lambda"
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /authenticate_with must respond to .call/
+      )
+    end
+
+    it "rejects non-callable values (integer)" do
+      config.authenticate_with = 42
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /authenticate_with must respond to .call/
+      )
+    end
+  end
+
   describe "custom_fingerprint validation" do
     it "accepts nil (default)" do
       config.custom_fingerprint = nil

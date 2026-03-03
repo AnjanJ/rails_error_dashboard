@@ -15,6 +15,12 @@ RSpec.describe RailsErrorDashboard::Configuration do
       it { expect(config.enable_error_subscriber).to be true }
     end
 
+    describe "authenticate_with" do
+      it "defaults to nil" do
+        expect(config.authenticate_with).to be_nil
+      end
+    end
+
     describe "Phase 1: new configuration defaults" do
       it "sets custom_severity_rules to empty hash" do
         expect(config.custom_severity_rules).to eq({})
@@ -130,6 +136,26 @@ RSpec.describe RailsErrorDashboard::Configuration do
   end
 
   describe "attribute accessors" do
+    describe "authenticate_with" do
+      it "can be set to a lambda" do
+        auth = -> { current_user&.admin? }
+        config.authenticate_with = auth
+        expect(config.authenticate_with).to eq(auth)
+      end
+
+      it "can be set to a proc" do
+        auth = proc { session[:admin] }
+        config.authenticate_with = auth
+        expect(config.authenticate_with).to eq(auth)
+      end
+
+      it "can be set to any callable object" do
+        callable = Class.new { def call = true }.new
+        config.authenticate_with = callable
+        expect(config.authenticate_with).to eq(callable)
+      end
+    end
+
     describe "custom_severity_rules" do
       it "can be set to a hash" do
         rules = { "PaymentError" => :critical, "ValidationError" => :low }
