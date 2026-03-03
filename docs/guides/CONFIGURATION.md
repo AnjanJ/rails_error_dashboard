@@ -155,7 +155,15 @@ Complete reference of all 43+ configuration options with defaults, types, and de
 |--------|------|---------|-------------|
 | `enable_breadcrumbs` | Boolean | `false` | Capture request activity trail (SQL, controller, cache, etc.) |
 | `breadcrumb_buffer_size` | Integer | `40` | Max breadcrumbs per request (ring buffer) |
-| `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or `[:sql, :controller, :cache, :job, :mailer, :custom]`) |
+| `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or `[:sql, :controller, :cache, :job, :mailer, :deprecation, :custom]`) |
+| `enable_n_plus_one_detection` | Boolean | `true` | Detect N+1 query patterns in SQL breadcrumbs (display-time analysis) |
+| `n_plus_one_threshold` | Integer | `3` | Min repetitions to flag as N+1 (min: 2) |
+
+### System Health Snapshot (NEW!)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_system_health` | Boolean | `false` | Capture GC, memory, threads, connection pool at error time |
 
 ### Internal Logging & Debugging
 
@@ -598,8 +606,12 @@ RailsErrorDashboard.configure do |config|
   config.breadcrumb_buffer_size = 40
 
   # Limit which categories are captured (default: nil = all)
-  # Options: :sql, :controller, :cache, :job, :mailer, :custom
+  # Options: :sql, :controller, :cache, :job, :mailer, :deprecation, :custom
   config.breadcrumb_categories = [ :sql, :controller ]  # Only SQL and controller events
+
+  # N+1 query detection (analyzes SQL breadcrumbs at display time)
+  config.enable_n_plus_one_detection = true  # Default: true
+  config.n_plus_one_threshold = 3            # Min repetitions to flag (default: 3, min: 2)
 end
 ```
 
@@ -622,6 +634,18 @@ RailsErrorDashboard.add_breadcrumb("payment processed", { provider: "stripe", am
 | `cache_write.active_support` | `cache` | `cache write: key` |
 | `perform.active_job` | `job` | Job class name + duration |
 | `deliver.action_mailer` | `mailer` | `MailerClass to: [recipients]` |
+| `deprecation.rails` | `deprecation` | Deprecation warning message + caller location |
+
+### N+1 Query Detection
+
+When breadcrumbs and N+1 detection are both enabled, the error detail page automatically analyzes SQL breadcrumbs for repeated query patterns. A yellow warning card appears when the same normalized query shape is repeated above the threshold:
+
+```ruby
+config.enable_n_plus_one_detection = true  # ON by default
+config.n_plus_one_threshold = 3            # Flag when same pattern appears 3+ times
+```
+
+The detector normalizes SQL by replacing literal values (`WHERE id = 42` → `WHERE id = ?`) and IN lists (`IN (1, 2, 3)` → `IN (?)`) while preserving PostgreSQL double-quoted identifiers. Analysis runs at display time only — zero overhead on requests.
 
 ### Use Cases
 
@@ -647,6 +671,41 @@ config.breadcrumb_categories = [ :sql, :controller ]
 - **Every subscriber wrapped in rescue** — never raises, never blocks
 - **Sensitive data filtered** — passwords, tokens, secrets scrubbed before storage
 - **< 0.1ms/request overhead** — events already fired by Rails
+
+---
+
+## System Health Snapshot (NEW!)
+
+Capture runtime health metrics (GC stats, memory, threads, connection pool, Puma) at the moment of every error. Displayed in the error detail sidebar.
+
+### Quick Start
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_system_health = true
+end
+```
+
+### What Gets Captured
+
+| Metric | Source | Notes |
+|--------|--------|-------|
+| GC stats | `GC.stat` | heap_live_slots, heap_free_slots, major_gc_count, total_allocated_objects |
+| Process memory | `/proc/self/status` | RSS in MB, Linux only (nil on macOS) |
+| Thread count | `Thread.list.count` | O(1), safe |
+| Connection pool | `ActiveRecord::Base.connection_pool.stat` | size, busy, idle, dead, waiting |
+| Puma stats | `Puma.stats` | running, max_threads, pool_capacity, backlog (when available) |
+
+### Safety
+
+- **Default OFF** — opt-in only
+- **Sub-millisecond** — total snapshot < 1ms
+- **Every metric individually wrapped** in `rescue => nil`
+- **Top-level rescue** — returns `{ captured_at: ... }` if everything fails (never raises)
+- **No ObjectSpace scanning** — never calls `each_object` or `count_objects`
+- **No Thread backtraces** — only `.count`, never `.map(&:backtrace)`
+- **No subprocess** — memory via procfs only, no `ps`, no fork, no backtick
+- **No global state** — no Thread.current, no mutex, no memoization
 
 ---
 
@@ -1260,6 +1319,13 @@ RailsErrorDashboard.configure do |config|
 
   # Capture all categories (default: nil = all)
   # config.breadcrumb_categories = [:sql, :controller, :cache, :job, :mailer, :custom]
+
+  # ============================================================================
+  # SYSTEM HEALTH SNAPSHOT (NEW!)
+  # ============================================================================
+
+  # Capture GC, memory, threads, connection pool at error time
+  config.enable_system_health = true
 
   # ============================================================================
   # ADDITIONAL CONFIGURATION

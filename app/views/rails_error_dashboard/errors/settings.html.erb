@@ -91,7 +91,16 @@
       color: "warning",
       settings: {
         enable_breadcrumbs: { label: "Breadcrumbs", description: "Capture request activity trail", type: :boolean },
-        breadcrumb_buffer_size: { label: "Buffer Size", description: "Max breadcrumbs per request", type: :integer, show_if: :enable_breadcrumbs, unit: "events" }
+        breadcrumb_buffer_size: { label: "Buffer Size", description: "Max breadcrumbs per request", type: :integer, show_if: :enable_breadcrumbs, unit: "events" },
+        enable_n_plus_one_detection: { label: "N+1 Detection", description: "Detect repeated query patterns in breadcrumbs", type: :boolean, show_if: :enable_breadcrumbs },
+        n_plus_one_threshold: { label: "N+1 Threshold", description: "Min repetitions to flag as N+1", type: :integer, show_if: :enable_n_plus_one_detection, unit: "queries" }
+      }
+    },
+    "System Health" => {
+      icon: "bi-heart-pulse",
+      color: "danger",
+      settings: {
+        enable_system_health: { label: "System Health Snapshot", description: "Capture GC, memory, threads, connection pool at error time", type: :boolean }
       }
     },
     "Enhanced Metrics" => {

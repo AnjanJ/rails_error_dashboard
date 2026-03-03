@@ -14,7 +14,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth, data retention
 
 ### Optional Features (Opt-in)
-**17 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
+**18 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -25,8 +25,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (3 features)**
-- Source Code Integration, Git Blame, Breadcrumbs
+**🔍 Developer Tools (4 features)**
+- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
@@ -426,15 +426,39 @@ Unlike Sentry or Honeybadger (which require SDK configuration), Rails Error Dash
 | `cache` | `cache_read.active_support`, `cache_write.active_support` | `cache read: users/42` |
 | `job` | `perform.active_job` | `SendWelcomeEmailJob` |
 | `mailer` | `deliver.action_mailer` | `UserMailer to: [user@example.com]` |
+| `deprecation` | `deprecation.rails` | `Method #foo is deprecated` (with caller location) |
 | `custom` | Manual API | `checkout started` |
 
 ### Timeline Display
 
 Each error's detail page shows a Breadcrumbs card with:
 - **Numbered event list** in chronological order
-- **Color-coded category badges** (SQL = blue, Controller = green, Cache = teal, etc.)
+- **Color-coded category badges** (SQL = blue, Controller = green, Cache = teal, Deprecation = red, etc.)
 - **Duration highlighting** — slow operations (>100ms) shown in red
 - **Metadata display** for custom breadcrumbs
+
+### Deprecation Warnings
+
+When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) are automatically captured as breadcrumbs. A dedicated red-bordered summary card appears on the error detail page when deprecations are detected, showing:
+- The deprecation warning message
+- The source caller location (first frame of the callstack)
+
+This helps you identify deprecated code paths that may be contributing to errors — especially useful when upgrading Rails versions.
+
+### N+1 Query Detection
+
+The N+1 detector analyzes SQL breadcrumbs **at display time** (not on every request) to identify repeated query patterns that suggest missing eager loading:
+
+- Enabled by default when breadcrumbs are on (`enable_n_plus_one_detection = true`)
+- Flags patterns where the same normalized query appears 3+ times (configurable via `n_plus_one_threshold`)
+- Shows a yellow warning card on the error detail page with repeat count, sample query, and total time
+- Normalizes literals (`WHERE id = 42` → `WHERE id = ?`) and IN clauses for fingerprinting
+- Pure display-time analysis — zero overhead on requests, O(n) over max 40 breadcrumbs
+
+```ruby
+config.enable_n_plus_one_detection = true  # Default: true
+config.n_plus_one_threshold = 3            # Min repetitions to flag (default: 3, min: 2)
+```
 
 ### Manual Breadcrumbs API
 
@@ -451,7 +475,9 @@ RailsErrorDashboard.add_breadcrumb("payment processing", { provider: "stripe" })
 RailsErrorDashboard.configure do |config|
   config.enable_breadcrumbs = true           # Master switch (default: false)
   config.breadcrumb_buffer_size = 40         # Max events per request (default: 40)
-  config.breadcrumb_categories = nil         # nil = all; or [:sql, :controller, :cache, :job, :mailer, :custom]
+  config.breadcrumb_categories = nil         # nil = all; or [:sql, :controller, :cache, :job, :mailer, :deprecation, :custom]
+  config.enable_n_plus_one_detection = true  # Detect N+1 query patterns (default: true)
+  config.n_plus_one_threshold = 3            # Min repetitions to flag (default: 3)
 end
 ```
 
@@ -472,6 +498,53 @@ Breadcrumbs are designed with host app safety as the top priority:
 ### Async Logging Compatibility
 
 When async logging is enabled, breadcrumbs are harvested from the current thread **before** the background job is dispatched (since the job runs on a different thread). This ensures breadcrumbs are always captured correctly regardless of logging mode.
+
+---
+
+## System Health Snapshot (NEW!)
+
+**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at the moment of every error:
+
+```ruby
+config.enable_system_health = true
+```
+
+### What Is System Health?
+
+When debugging errors, you need to know **what the app's runtime state was at the moment of failure**. Was memory spiking? Was the connection pool exhausted? Was GC thrashing? System health snapshots answer these questions automatically.
+
+Each error's detail page shows a System Health card with:
+
+- **GC Stats** — Heap live/free slots, major GC count, total allocated objects
+- **Process Memory** — RSS in MB (Linux procfs only, returns nil on macOS)
+- **Thread Count** — Number of active threads
+- **Connection Pool** — Size, busy, idle, dead, and waiting connections (with color-coded warnings)
+- **Puma Stats** — Running/max threads, pool capacity, backlog (when Puma is the server)
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_system_health = true  # Master switch (default: false)
+end
+```
+
+### Safety Guarantees
+
+System health snapshots are designed with host app safety as the top priority:
+
+- **Sub-millisecond** — Total snapshot completes in < 1ms
+- **Every metric individually wrapped** in `rescue => nil` — one failure doesn't affect others
+- **Top-level rescue** — If everything fails, returns `{ captured_at: ... }` (never raises)
+- **No ObjectSpace** — Never calls `ObjectSpace.each_object` or `ObjectSpace.count_objects` (heap scan)
+- **No Thread backtraces** — Only `Thread.list.count` (O(1)), never `.map(&:backtrace)` (GVL hold)
+- **No subprocess** — Process memory uses Linux procfs only, no `ps`, no fork, no backtick
+- **No new gems** — Uses only Ruby stdlib and ActiveRecord
+- **No global state** — No Thread.current, no mutex, no memoization
+
+### Async Logging Compatibility
+
+When async logging is enabled, system health is captured from the current thread **before** the background job is dispatched (since the job runs on a different thread and may have different runtime state). This ensures the snapshot reflects the actual state at error time.
 
 ---
 
@@ -909,6 +982,7 @@ rails generate rails_error_dashboard:install \
 - `--source_code_integration` - Enable source code viewer
 - `--git_blame` - Enable git blame integration
 - `--breadcrumbs` - Enable breadcrumbs (request activity trail) (NEW!)
+- `--system_health` - Enable system health snapshot (NEW!)
 
 ### After Installation
 
@@ -1010,6 +1084,7 @@ config.enable_error_correlation = true
 
 # Debugging
 config.enable_breadcrumbs = true
+config.enable_system_health = true
 ```
 
 #### Enterprise/High-Scale
@@ -1036,6 +1111,7 @@ config.enable_occurrence_patterns = true
 # Developer tools
 config.enable_source_code_integration = true
 config.enable_breadcrumbs = true
+config.enable_system_health = true
 ```
 
 ### Environment-Specific Configuration

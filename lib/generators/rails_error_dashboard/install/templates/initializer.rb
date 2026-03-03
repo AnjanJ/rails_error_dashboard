@@ -311,6 +311,24 @@ RailsErrorDashboard.configure do |config|
   # config.breadcrumb_buffer_size = 40
 
 <% end -%>
+  # N+1 Query Detection (analyzes SQL breadcrumbs at display time)
+  # Flags repeated query patterns that suggest missing eager loading
+  config.enable_n_plus_one_detection = true
+  config.n_plus_one_threshold = 3  # Min repetitions to flag (min: 2)
+
+<% if @enable_system_health -%>
+  # System Health Snapshot - ENABLED (NEW!)
+  # Capture GC stats, memory, threads, and connection pool state at error time
+  config.enable_system_health = true
+  # To disable: Set config.enable_system_health = false
+
+<% else -%>
+  # System Health Snapshot - DISABLED (NEW!)
+  # To enable: Set config.enable_system_health = true
+  config.enable_system_health = false
+
+<% end -%>
+
   # Repository settings (auto-detected from git remote, optional override)
   # config.repository_url = ENV["REPOSITORY_URL"]  # e.g., "https://github.com/user/repo"
   # config.repository_branch = ENV.fetch("REPOSITORY_BRANCH", "main")  # Default branch
