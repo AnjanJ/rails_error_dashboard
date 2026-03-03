@@ -11,7 +11,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Error Tracking & Capture** - Automatic error logging from controllers, jobs, middleware
 - ✅ **Dashboard & UI** - Modern interface with search, filtering, real-time updates
 - ✅ **Analytics & Insights** - Trend charts, severity breakdown, spike detection
-- ✅ **Security & Privacy** - HTTP Basic Auth, data retention
+- ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
 ### Optional Features (Opt-in)
 **16 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
@@ -449,10 +449,10 @@ config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"  # Default branch
 ## Security & Privacy
 
 ### Authentication
-- **HTTP Basic Auth** built-in
+- **HTTP Basic Auth** built-in (default)
+- **Custom authentication** via `config.authenticate_with` lambda — use Devise, Warden, session-based, or any auth system
 - **Configurable credentials** via environment variables
-- **Enable/disable per environment**
-- **Skip authentication in development** (configurable)
+- **Fail-closed security** — lambda errors are rescued, logged, and result in 403 Forbidden
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure

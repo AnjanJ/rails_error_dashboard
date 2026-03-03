@@ -31,6 +31,7 @@ Complete reference of all 43+ configuration options with defaults, types, and de
 |--------|------|---------|-------------|
 | `dashboard_username` | String | `"gandalf"` | Username for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_USER`) |
 | `dashboard_password` | String | `"youshallnotpass"` | Password for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_PASSWORD`) |
+| `authenticate_with` | Lambda/Proc/Callable | `nil` | Custom auth lambda executed in controller context. When set, replaces HTTP Basic Auth. Return truthy to allow, falsy to deny (403). |
 | `user_model` | String | `"User"` | Model name for user associations |
 
 ### Multi-App Support
@@ -272,6 +273,34 @@ RailsErrorDashboard.configure do |config|
   config.enable_error_subscriber = true
 end
 ```
+
+### Custom Authentication
+
+If you use Devise, Warden, or any other auth system, you can replace HTTP Basic Auth with a lambda that runs in controller context via `instance_exec`:
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  # Devise
+  config.authenticate_with = -> { current_user&.admin? }
+
+  # Warden
+  config.authenticate_with = -> { warden.authenticated?(:admin) }
+
+  # Session-based
+  config.authenticate_with = -> { session[:dashboard_admin] == true }
+
+  # Role-based
+  config.authenticate_with = -> { current_user&.role.in?(["admin", "developer"]) }
+end
+```
+
+**How it works:**
+- The lambda has full access to `current_user`, `session`, `request`, `params`, `cookies`, etc.
+- **Truthy return** → access granted
+- **Falsy return** (including `nil`) → 403 Forbidden
+- **Lambda raises** → rescued, logged, 403 (fail closed)
+- **Lambda calls `redirect_to`** → redirect honored (e.g. to your login page)
+- **`authenticate_with = nil`** (default) → falls back to HTTP Basic Auth
 
 ---
 

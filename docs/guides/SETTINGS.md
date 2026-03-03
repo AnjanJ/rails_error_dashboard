@@ -11,7 +11,7 @@ Navigate to the Settings page from the main dashboard:
 1. Click the **gear icon** (⚙️) in the navigation bar
 2. Or visit `/error_dashboard/settings` directly
 
-**Authentication**: Requires HTTP Basic Auth (same credentials as dashboard access)
+**Authentication**: Requires authentication (HTTP Basic Auth or custom `authenticate_with` lambda)
 
 ---
 
@@ -25,7 +25,7 @@ Shows the status of fundamental dashboard features:
 
 - **Error Middleware**: Whether the error-catching middleware is active
 - **Rails.error Subscriber**: Whether Rails 7+ error reporter integration is active
-- **Authentication**: Confirms HTTP Basic Auth is always enforced
+- **Authentication**: Confirms authentication is always enforced (HTTP Basic Auth or custom lambda)
 - **Data Retention**: Number of days errors are kept before auto-deletion
 - **Max Backtrace Lines**: Stack trace depth limit
 - **Sampling Rate**: Percentage of errors being logged (100% = all errors)
@@ -265,7 +265,7 @@ Baseline Alerts                  ✓ Enabled (2.0 std devs)
 - Passwords are never displayed
 
 **Access Control:**
-- Settings page requires HTTP Basic Auth
+- Settings page requires authentication (HTTP Basic Auth or custom `authenticate_with` lambda)
 - No API endpoint for programmatic access (security by design)
 - Only accessible to authenticated dashboard users
 
@@ -327,13 +327,18 @@ Run `echo $OPTION` in your shell to see actual environment value.
 
 ### Cannot Access Settings Page
 
-**Problem**: 401 Unauthorized or authentication prompt loops.
+**Problem**: 401 Unauthorized or 403 Forbidden.
 
-**Solution**:
+**Solution for HTTP Basic Auth (401)**:
 1. Verify credentials in initializer match what you're entering
 2. Check for browser cached credentials (clear browser cache)
 3. Try incognito/private browsing window
 4. Verify `dashboard_username` and `dashboard_password` are set
+
+**Solution for custom auth (403)**:
+1. Verify your `authenticate_with` lambda returns truthy for authorized users
+2. Check logs for `[RailsErrorDashboard] authenticate_with lambda raised` — this means the lambda is erroring
+3. Ensure `current_user` or other helpers are available in the controller context
 
 ---
 

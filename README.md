@@ -112,7 +112,7 @@ Modern Bootstrap 5 UI with dark/light mode, responsive design, real-time statist
 Error assignment and status tracking, priority levels (critical/high/medium/low), snooze functionality, comment threads, batch operations (bulk resolve/delete), resolution tracking with references.
 
 #### 🔒 Security & Privacy
-HTTP Basic Auth, environment-based settings, optional separate database for isolation. Your data stays on your server - no third-party access.
+HTTP Basic Auth or custom authentication (Devise, Warden, session-based), environment-based settings, optional separate database for isolation. Your data stays on your server - no third-party access.
 
 ### Optional Features (Choose During Install)
 
@@ -317,6 +317,9 @@ RailsErrorDashboard.configure do |config|
   # ============================================================================
   config.dashboard_username = ENV.fetch('ERROR_DASHBOARD_USER', 'gandalf')
   config.dashboard_password = ENV.fetch('ERROR_DASHBOARD_PASSWORD', 'youshallnotpass')
+
+  # Or use your existing auth (Devise, Warden, etc.) instead of Basic Auth:
+  # config.authenticate_with = -> { current_user&.admin? }
 
   # ============================================================================
   # OPTIONAL FEATURES (Enable as needed)
