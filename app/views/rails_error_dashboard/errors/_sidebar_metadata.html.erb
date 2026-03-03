@@ -1,0 +1,335 @@
+      <!-- Metadata Card -->
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle"></i> Metadata</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">Occurrence Count</small>
+            <span class="badge bg-primary fs-5"><%= error.occurrence_count %>x</span>
+            <% if error.occurrence_count > 1 %>
+              <br><small class="text-muted">This error has occurred <%= error.occurrence_count %> times</small>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">First Seen</small>
+            <% if related_errors.any? %>
+              <%= link_to "#section-timeline", class: "text-decoration-none", data: { bs_toggle: "tooltip" }, title: "Jump to timeline" do %>
+                <strong><%= local_time(error.first_seen_at, format: :date_only) %></strong><br>
+                <small><%= local_time(error.first_seen_at, format: :time_only) %></small>
+                <i class="bi bi-arrow-down-circle ms-1"></i>
+              <% end %>
+            <% else %>
+              <strong><%= local_time(error.first_seen_at, format: :date_only) %></strong><br>
+              <small><%= local_time(error.first_seen_at, format: :time_only) %></small>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">Last Seen</small>
+            <strong><%= local_time(error.last_seen_at, format: :date_only) %></strong><br>
+            <small><%= local_time(error.last_seen_at, format: :time_only) %></small>
+          </div>
+
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">Severity Level</small>
+            <% severity = error.severity %>
+            <% if severity == :critical %>
+              <span class="badge bg-danger fs-6">CRITICAL</span>
+            <% elsif severity == :high %>
+              <span class="badge bg-warning text-dark fs-6">HIGH</span>
+            <% elsif severity == :medium %>
+              <span class="badge bg-info text-dark fs-6">MEDIUM</span>
+            <% else %>
+              <span class="badge bg-secondary fs-6">LOW</span>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">Platform</small>
+            <% if error.platform == 'iOS' %>
+              <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
+            <% elsif error.platform == 'Android' %>
+              <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
+            <% elsif error.platform == 'Web' %>
+              <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
+            <% else %>
+              <span class="badge badge-api"><i class="bi bi-server"></i> <%= error.platform || 'API' %></span>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">User</small>
+            <% if error.respond_to?(:user) && error.user %>
+              <strong><%= error.user.email %></strong><br>
+              <small class="text-muted">ID: <%= error.user_id %></small>
+            <% elsif error.user_id %>
+              <span class="text-muted">User ID: <%= error.user_id %></span>
+            <% else %>
+              <span class="text-muted">Guest / Unauthenticated</span>
+            <% end %>
+          </div>
+
+          <!-- Phase 3: Workflow Status -->
+          <div class="mb-3">
+            <small class="metadata-label d-block mb-1">Workflow Status</small>
+            <% if error.respond_to?(:status) %>
+              <% badge_color = error.status_badge_color %>
+              <% text_dark = %w[info warning light].include?(badge_color) ? 'text-dark' : '' %>
+              <span class="badge bg-<%= badge_color %> <%= text_dark %> fs-6">
+                <%= error.status.titleize %>
+              </span>
+            <% elsif error.resolved? %>
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle"></i> Resolved
+              </span>
+              <% if error.resolved_at.present? %>
+                <br>
+                <small class="text-muted mt-1 d-block">
+                  <%= local_time(error.resolved_at, format: :full) %>
+                </small>
+              <% end %>
+            <% else %>
+              <span class="badge bg-danger">
+                <i class="bi bi-exclamation-circle"></i> Unresolved
+              </span>
+            <% end %>
+          </div>
+
+          <!-- Reopened indicator -->
+          <% if error.reopened? %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Reopened</small>
+              <span class="badge bg-warning text-dark">
+                <i class="bi bi-arrow-counterclockwise"></i> Reopened
+              </span>
+              <br>
+              <small class="text-muted mt-1 d-block">
+                <%= local_time(error.reopened_at, format: :full) %>
+              </small>
+            </div>
+          <% end %>
+
+          <!-- Phase 3: Assignment -->
+          <% if error.respond_to?(:assigned_to) %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Assigned To</small>
+              <% if error.assigned? %>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <i class="bi bi-person-fill text-primary"></i>
+                    <strong><%= error.assigned_to %></strong>
+                    <% if error.assigned_at.present? %>
+                      <br>
+                      <small class="text-muted">
+                        <%= local_time_ago(error.assigned_at) %>
+                      </small>
+                    <% end %>
+                  </div>
+                  <%= button_to unassign_error_path(error), method: :post, class: "btn btn-sm btn-outline-secondary",
+                      data: { turbo_confirm: "Remove assignment?" } do %>
+                    <i class="bi bi-x"></i>
+                  <% end %>
+                </div>
+              <% else %>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+                  <i class="bi bi-person-plus"></i> Assign
+                </button>
+              <% end %>
+            </div>
+
+            <!-- Phase 3: Priority -->
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Priority</small>
+              <% if error.respond_to?(:priority_level) %>
+                <span class="badge bg-<%= error.priority_color %> fs-6">
+                  <%= error.priority_label %>
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#priorityModal">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              <% end %>
+            </div>
+
+            <!-- Phase 3: Snooze -->
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Snooze</small>
+              <% if error.respond_to?(:snoozed?) && error.snoozed? %>
+                <div class="alert alert-warning py-2 mb-2">
+                  <i class="bi bi-alarm"></i>
+                  <strong>Snoozed</strong><br>
+                  <small>Until <%= local_time(error.snoozed_until, format: :datetime) %></small>
+                </div>
+                <%= button_to unsnooze_error_path(error), method: :post, class: "btn btn-sm btn-outline-warning" do %>
+                  <i class="bi bi-alarm-fill"></i> Unsnooze
+                <% end %>
+              <% else %>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#snoozeModal">
+                  <i class="bi bi-alarm"></i> Snooze
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if error.resolved? && error.resolved_by_name.present? %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Resolved By</small>
+              <strong><%= error.resolved_by_name %></strong>
+            </div>
+          <% end %>
+
+          <% if error.resolved? && error.resolution_reference.present? %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Reference</small>
+              <code><%= error.resolution_reference %></code>
+            </div>
+          <% end %>
+
+          <% if error.resolved? && error.resolution_comment.present? %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Resolution Notes</small>
+              <div class="alert alert-success mb-0">
+                <%= auto_link_urls(error.resolution_comment, error: error).html_safe %>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Environment Information -->
+          <div class="sidebar-section sidebar-section-blue">
+            <div class="sidebar-section-title"><i class="bi bi-gear"></i> Environment</div>
+            <small class="sidebar-section-hint">Runtime context at error time</small>
+            <div class="sidebar-section-body">
+              <% if error.app_version.present? %>
+                <div class="mb-1">
+                  <small class="text-muted">App Version:</small>
+                  <code class="ms-1"><%= error.app_version %></code>
+                </div>
+              <% end %>
+
+              <% if error.git_sha.present? %>
+                <div class="mb-1">
+                  <small class="text-muted">Git SHA:</small>
+                  <span class="ms-1"><%= git_commit_link(error.git_sha) %></span>
+                </div>
+              <% end %>
+
+              <% env_info = error.respond_to?(:environment_info) && error.environment_info.present? ?
+                   JSON.parse(error.environment_info, symbolize_names: true) : nil rescue nil %>
+
+              <div class="mb-1">
+                <small class="text-muted">Rails:</small>
+                <code class="ms-1"><%= env_info&.dig(:rails_version) || Rails.version %></code>
+              </div>
+
+              <div class="mb-1">
+                <small class="text-muted">Ruby:</small>
+                <code class="ms-1"><%= env_info&.dig(:ruby_version) || RUBY_VERSION %></code>
+              </div>
+
+              <div class="mb-1">
+                <small class="text-muted">Environment:</small>
+                <% env_name = env_info&.dig(:rails_env) || Rails.env.to_s %>
+                <span class="badge bg-<%= env_name == 'production' ? 'danger' : env_name == 'development' ? 'success' : 'warning' %> ms-1">
+                  <%= env_name.titleize %>
+                </span>
+              </div>
+
+              <% if env_info&.dig(:server).present? && env_info[:server] != "unknown" %>
+                <div class="mb-1">
+                  <small class="text-muted">Server:</small>
+                  <code class="ms-1"><%= env_info[:server].capitalize %></code>
+                </div>
+              <% end %>
+
+              <% if env_info&.dig(:database_adapter).present? && env_info[:database_adapter] != "unknown" %>
+                <div class="mb-1">
+                  <small class="text-muted">Database:</small>
+                  <code class="ms-1"><%= env_info[:database_adapter] %></code>
+                </div>
+              <% end %>
+
+              <% if env_info&.dig(:gem_versions)&.any? %>
+                <div class="mb-1">
+                  <small class="text-muted d-block">Key Gems:</small>
+                  <div class="ps-2">
+                    <% env_info[:gem_versions].each do |name, version| %>
+                      <small><code><%= name %> <%= version %></code></small><br>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <% if RailsErrorDashboard.configuration.enable_system_health &&
+                error.respond_to?(:system_health) && error.system_health.present? %>
+            <% health = begin; JSON.parse(error.system_health, symbolize_names: true); rescue; nil; end %>
+            <% if health %>
+              <div class="sidebar-section sidebar-section-red">
+                <div class="sidebar-section-title"><i class="bi bi-heart-pulse"></i> System Health</div>
+                <small class="sidebar-section-hint">Runtime state when error fired</small>
+                <div class="sidebar-section-body">
+                  <% if health[:process_memory_mb] %>
+                    <div class="mb-1">
+                      <small class="text-muted">Memory (RSS):</small>
+                      <% mem = health[:process_memory_mb].to_f %>
+                      <code class="ms-1 text-<%= mem > 1024 ? 'danger' : mem > 512 ? 'warning' : 'success' %>">
+                        <%= mem %> MB
+                      </code>
+                    </div>
+                  <% end %>
+
+                  <% if health[:thread_count] %>
+                    <div class="mb-1">
+                      <small class="text-muted">Threads:</small>
+                      <code class="ms-1"><%= health[:thread_count] %></code>
+                    </div>
+                  <% end %>
+
+                  <% if health[:gc] %>
+                    <div class="mb-1">
+                      <small class="text-muted">GC Live Objects:</small>
+                      <code class="ms-1"><%= begin; number_with_delimiter(health[:gc][:heap_live_slots]); rescue; health[:gc][:heap_live_slots]; end %></code>
+                    </div>
+                    <div class="mb-1">
+                      <small class="text-muted">Major GC Runs:</small>
+                      <code class="ms-1"><%= health[:gc][:major_gc_count] %></code>
+                    </div>
+                  <% end %>
+
+                  <% if health[:connection_pool] %>
+                    <% cp = health[:connection_pool] %>
+                    <div class="mb-1">
+                      <small class="text-muted">Connection Pool:</small>
+                      <code class="ms-1">
+                        <%= cp[:busy] %>/<%= cp[:size] %> busy, <%= cp[:idle] %> idle<% if cp[:dead].to_i > 0 %>, <span class="text-danger"><%= cp[:dead] %> dead</span><% end %><% if cp[:waiting].to_i > 0 %>, <span class="text-warning"><%= cp[:waiting] %> waiting</span><% end %>
+                      </code>
+                    </div>
+                  <% end %>
+
+                  <% if health[:puma] %>
+                    <% ps = health[:puma] %>
+                    <div class="mb-1">
+                      <small class="text-muted">Puma Threads:</small>
+                      <code class="ms-1">
+                        <%= ps[:running] %>/<%= ps[:max_threads] %> running, <%= ps[:pool_capacity] %> capacity<% if ps[:backlog].to_i > 0 %>, <span class="text-warning"><%= ps[:backlog] %> backlog</span><% end %>
+                      </code>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+
+          <div>
+            <small class="metadata-label d-block mb-1">Error ID</small>
+            <div class="d-flex align-items-center gap-2">
+              <code><%= error.id %></code>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= error.id %>', this)" title="Copy error ID">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>

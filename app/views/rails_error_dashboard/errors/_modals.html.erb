@@ -1,0 +1,139 @@
+<!-- Resolve Error Modal -->
+<div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: resolve_error_path(error), method: :post, class: "modal-content" do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="resolveModalLabel">
+            <i class="bi bi-check-circle"></i> Mark Error as Resolved
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="resolved_by_name" class="form-label">Your Name <span class="text-danger">*</span></label>
+            <%= text_field_tag :resolved_by_name, nil, class: "form-control", placeholder: "e.g., John Doe", required: true %>
+            <small class="text-muted">Who is resolving this error?</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="resolution_reference" class="form-label">Reference (Optional)</label>
+            <%= text_field_tag :resolution_reference, nil, class: "form-control", placeholder: "e.g., JIRA-123, PR #456, GitHub Issue #789" %>
+            <small class="text-muted">Link to ticket, PR, or issue</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="resolution_comment" class="form-label">Resolution Notes (Optional)</label>
+            <%= text_area_tag :resolution_comment, nil, class: "form-control", rows: 4, placeholder: "Describe what was done to fix this error..." %>
+            <small class="text-muted">What was done to resolve this error?</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Mark as Resolved", class: "btn btn-success", data: { action: "click->loading#click" } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: assign_error_path(error), method: :post do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignModalLabel">
+            <i class="bi bi-person-plus"></i> Assign Error
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="assigned_to" class="form-label">Assign To <span class="text-danger">*</span></label>
+            <%= text_field_tag :assigned_to, nil, class: "form-control", placeholder: "e.g., John Doe", required: true, autofocus: true %>
+            <small class="text-muted">Who should investigate this error?</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Assign", class: "btn btn-primary", data: { action: "click->loading#click" } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Priority Modal -->
+<div class="modal fade" id="priorityModal" tabindex="-1" aria-labelledby="priorityModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: update_priority_error_path(error), method: :post do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="priorityModalLabel">
+            <i class="bi bi-flag"></i> Update Priority
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="priority_level" class="form-label">Priority Level <span class="text-danger">*</span></label>
+            <%= select_tag :priority_level,
+                options_for_select(
+                  RailsErrorDashboard::ErrorLog.priority_options,
+                  error.priority_level
+                ),
+                class: "form-select", required: true %>
+            <small class="text-muted">Current: <%= error.priority_label %></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Update Priority", class: "btn btn-warning", data: { action: "click->loading#click" } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Phase 3: Snooze Modal -->
+<div class="modal fade" id="snoozeModal" tabindex="-1" aria-labelledby="snoozeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: snooze_error_path(error), method: :post do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="snoozeModalLabel">
+            <i class="bi bi-alarm"></i> Snooze Error
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="hours" class="form-label">Snooze Duration <span class="text-danger">*</span></label>
+            <%= select_tag :hours,
+                options_for_select([
+                  ['1 hour', 1],
+                  ['4 hours', 4],
+                  ['8 hours', 8],
+                  ['24 hours (1 day)', 24],
+                  ['48 hours (2 days)', 48],
+                  ['168 hours (1 week)', 168]
+                ], 24),
+                class: "form-select", required: true %>
+            <small class="text-muted">Hide this error from active views</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label">Reason (Optional)</label>
+            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: "Why are you snoozing this error?" %>
+            <small class="text-muted">Reason will be added as a comment</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Snooze", class: "btn btn-warning", data: { action: "click->loading#click" } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

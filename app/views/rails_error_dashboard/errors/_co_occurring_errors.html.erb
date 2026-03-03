@@ -1,0 +1,70 @@
+      <!-- Co-occurring Errors -->
+      <% if RailsErrorDashboard.configuration.enable_co_occurring_errors && error.respond_to?(:co_occurring_errors) %>
+        <% co_occurring = error.co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 5) %>
+        <% if co_occurring.any? %>
+          <div class="card mb-4" id="section-co-occurring">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">
+                <i class="bi bi-clock-history"></i> Co-occurring Errors
+                <span class="badge bg-info text-dark">Time Patterns</span>
+              </h5>
+              <small class="text-muted">Errors that occur within 5 minutes of this error</small>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Error Type</th>
+                      <th>Message</th>
+                      <th>Platform</th>
+                      <th>Frequency</th>
+                      <th>Avg Delay</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% co_occurring.each do |result| %>
+                      <% error_record = result[:error] %>
+                      <% frequency = result[:frequency] %>
+                      <% avg_delay = result[:avg_delay_seconds] %>
+                      <tr>
+                        <td>
+                          <span class="badge bg-danger"><%= error_record.error_type %></span>
+                        </td>
+                        <td>
+                          <span data-bs-toggle="tooltip" title="<%= error_record.message %>">
+                            <%= truncate(error_record.message, length: 60) %>
+                          </span>
+                        </td>
+                        <td>
+                          <% if error_record.platform.present? %>
+                            <span class="badge bg-secondary"><%= error_record.platform %></span>
+                          <% end %>
+                        </td>
+                        <td>
+                          <span class="badge bg-info text-dark">
+                            <%= frequency %> time<%= frequency > 1 ? 's' : '' %>
+                          </span>
+                        </td>
+                        <td>
+                          <% if avg_delay < 0 %>
+                            <span class="text-warning"><%= number_to_human(avg_delay.abs, units: {unit: "s", thousand: "s"}, precision: 1) %> before</span>
+                          <% elsif avg_delay > 0 %>
+                            <span class="text-success"><%= number_to_human(avg_delay, units: {unit: "s", thousand: "s"}, precision: 1) %> after</span>
+                          <% else %>
+                            <span class="text-muted">simultaneous</span>
+                          <% end %>
+                        </td>
+                        <td class="text-end">
+                          <%= link_to "View", error_path(error_record), class: "btn btn-sm btn-outline-primary" %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>

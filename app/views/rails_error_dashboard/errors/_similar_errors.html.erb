@@ -1,0 +1,75 @@
+      <!-- Similar Errors (Fuzzy Matching) -->
+      <% if RailsErrorDashboard.configuration.enable_similar_errors && error.respond_to?(:similar_errors) %>
+        <% similar = error.similar_errors(threshold: 0.6, limit: 5) %>
+        <% if similar.any? %>
+          <% cache [error, 'similar_errors_v1', similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
+          <div class="card mb-4" id="section-similar-errors">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">
+                <i class="bi bi-diagram-3"></i> Similar Errors
+                <span class="badge bg-info text-dark">Fuzzy Matching</span>
+              </h5>
+              <small class="text-muted">Errors with similar backtraces and messages (60%+ similarity)</small>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Similarity</th>
+                      <th>Error Type</th>
+                      <th>Message</th>
+                      <th>Platform</th>
+                      <th>Occurrences</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% similar.each do |item| %>
+                      <% similar_error = item[:error] %>
+                      <% similarity_pct = (item[:similarity] * 100).round %>
+                      <tr>
+                        <td>
+                          <div class="progress" style="width: 60px; height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 style="width: <%= similarity_pct %>%"
+                                 aria-valuenow="<%= similarity_pct %>"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                              <%= similarity_pct %>%
+                            </div>
+                          </div>
+                        </td>
+                        <td><code><%= similar_error.error_type %></code></td>
+                        <td>
+                          <div class="text-truncate" style="max-width: 300px;"
+                               data-bs-toggle="tooltip"
+                               title="<%= similar_error.message %>">
+                            <%= similar_error.message %>
+                          </div>
+                        </td>
+                        <td>
+                          <% if similar_error.platform == 'iOS' %>
+                            <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
+                          <% elsif similar_error.platform == 'Android' %>
+                            <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
+                          <% elsif similar_error.platform == 'Web' %>
+                            <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
+                          <% else %>
+                            <span class="badge badge-api"><i class="bi bi-server"></i> <%= similar_error.platform || 'API' %></span>
+                          <% end %>
+                        </td>
+                        <td><span class="badge bg-primary"><%= similar_error.occurrence_count %>x</span></td>
+                        <td>
+                          <%= link_to "View", error_path(similar_error), class: "btn btn-sm btn-outline-primary" %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <% end %>
+        <% end %>
+      <% end %>

@@ -1,0 +1,155 @@
+<script>
+  function downloadErrorJSON(event) {
+    const errorData = {
+      id: <%= raw error.id.to_json %>,
+      error_type: <%= raw error.error_type.to_json %>,
+      message: <%= raw error.message.to_json %>,
+      backtrace: <%= raw error.backtrace.to_json %>,
+      occurred_at: <%= raw error.occurred_at.to_json %>,
+      first_seen_at: <%= raw error.first_seen_at.to_json %>,
+      last_seen_at: <%= raw error.last_seen_at.to_json %>,
+      occurrence_count: <%= raw error.occurrence_count.to_json %>,
+      resolved: <%= raw error.resolved?.to_json %>,
+      resolved_at: <%= raw error.resolved_at.to_json %>,
+      resolved_by_name: <%= raw error.resolved_by_name.to_json %>,
+      platform: <%= raw error.platform.to_json %>,
+      user_id: <%= raw error.user_id.to_json %>,
+      severity: <%= raw error.severity.to_json %>,
+      priority_level: <%= raw (error.priority_level || 0).to_json %>,
+      <% if error.respond_to?(:exception_cause) && error.exception_cause.present? %>
+      exception_cause: <%= raw error.exception_cause %>,
+      <% end %>
+      <% if error.respond_to?(:app_version) %>
+      app_version: <%= raw error.app_version.to_json %>,
+      <% end %>
+      <% if error.respond_to?(:git_commit) %>
+      git_commit: <%= raw error.git_commit.to_json %>,
+      <% end %>
+      created_at: <%= raw error.created_at.to_json %>,
+      updated_at: <%= raw error.updated_at.to_json %>
+    };
+
+    const jsonString = JSON.stringify(errorData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `error_${errorData.id}_${errorData.error_type.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Visual feedback
+    const button = event.currentTarget;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+    button.classList.remove('btn-outline-secondary');
+    button.classList.add('btn-success');
+
+    setTimeout(() => {
+      button.innerHTML = originalHTML;
+      button.classList.remove('btn-success');
+      button.classList.add('btn-outline-secondary');
+    }, 2000);
+  }
+
+  // Section Navigation — pill bar with scroll spy
+  document.addEventListener('DOMContentLoaded', function() {
+    var sectionConfig = [
+      { id: 'section-error-info', icon: 'bi-bug-fill', label: 'Error' },
+      { id: 'section-request-context', icon: 'bi-globe', label: 'Request' },
+      { id: 'section-deprecation-warnings', icon: 'bi-exclamation-triangle', label: 'Deprecations' },
+      { id: 'section-n-plus-one', icon: 'bi-arrow-repeat', label: 'N+1' },
+      { id: 'section-breadcrumbs', icon: 'bi-signpost-2', label: 'Breadcrumbs' },
+      { id: 'section-similar-errors', icon: 'bi-diagram-3', label: 'Similar' },
+      { id: 'section-co-occurring', icon: 'bi-intersect', label: 'Co-occurring' },
+      { id: 'section-timeline', icon: 'bi-clock-history', label: 'Timeline' },
+      { id: 'section-discussion', icon: 'bi-chat-dots', label: 'Discussion' },
+      { id: 'section-error-cascades', icon: 'bi-share', label: 'Cascades' },
+      { id: 'section-occurrence-patterns', icon: 'bi-graph-up', label: 'Patterns' }
+    ];
+
+    var scrollContainer = document.querySelector('.section-nav-scroll');
+    var wrapper = document.getElementById('section-nav-wrapper');
+    if (!scrollContainer || !wrapper) return;
+
+    // Build pills only for sections that exist in the DOM
+    var activeSections = [];
+    sectionConfig.forEach(function(cfg) {
+      if (document.getElementById(cfg.id)) {
+        activeSections.push(cfg);
+        var pill = document.createElement('a');
+        pill.href = '#' + cfg.id;
+        pill.className = 'section-nav-pill';
+        pill.dataset.section = cfg.id;
+        pill.innerHTML = '<i class="bi ' + cfg.icon + '"></i> <span>' + cfg.label + '</span>';
+        pill.addEventListener('click', function(e) {
+          e.preventDefault();
+          var target = document.getElementById(cfg.id);
+          if (target) {
+            var navHeight = wrapper.offsetHeight;
+            var y = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 12;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          }
+        });
+        scrollContainer.appendChild(pill);
+      }
+    });
+
+    // Hide nav if only 2 or fewer sections (not useful)
+    if (activeSections.length <= 2) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    // Scroll spy with Intersection Observer
+    var currentActive = null;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.id;
+          if (currentActive !== id) {
+            currentActive = id;
+            document.querySelectorAll('.section-nav-pill').forEach(function(p) {
+              p.classList.toggle('active', p.dataset.section === id);
+              if (p.dataset.section === id) {
+                p.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              }
+            });
+          }
+        }
+      });
+    }, {
+      rootMargin: '-80px 0px -60% 0px',
+      threshold: 0
+    });
+
+    activeSections.forEach(function(cfg) {
+      var el = document.getElementById(cfg.id);
+      if (el) observer.observe(el);
+    });
+
+    // Sticky detection — add shadow when stuck
+    var sentinel = document.createElement('div');
+    sentinel.style.height = '1px';
+    sentinel.style.marginBottom = '-1px';
+    wrapper.parentNode.insertBefore(sentinel, wrapper);
+
+    var stickyObserver = new IntersectionObserver(function(entries) {
+      wrapper.classList.toggle('is-stuck', !entries[0].isIntersecting);
+    }, { threshold: 0 });
+    stickyObserver.observe(sentinel);
+
+    // Keyboard shortcuts: [ previous section, ] next section
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.key === '[' || e.key === ']') {
+        var pills = Array.from(document.querySelectorAll('.section-nav-pill'));
+        var activeIdx = pills.findIndex(function(p) { return p.classList.contains('active'); });
+        var nextIdx = e.key === ']' ? Math.min(activeIdx + 1, pills.length - 1) : Math.max(activeIdx - 1, 0);
+        if (nextIdx !== activeIdx) pills[nextIdx].click();
+      }
+    });
+  });
+</script>

@@ -1,0 +1,127 @@
+      <!-- Breadcrumbs (Request Activity Trail) -->
+      <% if RailsErrorDashboard.configuration.enable_breadcrumbs && error.respond_to?(:breadcrumbs) && error.breadcrumbs.present? %>
+        <% breadcrumbs = JSON.parse(error.breadcrumbs) rescue [] %>
+        <% if breadcrumbs.any? %>
+          <% deprecation_crumbs = breadcrumbs.select { |c| c["c"] == "deprecation" } %>
+          <% if deprecation_crumbs.any? %>
+            <div class="card mb-4" id="section-deprecation-warnings" style="border-color: var(--bs-danger);">
+              <div class="card-header bg-white">
+                <h5 class="mb-0">
+                  <i class="bi bi-exclamation-triangle text-danger"></i> Deprecation Warnings
+                  <span class="badge bg-danger"><%= deprecation_crumbs.size %></span>
+                </h5>
+                <small class="text-muted">Rails deprecation warnings detected during this request</small>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Warning</th>
+                        <th width="300">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% deprecation_crumbs.each do |crumb| %>
+                        <tr>
+                          <td><code style="font-size: 0.85em;"><%= crumb["m"] %></code></td>
+                          <td><small class="text-muted"><%= crumb.dig("meta", "caller") || "N/A" %></small></td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <% if RailsErrorDashboard.configuration.enable_n_plus_one_detection %>
+            <% n_plus_one_patterns = RailsErrorDashboard::Services::NplusOneDetector.call(breadcrumbs) %>
+            <% if n_plus_one_patterns.any? %>
+              <div class="card mb-4" id="section-n-plus-one" style="border-color: var(--bs-warning);">
+                <div class="card-header bg-white">
+                  <h5 class="mb-0">
+                    <i class="bi bi-arrow-repeat text-warning"></i> N+1 Query Detection
+                    <span class="badge bg-warning text-dark"><%= n_plus_one_patterns.size %> pattern<%= n_plus_one_patterns.size == 1 ? "" : "s" %></span>
+                  </h5>
+                  <small class="text-muted">Repeated query patterns detected in this request's SQL breadcrumbs</small>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th width="80">Repeats</th>
+                          <th>Query Pattern</th>
+                          <th width="100">Total Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% n_plus_one_patterns.each do |pattern| %>
+                          <tr>
+                            <td><span class="badge bg-warning text-dark"><%= pattern[:count] %>x</span></td>
+                            <td>
+                              <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(pattern[:sample_query], length: 200) %></code>
+                              <br><small class="text-muted">Fingerprint: <%= truncate(pattern[:fingerprint], length: 120) %></small>
+                            </td>
+                            <td>
+                              <span class="<%= pattern[:total_duration_ms] > 100 ? 'text-danger fw-bold' : 'text-muted' %>">
+                                <%= "%.1f" % pattern[:total_duration_ms] %>ms
+                              </span>
+                            </td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+
+          <div class="card mb-4" id="section-breadcrumbs">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">
+                <i class="bi bi-signpost-2"></i> Breadcrumbs
+                <span class="badge bg-secondary"><%= breadcrumbs.size %> events</span>
+              </h5>
+              <small class="text-muted">Activity trail leading up to this error</small>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th width="60">#</th>
+                      <th width="100">Category</th>
+                      <th>Message</th>
+                      <th width="100">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% breadcrumbs.each_with_index do |crumb, i| %>
+                      <tr>
+                        <td class="text-muted"><%= i + 1 %></td>
+                        <td><span class="badge bg-<%= breadcrumb_badge_color(crumb["c"]) %>"><%= crumb["c"] %></span></td>
+                        <td>
+                          <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(crumb["m"].to_s, length: 200) %></code>
+                          <% if crumb["meta"].present? %>
+                            <br><small class="text-muted"><%= crumb["meta"].inspect %></small>
+                          <% end %>
+                        </td>
+                        <td>
+                          <% if crumb["d"] %>
+                            <span class="<%= crumb["d"].to_f > 100 ? 'text-danger fw-bold' : 'text-muted' %>">
+                              <%= "%.1f" % crumb["d"] %>ms
+                            </span>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>

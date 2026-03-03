@@ -1,0 +1,83 @@
+      <!-- Request Context -->
+      <% cache [error, 'request_context_v2'] do %>
+      <div class="card mb-4" id="section-request-context">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-globe"></i> Request Context</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm">
+            <tr>
+              <th width="200">Request URL:</th>
+              <td>
+                <% if error.respond_to?(:http_method) && error.http_method.present? %>
+                  <span class="badge bg-primary me-1"><%= error.http_method %></span>
+                <% end %>
+                <code><%= error.request_url || 'N/A' %></code>
+              </td>
+            </tr>
+            <% if error.respond_to?(:hostname) && error.hostname.present? %>
+              <tr>
+                <th>Hostname:</th>
+                <td><code><%= error.hostname %></code></td>
+              </tr>
+            <% end %>
+            <% if error.respond_to?(:content_type) && error.content_type.present? %>
+              <tr>
+                <th>Content Type:</th>
+                <td><code><%= error.content_type %></code></td>
+              </tr>
+            <% end %>
+            <% if error.respond_to?(:request_duration_ms) && error.request_duration_ms.present? %>
+              <tr>
+                <th>Request Duration:</th>
+                <td>
+                  <% duration = error.request_duration_ms %>
+                  <span class="badge bg-<%= duration > 5000 ? 'danger' : duration > 1000 ? 'warning' : 'success' %>">
+                    <%= duration > 1000 ? "#{(duration / 1000.0).round(1)}s" : "#{duration}ms" %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+            <tr>
+              <th>Request Params:</th>
+              <td>
+                <% if error.request_params.present? %>
+                  <pre class="mb-0"><code><%= JSON.pretty_generate(JSON.parse(error.request_params)) rescue error.request_params %></code></pre>
+                <% else %>
+                  <span class="text-muted">N/A</span>
+                <% end %>
+              </td>
+            </tr>
+            <tr>
+              <th>User Agent:</th>
+              <td>
+                <% if error.user_agent.present? %>
+                  <% ua_info = parse_user_agent(error.user_agent) %>
+                  <div class="mb-2">
+                    <%= browser_icon(ua_info) %>
+                    <strong><%= ua_info[:browser_name] %></strong>
+                    <% if ua_info[:browser_version].present? %>
+                      <span class="text-muted"><%= ua_info[:browser_version] %></span>
+                    <% end %>
+                    <span class="ms-2"><%= os_icon(ua_info) %> <%= ua_info[:os_name] %></span>
+                    <span class="ms-2"><%= device_icon(ua_info) %> <%= ua_info[:device_type] %></span>
+                  </div>
+                  <details>
+                    <summary class="text-muted" style="cursor: pointer;">
+                      <small>Raw User Agent</small>
+                    </summary>
+                    <small class="text-muted"><%= error.user_agent %></small>
+                  </details>
+                <% else %>
+                  <span class="text-muted">N/A</span>
+                <% end %>
+              </td>
+            </tr>
+            <tr>
+              <th>IP Address:</th>
+              <td><code><%= error.ip_address || 'N/A' %></code></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <% end %>

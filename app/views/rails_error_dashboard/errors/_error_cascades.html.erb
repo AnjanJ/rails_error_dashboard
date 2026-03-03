@@ -1,0 +1,138 @@
+      <!-- Error Cascades -->
+      <% if RailsErrorDashboard.configuration.enable_error_cascades %>
+        <% cascades = error.error_cascades %>
+        <% if cascades[:parents].any? || cascades[:children].any? %>
+        <div class="card" id="section-error-cascades">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">
+              <i class="bi bi-diagram-3"></i> Error Cascades
+              <small class="text-muted ms-2">Causal relationships between errors</small>
+            </h5>
+          </div>
+          <div class="card-body">
+            <!-- Parent Errors (What causes this error) -->
+            <% if cascades[:parents].any? %>
+              <div class="mb-4">
+                <h6 class="text-danger">
+                  <i class="bi bi-arrow-down-circle"></i> Triggered By
+                  <small class="text-muted">(errors that cause this one)</small>
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Error Type</th>
+                        <th>Message</th>
+                        <th>Probability</th>
+                        <th>Frequency</th>
+                        <th>Avg Delay</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% cascades[:parents].each do |cascade| %>
+                        <% parent = cascade[:error] %>
+                        <tr>
+                          <td>
+                            <span class="badge bg-<%= severity_color(parent.severity) %>">
+                              <%= parent.error_type %>
+                            </span>
+                          </td>
+                          <td>
+                            <div class="text-truncate" style="max-width: 250px;">
+                              <%= parent.message %>
+                            </div>
+                          </td>
+                          <td>
+                            <% probability_pct = ((cascade[:probability] || 0) * 100).round(1) %>
+                            <span class="badge <%= probability_pct >= 70 ? 'bg-danger' : 'bg-warning' %>">
+                              <%= probability_pct %>%
+                            </span>
+                          </td>
+                          <td>
+                            <span class="badge bg-secondary"><%= cascade[:frequency] %>x</span>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              <%= (cascade[:avg_delay_seconds] || 0).round(1) %>s
+                            </small>
+                          </td>
+                          <td>
+                            <%= link_to "View", error_path(parent), class: "btn btn-sm btn-outline-primary" %>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <% end %>
+
+            <!-- Child Errors (What this error causes) -->
+            <% if cascades[:children].any? %>
+              <div>
+                <h6 class="text-warning">
+                  <i class="bi bi-arrow-up-circle"></i> Triggers
+                  <small class="text-muted">(errors caused by this one)</small>
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Error Type</th>
+                        <th>Message</th>
+                        <th>Probability</th>
+                        <th>Frequency</th>
+                        <th>Avg Delay</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% cascades[:children].each do |cascade| %>
+                        <% child = cascade[:error] %>
+                        <tr>
+                          <td>
+                            <span class="badge bg-<%= severity_color(child.severity) %>">
+                              <%= child.error_type %>
+                            </span>
+                          </td>
+                          <td>
+                            <div class="text-truncate" style="max-width: 250px;">
+                              <%= child.message %>
+                            </div>
+                          </td>
+                          <td>
+                            <% probability_pct = ((cascade[:probability] || 0) * 100).round(1) %>
+                            <span class="badge <%= probability_pct >= 70 ? 'bg-danger' : 'bg-warning' %>">
+                              <%= probability_pct %>%
+                            </span>
+                          </td>
+                          <td>
+                            <span class="badge bg-secondary"><%= cascade[:frequency] %>x</span>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              +<%= (cascade[:avg_delay_seconds] || 0).round(1) %>s
+                            </small>
+                          </td>
+                          <td>
+                            <%= link_to "View", error_path(child), class: "btn btn-sm btn-outline-primary" %>
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="mt-3">
+              <small class="text-muted">
+                <i class="bi bi-info-circle"></i>
+                Cascade patterns show causal relationships. High probability (≥70%) and frequency (≥3) indicate strong cascades.
+              </small>
+            </div>
+          </div>
+        </div>
+        <% end %>
+      <% end %>

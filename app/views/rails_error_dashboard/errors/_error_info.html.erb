@@ -1,0 +1,190 @@
+      <% cache [error, 'error_details_v1'] do %>
+      <div class="card mb-4" id="section-error-info">
+        <div class="card-header bg-danger text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-bug-fill"></i> <%= error.error_type %>
+              <% if error.recent? %>
+                <span class="badge bg-success ms-2" data-bs-toggle="tooltip" title="Error occurred within the last hour">NEW</span>
+              <% end %>
+              <% if error.reopened? %>
+                <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip" title="Previously resolved, recurred <%= error.reopened_at&.strftime('%b %d, %Y %H:%M') %>">
+                  <i class="bi bi-arrow-counterclockwise"></i> Reopened
+                </span>
+              <% end %>
+            </h5>
+            <button class="btn btn-sm btn-outline-light" onclick="copyToClipboard('<%= j error.error_type %>', this)" title="Copy error type">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-muted mb-0">Error Message:</h6>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= j error.message %>', this)" title="Copy error message">
+              <i class="bi bi-clipboard"></i> Copy
+            </button>
+          </div>
+          <div class="alert alert-danger">
+            <%= error.message %>
+          </div>
+
+          <% if error.respond_to?(:exception_cause) && error.exception_cause.present? %>
+            <% begin %>
+              <% cause_chain = JSON.parse(error.exception_cause) %>
+              <% if cause_chain.is_a?(Array) && cause_chain.any? %>
+                <div class="mt-4 mb-3">
+                  <h6 class="text-muted mb-2">
+                    <i class="bi bi-link-45deg"></i> Exception Cause Chain
+                    <span class="badge bg-secondary ms-1"><%= cause_chain.length %></span>
+                  </h6>
+                  <div class="cause-chain">
+                    <% cause_chain.each_with_index do |cause, index| %>
+                      <% cause_bt = cause["backtrace"] %>
+                      <% cause_bt = cause_bt.is_a?(String) ? cause_bt.split("\n") : Array(cause_bt) %>
+                      <div class="card mb-2 border-warning">
+                        <div class="card-header bg-warning bg-opacity-10 py-2">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                              <small class="text-muted">Caused by<%= " (##{index + 1})" if cause_chain.length > 1 %>:</small>
+                              <strong class="ms-1"><code><%= cause["class_name"] %></code></strong>
+                            </div>
+                            <% if cause_bt.any? %>
+                              <button class="btn btn-sm btn-outline-secondary py-0" type="button"
+                                      data-bs-toggle="collapse"
+                                      data-bs-target="#cause-backtrace-<%= index %>"
+                                      aria-expanded="false">
+                                <small><i class="bi bi-code-slash"></i> Backtrace</small>
+                              </button>
+                            <% end %>
+                          </div>
+                        </div>
+                        <div class="card-body py-2">
+                          <small><%= cause["message"] %></small>
+                        </div>
+                        <% if cause_bt.any? %>
+                          <div class="collapse" id="cause-backtrace-<%= index %>">
+                            <div class="card-body p-0 border-top">
+                              <div class="code-block p-2" style="max-height: 200px; overflow-y: auto; overflow-x: auto; font-size: 0.8rem;">
+                                <pre class="mb-0"><code><% cause_bt.each do |line| %><%= line %>
+<% end %></code></pre>
+                              </div>
+                            </div>
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            <% rescue JSON::ParserError %>
+              <%# Silently skip invalid JSON — safety first %>
+            <% end %>
+          <% end %>
+
+          <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
+            <h6 class="text-muted mb-0">
+              Backtrace:
+              <% if error.backtrace.present? %>
+                <% frames = parse_backtrace(error.backtrace) %>
+                <% app_frames = filter_app_code(frames) %>
+                <% framework_frames = filter_framework_code(frames) %>
+                <small class="text-muted">
+                  (<%= app_frames.count %> your code, <%= framework_frames.count %> framework/gems)
+                </small>
+              <% end %>
+            </h6>
+            <% if error.backtrace.present? %>
+              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(`<%= j error.backtrace %>`, this)" title="Copy full backtrace">
+                <i class="bi bi-clipboard"></i> Copy Full Backtrace
+              </button>
+            <% end %>
+          </div>
+          <% if error.backtrace.present? %>
+            <% frames = parse_backtrace(error.backtrace) %>
+            <% app_frames = filter_app_code(frames) %>
+            <% framework_frames = filter_framework_code(frames) %>
+
+            <% if app_frames.any? %>
+              <!-- Your Code Section (Expanded by default) -->
+              <div class="card mb-3">
+                <div class="card-header bg-success bg-opacity-10 border-success">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <strong class="text-success">
+                      <i class="bi bi-code-square"></i> Your Code
+                    </strong>
+                    <span class="badge bg-success"><%= app_frames.count %> frames</span>
+                  </div>
+                </div>
+                <div class="card-body p-0">
+                  <div class="code-block p-3" style="max-height: none; overflow-y: visible; overflow-x: auto;">
+                    <% app_frames.each_with_index do |frame, index| %>
+                      <div class="backtrace-frame-wrapper mb-2">
+                        <!-- Frame header (always visible) -->
+                        <div class="<%= frame_bg_class(frame[:category]) %> d-flex justify-content-between align-items-center px-2 py-1">
+                          <div>
+                            <span class="backtrace-frame-number"><%= index + 1 %></span>
+                            <span class="<%= frame_color_class(frame[:category]) %>">
+                              <%= frame_icon(frame[:category]) %> <%= frame[:short_path] %>:<%= frame[:line_number] %>
+                            </span> in <span class="backtrace-method-name">`<%= frame[:method_name] %>'</span>
+                          </div>
+                          <% if RailsErrorDashboard.configuration.enable_source_code_integration && frame[:category] == :app %>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#source-code-<%= index %>"
+                                    aria-expanded="false"
+                                    aria-controls="source-code-<%= index %>">
+                              <i class="bi bi-code-slash"></i> <span class="d-none d-md-inline">View Source</span>
+                            </button>
+                          <% end %>
+                        </div>
+
+                        <!-- Collapsible source code (only for app frames) -->
+                        <% if RailsErrorDashboard.configuration.enable_source_code_integration && frame[:category] == :app %>
+                          <div class="collapse" id="source-code-<%= index %>">
+                            <%= render "source_code", frame: frame, error: error, index: index %>
+                          </div>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <% if framework_frames.any? %>
+              <!-- Framework/Gem Code Section (Collapsed by default) -->
+              <div class="accordion" id="frameworkBacktraceAccordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#frameworkBacktrace" aria-expanded="false" aria-controls="frameworkBacktrace">
+                      <i class="bi bi-gear me-2 text-warning"></i>
+                      <strong>Framework & Gem Code</strong>
+                      <span class="badge bg-secondary ms-2"><%= framework_frames.count %> frames</span>
+                      <small class="text-muted ms-2">(click to expand)</small>
+                    </button>
+                  </h2>
+                  <div id="frameworkBacktrace" class="accordion-collapse collapse" data-bs-parent="#frameworkBacktraceAccordion">
+                    <div class="accordion-body p-0">
+                      <div class="code-block p-3" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                        <pre class="mb-0"><code><% framework_frames.each_with_index do |frame, index| %><span class="<%= frame_bg_class(frame[:category]) %> d-block px-2 py-1"><span class="backtrace-frame-number"><%= index + 1 %></span><span class="<%= frame_color_class(frame[:category]) %>"><%= frame_icon(frame[:category]) %> <%= frame[:short_path] %>:<%= frame[:line_number] %></span> in <span class="backtrace-method-name">`<%= frame[:method_name] %>'</span></span>
+<% end %></code></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <% if app_frames.empty? && framework_frames.empty? %>
+              <!-- Fallback: Show raw backtrace if parsing failed -->
+              <div class="code-block p-3 rounded" style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                <pre class="mb-0"><code><%= error.backtrace %></code></pre>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-muted">No backtrace available</p>
+          <% end %>
+        </div>
+      </div>
+      <% end %>
