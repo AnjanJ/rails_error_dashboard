@@ -1,5 +1,5 @@
       <!-- Request Context -->
-      <% cache [error, 'request_context_v2'] do %>
+      <% cache [error, 'request_context_v3'] do %>
       <div class="card mb-4" id="section-request-context">
         <div class="card-header bg-white">
           <h5 class="mb-0"><i class="bi bi-globe"></i> Request Context</h5>
@@ -77,6 +77,20 @@
               <th>IP Address:</th>
               <td><code><%= error.ip_address || 'N/A' %></code></td>
             </tr>
+            <% curl_cmd = RailsErrorDashboard::Services::CurlGenerator.call(error) %>
+            <% if curl_cmd.present? %>
+              <tr>
+                <th>Replay Request:</th>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary"
+                          onclick="copyToClipboard(this.dataset.curl, this)"
+                          data-curl="<%= h curl_cmd %>"
+                          title="Copy curl command to clipboard">
+                    <i class="bi bi-terminal"></i> Copy as curl
+                  </button>
+                </td>
+              </tr>
+            <% end %>
           </table>
         </div>
       </div>
