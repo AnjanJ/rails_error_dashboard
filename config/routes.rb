@@ -25,6 +25,8 @@ RailsErrorDashboard::Engine.routes.draw do
       get :deprecations
       get :n_plus_one_summary
       get :cache_health_summary
+      get :job_health_summary
+      get :database_health_summary
       post :batch_action
     end
   end

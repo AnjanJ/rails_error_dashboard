@@ -297,6 +297,57 @@ module RailsErrorDashboard
       @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
     end
 
+    def job_health_summary
+      unless RailsErrorDashboard.configuration.enable_system_health
+        flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::JobHealthSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @errors_with_jobs = all_entries.size
+      @total_failed = all_entries.sum { |e| e[:failed] || e[:errored] || 0 }
+      @adapters_detected = all_entries.map { |e| e[:adapter] }.uniq
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+    end
+
+    def database_health_summary
+      unless RailsErrorDashboard.configuration.enable_system_health
+        flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+
+      # Live database health (display-time only)
+      @live_health = Services::DatabaseHealthInspector.call
+
+      # Separate host vs gem tables from live data
+      all_tables = @live_health[:tables] || []
+      @host_tables = all_tables.reject { |t| t[:gem_table] }
+      @gem_tables = all_tables.select { |t| t[:gem_table] }
+
+      # Historical connection pool stats
+      result = Queries::DatabaseHealthSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @errors_with_pool = all_entries.size
+      @max_utilization = all_entries.map { |e| e[:utilization] }.max || 0
+      @total_dead = all_entries.sum { |e| e[:dead] }
+      @total_waiting = all_entries.sum { |e| e[:waiting] }
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+    end
+
     def settings
       @config = RailsErrorDashboard.configuration
     end

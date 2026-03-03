@@ -1,0 +1,450 @@
+<% content_for :page_title, "DB Health" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-database me-2"></i>
+      Database Health
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to database_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to database_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to database_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <%# ===== SECTION A: Live Database Health ===== %>
+
+  <h4 class="mb-3"><i class="bi bi-activity text-primary me-2"></i>Live Database Health</h4>
+
+  <% unless @live_health[:postgresql] %>
+    <div class="alert alert-info mb-3">
+      <i class="bi bi-info-circle me-2"></i>
+      <strong>Non-PostgreSQL adapter detected (<%= @live_health[:adapter] || "unknown" %>).</strong>
+      Live table, index, and activity stats require PostgreSQL. Connection pool and historical data are still available below.
+    </div>
+  <% end %>
+
+  <%# Connection Pool (always works — all adapters) %>
+  <% if @live_health[:connection_pool] %>
+    <% pool = @live_health[:connection_pool] %>
+    <div class="row mb-4">
+      <div class="col-md-2">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <div class="h4 mb-0 text-primary"><%= pool[:size] %></div>
+            <small class="text-muted">Pool Size</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <% busy_color = pool[:size] > 0 && (pool[:busy].to_f / pool[:size]) >= 0.8 ? "danger" : "info" %>
+            <div class="h4 mb-0 text-<%= busy_color %>"><%= pool[:busy] %></div>
+            <small class="text-muted">Busy</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <div class="h4 mb-0 text-success"><%= pool[:idle] %></div>
+            <small class="text-muted">Idle</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <% dead_color = pool[:dead] > 0 ? "danger" : "success" %>
+            <div class="h4 mb-0 text-<%= dead_color %>"><%= pool[:dead] %></div>
+            <small class="text-muted">Dead</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <% waiting_color = pool[:waiting] > 0 ? "warning" : "success" %>
+            <div class="h4 mb-0 text-<%= waiting_color %>"><%= pool[:waiting] %></div>
+            <small class="text-muted">Waiting</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @live_health[:postgresql] %>
+    <%# Summary cards for PostgreSQL %>
+    <% total_db_size = (@host_tables + @gem_tables).sum { |t| t[:total_bytes] } %>
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <div class="h4 mb-0 text-primary"><%= number_to_human_size(total_db_size) %></div>
+            <small class="text-muted">Total DB Size</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <div class="h4 mb-0 text-info"><%= @host_tables.size + @gem_tables.size %></div>
+            <small class="text-muted">Tables</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <% unused_color = @live_health[:unused_indexes]&.any? ? "warning" : "success" %>
+            <div class="h4 mb-0 text-<%= unused_color %>"><%= @live_health[:unused_indexes]&.size || 0 %></div>
+            <small class="text-muted">Unused Indexes</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body py-2">
+            <div class="h4 mb-0 text-secondary"><%= @live_health[:activity] ? @live_health[:activity][:total] : "N/A" %></div>
+            <small class="text-muted">Active Connections</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Host App Tables %>
+    <% if @host_tables.any? %>
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-table text-primary me-2"></i>
+            Host App Tables
+            <span class="badge bg-primary"><%= @host_tables.size %></span>
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Table</th>
+                  <th width="100">Est. Rows</th>
+                  <th width="100">Size</th>
+                  <th width="80">Seq Scans</th>
+                  <th width="80">Idx Scans</th>
+                  <th width="100">Dead Tuples</th>
+                  <th width="140">Last Vacuum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @host_tables.each do |table| %>
+                  <tr>
+                    <td><code><%= table[:name] %></code></td>
+                    <td><%= number_with_delimiter(table[:estimated_rows]) %></td>
+                    <td><%= number_to_human_size(table[:total_bytes]) %></td>
+                    <td><%= number_with_delimiter(table[:seq_scan]) %></td>
+                    <td><%= number_with_delimiter(table[:idx_scan]) %></td>
+                    <td>
+                      <% if table[:dead_tuples] > 1000 %>
+                        <span class="badge bg-warning text-dark"><%= number_with_delimiter(table[:dead_tuples]) %></span>
+                      <% else %>
+                        <%= number_with_delimiter(table[:dead_tuples]) %>
+                      <% end %>
+                    </td>
+                    <td><%= table[:last_autovacuum] ? local_time_ago(Time.parse(table[:last_autovacuum])) : "Never" %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Gem Tables (collapsible) %>
+    <% if @gem_tables.any? %>
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <a class="text-decoration-none" data-bs-toggle="collapse" href="#gemTablesCollapse" role="button" aria-expanded="false" aria-controls="gemTablesCollapse">
+            <h5 class="mb-0">
+              <i class="bi bi-table text-secondary me-2"></i>
+              Error Dashboard Tables
+              <span class="badge bg-secondary"><%= @gem_tables.size %></span>
+              <i class="bi bi-chevron-down ms-2" style="font-size: 0.8em;"></i>
+            </h5>
+          </a>
+        </div>
+        <div class="collapse" id="gemTablesCollapse">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Table</th>
+                    <th width="100">Est. Rows</th>
+                    <th width="100">Size</th>
+                    <th width="80">Seq Scans</th>
+                    <th width="80">Idx Scans</th>
+                    <th width="100">Dead Tuples</th>
+                    <th width="140">Last Vacuum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @gem_tables.each do |table| %>
+                    <tr>
+                      <td><code><%= table[:name] %></code></td>
+                      <td><%= number_with_delimiter(table[:estimated_rows]) %></td>
+                      <td><%= number_to_human_size(table[:total_bytes]) %></td>
+                      <td><%= number_with_delimiter(table[:seq_scan]) %></td>
+                      <td><%= number_with_delimiter(table[:idx_scan]) %></td>
+                      <td>
+                        <% if table[:dead_tuples] > 1000 %>
+                          <span class="badge bg-warning text-dark"><%= number_with_delimiter(table[:dead_tuples]) %></span>
+                        <% else %>
+                          <%= number_with_delimiter(table[:dead_tuples]) %>
+                        <% end %>
+                      </td>
+                      <td><%= table[:last_autovacuum] ? local_time_ago(Time.parse(table[:last_autovacuum])) : "Never" %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Unused Indexes %>
+    <% if @live_health[:unused_indexes]&.any? %>
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+            Unused Indexes
+            <span class="badge bg-warning text-dark"><%= @live_health[:unused_indexes].size %></span>
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Index</th>
+                  <th>Table</th>
+                  <th width="100">Size</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @live_health[:unused_indexes].each do |idx| %>
+                  <tr>
+                    <td><code><%= idx[:name] %></code></td>
+                    <td><code><%= idx[:table_name] %></code></td>
+                    <td><span class="badge bg-warning text-dark"><%= number_to_human_size(idx[:size_bytes]) %></span></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Activity by State %>
+    <% if @live_health[:activity] %>
+      <div class="card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-people text-info me-2"></i>
+            Connection Activity
+            <span class="badge bg-info"><%= @live_health[:activity][:total] %> total</span>
+            <% if @live_health[:activity][:total_waiting] > 0 %>
+              <span class="badge bg-warning text-dark"><%= @live_health[:activity][:total_waiting] %> waiting</span>
+            <% end %>
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>State</th>
+                  <th width="100">Count</th>
+                  <th width="100">Waiting</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @live_health[:activity][:by_state].each do |row| %>
+                  <tr>
+                    <td><span class="badge bg-secondary"><%= row[:state] %></span></td>
+                    <td><%= row[:count] %></td>
+                    <td>
+                      <% if row[:waiting] > 0 %>
+                        <span class="badge bg-warning text-dark"><%= row[:waiting] %></span>
+                      <% else %>
+                        0
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# ===== SECTION B: Historical Connection Pool at Error Time ===== %>
+
+  <hr class="my-4">
+  <h4 class="mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Historical Connection Pool at Error Time</h4>
+
+  <% if @errors_with_pool == 0 %>
+    <div class="text-center py-5">
+      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+      <h4 class="text-muted">No Connection Pool Data Found</h4>
+      <p class="text-muted">
+        No connection pool stats were detected in system health snapshots over the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How connection pool tracking works:</h6>
+          <ul class="mb-0">
+            <li>System health must be enabled (<code>enable_system_health = true</code>)</li>
+            <li>Connection pool stats are captured automatically at error time</li>
+            <li>Stats include pool size, busy, idle, dead, and waiting connections</li>
+            <li>This section shows pool health per-error, sorted by stress score</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @errors_with_pool %></div>
+            <small class="text-muted">Errors with Pool Data</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <% util_color = @max_utilization >= 80 ? "danger" : (@max_utilization >= 60 ? "warning" : "success") %>
+            <div class="display-6 text-<%= util_color %>"><%= @max_utilization %>%</div>
+            <small class="text-muted">Peak Utilization</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <% dead_color = @total_dead > 0 ? "danger" : "success" %>
+            <div class="display-6 text-<%= dead_color %>"><%= @total_dead %></div>
+            <small class="text-muted">Total Dead</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <% waiting_color = @total_waiting > 0 ? "warning" : "success" %>
+            <div class="display-6 text-<%= waiting_color %>"><%= @total_waiting %></div>
+            <small class="text-muted">Total Waiting</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-database text-info me-2"></i>
+          Connection Pool by Error
+          <span class="badge bg-info"><%= @errors_with_pool %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="80">Error</th>
+                <th>Error Type</th>
+                <th width="110">Utilization</th>
+                <th width="60">Busy</th>
+                <th width="60">Idle</th>
+                <th width="60">Dead</th>
+                <th width="70">Waiting</th>
+                <th width="70">Pool Size</th>
+                <th width="140">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @entries.each do |entry| %>
+                <tr>
+                  <td><%= link_to "##{entry[:error_id]}", error_path(entry[:error_id]), class: "text-decoration-none" %></td>
+                  <td><code><%= truncate(entry[:error_type].to_s, length: 40) %></code></td>
+                  <td>
+                    <% util = entry[:utilization] %>
+                    <% util_badge = util >= 80 ? "danger" : (util >= 60 ? "warning" : "success") %>
+                    <div class="progress" style="height: 20px;">
+                      <div class="progress-bar bg-<%= util_badge %>" role="progressbar" style="width: <%= [ util, 100 ].min %>%;" aria-valuenow="<%= util %>" aria-valuemin="0" aria-valuemax="100">
+                        <%= util %>%
+                      </div>
+                    </div>
+                  </td>
+                  <td><%= entry[:busy] %></td>
+                  <td><%= entry[:idle] %></td>
+                  <td>
+                    <% if entry[:dead] > 0 %>
+                      <span class="badge bg-danger"><%= entry[:dead] %></span>
+                    <% else %>
+                      0
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if entry[:waiting] > 0 %>
+                      <span class="badge bg-warning text-dark"><%= entry[:waiting] %></span>
+                    <% else %>
+                      0
+                    <% end %>
+                  </td>
+                  <td><%= entry[:size] %></td>
+                  <td><%= local_time_ago(entry[:occurred_at]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> High utilization during errors may indicate connection pool exhaustion or long-running queries.
+          </small>
+          <small class="ms-3">
+            <a href="https://guides.rubyonrails.org/configuring.html#configuring-a-database" target="_blank" rel="noopener" class="text-decoration-none">
+              <i class="bi bi-book"></i> Database Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+            </a>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
