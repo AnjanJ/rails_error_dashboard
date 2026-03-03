@@ -14,7 +14,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth, data retention
 
 ### Optional Features (Opt-in)
-**16 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
+**17 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -25,8 +25,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (2 features)**
-- Source Code Integration, Git Blame
+**🔍 Developer Tools (3 features)**
+- Source Code Integration, Git Blame, Breadcrumbs
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
@@ -399,6 +399,79 @@ config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"  # Default branch
 - **Read-only access**: Dashboard only reads files, never modifies
 - **Path validation**: Only files within app root can be accessed
 - **No external API calls**: All processing happens locally
+
+---
+
+## Breadcrumbs — Request Activity Trail (NEW!)
+
+**⚙️ Optional Feature** - Breadcrumbs are disabled by default. Enable them to see a timeline of events leading up to each error:
+
+```ruby
+config.enable_breadcrumbs = true
+config.breadcrumb_buffer_size = 40  # Max events per request (default: 40)
+```
+
+### What Are Breadcrumbs?
+
+When an error occurs, you need to know **what happened before the crash**. Breadcrumbs capture a timeline of events during the request — SQL queries, controller actions, cache operations, background jobs, and mailer deliveries — stored alongside the error for instant debugging context.
+
+Unlike Sentry or Honeybadger (which require SDK configuration), Rails Error Dashboard captures breadcrumbs **automatically** from `ActiveSupport::Notifications` — zero configuration beyond the enable flag.
+
+### Captured Event Categories
+
+| Category | Events | Example |
+|----------|--------|---------|
+| `sql` | `sql.active_record` | `SELECT * FROM users WHERE id = 42` (2.1ms) |
+| `controller` | `process_action.action_controller` | `UsersController#show` |
+| `cache` | `cache_read.active_support`, `cache_write.active_support` | `cache read: users/42` |
+| `job` | `perform.active_job` | `SendWelcomeEmailJob` |
+| `mailer` | `deliver.action_mailer` | `UserMailer to: [user@example.com]` |
+| `custom` | Manual API | `checkout started` |
+
+### Timeline Display
+
+Each error's detail page shows a Breadcrumbs card with:
+- **Numbered event list** in chronological order
+- **Color-coded category badges** (SQL = blue, Controller = green, Cache = teal, etc.)
+- **Duration highlighting** — slow operations (>100ms) shown in red
+- **Metadata display** for custom breadcrumbs
+
+### Manual Breadcrumbs API
+
+Add custom breadcrumbs from anywhere in your application code:
+
+```ruby
+RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123, items: 5 })
+RailsErrorDashboard.add_breadcrumb("payment processing", { provider: "stripe" })
+```
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_breadcrumbs = true           # Master switch (default: false)
+  config.breadcrumb_buffer_size = 40         # Max events per request (default: 40)
+  config.breadcrumb_categories = nil         # nil = all; or [:sql, :controller, :cache, :job, :mailer, :custom]
+end
+```
+
+### Safety & Performance
+
+Breadcrumbs are designed with host app safety as the top priority:
+
+- **Default OFF** — Must opt in, never added silently
+- **Fixed-size ring buffer** — Oldest events dropped when buffer is full (no unbounded memory growth)
+- **Thread-local storage** — No mutex/lock needed; each request has its own buffer
+- **Cleanup guaranteed** — Buffer cleared in `ensure` block (Puma thread reuse safe)
+- **Every subscriber wrapped in `rescue`** — Never raises, never blocks, never breaks the host app
+- **Message truncation** — SQL capped at 200 chars, messages at 500 chars, metadata at 10 keys
+- **Internal queries filtered** — Gem's own SQL queries excluded to prevent recursion
+- **Sensitive data filtered** — Passwords, tokens, secrets scrubbed via existing `SensitiveDataFilter`
+- **Overhead** — < 0.1ms per request (events are already fired by Rails)
+
+### Async Logging Compatibility
+
+When async logging is enabled, breadcrumbs are harvested from the current thread **before** the background job is dispatched (since the job runs on a different thread). This ensures breadcrumbs are always captured correctly regardless of logging mode.
 
 ---
 
@@ -794,12 +867,12 @@ rails generate rails_error_dashboard:install
   Rails Error Dashboard - Installation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/16] Slack Notifications
+[1/17] Slack Notifications
     Send errors to Slack channels instantly
     Enable? (y/N): y
     ✓ Enabled
 
-[2/16] Email Notifications
+[2/17] Email Notifications
     Email error alerts to your team
     Enable? (y/N): n
     ✗ Disabled
@@ -833,8 +906,9 @@ rails generate rails_error_dashboard:install \
 - `--error_correlation` - Enable error correlation analysis
 - `--platform_comparison` - Enable platform comparison
 - `--occurrence_patterns` - Enable occurrence pattern detection
-- `--source_code_integration` - Enable source code viewer (NEW!)
-- `--git_blame` - Enable git blame integration (NEW!)
+- `--source_code_integration` - Enable source code viewer
+- `--git_blame` - Enable git blame integration
+- `--breadcrumbs` - Enable breadcrumbs (request activity trail) (NEW!)
 
 ### After Installation
 
@@ -933,6 +1007,9 @@ config.async_logging = true
 config.enable_baseline_alerts = true
 config.enable_platform_comparison = true
 config.enable_error_correlation = true
+
+# Debugging
+config.enable_breadcrumbs = true
 ```
 
 #### Enterprise/High-Scale
@@ -955,6 +1032,10 @@ config.enable_error_cascades = true
 config.enable_error_correlation = true
 config.enable_platform_comparison = true
 config.enable_occurrence_patterns = true
+
+# Developer tools
+config.enable_source_code_integration = true
+config.enable_breadcrumbs = true
 ```
 
 ### Environment-Specific Configuration

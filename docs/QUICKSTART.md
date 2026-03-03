@@ -49,9 +49,10 @@ The installer will guide you through **optional features** organized in 4 catego
 - Platform Comparison - Compare iOS vs Android vs Web health
 - Occurrence Patterns - Detect cyclical patterns and error bursts
 
-**Developer Tools (2 features)** 🆕
+**Developer Tools (3 features)** 🆕
 - Source Code Integration - View actual source code in error backtraces with repository links
 - Git Blame - See who last modified the code that caused the error
+- Breadcrumbs - Capture request activity trail (SQL, controller, cache events) leading up to errors
 
 **All features are opt-in** - you can say "no" to everything and just use the core dashboard, or enable specific features you need.
 
@@ -73,11 +74,11 @@ Choose the features you want to enable:
 📧  NOTIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/17] Slack Notifications
+[1/18] Slack Notifications
     Send real-time error notifications to Slack channels
     Enable? (y/N): y
 
-[2/17] Email Notifications
+[2/18] Email Notifications
     Send error alerts via email to your team
     Enable? (y/N): n
 

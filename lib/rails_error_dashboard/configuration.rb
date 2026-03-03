@@ -114,6 +114,11 @@ module RailsErrorDashboard
     attr_accessor :notification_cooldown_minutes    # Per-error cooldown in minutes (default: 5, 0 = disabled)
     attr_accessor :notification_threshold_alerts    # Occurrence milestones that trigger notification (default: [10, 50, 100, 500, 1000])
 
+    # Breadcrumbs (request activity trail)
+    attr_accessor :enable_breadcrumbs              # Master switch (default: false)
+    attr_accessor :breadcrumb_buffer_size          # Max breadcrumbs per request (default: 40)
+    attr_accessor :breadcrumb_categories           # Which categories to capture (default: nil = all)
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -154,9 +159,10 @@ module RailsErrorDashboard
 
       @use_separate_database = ENV.fetch("USE_SEPARATE_ERROR_DB", "false") == "true"
 
-      # Retention policy - nil means keep forever (no automatic deletion)
-      # Users can run 'rails error_dashboard:cleanup_resolved DAYS=90' to manually clean up
-      @retention_days = nil
+      # Retention policy - days to keep errors before automatic deletion (default: 90)
+      # Set to nil to keep errors forever (not recommended for production)
+      # Schedule cleanup: RailsErrorDashboard::RetentionCleanupJob.perform_later
+      @retention_days = 90
 
       @enable_middleware = true
       @enable_error_subscriber = true
@@ -210,6 +216,11 @@ module RailsErrorDashboard
       @notification_minimum_severity = :low  # Notify on all severities (current behavior)
       @notification_cooldown_minutes = 5     # 5 min cooldown per error_hash (0 = disabled)
       @notification_threshold_alerts = [ 10, 50, 100, 500, 1000 ] # Occurrence milestones
+
+      # Breadcrumbs defaults - OFF by default (opt-in)
+      @enable_breadcrumbs = false         # Master switch
+      @breadcrumb_buffer_size = 40        # Max events per request (Sentry uses 100, we're conservative)
+      @breadcrumb_categories = nil        # nil = all; or [:sql, :controller, :cache, :job, :mailer, :custom]
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
@@ -286,6 +297,11 @@ module RailsErrorDashboard
       # Validate custom_fingerprint (must respond to .call if set)
       if custom_fingerprint && !custom_fingerprint.respond_to?(:call)
         errors << "custom_fingerprint must respond to .call (lambda, proc, or object with .call method)"
+      end
+
+      # Validate breadcrumb_buffer_size (must be positive if breadcrumbs enabled)
+      if enable_breadcrumbs && breadcrumb_buffer_size && breadcrumb_buffer_size < 1
+        errors << "breadcrumb_buffer_size must be at least 1 (got: #{breadcrumb_buffer_size})"
       end
 
       # Validate notification dependencies

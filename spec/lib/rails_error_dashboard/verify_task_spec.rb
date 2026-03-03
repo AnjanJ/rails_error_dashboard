@@ -90,6 +90,51 @@ RSpec.describe "error_dashboard:verify rake task" do
     end
   end
 
+  describe "retention policy check" do
+    it "shows OK with retention_days when configured" do
+      output = capture_stdout { task.invoke }
+      expect(output).to include("Data retention...")
+      expect(output).to include("OK (90 days)")
+    end
+
+    context "when retention_days is nil" do
+      around do |example|
+        original = RailsErrorDashboard.configuration.retention_days
+        RailsErrorDashboard.configuration.retention_days = nil
+        example.run
+        RailsErrorDashboard.configuration.retention_days = original
+      end
+
+      it "shows OK with no limit in development" do
+        allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+        output = capture_stdout { task.invoke }
+        expect(output).to include("Data retention...")
+        expect(output).to include("OK (no limit")
+      end
+
+      it "shows WARNING in production" do
+        allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+        output = capture_stdout { task.invoke }
+        expect(output).to include("Data retention...")
+        expect(output).to include("WARNING")
+      end
+    end
+
+    context "when retention_days is custom value" do
+      around do |example|
+        original = RailsErrorDashboard.configuration.retention_days
+        RailsErrorDashboard.configuration.retention_days = 365
+        example.run
+        RailsErrorDashboard.configuration.retention_days = original
+      end
+
+      it "shows the custom retention period" do
+        output = capture_stdout { task.invoke }
+        expect(output).to include("OK (365 days)")
+      end
+    end
+  end
+
   describe "with existing errors" do
     let!(:error_log) do
       create(:error_log, application: application, resolved: false)
@@ -120,6 +165,82 @@ RSpec.describe "error_dashboard:verify rake task" do
       it "reports SEPARATE mode" do
         output = capture_stdout { task.invoke }
         expect(output).to include("SEPARATE")
+      end
+    end
+  end
+
+  private
+
+  def capture_stdout
+    original_stdout = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original_stdout
+  end
+end
+
+RSpec.describe "error_dashboard:retention_cleanup rake task" do
+  before(:all) do
+    Rails.application.load_tasks
+  end
+
+  let(:task) { Rake::Task["error_dashboard:retention_cleanup"] }
+
+  before do
+    task.reenable
+  end
+
+  describe "output" do
+    it "prints the retention cleanup header" do
+      allow($stdin).to receive(:gets).and_return("n\n")
+      output = capture_stdout { task.invoke }
+      expect(output).to include("RETENTION CLEANUP")
+    end
+
+    context "when retention_days is nil" do
+      around do |example|
+        original = RailsErrorDashboard.configuration.retention_days
+        RailsErrorDashboard.configuration.retention_days = nil
+        example.run
+        RailsErrorDashboard.configuration.retention_days = original
+      end
+
+      it "shows not configured message" do
+        output = capture_stdout { task.invoke }
+        expect(output).to include("retention_days is not configured")
+      end
+    end
+
+    context "when no errors to delete" do
+      it "shows no errors message" do
+        output = capture_stdout { task.invoke }
+        expect(output).to include("No errors older than")
+      end
+    end
+
+    context "when there are expired errors" do
+      let!(:old_error) { create(:error_log, occurred_at: 91.days.ago) }
+
+      it "shows the count of errors to delete" do
+        allow($stdin).to receive(:gets).and_return("n\n")
+        output = capture_stdout { task.invoke }
+        expect(output).to include("Errors to delete: 1")
+      end
+
+      it "cancels when user says no" do
+        allow($stdin).to receive(:gets).and_return("n\n")
+        output = capture_stdout { task.invoke }
+        expect(output).to include("Cleanup cancelled")
+        expect(RailsErrorDashboard::ErrorLog.exists?(old_error.id)).to be true
+      end
+
+      it "deletes errors when user confirms" do
+        allow($stdin).to receive(:gets).and_return("y\n")
+        output = capture_stdout { task.invoke }
+        expect(output).to include("Retention cleanup complete!")
+        expect(RailsErrorDashboard::ErrorLog.exists?(old_error.id)).to be false
       end
     end
   end

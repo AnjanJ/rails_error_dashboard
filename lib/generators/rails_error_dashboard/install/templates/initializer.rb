@@ -22,9 +22,11 @@ RailsErrorDashboard.configure do |config|
   # User model for error associations
   config.user_model = "User"
 
-  # Error retention policy - nil means keep forever (no automatic deletion)
-  # To manually cleanup old errors: rails error_dashboard:cleanup_resolved DAYS=90
-  config.retention_days = nil
+  # Error retention policy (days to keep errors before automatic deletion)
+  # Set to nil to keep errors forever (not recommended for production)
+  # Run cleanup manually: rails error_dashboard:retention_cleanup
+  # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later
+  config.retention_days = 90
 
   # ============================================================================
   # NOTIFICATION SETTINGS
@@ -293,6 +295,20 @@ RailsErrorDashboard.configure do |config|
   # Git Blame Integration - DISABLED (NEW!)
   # To enable: Set config.enable_git_blame = true (requires Git installed)
   config.enable_git_blame = false
+
+<% end -%>
+<% if @enable_breadcrumbs -%>
+  # Breadcrumbs - ENABLED
+  # Capture a trail of events (SQL, controller, cache, etc.) leading up to each error
+  config.enable_breadcrumbs = true
+  config.breadcrumb_buffer_size = 40  # Max events per request
+  # To disable: Set config.enable_breadcrumbs = false
+
+<% else -%>
+  # Breadcrumbs - DISABLED
+  # To enable: Set config.enable_breadcrumbs = true
+  config.enable_breadcrumbs = false
+  # config.breadcrumb_buffer_size = 40
 
 <% end -%>
   # Repository settings (auto-detected from git remote, optional override)

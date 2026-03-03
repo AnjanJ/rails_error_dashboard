@@ -64,6 +64,11 @@ module RailsErrorDashboard
       if RailsErrorDashboard.configuration.enable_error_subscriber
         Rails.error.subscribe(RailsErrorDashboard::ErrorReporter.new)
       end
+
+      # Subscribe to AS::Notifications for breadcrumb collection
+      if RailsErrorDashboard.configuration.enable_breadcrumbs
+        RailsErrorDashboard::Subscribers::BreadcrumbSubscriber.subscribe!
+      end
     end
   end
 end

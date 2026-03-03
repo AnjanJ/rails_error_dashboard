@@ -30,6 +30,7 @@ module RailsErrorDashboard
       # Developer tools options
       class_option :source_code_integration, type: :boolean, default: false, desc: "Enable source code viewer (NEW!)"
       class_option :git_blame, type: :boolean, default: false, desc: "Enable git blame integration (NEW!)"
+      class_option :breadcrumbs, type: :boolean, default: false, desc: "Enable breadcrumbs (request activity trail)"
 
       def welcome_message
         say "\n"
@@ -160,6 +161,12 @@ module RailsErrorDashboard
             name: "Git Blame Integration (NEW!)",
             description: "Show git blame info (author, commit, timestamp)",
             category: "Developer Tools"
+          },
+          {
+            key: :breadcrumbs,
+            name: "Breadcrumbs (NEW!)",
+            description: "Capture request activity trail (SQL, controller, cache events)",
+            category: "Developer Tools"
           }
         ]
 
@@ -287,6 +294,7 @@ module RailsErrorDashboard
         # Developer Tools
         @enable_source_code_integration = @selected_features&.dig(:source_code_integration) || options[:source_code_integration]
         @enable_git_blame = @selected_features&.dig(:git_blame) || options[:git_blame]
+        @enable_breadcrumbs = @selected_features&.dig(:breadcrumbs) || options[:breadcrumbs]
 
         template "initializer.rb", "config/initializers/rails_error_dashboard.rb"
       end
@@ -387,12 +395,18 @@ module RailsErrorDashboard
         developer_tools_features = []
         developer_tools_features << "Source Code Integration" if @enable_source_code_integration
         developer_tools_features << "Git Blame" if @enable_git_blame
+        developer_tools_features << "Breadcrumbs" if @enable_breadcrumbs
 
         if developer_tools_features.any?
           say "\nDeveloper Tools:", :cyan
           say "  ✓ #{developer_tools_features.join(", ")}", :green
           enabled_count += developer_tools_features.size
         end
+
+        say "\nData Retention:", :cyan
+        say "  Default: 90 days (change via config.retention_days)", :white
+        say "  Manual cleanup: rails error_dashboard:retention_cleanup", :white
+        say "  Schedule daily: RailsErrorDashboard::RetentionCleanupJob.perform_later", :white
 
         say "\n"
         say "Configuration Required:", :yellow if enabled_count > 0

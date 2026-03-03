@@ -196,6 +196,21 @@ module RailsErrorDashboard
       )
     end
 
+    # Returns Bootstrap badge color class for breadcrumb category
+    # @param category [String] Breadcrumb category (sql, controller, cache, job, mailer, custom)
+    # @return [String] Bootstrap color class
+    def breadcrumb_badge_color(category)
+      case category.to_s
+      when "sql"        then "primary"
+      when "controller" then "success"
+      when "cache"      then "info"
+      when "job"        then "warning"
+      when "mailer"     then "secondary"
+      when "custom"     then "dark"
+      else "light"
+      end
+    end
+
     # Automatically converts URLs in text to clickable links that open in new window
     # Also highlights inline code wrapped in backticks with syntax highlighting
     # Also converts file paths to GitHub links if repository URL is configured

@@ -127,7 +127,22 @@ namespace :error_dashboard do
       puts "SKIPPED (#{e.message.truncate(60)})"
     end
 
-    # 7. Authentication check
+    # 7. Data retention check
+    print "  Data retention... "
+    if config.retention_days.present?
+      puts "OK (#{config.retention_days} days)"
+      checks_passed += 1
+    else
+      if Rails.env.production?
+        puts "WARNING - no retention policy (errors kept forever)"
+        warnings += 1
+      else
+        puts "OK (no limit - set retention_days for production)"
+        checks_passed += 1
+      end
+    end
+
+    # 8. Authentication check
     print "  Authentication... "
     if config.dashboard_username == "gandalf" && config.dashboard_password == "youshallnotpass"
       if Rails.env.production?
@@ -420,6 +435,54 @@ namespace :error_dashboard do
     elapsed = (Time.current - start_time).round(2)
 
     puts "\n✓ Cleanup complete!"
+    puts "  Deleted: #{deleted} errors"
+    puts "  Time elapsed: #{elapsed} seconds"
+
+    puts "\n" + "=" * 80 + "\n"
+  end
+
+  desc "Run retention cleanup (delete errors older than retention_days)"
+  task retention_cleanup: :environment do
+    config = RailsErrorDashboard.configuration
+
+    puts "\n" + "=" * 80
+    puts "RAILS ERROR DASHBOARD - RETENTION CLEANUP"
+    puts "=" * 80
+
+    if config.retention_days.blank?
+      puts "\n  retention_days is not configured (set it in your initializer)"
+      puts "\n" + "=" * 80 + "\n"
+      next
+    end
+
+    cutoff = config.retention_days.days.ago
+    count = RailsErrorDashboard::ErrorLog.where("occurred_at < ?", cutoff).count
+
+    puts "\n  Retention policy: #{config.retention_days} days"
+    puts "  Cutoff date: #{cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
+    puts "  Errors to delete: #{count}"
+
+    if count.zero?
+      puts "\n  No errors older than #{config.retention_days} days"
+      puts "\n" + "=" * 80 + "\n"
+      next
+    end
+
+    print "\n  Proceed with deletion? (y/N): "
+    confirmation = $stdin.gets.chomp.downcase
+
+    unless confirmation == "y" || confirmation == "yes"
+      puts "\n  Cleanup cancelled"
+      puts "\n" + "=" * 80 + "\n"
+      next
+    end
+
+    puts "\n  Deleting errors..."
+    start_time = Time.current
+    deleted = RailsErrorDashboard::RetentionCleanupJob.new.perform
+    elapsed = (Time.current - start_time).round(2)
+
+    puts "\n  Retention cleanup complete!"
     puts "  Deleted: #{deleted} errors"
     puts "  Time elapsed: #{elapsed} seconds"
 

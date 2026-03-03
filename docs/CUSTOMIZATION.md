@@ -125,6 +125,26 @@ config.add_error_context do |context|
 end
 ```
 
+### Custom Breadcrumbs
+
+Add manual breadcrumbs at key points in your application to capture domain-specific context:
+
+```ruby
+# In a controller
+def checkout
+  RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: @cart.id, items: @cart.items.count })
+
+  process_payment(@cart)
+
+  RailsErrorDashboard.add_breadcrumb("payment processed", { provider: "stripe", amount: @cart.total })
+rescue => e
+  # Breadcrumbs captured automatically — shows the trail leading to the error
+  raise
+end
+```
+
+Custom breadcrumbs appear alongside automatically-captured events (SQL, controller, cache) in the error detail page. Requires `config.enable_breadcrumbs = true`.
+
 ## Sampling and Filtering
 
 Control which errors are logged to reduce noise and storage.

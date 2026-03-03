@@ -159,7 +159,7 @@ Detect cyclical patterns (business hours, nighttime, weekend rhythms) and error 
 **Plus: Developer Insights Dashboard** 💡
 Built-in analytics dashboard with severity detection, platform stability scoring, actionable recommendations, and recent error activity summaries (always available, no configuration needed).
 
-#### 🔍 Source Code Integration (NEW!)
+#### 🔍 Source Code Integration
 
 **View actual source code directly in error backtraces** - no need to switch to your editor or GitHub.
 
@@ -169,21 +169,29 @@ Built-in analytics dashboard with severity detection, platform stability scoring
 - **Smart Caching** - Fast performance with 1-hour cache (configurable)
 - **Security Controls** - Only shows your app code by default (not gems/frameworks)
 
-**Perfect for debugging:**
-- Understand the code context without leaving the dashboard
-- Identify code ownership with git blame
-- Quick navigation to your repository
-- See recent changes that might have caused the error
-
 ```ruby
-# Enable in config/initializers/rails_error_dashboard.rb
 config.enable_source_code_integration = true
-config.source_code_context_lines = 7
 config.enable_git_blame = true
-config.git_repository_url = "https://github.com/user/repo"
 ```
 
 **📖 [Complete documentation →](docs/SOURCE_CODE_INTEGRATION.md)**
+
+#### 🥖 Breadcrumbs — Request Activity Trail (NEW!)
+
+**See exactly what happened before the crash** — SQL queries, controller actions, cache operations, job executions, and mailer deliveries captured automatically via `ActiveSupport::Notifications`.
+
+- **Automatic capture** — Zero config beyond the enable flag (Rails already emits the events)
+- **Timeline display** — Color-coded event list on each error's detail page
+- **Custom breadcrumbs** — `RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123 })`
+- **Safe by design** — Fixed-size ring buffer, thread-local, every subscriber wrapped in rescue
+- **Async-compatible** — Breadcrumbs harvested before background job dispatch
+
+```ruby
+config.enable_breadcrumbs = true
+config.breadcrumb_buffer_size = 40  # Max events per request
+```
+
+**📖 [Complete documentation →](docs/FEATURES.md#breadcrumbs--request-activity-trail-new)**
 
 #### 🆕 v0.2 Quick Wins (NEW!)
 

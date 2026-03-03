@@ -636,5 +636,95 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         end
       end
     end
+
+    # Breadcrumbs integration tests
+    describe "breadcrumbs integration" do
+      let(:exception) { create_unique_exception(StandardError, "breadcrumb test error", 900) }
+      let(:collector) { RailsErrorDashboard::Services::BreadcrumbCollector }
+
+      before do
+        RailsErrorDashboard.configuration.async_logging = false
+        collector.clear_buffer
+      end
+
+      after do
+        collector.clear_buffer
+        RailsErrorDashboard.reset_configuration!
+      end
+
+      context "when breadcrumbs are enabled and column exists" do
+        before do
+          RailsErrorDashboard.configuration.enable_breadcrumbs = true
+          collector.init_buffer
+          collector.add("sql", "SELECT * FROM users")
+          collector.add("controller", "UsersController#show")
+        end
+
+        it "harvests and stores breadcrumbs" do
+          result = described_class.call(exception, context)
+
+          expect(result).to be_present
+          expect(result.breadcrumbs).to be_present
+
+          parsed = JSON.parse(result.breadcrumbs)
+          expect(parsed.size).to eq(2)
+          expect(parsed.first["c"]).to eq("sql")
+          expect(parsed.last["c"]).to eq("controller")
+        end
+      end
+
+      context "when breadcrumbs are disabled" do
+        before do
+          RailsErrorDashboard.configuration.enable_breadcrumbs = false
+          collector.init_buffer
+          collector.add("sql", "SELECT * FROM users")
+        end
+
+        it "does not store breadcrumbs" do
+          result = described_class.call(exception, context)
+
+          expect(result).to be_present
+          expect(result.breadcrumbs).to be_nil
+        end
+      end
+
+      context "when buffer is empty" do
+        before do
+          RailsErrorDashboard.configuration.enable_breadcrumbs = true
+          collector.init_buffer
+          # Don't add any breadcrumbs
+        end
+
+        it "does not set breadcrumbs attribute" do
+          result = described_class.call(exception, context)
+
+          expect(result).to be_present
+          expect(result.breadcrumbs).to be_nil
+        end
+      end
+
+      context "async path: pre-serialized breadcrumbs from context" do
+        before do
+          RailsErrorDashboard.configuration.enable_breadcrumbs = true
+          # No buffer initialized — simulates different thread
+        end
+
+        it "uses pre-serialized breadcrumbs from context" do
+          serialized = [
+            { c: "sql", m: "SELECT 1", t: 1000, d: 0.5 },
+            { c: "controller", m: "OrdersController#create", t: 1001 }
+          ]
+
+          result = described_class.call(exception, context.merge(_serialized_breadcrumbs: serialized))
+
+          expect(result).to be_present
+          expect(result.breadcrumbs).to be_present
+
+          parsed = JSON.parse(result.breadcrumbs)
+          expect(parsed.size).to eq(2)
+          expect(parsed.first["c"]).to eq("sql")
+        end
+      end
+    end
   end
 end

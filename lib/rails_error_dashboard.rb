@@ -50,6 +50,8 @@ require "rails_error_dashboard/services/cause_chain_extractor"
 require "rails_error_dashboard/services/environment_snapshot"
 require "rails_error_dashboard/services/sensitive_data_filter"
 require "rails_error_dashboard/services/notification_throttler"
+require "rails_error_dashboard/services/breadcrumb_collector"
+require "rails_error_dashboard/subscribers/breadcrumb_subscriber"
 require "rails_error_dashboard/queries/co_occurring_errors"
 require "rails_error_dashboard/queries/error_cascades"
 require "rails_error_dashboard/queries/baseline_stats"
@@ -155,5 +157,16 @@ module RailsErrorDashboard
   #   end
   def self.on_error_resolved(&block)
     configuration.notification_callbacks[:error_resolved] << block if block_given?
+  end
+
+  # Add a custom breadcrumb to the current request's trail
+  # No-ops if breadcrumbs are disabled or no buffer is initialized.
+  # @param message [String] Human-readable description
+  # @param metadata [Hash, nil] Optional key-value pairs
+  # @example
+  #   RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123 })
+  def self.add_breadcrumb(message, metadata = nil)
+    return unless configuration.enable_breadcrumbs
+    Services::BreadcrumbCollector.add("custom", message, metadata: metadata)
   end
 end

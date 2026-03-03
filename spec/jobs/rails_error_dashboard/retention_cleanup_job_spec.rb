@@ -14,7 +14,7 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
   end
 
   describe "#perform" do
-    context "when retention_days is nil (default)" do
+    context "when retention_days is nil (disabled)" do
       before do
         RailsErrorDashboard.configuration.retention_days = nil
       end
@@ -23,6 +23,23 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
         old_error = create(:error_log, occurred_at: 1.year.ago)
         described_class.new.perform
         expect(RailsErrorDashboard::ErrorLog.exists?(old_error.id)).to be true
+      end
+
+      it "returns 0" do
+        create(:error_log, occurred_at: 1.year.ago)
+        expect(described_class.new.perform).to eq(0)
+      end
+    end
+
+    context "with default retention_days (90)" do
+      it "deletes errors older than 90 days" do
+        old_error = create(:error_log, occurred_at: 91.days.ago)
+        recent_error = create(:error_log, occurred_at: 89.days.ago)
+
+        described_class.new.perform
+
+        expect(RailsErrorDashboard::ErrorLog.exists?(old_error.id)).to be false
+        expect(RailsErrorDashboard::ErrorLog.exists?(recent_error.id)).to be true
       end
     end
 
@@ -86,8 +103,43 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
         }.to change(RailsErrorDashboard::ErrorComment, :count).by(-1)
       end
 
+      it "cleans up associated cascade patterns (as parent)" do
+        old_error = create(:error_log, occurred_at: 60.days.ago)
+        other_error = create(:error_log, occurred_at: 1.day.ago)
+        RailsErrorDashboard::CascadePattern.create!(
+          parent_error: old_error,
+          child_error: other_error,
+          frequency: 1,
+          cascade_probability: 0.5
+        )
+
+        expect {
+          described_class.new.perform
+        }.to change(RailsErrorDashboard::CascadePattern, :count).by(-1)
+      end
+
+      it "cleans up associated cascade patterns (as child)" do
+        old_error = create(:error_log, occurred_at: 60.days.ago)
+        other_error = create(:error_log, occurred_at: 1.day.ago)
+        RailsErrorDashboard::CascadePattern.create!(
+          parent_error: other_error,
+          child_error: old_error,
+          frequency: 1,
+          cascade_probability: 0.5
+        )
+
+        expect {
+          described_class.new.perform
+        }.to change(RailsErrorDashboard::CascadePattern, :count).by(-1)
+      end
+
       it "handles empty tables gracefully" do
         expect { described_class.new.perform }.not_to raise_error
+      end
+
+      it "returns 0 when no expired records exist" do
+        create(:error_log, occurred_at: 1.day.ago)
+        expect(described_class.new.perform).to eq(0)
       end
 
       it "returns the count of deleted errors" do

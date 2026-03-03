@@ -377,6 +377,57 @@
       </div>
       <% end %>
 
+      <!-- Breadcrumbs (Request Activity Trail) -->
+      <% if RailsErrorDashboard.configuration.enable_breadcrumbs && @error.respond_to?(:breadcrumbs) && @error.breadcrumbs.present? %>
+        <% breadcrumbs = JSON.parse(@error.breadcrumbs) rescue [] %>
+        <% if breadcrumbs.any? %>
+          <div class="card mb-4">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">
+                <i class="bi bi-signpost-2"></i> Breadcrumbs
+                <span class="badge bg-secondary"><%= breadcrumbs.size %> events</span>
+              </h5>
+              <small class="text-muted">Activity trail leading up to this error</small>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th width="60">#</th>
+                      <th width="100">Category</th>
+                      <th>Message</th>
+                      <th width="100">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% breadcrumbs.each_with_index do |crumb, i| %>
+                      <tr>
+                        <td class="text-muted"><%= i + 1 %></td>
+                        <td><span class="badge bg-<%= breadcrumb_badge_color(crumb["c"]) %>"><%= crumb["c"] %></span></td>
+                        <td>
+                          <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(crumb["m"].to_s, length: 200) %></code>
+                          <% if crumb["meta"].present? %>
+                            <br><small class="text-muted"><%= crumb["meta"].inspect %></small>
+                          <% end %>
+                        </td>
+                        <td>
+                          <% if crumb["d"] %>
+                            <span class="<%= crumb["d"].to_f > 100 ? 'text-danger fw-bold' : 'text-muted' %>">
+                              <%= "%.1f" % crumb["d"] %>ms
+                            </span>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+
       <!-- Similar Errors (Fuzzy Matching) -->
       <% if RailsErrorDashboard.configuration.enable_similar_errors && @error.respond_to?(:similar_errors) %>
         <% similar = @error.similar_errors(threshold: 0.6, limit: 5) %>

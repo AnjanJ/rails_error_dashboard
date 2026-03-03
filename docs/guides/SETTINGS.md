@@ -17,7 +17,7 @@ Navigate to the Settings page from the main dashboard:
 
 ## Settings Overview
 
-The Settings page is organized into seven sections:
+The Settings page is organized into eight sections:
 
 ### 1. Core Features
 
@@ -143,7 +143,22 @@ See [Plugin System Guide](../PLUGIN_SYSTEM.md) for how to create custom plugins.
 
 ---
 
-### 6. Enhanced Metrics
+### 6. Breadcrumbs
+
+Shows breadcrumb (request activity trail) configuration:
+
+- **Breadcrumbs**: Whether breadcrumb collection is enabled
+- **Buffer Size**: Maximum breadcrumbs per request (shown when breadcrumbs enabled)
+
+**Example Display:**
+```text
+Breadcrumbs                      ✓ Enabled
+Buffer Size                      40 events
+```
+
+---
+
+### 7. Enhanced Metrics
 
 Displays additional context being tracked with errors (shown only if any of these are configured):
 
@@ -162,7 +177,7 @@ Total Users                      10,000
 
 ---
 
-### 7. Internal Logging
+### 8. Internal Logging
 
 Shows gem debugging and logging settings:
 

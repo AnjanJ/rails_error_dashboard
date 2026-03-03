@@ -23,6 +23,11 @@ module RailsErrorDashboard
         # Record request start time for duration calculation
         env["rails_error_dashboard.request_start"] = Time.now.to_f
 
+        # Initialize breadcrumb buffer for this request
+        if RailsErrorDashboard.configuration.enable_breadcrumbs
+          RailsErrorDashboard::Services::BreadcrumbCollector.init_buffer
+        end
+
         @app.call(env)
       rescue => exception
         # Report to Rails.error (will be logged by our ErrorReporter)
@@ -45,6 +50,9 @@ module RailsErrorDashboard
 
         # Re-raise original exception to let Rails handle the response
         raise exception
+      ensure
+        # CRITICAL: Always clean up thread-local storage (Puma reuses threads)
+        RailsErrorDashboard::Services::BreadcrumbCollector.clear_buffer
       end
     end
   end

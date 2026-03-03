@@ -10,7 +10,7 @@ RSpec.describe RailsErrorDashboard::Configuration do
       it { expect(config.dashboard_username).to eq("gandalf") }
       it { expect(config.dashboard_password).to eq("youshallnotpass") }
       it { expect(config.user_model).to be_nil } # Auto-detected if not set
-      it { expect(config.retention_days).to be_nil } # Keep forever by default (no auto-deletion)
+      it { expect(config.retention_days).to eq(90) } # 90-day retention by default
       it { expect(config.enable_middleware).to be true }
       it { expect(config.enable_error_subscriber).to be true }
     end
@@ -53,6 +53,20 @@ RSpec.describe RailsErrorDashboard::Configuration do
         expect(config.notification_callbacks[:error_logged]).to eq([])
         expect(config.notification_callbacks[:critical_error]).to eq([])
         expect(config.notification_callbacks[:error_resolved]).to eq([])
+      end
+    end
+
+    describe "breadcrumb configuration defaults" do
+      it "sets enable_breadcrumbs to false (opt-in)" do
+        expect(config.enable_breadcrumbs).to be false
+      end
+
+      it "sets breadcrumb_buffer_size to 40" do
+        expect(config.breadcrumb_buffer_size).to eq(40)
+      end
+
+      it "sets breadcrumb_categories to nil (all categories)" do
+        expect(config.breadcrumb_categories).to be_nil
       end
     end
 
@@ -309,6 +323,25 @@ RSpec.describe RailsErrorDashboard::Configuration do
 
         expect(config.effective_total_users).to be_nil
       end
+    end
+  end
+
+  describe "breadcrumb_buffer_size validation" do
+    it "raises when breadcrumb_buffer_size is less than 1 and breadcrumbs are enabled" do
+      config.enable_breadcrumbs = true
+      config.breadcrumb_buffer_size = 0
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /breadcrumb_buffer_size must be at least 1/
+      )
+    end
+
+    it "does not raise when breadcrumbs are disabled even with invalid buffer size" do
+      config.enable_breadcrumbs = false
+      config.breadcrumb_buffer_size = 0
+
+      expect { config.validate! }.not_to raise_error
     end
   end
 

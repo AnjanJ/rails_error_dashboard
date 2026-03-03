@@ -86,6 +86,14 @@
         git_branch_strategy: { label: "Git Branch Strategy", description: "Branch resolution strategy", type: :symbol, show_if: :enable_source_code_integration }
       }
     },
+    "Breadcrumbs" => {
+      icon: "bi-signpost-2",
+      color: "warning",
+      settings: {
+        enable_breadcrumbs: { label: "Breadcrumbs", description: "Capture request activity trail", type: :boolean },
+        breadcrumb_buffer_size: { label: "Buffer Size", description: "Max breadcrumbs per request", type: :integer, show_if: :enable_breadcrumbs, unit: "events" }
+      }
+    },
     "Enhanced Metrics" => {
       icon: "bi-speedometer",
       color: "secondary",

@@ -3,7 +3,7 @@
 module RailsErrorDashboard
   # Background job to enforce the retention_days configuration.
   # Deletes error logs (and their associated records) older than the configured threshold.
-  # Uses find_each + destroy to respect dependent: :destroy on associations.
+  # Uses batch deletion (in_batches + delete_all) for performance on large tables.
   #
   # Schedule this job daily via your preferred scheduler (SolidQueue, Sidekiq, cron).
   #
@@ -20,13 +20,25 @@ module RailsErrorDashboard
       return 0 if retention_days.blank?
 
       cutoff = retention_days.days.ago
+      expired_scope = ErrorLog.where("occurred_at < ?", cutoff)
+      return 0 if expired_scope.none?
+
       deleted_count = 0
 
-      # Use find_each to process in batches (default 1000)
-      # destroy triggers dependent: :destroy on associations (occurrences, comments, cascades)
-      ErrorLog.where("occurred_at < ?", cutoff).find_each do |error_log|
-        error_log.destroy
-        deleted_count += 1
+      # Delete dependents first, then errors — all in batches to prevent table locks
+      expired_ids_scope = expired_scope.select(:id)
+
+      # Batch delete dependent records (occurrences, comments, cascade patterns)
+      ErrorOccurrence.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
+      ErrorComment.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
+      CascadePattern.where(parent_error_id: expired_ids_scope)
+                    .or(CascadePattern.where(child_error_id: expired_ids_scope))
+                    .in_batches(of: 1000).delete_all
+
+      # Now batch delete the error logs themselves
+      expired_scope.in_batches(of: 1000) do |batch|
+        batch_size = batch.delete_all
+        deleted_count += batch_size
       end
 
       if deleted_count > 0

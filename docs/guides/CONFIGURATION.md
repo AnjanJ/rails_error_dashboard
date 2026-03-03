@@ -149,6 +149,14 @@ Complete reference of all 43+ configuration options with defaults, types, and de
 | `only_show_app_code_source` | Boolean | `true` | Hide gem/vendor code (security) |
 | `git_branch_strategy` | Symbol | `:commit_sha` | Branch strategy (`:commit_sha`, `:current_branch`, `:main`) |
 
+### Breadcrumbs — Request Activity Trail (NEW!)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_breadcrumbs` | Boolean | `false` | Capture request activity trail (SQL, controller, cache, etc.) |
+| `breadcrumb_buffer_size` | Integer | `40` | Max breadcrumbs per request (ring buffer) |
+| `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or `[:sql, :controller, :cache, :job, :mailer, :custom]`) |
+
 ### Internal Logging & Debugging
 
 | Option | Type | Default | Description |
@@ -564,6 +572,81 @@ end
 - **Read-only**: Dashboard only reads files, never modifies
 - **Path validation**: Only files within app root can be accessed
 - **No external calls**: All processing happens locally
+
+---
+
+## Breadcrumbs — Request Activity Trail (NEW!)
+
+Breadcrumbs capture a timeline of events (SQL queries, controller actions, cache operations, etc.) during a request, then store them with the error for instant debugging context.
+
+### Basic Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  # Enable breadcrumbs
+  config.enable_breadcrumbs = true
+end
+```
+
+### Advanced Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_breadcrumbs = true
+
+  # Max events per request (default: 40, ring buffer drops oldest when full)
+  config.breadcrumb_buffer_size = 40
+
+  # Limit which categories are captured (default: nil = all)
+  # Options: :sql, :controller, :cache, :job, :mailer, :custom
+  config.breadcrumb_categories = [ :sql, :controller ]  # Only SQL and controller events
+end
+```
+
+### Manual Breadcrumbs
+
+Add custom breadcrumbs from anywhere in your application code:
+
+```ruby
+RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123 })
+RailsErrorDashboard.add_breadcrumb("payment processed", { provider: "stripe", amount: 99.99 })
+```
+
+### Captured Events
+
+| Event | Category | What's Captured |
+|-------|----------|----------------|
+| `sql.active_record` | `sql` | SQL query (first 200 chars) + duration. Skips SCHEMA queries and internal gem queries |
+| `process_action.action_controller` | `controller` | `ControllerName#action` + duration |
+| `cache_read.active_support` | `cache` | `cache read: key` |
+| `cache_write.active_support` | `cache` | `cache write: key` |
+| `perform.active_job` | `job` | Job class name + duration |
+| `deliver.action_mailer` | `mailer` | `MailerClass to: [recipients]` |
+
+### Use Cases
+
+```ruby
+# Development: Full breadcrumb visibility
+config.enable_breadcrumbs = true
+
+# Production: Enable with conservative buffer
+config.enable_breadcrumbs = true
+config.breadcrumb_buffer_size = 25
+
+# High-traffic: Only capture SQL and controller events
+config.enable_breadcrumbs = true
+config.breadcrumb_categories = [ :sql, :controller ]
+```
+
+### Safety
+
+- **Default OFF** — opt-in only
+- **Fixed-size ring buffer** — no unbounded memory growth
+- **Thread-local** — no mutex/lock, each request isolated
+- **Cleanup in ensure** — buffer cleared even on exceptions (Puma thread reuse safe)
+- **Every subscriber wrapped in rescue** — never raises, never blocks
+- **Sensitive data filtered** — passwords, tokens, secrets scrubbed before storage
+- **< 0.1ms/request overhead** — events already fired by Rails
 
 ---
 
@@ -1164,6 +1247,19 @@ RailsErrorDashboard.configure do |config|
 
   # Branch strategy for repository links (default: :commit_sha)
   config.git_branch_strategy = :commit_sha
+
+  # ============================================================================
+  # BREADCRUMBS (NEW!)
+  # ============================================================================
+
+  # Enable breadcrumbs (request activity trail)
+  config.enable_breadcrumbs = true
+
+  # Max events per request (default: 40)
+  config.breadcrumb_buffer_size = 40
+
+  # Capture all categories (default: nil = all)
+  # config.breadcrumb_categories = [:sql, :controller, :cache, :job, :mailer, :custom]
 
   # ============================================================================
   # ADDITIONAL CONFIGURATION

@@ -98,7 +98,7 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
 
         expect(initializer_content).to include("config.enable_middleware = true")
         expect(initializer_content).to include("config.enable_error_subscriber = true")
-        expect(initializer_content).to include("config.retention_days = nil")
+        expect(initializer_content).to include("config.retention_days = 90")
       end
     end
 
@@ -290,6 +290,13 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       expect(initializer_content).to include("ADDITIONAL CONFIGURATION")
     end
 
+    it "includes retention cleanup scheduling guidance" do
+      initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+
+      expect(initializer_content).to include("retention_cleanup")
+      expect(initializer_content).to include("RetentionCleanupJob")
+    end
+
     it "provides helpful comments for each feature" do
       initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
 
@@ -314,7 +321,7 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
 
       expect(initializer_content).to include('config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")')
       expect(initializer_content).to include('config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")')
-      expect(initializer_content).to include("config.retention_days = nil")
+      expect(initializer_content).to include("config.retention_days = 90")
       expect(initializer_content).to include("config.max_backtrace_lines = 100")
     end
   end
@@ -574,6 +581,35 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
 
         initializer_content = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
         expect(initializer_content).to include("config.use_separate_database = false")
+      end
+    end
+  end
+
+  describe "breadcrumbs feature" do
+    context "with --breadcrumbs flag" do
+      before do
+        run_generator [ "--no-interactive", "--breadcrumbs" ]
+      end
+
+      it "enables breadcrumbs in initializer" do
+        initializer_path = "#{destination_root}/config/initializers/rails_error_dashboard.rb"
+        initializer_content = File.read(initializer_path)
+
+        expect(initializer_content).to include("config.enable_breadcrumbs = true")
+        expect(initializer_content).to include("config.breadcrumb_buffer_size = 40")
+      end
+    end
+
+    context "without --breadcrumbs flag" do
+      before do
+        run_generator [ "--no-interactive" ]
+      end
+
+      it "disables breadcrumbs in initializer" do
+        initializer_path = "#{destination_root}/config/initializers/rails_error_dashboard.rb"
+        initializer_content = File.read(initializer_path)
+
+        expect(initializer_content).to include("config.enable_breadcrumbs = false")
       end
     end
   end
