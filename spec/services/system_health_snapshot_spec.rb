@@ -124,6 +124,75 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
       end
     end
 
+    describe ":job_queue" do
+      it "returns nil when no adapter is defined" do
+        expect(snapshot[:job_queue]).to be_nil
+      end
+
+      context "when Sidekiq is available" do
+        before do
+          sidekiq_stats_class = Class.new do
+            def enqueued = 5
+            def processed = 100
+            def failed = 2
+            def dead_size = 1
+            def scheduled_size = 3
+            def retry_size = 0
+            def workers_size = 4
+          end
+
+          stub_const("Sidekiq::Stats", sidekiq_stats_class)
+        end
+
+        it "captures Sidekiq stats" do
+          result = described_class.capture
+          jq = result[:job_queue]
+          expect(jq).to be_a(Hash)
+          expect(jq[:adapter]).to eq("sidekiq")
+          expect(jq[:enqueued]).to eq(5)
+          expect(jq[:dead]).to eq(1)
+          expect(jq[:workers]).to eq(4)
+        end
+      end
+
+      context "when SolidQueue is available" do
+        before do
+          stub_const("SolidQueue", Module.new)
+          stub_const("SolidQueue::ReadyExecution", double(count: 3))
+          stub_const("SolidQueue::ScheduledExecution", double(count: 1))
+          stub_const("SolidQueue::ClaimedExecution", double(count: 2))
+          stub_const("SolidQueue::FailedExecution", double(count: 0))
+          stub_const("SolidQueue::BlockedExecution", double(count: 0))
+        end
+
+        it "captures SolidQueue stats" do
+          result = described_class.capture
+          jq = result[:job_queue]
+          expect(jq).to be_a(Hash)
+          expect(jq[:adapter]).to eq("solid_queue")
+          expect(jq[:ready]).to eq(3)
+          expect(jq[:claimed]).to eq(2)
+          expect(jq[:failed]).to eq(0)
+        end
+      end
+
+      context "when adapter raises" do
+        before do
+          sidekiq_stats_class = Class.new do
+            def initialize
+              raise RuntimeError, "Redis down"
+            end
+          end
+          stub_const("Sidekiq::Stats", sidekiq_stats_class)
+        end
+
+        it "returns nil" do
+          result = described_class.capture
+          expect(result[:job_queue]).to be_nil
+        end
+      end
+    end
+
     it "does NOT call any subprocess or backtick" do
       # Verify no Kernel#` or system calls
       expect(Kernel).not_to receive(:`)

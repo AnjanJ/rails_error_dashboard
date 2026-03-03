@@ -33,6 +33,7 @@ module RailsErrorDashboard
           thread_count: thread_count,
           connection_pool: connection_pool_stats,
           puma: puma_stats,
+          job_queue: job_queue_stats,
           captured_at: Time.current.iso8601
         }
       end
@@ -82,6 +83,60 @@ module RailsErrorDashboard
         raw = JSON.parse(Puma.stats)
         { pool_capacity: raw["pool_capacity"], max_threads: raw["max_threads"],
           running: raw["running"], backlog: raw["backlog"] }
+      rescue => e
+        nil
+      end
+
+      # Auto-detect and capture job queue stats
+      # @return [Hash, nil] Job queue stats with :adapter key, or nil
+      def job_queue_stats
+        if defined?(::Sidekiq::Stats)
+          sidekiq_stats
+        elsif defined?(::SolidQueue)
+          solid_queue_stats
+        elsif defined?(::GoodJob)
+          good_job_stats
+        end
+      rescue => e
+        nil
+      end
+
+      def sidekiq_stats
+        stats = ::Sidekiq::Stats.new
+        {
+          adapter: "sidekiq",
+          enqueued: stats.enqueued,
+          processed: stats.processed,
+          failed: stats.failed,
+          dead: stats.dead_size,
+          scheduled: stats.scheduled_size,
+          retry: stats.retry_size,
+          workers: stats.workers_size
+        }
+      rescue => e
+        nil
+      end
+
+      def solid_queue_stats
+        {
+          adapter: "solid_queue",
+          ready: (::SolidQueue::ReadyExecution.count rescue nil),
+          scheduled: (::SolidQueue::ScheduledExecution.count rescue nil),
+          claimed: (::SolidQueue::ClaimedExecution.count rescue nil),
+          failed: (::SolidQueue::FailedExecution.count rescue nil),
+          blocked: (::SolidQueue::BlockedExecution.count rescue nil)
+        }
+      rescue => e
+        nil
+      end
+
+      def good_job_stats
+        {
+          adapter: "good_job",
+          queued: (::GoodJob::Job.where(finished_at: nil, error: nil).count rescue nil),
+          errored: (::GoodJob::Job.where.not(error: nil).where(finished_at: nil).count rescue nil),
+          finished: (::GoodJob::Job.where.not(finished_at: nil).count rescue nil)
+        }
       rescue => e
         nil
       end

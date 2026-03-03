@@ -317,6 +317,23 @@
                       </code>
                     </div>
                   <% end %>
+
+                  <% if health[:job_queue] %>
+                    <% jq = health[:job_queue] %>
+                    <div class="mb-1">
+                      <small class="text-muted">Job Queue (<%= jq[:adapter] %>):</small>
+                      <code class="ms-1">
+                        <% case jq[:adapter] %>
+                        <% when "sidekiq" %>
+                          <%= jq[:enqueued] %> enqueued, <%= jq[:workers] %> workers<% if jq[:dead].to_i > 0 %>, <span class="text-danger"><%= jq[:dead] %> dead</span><% end %><% if jq[:retry].to_i > 0 %>, <span class="text-warning"><%= jq[:retry] %> retry</span><% end %>
+                        <% when "solid_queue" %>
+                          <%= jq[:ready] %> ready, <%= jq[:claimed] %> claimed, <%= jq[:scheduled] %> scheduled<% if jq[:failed].to_i > 0 %>, <span class="text-danger"><%= jq[:failed] %> failed</span><% end %><% if jq[:blocked].to_i > 0 %>, <span class="text-warning"><%= jq[:blocked] %> blocked</span><% end %>
+                        <% when "good_job" %>
+                          <%= jq[:queued] %> queued, <%= jq[:finished] %> finished<% if jq[:errored].to_i > 0 %>, <span class="text-danger"><%= jq[:errored] %> errored</span><% end %>
+                        <% end %>
+                      </code>
+                    </div>
+                  <% end %>
                 </div>
               </div>
             <% end %>
