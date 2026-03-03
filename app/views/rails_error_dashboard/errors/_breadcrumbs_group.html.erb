@@ -35,7 +35,7 @@
             </div>
           <% end %>
 
-          <% if RailsErrorDashboard.configuration.enable_n_plus_one_detection %>
+          <% if RailsErrorDashboard.configuration.respond_to?(:enable_n_plus_one_detection) && RailsErrorDashboard.configuration.enable_n_plus_one_detection %>
             <% n_plus_one_patterns = RailsErrorDashboard::Services::NplusOneDetector.call(breadcrumbs) %>
             <% if n_plus_one_patterns.any? %>
               <div class="card mb-4" id="section-n-plus-one" style="border-color: var(--bs-warning);">

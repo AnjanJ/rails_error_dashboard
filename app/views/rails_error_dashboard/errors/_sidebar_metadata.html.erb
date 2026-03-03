@@ -262,7 +262,7 @@
             </div>
           </div>
 
-          <% if RailsErrorDashboard.configuration.enable_system_health &&
+          <% if RailsErrorDashboard.configuration.respond_to?(:enable_system_health) && RailsErrorDashboard.configuration.enable_system_health &&
                 error.respond_to?(:system_health) && error.system_health.present? %>
             <% health = begin; JSON.parse(error.system_health, symbolize_names: true); rescue; nil; end %>
             <% if health %>
