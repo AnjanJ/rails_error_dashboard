@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2026-03-03
+
 ### Added
 - **Deprecation Warnings page** — Aggregate view of all deprecation warnings across errors, grouped by message and source, with occurrence counts, affected error links, and time range filtering (7/30/90 days). Available at `/errors/deprecations` when breadcrumbs are enabled
 - **N+1 Query Patterns page** — Cross-error view of N+1 query patterns grouped by SQL fingerprint, showing total occurrences, affected errors, cumulative query time, and sample queries. Available at `/errors/n_plus_one_summary` when breadcrumbs are enabled
