@@ -32,6 +32,16 @@
                   </table>
                 </div>
               </div>
+              <div class="card-footer bg-white border-top">
+                <small class="text-muted">
+                  <i class="bi bi-lightbulb text-warning"></i> Fix deprecations before upgrading Rails to avoid breaking changes.
+                </small>
+                <small class="float-end">
+                  <a href="https://guides.rubyonrails.org/upgrading_ruby_on_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
+                    <i class="bi bi-book"></i> Rails Upgrade Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                  </a>
+                </small>
+              </div>
             </div>
           <% end %>
 
@@ -63,6 +73,15 @@
                             <td>
                               <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(pattern[:sample_query], length: 200) %></code>
                               <br><small class="text-muted">Fingerprint: <%= truncate(pattern[:fingerprint], length: 120) %></small>
+                              <% table_name = extract_table_from_sql(pattern[:sample_query]) %>
+                              <br><small class="text-muted">
+                                <i class="bi bi-lightbulb text-warning"></i>
+                                <% if table_name %>
+                                  Tip: Preload <strong><%= table_name %></strong> with <code>.includes(:association)</code> or <code>.preload(:association)</code>
+                                <% else %>
+                                  Tip: Use <code>.includes</code> or <code>.preload</code> to eager load associations
+                                <% end %>
+                              </small>
                             </td>
                             <td>
                               <span class="<%= pattern[:total_duration_ms] > 100 ? 'text-danger fw-bold' : 'text-muted' %>">
@@ -74,6 +93,13 @@
                       </tbody>
                     </table>
                   </div>
+                </div>
+                <div class="card-footer bg-white border-top">
+                  <small class="float-end">
+                    <a href="https://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations" target="_blank" rel="noopener" class="text-decoration-none">
+                      <i class="bi bi-book"></i> Rails Eager Loading Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                    </a>
+                  </small>
                 </div>
               </div>
             <% end %>
@@ -138,6 +164,26 @@
                     <small class="text-muted">Slowest: <strong><%= "%.1f" % cache_analysis[:slowest][:duration_ms] %>ms</strong></small>
                   <% end %>
                 </div>
+
+                <% if cache_analysis[:hit_rate] && cache_analysis[:hit_rate] < 80 %>
+                  <div class="alert alert-<%= cache_analysis[:hit_rate] < 50 ? 'warning' : 'info' %> py-1 px-2 mb-0 mt-2">
+                    <small>
+                      <i class="bi bi-lightbulb text-warning"></i>
+                      <% if cache_analysis[:hit_rate] < 50 %>
+                        Low hit rate — review cache key design and TTL settings.
+                      <% else %>
+                        Moderate hit rate — consider warming caches or adjusting expiration.
+                      <% end %>
+                    </small>
+                  </div>
+                <% end %>
+              </div>
+              <div class="card-footer bg-white border-top">
+                <small class="float-end">
+                  <a href="https://guides.rubyonrails.org/caching_with_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
+                    <i class="bi bi-book"></i> Rails Caching Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                  </a>
+                </small>
               </div>
             </div>
           <% end %>

@@ -212,6 +212,15 @@ module RailsErrorDashboard
       end
     end
 
+    # Extracts table name from a SQL query string
+    # @param sql [String] SQL query (e.g., 'SELECT "users".* FROM "users" WHERE ...')
+    # @return [String, nil] The table name or nil if not extractable
+    def extract_table_from_sql(sql)
+      return nil if sql.blank?
+      match = sql.match(/FROM\s+["`]?(\w+)["`]?/i)
+      match ? match[1] : nil
+    end
+
     # Automatically converts URLs in text to clickable links that open in new window
     # Also highlights inline code wrapped in backticks with syntax highlighting
     # Also converts file paths to GitHub links if repository URL is configured

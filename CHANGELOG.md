@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Deprecation Warnings page** — Aggregate view of all deprecation warnings across errors, grouped by message and source, with occurrence counts, affected error links, and time range filtering (7/30/90 days). Available at `/errors/deprecations` when breadcrumbs are enabled
+- **N+1 Query Patterns page** — Cross-error view of N+1 query patterns grouped by SQL fingerprint, showing total occurrences, affected errors, cumulative query time, and sample queries. Available at `/errors/n_plus_one_summary` when breadcrumbs are enabled
+- **Cache Health page** — Per-error cache performance overview sorted worst-first, showing hit rate, read/write counts, slowest operations, and total cache time. Available at `/errors/cache_health_summary` when breadcrumbs are enabled
+- **Sidebar navigation** — Three new links (Deprecations, N+1 Queries, Cache Health) in the sidebar under the breadcrumbs feature guard
+- **Per-error N+1 tips** — Eager loading suggestions with extracted table names on the error detail N+1 card
+- **Per-error cache advisories** — Hit rate advisory alerts on the error detail cache card when hit rate is below 80%
+- **Guide links** — Rails Upgrade Guide, Eager Loading Guide, and Caching Guide links on both per-error cards and aggregate pages
+- **`extract_table_from_sql` helper** — Extracts table name from SQL queries for contextual eager loading tips
+- New query classes: `Queries::DeprecationWarnings`, `Queries::NplusOneSummary`, `Queries::CacheHealthSummary`
+- 39 new specs (12 DeprecationWarnings query, 12 NplusOneSummary query, 12 CacheHealthSummary query, 7 N+1 request, 8 cache request, 7 deprecations request, +3 helper specs). Total suite: 2,148 specs
+
 ---
 
 ## [0.2.4] - 2026-03-02

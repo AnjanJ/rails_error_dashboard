@@ -93,6 +93,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### "I want to see source code directly in error details" 🆕
 → [Source Code Integration](SOURCE_CODE_INTEGRATION.md)
 
+### "I want to find N+1 queries or cache issues across all errors"
+→ [Breadcrumbs](FEATURES.md#breadcrumbs--request-activity-trail-new) (enable breadcrumbs, then visit N+1 Queries or Cache Health pages)
+
 ### "I need to track multiple Rails applications"
 → [Multi-App Support](MULTI_APP_PERFORMANCE.md)
 

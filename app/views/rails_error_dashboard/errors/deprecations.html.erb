@@ -1,0 +1,129 @@
+<% content_for :page_title, "Deprecation Warnings" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Deprecation Warnings
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to deprecations_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to deprecations_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to deprecations_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <% if @unique_count == 0 %>
+    <div class="text-center py-5">
+      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+      <h4 class="text-muted">No Deprecation Warnings Found</h4>
+      <p class="text-muted">
+        No deprecation warnings were detected in error breadcrumbs over the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How deprecations are captured:</h6>
+          <ul class="mb-0">
+            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
+            <li>Rails deprecation warnings are automatically captured as breadcrumbs</li>
+            <li>Deprecations appear here when an error occurs during a request with deprecation warnings</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @unique_count %></div>
+            <small class="text-muted">Unique Warnings</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= @total_count %></div>
+            <small class="text-muted">Total Occurrences</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @affected_count %></div>
+            <small class="text-muted">Affected Errors</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+          All Deprecation Warnings
+          <span class="badge bg-danger"><%= @unique_count %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Warning</th>
+                <th width="250">Source</th>
+                <th width="120">Occurrences</th>
+                <th width="250">Errors</th>
+                <th width="140">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @deprecations.each do |dep| %>
+                <tr>
+                  <td><code style="font-size: 0.85em;"><%= dep[:message] %></code></td>
+                  <td><small class="text-muted"><%= dep[:source] %></small></td>
+                  <td><span class="badge bg-warning text-dark"><%= dep[:count] %></span></td>
+                  <td>
+                    <% shown_ids = dep[:error_ids].first(5) %>
+                    <% shown_ids.each_with_index do |eid, i| %>
+                      <%= link_to "##{eid}", error_path(eid), class: "text-decoration-none" %><%= "," unless i == shown_ids.size - 1 %>
+                    <% end %>
+                    <% if dep[:error_ids].size > 5 %>
+                      <small class="text-muted">+<%= dep[:error_ids].size - 5 %> more</small>
+                    <% end %>
+                  </td>
+                  <td><%= local_time_ago(dep[:last_seen]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> Fix deprecations before upgrading Rails to avoid breaking changes.
+          </small>
+          <small class="ms-3">
+            <a href="https://guides.rubyonrails.org/upgrading_ruby_on_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
+              <i class="bi bi-book"></i> Rails Upgrade Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+            </a>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

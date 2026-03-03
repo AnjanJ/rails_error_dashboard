@@ -445,6 +445,19 @@ When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) a
 
 This helps you identify deprecated code paths that may be contributing to errors — especially useful when upgrading Rails versions.
 
+#### Deprecation Warnings Aggregate Page
+
+Beyond per-error display, the **Deprecations** page (`/errors/deprecations`) provides an app-wide view of all deprecation warnings across errors:
+
+- **Summary cards** — Unique warnings count, total occurrences, affected errors
+- **Sortable table** — Warning message, source caller, occurrence count, linked error IDs, last seen
+- **Time range filtering** — 7, 30, or 90 day windows
+- **Pagination** — For large result sets
+
+![Deprecation Warnings](images/deprecations.png)
+
+This page helps prioritize which deprecations to fix first based on frequency and scope across your entire error history.
+
 ### N+1 Query Detection
 
 The N+1 detector analyzes SQL breadcrumbs **at display time** (not on every request) to identify repeated query patterns that suggest missing eager loading:
@@ -459,6 +472,40 @@ The N+1 detector analyzes SQL breadcrumbs **at display time** (not on every requ
 config.enable_n_plus_one_detection = true  # Default: true
 config.n_plus_one_threshold = 3            # Min repetitions to flag (default: 3, min: 2)
 ```
+
+#### N+1 Query Patterns Aggregate Page
+
+The **N+1 Queries** page (`/errors/n_plus_one_summary`) provides an app-wide view of N+1 patterns across all errors:
+
+- **Summary cards** — Unique patterns count, total occurrences (sum of all repeats), affected errors
+- **Pattern table** — Sample query (truncated), occurrence count, linked error IDs (first 5 + "N more"), cumulative query time (red if >100ms), last seen
+- **Time range filtering** — 7, 30, or 90 day windows
+- **Contextual tips** — Each per-error N+1 card now shows the extracted table name with an eager loading suggestion
+
+![N+1 Query Patterns](images/n-plus-one-queries.png)
+
+This page helps identify the most impactful N+1 patterns across your entire application.
+
+### Cache Health Analysis
+
+Cache breadcrumbs (`cache_read.active_support`, `cache_write.active_support`) are analyzed per-error to show cache performance at the moment of failure:
+
+- **Per-error card** — Reads, writes, hit rate (color-coded), total cache time, slowest operation
+- **Hit rate advisories** — Alerts when hit rate is below 80% with actionable suggestions
+- **Rails Caching Guide link** — Direct link to Rails documentation
+
+#### Cache Health Aggregate Page
+
+The **Cache Health** page (`/errors/cache_health_summary`) provides an app-wide view of cache performance across all errors:
+
+- **Summary cards** — Errors with cache activity, average hit rate (color-coded: green >=80%, yellow >=50%, red <50%), total cache operations
+- **Per-error table** — Error link, reads, writes, hit rate badge, total time, slowest operation, last seen
+- **Sorted worst-first** — Errors with lowest hit rates appear first (nil rates sorted last)
+- **Time range filtering** — 7, 30, or 90 day windows
+
+![Cache Health](images/cache-health.png)
+
+This page helps identify errors associated with poor cache performance across your application.
 
 ### Manual Breadcrumbs API
 

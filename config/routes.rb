@@ -22,6 +22,9 @@ RailsErrorDashboard::Engine.routes.draw do
       get :analytics
       get :platform_comparison
       get :correlation
+      get :deprecations
+      get :n_plus_one_summary
+      get :cache_health_summary
       post :batch_action
     end
   end

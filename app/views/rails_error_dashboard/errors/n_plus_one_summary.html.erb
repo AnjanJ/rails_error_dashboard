@@ -1,0 +1,134 @@
+<% content_for :page_title, "N+1 Query Patterns" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-arrow-repeat me-2"></i>
+      N+1 Query Patterns
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to n_plus_one_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to n_plus_one_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to n_plus_one_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <% if @unique_count == 0 %>
+    <div class="text-center py-5">
+      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+      <h4 class="text-muted">No N+1 Query Patterns Found</h4>
+      <p class="text-muted">
+        No N+1 query patterns were detected in error breadcrumbs over the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How N+1 detection works:</h6>
+          <ul class="mb-0">
+            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
+            <li>SQL queries are captured as breadcrumbs during requests that produce errors</li>
+            <li>Queries with the same shape appearing >= <code>n_plus_one_threshold</code> times are flagged</li>
+            <li>Default threshold is 3 repetitions</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @unique_count %></div>
+            <small class="text-muted">Unique Patterns</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= @total_count %></div>
+            <small class="text-muted">Total Occurrences</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @affected_count %></div>
+            <small class="text-muted">Affected Errors</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-arrow-repeat text-danger me-2"></i>
+          All N+1 Query Patterns
+          <span class="badge bg-danger"><%= @unique_count %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Query Pattern</th>
+                <th width="120">Occurrences</th>
+                <th width="250">Errors</th>
+                <th width="120">Total Time</th>
+                <th width="140">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @patterns.each do |pattern| %>
+                <tr>
+                  <td><code style="font-size: 0.85em;"><%= truncate(pattern[:sample_query], length: 200) %></code></td>
+                  <td><span class="badge bg-warning text-dark"><%= pattern[:count] %></span></td>
+                  <td>
+                    <% shown_ids = pattern[:error_ids].first(5) %>
+                    <% shown_ids.each_with_index do |eid, i| %>
+                      <%= link_to "##{eid}", error_path(eid), class: "text-decoration-none" %><%= "," unless i == shown_ids.size - 1 %>
+                    <% end %>
+                    <% if pattern[:error_ids].size > 5 %>
+                      <small class="text-muted">+<%= pattern[:error_ids].size - 5 %> more</small>
+                    <% end %>
+                  </td>
+                  <td>
+                    <span class="<%= pattern[:total_duration_ms] > 100 ? 'text-danger fw-bold' : '' %>">
+                      <%= pattern[:total_duration_ms] %> ms
+                    </span>
+                  </td>
+                  <td><%= local_time_ago(pattern[:last_seen]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> Use <code>includes</code>, <code>preload</code>, or <code>eager_load</code> to fix N+1 queries.
+          </small>
+          <small class="ms-3">
+            <a href="https://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations" target="_blank" rel="noopener" class="text-decoration-none">
+              <i class="bi bi-book"></i> Rails Eager Loading Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+            </a>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -236,6 +236,67 @@ module RailsErrorDashboard
       @platform_specific_errors = correlation.platform_specific_errors
     end
 
+    def deprecations
+      unless RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::DeprecationWarnings.call(days, application_id: @current_application_id)
+      all_deprecations = result[:deprecations]
+
+      # Summary stats (computed before pagination)
+      @unique_count = all_deprecations.size
+      @total_count = all_deprecations.sum { |d| d[:count] }
+      @affected_count = all_deprecations.flat_map { |d| d[:error_ids] }.uniq.size
+
+      @pagy, @deprecations = pagy(:offset, all_deprecations, limit: params[:per_page] || 25)
+    end
+
+    def n_plus_one_summary
+      unless RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::NplusOneSummary.call(days, application_id: @current_application_id)
+      all_patterns = result[:patterns]
+
+      # Summary stats (computed before pagination)
+      @unique_count = all_patterns.size
+      @total_count = all_patterns.sum { |p| p[:count] }
+      @affected_count = all_patterns.flat_map { |p| p[:error_ids] }.uniq.size
+
+      @pagy, @patterns = pagy(:offset, all_patterns, limit: params[:per_page] || 25)
+    end
+
+    def cache_health_summary
+      unless RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::CacheHealthSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @errors_with_cache = all_entries.size
+      non_nil_rates = all_entries.map { |e| e[:hit_rate] }.compact
+      @avg_hit_rate = non_nil_rates.any? ? (non_nil_rates.sum / non_nil_rates.size).round(1) : nil
+      @total_cache_ops = all_entries.sum { |e| e[:reads] + e[:writes] }
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+    end
+
     def settings
       @config = RailsErrorDashboard.configuration
     end

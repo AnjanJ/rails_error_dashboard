@@ -3,6 +3,33 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
+  describe "#extract_table_from_sql" do
+    it "extracts table name from a standard SELECT query" do
+      expect(helper.extract_table_from_sql('SELECT "users".* FROM "users" WHERE "users"."id" = ?')).to eq("users")
+    end
+
+    it "extracts table name from a query without quotes" do
+      expect(helper.extract_table_from_sql("SELECT * FROM posts WHERE id = 1")).to eq("posts")
+    end
+
+    it "extracts table name from a query with backtick quotes" do
+      expect(helper.extract_table_from_sql("SELECT * FROM `comments` WHERE post_id = 1")).to eq("comments")
+    end
+
+    it "is case-insensitive for FROM keyword" do
+      expect(helper.extract_table_from_sql("select * from orders")).to eq("orders")
+    end
+
+    it "returns nil for blank input" do
+      expect(helper.extract_table_from_sql(nil)).to be_nil
+      expect(helper.extract_table_from_sql("")).to be_nil
+    end
+
+    it "returns nil when no FROM clause is found" do
+      expect(helper.extract_table_from_sql("INSERT INTO users VALUES (1)")).to be_nil
+    end
+  end
+
   describe "#auto_link_urls" do
     before do
       RailsErrorDashboard.configuration.git_repository_url = nil

@@ -42,10 +42,22 @@ Experience the full dashboard with 480+ realistic Rails errors, LOTR-themed demo
 
 ![Analytics](docs/images/analytics.png)
 
+**Deprecation Warnings** — Aggregate deprecation warnings across all errors with occurrence counts and affected error links.
+
+![Deprecation Warnings](docs/images/deprecations.png)
+
+**N+1 Query Patterns** — Cross-error N+1 detection grouped by SQL fingerprint.
+
+![N+1 Query Patterns](docs/images/n-plus-one-queries.png)
+
+**Cache Health** — Per-error cache performance sorted worst-first.
+
+![Cache Health](docs/images/cache-health.png)
+
 ---
 
 ### ⚠️ BETA SOFTWARE
-This Rails Engine is in beta and under active development. While functional and tested (1,895+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
+This Rails Engine is in beta and under active development. While functional and tested (2,100+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
 
 **Supports**: Rails 7.0 - 8.1 | Ruby 3.2 - 4.0
 
@@ -187,6 +199,9 @@ config.enable_git_blame = true
 - **Custom breadcrumbs** — `RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123 })`
 - **Safe by design** — Fixed-size ring buffer, thread-local, every subscriber wrapped in rescue
 - **Async-compatible** — Breadcrumbs harvested before background job dispatch
+- **Deprecation warnings page** — Aggregate view across all errors at `/errors/deprecations`
+- **N+1 query patterns page** — Cross-error N+1 analysis at `/errors/n_plus_one_summary`
+- **Cache health page** — App-wide cache performance sorted worst-first at `/errors/cache_health_summary`
 
 ```ruby
 config.enable_breadcrumbs = true
@@ -703,7 +718,7 @@ Clean, maintainable, testable architecture you can understand and modify.
 
 ## 🧪 Testing
 
-1,800+ tests covering unit, integration, and browser-based system tests.
+2,100+ tests covering unit, integration, and browser-based system tests.
 
 ### Running Tests
 
@@ -796,7 +811,7 @@ Rails Error Dashboard is available as open source under the terms of the [MIT Li
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 1,800+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](docs/FEATURES.md#production-readiness).
+This is currently in **beta** but actively tested with 2,100+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](docs/FEATURES.md#production-readiness).
 </details>
 
 <details>

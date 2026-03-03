@@ -1640,6 +1640,23 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
                   <i class="bi bi-gear"></i> Settings
                 <% end %>
               </li>
+              <% if RailsErrorDashboard.configuration.enable_breadcrumbs %>
+                <li class="nav-item">
+                  <%= link_to deprecations_errors_path(nav_params), class: "nav-link #{request.path == deprecations_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-exclamation-triangle"></i> Deprecations
+                  <% end %>
+                </li>
+                <li class="nav-item">
+                  <%= link_to n_plus_one_summary_errors_path(nav_params), class: "nav-link #{request.path == n_plus_one_summary_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-arrow-repeat"></i> N+1 Queries
+                  <% end %>
+                </li>
+                <li class="nav-item">
+                  <%= link_to cache_health_summary_errors_path(nav_params), class: "nav-link #{request.path == cache_health_summary_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-lightning-charge"></i> Cache Health
+                  <% end %>
+                </li>
+              <% end %>
             </ul>
 
             <h6 class="mt-4">QUICK FILTERS</h6>
