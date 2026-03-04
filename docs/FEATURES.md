@@ -25,8 +25,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (4 features)**
-- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot
+**🔍 Developer Tools (6 features)**
+- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
@@ -592,6 +592,53 @@ System health snapshots are designed with host app safety as the top priority:
 ### Async Logging Compatibility
 
 When async logging is enabled, system health is captured from the current thread **before** the background job is dispatched (since the job runs on a different thread and may have different runtime state). This ensures the snapshot reflects the actual state at error time.
+
+### Job Health Page
+
+The **Job Health** page (`/errors/job_health_summary`) provides an aggregate view of background job queue health across all errors:
+
+- **Auto-detection** — Automatically captures stats from Sidekiq, SolidQueue, or GoodJob at error time
+- **Per-error table** — Error link, adapter badge, failed count (color-coded), queued count, other stats (dead/retry/workers for Sidekiq, claimed/blocked/scheduled for SolidQueue), last seen
+- **Summary cards** — Errors with job data, total failed jobs (red if >0), adapters detected
+- **Sorted worst-first** — Errors with the highest failed job counts appear first
+- **Time range filtering** — 7, 30, or 90 day windows
+- **Active Job Guide link** — Direct link to Rails documentation
+
+This page helps identify errors that coincide with job queue problems — a failing job queue often causes cascading errors.
+
+### Database Health Page
+
+The **Database Health** page (`/errors/database_health_summary`) is a lightweight PgHero-style database health panel built into the dashboard. It has two sections:
+
+#### Section A — Live Database Health
+
+Queries PostgreSQL system views at display time (NOT in the capture path):
+
+- **Connection pool** (all adapters) — Pool size, busy, idle, dead, waiting connections with color-coded warnings
+- **Table stats** (PostgreSQL only) — From `pg_stat_user_tables`: table name, estimated rows, size (`number_to_human_size`), sequential scans, index scans, dead tuples (warning badge if >1000), last vacuum/autovacuum timestamp
+- **Host vs gem tables** — Host app tables shown by default, error dashboard tables in a collapsible section
+- **Unused indexes** (PostgreSQL only) — From `pg_stat_user_indexes`: indexes with zero scans and non-zero size, with warning badges
+- **Connection activity** (PostgreSQL only) — From `pg_stat_activity`: connections grouped by state (active, idle, etc.), total count, waiting count
+- **Non-PostgreSQL info banner** — SQLite/MySQL users see an info message explaining live stats require PostgreSQL, but connection pool and historical data are still available
+
+The `DatabaseHealthInspector` service is designed with the same safety principles as `SystemHealthSnapshot`:
+- Every method individually wrapped in `rescue => nil`
+- Top-level rescue returns safe fallback hash (never raises)
+- Feature-detects PostgreSQL via `connection.adapter_name`
+- No user input in any SQL query (all static SQL)
+
+#### Section B — Historical Connection Pool at Error Time
+
+Extracts `connection_pool` data from the `system_health` JSON column per-error:
+
+- **Summary cards** — Errors with pool data, peak utilization (color-coded), total dead connections, total waiting
+- **Per-error table** — Error link, error type, utilization % (progress bar, color-coded: >=80% danger, >=60% warning, else success), busy, idle, dead (red badge if >0), waiting (yellow badge if >0), pool size, last seen
+- **Sorted by stress score** — `(busy + dead + waiting)` descending, worst first
+- **Time range filtering** — 7, 30, or 90 day windows
+- **Database Guide link** — Direct link to Rails database configuration documentation
+- **Pagy pagination** — Standard paginated table
+
+This page helps identify errors associated with connection pool exhaustion or database performance issues.
 
 ---
 

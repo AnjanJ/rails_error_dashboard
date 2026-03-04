@@ -228,6 +228,27 @@ config.enable_system_health = true
 
 **📖 [Complete documentation →](docs/FEATURES.md#system-health-snapshot-new)**
 
+#### 🏭 Job Health Page
+
+**See background job queue health alongside your errors** — auto-detects Sidekiq, SolidQueue, or GoodJob stats captured at error time.
+
+- **Per-error table** — Adapter badge, failed count (color-coded), queued/enqueued, other stats
+- **Summary cards** — Errors with job data, total failed, adapters detected
+- **Sorted worst-first** — Highest failed count first
+
+**📖 [Complete documentation →](docs/FEATURES.md#job-health-page)**
+
+#### 🗄️ Database Health Page
+
+**PgHero-style database health built into the dashboard** — live PostgreSQL stats + historical connection pool data from error snapshots.
+
+- **Live stats** (PostgreSQL) — Table sizes, unused indexes, dead tuples, vacuum timestamps, connection activity
+- **Historical pool data** (all adapters) — Per-error connection pool utilization, sorted by stress score
+- **Color-coded** — Utilization >=80% danger, >=60% warning; dead/waiting badges
+- **Non-PG friendly** — SQLite/MySQL still see connection pool stats and historical data
+
+**📖 [Complete documentation →](docs/FEATURES.md#database-health-page)**
+
 #### 🆕 v0.2 Quick Wins (NEW!)
 
 **11 features that make error tracking smarter, safer, and more actionable:**
