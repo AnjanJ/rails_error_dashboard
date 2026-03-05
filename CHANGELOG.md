@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.1] - 2026-03-05
+
 ### Added
 - **Job Health page** — Aggregate view of background job queue stats (Sidekiq, SolidQueue, GoodJob) across errors, sorted by failed count. Summary cards (errors with job data, total failed, adapters detected), adapter badges, color-coded failed counts, 7/30/90 day filtering. Available at `/errors/job_health_summary` when `enable_system_health` is enabled
 - **Database Health page** — PgHero-style database health panel with two sections. **Live stats:** connection pool (all adapters), PostgreSQL table sizes/scans/dead tuples/vacuum timestamps from `pg_stat_user_tables`, unused indexes from `pg_stat_user_indexes`, connection activity from `pg_stat_activity`. Host app vs gem tables separated. **Historical:** per-error connection pool utilization from `system_health` snapshots, color-coded (>=80% danger, >=60% warning), sorted by stress score. Available at `/errors/database_health_summary` when `enable_system_health` is enabled
+- **RSpec request spec generator** — `rails generate rails_error_dashboard:rspec_request_specs` generates request specs for all dashboard endpoints with copy-to-clipboard button on the settings page
 - **Sidebar navigation** — Two new links (Job Health, DB Health) in the sidebar under the system health feature guard
 - New service: `Services::DatabaseHealthInspector` — display-time only (not capture path), feature-detects PostgreSQL, every method individually rescue-wrapped
 - New query classes: `Queries::JobHealthSummary`, `Queries::DatabaseHealthSummary`

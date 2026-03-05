@@ -720,7 +720,7 @@ This page helps identify errors associated with connection pool exhaustion or da
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **1,900+ RSpec tests** with high coverage
+- **2,226+ RSpec tests** with high coverage
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
@@ -761,6 +761,7 @@ This page helps identify errors associated with connection pool exhaustion or da
 - **Factory Bot integration** for test data
 - **RSpec matchers** for common assertions
 - **Test helpers** for error generation
+- **RSpec request spec generator** — `rails generate rails_error_dashboard:rspec_request_specs` generates request specs for all dashboard endpoints
 
 ---
 

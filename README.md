@@ -54,10 +54,18 @@ Experience the full dashboard with 480+ realistic Rails errors, LOTR-themed demo
 
 ![Cache Health](docs/images/cache-health.png)
 
+**Job Health** — Background job queue stats across errors, sorted by failed count.
+
+![Job Health](docs/images/job-health.png)
+
+**Database Health** — Connection pool utilization, PostgreSQL table stats, and per-error stress scores.
+
+![Database Health](docs/images/database-health.png)
+
 ---
 
 ### ⚠️ BETA SOFTWARE
-This Rails Engine is in beta and under active development. While functional and tested (2,100+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
+This Rails Engine is in beta and under active development. While functional and tested (2,226+ tests passing, including browser-based system tests), the API may change before v1.0.0. Use in production at your own discretion.
 
 **Supports**: Rails 7.0 - 8.1 | Ruby 3.2 - 4.0
 

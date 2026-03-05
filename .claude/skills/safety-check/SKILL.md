@@ -64,6 +64,12 @@ These files run on EVERY request or error — any bug here affects the host app:
 
 4. **Verdict**: PASS (all clear), WARN (potential issues), or FAIL (definite violation)
 
+## Workflow Orchestration
+
+- **Verification Before Done**: Never report PASS without reading the actual code. Diff lines alone are insufficient — read the full file to understand rescue/ensure context.
+- **Autonomous Bug Fixing**: If a safety violation is found (FAIL), fix it immediately rather than just reporting it. Then re-run the check to verify the fix.
+- **Self-Improvement Loop**: If a safety violation was caused by a pattern not yet in the 10 rules, add it to `tasks/lessons.md`.
+
 ## Auto-Invocation
 
 Claude should automatically run this check when:
