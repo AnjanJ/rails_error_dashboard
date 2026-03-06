@@ -28,6 +28,21 @@ RSpec.describe "Swallowed Exceptions page", type: :request do
       end
     end
 
+    context "when disabled due to Ruby < 3.3" do
+      before do
+        # Simulate what validate! does: auto-disable on Ruby < 3.3
+        RailsErrorDashboard.configuration.detect_swallowed_exceptions = false
+        stub_const("RUBY_VERSION", "3.2.0")
+      end
+
+      it "redirects with Ruby version explanation" do
+        get "/error_dashboard/errors/swallowed_exceptions"
+        expect(response).to redirect_to("/error_dashboard/errors")
+        follow_redirect!
+        expect(response.body).to include("requires Ruby 3.3+")
+      end
+    end
+
     context "when swallowed exception detection is enabled" do
       before do
         RailsErrorDashboard.configuration.detect_swallowed_exceptions = true

@@ -298,11 +298,13 @@ module RailsErrorDashboard
 
     # Validate configuration values
     # Raises ConfigurationError if any validation fails
+    # Logs warnings for non-fatal issues (e.g., Ruby version incompatibilities)
     #
     # @raise [ConfigurationError] if configuration is invalid
     # @return [true] if configuration is valid
     def validate!
       errors = []
+      warnings = []
 
       # Validate sampling_rate (must be between 0.0 and 1.0)
       if sampling_rate && (sampling_rate < 0.0 || sampling_rate > 1.0)
@@ -391,6 +393,14 @@ module RailsErrorDashboard
       end
 
       # Validate swallowed exception detection settings
+      # Auto-disable on Ruby < 3.3 (warn, don't crash)
+      if detect_swallowed_exceptions && RUBY_VERSION < "3.3"
+        warnings << "detect_swallowed_exceptions requires Ruby 3.3+ (current: #{RUBY_VERSION}). " \
+                    "TracePoint(:rescue) was added in Ruby 3.3 (Feature #19572). " \
+                    "Feature has been auto-disabled. Upgrade Ruby to use this feature."
+        @detect_swallowed_exceptions = false
+      end
+      # Validate sub-settings only if feature is still active after version check
       if detect_swallowed_exceptions
         if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1
           errors << "swallowed_exception_max_cache_size must be at least 1 (got: #{swallowed_exception_max_cache_size})"
@@ -459,6 +469,11 @@ module RailsErrorDashboard
       # Validate notification_threshold_alerts (must be array of positive integers if set)
       if notification_threshold_alerts && !notification_threshold_alerts.is_a?(Array)
         errors << "notification_threshold_alerts must be an Array (got: #{notification_threshold_alerts.class})"
+      end
+
+      # Log warnings (non-fatal issues)
+      warnings.each do |warning|
+        Rails.logger.warn "[Rails Error Dashboard] #{warning}" if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
       end
 
       # Raise exception if any errors found

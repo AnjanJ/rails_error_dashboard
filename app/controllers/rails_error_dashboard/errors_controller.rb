@@ -350,7 +350,12 @@ module RailsErrorDashboard
 
     def swallowed_exceptions
       unless RailsErrorDashboard.configuration.detect_swallowed_exceptions
-        flash[:alert] = "Swallowed exception detection is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        # On Ruby < 3.3, validate! auto-disables this feature — tell the user why
+        if RUBY_VERSION < "3.3"
+          flash[:alert] = "Swallowed exception detection requires Ruby 3.3+ (you have #{RUBY_VERSION}). Upgrade Ruby to use this feature."
+        else
+          flash[:alert] = "Swallowed exception detection is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        end
         redirect_to errors_path
         return
       end

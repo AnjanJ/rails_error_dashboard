@@ -32,6 +32,7 @@ module RailsErrorDashboard
       class_option :git_blame, type: :boolean, default: false, desc: "Enable git blame integration (NEW!)"
       class_option :breadcrumbs, type: :boolean, default: false, desc: "Enable breadcrumbs (request activity trail)"
       class_option :system_health, type: :boolean, default: false, desc: "Enable system health snapshot at error time"
+      class_option :swallowed_exceptions, type: :boolean, default: false, desc: "Enable swallowed exception detection (Ruby 3.3+)"
 
       def welcome_message
         say "\n"
@@ -174,6 +175,12 @@ module RailsErrorDashboard
             name: "System Health Snapshot (NEW!)",
             description: "Capture GC, memory, threads, connection pool at error time",
             category: "Developer Tools"
+          },
+          {
+            key: :swallowed_exceptions,
+            name: "Swallowed Exception Detection (Ruby 3.3+)",
+            description: "Detect exceptions being silently rescued via TracePoint(:rescue)",
+            category: "Developer Tools"
           }
         ]
 
@@ -194,6 +201,11 @@ module RailsErrorDashboard
             else
               say "    ✗ Disabled", :white
             end
+          end
+
+          if @selected_features[feature[:key]] && feature[:key] == :swallowed_exceptions && RUBY_VERSION < "3.3"
+            say "    ⚠ Warning: This feature requires Ruby 3.3+ (you have #{RUBY_VERSION})", :yellow
+            say "    The feature will be included in your config but won't activate until you upgrade Ruby.", :white
           end
         end
 
@@ -303,6 +315,7 @@ module RailsErrorDashboard
         @enable_git_blame = @selected_features&.dig(:git_blame) || options[:git_blame]
         @enable_breadcrumbs = @selected_features&.dig(:breadcrumbs) || options[:breadcrumbs]
         @enable_system_health = @selected_features&.dig(:system_health) || options[:system_health]
+        @enable_swallowed_exceptions = @selected_features&.dig(:swallowed_exceptions) || options[:swallowed_exceptions]
 
         template "initializer.rb", "config/initializers/rails_error_dashboard.rb"
       end
@@ -405,6 +418,7 @@ module RailsErrorDashboard
         developer_tools_features << "Git Blame" if @enable_git_blame
         developer_tools_features << "Breadcrumbs" if @enable_breadcrumbs
         developer_tools_features << "System Health" if @enable_system_health
+        developer_tools_features << "Swallowed Exception Detection" if @enable_swallowed_exceptions
 
         if developer_tools_features.any?
           say "\nDeveloper Tools:", :cyan

@@ -640,9 +640,29 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
   end
 
   describe "swallowed exception detection validation" do
-    it "accepts valid defaults when enabled" do
+    if RUBY_VERSION >= "3.3"
+      it "accepts valid defaults when enabled on Ruby 3.3+" do
+        config.detect_swallowed_exceptions = true
+        expect { config.validate! }.not_to raise_error
+      end
+    end
+
+    it "auto-disables and warns on Ruby < 3.3 instead of crashing" do
+      stub_const("RUBY_VERSION", "3.2.0")
       config.detect_swallowed_exceptions = true
+
+      expect(Rails.logger).to receive(:warn).with(/detect_swallowed_exceptions requires Ruby 3\.3\+/)
       expect { config.validate! }.not_to raise_error
+      expect(config.detect_swallowed_exceptions).to be false
+    end
+
+    it "includes upgrade guidance in the Ruby version warning" do
+      stub_const("RUBY_VERSION", "3.2.4")
+      config.detect_swallowed_exceptions = true
+
+      expect(Rails.logger).to receive(:warn).with(/Upgrade Ruby to use this feature/)
+      config.validate!
+      expect(config.detect_swallowed_exceptions).to be false
     end
 
     it "rejects max_cache_size of 0 when enabled" do
