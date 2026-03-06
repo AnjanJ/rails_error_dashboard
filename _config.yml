@@ -2,7 +2,7 @@ theme: jekyll-theme-hacker
 title: Rails Error Dashboard
 description: Self-hosted error tracking and exception monitoring for Ruby on Rails. Open source, free forever. A Sentry alternative with cause chains, analytics, workflow management, and multi-channel notifications.
 show_downloads: true
-url: https://anjanj.github.io
+url: https://rafaelturtle.github.io
 baseurl: /rails_error_dashboard
 lang: en
 
