@@ -375,6 +375,22 @@ RailsErrorDashboard.configure do |config|
   # config.swallowed_exception_threshold = 0.95
 
 <% end -%>
+<% if @enable_crash_capture -%>
+  # Process Crash Capture - ENABLED
+  # Captures fatal crashes via at_exit hook. Crash data is written to disk as JSON
+  # and imported into the database on next boot. Zero runtime overhead.
+  config.enable_crash_capture = true
+  # config.crash_capture_path = "/tmp/my_app_crashes"  # Default: Dir.tmpdir
+  # To disable: Set config.enable_crash_capture = false
+
+<% else -%>
+  # Process Crash Capture - DISABLED
+  # Captures fatal crashes via at_exit hook (written to disk, imported on next boot)
+  # To enable: Set config.enable_crash_capture = true
+  config.enable_crash_capture = false
+  # config.crash_capture_path = "/tmp/my_app_crashes"
+
+<% end -%>
   # Repository settings (auto-detected from git remote, optional override)
   # config.repository_url = ENV["REPOSITORY_URL"]  # e.g., "https://github.com/user/repo"
   # config.repository_branch = ENV.fetch("REPOSITORY_BRANCH", "main")  # Default branch

@@ -80,6 +80,12 @@ module RailsErrorDashboard
       if RailsErrorDashboard.configuration.detect_swallowed_exceptions
         RailsErrorDashboard::Services::SwallowedExceptionTracker.enable!
       end
+
+      # Import crash files from previous process death, then register at_exit hook
+      if RailsErrorDashboard.configuration.enable_crash_capture
+        RailsErrorDashboard::Services::CrashCapture.import!
+        RailsErrorDashboard::Services::CrashCapture.enable!
+      end
     end
   end
 end

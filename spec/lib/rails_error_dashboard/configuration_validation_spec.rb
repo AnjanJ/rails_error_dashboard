@@ -714,6 +714,41 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "crash capture validation" do
+    it "accepts valid defaults when enabled" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts existing directory" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = Dir.tmpdir
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "rejects non-existent crash_capture_path" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = "/nonexistent/crash/path"
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /crash_capture_path.*does not exist/
+      )
+    end
+
+    it "does not validate path when feature is disabled" do
+      config.enable_crash_capture = false
+      config.crash_capture_path = "/nonexistent/crash/path"
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "defaults to false (prevents import on every boot)" do
+      fresh_config = RailsErrorDashboard::Configuration.new
+      expect(fresh_config.enable_crash_capture).to be false
+      expect(fresh_config.crash_capture_path).to be_nil
+    end
+  end
+
   describe "ConfigurationError" do
     it "stores errors array" do
       error = RailsErrorDashboard::ConfigurationError.new([ "error1", "error2" ])

@@ -148,6 +148,10 @@ module RailsErrorDashboard
     attr_accessor :swallowed_exception_threshold        # Rescue ratio to flag (default: 0.95)
     attr_accessor :swallowed_exception_ignore_classes   # Additional exception classes to skip (default: [])
 
+    # Process crash capture via at_exit hook
+    attr_accessor :enable_crash_capture                 # Master switch (default: false)
+    attr_accessor :crash_capture_path                   # Directory for crash files (default: Dir.tmpdir)
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -280,6 +284,10 @@ module RailsErrorDashboard
       @swallowed_exception_threshold = 0.95      # Rescue ratio to flag as swallowed
       @swallowed_exception_ignore_classes = []   # Additional exception classes to skip
 
+      # Process crash capture defaults - OFF by default (opt-in)
+      @enable_crash_capture = false     # at_exit hook for fatal crash capture
+      @crash_capture_path = nil         # nil = Dir.tmpdir
+
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
@@ -410,6 +418,13 @@ module RailsErrorDashboard
         end
         if swallowed_exception_threshold && (swallowed_exception_threshold < 0.0 || swallowed_exception_threshold > 1.0)
           errors << "swallowed_exception_threshold must be between 0.0 and 1.0 (got: #{swallowed_exception_threshold})"
+        end
+      end
+
+      # Validate crash capture path (must exist if custom path specified)
+      if enable_crash_capture && crash_capture_path
+        unless Dir.exist?(crash_capture_path)
+          errors << "crash_capture_path '#{crash_capture_path}' does not exist"
         end
       end
 
