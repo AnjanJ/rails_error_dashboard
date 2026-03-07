@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Rails Error Dashboard Documentation"
+permalink: /docs/
+---
+
 # Rails Error Dashboard Documentation
 
 Welcome to the Rails Error Dashboard documentation! This guide will help you get started, customize your setup, and make the most of the advanced features.

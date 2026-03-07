@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Complete Feature List"
+permalink: /docs/FEATURES
+---
+
 # Complete Feature List
 
 This document provides a comprehensive overview of all features in Rails Error Dashboard.

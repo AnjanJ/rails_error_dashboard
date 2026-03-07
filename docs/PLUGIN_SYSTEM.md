@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Plugin System Guide"
+permalink: /docs/PLUGIN_SYSTEM
+---
+
 # Plugin System Guide
 
 Rails Error Dashboard includes a powerful plugin system that allows you to extend functionality and integrate with external services.
