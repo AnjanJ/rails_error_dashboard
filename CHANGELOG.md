@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-03-07
+
+### Added
+- **Local variable capture via TracePoint(:raise)** — Capture local variables at the point of exception. Opt-in via `config.enable_local_variables = true`. Configurable limits for count, depth, string length, array/hash items. Sensitive data auto-filtered via Rails `filter_parameters` + custom patterns. Never stores Binding objects
+- **Instance variable capture via TracePoint(:raise)** — Capture instance variables from the object that raised the exception. Opt-in via `config.enable_instance_variables = true`. Includes `_self_class` metadata showing the receiver's class name. Configurable max count and filter patterns
+- **Swallowed exception detection via TracePoint(:raise) + TracePoint(:rescue)** — Detect exceptions that are raised but silently rescued (never reach the dashboard). Tracks raise/rescue counts per location, hourly bucketing, configurable flush interval and threshold. Requires Ruby 3.3+. Opt-in via `config.detect_swallowed_exceptions = true`. Dashboard page at `/errors/swallowed_exceptions`
+- **On-demand diagnostic dump** — Capture system state snapshots (environment, GC stats, threads, connection pool, memory, job queue) via dashboard button or `rails error_dashboard:diagnostic_dump` rake task. Stored in dedicated table with optional notes. Dashboard page at `/errors/diagnostic_dumps` with expandable JSON details
+- **Rack Attack event tracking** — Track Rack::Attack throttle, blocklist, and track events as breadcrumbs. Opt-in via `config.enable_rack_attack_tracking = true` (requires breadcrumbs enabled). Dashboard page at `/errors/rack_attack_summary`
+- **Process crash capture via at_exit hook** — Capture unhandled exceptions that crash the Ruby process, logged before exit
+
+### Fixed
+- **Swallowed exceptions page always empty** — Query grouped by `(exception_class, raise_location, rescue_location)` but raise and rescue events are stored as separate rows (raise has `rescue_location=nil`, rescue has it set). The ratio was always 0 or infinity. Fixed by grouping on `(exception_class, raise_location)` only
+- **Diagnostic dump "Capture Dump" button broken** — Used `link_to` with `method: :post` which requires JavaScript (rails-ujs/Turbo) to intercept clicks. The gem dashboard includes neither, so the browser sent a plain GET matching `errors/:id`. Fixed by using `button_to` which renders a real `<form>`
+- **Migration class name mismatch** — `CreateRailsErrorDashboardSwallowedException` (singular) didn't match the filename convention (plural), causing `rails db:migrate` to fail for apps installing the incremental migration
+- **Flaky swallowed exception tracker spec on Ruby 3.3+** — TracePoint was globally active between tests, allowing RSpec internals to accumulate raise/rescue counts. Added explicit `clear!` before the empty-counters assertion
+- **N+1 queries and memory bloat in DashboardStats** — Eliminated N+1 queries and excessive memory usage in dashboard statistics calculations
+
+### Changed
+- README rewritten as a concise landing page (~360 lines, down from 1060)
+- Added FAQ and Migration Strategy to documentation hub
+
+---
+
 ## [0.3.1] - 2026-03-05
 
 ### Added
