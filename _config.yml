@@ -15,10 +15,12 @@ github:
 navigation:
   - name: Home
     url: /
-  - name: Quickstart
-    url: /docs/QUICKSTART
   - name: Documentation
     url: /docs/
+  - name: Quickstart
+    url: /docs/QUICKSTART
+  - name: Features
+    url: /docs/FEATURES
   - name: Multi-App Support
     url: /docs/MULTI_APP_PERFORMANCE
   - name: API Reference
@@ -27,6 +29,8 @@ navigation:
     url: /docs/CUSTOMIZATION
   - name: Plugins
     url: /docs/PLUGIN_SYSTEM
+  - name: Troubleshooting
+    url: /docs/TROUBLESHOOTING
 
 # Plugins
 plugins:
