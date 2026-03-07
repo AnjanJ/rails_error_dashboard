@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Customization Guide"
+permalink: /docs/CUSTOMIZATION
+---
+
 # Customization Guide
 
 Learn how to customize Rails Error Dashboard to fit your application's specific needs.

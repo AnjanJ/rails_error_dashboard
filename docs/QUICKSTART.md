@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Quickstart Guide"
+permalink: /docs/QUICKSTART
+---
+
 # Quickstart Guide
 
 Get Rails Error Dashboard up and running in 5 minutes!

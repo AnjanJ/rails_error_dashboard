@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Troubleshooting Guide"
+permalink: /docs/TROUBLESHOOTING
+---
+
 # Troubleshooting Guide
 
 Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to common problems, error messages, and debugging techniques.
