@@ -92,6 +92,12 @@ RSpec.describe RailsErrorDashboard::Configuration do
       end
     end
 
+    describe "rack attack tracking configuration defaults" do
+      it "sets enable_rack_attack_tracking to false (opt-in)" do
+        expect(config.enable_rack_attack_tracking).to be false
+      end
+    end
+
     describe "Phase 4.3: baseline alert configuration defaults" do
       it "sets enable_baseline_alerts to false (opt-in)" do
         expect(config.enable_baseline_alerts).to be false
@@ -403,6 +409,24 @@ RSpec.describe RailsErrorDashboard::Configuration do
       config.n_plus_one_threshold = 0
 
       expect { config.validate! }.not_to raise_error
+    end
+  end
+
+  describe "rack_attack tracking validation" do
+    it "auto-disables when breadcrumbs are off" do
+      config.enable_rack_attack_tracking = true
+      config.enable_breadcrumbs = false
+
+      expect { config.validate! }.not_to raise_error
+      expect(config.enable_rack_attack_tracking).to be false
+    end
+
+    it "stays enabled when breadcrumbs are on" do
+      config.enable_rack_attack_tracking = true
+      config.enable_breadcrumbs = true
+
+      expect { config.validate! }.not_to raise_error
+      expect(config.enable_rack_attack_tracking).to be true
     end
   end
 

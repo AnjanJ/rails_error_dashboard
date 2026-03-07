@@ -373,6 +373,27 @@ module RailsErrorDashboard
       @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
     end
 
+    def rack_attack_summary
+      unless RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
+             RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "Rack Attack tracking is not enabled. Enable enable_rack_attack_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::RackAttackSummary.call(days, application_id: @current_application_id)
+      all_events = result[:events]
+
+      # Summary stats (computed before pagination)
+      @unique_rules = all_events.size
+      @total_events = all_events.sum { |e| e[:count] }
+      @unique_ips = all_events.flat_map { |e| e[:ips] }.uniq.size
+
+      @pagy, @events = pagy(:offset, all_events, limit: params[:per_page] || 25)
+    end
+
     def diagnostic_dumps
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
         flash[:alert] = "Diagnostic dumps are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"

@@ -155,6 +155,9 @@ module RailsErrorDashboard
     # On-demand diagnostic dump (rake task + dashboard endpoint)
     attr_accessor :enable_diagnostic_dump               # Master switch (default: false)
 
+    # Rack Attack event tracking (requires enable_breadcrumbs = true)
+    attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -294,6 +297,9 @@ module RailsErrorDashboard
       # Diagnostic dump defaults - OFF by default (opt-in)
       @enable_diagnostic_dump = false   # On-demand system state snapshot
 
+      # Rack Attack event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
+      @enable_rack_attack_tracking = false
+
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
@@ -425,6 +431,13 @@ module RailsErrorDashboard
         if swallowed_exception_threshold && (swallowed_exception_threshold < 0.0 || swallowed_exception_threshold > 1.0)
           errors << "swallowed_exception_threshold must be between 0.0 and 1.0 (got: #{swallowed_exception_threshold})"
         end
+      end
+
+      # Validate rack_attack tracking requires breadcrumbs
+      if enable_rack_attack_tracking && !enable_breadcrumbs
+        warnings << "enable_rack_attack_tracking requires enable_breadcrumbs = true. " \
+                    "Rack Attack tracking has been auto-disabled."
+        @enable_rack_attack_tracking = false
       end
 
       # Validate crash capture path (must exist if custom path specified)

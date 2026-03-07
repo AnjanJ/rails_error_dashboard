@@ -1657,6 +1657,13 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
                   <% end %>
                 </li>
               <% end %>
+              <% if RailsErrorDashboard.configuration.enable_rack_attack_tracking && RailsErrorDashboard.configuration.enable_breadcrumbs %>
+                <li class="nav-item">
+                  <%= link_to rack_attack_summary_errors_path(nav_params), class: "nav-link #{request.path == rack_attack_summary_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-shield-exclamation"></i> Rate Limits
+                  <% end %>
+                </li>
+              <% end %>
               <% if RailsErrorDashboard.configuration.enable_system_health %>
                 <li class="nav-item">
                   <%= link_to job_health_summary_errors_path(nav_params), class: "nav-link #{request.path == job_health_summary_errors_path ? 'active' : ''}" do %>
