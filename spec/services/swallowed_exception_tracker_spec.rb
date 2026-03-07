@@ -209,6 +209,9 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
     end
 
     it "does nothing when counters are empty" do
+      # Clear immediately before the assertion — the enabled TracePoint may have
+      # accumulated raise/rescue counts from RSpec internals between tests.
+      described_class.clear!
       expect {
         described_class.flush!
       }.not_to have_enqueued_job(RailsErrorDashboard::SwallowedExceptionFlushJob)
