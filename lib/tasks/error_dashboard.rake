@@ -444,6 +444,40 @@ namespace :error_dashboard do
     puts "\n" + "=" * 80 + "\n"
   end
 
+  desc "Capture diagnostic dump of current system state"
+  task diagnostic_dump: :environment do
+    unless RailsErrorDashboard.configuration.enable_diagnostic_dump
+      puts "\n  Diagnostic dumps are not enabled."
+      puts "  Set config.enable_diagnostic_dump = true in your initializer."
+      next
+    end
+
+    puts "\n" + "=" * 70
+    puts "  RAILS ERROR DASHBOARD - DIAGNOSTIC DUMP"
+    puts "=" * 70
+
+    dump = RailsErrorDashboard::Services::DiagnosticDumpGenerator.call
+
+    app_name = RailsErrorDashboard.configuration.application_name ||
+               ENV["APPLICATION_NAME"] ||
+               (defined?(Rails) && Rails.application.class.module_parent_name) ||
+               "Unknown"
+    app = RailsErrorDashboard::Commands::FindOrCreateApplication.call(app_name)
+
+    RailsErrorDashboard::DiagnosticDump.create!(
+      application_id: app.id,
+      dump_data: dump.to_json,
+      captured_at: Time.current,
+      note: ENV["NOTE"]
+    )
+
+    puts "\n" + JSON.pretty_generate(dump)
+    puts "\n  Diagnostic dump saved to database."
+    puts "  Application: #{app_name}"
+    puts "  Note: #{ENV['NOTE'] || '(none)'}"
+    puts "\n" + "=" * 70 + "\n"
+  end
+
   desc "Run retention cleanup (delete errors older than retention_days)"
   task retention_cleanup: :environment do
     config = RailsErrorDashboard.configuration

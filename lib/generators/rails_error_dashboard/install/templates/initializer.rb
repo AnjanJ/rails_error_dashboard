@@ -356,7 +356,54 @@ RailsErrorDashboard.configure do |config|
   config.enable_system_health = false
 
 <% end -%>
+<% if @enable_swallowed_exceptions -%>
+  # Swallowed Exception Detection - ENABLED
+  # Requires Ruby 3.3+ — detects exceptions that are raised then silently rescued
+  # Uses TracePoint(:rescue), which was added in Ruby 3.3 (Feature #19572)
+  config.detect_swallowed_exceptions = true
+  config.swallowed_exception_threshold = 0.95       # Rescue ratio to flag (95%+)
+  # config.swallowed_exception_flush_interval = 60   # Seconds between DB flushes
+  # config.swallowed_exception_max_cache_size = 1000  # Max entries per thread
+  # config.swallowed_exception_ignore_classes = []    # App-specific exceptions to skip
+  # To disable: Set config.detect_swallowed_exceptions = false
 
+<% else -%>
+  # Swallowed Exception Detection - DISABLED
+  # Requires Ruby 3.3+ (TracePoint(:rescue) not available before 3.3)
+  # To enable: Set config.detect_swallowed_exceptions = true
+  config.detect_swallowed_exceptions = false
+  # config.swallowed_exception_threshold = 0.95
+
+<% end -%>
+<% if @enable_diagnostic_dump -%>
+  # Diagnostic Dump - ENABLED
+  # On-demand system state snapshot via rake task or dashboard button
+  config.enable_diagnostic_dump = true
+  # To disable: Set config.enable_diagnostic_dump = false
+
+<% else -%>
+  # Diagnostic Dump - DISABLED
+  # On-demand system state snapshot (rake task + dashboard page)
+  # To enable: Set config.enable_diagnostic_dump = true
+  config.enable_diagnostic_dump = false
+
+<% end -%>
+<% if @enable_crash_capture -%>
+  # Process Crash Capture - ENABLED
+  # Captures fatal crashes via at_exit hook. Crash data is written to disk as JSON
+  # and imported into the database on next boot. Zero runtime overhead.
+  config.enable_crash_capture = true
+  # config.crash_capture_path = "/tmp/my_app_crashes"  # Default: Dir.tmpdir
+  # To disable: Set config.enable_crash_capture = false
+
+<% else -%>
+  # Process Crash Capture - DISABLED
+  # Captures fatal crashes via at_exit hook (written to disk, imported on next boot)
+  # To enable: Set config.enable_crash_capture = true
+  config.enable_crash_capture = false
+  # config.crash_capture_path = "/tmp/my_app_crashes"
+
+<% end -%>
   # Repository settings (auto-detected from git remote, optional override)
   # config.repository_url = ENV["REPOSITORY_URL"]  # e.g., "https://github.com/user/repo"
   # config.repository_branch = ENV.fetch("REPOSITORY_BRANCH", "main")  # Default branch

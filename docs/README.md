@@ -14,7 +14,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Quickstart Guide](QUICKSTART.md)** - Get up and running in 5 minutes
 - **[Installation](../README.md#installation)** - Detailed installation instructions
 - **[Configuration](guides/CONFIGURATION.md)** - Complete configuration reference
+- **[Migration & Upgrade Strategy](MIGRATION_STRATEGY.md)** - Squashed migrations and v0.2.0 upgrade guide
 - **[Uninstall Guide](UNINSTALL.md)** - Complete removal instructions (manual + automated)
+- **[FAQ](FAQ.md)** - Common questions answered
 
 ### Core Features
 - **[Error Tracking & Capture](FEATURES.md#error-tracking--capture)** - Understanding the main dashboard

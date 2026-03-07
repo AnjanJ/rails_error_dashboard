@@ -114,6 +114,18 @@ module RailsErrorDashboard
         []
       end
 
+      # Non-destructive read of current breadcrumbs (does NOT clear the buffer)
+      # Used by DiagnosticDumpGenerator for on-demand snapshots.
+      # @return [Array<Hash>] Array of breadcrumb hashes (empty if none)
+      def self.current_breadcrumbs
+        buffer = Thread.current[THREAD_KEY]
+        return [] unless buffer
+        buffer.to_a
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BreadcrumbCollector.current_breadcrumbs failed: #{e.message}")
+        []
+      end
+
       # Get the current buffer (for inspection)
       # @return [RingBuffer, nil]
       def self.current_buffer

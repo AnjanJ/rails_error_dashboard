@@ -210,6 +210,40 @@ RSpec.describe RailsErrorDashboard::Services::BreadcrumbCollector do
     end
   end
 
+  describe ".current_breadcrumbs" do
+    it "returns array of breadcrumb hashes without clearing the buffer" do
+      described_class.init_buffer
+      described_class.add("sql", "SELECT 1")
+      described_class.add("controller", "UsersController#show")
+
+      result = described_class.current_breadcrumbs
+      expect(result).to be_an(Array)
+      expect(result.size).to eq(2)
+
+      # Verify buffer was NOT cleared (non-destructive read)
+      expect(described_class.current_breadcrumbs.size).to eq(2)
+    end
+
+    it "returns empty array when buffer is nil" do
+      described_class.clear_buffer
+      expect(described_class.current_breadcrumbs).to eq([])
+    end
+
+    it "returns empty array when buffer is empty" do
+      described_class.init_buffer
+      expect(described_class.current_breadcrumbs).to eq([])
+    end
+
+    it "never raises even when buffer.to_a raises" do
+      described_class.init_buffer
+      buffer = described_class.current_buffer
+      allow(buffer).to receive(:to_a).and_raise(RuntimeError, "broken")
+
+      expect { described_class.current_breadcrumbs }.not_to raise_error
+      expect(described_class.current_breadcrumbs).to eq([])
+    end
+  end
+
   describe ".current_buffer" do
     it "returns the buffer when initialized" do
       described_class.init_buffer

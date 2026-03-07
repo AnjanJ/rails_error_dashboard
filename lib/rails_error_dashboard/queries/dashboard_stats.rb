@@ -309,37 +309,58 @@ module RailsErrorDashboard
       def top_errors_by_impact
         base_scope.where("occurred_at >= ?", 7.days.ago)
                 .group(:error_type, :id)
-                .select("error_type, id, occurrence_count,
+                .select("error_type, id, message, occurred_at, occurrence_count,
                         COUNT(DISTINCT user_id) as affected_users,
                         COUNT(DISTINCT user_id) * occurrence_count as impact_score")
                 .order("impact_score DESC")
                 .limit(6)
                 .map do |error|
-                  full_error = ErrorLog.find(error.id)
                   {
                     id: error.id,
                     error_type: error.error_type,
-                    message: full_error.message&.truncate(80),
-                    severity: full_error.severity,
+                    message: error.message&.truncate(80),
+                    severity: Services::SeverityClassifier.classify(error.error_type),
                     occurrence_count: error.occurrence_count,
                     affected_users: error.affected_users.to_i,
                     impact_score: error.impact_score.to_i,
-                    occurred_at: full_error.occurred_at
+                    occurred_at: error.occurred_at
                   }
                 end
       end
 
       # Calculate average resolution time (MTTR) in hours for the last 30 days
+      # Uses SQL AVG to avoid loading all resolved errors into Ruby memory
       def average_resolution_time
-        resolved_errors = base_scope.resolved.where("resolved_at >= ?", 30.days.ago)
-        return nil if resolved_errors.empty?
+        scope = base_scope.resolved.where("resolved_at >= ?", 30.days.ago)
+        return nil unless scope.exists?
 
-        total_seconds = resolved_errors.sum do |error|
-          (error.resolved_at - error.occurred_at).to_i
+        avg_seconds = scope.pick(Arel.sql(avg_seconds_sql))
+        return nil unless avg_seconds
+
+        (avg_seconds.to_f / 3600.0).round(2)
+      end
+
+      def avg_seconds_sql
+        case db_adapter
+        when :postgresql
+          "AVG(EXTRACT(EPOCH FROM (resolved_at - occurred_at)))"
+        when :mysql
+          "AVG(TIMESTAMPDIFF(SECOND, occurred_at, resolved_at))"
+        else
+          # SQLite: julianday difference * 86400 gives seconds
+          "AVG((julianday(resolved_at) - julianday(occurred_at)) * 86400)"
         end
+      end
 
-        average_seconds = total_seconds / resolved_errors.count.to_f
-        (average_seconds / 3600.0).round(2) # Convert to hours
+      def db_adapter
+        adapter = ErrorLog.connection.adapter_name.downcase
+        if adapter.include?("postgresql")
+          :postgresql
+        elsif adapter.include?("mysql") || adapter.include?("trilogy")
+          :mysql
+        else
+          :sqlite
+        end
       end
     end
   end

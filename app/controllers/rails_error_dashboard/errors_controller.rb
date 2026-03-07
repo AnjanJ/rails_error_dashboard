@@ -348,6 +348,95 @@ module RailsErrorDashboard
       @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
     end
 
+    def swallowed_exceptions
+      unless RailsErrorDashboard.configuration.detect_swallowed_exceptions
+        # On Ruby < 3.3, validate! auto-disables this feature — tell the user why
+        if RUBY_VERSION < "3.3"
+          flash[:alert] = "Swallowed exception detection requires Ruby 3.3+ (you have #{RUBY_VERSION}). Upgrade Ruby to use this feature."
+        else
+          flash[:alert] = "Swallowed exception detection is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        end
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::SwallowedExceptionSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @unique_count = all_entries.size
+      @total_rescue_count = all_entries.sum { |e| e[:rescue_count] }
+      @total_raise_count = all_entries.sum { |e| e[:raise_count] }
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+    end
+
+    def rack_attack_summary
+      unless RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
+             RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "Rack Attack tracking is not enabled. Enable enable_rack_attack_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::RackAttackSummary.call(days, application_id: @current_application_id)
+      all_events = result[:events]
+
+      # Summary stats (computed before pagination)
+      @unique_rules = all_events.size
+      @total_events = all_events.sum { |e| e[:count] }
+      @unique_ips = all_events.flat_map { |e| e[:ips] }.uniq.size
+
+      @pagy, @events = pagy(:offset, all_events, limit: params[:per_page] || 25)
+    end
+
+    def diagnostic_dumps
+      unless RailsErrorDashboard.configuration.enable_diagnostic_dump
+        flash[:alert] = "Diagnostic dumps are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      scope = DiagnosticDump.recent
+      scope = scope.where(application_id: @current_application_id) if @current_application_id.present?
+      @total_dumps = scope.count
+
+      @pagy, @dumps = pagy(:offset, scope, limit: params[:per_page] || 25)
+    end
+
+    def create_diagnostic_dump
+      unless RailsErrorDashboard.configuration.enable_diagnostic_dump
+        flash[:alert] = "Diagnostic dumps are not enabled."
+        redirect_to errors_path
+        return
+      end
+
+      dump = Services::DiagnosticDumpGenerator.call
+
+      app_name = RailsErrorDashboard.configuration.application_name ||
+                 ENV["APPLICATION_NAME"] ||
+                 (defined?(Rails) && Rails.application.class.module_parent_name) ||
+                 "Unknown"
+      app = Commands::FindOrCreateApplication.call(app_name)
+
+      DiagnosticDump.create!(
+        application_id: app.id,
+        dump_data: dump.to_json,
+        captured_at: Time.current,
+        note: params[:note].presence
+      )
+
+      flash[:notice] = "Diagnostic dump captured successfully."
+      redirect_to diagnostic_dumps_errors_path
+    rescue => e
+      flash[:alert] = "Failed to capture diagnostic dump: #{e.message}"
+      redirect_to diagnostic_dumps_errors_path
+    end
+
     def settings
       @config = RailsErrorDashboard.configuration
     end

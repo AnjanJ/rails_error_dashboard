@@ -1,0 +1,182 @@
+<% content_for :page_title, "Diagnostic Dumps" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-clipboard-pulse me-2"></i>
+      Diagnostic Dumps
+    </h1>
+
+    <%= link_to create_diagnostic_dump_errors_path, method: :post, class: "btn btn-primary btn-sm", data: { turbo_method: :post } do %>
+      <i class="bi bi-camera me-1"></i> Capture Dump
+    <% end %>
+  </div>
+
+  <% if @total_dumps == 0 %>
+    <div class="text-center py-5">
+      <i class="bi bi-clipboard-pulse display-1 text-muted mb-3"></i>
+      <h4 class="text-muted">No Diagnostic Dumps Yet</h4>
+      <p class="text-muted">
+        Capture an on-demand snapshot of your system state for debugging.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How diagnostic dumps work:</h6>
+          <ul class="mb-0">
+            <li>Click <strong>Capture Dump</strong> above or run <code>rails error_dashboard:diagnostic_dump</code></li>
+            <li>Captures: environment, GC stats, threads, connection pool, memory, job queue</li>
+            <li>Each dump is saved to the database for historical comparison</li>
+            <li>Use dumps to investigate production issues or verify system health</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @total_dumps %></div>
+            <small class="text-muted">Total Dumps</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <%
+              latest = @dumps.first
+              latest_data = begin; JSON.parse(latest.dump_data); rescue; {}; end if latest
+              thread_count = latest_data&.dig("system_health", "thread_count")
+            %>
+            <div class="display-6 text-secondary"><%= thread_count || "N/A" %></div>
+            <small class="text-muted">Threads (Latest)</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <%
+              memory_mb = latest_data&.dig("system_health", "process_memory_mb")
+            %>
+            <div class="display-6 text-secondary"><%= memory_mb ? "#{memory_mb} MB" : "N/A" %></div>
+            <small class="text-muted">Memory (Latest)</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-clipboard-pulse text-info me-2"></i>
+          Dump History
+          <span class="badge bg-info"><%= @total_dumps %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <% @dumps.each do |dump| %>
+          <%
+            data = begin; JSON.parse(dump.dump_data); rescue; {}; end
+            env = data["environment"] || {}
+            health = data["system_health"] || {}
+            gc = data["gc"] || {}
+            threads = data["threads"] || []
+          %>
+          <div class="border-bottom p-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <strong>
+                  <i class="bi bi-clock me-1"></i>
+                  <%= dump.captured_at.strftime("%Y-%m-%d %H:%M:%S %Z") %>
+                </strong>
+                <span class="text-muted ms-2">PID: <%= data["pid"] %></span>
+                <% if data["uptime_seconds"] %>
+                  <span class="text-muted ms-2">
+                    Uptime: <%= (data["uptime_seconds"].to_i / 60) %>m
+                  </span>
+                <% end %>
+                <% if dump.note.present? %>
+                  <span class="badge bg-secondary ms-2"><%= dump.note %></span>
+                <% end %>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#dump-<%= dump.id %>"
+                      aria-expanded="false">
+                <i class="bi bi-chevron-down"></i> Details
+              </button>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3">
+                <small class="text-muted d-block">Environment</small>
+                <small>
+                  Ruby <%= env["ruby_version"] || "?" %> /
+                  Rails <%= env["rails_version"] || "?" %>
+                  <% if env["server"] && env["server"] != "unknown" %>
+                    / <%= env["server"].capitalize %>
+                  <% end %>
+                </small>
+              </div>
+              <div class="col-md-3">
+                <small class="text-muted d-block">System Health</small>
+                <small>
+                  <% mem = health["process_memory_mb"] %>
+                  <% tc = health["thread_count"] %>
+                  <% pool = health["connection_pool"] %>
+                  <%= mem ? "#{mem} MB" : "N/A" %> /
+                  <%= tc || "?" %> threads
+                  <% if pool %>
+                    / Pool: <%= pool["busy"] %>/<%= pool["size"] %>
+                  <% end %>
+                </small>
+              </div>
+              <div class="col-md-3">
+                <small class="text-muted d-block">GC</small>
+                <small>
+                  <% gc_health = health["gc"] || {} %>
+                  Live: <%= gc_health["heap_live_slots"]&.to_s(:delimited) rescue gc_health["heap_live_slots"] || "?" %> /
+                  Major GC: <%= gc_health["major_gc_count"] || "?" %>
+                </small>
+              </div>
+              <div class="col-md-3">
+                <small class="text-muted d-block">Job Queue</small>
+                <small>
+                  <% jq = health["job_queue"] %>
+                  <% if jq %>
+                    <%= jq["adapter"] %>
+                    <% if jq["failed"] || jq["errored"] %>
+                      — failed: <%= jq["failed"] || jq["errored"] %>
+                    <% end %>
+                  <% else %>
+                    N/A
+                  <% end %>
+                </small>
+              </div>
+            </div>
+
+            <div class="collapse mt-3" id="dump-<%= dump.id %>">
+              <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem;"><%= JSON.pretty_generate(data) rescue dump.dump_data %></pre>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i>
+            You can also capture dumps via: <code>rails error_dashboard:diagnostic_dump</code>
+            <span class="ms-2">Add a note: <code>NOTE="deploy check" rails error_dashboard:diagnostic_dump</code></span>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

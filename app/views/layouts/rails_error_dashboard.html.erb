@@ -1657,6 +1657,13 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
                   <% end %>
                 </li>
               <% end %>
+              <% if RailsErrorDashboard.configuration.enable_rack_attack_tracking && RailsErrorDashboard.configuration.enable_breadcrumbs %>
+                <li class="nav-item">
+                  <%= link_to rack_attack_summary_errors_path(nav_params), class: "nav-link #{request.path == rack_attack_summary_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-shield-exclamation"></i> Rate Limits
+                  <% end %>
+                </li>
+              <% end %>
               <% if RailsErrorDashboard.configuration.enable_system_health %>
                 <li class="nav-item">
                   <%= link_to job_health_summary_errors_path(nav_params), class: "nav-link #{request.path == job_health_summary_errors_path ? 'active' : ''}" do %>
@@ -1666,6 +1673,20 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
                 <li class="nav-item">
                   <%= link_to database_health_summary_errors_path(nav_params), class: "nav-link #{request.path == database_health_summary_errors_path ? 'active' : ''}" do %>
                     <i class="bi bi-database"></i> DB Health
+                  <% end %>
+                </li>
+              <% end %>
+              <% if RailsErrorDashboard.configuration.detect_swallowed_exceptions %>
+                <li class="nav-item">
+                  <%= link_to swallowed_exceptions_errors_path(nav_params), class: "nav-link #{request.path == swallowed_exceptions_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-eye-slash"></i> Swallowed
+                  <% end %>
+                </li>
+              <% end %>
+              <% if RailsErrorDashboard.configuration.enable_diagnostic_dump %>
+                <li class="nav-item">
+                  <%= link_to diagnostic_dumps_errors_path(nav_params), class: "nav-link #{request.path == diagnostic_dumps_errors_path ? 'active' : ''}" do %>
+                    <i class="bi bi-clipboard-pulse"></i> Diagnostics
                   <% end %>
                 </li>
               <% end %>

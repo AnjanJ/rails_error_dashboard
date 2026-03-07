@@ -141,6 +141,23 @@ module RailsErrorDashboard
     attr_accessor :instance_variable_max_count          # Max ivars to capture (default: 20)
     attr_accessor :instance_variable_filter_patterns    # Additional sensitive ivar patterns (default: [])
 
+    # Swallowed exception detection via TracePoint(:raise) + TracePoint(:rescue) (Ruby 3.3+ only)
+    attr_accessor :detect_swallowed_exceptions          # Master switch (default: false)
+    attr_accessor :swallowed_exception_max_cache_size   # Max entries per thread (default: 1000)
+    attr_accessor :swallowed_exception_flush_interval   # Seconds between flushes (default: 60)
+    attr_accessor :swallowed_exception_threshold        # Rescue ratio to flag (default: 0.95)
+    attr_accessor :swallowed_exception_ignore_classes   # Additional exception classes to skip (default: [])
+
+    # Process crash capture via at_exit hook
+    attr_accessor :enable_crash_capture                 # Master switch (default: false)
+    attr_accessor :crash_capture_path                   # Directory for crash files (default: Dir.tmpdir)
+
+    # On-demand diagnostic dump (rake task + dashboard endpoint)
+    attr_accessor :enable_diagnostic_dump               # Master switch (default: false)
+
+    # Rack Attack event tracking (requires enable_breadcrumbs = true)
+    attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -266,6 +283,23 @@ module RailsErrorDashboard
       @instance_variable_max_count = 20          # Max ivars per exception
       @instance_variable_filter_patterns = []    # Additional sensitive ivar name patterns
 
+      # Swallowed exception detection defaults - OFF by default (Ruby 3.3+ opt-in)
+      @detect_swallowed_exceptions = false       # TracePoint(:raise) + TracePoint(:rescue)
+      @swallowed_exception_max_cache_size = 1000 # Max entries per thread-local hash
+      @swallowed_exception_flush_interval = 60   # Seconds between DB flushes
+      @swallowed_exception_threshold = 0.95      # Rescue ratio to flag as swallowed
+      @swallowed_exception_ignore_classes = []   # Additional exception classes to skip
+
+      # Process crash capture defaults - OFF by default (opt-in)
+      @enable_crash_capture = false     # at_exit hook for fatal crash capture
+      @crash_capture_path = nil         # nil = Dir.tmpdir
+
+      # Diagnostic dump defaults - OFF by default (opt-in)
+      @enable_diagnostic_dump = false   # On-demand system state snapshot
+
+      # Rack Attack event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
+      @enable_rack_attack_tracking = false
+
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
@@ -284,11 +318,13 @@ module RailsErrorDashboard
 
     # Validate configuration values
     # Raises ConfigurationError if any validation fails
+    # Logs warnings for non-fatal issues (e.g., Ruby version incompatibilities)
     #
     # @raise [ConfigurationError] if configuration is invalid
     # @return [true] if configuration is valid
     def validate!
       errors = []
+      warnings = []
 
       # Validate sampling_rate (must be between 0.0 and 1.0)
       if sampling_rate && (sampling_rate < 0.0 || sampling_rate > 1.0)
@@ -376,6 +412,41 @@ module RailsErrorDashboard
         errors << "instance_variable_max_count must be at least 1 (got: #{instance_variable_max_count})"
       end
 
+      # Validate swallowed exception detection settings
+      # Auto-disable on Ruby < 3.3 (warn, don't crash)
+      if detect_swallowed_exceptions && RUBY_VERSION < "3.3"
+        warnings << "detect_swallowed_exceptions requires Ruby 3.3+ (current: #{RUBY_VERSION}). " \
+                    "TracePoint(:rescue) was added in Ruby 3.3 (Feature #19572). " \
+                    "Feature has been auto-disabled. Upgrade Ruby to use this feature."
+        @detect_swallowed_exceptions = false
+      end
+      # Validate sub-settings only if feature is still active after version check
+      if detect_swallowed_exceptions
+        if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1
+          errors << "swallowed_exception_max_cache_size must be at least 1 (got: #{swallowed_exception_max_cache_size})"
+        end
+        if swallowed_exception_flush_interval && swallowed_exception_flush_interval < 1
+          errors << "swallowed_exception_flush_interval must be at least 1 (got: #{swallowed_exception_flush_interval})"
+        end
+        if swallowed_exception_threshold && (swallowed_exception_threshold < 0.0 || swallowed_exception_threshold > 1.0)
+          errors << "swallowed_exception_threshold must be between 0.0 and 1.0 (got: #{swallowed_exception_threshold})"
+        end
+      end
+
+      # Validate rack_attack tracking requires breadcrumbs
+      if enable_rack_attack_tracking && !enable_breadcrumbs
+        warnings << "enable_rack_attack_tracking requires enable_breadcrumbs = true. " \
+                    "Rack Attack tracking has been auto-disabled."
+        @enable_rack_attack_tracking = false
+      end
+
+      # Validate crash capture path (must exist if custom path specified)
+      if enable_crash_capture && crash_capture_path
+        unless Dir.exist?(crash_capture_path)
+          errors << "crash_capture_path '#{crash_capture_path}' does not exist"
+        end
+      end
+
       # Validate notification dependencies
       if enable_slack_notifications && (slack_webhook_url.nil? || slack_webhook_url.strip.empty?)
         errors << "slack_webhook_url is required when enable_slack_notifications is true"
@@ -432,6 +503,11 @@ module RailsErrorDashboard
       # Validate notification_threshold_alerts (must be array of positive integers if set)
       if notification_threshold_alerts && !notification_threshold_alerts.is_a?(Array)
         errors << "notification_threshold_alerts must be an Array (got: #{notification_threshold_alerts.class})"
+      end
+
+      # Log warnings (non-fatal issues)
+      warnings.each do |warning|
+        Rails.logger.warn "[Rails Error Dashboard] #{warning}" if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
       end
 
       # Raise exception if any errors found

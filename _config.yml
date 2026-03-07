@@ -37,14 +37,31 @@ plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
 
-# Exclude from processing
+# Exclude from processing (only docs/ and root .md files are part of the site)
 exclude:
   - Gemfile
   - Gemfile.lock
+  - Rakefile
+  - "*.gemspec"
+  - "*.gem"
   - node_modules
   - vendor
+  - app
+  - bin
+  - config
+  - db
+  - lib
   - spec
+  - test
   - tmp
   - log
   - coverage
+  - scripts
+  - tasks
+  - blog
+  - seo
+  - gemfiles
+  - lefthook.yml
   - .git
+  - .github
+  - .claude

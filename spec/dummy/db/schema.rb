@@ -10,13 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_03_06_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_03_07_000001) do
   create_table "rails_error_dashboard_applications", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.text "description"
     t.datetime "created_at", precision: nil
     t.datetime "updated_at", precision: nil
     t.index [ "name" ], name: "index_rails_error_dashboard_applications_on_name", unique: true
+  end
+
+  create_table "rails_error_dashboard_diagnostic_dumps", force: :cascade do |t|
+    t.integer "application_id", null: false
+    t.text "dump_data", null: false
+    t.string "note"
+    t.datetime "captured_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "application_id" ], name: "index_diagnostic_dumps_on_application_id"
+    t.index [ "captured_at" ], name: "index_diagnostic_dumps_on_captured_at"
   end
 
   create_table "rails_error_dashboard_cascade_patterns", force: :cascade do |t|
@@ -133,6 +144,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_06_000002) do
     t.index [ "user_id" ], name: "index_rails_error_dashboard_error_logs_on_user_id"
   end
 
+  create_table "rails_error_dashboard_swallowed_exceptions", force: :cascade do |t|
+    t.string "exception_class", null: false
+    t.string "raise_location", limit: 500, null: false
+    t.string "rescue_location", limit: 500
+    t.datetime "period_hour", null: false
+    t.integer "raise_count", default: 0, null: false
+    t.integer "rescue_count", default: 0, null: false
+    t.datetime "last_seen_at"
+    t.integer "application_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "application_id", "period_hour" ], name: "index_swallowed_exceptions_on_app_and_hour"
+    t.index [ "exception_class", "period_hour" ], name: "index_swallowed_exceptions_on_class_and_hour"
+    t.index [ "exception_class", "raise_location", "rescue_location", "period_hour", "application_id" ], name: "index_swallowed_exceptions_upsert_key", unique: true
+    t.index [ "period_hour" ], name: "index_swallowed_exceptions_on_period_hour"
+  end
+
   create_table "rails_error_dashboard_error_occurrences", force: :cascade do |t|
     t.integer "error_log_id", null: false
     t.datetime "occurred_at", null: false
@@ -147,6 +175,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_06_000002) do
     t.index [ "user_id" ], name: "index_error_occurrences_on_user"
   end
 
+  add_foreign_key "rails_error_dashboard_diagnostic_dumps", "rails_error_dashboard_applications", column: "application_id"
   add_foreign_key "rails_error_dashboard_cascade_patterns", "rails_error_dashboard_error_logs", column: "child_error_id"
   add_foreign_key "rails_error_dashboard_cascade_patterns", "rails_error_dashboard_error_logs", column: "parent_error_id"
   add_foreign_key "rails_error_dashboard_error_comments", "rails_error_dashboard_error_logs", column: "error_log_id"

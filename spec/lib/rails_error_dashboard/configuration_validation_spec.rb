@@ -639,6 +639,116 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "swallowed exception detection validation" do
+    if RUBY_VERSION >= "3.3"
+      it "accepts valid defaults when enabled on Ruby 3.3+" do
+        config.detect_swallowed_exceptions = true
+        expect { config.validate! }.not_to raise_error
+      end
+    end
+
+    it "auto-disables and warns on Ruby < 3.3 instead of crashing" do
+      stub_const("RUBY_VERSION", "3.2.0")
+      config.detect_swallowed_exceptions = true
+
+      expect(Rails.logger).to receive(:warn).with(/detect_swallowed_exceptions requires Ruby 3\.3\+/)
+      expect { config.validate! }.not_to raise_error
+      expect(config.detect_swallowed_exceptions).to be false
+    end
+
+    it "includes upgrade guidance in the Ruby version warning" do
+      stub_const("RUBY_VERSION", "3.2.4")
+      config.detect_swallowed_exceptions = true
+
+      expect(Rails.logger).to receive(:warn).with(/Upgrade Ruby to use this feature/)
+      config.validate!
+      expect(config.detect_swallowed_exceptions).to be false
+    end
+
+    it "rejects max_cache_size of 0 when enabled" do
+      stub_const("RUBY_VERSION", "3.3.0")
+      config.detect_swallowed_exceptions = true
+      config.swallowed_exception_max_cache_size = 0
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /swallowed_exception_max_cache_size must be at least 1/
+      )
+    end
+
+    it "rejects flush_interval of 0 when enabled" do
+      stub_const("RUBY_VERSION", "3.3.0")
+      config.detect_swallowed_exceptions = true
+      config.swallowed_exception_flush_interval = 0
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /swallowed_exception_flush_interval must be at least 1/
+      )
+    end
+
+    it "rejects threshold above 1.0 when enabled" do
+      stub_const("RUBY_VERSION", "3.3.0")
+      config.detect_swallowed_exceptions = true
+      config.swallowed_exception_threshold = 1.5
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /swallowed_exception_threshold must be between 0.0 and 1.0/
+      )
+    end
+
+    it "rejects negative threshold when enabled" do
+      stub_const("RUBY_VERSION", "3.3.0")
+      config.detect_swallowed_exceptions = true
+      config.swallowed_exception_threshold = -0.1
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /swallowed_exception_threshold must be between 0.0 and 1.0/
+      )
+    end
+
+    it "does not validate settings when feature is disabled" do
+      config.detect_swallowed_exceptions = false
+      config.swallowed_exception_max_cache_size = 0
+      config.swallowed_exception_flush_interval = 0
+      config.swallowed_exception_threshold = 99.0
+      expect { config.validate! }.not_to raise_error
+    end
+  end
+
+  describe "crash capture validation" do
+    it "accepts valid defaults when enabled" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts existing directory" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = Dir.tmpdir
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "rejects non-existent crash_capture_path" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = "/nonexistent/crash/path"
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /crash_capture_path.*does not exist/
+      )
+    end
+
+    it "does not validate path when feature is disabled" do
+      config.enable_crash_capture = false
+      config.crash_capture_path = "/nonexistent/crash/path"
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "defaults to false (prevents import on every boot)" do
+      fresh_config = RailsErrorDashboard::Configuration.new
+      expect(fresh_config.enable_crash_capture).to be false
+      expect(fresh_config.crash_capture_path).to be_nil
+    end
+  end
+
   describe "ConfigurationError" do
     it "stores errors array" do
       error = RailsErrorDashboard::ConfigurationError.new([ "error1", "error2" ])

@@ -1,0 +1,126 @@
+<% content_for :page_title, "Swallowed Exceptions" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-eye-slash me-2"></i>
+      Swallowed Exceptions
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to swallowed_exceptions_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to swallowed_exceptions_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to swallowed_exceptions_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <% if @unique_count == 0 %>
+    <div class="text-center py-5">
+      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+      <h4 class="text-muted">No Swallowed Exceptions Detected</h4>
+      <p class="text-muted">
+        No exceptions with a rescue ratio above <%= (RailsErrorDashboard.configuration.swallowed_exception_threshold * 100).round %>% were detected in the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How swallowed exceptions are detected:</h6>
+          <ul class="mb-0">
+            <li>TracePoint(:raise) counts every exception raised</li>
+            <li>TracePoint(:rescue) counts every exception rescued</li>
+            <li>High rescue/raise ratio = likely swallowed (silently rescued)</li>
+            <li>Requires Ruby 3.3+ and <code>detect_swallowed_exceptions = true</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @unique_count %></div>
+            <small class="text-muted">Swallowed Patterns</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= number_with_delimiter(@total_rescue_count) %></div>
+            <small class="text-muted">Total Rescues</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= number_with_delimiter(@total_raise_count) %></div>
+            <small class="text-muted">Total Raises</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-eye-slash text-danger me-2"></i>
+          Swallowed Exception Patterns
+          <span class="badge bg-danger"><%= @unique_count %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Exception Class</th>
+                <th width="250">Raise Location</th>
+                <th width="250">Rescue Location</th>
+                <th width="100">Raises</th>
+                <th width="100">Rescues</th>
+                <th width="100">Ratio</th>
+                <th width="140">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @entries.each do |entry| %>
+                <tr>
+                  <td><code style="font-size: 0.85em;"><%= entry[:exception_class] %></code></td>
+                  <td><small class="text-muted text-break"><%= entry[:raise_location] %></small></td>
+                  <td><small class="text-muted text-break"><%= entry[:rescue_location] || "Unknown" %></small></td>
+                  <td><span class="badge bg-info text-dark"><%= number_with_delimiter(entry[:raise_count]) %></span></td>
+                  <td><span class="badge bg-warning text-dark"><%= number_with_delimiter(entry[:rescue_count]) %></span></td>
+                  <td>
+                    <% ratio_pct = (entry[:rescue_ratio] * 100).round(1) %>
+                    <span class="badge <%= ratio_pct >= 99 ? 'bg-danger' : ratio_pct >= 95 ? 'bg-warning text-dark' : 'bg-secondary' %>">
+                      <%= ratio_pct %>%
+                    </span>
+                  </td>
+                  <td><%= local_time_ago(entry[:last_seen]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> Swallowed exceptions are raised then silently rescued. They may hide real bugs.
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

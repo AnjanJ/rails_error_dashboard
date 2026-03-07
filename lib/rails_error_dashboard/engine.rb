@@ -70,10 +70,28 @@ module RailsErrorDashboard
         RailsErrorDashboard::Subscribers::BreadcrumbSubscriber.subscribe!
       end
 
+      # Subscribe to Rack Attack AS::Notifications events (requires breadcrumbs + Rack::Attack)
+      if RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
+         RailsErrorDashboard.configuration.enable_breadcrumbs &&
+         defined?(Rack::Attack)
+        RailsErrorDashboard::Subscribers::RackAttackSubscriber.subscribe!
+      end
+
       # Enable TracePoint(:raise) for local variable and/or instance variable capture
       if RailsErrorDashboard.configuration.enable_local_variables ||
          RailsErrorDashboard.configuration.enable_instance_variables
         RailsErrorDashboard::Services::LocalVariableCapturer.enable!
+      end
+
+      # Enable TracePoint(:raise) + TracePoint(:rescue) for swallowed exception detection
+      if RailsErrorDashboard.configuration.detect_swallowed_exceptions
+        RailsErrorDashboard::Services::SwallowedExceptionTracker.enable!
+      end
+
+      # Import crash files from previous process death, then register at_exit hook
+      if RailsErrorDashboard.configuration.enable_crash_capture
+        RailsErrorDashboard::Services::CrashCapture.import!
+        RailsErrorDashboard::Services::CrashCapture.enable!
       end
     end
   end
