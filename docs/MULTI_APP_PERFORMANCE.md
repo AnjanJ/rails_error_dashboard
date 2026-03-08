@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Multi-App Performance Monitoring"
+permalink: /docs/MULTI_APP_PERFORMANCE
+---
+
 # Multi-App Performance Monitoring
 
 This guide covers performance monitoring and optimization for Rails Error Dashboard's multi-app support feature.

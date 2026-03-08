@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Real-Time Updates with Turbo Streams"
+permalink: /docs/guides/REAL_TIME_UPDATES
+---
+
 # Real-Time Updates with Turbo Streams
 
 This guide explains how Rails Error Dashboard uses Turbo Streams to provide real-time updates for error tracking without manual page refreshes.

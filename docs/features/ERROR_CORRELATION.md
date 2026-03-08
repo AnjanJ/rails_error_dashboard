@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Error Correlation Guide"
+permalink: /docs/features/ERROR_CORRELATION
+---
+
 # Error Correlation Guide
 
 This guide covers the error correlation analysis features, including release correlation, user correlation, and time-based correlation.

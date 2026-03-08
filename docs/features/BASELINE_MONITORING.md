@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Baseline Monitoring and Alerts"
+permalink: /docs/features/BASELINE_MONITORING
+---
+
 # Baseline Monitoring and Alerts
 
 This guide covers the intelligent baseline monitoring features, including statistical baseline calculation, anomaly detection, and automated alerting.

@@ -1,3 +1,9 @@
+---
+layout: default
+title: "API Reference"
+permalink: /docs/API_REFERENCE
+---
+
 # API Reference
 
 Complete API documentation for Rails Error Dashboard.

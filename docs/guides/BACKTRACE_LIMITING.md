@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Backtrace Limiting Guide"
+permalink: /docs/guides/BACKTRACE_LIMITING
+---
+
 # Backtrace Limiting Guide
 
 This guide explains how backtrace limiting works in RailsErrorDashboard and how to configure it for optimal storage efficiency.

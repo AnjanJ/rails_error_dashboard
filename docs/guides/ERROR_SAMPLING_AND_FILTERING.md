@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Error Sampling and Filtering Guide"
+permalink: /docs/guides/ERROR_SAMPLING_AND_FILTERING
+---
+
 # Error Sampling and Filtering Guide
 
 This guide explains how to use error sampling and filtering in RailsErrorDashboard to manage high-volume error logging and reduce noise.

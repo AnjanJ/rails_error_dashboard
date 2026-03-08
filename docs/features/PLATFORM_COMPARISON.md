@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Platform Comparison Guide"
+permalink: /docs/features/PLATFORM_COMPARISON
+---
+
 # Platform Comparison Guide
 
 This guide covers the platform comparison and health analytics features, which enable side-by-side comparison of error metrics across iOS, Android, API, and Web platforms.
