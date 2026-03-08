@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2026-03-08
+
+### Fixed
+- **GitHub Pages 404s on all documentation links** — Added Jekyll front matter with `permalink` to all 32 documentation files across `docs/`, `docs/guides/`, `docs/features/`, and `docs/development/`. Navigation now includes Features and Troubleshooting entries (#87, #90) @RafaelTurtle
+
+### Changed
+- Updated all documentation for v0.4.0 features (FEATURES.md, CONFIGURATION.md, FAQ.md, QUICKSTART.md, API_REFERENCE.md, MIGRATION_STRATEGY.md, GLOSSARY.md, CUSTOMIZATION.md, SETTINGS.md, TROUBLESHOOTING.md, TESTING.md, SOURCE_CODE_INTEGRATION.md)
+- Added screenshots for local variables, swallowed exceptions, and diagnostic dumps to README
+- README updated with 6 new v0.4.0 feature sections
+- Added @RafaelTurtle to contributors (first Documentation Hero)
+
+---
+
 ## [0.4.0] - 2026-03-07
 
 ### Added
