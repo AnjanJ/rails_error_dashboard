@@ -293,10 +293,10 @@ System-level variables accessed via `ENV['NAME']`. Used for secrets and environm
 
 ### Feature Flags
 Boolean configuration options that enable/disable specific features:
-- `enable_slack_notifications`
-- `enable_baseline_alerts`
-- `enable_similar_errors`
-- `enable_platform_comparison`
+- `enable_slack_notifications`, `enable_email_notifications`, `enable_discord_notifications`, `enable_pagerduty_notifications`, `enable_webhook_notifications`
+- `enable_baseline_alerts`, `enable_similar_errors`, `enable_platform_comparison`, `enable_error_correlation`, `enable_occurrence_patterns`
+- `enable_breadcrumbs`, `enable_system_health`, `enable_source_code_integration`, `enable_git_blame`
+- `enable_local_variables`, `enable_instance_variables`, `detect_swallowed_exceptions`, `enable_diagnostic_dump`, `enable_rack_attack_tracking`, `enable_crash_capture`
 
 ---
 
@@ -347,7 +347,7 @@ Security vulnerability where unwanted attributes are updated. Rails protects wit
 ## Testing
 
 ### RSpec
-Ruby testing framework. Rails Error Dashboard has 935+ tests covering models, controllers, services, and integration.
+Ruby testing framework. Rails Error Dashboard has 2,600+ tests covering models, controllers, services, and integration.
 
 ### Factory Bot
 Test data generation. Creates realistic test records for errors, applications, and users.
@@ -409,6 +409,37 @@ Reverting to a previous version after a failed deployment. Rails Error Dashboard
 - **DB**: Database
 - **DDL**: Data Definition Language (migrations)
 - **ORM**: Object-Relational Mapping (ActiveRecord)
+
+---
+
+## Deep Debugging (v0.4.0)
+
+### TracePoint
+Ruby's built-in mechanism for hooking into runtime events. Rails Error Dashboard uses `TracePoint(:raise)` to capture local/instance variables at exception time, and `TracePoint(:rescue)` (Ruby 3.3+) for swallowed exception detection. Production-safe — Sentry ships the same `:raise` event.
+
+### Local Variable Capture
+Capturing the values of local variables at the exact moment an exception is raised, via `TracePoint(:raise)`. Shows what the code was working with when it failed.
+
+### Instance Variable Capture
+Capturing instance variables from `tp.self` (the receiver object) when an exception is raised. Shows the internal state of the object that failed.
+
+### Swallowed Exception
+An exception that is `raise`d but then silently `rescue`d — never logged, re-raised, or handled meaningfully. Detected by comparing raise counts vs rescue counts per code location.
+
+### Diagnostic Dump
+An on-demand snapshot of the application's runtime state: environment, GC stats, threads, connection pool, memory, job queue health. Triggered via dashboard button or rake task.
+
+### Process Crash Capture
+Capturing unhandled exceptions that terminate the Ruby process via an `at_exit` hook. Writes crash data to disk (JSON) since the database may be unavailable during shutdown. Imported on next boot.
+
+### at_exit Hook
+Ruby's `Kernel.at_exit` — registers a block that runs when the process exits. Used by crash capture to write exception data to disk before the process terminates.
+
+### RubyVM.stat
+Ruby's built-in method returning VM internal statistics: constant cache invalidations, class serial number, global method state. Included in system health snapshots when available.
+
+### YJIT
+Yet Another JIT compiler — Ruby's built-in JIT (Ruby 3.1+). `RubyVM::YJIT.runtime_stats` provides compiled ISEQs, code region size, inline/outlined bytes. Included in system health snapshots when YJIT is enabled.
 
 ---
 

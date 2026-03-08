@@ -721,6 +721,72 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 ---
 
+## Deep Debugging Issues (v0.4.0)
+
+### Local Variables Not Showing on Error Detail Page
+
+**Problem**: `enable_local_variables` is enabled but errors don't show variable data.
+
+**Solutions**:
+
+1. **Verify feature is enabled**:
+   ```ruby
+   RailsErrorDashboard.configuration.enable_local_variables
+   # Should return: true
+   ```
+
+2. **Check that the error was captured AFTER enabling** — existing errors won't have variables. Only new errors get variable data.
+
+3. **Some exceptions don't have local variables** — if the exception is raised in C code or a native extension, TracePoint may not capture locals.
+
+### Swallowed Exceptions Page Empty
+
+**Problem**: `/errors/swallowed_exceptions` shows no data.
+
+**Solutions**:
+
+1. **Check Ruby version** — requires Ruby 3.3+ for `TracePoint(:rescue)`. On Ruby < 3.3, the feature is auto-disabled.
+
+2. **Verify feature is enabled**:
+   ```ruby
+   RailsErrorDashboard.configuration.detect_swallowed_exceptions
+   # Should return: true
+   ```
+
+3. **Wait for flush interval** — data is flushed to the database every `swallowed_exception_flush_interval` seconds (default: 60). Check back after a minute.
+
+4. **Check threshold** — only locations where the rescue ratio exceeds `swallowed_exception_threshold` (default: 0.95) are shown.
+
+### Diagnostic Dump Button Not Working
+
+**Problem**: "Capture Dump" button doesn't create a dump.
+
+**Solutions**:
+
+1. **Verify feature is enabled**:
+   ```ruby
+   RailsErrorDashboard.configuration.enable_diagnostic_dump
+   # Should return: true
+   ```
+
+2. **Try the rake task** — `rails error_dashboard:diagnostic_dump` to verify the feature works outside the dashboard.
+
+3. **Check browser console** — the button uses a `<form>` POST, not a JavaScript link. If Turbo is interfering, check for JS errors.
+
+### Crash Capture Not Importing on Boot
+
+**Problem**: Process crashed but no crash error appeared after restart.
+
+**Solutions**:
+
+1. **Check crash file path** — look for JSON files in `Dir.tmpdir` (or your custom `crash_capture_path`).
+
+2. **Verify the crash was an unhandled exception** — `at_exit` only captures when `$!` is set (an exception terminated the process). Clean exits via `exit(0)` or `SIGTERM` don't trigger it.
+
+3. **Check file permissions** — the process needs write permission to the crash capture path.
+
+---
+
 ## Source Code Integration Issues
 
 ### Source Code Not Showing

@@ -546,6 +546,20 @@ RailsErrorDashboard.configure do |config|
 
   # UI
   config.dashboard_base_url = "http://localhost:3000"
+
+  # Developer Tools (v0.3+)
+  config.enable_breadcrumbs = false
+  config.enable_system_health = false
+  config.enable_source_code_integration = false
+  config.enable_git_blame = false
+
+  # Deep Debugging (v0.4)
+  config.enable_local_variables = false
+  config.enable_instance_variables = false
+  config.detect_swallowed_exceptions = false     # Requires Ruby 3.3+
+  config.enable_diagnostic_dump = false
+  config.enable_rack_attack_tracking = false      # Requires breadcrumbs
+  config.enable_crash_capture = false
 end
 ```
 

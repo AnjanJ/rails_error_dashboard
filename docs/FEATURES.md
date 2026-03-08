@@ -14,7 +14,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
 ### Optional Features (Opt-in)
-**18 features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
+**24+ features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -27,6 +27,9 @@ Core features that are always enabled - no configuration needed:
 
 **🔍 Developer Tools (6 features)**
 - Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page
+
+**🔬 Deep Debugging (6 features)** — v0.4.0
+- Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
@@ -567,6 +570,8 @@ Each error's detail page shows a System Health card with:
 - **Thread Count** — Number of active threads
 - **Connection Pool** — Size, busy, idle, dead, and waiting connections (with color-coded warnings)
 - **Puma Stats** — Running/max threads, pool capacity, backlog (when Puma is the server)
+- **RubyVM Cache Health** — Constant cache invalidations, class serial, global state from `RubyVM.stat` (when available)
+- **YJIT Runtime Stats** — Compiled ISEQs, code region size, inline/outlined bytes from `RubyVM::YJIT.runtime_stats` (when YJIT is enabled)
 
 ### Configuration
 
@@ -639,6 +644,233 @@ Extracts `connection_pool` data from the `system_health` JSON column per-error:
 - **Pagy pagination** — Standard paginated table
 
 This page helps identify errors associated with connection pool exhaustion or database performance issues.
+
+---
+
+## Local Variable Capture (v0.4.0)
+
+**⚙️ Optional Feature** - Local variable capture is disabled by default. Enable it to see the exact values of local variables at the moment an exception was raised:
+
+```ruby
+config.enable_local_variables = true
+```
+
+### How It Works
+
+Uses `TracePoint(:raise)` to capture local variables from the stack frame where the exception originates — before the stack unwinds and the values are lost. This is the most valuable debugging context possible: instead of guessing what went wrong from a stack trace, you see exactly what the variables contained.
+
+Variables are displayed on the error detail page in a dedicated "Local Variables" card with:
+
+- **Variable name** — The local variable identifier
+- **Type** — The Ruby class of the value (String, Integer, Array, etc.)
+- **Value** — The serialized value (truncated to configured limits)
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_local_variables = true              # Master switch (default: false)
+  config.local_variable_max_count = 15              # Max variables per exception (default: 15)
+  config.local_variable_max_depth = 3               # Max object nesting depth (default: 3)
+  config.local_variable_max_string_length = 200     # Truncate strings beyond this (default: 200)
+  config.local_variable_max_array_items = 10        # Max array items to serialize (default: 10)
+  config.local_variable_max_hash_items = 20         # Max hash entries to serialize (default: 20)
+  config.local_variable_filter_patterns = []        # Additional sensitive name patterns (default: [])
+end
+```
+
+### Safety & Privacy
+
+- **Never stores Binding objects** — Values are extracted immediately from the TracePoint, then the Binding is discarded for GC
+- **Sensitive data filtered** — Rails `filter_parameters` patterns are applied automatically (passwords, tokens, PII). Additional patterns can be added via `local_variable_filter_patterns`
+- **Configurable limits** — All size limits are enforced during serialization to prevent memory bloat
+- **Opt-in only** — Disabled by default, must be explicitly enabled
+
+---
+
+## Instance Variable Capture (v0.4.0)
+
+**⚙️ Optional Feature** - Instance variable capture is disabled by default. Enable it to see the instance variables of the object that raised the exception:
+
+```ruby
+config.enable_instance_variables = true
+```
+
+### How It Works
+
+Uses `TracePoint(:raise)` to inspect `tp.self` (the receiver object at the raise point) and capture its instance variables. This shows the internal state of the object that failed — for example, the `@user`, `@order`, or `@connection` that was in a bad state when the exception occurred.
+
+The error detail page shows an "Instance Variables" card alongside the local variables with:
+
+- **Variable name** — The instance variable identifier (e.g., `@user`)
+- **Type** — The Ruby class of the value
+- **Value** — The serialized value
+- **`_self_class`** — Special metadata showing the receiver's class name
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_instance_variables = true             # Master switch (default: false)
+  config.instance_variable_max_count = 20             # Max variables per exception (default: 20)
+  config.instance_variable_filter_patterns = []       # Additional sensitive name patterns (default: [])
+end
+```
+
+### Safety
+
+- Same safety guarantees as local variable capture: no Binding storage, sensitive data filtering, configurable limits
+- Shares the same TracePoint handler as local variable capture — minimal overhead when both are enabled
+
+---
+
+## Swallowed Exception Detection (v0.4.0)
+
+**⚙️ Optional Feature** - Swallowed exception detection is disabled by default. **Requires Ruby 3.3+** (TracePoint `:rescue` event). Enable it to detect exceptions that are raised but silently rescued:
+
+```ruby
+config.detect_swallowed_exceptions = true
+```
+
+### How It Works
+
+Uses two TracePoint events working together:
+
+1. **TracePoint(`:raise`)** — Tracks every exception raise with its location
+2. **TracePoint(`:rescue`)** — Tracks every rescue with its location (Ruby 3.3+ only, Feature #19572)
+
+By comparing raise counts vs rescue counts per location, the system identifies code paths where exceptions are caught but never logged, re-raised, or handled meaningfully. These "swallowed" exceptions are the hardest bugs to find — they silently corrupt state without any visible error.
+
+### Dashboard Page
+
+The dedicated page at `/errors/swallowed_exceptions` shows:
+
+- **Summary cards** — Total swallowed patterns, total rescues, total raises
+- **Pattern table** — Exception class, raise location, rescue location, raise count, rescue count, ratio (color-coded), last seen
+- **Time range filtering** — 7, 30, or 90 day windows
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.detect_swallowed_exceptions = true           # Master switch (default: false)
+  config.swallowed_exception_max_cache_size = 1000    # Max entries per thread-local cache (default: 1000)
+  config.swallowed_exception_flush_interval = 60      # Seconds between DB flushes (default: 60)
+  config.swallowed_exception_threshold = 0.95         # Rescue ratio to flag as swallowed (default: 0.95)
+  config.swallowed_exception_ignore_classes = []      # Exception classes to skip (default: [])
+end
+```
+
+### Safety & Performance
+
+- **Memory-bounded** — Thread-local caches with configurable max size, background flush to database
+- **Hourly bucketing** — Aggregated counts per hour, not per-event
+- **Auto-disabled on Ruby < 3.3** — Logs a warning and disables gracefully (no crash)
+- **Minimal overhead** — TracePoint `:rescue` is lightweight (same cost as `:raise` which Sentry ships)
+
+---
+
+## On-Demand Diagnostic Dump (v0.4.0)
+
+**⚙️ Optional Feature** - Diagnostic dumps are disabled by default. Enable to snapshot your app's entire system state on demand:
+
+```ruby
+config.enable_diagnostic_dump = true
+```
+
+### How It Works
+
+Captures a comprehensive snapshot of your application's runtime state — useful for debugging intermittent production issues without reproducing them. The dump includes:
+
+- **Environment** — Ruby version, Rails version, server (Puma/etc.)
+- **GC Stats** — Full `GC.stat` output
+- **Thread Info** — Thread count and statuses
+- **Connection Pool** — Pool size, busy, idle, dead, waiting
+- **Memory** — Process RSS (Linux)
+- **Job Queue Health** — Adapter stats (Sidekiq/SolidQueue/GoodJob)
+- **RubyVM Stats** — Cache health, YJIT stats (when available)
+
+### Triggering a Dump
+
+Two ways to capture a dump:
+
+1. **Dashboard button** — Click "Capture Dump" on the `/errors/diagnostic_dumps` page
+2. **Rake task** — `rails error_dashboard:diagnostic_dump` (optionally with `NOTE="deploy check"`)
+
+### Dashboard Page
+
+The page at `/errors/diagnostic_dumps` shows:
+
+- **Summary cards** — Total dumps, threads (latest), memory (latest)
+- **Dump history** — PID, uptime, environment, system health summary, GC summary, job queue, expandable details
+- **Paginated** — Standard Pagy pagination
+
+---
+
+## Rack Attack Event Tracking (v0.4.0)
+
+**⚙️ Optional Feature** - Rack Attack tracking is disabled by default. **Requires breadcrumbs to be enabled.** Enable it to track Rack::Attack security events:
+
+```ruby
+config.enable_breadcrumbs = true
+config.enable_rack_attack_tracking = true
+```
+
+### How It Works
+
+Subscribes to Rack::Attack's ActiveSupport::Notifications events and records them as breadcrumbs. When an error occurs after a throttle or blocklist event, the breadcrumbs show the security context — revealing whether rate limiting or blocking contributed to the error.
+
+### Tracked Events
+
+- **Throttle events** — Request rate exceeded configured limits
+- **Blocklist events** — Request matched a blocklist rule
+- **Track events** — Custom tracking rules fired
+
+### Dashboard Page
+
+The page at `/errors/rack_attack_summary` shows event breakdown with time range filtering (7, 30, or 90 days).
+
+### Safety
+
+- **Auto-disabled** — If breadcrumbs are not enabled, Rack Attack tracking is automatically disabled with a warning (no crash)
+- **Zero integration cost** — Rack::Attack already emits AS::Notifications events; this just subscribes to them
+
+---
+
+## Process Crash Capture (v0.4.0)
+
+**⚙️ Optional Feature** - Process crash capture is disabled by default. Enable it to capture unhandled exceptions that crash the Ruby process:
+
+```ruby
+config.enable_crash_capture = true
+```
+
+### How It Works
+
+Registers an `at_exit` hook that fires when the Ruby process exits. If the exit is caused by an unhandled exception (`$!` is set), the crash data is written to a JSON file on disk — because the database may be unavailable during process shutdown.
+
+On the next boot, the gem automatically imports any crash files and creates error log records with `platform: "crash_capture"` and `severity: "fatal"`.
+
+### What Gets Captured
+
+- **Exception details** — Class, message, backtrace
+- **Cause chain** — Full exception cause chain
+- **Runtime context** — Ruby version, Rails version, PID, uptime
+- **GC stats** — Garbage collector state at crash time
+- **Thread count** — Number of active threads
+
+### Configuration
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_crash_capture = true      # Master switch (default: false)
+  config.crash_capture_path = nil         # Custom path for crash files (default: Dir.tmpdir)
+end
+```
+
+### Why This Matters
+
+This is a **self-hosted only feature** — impossible for SaaS error trackers. When a process crashes, SaaS tools lose the connection before they can report. Since this gem runs inside the process, it can write to disk as the last act before exit.
 
 ---
 
@@ -720,7 +952,7 @@ This page helps identify errors associated with connection pool exhaustion or da
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **2,226+ RSpec tests** with high coverage
+- **2,600+ RSpec tests** with high coverage
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
@@ -802,7 +1034,7 @@ config.enable_source_code_integration = true # Source code viewer (NEW!)
 config.enable_git_blame = true               # Git blame integration (NEW!)
 ```
 
-*All code is complete and tested (1,900+ tests passing). These advanced features provide powerful insights for production debugging.*
+*All code is complete and tested (2,600+ tests passing). These advanced features provide powerful insights for production debugging.*
 
 ### Fuzzy Error Matching
 - **Find similar errors** even with different error hashes
@@ -1035,12 +1267,12 @@ rails generate rails_error_dashboard:install
   Rails Error Dashboard - Installation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/17] Slack Notifications
+[1/23] Slack Notifications
     Send errors to Slack channels instantly
     Enable? (y/N): y
     ✓ Enabled
 
-[2/17] Email Notifications
+[2/23] Email Notifications
     Email error alerts to your team
     Enable? (y/N): n
     ✗ Disabled
@@ -1076,8 +1308,14 @@ rails generate rails_error_dashboard:install \
 - `--occurrence_patterns` - Enable occurrence pattern detection
 - `--source_code_integration` - Enable source code viewer
 - `--git_blame` - Enable git blame integration
-- `--breadcrumbs` - Enable breadcrumbs (request activity trail) (NEW!)
-- `--system_health` - Enable system health snapshot (NEW!)
+- `--breadcrumbs` - Enable breadcrumbs (request activity trail)
+- `--system_health` - Enable system health snapshot
+- `--local_variables` - Enable local variable capture via TracePoint
+- `--instance_variables` - Enable instance variable capture via TracePoint
+- `--detect_swallowed_exceptions` - Enable swallowed exception detection (Ruby 3.3+)
+- `--diagnostic_dump` - Enable on-demand diagnostic dump
+- `--rack_attack_tracking` - Enable Rack Attack event tracking (requires breadcrumbs)
+- `--crash_capture` - Enable process crash capture via at_exit hook
 
 ### After Installation
 

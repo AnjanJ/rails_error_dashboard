@@ -196,6 +196,27 @@ Internal Logging                 ⚠ Enabled
 Log Level                        DEBUG
 ```
 
+### 9. Deep Debugging (v0.4.0)
+
+Shows v0.4.0 deep debugging feature settings:
+
+- **Local Variable Capture**: Whether local variables are captured via TracePoint at exception time
+- **Instance Variable Capture**: Whether instance variables are captured from the raising object
+- **Swallowed Exception Detection**: Whether silently rescued exceptions are detected (requires Ruby 3.3+)
+- **Diagnostic Dump**: Whether on-demand system state snapshots are available
+- **Rack Attack Tracking**: Whether Rack::Attack events are tracked as breadcrumbs
+- **Process Crash Capture**: Whether at_exit hook captures crashes
+
+**Example Display:**
+```text
+Local Variables                  ✓ Enabled (max: 15, depth: 3)
+Instance Variables               ✓ Enabled (max: 20)
+Swallowed Exception Detection    ✓ Enabled (threshold: 0.95, Ruby 3.3+)
+Diagnostic Dump                  ✓ Enabled
+Rack Attack Tracking             ✗ Disabled (requires breadcrumbs)
+Process Crash Capture            ✓ Enabled (path: /tmp)
+```
+
 ---
 
 ## Use Cases

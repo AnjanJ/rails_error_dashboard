@@ -49,10 +49,19 @@ The installer will guide you through **optional features** organized in 4 catego
 - Platform Comparison - Compare iOS vs Android vs Web health
 - Occurrence Patterns - Detect cyclical patterns and error bursts
 
-**Developer Tools (3 features)** 🆕
+**Developer Tools (4 features)**
 - Source Code Integration - View actual source code in error backtraces with repository links
 - Git Blame - See who last modified the code that caused the error
 - Breadcrumbs - Capture request activity trail (SQL, controller, cache events) leading up to errors
+- System Health Snapshot - GC stats, memory, threads, connection pool, RubyVM, YJIT at error time
+
+**Deep Debugging (6 features)** — v0.4.0
+- Local Variable Capture - See exact local variable values at exception point via TracePoint
+- Instance Variable Capture - See instance variables of the object that raised the exception
+- Swallowed Exception Detection - Find exceptions that are raised but silently rescued (Ruby 3.3+)
+- On-Demand Diagnostic Dump - Snapshot system state via dashboard button or rake task
+- Rack Attack Event Tracking - Track throttle/blocklist events as breadcrumbs
+- Process Crash Capture - Capture unhandled exceptions via at_exit hook
 
 **All features are opt-in** - you can say "no" to everything and just use the core dashboard, or enable specific features you need.
 
@@ -74,11 +83,11 @@ Choose the features you want to enable:
 📧  NOTIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/18] Slack Notifications
+[1/24] Slack Notifications
     Send real-time error notifications to Slack channels
     Enable? (y/N): y
 
-[2/18] Email Notifications
+[2/24] Email Notifications
     Send error alerts via email to your team
     Enable? (y/N): n
 

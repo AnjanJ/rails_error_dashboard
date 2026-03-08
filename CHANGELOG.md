@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **On-demand diagnostic dump** — Capture system state snapshots (environment, GC stats, threads, connection pool, memory, job queue) via dashboard button or `rails error_dashboard:diagnostic_dump` rake task. Stored in dedicated table with optional notes. Dashboard page at `/errors/diagnostic_dumps` with expandable JSON details
 - **Rack Attack event tracking** — Track Rack::Attack throttle, blocklist, and track events as breadcrumbs. Opt-in via `config.enable_rack_attack_tracking = true` (requires breadcrumbs enabled). Dashboard page at `/errors/rack_attack_summary`
 - **Process crash capture via at_exit hook** — Capture unhandled exceptions that crash the Ruby process, logged before exit
+- **RubyVM cache health stats** — System health snapshots now include `RubyVM.stat` data (constant cache, class serial, global state) when available
+- **YJIT runtime stats** — System health snapshots now include `RubyVM::YJIT.runtime_stats` (compiled ISEQs, code region size, inline/outlined bytes) when YJIT is enabled
 
 ### Fixed
 - **Swallowed exceptions page always empty** — Query grouped by `(exception_class, raise_location, rescue_location)` but raise and rescue events are stored as separate rows (raise has `rescue_location=nil`, rescue has it set). The ratio was always 0 or infinity. Fixed by grouping on `(exception_class, raise_location)` only

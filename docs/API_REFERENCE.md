@@ -485,6 +485,76 @@ curl -u admin:password \
 
 **Note:** This endpoint returns HTML by default (web UI). For programmatic access to configuration, use the Ruby API (`RailsErrorDashboard.configuration`) instead. See [Settings Dashboard Guide](guides/SETTINGS.md) for details.
 
+### Swallowed Exceptions (v0.4.0)
+
+View detected swallowed exceptions — exceptions that are raised but silently rescued.
+
+**Endpoint:** `GET /error_dashboard/errors/swallowed_exceptions`
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `days` | integer | Time range filter (7, 30, 90) | `?days=30` |
+
+**Example:**
+```bash
+curl -u admin:password \
+  "https://your-app.com/error_dashboard/errors/swallowed_exceptions?days=30"
+```
+
+**Requires:** `config.detect_swallowed_exceptions = true` and Ruby 3.3+
+
+### Diagnostic Dumps (v0.4.0)
+
+View diagnostic dump history or capture a new dump.
+
+**List dumps:** `GET /error_dashboard/errors/diagnostic_dumps`
+
+**Capture new dump:** `POST /error_dashboard/errors/diagnostic_dumps`
+
+**Parameters (POST):**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `note` | string | No | Optional note to attach to the dump |
+
+**Example:**
+```bash
+# List dumps
+curl -u admin:password \
+  https://your-app.com/error_dashboard/errors/diagnostic_dumps
+
+# Capture a new dump
+curl -X POST -u admin:password \
+  -d "note=deploy check" \
+  https://your-app.com/error_dashboard/errors/diagnostic_dumps
+```
+
+**Requires:** `config.enable_diagnostic_dump = true`
+
+**Rake task alternative:** `rails error_dashboard:diagnostic_dump NOTE="deploy check"`
+
+### Rack Attack Summary (v0.4.0)
+
+View Rack Attack event summary (throttle, blocklist, track events).
+
+**Endpoint:** `GET /error_dashboard/errors/rack_attack_summary`
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `days` | integer | Time range filter (7, 30, 90) | `?days=7` |
+
+**Example:**
+```bash
+curl -u admin:password \
+  "https://your-app.com/error_dashboard/errors/rack_attack_summary?days=7"
+```
+
+**Requires:** `config.enable_rack_attack_tracking = true` and `config.enable_breadcrumbs = true`
+
 ---
 
 ## Error Response Codes

@@ -17,8 +17,24 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Workflow Management](FEATURES.md#workflow-management)** - Managing and resolving errors
 - **[Notifications](guides/NOTIFICATIONS.md)** - Setting up alerts (Slack, Email, Discord, PagerDuty)
 
-### Advanced Features
-- **[Source Code Integration](SOURCE_CODE_INTEGRATION.md)** 🆕 - View source code, git blame, and repository links in errors
+### Monitoring & Health (v0.3)
+- **[System Health Snapshots](FEATURES.md#system-health-snapshot)** - GC stats, threads, connection pool, memory, RubyVM cache, YJIT stats
+- **[N+1 Query Detection](FEATURES.md#n1-query-detection)** - Detect N+1 queries from breadcrumbs
+- **[Job Health](FEATURES.md#job-health)** - Background job queue stats (Sidekiq, SolidQueue, GoodJob)
+- **[Database Health](FEATURES.md#database-health)** - PgHero-style connection pool and table stats
+- **[Cache Health](FEATURES.md#cache-health)** - Cache hit rates and miss patterns
+- **[Deprecation Tracking](FEATURES.md#deprecation-tracking)** - Track Rails deprecation warnings
+
+### Deep Debugging (v0.4)
+- **[Local Variable Capture](FEATURES.md#local-variable-capture)** - Capture local variables at the point of exception via TracePoint
+- **[Instance Variable Capture](FEATURES.md#instance-variable-capture)** - Capture instance variables from the raising object
+- **[Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection)** - Detect silently rescued exceptions (Ruby 3.3+)
+- **[On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump)** - Snapshot system state on demand
+- **[Rack Attack Event Tracking](FEATURES.md#rack-attack-event-tracking)** - Track throttle/blocklist events as breadcrumbs
+- **[Process Crash Capture](FEATURES.md#process-crash-capture)** - Capture crashes via at_exit hook
+
+### Advanced Analytics
+- **[Source Code Integration](SOURCE_CODE_INTEGRATION.md)** - View source code, git blame, and repository links in errors
 - **[Advanced Error Grouping](features/ADVANCED_ERROR_GROUPING.md)** - Fuzzy matching, co-occurring errors, cascades
 - **[Baseline Monitoring](features/BASELINE_MONITORING.md)** - Statistical anomaly detection and alerts
 - **[Platform Comparison](features/PLATFORM_COMPARISON.md)** - iOS vs Android vs API health analysis
@@ -59,9 +75,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 3. [Notifications](guides/NOTIFICATIONS.md) - Set up Slack alerts
 
 ### For Advanced Users
-1. [Source Code Integration](SOURCE_CODE_INTEGRATION.md) - View code, blame, and repo links 🆕
-2. [Baseline Monitoring](features/BASELINE_MONITORING.md) - Proactive alerting
-3. [Platform Comparison](features/PLATFORM_COMPARISON.md) - Cross-platform analysis
+1. [Local Variable Capture](FEATURES.md#local-variable-capture) - Debug with exact variable values
+2. [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection) - Find silently rescued exceptions
+3. [Diagnostic Dumps](FEATURES.md#on-demand-diagnostic-dump) - Snapshot system state on demand
 4. [Plugin System](PLUGIN_SYSTEM.md) - Custom integrations
 
 ### For Developers
@@ -92,7 +108,19 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### "I want proactive alerting for anomalies"
 → [Baseline Monitoring](features/BASELINE_MONITORING.md)
 
-### "I want to see source code directly in error details" 🆕
+### "I want to see exact variable values when an exception occurs"
+→ [Local Variable Capture](FEATURES.md#local-variable-capture) (enable `enable_local_variables` and/or `enable_instance_variables`)
+
+### "I want to find exceptions that are silently rescued"
+→ [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection) (requires Ruby 3.3+)
+
+### "I want to snapshot my app's system state on demand"
+→ [On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump) (dashboard button or rake task)
+
+### "I want to capture errors from process crashes"
+→ [Process Crash Capture](FEATURES.md#process-crash-capture) (at_exit hook writes to disk, imported on next boot)
+
+### "I want to see source code directly in error details"
 → [Source Code Integration](SOURCE_CODE_INTEGRATION.md)
 
 ### "I want to find N+1 queries or cache issues across all errors"
@@ -121,7 +149,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.2.0** (Latest).
+This documentation is for **Rails Error Dashboard v0.4.0** (Latest).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 

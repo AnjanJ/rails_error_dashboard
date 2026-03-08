@@ -11,6 +11,12 @@ This guide covers all configuration options for Rails Error Dashboard, including
 - [Performance Features](#performance-features)
 - [Advanced Analytics Features](#advanced-analytics-features)
 - [Source Code Integration](#source-code-integration-new)
+- [Local Variable Capture](#local-variable-capture-v040)
+- [Instance Variable Capture](#instance-variable-capture-v040)
+- [Swallowed Exception Detection](#swallowed-exception-detection-v040)
+- [Diagnostic Dump](#diagnostic-dump-v040)
+- [Rack Attack Event Tracking](#rack-attack-event-tracking-v040)
+- [Process Crash Capture](#process-crash-capture-v040)
 - [Custom Severity Classification](#custom-severity-classification)
 - [Ignored Exceptions](#ignored-exceptions)
 - [Error Sampling](#error-sampling)
@@ -23,7 +29,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Complete reference of all 43+ configuration options with defaults, types, and descriptions.
+Complete reference of all 60+ configuration options with defaults, types, and descriptions.
 
 ### Authentication & Access
 
@@ -160,11 +166,60 @@ Complete reference of all 43+ configuration options with defaults, types, and de
 | `enable_n_plus_one_detection` | Boolean | `true` | Detect N+1 query patterns in SQL breadcrumbs (display-time analysis) |
 | `n_plus_one_threshold` | Integer | `3` | Min repetitions to flag as N+1 (min: 2) |
 
-### System Health Snapshot (NEW!)
+### System Health Snapshot
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_system_health` | Boolean | `false` | Capture GC, memory, threads, connection pool at error time |
+| `enable_system_health` | Boolean | `false` | Capture GC, memory, threads, connection pool, RubyVM cache, YJIT stats at error time |
+
+### Local Variable Capture (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_local_variables` | Boolean | `false` | Capture local variables at exception raise point via TracePoint |
+| `local_variable_max_count` | Integer | `15` | Maximum number of local variables to capture per exception |
+| `local_variable_max_depth` | Integer | `3` | Maximum object nesting depth for serialization |
+| `local_variable_max_string_length` | Integer | `200` | Truncate string values beyond this length |
+| `local_variable_max_array_items` | Integer | `10` | Maximum array items to serialize |
+| `local_variable_max_hash_items` | Integer | `20` | Maximum hash entries to serialize |
+| `local_variable_filter_patterns` | Array | `[]` | Additional sensitive variable name patterns to filter (beyond Rails `filter_parameters`) |
+
+### Instance Variable Capture (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_instance_variables` | Boolean | `false` | Capture instance variables from the object that raised the exception |
+| `instance_variable_max_count` | Integer | `20` | Maximum instance variables to capture per exception |
+| `instance_variable_filter_patterns` | Array | `[]` | Additional sensitive instance variable name patterns to filter |
+
+### Swallowed Exception Detection (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `detect_swallowed_exceptions` | Boolean | `false` | Detect exceptions that are raised but silently rescued. **Requires Ruby 3.3+** |
+| `swallowed_exception_max_cache_size` | Integer | `1000` | Maximum entries per thread-local raise/rescue tracking cache |
+| `swallowed_exception_flush_interval` | Integer | `60` | Seconds between database flushes of accumulated data |
+| `swallowed_exception_threshold` | Float | `0.95` | Rescue ratio (0.0-1.0) to flag a location as "swallowed" |
+| `swallowed_exception_ignore_classes` | Array | `[]` | Additional exception classes to skip during tracking |
+
+### Diagnostic Dump (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_diagnostic_dump` | Boolean | `false` | Enable on-demand system state snapshots via dashboard or rake task |
+
+### Rack Attack Event Tracking (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_rack_attack_tracking` | Boolean | `false` | Track Rack::Attack throttle/blocklist events as breadcrumbs. Requires `enable_breadcrumbs = true` |
+
+### Process Crash Capture (v0.4.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook |
+| `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Directory must exist |
 
 ### Internal Logging & Debugging
 
@@ -736,6 +791,8 @@ end
 | Thread count | `Thread.list.count` | O(1), safe |
 | Connection pool | `ActiveRecord::Base.connection_pool.stat` | size, busy, idle, dead, waiting |
 | Puma stats | `Puma.stats` | running, max_threads, pool_capacity, backlog (when available) |
+| RubyVM cache | `RubyVM.stat` | constant_cache invalidations, class serial, global state (when available) |
+| YJIT stats | `RubyVM::YJIT.runtime_stats` | compiled ISEQs, code region size, inline/outlined bytes (when YJIT enabled) |
 
 ### Safety
 
@@ -747,6 +804,114 @@ end
 - **No Thread backtraces** — only `.count`, never `.map(&:backtrace)`
 - **No subprocess** — memory via procfs only, no `ps`, no fork, no backtick
 - **No global state** — no Thread.current, no mutex, no memoization
+
+---
+
+## Local Variable Capture (v0.4.0)
+
+Capture local variables at the exact moment an exception is raised via `TracePoint(:raise)`. The most valuable debugging context possible.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_local_variables = true
+
+  # Serialization limits (all have sensible defaults)
+  config.local_variable_max_count = 15          # Max variables per exception
+  config.local_variable_max_depth = 3           # Max object nesting depth
+  config.local_variable_max_string_length = 200 # Truncate strings beyond this
+  config.local_variable_max_array_items = 10    # Max array items
+  config.local_variable_max_hash_items = 20     # Max hash entries
+
+  # Additional sensitive patterns (beyond Rails filter_parameters)
+  config.local_variable_filter_patterns = [ /secret/, /token/ ]
+end
+```
+
+### Safety
+
+- **Never stores Binding objects** — values extracted immediately, Binding is GC'd
+- **Sensitive data auto-filtered** — Rails `filter_parameters` applied automatically
+- **Configurable limits** — all size limits enforced during serialization
+- **Opt-in only** — disabled by default
+
+---
+
+## Instance Variable Capture (v0.4.0)
+
+Capture instance variables from the object that raised the exception (`tp.self` on the TracePoint).
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_instance_variables = true
+  config.instance_variable_max_count = 20          # Max variables (default: 20)
+  config.instance_variable_filter_patterns = []    # Additional sensitive patterns
+end
+```
+
+Shares the same TracePoint handler as local variable capture — minimal overhead when both are enabled. Includes `_self_class` metadata showing the receiver's class name.
+
+---
+
+## Swallowed Exception Detection (v0.4.0)
+
+Detect exceptions that are raised but silently rescued — the hardest bugs to find. **Requires Ruby 3.3+** (TracePoint `:rescue` event, Feature #19572).
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.detect_swallowed_exceptions = true
+
+  config.swallowed_exception_max_cache_size = 1000  # Thread-local cache size
+  config.swallowed_exception_flush_interval = 60    # Seconds between DB flushes
+  config.swallowed_exception_threshold = 0.95       # 95% rescue ratio = "swallowed"
+  config.swallowed_exception_ignore_classes = []    # Exception classes to skip
+end
+```
+
+Dashboard page at `/errors/swallowed_exceptions`. Auto-disabled on Ruby < 3.3 with a warning (no crash).
+
+---
+
+## Diagnostic Dump (v0.4.0)
+
+On-demand system state snapshots — environment, GC stats, threads, connection pool, memory, job queue health.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_diagnostic_dump = true
+end
+```
+
+Trigger via dashboard button or `rails error_dashboard:diagnostic_dump NOTE="deploy check"`. Dashboard page at `/errors/diagnostic_dumps`.
+
+---
+
+## Rack Attack Event Tracking (v0.4.0)
+
+Track Rack::Attack throttle, blocklist, and track events as breadcrumbs. Requires breadcrumbs to be enabled.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_breadcrumbs = true              # Required dependency
+  config.enable_rack_attack_tracking = true
+end
+```
+
+Auto-disabled with warning if breadcrumbs are not enabled. Dashboard page at `/errors/rack_attack_summary`.
+
+---
+
+## Process Crash Capture (v0.4.0)
+
+Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_crash_capture = true
+  config.crash_capture_path = nil    # nil = Dir.tmpdir; custom path must exist
+end
+```
+
+Writes crash data to JSON on disk (database may be unavailable during shutdown). Imported automatically on next boot. A self-hosted only feature — impossible for SaaS tools.
 
 ---
 
@@ -1365,8 +1530,36 @@ RailsErrorDashboard.configure do |config|
   # SYSTEM HEALTH SNAPSHOT (NEW!)
   # ============================================================================
 
-  # Capture GC, memory, threads, connection pool at error time
+  # Capture GC, memory, threads, connection pool, RubyVM, YJIT at error time
   config.enable_system_health = true
+
+  # ============================================================================
+  # DEEP DEBUGGING (v0.4.0)
+  # ============================================================================
+
+  # Local variable capture via TracePoint(:raise)
+  config.enable_local_variables = true
+  config.local_variable_max_count = 15
+  config.local_variable_max_depth = 3
+  config.local_variable_max_string_length = 200
+
+  # Instance variable capture from raising object
+  config.enable_instance_variables = true
+  config.instance_variable_max_count = 20
+
+  # Swallowed exception detection (Ruby 3.3+ required)
+  config.detect_swallowed_exceptions = true
+  config.swallowed_exception_threshold = 0.95
+
+  # On-demand diagnostic dump
+  config.enable_diagnostic_dump = true
+
+  # Rack Attack event tracking (requires breadcrumbs)
+  config.enable_rack_attack_tracking = true
+
+  # Process crash capture via at_exit hook
+  config.enable_crash_capture = true
+  # config.crash_capture_path = "/var/log/myapp/crashes"  # default: Dir.tmpdir
 
   # ============================================================================
   # ADDITIONAL CONFIGURATION

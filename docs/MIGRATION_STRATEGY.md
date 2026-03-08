@@ -417,12 +417,22 @@ v0.1.29
   ├─ 20260106094256  ← Backfill application
   └─ 20260106094318  ← Finalize foreign key
 
-v0.2.0 (Current)
+v0.2.0
   ├─ 20260220000001  ← Exception cause chain (cause_class, cause_message, exception_chain)
   ├─ 20260220000002  ← Enriched context (http_method, hostname, content_type, etc.)
   ├─ 20260220000003  ← Time-series indexes (BRIN + functional, PostgreSQL only)
   ├─ 20260221000001  ← Environment info (ruby_version, rails_version, gem_version)
   └─ 20260221000002  ← Reopened tracking (reopened_at)
+
+v0.3.0
+  ├─ 20260303000001  ← Breadcrumbs (text column on error_logs)
+  └─ 20260304000001  ← System health (JSON column on error_logs)
+
+v0.4.0 (Current)
+  ├─ 20260306000001  ← Local variables (text column on error_logs)
+  ├─ 20260306000002  ← Instance variables (text column on error_logs)
+  ├─ 20260306000003  ← Swallowed exceptions table (new table)
+  └─ 20260307000001  ← Diagnostic dumps table (new table)
 ```
 
 ---
@@ -569,6 +579,85 @@ config.notification_cooldown_minutes = 60
 ```
 
 Run `rails generate rails_error_dashboard:install` to see the full initializer template with all new options.
+
+---
+
+## Upgrading to v0.3.0
+
+v0.3.0 adds 2 new migrations for breadcrumbs and system health snapshots.
+
+### Shared Database (default)
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+rails db:migrate
+```
+
+### Separate Database
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+mv db/migrate/*_add_breadcrumbs_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_system_health_to_error_logs.rb db/error_dashboard_migrate/
+rails db:migrate:error_dashboard
+```
+
+### New v0.3.0 Columns
+
+| Migration | Columns Added | Purpose |
+|-----------|---------------|---------|
+| `add_breadcrumbs` | `breadcrumbs` (text) | Request activity trail (SQL, controller, cache events) |
+| `add_system_health` | `system_health` (text) | GC, memory, threads, connection pool snapshot |
+
+---
+
+## Upgrading to v0.4.0
+
+v0.4.0 adds 4 new migrations: 2 columns on error_logs and 2 new tables.
+
+### Shared Database (default)
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+rails db:migrate
+```
+
+### Separate Database
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+mv db/migrate/*_add_local_variables_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_add_instance_variables_to_error_logs.rb db/error_dashboard_migrate/
+mv db/migrate/*_create_rails_error_dashboard_swallowed_exceptions.rb db/error_dashboard_migrate/
+mv db/migrate/*_create_rails_error_dashboard_diagnostic_dumps.rb db/error_dashboard_migrate/
+rails db:migrate:error_dashboard
+```
+
+### New v0.4.0 Schema Changes
+
+| Migration | Type | Purpose |
+|-----------|------|---------|
+| `add_local_variables` | Column (text) on error_logs | Local variable values at exception point |
+| `add_instance_variables` | Column (text) on error_logs | Instance variable values from raising object |
+| `create_swallowed_exceptions` | New table | Tracks raise/rescue counts per location, hourly bucketing |
+| `create_diagnostic_dumps` | New table | Stores system state snapshots with full JSON details |
+
+### New Configuration Options
+
+After upgrading, these options are available (all disabled by default):
+
+```ruby
+config.enable_local_variables = true
+config.enable_instance_variables = true
+config.detect_swallowed_exceptions = true    # Requires Ruby 3.3+
+config.enable_diagnostic_dump = true
+config.enable_rack_attack_tracking = true    # Requires breadcrumbs
+config.enable_crash_capture = true
+```
 
 ---
 

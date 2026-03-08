@@ -27,10 +27,13 @@ Rails Error Dashboard supports multiple Rails versions and is tested against Rai
 - ✅ **Ruby 3.2** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - ✅ **Ruby 3.3** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - ✅ **Ruby 3.4** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
+- ✅ **Ruby 4.0** (with Rails 8.1)
 
 **Note**: Rails Error Dashboard requires **Ruby >= 3.2** due to the browser gem dependency.
 
 **Why no Ruby 3.1?** The browser gem v6.x requires Ruby >= 3.2.0.
+
+**Ruby 3.3+ features**: Swallowed exception detection (`TracePoint(:rescue)`) requires Ruby 3.3+. These specs are conditionally skipped on Ruby 3.2.
 
 ---
 

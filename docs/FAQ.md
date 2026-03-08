@@ -7,7 +7,7 @@ Common questions about Rails Error Dashboard.
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 2,100+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](FEATURES.md#production-ready).
+This is currently in **beta** but actively tested with 2,600+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](FEATURES.md#production-ready).
 </details>
 
 <details>
@@ -178,6 +178,47 @@ RailsErrorDashboard::PluginRegistry.register(MyCustomPlugin.new)
 ```
 
 See [Plugin System Guide](PLUGIN_SYSTEM.md).
+</details>
+
+<details>
+<summary><strong>Is TracePoint safe for production? What's the performance impact?</strong></summary>
+
+Yes. TracePoint(`:raise`) is the same mechanism Sentry uses in production. It only fires when an exception is raised (not on every line of code). The overhead is sub-millisecond per exception. Values are extracted immediately and the Binding is discarded — no memory leaks.
+
+TracePoint(`:rescue`) (used for swallowed exception detection) is similarly lightweight. It was added in Ruby 3.3 (Feature #19572) and only fires on rescue events.
+
+Both are opt-in and disabled by default. See [Local Variable Capture](FEATURES.md#local-variable-capture-v040) and [Host App Safety](../HOST_APP_SAFETY.md).
+</details>
+
+<details>
+<summary><strong>What Ruby version do I need for swallowed exception detection?</strong></summary>
+
+**Ruby 3.3+** is required for swallowed exception detection. The feature uses `TracePoint(:rescue)` which was added in Ruby 3.3 (Feature #19572).
+
+If you enable `detect_swallowed_exceptions = true` on Ruby < 3.3, it will be automatically disabled with a warning — no crash or error.
+
+All other v0.4.0 features (local variables, instance variables, diagnostic dumps, crash capture, Rack Attack tracking) work on Ruby 3.2+.
+</details>
+
+<details>
+<summary><strong>How do I capture a diagnostic dump?</strong></summary>
+
+Two ways:
+
+1. **Dashboard button** — Visit `/errors/diagnostic_dumps` and click "Capture Dump"
+2. **Rake task** — `rails error_dashboard:diagnostic_dump` (add `NOTE="deploy check"` for a note)
+
+Dumps capture: environment, GC stats, threads, connection pool, memory, job queue health, RubyVM/YJIT stats. Requires `config.enable_diagnostic_dump = true`.
+</details>
+
+<details>
+<summary><strong>What are swallowed exceptions? Why should I care?</strong></summary>
+
+Swallowed exceptions are exceptions that are `raise`d but then silently `rescue`d — never logged, re-raised, or handled meaningfully. They're the hardest bugs to find because they produce no visible error.
+
+Example: a `rescue => e` that does nothing silently corrupts state. The swallowed exception detector finds these code paths by comparing raise counts vs rescue counts per location.
+
+No other self-hosted error tracker offers this feature. See [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040).
 </details>
 
 <details>
