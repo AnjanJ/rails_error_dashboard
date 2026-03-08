@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Source Code Integration Feature"
+permalink: /docs/SOURCE_CODE_INTEGRATION
+---
+
 # Source Code Integration Feature
 
 **Status:** ✅ Complete (Parts 1-4)

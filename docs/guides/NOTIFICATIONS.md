@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Notification Configuration Guide"
+permalink: /docs/guides/NOTIFICATIONS
+---
+
 # Notification Configuration Guide
 
 Rails Error Dashboard supports multiple notification backends to alert your team when errors occur.

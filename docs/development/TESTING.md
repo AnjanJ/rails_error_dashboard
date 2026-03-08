@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Multi-Version Testing Guide"
+permalink: /docs/development/TESTING
+---
+
+
 # Multi-Version Testing Guide
 
 Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.0, 7.1, 7.2, 8.0, and 8.1.

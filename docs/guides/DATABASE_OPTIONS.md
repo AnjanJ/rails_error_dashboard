@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Database Setup Guide"
+permalink: /docs/guides/DATABASE_OPTIONS
+---
+
 # Database Setup Guide
 
 This guide covers all database configurations for Rails Error Dashboard: single-app, separate database, and multi-app setups.

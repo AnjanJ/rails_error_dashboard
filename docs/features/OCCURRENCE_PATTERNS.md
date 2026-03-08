@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Occurrence Patterns Guide"
+permalink: /docs/features/OCCURRENCE_PATTERNS
+---
+
 # Occurrence Patterns Guide
 
 This guide covers the enhanced occurrence pattern detection features, including cyclical pattern analysis and error burst detection.

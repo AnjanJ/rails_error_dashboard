@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Database Optimization Guide"
+permalink: /docs/guides/DATABASE_OPTIMIZATION
+---
+
 # Database Optimization Guide
 
 This guide explains the database optimizations in RailsErrorDashboard and how to get the best performance.

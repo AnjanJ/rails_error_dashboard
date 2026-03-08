@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Frequently Asked Questions"
+permalink: /docs/FAQ
+---
+
 # Frequently Asked Questions
 
 Common questions about Rails Error Dashboard.

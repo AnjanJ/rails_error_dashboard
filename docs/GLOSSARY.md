@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Rails Error Dashboard - Glossary"
+permalink: /docs/GLOSSARY
+---
+
 # Rails Error Dashboard - Glossary
 
 A comprehensive guide to terms, concepts, and terminology used throughout the Rails Error Dashboard documentation.

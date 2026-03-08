@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Solid Queue Setup Guide"
+permalink: /docs/guides/SOLID_QUEUE_SETUP
+---
+
 # Solid Queue Setup Guide
 
 This guide covers how to configure **Solid Queue** (Rails 8.1+ default) for optimal performance with RailsErrorDashboard.

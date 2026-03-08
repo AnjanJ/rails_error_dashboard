@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Uninstalling Rails Error Dashboard"
+permalink: /docs/UNINSTALL
+---
+
 # Uninstalling Rails Error Dashboard
 
 This guide explains how to completely remove Rails Error Dashboard from your application.

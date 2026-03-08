@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Error Trend Visualizations"
+permalink: /docs/guides/ERROR_TREND_VISUALIZATIONS
+---
+
 # Error Trend Visualizations
 
 This guide explains the trend visualization and spike detection features in Rails Error Dashboard, helping you identify patterns and anomalies in error occurrences.

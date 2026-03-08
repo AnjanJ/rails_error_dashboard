@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Advanced Error Grouping"
+permalink: /docs/features/ADVANCED_ERROR_GROUPING
+---
+
 # Advanced Error Grouping
 
 This guide covers the advanced error grouping features, including fuzzy error matching, co-occurring error detection, and error cascade identification.

@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Batch Operations Guide"
+permalink: /docs/guides/BATCH_OPERATIONS
+---
+
 # Batch Operations Guide
 
 Rails Error Dashboard supports batch operations to efficiently manage multiple errors at once.

@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Migration Strategy: Squashed + Incremental"
+permalink: /docs/MIGRATION_STRATEGY
+---
+
 # Migration Strategy: Squashed + Incremental
 
 ## Overview

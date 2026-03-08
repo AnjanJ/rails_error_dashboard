@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Configuration Guide"
+permalink: /docs/guides/CONFIGURATION
+---
+
 # Configuration Guide
 
 This guide covers all configuration options for Rails Error Dashboard, including advanced features for customization and extensibility.

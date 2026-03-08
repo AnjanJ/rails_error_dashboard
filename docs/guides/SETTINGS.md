@@ -1,3 +1,9 @@
+---
+layout: default
+title: "Settings Dashboard"
+permalink: /docs/guides/SETTINGS
+---
+
 # Settings Dashboard
 
 The Settings page provides a read-only view of your Rails Error Dashboard configuration, making it easy to verify which features are enabled and review current settings without digging through initializer files.
