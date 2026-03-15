@@ -452,6 +452,6 @@ If this gem saves you some headaches (or some money on error tracking SaaS), con
 
 ---
 
-**Made with care by [Anjan](https://www.anjan.dev) for the Rails community**
+**Made with ❤️ by [Anjan](https://anjan.dev)**
 
 *One Gem to rule them all, One Gem to find them, One Gem to bring them all, and in the dashboard bind them.*
