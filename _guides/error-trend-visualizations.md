@@ -733,8 +733,8 @@ end
 - [Chart.js Documentation](https://www.chartjs.org/docs/)
 - [Chartkick Guide](https://chartkick.com/)
 - [Groupdate Gem](https://github.com/ankane/groupdate)
-- [DATABASE_OPTIMIZATION.md](DATABASE_OPTIMIZATION.md)
-- [REAL_TIME_UPDATES.md](REAL_TIME_UPDATES.md)
+- [DATABASE_OPTIMIZATION.md](/rails_error_dashboard/docs/guides/database-optimization/)
+- [REAL_TIME_UPDATES.md](/rails_error_dashboard/docs/guides/real-time-updates/)
 - [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md)
 
 ---

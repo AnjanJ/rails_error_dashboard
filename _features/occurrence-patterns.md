@@ -912,7 +912,7 @@ bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(
 
 ## Further Reading
 
-- [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Finding similar errors
-- [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Statistical baselines
-- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - Platform health
-- [Error Correlation Guide](ERROR_CORRELATION.md) - Release and user correlation
+- [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) - Finding similar errors
+- [Baseline Monitoring Guide](/rails_error_dashboard/docs/features/baseline-monitoring/) - Statistical baselines
+- [Platform Comparison Guide](/rails_error_dashboard/docs/features/platform-comparison/) - Platform health
+- [Error Correlation Guide](/rails_error_dashboard/docs/features/error-correlation/) - Release and user correlation

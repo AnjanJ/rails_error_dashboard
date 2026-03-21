@@ -13,7 +13,7 @@ Common questions about Rails Error Dashboard.
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 2,600+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](FEATURES.md#production-ready).
+This is currently in **beta** but actively tested with 2,600+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](/rails_error_dashboard/docs/features/#production-ready).
 </details>
 
 <details>
@@ -23,7 +23,7 @@ This is currently in **beta** but actively tested with 2,600+ passing tests acro
 **Better**: 100% free, self-hosted (your data stays with you), no usage limits, Rails-optimized
 **Trade-offs**: You manage hosting/backups, fewer integrations than commercial services
 
-See [full comparison](features/PLATFORM_COMPARISON.md).
+See [full comparison](/rails_error_dashboard/docs/features/platform-comparison/).
 </details>
 
 <details>
@@ -34,7 +34,7 @@ Minimal with async logging enabled:
 - **Async (recommended)**: ~1-2ms (queues to background job)
 - **Sampling**: Log only 10% of non-critical errors for high-traffic apps
 
-See [Performance Guide](guides/ERROR_SAMPLING_AND_FILTERING.md).
+See [Performance Guide](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/).
 </details>
 
 <details>
@@ -48,7 +48,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-See [Database Options Guide](guides/DATABASE_OPTIONS.md).
+See [Database Options Guide](/rails_error_dashboard/docs/guides/database-options/).
 </details>
 
 <details>
@@ -71,7 +71,7 @@ Yes! The error logging works in API-only mode. The dashboard UI requires a brows
 - Run in a separate Rails instance pointing to the same database
 - Accessed via SSH tunnel
 
-See [API-only setup](guides/MOBILE_APP_INTEGRATION.md#backend-setup-rails-api).
+See [API-only setup](/rails_error_dashboard/docs/guides/mobile-app-integration/#backend-setup-rails-api).
 </details>
 
 <details>
@@ -87,7 +87,7 @@ APP_NAME=my-api rails server
 APP_NAME=my-admin rails server
 ```
 
-All apps share the same dashboard. See [Multi-App Guide](MULTI_APP_PERFORMANCE.md).
+All apps share the same dashboard. See [Multi-App Guide](/rails_error_dashboard/docs/features/multi-app-performance/).
 </details>
 
 <details>
@@ -104,7 +104,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-See [Customization Guide](CUSTOMIZATION.md).
+See [Customization Guide](/rails_error_dashboard/docs/guides/customization/).
 </details>
 
 <details>
@@ -120,7 +120,7 @@ rails error_dashboard:cleanup_resolved DAYS=90
 rails error_dashboard:cleanup_resolved DAYS=30 APP_NAME="My App"
 ```
 
-Or schedule with cron/whenever. See [Database Optimization](guides/DATABASE_OPTIMIZATION.md).
+Or schedule with cron/whenever. See [Database Optimization](/rails_error_dashboard/docs/guides/database-optimization/).
 </details>
 
 <details>
@@ -135,7 +135,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-Supports Slack, Discord, Email, PagerDuty, and custom webhooks. See [Notifications Guide](guides/NOTIFICATIONS.md).
+Supports Slack, Discord, Email, PagerDuty, and custom webhooks. See [Notifications Guide](/rails_error_dashboard/docs/guides/notifications/).
 </details>
 
 <details>
@@ -165,7 +165,7 @@ fetch('https://api.example.com/error_dashboard/api/v1/errors', {
 });
 ```
 
-See [Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md).
+See [Mobile App Integration](/rails_error_dashboard/docs/guides/mobile-app-integration/).
 </details>
 
 <details>
@@ -183,7 +183,7 @@ end
 RailsErrorDashboard::PluginRegistry.register(MyCustomPlugin.new)
 ```
 
-See [Plugin System Guide](PLUGIN_SYSTEM.md).
+See [Plugin System Guide](/rails_error_dashboard/docs/features/plugin-system/).
 </details>
 
 <details>
@@ -193,7 +193,7 @@ Yes. TracePoint(`:raise`) is the same mechanism Sentry uses in production. It on
 
 TracePoint(`:rescue`) (used for swallowed exception detection) is similarly lightweight. It was added in Ruby 3.3 (Feature #19572) and only fires on rescue events.
 
-Both are opt-in and disabled by default. See [Local Variable Capture](FEATURES.md#local-variable-capture-v040) and [Host App Safety](../HOST_APP_SAFETY.md).
+Both are opt-in and disabled by default. See [Local Variable Capture](/rails_error_dashboard/docs/features/#local-variable-capture-v040) and [Host App Safety](../HOST_APP_SAFETY.md).
 </details>
 
 <details>
@@ -224,13 +224,13 @@ Swallowed exceptions are exceptions that are `raise`d but then silently `rescue`
 
 Example: a `rescue => e` that does nothing silently corrupts state. The swallowed exception detector finds these code paths by comparing raise counts vs rescue counts per location.
 
-No other self-hosted error tracker offers this feature. See [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040).
+No other self-hosted error tracker offers this feature. See [Swallowed Exception Detection](/rails_error_dashboard/docs/features/#swallowed-exception-detection-v040).
 </details>
 
 <details>
 <summary><strong>What if I need help?</strong></summary>
 
-- **Read the docs**: [docs/README.md](README.md)
+- **Read the docs**: [docs/README.md](/rails_error_dashboard/docs/documentation/)
 - **Report bugs**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
 - **Ask questions**: [GitHub Discussions](https://github.com/AnjanJ/rails_error_dashboard/discussions)
 - **Security issues**: See [SECURITY.md](https://github.com/AnjanJ/rails_error_dashboard/blob/main/SECURITY.md)

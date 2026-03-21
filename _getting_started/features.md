@@ -43,7 +43,7 @@ Core features that are always enabled - no configuration needed:
 **🆕 v0.2 Configurable**
 - Custom Fingerprint Lambda, Notification Throttling (severity filter, cooldown, threshold alerts)
 
-All optional features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](guides/CONFIGURATION.md) for setup.
+All optional features are disabled by default and can be toggled on/off at any time. See [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) for setup.
 
 ---
 
@@ -1528,4 +1528,4 @@ For detailed information about what each feature does and when to use it, see th
 
 ---
 
-**📚 [Back to Documentation →](README.md)**
+**📚 [Back to Documentation →](/rails_error_dashboard/docs/documentation/)**

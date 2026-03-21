@@ -420,7 +420,7 @@ Planned features for future versions:
 ## Related Documentation
 
 - [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md) - Overall gem documentation
-- [Notifications](NOTIFICATIONS.md) - Notification setup
+- [Notifications](/rails_error_dashboard/docs/guides/notifications/) - Notification setup
 
 ---
 

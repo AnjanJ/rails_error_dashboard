@@ -482,6 +482,6 @@ A: Yes, set `config.max_backtrace_lines = 10000` (or any very high number).
 
 ## Additional Resources
 
-- [Database Optimization Guide](DATABASE_OPTIMIZATION.md)
+- [Database Optimization Guide](/rails_error_dashboard/docs/guides/database-optimization/)
 - [Performance Tuning Guide](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#performance)
 - [Configuration Options](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#configuration)

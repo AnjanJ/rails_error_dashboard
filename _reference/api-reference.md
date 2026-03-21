@@ -72,7 +72,7 @@ end
 
 ## Error Logging
 
-While the gem doesn't provide built-in HTTP endpoints for error logging (to allow customization), you can easily create them in your application. See [Mobile App Integration Guide](guides/MOBILE_APP_INTEGRATION.md) for complete examples.
+While the gem doesn't provide built-in HTTP endpoints for error logging (to allow customization), you can easily create them in your application. See [Mobile App Integration Guide](/rails_error_dashboard/docs/guides/mobile-app-integration/) for complete examples.
 
 ### Example: Creating a Custom Error Logging Endpoint
 
@@ -489,7 +489,7 @@ curl -u admin:password \
   https://your-app.com/error_dashboard/settings
 ```
 
-**Note:** This endpoint returns HTML by default (web UI). For programmatic access to configuration, use the Ruby API (`RailsErrorDashboard.configuration`) instead. See [Settings Dashboard Guide](guides/SETTINGS.md) for details.
+**Note:** This endpoint returns HTML by default (web UI). For programmatic access to configuration, use the Ruby API (`RailsErrorDashboard.configuration`) instead. See [Settings Dashboard Guide](/rails_error_dashboard/docs/guides/settings/) for details.
 
 ### Swallowed Exceptions (v0.4.0)
 

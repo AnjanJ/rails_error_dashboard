@@ -835,7 +835,7 @@ correlation.platform_specific_errors
 
 ## Further Reading
 
-- [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Finding related errors
-- [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Statistical anomaly detection
-- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - Platform health analysis
-- [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Temporal pattern detection
+- [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) - Finding related errors
+- [Baseline Monitoring Guide](/rails_error_dashboard/docs/features/baseline-monitoring/) - Statistical anomaly detection
+- [Platform Comparison Guide](/rails_error_dashboard/docs/features/platform-comparison/) - Platform health analysis
+- [Occurrence Patterns Guide](/rails_error_dashboard/docs/features/occurrence-patterns/) - Temporal pattern detection

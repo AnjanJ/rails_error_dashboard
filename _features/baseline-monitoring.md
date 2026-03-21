@@ -679,7 +679,7 @@ throttler.record_alert(
 
 ## Further Reading
 
-- [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Fuzzy matching and cascades
-- [Platform Comparison Guide](PLATFORM_COMPARISON.md) - iOS vs Android analysis
-- [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Cyclical and burst patterns
-- [Error Correlation Guide](ERROR_CORRELATION.md) - Release and user correlation
+- [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) - Fuzzy matching and cascades
+- [Platform Comparison Guide](/rails_error_dashboard/docs/features/platform-comparison/) - iOS vs Android analysis
+- [Occurrence Patterns Guide](/rails_error_dashboard/docs/features/occurrence-patterns/) - Cyclical and burst patterns
+- [Error Correlation Guide](/rails_error_dashboard/docs/features/error-correlation/) - Release and user correlation

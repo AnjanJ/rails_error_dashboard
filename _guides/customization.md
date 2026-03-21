@@ -373,7 +373,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-See [Database Options Guide](guides/DATABASE_OPTIONS.md) for details.
+See [Database Options Guide](/rails_error_dashboard/docs/guides/database-options/) for details.
 
 ### Custom Retention Policy
 
@@ -504,7 +504,7 @@ module RailsErrorDashboard
 end
 ```
 
-See [Plugin System Guide](PLUGIN_SYSTEM.md) for details.
+See [Plugin System Guide](/rails_error_dashboard/docs/features/plugin-system/) for details.
 
 ## Configuration Reference
 
@@ -634,11 +634,11 @@ end
 
 ## Further Reading
 
-- [Configuration Guide](guides/CONFIGURATION.md) - Complete reference
-- [Plugin System](PLUGIN_SYSTEM.md) - Build custom plugins
-- [API Reference](API_REFERENCE.md) - Full API documentation
-- [Database Options](guides/DATABASE_OPTIONS.md) - Separate database setup
+- [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) - Complete reference
+- [Plugin System](/rails_error_dashboard/docs/features/plugin-system/) - Build custom plugins
+- [API Reference](/rails_error_dashboard/docs/reference/api-reference/) - Full API documentation
+- [Database Options](/rails_error_dashboard/docs/guides/database-options/) - Separate database setup
 
 ---
 
-**Questions?** Check the [documentation](README.md) or [open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues).
+**Questions?** Check the [documentation](/rails_error_dashboard/docs/documentation/) or [open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues).

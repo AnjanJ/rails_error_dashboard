@@ -461,7 +461,7 @@ end
 config.dashboard_base_url = ENV['DASHBOARD_BASE_URL']  # e.g., "https://yourapp.com"
 ```
 
-See [Notifications Guide](NOTIFICATIONS.md) for detailed setup instructions.
+See [Notifications Guide](/rails_error_dashboard/docs/guides/notifications/) for detailed setup instructions.
 
 ---
 
@@ -507,7 +507,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-Requires additional database configuration. See [Database Options Guide](DATABASE_OPTIONS.md) for setup instructions.
+Requires additional database configuration. See [Database Options Guide](/rails_error_dashboard/docs/guides/database-options/) for setup instructions.
 
 ---
 
@@ -1890,7 +1890,7 @@ end
    config.retention_days = 30  # Auto-cleanup old errors
    ```
 
-See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
+See [Database Optimization Guide](/rails_error_dashboard/docs/guides/database-optimization/) for more.
 
 ### Authentication Not Working
 

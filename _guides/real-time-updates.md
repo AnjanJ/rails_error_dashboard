@@ -386,7 +386,7 @@ Turbo automatically chooses the best transport:
 
 **High-Volume Apps (1000s of errors/minute):**
 - Consider throttling broadcasts
-- Use sampling (see [ERROR_SAMPLING_AND_FILTERING.md](ERROR_SAMPLING_AND_FILTERING.md))
+- Use sampling (see [ERROR_SAMPLING_AND_FILTERING.md](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/))
 - Monitor WebSocket connections
 
 ### Database Impact
@@ -478,7 +478,7 @@ end
 ```
 
 If slow, check:
-- Database indexes (see [DATABASE_OPTIMIZATION.md](DATABASE_OPTIMIZATION.md))
+- Database indexes (see [DATABASE_OPTIMIZATION.md](/rails_error_dashboard/docs/guides/database-optimization/))
 - Number of errors in database
 
 **Check 2: Partial Rendering**
@@ -720,8 +720,8 @@ Dashboard continues to function normally with manual refresh.
 
 - [Turbo Handbook](https://turbo.hotwired.dev/)
 - [Turbo Streams Reference](https://turbo.hotwired.dev/handbook/streams)
-- [Error Sampling & Filtering](ERROR_SAMPLING_AND_FILTERING.md)
-- [Database Optimization](DATABASE_OPTIMIZATION.md)
+- [Error Sampling & Filtering](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/)
+- [Database Optimization](/rails_error_dashboard/docs/guides/database-optimization/)
 - [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md)
 
 ---
@@ -737,6 +737,6 @@ Dashboard continues to function normally with manual refresh.
 ✅ **Production ready** - All 545 tests passing
 
 **Related Features:**
-- [Error Trend Visualizations](ERROR_TREND_VISUALIZATIONS.md) - Charts for 7-day trends
+- [Error Trend Visualizations](/rails_error_dashboard/docs/guides/error-trend-visualizations/) - Charts for 7-day trends
 - [Baseline Monitoring](/rails_error_dashboard/docs/features/baseline-monitoring/) - Spike detection and alerts
 - [Analytics](/rails_error_dashboard/docs/features/#analytics--insights) - Complete analytics features

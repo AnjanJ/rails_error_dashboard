@@ -712,7 +712,7 @@ Android: "NoMethodError: undefined method `name`"  # Note: ` vs '
 
 ## Further Reading
 
-- [Advanced Error Grouping Guide](ADVANCED_ERROR_GROUPING.md) - Fuzzy matching across platforms
-- [Baseline Monitoring Guide](BASELINE_MONITORING.md) - Platform-specific baselines
-- [Occurrence Patterns Guide](OCCURRENCE_PATTERNS.md) - Platform-specific patterns
-- [Error Correlation Guide](ERROR_CORRELATION.md) - Platform correlation analysis
+- [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) - Fuzzy matching across platforms
+- [Baseline Monitoring Guide](/rails_error_dashboard/docs/features/baseline-monitoring/) - Platform-specific baselines
+- [Occurrence Patterns Guide](/rails_error_dashboard/docs/features/occurrence-patterns/) - Platform-specific patterns
+- [Error Correlation Guide](/rails_error_dashboard/docs/features/error-correlation/) - Platform correlation analysis

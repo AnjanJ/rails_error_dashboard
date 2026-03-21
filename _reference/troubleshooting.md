@@ -831,7 +831,7 @@ RailsErrorDashboard.configuration.enable_source_code_integration
    # => /Users/you/myapp
    ```
 
-**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#troubleshooting) for 10+ specific scenarios and solutions.
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](/rails_error_dashboard/docs/features/source-code-integration/#troubleshooting) for 10+ specific scenarios and solutions.
 
 ---
 
@@ -874,7 +874,7 @@ git --version
    git blame -L 42,42 --porcelain app/controllers/users_controller.rb
    ```
 
-**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#git-blame-not-working)
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](/rails_error_dashboard/docs/features/source-code-integration/#git-blame-not-working)
 
 ---
 
@@ -916,7 +916,7 @@ RailsErrorDashboard.configuration.git_repository_url
    "git@github.com:user/repo.git"      # Use HTTPS format
    ```
 
-**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#repository-links-not-generating)
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](/rails_error_dashboard/docs/features/source-code-integration/#repository-links-not-generating)
 
 ---
 
@@ -1032,7 +1032,7 @@ end
 ### Complete Troubleshooting Guide
 
 For comprehensive troubleshooting with 10+ scenarios, solutions, and examples, see:
-**[Source Code Integration Documentation - Troubleshooting Section](SOURCE_CODE_INTEGRATION.md#troubleshooting)**
+**[Source Code Integration Documentation - Troubleshooting Section](/rails_error_dashboard/docs/features/source-code-integration/#troubleshooting)**
 
 Includes solutions for:
 - File not found errors
@@ -1278,10 +1278,10 @@ If you've tried the solutions above and still have issues:
 
 ## Related Documentation
 
-- **[Configuration Guide](guides/CONFIGURATION.md)** - All configuration options
-- **[Settings Dashboard](guides/SETTINGS.md)** - Verify current configuration
-- **[API Reference](API_REFERENCE.md)** - API endpoints and Ruby API
-- **[QUICKSTART](QUICKSTART.md)** - Installation and setup
+- **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - All configuration options
+- **[Settings Dashboard](/rails_error_dashboard/docs/guides/settings/)** - Verify current configuration
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - API endpoints and Ruby API
+- **[QUICKSTART](/rails_error_dashboard/docs/quickstart/)** - Installation and setup
 
 ---
 

@@ -189,7 +189,7 @@ end
 config.authenticate_with = -> { warden.authenticated? }
 ```
 
-> **Note:** Devise helpers like `current_user` are not available in the engine controller context. Use `warden` directly instead. See the [Configuration Guide](guides/CONFIGURATION.md#custom-authentication) for details and examples.
+> **Note:** Devise helpers like `current_user` are not available in the engine controller context. Use `warden` directly instead. See the [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/#custom-authentication) for details and examples.
 
 You can enable or disable any feature at any time by editing this file. Just change `true` to `false` (or vice versa) and restart your Rails server.
 
@@ -255,7 +255,7 @@ config.enable_similar_errors = true
 config.enable_platform_comparison = true
 ```
 
-See the [Complete Configuration Guide](guides/CONFIGURATION.md) for all configuration options.
+See the [Complete Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) for all configuration options.
 
 ## Common Tasks
 
@@ -283,10 +283,10 @@ Use the sidebar filters:
 
 Now that you have the basics working:
 
-1. **Set up notifications**: [Notifications Guide](guides/NOTIFICATIONS.md)
-2. **Customize severity**: [Customization Guide](CUSTOMIZATION.md)
-3. **Enable advanced features**: [Baseline Monitoring](features/BASELINE_MONITORING.md)
-4. **Build integrations**: [Plugin System](PLUGIN_SYSTEM.md)
+1. **Set up notifications**: [Notifications Guide](/rails_error_dashboard/docs/guides/notifications/)
+2. **Customize severity**: [Customization Guide](/rails_error_dashboard/docs/guides/customization/)
+3. **Enable advanced features**: [Baseline Monitoring](/rails_error_dashboard/docs/features/baseline-monitoring/)
+4. **Build integrations**: [Plugin System](/rails_error_dashboard/docs/features/plugin-system/)
 
 ## Troubleshooting
 
@@ -416,18 +416,18 @@ Before deploying to production:
 
 ## Getting Help
 
-- **Documentation**: [docs/README.md](README.md)
+- **Documentation**: [docs/README.md](/rails_error_dashboard/docs/documentation/)
 - **Issues**: [GitHub Issues](https://github.com/AnjanJ/rails_error_dashboard/issues)
-- **Configuration**: [Configuration Guide](guides/CONFIGURATION.md)
+- **Configuration**: [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)
 
 ## What's Next?
 
 Explore advanced features:
 
-- **[Baseline Monitoring](features/BASELINE_MONITORING.md)** - Proactive anomaly detection
-- **[Platform Comparison](features/PLATFORM_COMPARISON.md)** - iOS vs Android health
-- **[Error Correlation](features/ERROR_CORRELATION.md)** - Track errors by version
-- **[Plugin System](PLUGIN_SYSTEM.md)** - Build custom integrations
+- **[Baseline Monitoring](/rails_error_dashboard/docs/features/baseline-monitoring/)** - Proactive anomaly detection
+- **[Platform Comparison](/rails_error_dashboard/docs/features/platform-comparison/)** - iOS vs Android health
+- **[Error Correlation](/rails_error_dashboard/docs/features/error-correlation/)** - Track errors by version
+- **[Plugin System](/rails_error_dashboard/docs/features/plugin-system/)** - Build custom integrations
 
 ---
 

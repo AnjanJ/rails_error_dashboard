@@ -380,7 +380,7 @@ Run `echo $OPTION` in your shell to see actual environment value.
 **Solution for custom auth (403)**:
 1. Verify your `authenticate_with` lambda returns truthy for authorized users
 2. Check logs for `[RailsErrorDashboard] authenticate_with lambda raised` — this means the lambda is erroring
-3. Use `warden` instead of `current_user` — Devise helpers are not available in the engine controller (see [Custom Authentication](CONFIGURATION.md#custom-authentication))
+3. Use `warden` instead of `current_user` — Devise helpers are not available in the engine controller (see [Custom Authentication](/rails_error_dashboard/docs/guides/configuration/#custom-authentication))
 
 ---
 
@@ -410,9 +410,9 @@ config.retention_days  # => 90
 
 ## Related Documentation
 
-- **[Configuration Guide](CONFIGURATION.md)** - Complete configuration options
-- **[Configuration Defaults Reference](CONFIGURATION.md#configuration-defaults-reference)** - All defaults in one table
-- **[Troubleshooting](CONFIGURATION.md#troubleshooting)** - Configuration-related issues
+- **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration options
+- **[Configuration Defaults Reference](/rails_error_dashboard/docs/guides/configuration/#configuration-defaults-reference)** - All defaults in one table
+- **[Troubleshooting](/rails_error_dashboard/docs/guides/configuration/#troubleshooting)** - Configuration-related issues
 
 ---
 

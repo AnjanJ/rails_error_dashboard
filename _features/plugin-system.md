@@ -1004,8 +1004,8 @@ If plugins slow down error logging:
 ## Related Documentation
 
 - [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md) - Overall gem documentation
-- [Notifications](guides/NOTIFICATIONS.md) - Built-in notification backends
-- [Batch Operations](guides/BATCH_OPERATIONS.md) - Batch operations
+- [Notifications](/rails_error_dashboard/docs/guides/notifications/) - Built-in notification backends
+- [Batch Operations](/rails_error_dashboard/docs/guides/batch-operations/) - Batch operations
 
 ---
 

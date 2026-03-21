@@ -451,10 +451,10 @@ Yet Another JIT compiler — Ruby's built-in JIT (Ruby 3.1+). `RubyVM::YJIT.runt
 
 ## Additional Resources
 
-- **[Configuration Guide](guides/CONFIGURATION.md)** - Complete configuration reference
-- **[Features Documentation](FEATURES.md)** - All feature details
-- **[API Reference](API_REFERENCE.md)** - API endpoint documentation
-- **[Plugin System](PLUGIN_SYSTEM.md)** - Building custom plugins
+- **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration reference
+- **[Features Documentation](/rails_error_dashboard/docs/features/)** - All feature details
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - API endpoint documentation
+- **[Plugin System](/rails_error_dashboard/docs/features/plugin-system/)** - Building custom plugins
 
 ---
 
