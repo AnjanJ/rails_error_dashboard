@@ -35,7 +35,10 @@ Core features that are always enabled - no configuration needed:
 - Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page
 
 **🔬 Deep Debugging (6 features)** — v0.4.0
-- Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture, ActionCable Connection Monitoring
+- Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture
+
+**📡 Real-Time Monitoring (2 features)** — v0.5.0+
+- ActionCable Connection Monitoring, Deep Runtime Insights (file descriptors, system load, system memory, TCP connections, GC context)
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes
@@ -572,12 +575,17 @@ When debugging errors, you need to know **what the app's runtime state was at th
 Each error's detail page shows a System Health card with:
 
 - **GC Stats** — Heap live/free slots, major GC count, total allocated objects
-- **Process Memory** — RSS in MB (Linux procfs only, returns nil on macOS)
+- **GC Context** — Last major/minor GC counts, trigger reason, current GC state
+- **Process Memory** — RSS in MB, peak RSS, swap usage, OS thread count (Linux procfs, returns nil on macOS)
 - **Thread Count** — Number of active threads
 - **Connection Pool** — Size, busy, idle, dead, and waiting connections (with color-coded warnings)
 - **Puma Stats** — Running/max threads, pool capacity, backlog (when Puma is the server)
 - **RubyVM Cache Health** — Constant cache invalidations, class serial, global state from `RubyVM.stat` (when available)
 - **YJIT Runtime Stats** — Compiled ISEQs, code region size, inline/outlined bytes from `RubyVM::YJIT.runtime_stats` (when YJIT is enabled)
+- **File Descriptors** — Open count vs ulimit with utilization % (color-coded danger indicator)
+- **System Load** — 1/5/15 minute load averages, CPU count, load ratio (color-coded)
+- **System Memory** — Total, available, used %, swap used (color-coded)
+- **TCP Connections** — Established, close_wait, time_wait, listen counts (color-coded)
 
 ### Configuration
 
@@ -597,7 +605,7 @@ System health snapshots are designed with host app safety as the top priority:
 - **No ObjectSpace** — Never calls `ObjectSpace.each_object` or `ObjectSpace.count_objects` (heap scan)
 - **No Thread backtraces** — Only `Thread.list.count` (O(1)), never `.map(&:backtrace)` (GVL hold)
 - **No subprocess** — Process memory uses Linux procfs only, no `ps`, no fork, no backtick
-- **No new gems** — Uses only Ruby stdlib and ActiveRecord
+- **No new gems** — Uses only Ruby stdlib (`Etc`) and ActiveRecord
 - **No global state** — No Thread.current, no mutex, no memoization
 
 ### Async Logging Compatibility

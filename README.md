@@ -22,7 +22,7 @@ gem 'rails_error_dashboard'
 
 **[rails-error-dashboard.anjan.dev](https://rails-error-dashboard.anjan.dev)** — Username: `gandalf` · Password: `youshallnotpass`
 
-> **Beta Software** — Functional and tested (2,600+ tests passing), but the API may change before v1.0. Supports Rails 7.0-8.1 and Ruby 3.2-4.0.
+> **Beta Software** — Functional and tested (2,700+ tests passing), but the API may change before v1.0. Supports Rails 7.0-8.1 and Ruby 3.2-4.0.
 
 ### Screenshots
 
@@ -87,12 +87,13 @@ config.enable_breadcrumbs = true
 <details>
 <summary><strong>System Health Snapshot</strong></summary>
 
-Know your app's runtime state at the moment of failure — GC stats, process memory, thread count, connection pool utilization, Puma thread stats, RubyVM cache health, and YJIT compilation stats captured automatically.
+Know your app's runtime state at the moment of failure — GC stats, process memory, thread count, connection pool utilization, Puma thread stats, RubyVM cache health, YJIT compilation stats, and deep runtime insights captured automatically.
 
 - Sub-millisecond total snapshot, every metric individually rescue-wrapped
 - No ObjectSpace scanning, no Thread backtraces, no subprocess calls
 - RubyVM.stat: constant cache invalidations, shape cache stats
 - YJIT runtime stats: compiled iseqs, invalidation count, code region sizes
+- **v0.5.2** — File descriptor utilization, system load averages, system memory pressure, TCP connection states, GC context (trigger reason, last major/minor), process swap and peak RSS — all with color-coded danger indicators
 
 ```ruby
 config.enable_system_health = true

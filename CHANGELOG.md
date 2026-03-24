@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.2] - 2026-03-25
+
+### Added
+- **Deep runtime insights in system health snapshot** — 6 new metric groups captured at error time, all from Linux procfs reads and Ruby APIs (zero subprocess calls, <1ms budget). Color-coded danger indicators in sidebar view:
+  - Process memory: swap_mb, rss_peak_mb, os_threads (from same `/proc/self/status` read — zero additional I/O)
+  - File descriptors: open count vs ulimit with utilization %
+  - System load: 1/5/15m averages, CPU count, load ratio
+  - System memory: total/available/used%, swap used
+  - GC context: last major/minor, trigger reason, current state
+  - TCP connections: established/close_wait/time_wait/listen counts
+
+### Fixed
+- **Migration duplication on generator re-run (#93)** — Re-running `rails generate rails_error_dashboard:install` after upgrade no longer duplicates migrations into wrong directory. Generator detects existing initializer config, checks both `db/migrate/` and `db/error_dashboard_migrate/`, and preserves existing configuration (@gmarziou)
 
 ---
 
