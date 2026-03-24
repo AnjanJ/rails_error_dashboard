@@ -440,7 +440,7 @@ Built with [Rails](https://rubyonrails.org/) · UI by [Bootstrap 5](https://getb
 
 [![Contributors](https://contrib.rocks/image?repo=AnjanJ/rails_error_dashboard)](https://github.com/AnjanJ/rails_error_dashboard/graphs/contributors)
 
-Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), and [@RafaelTurtle](https://github.com/RafaelTurtle). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
+Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), [@RafaelTurtle](https://github.com/RafaelTurtle), and [@j4rs](https://github.com/j4rs). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
 
 ---
 

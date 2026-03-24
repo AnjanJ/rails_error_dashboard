@@ -49,6 +49,21 @@ module ModalHelpers
     find("form[action*='/unsnooze'] button[type='submit']").click
   end
 
+  # Open the Mute modal, optionally fill in name and reason, and submit
+  def mute_error(muted_by: nil, reason: nil)
+    find("[data-bs-target='#muteModal']").click
+    within_modal("muteModal") do
+      fill_in "muted_by", with: muted_by if muted_by
+      fill_in "reason", with: reason if reason
+      find("input[type='submit'][value='Mute Notifications']").click
+    end
+  end
+
+  # Click the Unmute button (no modal, direct button_to form)
+  def unmute_error
+    find("form[action*='/unmute'] button[type='submit']").click
+  end
+
   # Open the Resolve modal, fill in details, and submit
   def resolve_error(name:, comment: nil, reference: nil)
     find("[data-bs-target='#resolveModal']").click

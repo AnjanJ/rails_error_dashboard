@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Mute/unmute errors for notification suppression** — Muted errors still appear in the dashboard but skip all notifications (Slack, email, Discord, PagerDuty, webhooks). Includes mute/unmute buttons on error detail page, batch mute/unmute, "Hide muted" filter, and bell-slash icon in error list (#92) @j4rs
+
 ### Changed
 - **Migrated docs site to Jekyll VitePress Theme** — Replaced jekyll-theme-hacker with [jekyll-vitepress-theme](https://jekyll-vitepress.dev/) by [@crmne](https://github.com/crmne). New docs feature sidebar navigation, dark/light mode, full-text search (`/` or `Ctrl+K`), code copy buttons, edit-on-GitHub links, and previous/next page navigation. Docs reorganized into collections (Getting Started, Guides, Features, Reference)
+- **Refactored notification dispatch in LogError** — Extracted `maybe_notify` helper to consolidate mute check + throttle check in a single place (#92) @j4rs
 
 ---
 

@@ -158,6 +158,71 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    context 'with muted error and notifications enabled' do
+      before do
+        allow(RailsErrorDashboard.configuration).to receive(:enable_slack_notifications).and_return(true)
+        allow(RailsErrorDashboard.configuration).to receive(:slack_webhook_url).and_return('https://hooks.slack.com/test')
+        allow(RailsErrorDashboard.configuration).to receive(:enable_email_notifications).and_return(true)
+        allow(RailsErrorDashboard.configuration).to receive(:notification_email_recipients).and_return([ 'dev@example.com' ])
+      end
+
+      it 'does not enqueue notification jobs for muted recurring errors' do
+        # First occurrence — creates the error and fires notifications
+        error_log = described_class.call(exception, context)
+        expect(error_log).to be_persisted
+
+        # Mute the error
+        error_log.update!(muted: true, muted_at: Time.current, muted_by: "gandalf")
+
+        # Clear enqueued jobs from first occurrence
+        clear_enqueued_jobs
+
+        # Second occurrence — same exception, should NOT fire notifications
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'does not enqueue email notification jobs for muted recurring errors' do
+        error_log = described_class.call(exception, context)
+        error_log.update!(muted: true, muted_at: Time.current)
+        clear_enqueued_jobs
+
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::EmailErrorNotificationJob)
+      end
+
+      it 'still creates the error occurrence when muted' do
+        error_log = described_class.call(exception, context)
+        error_log.update!(muted: true, muted_at: Time.current)
+        initial_count = error_log.occurrence_count
+
+        described_class.call(exception, context)
+
+        expect(error_log.reload.occurrence_count).to be > initial_count
+      end
+
+      it 'resumes notifications after unmuting' do
+        error_log = described_class.call(exception, context)
+        error_log.update!(muted: true, muted_at: Time.current)
+        clear_enqueued_jobs
+
+        # While muted — no notification
+        described_class.call(exception, context)
+        expect(RailsErrorDashboard::SlackErrorNotificationJob).not_to have_been_enqueued
+
+        # Unmute and resolve so next occurrence triggers reopened notification
+        error_log.update!(muted: false, muted_at: nil, resolved: true, resolved_at: Time.current)
+        clear_enqueued_jobs
+
+        # Next occurrence reopens — should notify again
+        expect {
+          described_class.call(exception, context)
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+    end
+
     context 'backtrace_locations pass-through' do
       it 'passes backtrace_locations to BacktraceProcessor.calculate_signature' do
         expect(RailsErrorDashboard::Services::BacktraceProcessor).to receive(:calculate_signature)

@@ -58,6 +58,18 @@ RSpec.describe "Error Workflow", type: :system do
       expect(page).not_to have_css(".alert-warning", text: "Snoozed")
       expect(page).to have_css("[data-bs-target='#snoozeModal']")
 
+      # Step 6b: Mute notifications with reason
+      mute_error(muted_by: "gandalf", reason: "Known scanner noise")
+      wait_for_page_load
+      expect(page).to have_content("Muted")
+      expect(page).to have_content("Known scanner noise")
+
+      # Step 6c: Unmute notifications
+      unmute_error
+      wait_for_page_load
+      expect(page).not_to have_css(".alert-secondary", text: "Muted")
+      expect(page).to have_css("[data-bs-target='#muteModal']")
+
       # Step 7: Assign again → status auto-changes to "In Progress"
       assign_error_to("gandalf")
       wait_for_page_load

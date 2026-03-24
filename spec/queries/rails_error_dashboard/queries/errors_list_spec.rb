@@ -208,6 +208,42 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
       end
     end
 
+    describe "filtering by muted status" do
+      let!(:muted_error) { create(:error_log, occurred_at: 30.minutes.ago).tap { |e| e.update!(muted: true, muted_at: Time.current) } }
+
+      it "includes muted errors by default" do
+        result = described_class.call
+
+        expect(result).to include(muted_error)
+      end
+
+      it "excludes muted errors with hide_muted string '1'" do
+        result = described_class.call(hide_muted: "1")
+
+        expect(result).not_to include(muted_error)
+        expect(result).to include(error1, error2, error3)
+      end
+
+      it "excludes muted errors with hide_muted boolean true" do
+        result = described_class.call(hide_muted: true)
+
+        expect(result).not_to include(muted_error)
+      end
+
+      it "includes muted errors when hide_muted is '0'" do
+        result = described_class.call(hide_muted: "0")
+
+        expect(result).to include(muted_error)
+      end
+
+      it "combines hide_muted with other filters" do
+        result = described_class.call(hide_muted: "1", error_type: "NoMethodError")
+
+        expect(result).not_to include(muted_error)
+        expect(result).to include(error1, error3)
+      end
+    end
+
     describe "with empty filters hash" do
       it "returns only unresolved errors by default" do
         result = described_class.call({})

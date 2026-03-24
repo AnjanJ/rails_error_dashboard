@@ -48,6 +48,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Jorge Rodriguez ([@j4rs](https://github.com/j4rs))
+
+- ✨ [#92](https://github.com/AnjanJ/rails_error_dashboard/pull/92) - Added mute/unmute feature for notification suppression — muted errors still appear in the dashboard but skip all notifications (Slack, email, Discord, PagerDuty, webhooks). Includes batch mute/unmute, "Hide muted" filter, bell-slash icon in error list, and a clean `maybe_notify` refactor in LogError
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -118,8 +124,8 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 5 (including maintainer)
-**External Contributors:** 4
+**Total Contributors:** 6 (including maintainer)
+**External Contributors:** 5
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
@@ -151,6 +157,7 @@ When you contribute to Rails Error Dashboard, you get:
 
 ### ✨ Feature Creators
 - [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
+- [@j4rs](https://github.com/j4rs) - Mute/unmute notification suppression
 
 ---
 
@@ -166,4 +173,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: March 8, 2026*
+*This page is updated with each release. Last updated: March 24, 2026*
