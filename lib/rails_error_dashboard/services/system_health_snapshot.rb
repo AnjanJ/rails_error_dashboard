@@ -36,6 +36,7 @@ module RailsErrorDashboard
           job_queue: job_queue_stats,
           ruby_vm: ruby_vm_stats,
           yjit: yjit_stats,
+          actioncable: actioncable_stats,
           captured_at: Time.current.iso8601
         }
       end
@@ -150,6 +151,18 @@ module RailsErrorDashboard
       def ruby_vm_stats
         return nil unless defined?(RubyVM) && RubyVM.respond_to?(:stat)
         RubyVM.stat
+      rescue => e
+        nil
+      end
+
+      # ActionCable connection stats — read-only, <0.1ms
+      def actioncable_stats
+        return nil unless defined?(ActionCable) && defined?(ActionCable::Server)
+        server = ActionCable.server
+        {
+          connections: server.connections.count,
+          adapter: server.pubsub&.class&.name&.demodulize
+        }
       rescue => e
         nil
       end

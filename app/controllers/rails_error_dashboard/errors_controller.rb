@@ -409,6 +409,27 @@ module RailsErrorDashboard
       @pagy, @events = pagy(:offset, all_events, limit: params[:per_page] || 25)
     end
 
+    def actioncable_health_summary
+      unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
+             RailsErrorDashboard.configuration.enable_breadcrumbs
+        flash[:alert] = "ActionCable tracking is not enabled. Enable enable_actioncable_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+        redirect_to errors_path
+        return
+      end
+
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::ActionCableSummary.call(days, application_id: @current_application_id)
+      all_channels = result[:channels]
+
+      # Summary stats (computed before pagination)
+      @unique_channels = all_channels.size
+      @total_events = all_channels.sum { |c| c[:total_events] }
+      @total_rejections = all_channels.sum { |c| c[:rejection_count] }
+
+      @pagy, @channels = pagy(:offset, all_channels, limit: params[:per_page] || 25)
+    end
+
     def diagnostic_dumps
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
         flash[:alert] = "Diagnostic dumps are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"

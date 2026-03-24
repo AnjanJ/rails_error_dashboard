@@ -77,6 +77,13 @@ module RailsErrorDashboard
         RailsErrorDashboard::Subscribers::RackAttackSubscriber.subscribe!
       end
 
+      # Subscribe to ActionCable AS::Notifications events (requires breadcrumbs + ActionCable)
+      if RailsErrorDashboard.configuration.enable_actioncable_tracking &&
+         RailsErrorDashboard.configuration.enable_breadcrumbs &&
+         defined?(ActionCable)
+        RailsErrorDashboard::Subscribers::ActionCableSubscriber.subscribe!
+      end
+
       # Enable TracePoint(:raise) for local variable and/or instance variable capture
       if RailsErrorDashboard.configuration.enable_local_variables ||
          RailsErrorDashboard.configuration.enable_instance_variables

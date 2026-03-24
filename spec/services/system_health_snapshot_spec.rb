@@ -335,6 +335,49 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
       end
     end
 
+    describe ":actioncable" do
+      it "returns nil when ActionCable is not defined" do
+        # ActionCable may or may not be defined in test env
+        # If not defined, should return nil
+        if defined?(ActionCable)
+          # If it IS defined, stub server to test behavior
+          server = double("ActionCable::Server", connections: [], pubsub: nil)
+          allow(ActionCable).to receive(:server).and_return(server)
+          ac = snapshot[:actioncable]
+          expect(ac).to be_a(Hash)
+          expect(ac[:connections]).to eq(0)
+        else
+          expect(snapshot[:actioncable]).to be_nil
+        end
+      end
+
+      it "captures connection count and adapter when ActionCable is available" do
+        pubsub = double("ActionCable::SubscriptionAdapter::Async")
+        allow(pubsub).to receive(:class).and_return(ActionCable::SubscriptionAdapter::Async) if defined?(ActionCable::SubscriptionAdapter::Async)
+        allow(pubsub).to receive_message_chain(:class, :name).and_return("ActionCable::SubscriptionAdapter::Async")
+
+        server = double("ActionCable::Server", connections: [ 1, 2, 3 ], pubsub: pubsub)
+        stub_const("ActionCable", Module.new) unless defined?(ActionCable)
+        stub_const("ActionCable::Server", Class.new) unless defined?(ActionCable::Server)
+        allow(ActionCable).to receive(:server).and_return(server)
+
+        result = described_class.capture
+        ac = result[:actioncable]
+        expect(ac).to be_a(Hash)
+        expect(ac[:connections]).to eq(3)
+        expect(ac[:adapter]).to eq("Async")
+      end
+
+      it "returns nil when server raises" do
+        stub_const("ActionCable", Module.new) unless defined?(ActionCable)
+        stub_const("ActionCable::Server", Class.new) unless defined?(ActionCable::Server)
+        allow(ActionCable).to receive(:server).and_raise(RuntimeError, "not configured")
+
+        result = described_class.capture
+        expect(result[:actioncable]).to be_nil
+      end
+    end
+
     it "does NOT call any subprocess or backtick" do
       # Verify no Kernel#` or system calls
       expect(Kernel).not_to receive(:`)

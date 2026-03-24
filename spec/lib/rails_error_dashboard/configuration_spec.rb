@@ -450,4 +450,22 @@ RSpec.describe RailsErrorDashboard::Configuration do
       expect(config.effective_total_users).to eq(2000)
     end
   end
+
+  describe "actioncable tracking validation" do
+    it "auto-disables when breadcrumbs are off" do
+      config.enable_actioncable_tracking = true
+      config.enable_breadcrumbs = false
+      config.validate!
+
+      expect(config.enable_actioncable_tracking).to be false
+    end
+
+    it "stays enabled when breadcrumbs are on" do
+      config.enable_actioncable_tracking = true
+      config.enable_breadcrumbs = true
+      config.validate!
+
+      expect(config.enable_actioncable_tracking).to be true
+    end
+  end
 end

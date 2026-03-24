@@ -158,6 +158,9 @@ module RailsErrorDashboard
     # Rack Attack event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
 
+    # ActionCable event tracking (requires enable_breadcrumbs = true)
+    attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -300,6 +303,9 @@ module RailsErrorDashboard
       # Rack Attack event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_rack_attack_tracking = false
 
+      # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
+      @enable_actioncable_tracking = false
+
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
@@ -438,6 +444,13 @@ module RailsErrorDashboard
         warnings << "enable_rack_attack_tracking requires enable_breadcrumbs = true. " \
                     "Rack Attack tracking has been auto-disabled."
         @enable_rack_attack_tracking = false
+      end
+
+      # Validate actioncable tracking requires breadcrumbs
+      if enable_actioncable_tracking && !enable_breadcrumbs
+        warnings << "enable_actioncable_tracking requires enable_breadcrumbs = true. " \
+                    "ActionCable tracking has been auto-disabled."
+        @enable_actioncable_tracking = false
       end
 
       # Validate crash capture path (must exist if custom path specified)
