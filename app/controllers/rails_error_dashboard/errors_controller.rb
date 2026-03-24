@@ -19,6 +19,7 @@ module RailsErrorDashboard
       assignee_name
       priority_level
       hide_snoozed
+      hide_muted
       reopened
       sort_by
       sort_direction
@@ -121,6 +122,16 @@ module RailsErrorDashboard
       redirect_to error_path(@error)
     end
 
+    def mute
+      @error = Commands::MuteError.call(params[:id], muted_by: params[:muted_by], reason: params[:reason])
+      redirect_to error_path(@error)
+    end
+
+    def unmute
+      @error = Commands::UnmuteError.call(params[:id])
+      redirect_to error_path(@error)
+    end
+
     def update_status
       result = Commands::UpdateErrorStatus.call(params[:id], status: params[:status], comment: params[:comment])
       redirect_to error_path(result[:error])
@@ -200,6 +211,10 @@ module RailsErrorDashboard
           resolved_by_name: params[:resolved_by_name],
           resolution_comment: params[:resolution_comment]
         )
+      when "mute"
+        Commands::BatchMuteErrors.call(error_ids, muted_by: params[:muted_by])
+      when "unmute"
+        Commands::BatchUnmuteErrors.call(error_ids)
       when "delete"
         Commands::BatchDeleteErrors.call(error_ids)
       else

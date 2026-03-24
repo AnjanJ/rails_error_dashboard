@@ -90,6 +90,9 @@
     <% if error.reopened? %>
       <i class="bi bi-arrow-counterclockwise text-warning ms-1" data-bs-toggle="tooltip" title="Reopened"></i>
     <% end %>
+    <% if error.respond_to?(:muted?) && error.muted? %>
+      <i class="bi bi-bell-slash text-secondary ms-1" data-bs-toggle="tooltip" title="Muted - notifications silenced"></i>
+    <% end %>
   </td>
   <td onclick="event.stopPropagation();">
     <%= link_to error_path(error), class: "btn btn-sm btn-outline-primary" do %>

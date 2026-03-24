@@ -137,3 +137,38 @@
     </div>
   </div>
 </div>
+
+<!-- Mute Notifications Modal -->
+<div class="modal fade" id="muteModal" tabindex="-1" aria-labelledby="muteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <%= form_with url: mute_error_path(error), method: :post do |f| %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="muteModalLabel">
+            <i class="bi bi-bell-slash"></i> Mute Notifications
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">
+            Muted errors still appear in the dashboard but will not trigger any notifications
+            (Slack, email, Discord, PagerDuty, webhooks).
+          </p>
+          <div class="mb-3">
+            <label for="muted_by" class="form-label">Your Name (Optional)</label>
+            <%= text_field_tag :muted_by, nil, class: "form-control", placeholder: "e.g., John Doe" %>
+          </div>
+          <div class="mb-3">
+            <label for="reason" class="form-label">Reason (Optional)</label>
+            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: "Why are you muting this error?" %>
+            <small class="text-muted">Reason will be added as a comment</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= submit_tag "Mute Notifications", class: "btn btn-secondary", data: { action: "click->loading#click" } %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -15,6 +15,8 @@ RailsErrorDashboard::Engine.routes.draw do
       post :update_priority
       post :snooze
       post :unsnooze
+      post :mute
+      post :unmute
       post :update_status
       post :add_comment
     end

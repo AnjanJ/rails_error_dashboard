@@ -39,6 +39,7 @@ module RailsErrorDashboard
         query = filter_by_assignment(query)
         query = filter_by_priority(query)
         query = filter_by_snoozed(query)
+        query = filter_by_muted(query)
         query = filter_by_reopened(query)
         query
       end
@@ -191,6 +192,16 @@ module RailsErrorDashboard
         # If hide_snoozed is checked, exclude snoozed errors
         if @filters[:hide_snoozed] == "1" || @filters[:hide_snoozed] == true
           query.active
+        else
+          query
+        end
+      end
+
+      def filter_by_muted(query)
+        return query unless ErrorLog.column_names.include?("muted")
+
+        if @filters[:hide_muted] == "1" || @filters[:hide_muted] == true
+          query.unmuted
         else
           query
         end

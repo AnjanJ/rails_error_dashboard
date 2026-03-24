@@ -28,10 +28,15 @@
         <% end %>
       </h2>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
       <button type="button" class="btn btn-outline-secondary" onclick="downloadErrorJSON(event)" title="Download error details as JSON">
         <i class="bi bi-download"></i> Export JSON
       </button>
+      <% if @error.respond_to?(:muted?) && @error.muted? %>
+        <button type="button" class="btn btn-secondary" disabled>
+          <i class="bi bi-bell-slash"></i> Muted
+        </button>
+      <% end %>
       <% if @error.resolved? %>
         <span class="badge bg-success fs-6">
           <i class="bi bi-check-circle"></i> Resolved

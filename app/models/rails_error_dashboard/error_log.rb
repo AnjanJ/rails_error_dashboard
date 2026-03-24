@@ -71,6 +71,8 @@ module RailsErrorDashboard
     scope :unassigned, -> { where(assigned_to: nil) }
     scope :by_assignee, ->(name) { where(assigned_to: name) }
     scope :by_priority, ->(level) { where(priority_level: level) }
+    scope :muted, -> { where(muted: true) }
+    scope :unmuted, -> { where(muted: false) }
 
     # Set defaults and tracking
     before_validation :set_defaults, on: :create
@@ -158,6 +160,20 @@ module RailsErrorDashboard
     # Snooze query
     def snoozed?
       snoozed_until.present? && snoozed_until >= Time.current
+    end
+
+    # Mute query — checks column existence for backward compatibility
+    def muted?
+      self.class.column_names.include?("muted") && muted == true
+    end
+
+    # Mute/unmute convenience methods — delegate to Commands
+    def mute!(mute_data = {})
+      Commands::MuteError.call(id, **mute_data)
+    end
+
+    def unmute!
+      Commands::UnmuteError.call(id)
     end
 
     # Priority methods

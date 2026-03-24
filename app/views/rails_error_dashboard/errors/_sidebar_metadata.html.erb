@@ -172,6 +172,35 @@
             </div>
           <% end %>
 
+          <!-- Mute Notifications -->
+          <% if error.respond_to?(:muted?) %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1">Notifications</small>
+              <% if error.muted? %>
+                <div class="alert alert-secondary py-2 mb-2">
+                  <i class="bi bi-bell-slash"></i>
+                  <strong>Muted</strong><br>
+                  <% if error.muted_by.present? %>
+                    <small>By <%= error.muted_by %></small><br>
+                  <% end %>
+                  <% if error.muted_reason.present? %>
+                    <small><em><%= error.muted_reason %></em></small><br>
+                  <% end %>
+                  <% if error.muted_at.present? %>
+                    <small>Since <%= local_time(error.muted_at, format: :short) %></small>
+                  <% end %>
+                </div>
+                <%= button_to unmute_error_path(error), method: :post, class: "btn btn-sm btn-outline-primary" do %>
+                  <i class="bi bi-bell"></i> Unmute
+                <% end %>
+              <% else %>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#muteModal">
+                  <i class="bi bi-bell-slash"></i> Mute
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+
           <% if error.resolved? && error.resolved_by_name.present? %>
             <div class="mb-3">
               <small class="metadata-label d-block mb-1">Resolved By</small>

@@ -266,31 +266,20 @@ module RailsErrorDashboard
           end
         end
 
-        # Send notifications for new errors and reopened errors (with throttling)
+        # Send notifications for new errors and reopened errors (with throttling).
+        # Muted errors skip notification dispatch but still fire plugin events.
         if error_log.occurrence_count == 1
-          # Brand new error — notify if severity meets minimum
-          if Services::NotificationThrottler.severity_meets_minimum?(error_log)
-            Services::ErrorNotificationDispatcher.call(error_log)
-            Services::NotificationThrottler.record_notification(error_log)
-          end
+          maybe_notify(error_log) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
           PluginRegistry.dispatch(:on_error_logged, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         elsif error_log.just_reopened
-          # Reopened error — notify if meets severity + not in cooldown
-          if Services::NotificationThrottler.should_notify?(error_log)
-            Services::ErrorNotificationDispatcher.call(error_log)
-            Services::NotificationThrottler.record_notification(error_log)
-          end
+          maybe_notify(error_log) { Services::NotificationThrottler.should_notify?(error_log) }
           PluginRegistry.dispatch(:on_error_reopened, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         else
-          # Recurring unresolved error — check threshold milestones
-          if Services::NotificationThrottler.threshold_reached?(error_log)
-            Services::ErrorNotificationDispatcher.call(error_log)
-            Services::NotificationThrottler.record_notification(error_log)
-          end
+          maybe_notify(error_log) { Services::NotificationThrottler.threshold_reached?(error_log) }
           PluginRegistry.dispatch(:on_error_recurred, error_log)
         end
 
@@ -309,6 +298,16 @@ module RailsErrorDashboard
       end
 
       private
+
+      # Dispatch notification if error is not muted and the throttle check passes.
+      # Muted errors skip notifications but still fire plugin events/callbacks.
+      def maybe_notify(error_log)
+        return if error_log.muted?
+        return unless yield
+
+        Services::ErrorNotificationDispatcher.call(error_log)
+        Services::NotificationThrottler.record_notification(error_log)
+      end
 
       # Find or create application for multi-app support
       def find_or_create_application
@@ -369,8 +368,9 @@ module RailsErrorDashboard
       def check_baseline_anomaly(error_log)
         config = RailsErrorDashboard.configuration
 
-        # Return early if baseline alerts are disabled
+        # Return early if baseline alerts are disabled or error is muted
         return unless config.enable_baseline_alerts
+        return if error_log.muted?
         return unless defined?(Queries::BaselineStats)
         return unless defined?(BaselineAlertJob)
 

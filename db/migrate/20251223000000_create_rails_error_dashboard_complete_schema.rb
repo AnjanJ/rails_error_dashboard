@@ -95,6 +95,12 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       # Instance variable capture (from 20260306000002)
       t.text :instance_variables
 
+      # Mute notifications (from 20260323000001)
+      t.boolean :muted, default: false, null: false
+      t.datetime :muted_at
+      t.string :muted_by
+      t.string :muted_reason
+
       t.timestamps
     end
 
@@ -132,6 +138,9 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
     add_index :rails_error_dashboard_error_logs, :application_id
     add_index :rails_error_dashboard_error_logs, [ :application_id, :occurred_at ], name: "index_error_logs_on_app_occurred"
     add_index :rails_error_dashboard_error_logs, [ :application_id, :resolved ], name: "index_error_logs_on_app_resolved"
+
+    # Mute index (from 20260323000001)
+    add_index :rails_error_dashboard_error_logs, :muted
 
     # Workflow indexes (from 20251229111223)
     add_index :rails_error_dashboard_error_logs, [ :assigned_to, :status, :occurred_at ], name: "index_error_logs_on_assignment_workflow"

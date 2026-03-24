@@ -108,6 +108,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_07_000001) do
     t.datetime "assigned_at"
     t.datetime "snoozed_until"
     t.integer "priority_level", default: 0
+    t.boolean "muted", default: false, null: false
+    t.datetime "muted_at"
+    t.string "muted_by"
+    t.string "muted_reason"
     t.integer "application_id", null: false
     t.text "exception_cause"
     t.string "http_method", limit: 10

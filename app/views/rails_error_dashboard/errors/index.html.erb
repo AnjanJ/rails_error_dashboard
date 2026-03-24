@@ -360,6 +360,13 @@
                 <%= label_tag :hide_snoozed, "Hide snoozed", class: "form-check-label" %>
               </div>
             </div>
+
+            <div class="col-auto">
+              <div class="form-check">
+                <%= check_box_tag :hide_muted, "1", params[:hide_muted] == "1", class: "form-check-input" %>
+                <%= label_tag :hide_muted, "Hide muted", class: "form-check-label" %>
+              </div>
+            </div>
           </div>
         </div>
 
