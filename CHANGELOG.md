@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-03-25
+
+### Fixed
+- **Docker build crash with default credentials check** — `assets:precompile` runs in production mode with `SECRET_KEY_BASE_DUMMY=1` but without runtime ENV vars, causing `ConfigurationError`. Now skips credential validation when `SECRET_KEY_BASE_DUMMY` is set
+
+---
+
 ## [0.5.3] - 2026-03-25
 
 ### Added
