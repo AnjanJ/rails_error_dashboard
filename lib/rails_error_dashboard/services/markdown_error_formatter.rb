@@ -202,17 +202,103 @@ module RailsErrorDashboard
         return nil unless health.is_a?(Hash) && health.any?
 
         items = []
-        items << "- **Memory:** #{health["process_memory_mb"]} MB RSS" if health["process_memory_mb"]
-        items << "- **Threads:** #{health["thread_count"]}" if health["thread_count"]
 
-        pool = health["connection_pool"]
-        if pool.is_a?(Hash)
-          items << "- **DB Pool:** #{pool["busy"]}/#{pool["size"]} busy" if pool["size"]
+        # Process memory
+        mem = health["process_memory"]
+        if mem.is_a?(Hash)
+          parts = []
+          parts << "#{mem["rss_mb"]} MB RSS" if mem["rss_mb"]
+          parts << "peak #{mem["rss_peak_mb"]} MB" if mem["rss_peak_mb"]
+          parts << "swap #{mem["swap_mb"]} MB" if mem["swap_mb"] && mem["swap_mb"] > 0
+          parts << "#{mem["os_threads"]} OS threads" if mem["os_threads"]
+          items << "- **Memory:** #{parts.join(", ")}" if parts.any?
+        elsif health["process_memory_mb"]
+          items << "- **Memory:** #{health["process_memory_mb"]} MB RSS"
         end
 
-        gc = health["gc_stats"]
+        items << "- **Threads:** #{health["thread_count"]}" if health["thread_count"]
+
+        # DB connection pool
+        pool = health["connection_pool"]
+        if pool.is_a?(Hash) && pool["size"]
+          pool_parts = [ "#{pool["busy"]}/#{pool["size"]} busy" ]
+          pool_parts << "#{pool["dead"]} dead" if pool["dead"].to_i > 0
+          pool_parts << "#{pool["waiting"]} waiting" if pool["waiting"].to_i > 0
+          items << "- **DB Pool:** #{pool_parts.join(", ")}"
+        end
+
+        # GC stats
+        gc = health["gc"] || health["gc_stats"]
         if gc.is_a?(Hash)
-          items << "- **GC:** #{gc["major_gc_count"]} major cycles" if gc["major_gc_count"]
+          gc_parts = []
+          gc_parts << "#{gc["major_gc_count"]} major" if gc["major_gc_count"]
+          gc_parts << "#{gc["heap_live_slots"]} live slots" if gc["heap_live_slots"]
+          gc_parts << "#{gc["total_allocated_objects"]} total allocated" if gc["total_allocated_objects"]
+          items << "- **GC:** #{gc_parts.join(", ")}" if gc_parts.any?
+        end
+
+        # GC latest
+        gc_latest = health["gc_latest"]
+        if gc_latest.is_a?(Hash)
+          latest_parts = []
+          latest_parts << "triggered by #{gc_latest["gc_by"]}" if gc_latest["gc_by"]
+          latest_parts << "state: #{gc_latest["state"]}" if gc_latest["state"]
+          items << "- **Last GC:** #{latest_parts.join(", ")}" if latest_parts.any?
+        end
+
+        # Puma
+        puma = health["puma"]
+        if puma.is_a?(Hash) && puma["max_threads"]
+          items << "- **Puma:** #{puma["running"]}/#{puma["max_threads"]} threads, backlog #{puma["backlog"]}"
+        end
+
+        # Job queue
+        job = health["job_queue"]
+        if job.is_a?(Hash) && job["adapter"]
+          items << "- **Job Queue:** #{job["adapter"]} — #{job["failed"]} failed, #{job["queued"]} queued"
+        end
+
+        # File descriptors
+        fd = health["file_descriptors"]
+        if fd.is_a?(Hash) && fd["open"]
+          items << "- **File Descriptors:** #{fd["open"]}/#{fd["limit"]} (#{fd["utilization_pct"]}%)"
+        end
+
+        # System load
+        load = health["system_load"]
+        if load.is_a?(Hash) && load["load_1m"]
+          items << "- **System Load:** #{load["load_1m"]}/#{load["load_5m"]}/#{load["load_15m"]} (#{load["cpu_count"]} CPUs)"
+        end
+
+        # System memory
+        sys_mem = health["system_memory"]
+        if sys_mem.is_a?(Hash) && sys_mem["total_mb"]
+          items << "- **System Memory:** #{sys_mem["available_mb"]}/#{sys_mem["total_mb"]} MB available (#{sys_mem["used_pct"]}% used)"
+        end
+
+        # TCP connections
+        tcp = health["tcp_connections"]
+        if tcp.is_a?(Hash) && tcp.values.any? { |v| v.to_i > 0 }
+          tcp_parts = tcp.map { |state, count| "#{state}: #{count}" if count.to_i > 0 }.compact
+          items << "- **TCP:** #{tcp_parts.join(", ")}"
+        end
+
+        # RubyVM
+        vm = health["ruby_vm"]
+        if vm.is_a?(Hash) && vm.any?
+          items << "- **RubyVM:** #{vm.map { |k, v| "#{k}: #{v}" }.join(", ")}"
+        end
+
+        # YJIT
+        yjit = health["yjit"]
+        if yjit.is_a?(Hash) && yjit.any?
+          items << "- **YJIT:** #{yjit.map { |k, v| "#{k}: #{v}" }.join(", ")}"
+        end
+
+        # ActionCable
+        ac = health["actioncable"]
+        if ac.is_a?(Hash) && ac["connections"]
+          items << "- **ActionCable:** #{ac["connections"]} connections (#{ac["adapter"]})"
         end
 
         return nil if items.empty?

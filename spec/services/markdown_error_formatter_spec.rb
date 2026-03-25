@@ -287,16 +287,55 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
     context "system health" do
       it "includes memory and thread info" do
         health = {
-          "process_memory_mb" => 245,
+          "process_memory" => { "rss_mb" => 245.2, "rss_peak_mb" => 310.0, "swap_mb" => 0, "os_threads" => 14 },
+          "process_memory_mb" => 245.2,
           "thread_count" => 12,
-          "gc_stats" => { "major_gc_count" => 42 },
-          "connection_pool" => { "size" => 10, "busy" => 3 }
+          "gc" => { "major_gc_count" => 42, "heap_live_slots" => 500_000, "total_allocated_objects" => 2_000_000 },
+          "connection_pool" => { "size" => 10, "busy" => 3, "dead" => 0, "waiting" => 0 }
         }.to_json
 
         result = described_class.call(make_error(system_health: health))
         expect(result).to include("## System Health")
-        expect(result).to include("245")
+        expect(result).to include("245.2 MB RSS")
+        expect(result).to include("peak 310.0 MB")
         expect(result).to include("12")
+        expect(result).to include("42 major")
+        expect(result).to include("500000 live slots")
+        expect(result).to include("3/10 busy")
+      end
+
+      it "includes file descriptors, system load, and TCP connections" do
+        health = {
+          "file_descriptors" => { "open" => 42, "limit" => 1024, "utilization_pct" => 4.1 },
+          "system_load" => { "load_1m" => 2.5, "load_5m" => 1.8, "load_15m" => 1.2, "cpu_count" => 4 },
+          "tcp_connections" => { "established" => 15, "close_wait" => 2, "time_wait" => 0, "listen" => 3 }
+        }.to_json
+
+        result = described_class.call(make_error(system_health: health))
+        expect(result).to include("42/1024")
+        expect(result).to include("2.5/1.8/1.2")
+        expect(result).to include("4 CPUs")
+        expect(result).to include("established: 15")
+        expect(result).to include("close_wait: 2")
+      end
+
+      it "includes GC latest, Puma, and YJIT stats" do
+        health = {
+          "gc_latest" => { "gc_by" => "newobj", "state" => "none" },
+          "puma" => { "running" => 3, "max_threads" => 5, "backlog" => 0 },
+          "yjit" => { "compiled_iseq_count" => 1500, "invalidation_count" => 3 }
+        }.to_json
+
+        result = described_class.call(make_error(system_health: health))
+        expect(result).to include("triggered by newobj")
+        expect(result).to include("3/5 threads")
+        expect(result).to include("compiled_iseq_count: 1500")
+      end
+
+      it "falls back to process_memory_mb when process_memory hash is absent" do
+        health = { "process_memory_mb" => 128.5 }.to_json
+        result = described_class.call(make_error(system_health: health))
+        expect(result).to include("128.5 MB RSS")
       end
     end
 
