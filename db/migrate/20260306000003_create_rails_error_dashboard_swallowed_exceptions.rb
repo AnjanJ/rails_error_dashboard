@@ -3,9 +3,9 @@
 class CreateRailsErrorDashboardSwallowedExceptions < ActiveRecord::Migration[7.0]
   def change
     create_table :rails_error_dashboard_swallowed_exceptions do |t|
-      t.string   :exception_class,  null: false
-      t.string   :raise_location,   null: false, limit: 500
-      t.string   :rescue_location,  limit: 500
+      t.string   :exception_class,  null: false, limit: 250
+      t.string   :raise_location,   null: false, limit: 250
+      t.string   :rescue_location,  limit: 250
       t.datetime :period_hour,      null: false
       t.integer  :raise_count,      null: false, default: 0
       t.integer  :rescue_count,     null: false, default: 0

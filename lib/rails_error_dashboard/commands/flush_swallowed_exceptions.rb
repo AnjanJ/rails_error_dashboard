@@ -52,8 +52,8 @@ module RailsErrorDashboard
 
       def upsert_raise(class_name, location, period, app_id, count)
         record = SwallowedException.find_or_initialize_by(
-          exception_class: truncate(class_name, 255),
-          raise_location: truncate(location, 500),
+          exception_class: truncate(class_name, 250),
+          raise_location: truncate(location, 250),
           rescue_location: nil,
           period_hour: period,
           application_id: app_id
@@ -70,9 +70,9 @@ module RailsErrorDashboard
 
       def upsert_rescue(class_name, raise_loc, rescue_loc, period, app_id, count)
         record = SwallowedException.find_or_initialize_by(
-          exception_class: truncate(class_name, 255),
-          raise_location: truncate(raise_loc, 500),
-          rescue_location: rescue_loc.present? ? truncate(rescue_loc, 500) : nil,
+          exception_class: truncate(class_name, 250),
+          raise_location: truncate(raise_loc, 250),
+          rescue_location: rescue_loc.present? ? truncate(rescue_loc, 250) : nil,
           period_hour: period,
           application_id: app_id
         )
