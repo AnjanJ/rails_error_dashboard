@@ -333,8 +333,10 @@ module RailsErrorDashboard
       warnings = []
 
       # Block boot with default or blank credentials in production
+      # Skip during asset precompilation (SECRET_KEY_BASE_DUMMY=1) — ENV vars aren't available at build time
       if default_credentials? &&
-         defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
+         defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production? &&
+         ENV["SECRET_KEY_BASE_DUMMY"].blank?
         errors << "Default or blank credentials cannot be used in production. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
       end
 

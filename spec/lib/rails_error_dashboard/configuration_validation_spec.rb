@@ -858,5 +858,13 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
 
       expect { config.validate! }.not_to raise_error
     end
+
+    it "does not raise in production during asset precompilation (SECRET_KEY_BASE_DUMMY)" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
+
+      expect { config.validate! }.not_to raise_error
+    end
   end
 end
