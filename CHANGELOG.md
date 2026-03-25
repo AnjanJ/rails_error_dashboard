@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-03-25
+
+### Fixed
+- **Copy for LLM rendered literal `\n` instead of newlines** — The `j` (escape_javascript) helper in the view escaped newlines for HTML attribute safety, but the clipboard received literal `\n` text. Now unescapes before copying so markdown renders correctly in editors and LLMs
+- **Copy for LLM crashed on related errors** — `related_errors` returns plain `ErrorLog` objects, not wrapped objects with `.similarity`/`.error` accessors. Now handles both formats gracefully
+- **Instance variable `_self_class` rendered as raw hash** — When `_self_class` is stored as a serialized hash (`{"type":"String","value":"QuestService"}`), the formatter now extracts the value correctly instead of dumping the hash
+
+---
+
 ## [0.5.5] - 2026-03-25
 
 ### Fixed
