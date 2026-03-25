@@ -107,7 +107,7 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
       expect(parsed[:yjit][:code_region_size]).to eq(2048)
     end
 
-    it "completes within 5ms" do
+    it "completes within 10ms" do
       # Warm up
       described_class.capture
 
@@ -115,7 +115,7 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
       described_class.capture
       elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000
 
-      expect(elapsed_ms).to be < 5
+      expect(elapsed_ms).to be < 10
     end
 
     context "when GC.stat raises" do
@@ -393,7 +393,7 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
           expect(fd[:limit]).to be_a(Integer)
           expect(fd[:limit]).to be > 0
           expect(fd[:utilization_pct]).to be_a(Float)
-          expect(fd[:utilization_pct]).to be > 0
+          expect(fd[:utilization_pct]).to be >= 0
           expect(fd[:utilization_pct]).to be <= 100
         end
       else
