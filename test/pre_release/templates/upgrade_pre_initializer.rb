@@ -4,8 +4,8 @@
 # Only uses config options that exist in the published gem version.
 RailsErrorDashboard.configure do |config|
   # Authentication
-  config.dashboard_username = "gandalf"
-  config.dashboard_password = "youshallnotpass"
+  config.dashboard_username = "chaos_test_admin"
+  config.dashboard_password = "chaos_test_secret_42"
 
   # Synchronous logging
   config.async_logging = false

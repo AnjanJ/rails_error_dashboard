@@ -6,8 +6,8 @@
 # serialization/deserialization round-trip through the :solid_queue adapter path.
 RailsErrorDashboard.configure do |config|
   # Authentication
-  config.dashboard_username = "gandalf"
-  config.dashboard_password = "youshallnotpass"
+  config.dashboard_username = "chaos_test_admin"
+  config.dashboard_password = "chaos_test_secret_42"
 
   # Async logging via SolidQueue adapter
   # ActiveJob queue_adapter set to :async in separate initializer (thread pool)

@@ -18,8 +18,8 @@ PreReleaseTestHarness.header("CHAOS TEST PHASE D: HTTP DASHBOARD ENDPOINT VERIFI
 
 # Configuration — read from environment or use defaults
 HTTP_PORT = ENV.fetch("PORT", "3000")
-HTTP_USER = ENV.fetch("DASHBOARD_USER", "gandalf")
-HTTP_PASS = ENV.fetch("DASHBOARD_PASS", "youshallnotpass")
+HTTP_USER = ENV.fetch("DASHBOARD_USER", "chaos_test_admin")
+HTTP_PASS = ENV.fetch("DASHBOARD_PASS", "chaos_test_secret_42")
 MOUNT_PATH = ENV.fetch("MOUNT_PATH", "/error_dashboard")
 HTTP_BASE = "http://localhost:#{HTTP_PORT}#{MOUNT_PATH}"
 

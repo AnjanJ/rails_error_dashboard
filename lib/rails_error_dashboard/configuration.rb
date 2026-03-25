@@ -332,6 +332,12 @@ module RailsErrorDashboard
       errors = []
       warnings = []
 
+      # Block boot with default or blank credentials in production
+      if default_credentials? &&
+         defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production?
+        errors << "Default or blank credentials cannot be used in production. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
+      end
+
       # Validate sampling_rate (must be between 0.0 and 1.0)
       if sampling_rate && (sampling_rate < 0.0 || sampling_rate > 1.0)
         errors << "sampling_rate must be between 0.0 and 1.0 (got: #{sampling_rate})"
@@ -527,6 +533,18 @@ module RailsErrorDashboard
       raise ConfigurationError, errors if errors.any?
 
       true
+    end
+
+    # Check if using default or blank demo credentials with basic auth
+    #
+    # @return [Boolean] true if basic auth is active with default gandalf/youshallnotpass or blank credentials
+    def default_credentials?
+      return false unless authenticate_with.nil?
+
+      default = dashboard_username == "gandalf" && dashboard_password == "youshallnotpass"
+      blank = dashboard_username.to_s.strip.empty? || dashboard_password.to_s.strip.empty?
+
+      default || blank
     end
 
     # Get the effective user model (auto-detected if not configured)

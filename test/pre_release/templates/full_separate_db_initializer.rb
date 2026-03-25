@@ -3,8 +3,8 @@
 # Pre-release test v2: ALL features enabled, sync, SEPARATE database
 RailsErrorDashboard.configure do |config|
   # Authentication
-  config.dashboard_username = "gandalf"
-  config.dashboard_password = "youshallnotpass"
+  config.dashboard_username = "chaos_test_admin"
+  config.dashboard_password = "chaos_test_secret_42"
 
   # Separate database
   config.use_separate_database = true

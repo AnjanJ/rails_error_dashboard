@@ -156,7 +156,7 @@ install_gem() {
   shift 2
 
   log_step "Running generator..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
 
   log_step "Applying initializer template: $(basename "$initializer_file")"
   cp "$initializer_file" "$app_dir/config/initializers/rails_error_dashboard.rb"
@@ -544,7 +544,7 @@ YAML
 
   # Run generator with separate-database flag
   log_step "Running generator with --separate-database..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
 
   # Apply initializer
   log_step "Applying initializer template: full_separate_db_initializer.rb"

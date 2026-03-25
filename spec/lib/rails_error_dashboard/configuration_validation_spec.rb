@@ -766,4 +766,97 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       expect(error.message).to include("2. second")
     end
   end
+
+  describe "#default_credentials?" do
+    it "returns true with default gandalf credentials and no authenticate_with" do
+      expect(config.default_credentials?).to be true
+    end
+
+    it "returns false when username is changed" do
+      config.dashboard_username = "admin"
+      expect(config.default_credentials?).to be false
+    end
+
+    it "returns false when password is changed" do
+      config.dashboard_password = "secure_password_123"
+      expect(config.default_credentials?).to be false
+    end
+
+    it "returns false when authenticate_with is set" do
+      config.authenticate_with = -> { true }
+      expect(config.default_credentials?).to be false
+    end
+
+    it "returns true when username is blank" do
+      config.dashboard_username = ""
+      config.dashboard_password = "something"
+      expect(config.default_credentials?).to be true
+    end
+
+    it "returns true when password is blank" do
+      config.dashboard_username = "admin"
+      config.dashboard_password = ""
+      expect(config.default_credentials?).to be true
+    end
+
+    it "returns true when username is nil" do
+      config.dashboard_username = nil
+      expect(config.default_credentials?).to be true
+    end
+
+    it "returns true when credentials are whitespace-only" do
+      config.dashboard_username = "  "
+      config.dashboard_password = "  "
+      expect(config.default_credentials?).to be true
+    end
+
+    it "returns false with blank credentials when authenticate_with is set" do
+      config.dashboard_username = ""
+      config.authenticate_with = -> { true }
+      expect(config.default_credentials?).to be false
+    end
+  end
+
+  describe "default credentials in production" do
+    it "raises ConfigurationError in production with default credentials" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /Default or blank credentials cannot be used in production/
+      )
+    end
+
+    it "raises ConfigurationError in production with blank credentials" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+      config.dashboard_username = ""
+      config.dashboard_password = ""
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /Default or blank credentials cannot be used in production/
+      )
+    end
+
+    it "does not raise in development with default credentials" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("development"))
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "does not raise in production with custom credentials" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = "secure_pass"
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "does not raise in production when authenticate_with is set" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+      config.authenticate_with = -> { true }
+
+      expect { config.validate! }.not_to raise_error
+    end
+  end
 end

@@ -4,6 +4,7 @@ module RailsErrorDashboard
   class ErrorsController < ApplicationController
     before_action :authenticate_dashboard_user!
     before_action :set_application_context
+    before_action :check_default_credentials
 
     FILTERABLE_PARAMS = %i[
       error_type
@@ -506,6 +507,10 @@ module RailsErrorDashboard
     def set_application_context
       @current_application_id = params[:application_id].presence
       @applications = Application.ordered_by_name.pluck(:name, :id)
+    end
+
+    def check_default_credentials
+      @default_credentials_warning = RailsErrorDashboard.configuration.default_credentials?
     end
 
     def authenticate_dashboard_user!

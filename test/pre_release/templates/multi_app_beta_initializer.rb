@@ -3,8 +3,8 @@
 # Pre-release test: Multi-app Beta — second app sharing a database
 RailsErrorDashboard.configure do |config|
   # Authentication
-  config.dashboard_username = "gandalf"
-  config.dashboard_password = "youshallnotpass"
+  config.dashboard_username = "chaos_test_admin"
+  config.dashboard_password = "chaos_test_secret_42"
 
   # Different application name — isolation is the whole point
   config.application_name = "MultiAppBeta"

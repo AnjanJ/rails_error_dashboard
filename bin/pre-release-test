@@ -190,7 +190,7 @@ install_gem() {
   shift 2
 
   log_step "Running generator..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive "$@" 2>&1 | grep -v "^$" | head -5)
 
   # Overwrite the initializer with our template
   log_step "Applying initializer template: $(basename "$initializer_file")"
@@ -594,7 +594,7 @@ YAML
 
   # Run generator with separate-database flag
   log_step "Running generator..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
 
   # Apply our initializer template
   log_step "Applying initializer template: full_separate_db_initializer.rb"
@@ -699,7 +699,7 @@ YAML
 
   # Run generator with separate-database flag
   log_step "Running generator for Alpha..."
-  (cd "$alpha_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+  (cd "$alpha_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
 
   # Apply Alpha initializer
   log_step "Applying Alpha initializer..."
@@ -779,7 +779,7 @@ YAML
 
   # Run generator (skip migrations — tables already exist from Alpha)
   log_step "Running generator for Beta..."
-  (cd "$beta_dir" && bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
+  (cd "$beta_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
 
   # Apply Beta initializer
   log_step "Applying Beta initializer..."
@@ -855,7 +855,7 @@ test_full_upgrade() {
 
   # Run generator
   log_step "Running v0.1.38 generator..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
 
   # Apply minimal initializer compatible with v0.1.38
   log_step "Applying v0.1.38 initializer..."
@@ -881,7 +881,7 @@ test_full_upgrade() {
 
   # Re-run generator to copy new migration files from v0.2.0
   log_step "Re-running generator to pick up new migrations..."
-  (cd "$app_dir" && bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
+  (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
 
   # Run new migrations
   log_step "Running v0.2.0 migrations..."

@@ -4,8 +4,8 @@
 # Purpose: catch interaction bugs when ALL options are active at once.
 RailsErrorDashboard.configure do |config|
   # Authentication
-  config.dashboard_username = "gandalf"
-  config.dashboard_password = "youshallnotpass"
+  config.dashboard_username = "chaos_test_admin"
+  config.dashboard_password = "chaos_test_secret_42"
 
   # Synchronous logging (kitchen sink tests config interactions, not async)
   config.async_logging = false
