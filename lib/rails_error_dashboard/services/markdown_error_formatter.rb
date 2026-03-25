@@ -246,17 +246,8 @@ module RailsErrorDashboard
           items << "- **Last GC:** #{latest_parts.join(", ")}" if latest_parts.any?
         end
 
-        # Puma
-        puma = health["puma"]
-        if puma.is_a?(Hash) && puma["max_threads"]
-          items << "- **Puma:** #{puma["running"]}/#{puma["max_threads"]} threads, backlog #{puma["backlog"]}"
-        end
-
-        # Job queue
-        job = health["job_queue"]
-        if job.is_a?(Hash) && job["adapter"]
-          items << "- **Job Queue:** #{job["adapter"]} — #{job["failed"]} failed, #{job["queued"]} queued"
-        end
+        # Note: Puma and job queue stats are omitted — they are server-wide metrics,
+        # not error-specific. The LLM can infer job context from the backtrace.
 
         # File descriptors
         fd = health["file_descriptors"]

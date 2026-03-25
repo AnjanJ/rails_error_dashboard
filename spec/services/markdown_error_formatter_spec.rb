@@ -330,28 +330,30 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
         expect(result).to include("close_wait: 2")
       end
 
-      it "includes GC latest and Puma stats" do
+      it "includes GC latest info" do
         health = {
-          "gc_latest" => { "gc_by" => "newobj", "state" => "none" },
-          "puma" => { "running" => 3, "max_threads" => 5, "backlog" => 0 }
+          "gc_latest" => { "gc_by" => "newobj", "state" => "none" }
         }.to_json
 
         result = described_class.call(make_error(system_health: health))
         expect(result).to include("triggered by newobj")
-        expect(result).to include("3/5 threads")
       end
 
-      it "omits RubyVM, YJIT, and ActionCable stats (process-wide, not error-specific)" do
+      it "omits process-wide stats not useful for LLM debugging" do
         health = {
           "ruby_vm" => { "constant_cache_invalidations" => 1000 },
           "yjit" => { "compiled_iseq_count" => 1500 },
-          "actioncable" => { "connections" => 5, "adapter" => "redis" }
+          "actioncable" => { "connections" => 5, "adapter" => "redis" },
+          "puma" => { "running" => 3, "max_threads" => 5, "backlog" => 0 },
+          "job_queue" => { "adapter" => "sidekiq", "failed" => 2, "queued" => 10 }
         }.to_json
 
         result = described_class.call(make_error(system_health: health))
         expect(result).not_to include("RubyVM")
         expect(result).not_to include("YJIT")
         expect(result).not_to include("ActionCable")
+        expect(result).not_to include("Puma")
+        expect(result).not_to include("Job Queue")
       end
 
       it "falls back to process_memory_mb when process_memory hash is absent" do
