@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: March 25, 2026 | Current version: v0.5.2
+> Last updated: March 25, 2026 | Current version: v0.5.3
 > Deep introspection analysis: [DEEP_INTROSPECTION_ANALYSIS.md](DEEP_INTROSPECTION_ANALYSIS.md)
 > Faultline comparison: [FAULTLINE_COMPARISON.md](FAULTLINE_COMPARISON.md)
 > Time-series strategy: [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)

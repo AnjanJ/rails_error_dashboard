@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-03-25
+
+### Added
+- **"Copy for LLM" button on error detail page (#94)** — One-click copy of error details as clean Markdown, optimized for pasting into an LLM session. Conditional sections: app backtrace (framework frames filtered), exception cause chain, local/instance variables, request context, breadcrumbs (last 10), environment, system health, related errors with similarity %, and metadata. Sensitive data stays `[FILTERED]` (@paul)
+- **Default credentials protection** — App refuses to boot in production with `gandalf/youshallnotpass` or blank credentials (raises `ConfigurationError`). Dashboard shows a reminder banner in all environments until credentials are changed. Adds `default_credentials?` helper to Configuration
+
+### Fixed
+- **MySQL index key too long on swallowed_exceptions (#96)** — Composite unique index totalled 5042 bytes under `utf8mb4`, exceeding MySQL's 3072-byte InnoDB limit. Reduced `exception_class`, `raise_location`, and `rescue_location` from 255/500/500 to 250/250/250 (3022 bytes total). Includes fix migration for existing installations (@gmarziou)
+- **Install generator matched config values inside comments** — The `detect_existing_config` regex for `use_separate_database` and `database` name could match commented-out lines, causing single-DB apps to be misidentified as separate-DB on upgrade. Both regexes now anchored with `^\s*` to skip comments
+
+---
+
 ## [0.5.2] - 2026-03-25
 
 ### Added

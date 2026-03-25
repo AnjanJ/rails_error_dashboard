@@ -31,8 +31,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (6 features)**
-- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page
+**🔍 Developer Tools (7 features)**
+- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page, Copy for LLM (Markdown export)
 
 **🔬 Deep Debugging (6 features)** — v0.4.0
 - Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture

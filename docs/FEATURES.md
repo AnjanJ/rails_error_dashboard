@@ -31,8 +31,8 @@ Core features that are always enabled - no configuration needed:
 **📊 Advanced Analytics (7 features)**
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
-**🔍 Developer Tools (6 features)**
-- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page
+**🔍 Developer Tools (7 features)**
+- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page, Copy for LLM (Markdown export)
 
 **🔬 Deep Debugging (6 features)** — v0.4.0
 - Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture
@@ -981,6 +981,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 - **Custom authentication** via `config.authenticate_with` lambda — use Devise, Warden, session-based, or any auth system
 - **Configurable credentials** via environment variables
 - **Fail-closed security** — lambda errors are rescued, logged, and result in 403 Forbidden
+- **Default credentials protection** — App refuses to boot in production with default (`gandalf/youshallnotpass`) or blank credentials. Dashboard shows a reminder banner in all environments until credentials are changed
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure

@@ -154,9 +154,9 @@ config.enable_git_blame = true
 </details>
 
 <details>
-<summary><strong>Error Replay — Copy as cURL / RSpec</strong></summary>
+<summary><strong>Error Replay — Copy as cURL / RSpec / LLM Markdown</strong></summary>
 
-Replay failing requests with one click. Copy the request as a cURL command or generate an RSpec test from the captured error context.
+Replay failing requests with one click. Copy the request as a cURL command, generate an RSpec test, or **copy all error details as clean Markdown** for pasting into an LLM session. The LLM export includes app backtrace, cause chain, local/instance variables, breadcrumbs, environment, system health, and related errors — with framework frames filtered and sensitive data preserved as `[FILTERED]`.
 
 [Complete documentation →](docs/FEATURES.md#error-details-page)
 </details>
