@@ -21,6 +21,7 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
       request_duration_ms: nil,
       ip_address: nil,
       user_agent: nil,
+      request_params: nil,
       severity: "high",
       priority_level: nil,
       status: "new",
@@ -202,6 +203,40 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
           request_duration_ms: 245
         ))
         expect(result).to include("245ms")
+      end
+
+      it "includes user agent when present" do
+        result = described_class.call(make_error(
+          request_url: "/users",
+          user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X)"
+        ))
+        expect(result).to include("Mozilla/5.0")
+      end
+
+      it "includes request params as formatted JSON" do
+        result = described_class.call(make_error(
+          request_url: "/users",
+          request_params: '{"name":"Gandalf","role":"wizard"}'
+        ))
+        expect(result).to include("**Request Params:**")
+        expect(result).to include('"name": "Gandalf"')
+        expect(result).to include('"role": "wizard"')
+      end
+
+      it "omits request params when nil" do
+        result = described_class.call(make_error(
+          request_url: "/users",
+          request_params: nil
+        ))
+        expect(result).not_to include("Request Params")
+      end
+
+      it "handles malformed request params JSON gracefully" do
+        result = described_class.call(make_error(
+          request_url: "/users",
+          request_params: "not json{"
+        ))
+        expect(result).not_to include("Request Params")
       end
     end
 

@@ -141,6 +141,12 @@ module RailsErrorDashboard
         items << "- **Content-Type:** #{@error.content_type}" if @error.content_type.present?
         items << "- **Duration:** #{@error.request_duration_ms}ms" if @error.request_duration_ms.present?
         items << "- **IP:** #{@error.ip_address}" if @error.ip_address.present?
+        items << "- **User-Agent:** #{@error.user_agent}" if @error.user_agent.present?
+
+        params = parse_json(@error.request_params) if @error.request_params.present?
+        if params.is_a?(Hash) && params.any?
+          items << "\n**Request Params:**\n```json\n#{JSON.pretty_generate(params)}\n```"
+        end
 
         "## Request Context\n\n#{items.join("\n")}"
       end
