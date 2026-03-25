@@ -32,6 +32,9 @@
       <button type="button" class="btn btn-outline-secondary" onclick="downloadErrorJSON(event)" title="Download error details as JSON">
         <i class="bi bi-download"></i> Export JSON
       </button>
+      <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard(this.dataset.markdown, this)" data-markdown="<%= j @error_markdown %>" title="Copy error details as Markdown for LLM debugging">
+        <i class="bi bi-clipboard"></i> Copy for LLM
+      </button>
       <% if @error.respond_to?(:muted?) && @error.muted? %>
         <button type="button" class="btn btn-secondary" disabled>
           <i class="bi bi-bell-slash"></i> Muted

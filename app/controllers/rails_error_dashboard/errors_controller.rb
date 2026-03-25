@@ -79,6 +79,7 @@ module RailsErrorDashboard
       # - parent_cascade_patterns/child_cascade_patterns: Used if cascade detection is enabled
       @error = ErrorLog.includes(:comments, :parent_cascade_patterns, :child_cascade_patterns).find(params[:id])
       @related_errors = @error.related_errors(limit: 5, application_id: @current_application_id)
+      @error_markdown = Services::MarkdownErrorFormatter.call(@error, related_errors: @related_errors)
 
       # Dispatch plugin event for error viewed
       RailsErrorDashboard::PluginRegistry.dispatch(:on_error_viewed, @error)
