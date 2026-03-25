@@ -141,7 +141,6 @@ module RailsErrorDashboard
         items << "- **Hostname:** #{@error.hostname}" if @error.hostname.present?
         items << "- **Content-Type:** #{@error.content_type}" if @error.content_type.present?
         items << "- **Duration:** #{@error.request_duration_ms}ms" if @error.request_duration_ms.present?
-        items << "- **IP:** #{@error.ip_address}" if @error.ip_address.present?
         items << "- **User-Agent:** #{@error.user_agent}" if @error.user_agent.present?
 
         params = parse_json(@error.request_params) if @error.request_params.present?
@@ -311,14 +310,12 @@ module RailsErrorDashboard
 
       def metadata_section
         items = []
-        items << "- **Severity:** #{@error.severity}" if @error.severity.present?
-        items << "- **Status:** #{@error.status}" if @error.status.present?
-        items << "- **Priority:** P#{3 - @error.priority_level}" if @error.priority_level.present?
         items << "- **Platform:** #{@error.platform}" if @error.platform.present?
         items << "- **First seen:** #{@error.first_seen_at&.utc&.strftime("%Y-%m-%d %H:%M:%S UTC")}" if @error.first_seen_at
         items << "- **Occurrences:** #{@error.occurrence_count}" if @error.occurrence_count
         items << "- **User ID:** #{@error.user_id}" if @error.user_id.present?
-        items << "- **Assigned to:** #{@error.assigned_to}" if @error.assigned_to.present?
+
+        return nil if items.empty?
 
         "## Metadata\n\n#{items.join("\n")}"
       end

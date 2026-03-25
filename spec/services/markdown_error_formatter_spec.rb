@@ -395,32 +395,28 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
     end
 
     context "metadata section" do
-      it "includes severity and status" do
-        result = described_class.call(make_error(severity: "critical", status: "investigating"))
+      it "includes platform and occurrence count" do
+        result = described_class.call(make_error(platform: "iOS", occurrence_count: 127))
         expect(result).to include("## Metadata")
-        expect(result).to include("critical")
-        expect(result).to include("investigating")
-      end
-
-      it "includes occurrence count" do
-        result = described_class.call(make_error(occurrence_count: 127))
+        expect(result).to include("iOS")
         expect(result).to include("127")
-      end
-
-      it "includes assigned_to when present" do
-        result = described_class.call(make_error(assigned_to: "alice"))
-        expect(result).to include("alice")
-      end
-
-      it "omits assigned_to when nil" do
-        result = described_class.call(make_error(assigned_to: nil))
-        expect(result).not_to include("Assigned")
       end
 
       it "includes user_id when present" do
         result = described_class.call(make_error(user_id: 42))
         expect(result).to include("User ID")
         expect(result).to include("42")
+      end
+
+      it "omits workflow fields (severity, status, priority, assigned_to)" do
+        result = described_class.call(make_error(
+          severity: "critical", status: "investigating",
+          priority_level: 2, assigned_to: "alice"
+        ))
+        expect(result).not_to include("Severity")
+        expect(result).not_to include("Status")
+        expect(result).not_to include("Priority")
+        expect(result).not_to include("Assigned")
       end
     end
 
