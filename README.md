@@ -131,10 +131,16 @@ Requires breadcrumbs to be enabled.
 
 ![Cache Health](docs/images/cache-health.png)
 
-**ActionCable Health** — Track WebSocket channel actions, transmissions, subscription confirmations, and rejections. Dashboard page at `/errors/actioncable_health_summary` with channel breakdown sorted by rejections. System health snapshot captures live connection count and adapter. No error tracker surfaces this alongside HTTP errors.
+**ActionCable Health** — Track WebSocket channel actions, transmissions, subscription confirmations, and rejections. Dashboard page at `/errors/actioncable_health_summary` with channel breakdown sorted by rejections. System health snapshot captures live connection count and adapter.
 
 ```ruby
 config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
+```
+
+**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors.
+
+```ruby
+config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true
 ```
 
 [Complete documentation →](docs/FEATURES.md#job-health-page)

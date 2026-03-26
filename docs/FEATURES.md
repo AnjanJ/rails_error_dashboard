@@ -37,8 +37,8 @@ Core features that are always enabled - no configuration needed:
 **🔬 Deep Debugging (6 features)** — v0.4.0
 - Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture
 
-**📡 Real-Time Monitoring (2 features)** — v0.5.0+
-- ActionCable Connection Monitoring, Deep Runtime Insights (file descriptors, system load, system memory, TCP connections, GC context)
+**📡 Real-Time Monitoring (3 features)** — v0.5.0+
+- ActionCable Connection Monitoring, ActiveStorage Service Health, Deep Runtime Insights (file descriptors, system load, system memory, TCP connections, GC context)
 
 **🆕 v0.2 Smart Defaults (Always ON)**
 - Exception Cause Chains, Enriched Context, Environment Info, Structured Backtrace, Sensitive Data Filtering, Auto-Reopen, CurrentAttributes Integration, BRIN Indexes

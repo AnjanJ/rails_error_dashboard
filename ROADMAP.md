@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: March 25, 2026 | Current version: v0.5.3
+> Last updated: March 26, 2026 | Current version: v0.5.7
 > Deep introspection analysis: [DEEP_INTROSPECTION_ANALYSIS.md](DEEP_INTROSPECTION_ANALYSIS.md)
 > Faultline comparison: [FAULTLINE_COMPARISON.md](FAULTLINE_COMPARISON.md)
 > Time-series strategy: [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)
@@ -16,9 +16,9 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (475 stars, min
 
 | Metric | rails_error_dashboard | solid_errors | faultline | findbug | exception_notification |
 |--------|-----------------------|-------------|-----------|---------|----------------------|
-| Total Downloads | 9,779 | 276,761 | N/A (git-only) | 1,447 | 22,144,698 |
-| GitHub Stars | 35 | 481 | 72 | 25 | 2,185 |
-| Last Commit | 2026-03-08 (active) | 2025-11-24 (stale) | 2026-03-06 (active) | 2026-02-25 (active) | 2021-12-28 (dead) |
+| Total Downloads | 11,000+ | 276,761 | N/A (git-only) | 1,447 | 22,144,698 |
+| GitHub Stars | 70+ | 481 | 72 | 25 | 2,185 |
+| Last Commit | 2026-03-26 (active) | 2025-11-24 (stale) | 2026-03-06 (active) | 2026-02-25 (active) | 2021-12-28 (dead) |
 | Dashboard UI | Yes (Bootstrap 5) | Yes (minimal) | Yes (Tailwind) | Yes | No |
 | Notifications | Slack, Email, Discord, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
 | Rails Versions | 7.0 - 8.1 | 7.1+ | 8.0+ | 7.0+ | 7.1+ |
@@ -26,9 +26,10 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (475 stars, min
 | Local Variables | Yes (TracePoint) | No | Yes (TracePoint) | No | No |
 | Auth | HTTP Basic + Custom Lambda | N/A | Devise/Warden/Lambda | ? | N/A |
 | Error Model | Single record + count | Single record | Group + Occurrences | Single record | N/A |
-| GitHub Issues | Planned (v0.5) | No | Yes | No | No |
+| GitHub Issues | Not yet | No | Yes | No | No |
 | Auto-Reopen | Yes | No | Yes | No | N/A |
-| Telegram | Planned (v0.5) | No | Yes | No | No |
+| Copy for LLM | Yes (v0.5.3+) | No | No | No | No |
+| Telegram | Not yet | No | Yes | No | No |
 | Performance Monitoring | Planned (v0.6) | No | No | Yes (Redis-based) | No |
 
 > **Detailed comparison:** See [FAULTLINE_COMPARISON.md](FAULTLINE_COMPARISON.md) for full feature-by-feature analysis.
@@ -641,7 +642,7 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 | **v0.6** | Environment awareness | 1 day | Team workflow ++ | Phase 6 |
 | ~~**v0.7**~~ | ~~Rack Attack event tracking (R)~~ | ~~Half day~~ | ~~Operational +~~ | ~~Phase 6~~ **DONE (v0.4.0)** |
 | **v0.6** | Performance monitoring — request timing, slow queries (Z) | 3-4 days | Differentiation +++ | Phase 6 |
-| **v0.6** | ActionCable connection monitoring (S) | Half day | Operational + | Phase 6 |
+| ~~**v0.6**~~ | ~~ActionCable connection monitoring (S)~~ | ~~Half day~~ | ~~Operational +~~ | ~~Phase 6~~ **DONE (v0.5.0)** |
 | **v0.6** | Zeitwerk loading error capture (T) | Half day | Reliability + | Phase 6 |
 | **v0.6** | ActiveStorage service health (U) | Half day | Operational + | Phase 6 |
 | ~~**v0.7**~~ | ~~YJIT runtime stats (W)~~ | ~~Half day~~ | ~~Operational +~~ | ~~Phase 6~~ **DONE (v0.4.0)** |
@@ -667,16 +668,20 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 
 ### What's Strong Today
 - Error capture & deduplication (9/10) — SHA256 hashing, smart normalization, custom fingerprint, auto-reopen, cause chain
-- Error context (9/10) — request (HTTP method, hostname, duration), job, platform, user (CurrentAttributes), git SHA, environment info, sensitive data filtering
-- Configuration (9/10) — 100+ options, sensible defaults, env var support, comprehensive validation
-- Error lifecycle (8.5/10) — 5 states, assignment, priority, snooze, comments, batch ops, auto-reopen on recurrence
-- Notifications (8.5/10) — 5 channels (Slack, Email, Discord, PagerDuty, Webhooks), severity filter, per-error cooldown, threshold milestones, plugin callbacks. Missing: Telegram (planned v0.5)
+- Error context (9.5/10) — request (HTTP method, hostname, duration, params), job, platform, user (CurrentAttributes), git SHA, environment info, sensitive data filtering, local/instance variables (TracePoint), breadcrumbs, system health snapshot
+- Configuration (9/10) — 100+ options, sensible defaults, env var support, comprehensive validation, default credentials protection
+- Error lifecycle (8.5/10) — 5 states, assignment, priority, snooze, mute/unmute, comments, batch ops, auto-reopen on recurrence
+- Notifications (8.5/10) — 5 channels (Slack, Email, Discord, PagerDuty, Webhooks), severity filter, per-error cooldown, threshold milestones, mute suppression, plugin callbacks
 - Analytics (8/10) — baseline alerts, similar errors, cascades, correlation, patterns
+- Deep debugging (9/10) — local variable capture, instance variable capture, swallowed exception detection, process crash capture, diagnostic dump, Rack Attack tracking, ActionCable monitoring
+- System health (9/10) — GC stats + context, process memory (RSS/peak/swap), file descriptors, system load, system memory, TCP connections, DB pool, Puma, job queue, RubyVM, YJIT
+- Copy for LLM (9/10) — source code snippets, filtered variables omitted, conditional sections, signal-to-noise optimized for AI debugging
 - Search & filtering (8/10) — 11 filters, PostgreSQL full-text search, pagination
 - Source code integration (8/10) — source reader, git blame, GitHub links
 - Multi-tenancy (8/10) — per-app isolation, auto-detection, shared DB
-- Deployment (8/10) — 3-step install, works with Thruster, API-only mode
+- Deployment (8/10) — 3-step install, works with Thruster, API-only mode, MySQL + PostgreSQL + SQLite supported
 - Dependencies (9/10) — only 2 required (pagy, groupdate), 4 optional with graceful degradation
+- Community (growing) — 5 contributors, 11 merged PRs, 11K+ downloads, 70+ stars
 
 ### What Needs Work
 - API (3/10) — no JSON endpoints at all (ICEBOX)
@@ -685,7 +690,8 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 - Integrations (6/10) — limited ecosystem, no GitHub issue creation (Faultline has this), no Telegram (Faultline has this), sketch-level plugins
 - Performance monitoring (0/10) — no request timing or slow query tracking (findbug has this, planned v0.6)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN indexes added. See [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)
-- Testing (9.5/10) — 2636 unit specs, 7 system tests, 1264+ chaos test assertions
+- Testing (9.5/10) — 2800+ unit specs, 7 system tests, 1264+ chaos test assertions
+- Community growth — not yet on awesome-ruby or Ruby Toolbox (highest-leverage growth actions)
 
 ### What Was Fixed (v0.2 Quick Wins)
 - ~~Auto-reopen (0/10)~~ — Now auto-reopens resolved/wont_fix errors on recurrence
