@@ -294,17 +294,8 @@ if index_resp && index_resp.code.to_i == 200
       assert_status "Update status #{status_id} to in_progress -> 200", resp, 200..200
     end
 
-    # --- Add Comment ---
-    comment_id = test_ids[4]
-    get("/errors/#{comment_id}")
-    resp = post("/errors/#{comment_id}/add_comment", params: {
-      author_name: "Integration Tester",
-      body: "This is an integration test comment with special chars: <b>bold</b> & 'quotes'"
-    })
-    if resp
-      assert_status "Add comment to #{comment_id} -> 200", resp, 200..200
-      assert_contains "Comment visible on page", resp.body, "Integration Tester", "integration test comment"
-    end
+    # --- Add Comment (removed in v0.6 — discussion moved to issue tracker) ---
+    # Manual comments no longer supported. Audit trail comments from workflow actions are still created internally.
 
     # --- Resolve ---
     resolve_id = test_ids[5]
