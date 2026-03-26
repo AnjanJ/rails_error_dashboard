@@ -1,0 +1,67 @@
+<% if RailsErrorDashboard.configuration.enable_issue_tracking %>
+  <div class="card mb-4" id="issue-tracking">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">
+        <i class="bi bi-link-45deg me-2"></i>
+        Issue Tracker
+      </h5>
+    </div>
+    <div class="card-body">
+      <% if @error.external_issue_url.present? %>
+        <!-- Linked issue display -->
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <% provider = @error.external_issue_provider %>
+            <% icon = case provider
+                       when "github" then "bi-github"
+                       when "gitlab" then "bi-gitlab"
+                       when "codeberg" then "bi-git"
+                       else "bi-link-45deg"
+                       end %>
+            <span class="badge bg-success me-2">
+              <i class="bi <%= icon %> me-1"></i>
+              <%= provider&.capitalize || "Linked" %> #<%= @error.external_issue_number || "?" %>
+            </span>
+            <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="text-decoration-none">
+              View Issue <i class="bi bi-box-arrow-up-right" style="font-size: 0.8em;"></i>
+            </a>
+          </div>
+          <div>
+            <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-chat-dots"></i> Discuss on <%= provider&.capitalize || "Platform" %>
+            </a>
+            <%= button_to "Unlink", unlink_issue_error_path(@error), method: :post, class: "btn btn-sm btn-outline-danger", data: { confirm: "Remove issue link?" } %>
+          </div>
+        </div>
+      <% else %>
+        <!-- No linked issue — show create/link options -->
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="text-muted mb-2">Create New Issue</h6>
+            <% provider = RailsErrorDashboard.configuration.effective_issue_tracker_provider %>
+            <% if provider && RailsErrorDashboard.configuration.effective_issue_tracker_token %>
+              <%= button_to create_issue_error_path(@error), method: :post, class: "btn btn-sm btn-primary" do %>
+                <i class="bi bi-plus-circle me-1"></i>
+                Create <%= provider.to_s.capitalize %> Issue
+              <% end %>
+            <% else %>
+              <p class="text-muted small mb-0">
+                <i class="bi bi-info-circle"></i>
+                Configure <code>issue_tracker_token</code> and <code>git_repository_url</code> in your initializer to enable issue creation.
+              </p>
+            <% end %>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-2">Link Existing Issue</h6>
+            <%= form_tag link_issue_error_path(@error), method: :post, class: "d-flex gap-2" do %>
+              <%= text_field_tag :issue_url, nil, placeholder: "https://github.com/user/repo/issues/42", class: "form-control form-control-sm", required: true %>
+              <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
+                <i class="bi bi-link"></i> Link
+              </button>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

@@ -82,6 +82,8 @@
       <!-- Timeline: Related Errors -->
       <%= render "timeline" %>
 
+      <%= render "issue_section", error: @error %>
+
       <%= render "discussion", error: @error %>
 
       <%= render "error_cascades", error: @error %>

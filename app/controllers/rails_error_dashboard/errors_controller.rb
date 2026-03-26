@@ -144,6 +144,43 @@ module RailsErrorDashboard
       redirect_to error_path(@error)
     end
 
+    def create_issue
+      dashboard_url = error_url(params[:id])
+      result = Commands::CreateIssue.call(params[:id], dashboard_url: dashboard_url)
+
+      if result[:success]
+        flash[:notice] = "Issue created: #{result[:issue_url]}"
+      else
+        flash[:alert] = "Failed to create issue: #{result[:error]}"
+      end
+      redirect_to error_path(params[:id])
+    end
+
+    def link_issue
+      result = Commands::LinkExistingIssue.call(params[:id], issue_url: params[:issue_url])
+
+      if result[:success]
+        flash[:notice] = "Issue linked successfully"
+      else
+        flash[:alert] = "Failed to link issue: #{result[:error]}"
+      end
+      redirect_to error_path(params[:id])
+    end
+
+    def unlink_issue
+      error = ErrorLog.find(params[:id])
+      error.update!(
+        external_issue_url: nil,
+        external_issue_number: nil,
+        external_issue_provider: nil
+      )
+      flash[:notice] = "Issue unlinked"
+      redirect_to error_path(error)
+    rescue => e
+      flash[:alert] = "Failed to unlink issue: #{e.message}"
+      redirect_to error_path(params[:id])
+    end
+
     def analytics
       days = (params[:days] || 30).to_i
       @days = days
