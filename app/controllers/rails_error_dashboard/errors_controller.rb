@@ -280,8 +280,10 @@ module RailsErrorDashboard
       days = (params[:days] || 30).to_i
       @days = days
       result = Queries::ReleaseTimeline.call(days, application_id: @current_application_id)
-      @releases = result[:releases]
+      all_releases = result[:releases]
       @summary = result[:summary]
+
+      @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
     end
 
     def deprecations
