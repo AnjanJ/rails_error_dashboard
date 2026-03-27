@@ -1,10 +1,15 @@
 <% if RailsErrorDashboard.configuration.enable_issue_tracking %>
   <div class="card mb-4" id="issue-tracking">
-    <div class="card-header bg-white">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="bi bi-link-45deg me-2"></i>
         Issue Tracker
       </h5>
+      <% if @error.external_issue_url.present? %>
+        <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-box-arrow-up-right me-1"></i> View Issue
+        </a>
+      <% end %>
     </div>
     <div class="card-body">
       <% if @error.external_issue_url.present? %>
@@ -17,25 +22,20 @@
                    end %>
         <% issue = @platform_issue %>
 
-        <!-- Issue link + status -->
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success">
-              <i class="bi <%= icon %> me-1"></i>
-              <%= provider&.capitalize || "Linked" %> #<%= @error.external_issue_number || "?" %>
+        <!-- Issue badge + status -->
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="badge bg-success">
+            <i class="bi <%= icon %> me-1"></i>
+            <%= provider&.capitalize || "Linked" %> #<%= @error.external_issue_number || "?" %>
+          </span>
+          <% if issue %>
+            <% state_color = issue[:state] == "open" ? "success" : "secondary" %>
+            <% state_icon = issue[:state] == "open" ? "bi-circle-fill" : "bi-check-circle-fill" %>
+            <span class="badge bg-<%= state_color %>">
+              <i class="bi <%= state_icon %> me-1" style="font-size: 0.6em;"></i>
+              <%= issue[:state]&.capitalize %>
             </span>
-            <% if issue %>
-              <% state_color = issue[:state] == "open" ? "success" : "secondary" %>
-              <% state_icon = issue[:state] == "open" ? "bi-circle-fill" : "bi-check-circle-fill" %>
-              <span class="badge bg-<%= state_color %>">
-                <i class="bi <%= state_icon %> me-1" style="font-size: 0.6em;"></i>
-                <%= issue[:state]&.capitalize %>
-              </span>
-            <% end %>
-            <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="text-decoration-none">
-              View Issue <i class="bi bi-box-arrow-up-right" style="font-size: 0.8em;"></i>
-            </a>
-          </div>
+          <% end %>
         </div>
 
         <% if issue %>
