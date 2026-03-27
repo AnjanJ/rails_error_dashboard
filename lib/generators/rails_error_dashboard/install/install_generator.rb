@@ -398,6 +398,12 @@ module RailsErrorDashboard
       end
 
       def add_route
+        routes_path = File.join(destination_root, "config", "routes.rb")
+        if File.exist?(routes_path) && File.read(routes_path).include?("RailsErrorDashboard::Engine")
+          say_status "skip", "route already exists (RailsErrorDashboard::Engine is already mounted)", :yellow
+          return
+        end
+
         route "mount RailsErrorDashboard::Engine => '/red'  # RED (Rails Error Dashboard) — also works at /error_dashboard"
       end
 

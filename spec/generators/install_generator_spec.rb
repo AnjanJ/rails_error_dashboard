@@ -432,6 +432,25 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       routes_content = File.read("#{destination_root}/config/routes.rb")
       expect(routes_content).to include("mount RailsErrorDashboard::Engine => '/red'")
     end
+
+    it "skips route when engine is already mounted at a custom path" do
+      # Write a routes file with a custom mount
+      File.write("#{destination_root}/config/routes.rb", <<~RUBY)
+        Rails.application.routes.draw do
+          namespace :admin do
+            mount RailsErrorDashboard::Engine => "red"
+          end
+        end
+      RUBY
+
+      run_generator [ "--no-interactive" ]
+
+      routes_content = File.read("#{destination_root}/config/routes.rb")
+      # Should NOT add the default route since engine is already mounted
+      expect(routes_content).not_to include("mount RailsErrorDashboard::Engine => '/red'")
+      # Should preserve the custom mount
+      expect(routes_content).to include("namespace :admin")
+    end
   end
 
   describe "interactive mode simulation" do
