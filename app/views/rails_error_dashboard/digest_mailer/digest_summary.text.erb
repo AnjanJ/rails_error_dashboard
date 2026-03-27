@@ -1,0 +1,50 @@
+==========================================
+RED — Error Digest (<%= @digest[:period_label] %>)
+==========================================
+Generated: <%= @digest[:generated_at].strftime('%B %d, %Y at %I:%M %p %Z') %>
+
+------------------------------------------
+SUMMARY
+------------------------------------------
+New Errors:        <%= @digest[:stats][:new_errors] %>
+Total Occurrences: <%= @digest[:stats][:total_occurrences] %>
+Resolved:          <%= @digest[:stats][:resolved] %>
+Unresolved:        <%= @digest[:stats][:unresolved] %>
+Critical/High:     <%= @digest[:stats][:critical_high] %>
+Resolution Rate:   <%= @digest[:stats][:resolution_rate] %>%
+
+<% if @digest[:comparison][:error_delta_percentage] %>
+------------------------------------------
+VS PREVIOUS PERIOD
+------------------------------------------
+Current:  <%= @digest[:comparison][:current_count] %> errors
+Previous: <%= @digest[:comparison][:previous_count] %> errors
+Change:   <%= @digest[:comparison][:error_delta] > 0 ? "+#{@digest[:comparison][:error_delta]}" : @digest[:comparison][:error_delta] %> (<%= @digest[:comparison][:error_delta_percentage] > 0 ? "+#{@digest[:comparison][:error_delta_percentage]}" : @digest[:comparison][:error_delta_percentage] %>%)
+<% end %>
+
+<% if @digest[:critical_unresolved].any? %>
+------------------------------------------
+CRITICAL / HIGH UNRESOLVED
+------------------------------------------
+<% @digest[:critical_unresolved].each do |error| %>
+  [<%= error[:severity].to_s.upcase %>] <%= error[:error_type] %>: <%= error[:message] %>
+  → <%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>
+<% end %>
+<% end %>
+
+<% if @digest[:top_errors].any? %>
+------------------------------------------
+TOP ERRORS BY COUNT
+------------------------------------------
+<% @digest[:top_errors].each_with_index do |error, i| %>
+  <%= i + 1 %>. <%= error[:error_type] %> (<%= error[:count] %>x): <%= error[:message] %>
+     → <%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>
+<% end %>
+<% end %>
+
+------------------------------------------
+
+View the full dashboard:
+<%= @dashboard_url %>/error_dashboard
+
+This is an automated digest from RED (Rails Error Dashboard).

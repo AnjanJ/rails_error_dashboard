@@ -34,6 +34,11 @@ module RailsErrorDashboard
     attr_accessor :webhook_urls
     attr_accessor :enable_webhook_notifications
 
+    # Scheduled digests (daily/weekly summary emails)
+    attr_accessor :enable_scheduled_digests         # Master switch (default: false)
+    attr_accessor :digest_frequency                 # :daily or :weekly (default: :daily)
+    attr_accessor :digest_recipients                # Array of emails (default: notification_email_recipients)
+
     # Separate database configuration
     attr_accessor :use_separate_database
 
@@ -217,6 +222,11 @@ module RailsErrorDashboard
       # Generic webhook settings (array of URLs)
       @webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
       @enable_webhook_notifications = false
+
+      # Scheduled digest defaults - OFF by default (opt-in)
+      @enable_scheduled_digests = false
+      @digest_frequency = :daily
+      @digest_recipients = nil  # falls back to notification_email_recipients
 
       @use_separate_database = ENV.fetch("USE_SEPARATE_ERROR_DB", "false") == "true"
 

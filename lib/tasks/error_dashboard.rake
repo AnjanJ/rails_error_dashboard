@@ -525,4 +525,27 @@ namespace :error_dashboard do
 
     puts "\n" + "=" * 80 + "\n"
   end
+
+  desc "Send error digest email (PERIOD=daily|weekly, APP_ID=optional)"
+  task send_digest: :environment do
+    period = ENV.fetch("PERIOD", "daily")
+    app_id = ENV["APP_ID"]
+
+    unless RailsErrorDashboard.configuration.enable_scheduled_digests
+      puts "Scheduled digests are not enabled. Set config.enable_scheduled_digests = true"
+      next
+    end
+
+    recipients = RailsErrorDashboard.configuration.digest_recipients ||
+                 RailsErrorDashboard.configuration.notification_email_recipients
+
+    if recipients.blank?
+      puts "No digest recipients configured. Set config.digest_recipients or config.notification_email_recipients"
+      next
+    end
+
+    puts "Sending #{period} error digest to #{recipients.join(', ')}..."
+    RailsErrorDashboard::ScheduledDigestJob.perform_later(period: period, application_id: app_id)
+    puts "Digest job enqueued."
+  end
 end

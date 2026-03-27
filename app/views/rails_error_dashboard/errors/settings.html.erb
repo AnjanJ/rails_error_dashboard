@@ -55,7 +55,10 @@
         enable_pagerduty_notifications: { label: "PagerDuty", description: "Critical error escalation", type: :boolean },
         pagerduty_integration_key: { label: "PagerDuty Integration Key", description: "PagerDuty API key", type: :string, show_if: :enable_pagerduty_notifications },
         enable_webhook_notifications: { label: "Custom Webhooks", description: "Generic webhook endpoints", type: :boolean },
-        webhook_urls: { label: "Webhook URLs", description: "Custom webhook endpoints", type: :array, show_if: :enable_webhook_notifications }
+        webhook_urls: { label: "Webhook URLs", description: "Custom webhook endpoints", type: :array, show_if: :enable_webhook_notifications },
+        enable_scheduled_digests: { label: "Scheduled Digests", description: "Daily/weekly summary emails. Schedule via SolidQueue, Sidekiq, or cron", type: :boolean },
+        digest_frequency: { label: "Digest Frequency", description: "How often to send digest emails", type: :symbol, show_if: :enable_scheduled_digests },
+        digest_recipients: { label: "Digest Recipients", description: "Email addresses (falls back to notification recipients)", type: :array, show_if: :enable_scheduled_digests }
       }
     },
     "Advanced Analytics Features" => {

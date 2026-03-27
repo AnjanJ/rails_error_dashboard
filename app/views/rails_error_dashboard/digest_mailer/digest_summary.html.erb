@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5; color: #18181b; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .card { background: #ffffff; border-radius: 8px; padding: 24px; margin-bottom: 16px; border: 1px solid #e4e4e7; }
+    .header { text-align: center; padding: 24px 0; }
+    .header h1 { font-size: 24px; margin: 0 0 4px 0; color: #18181b; }
+    .header .subtitle { color: #71717a; font-size: 14px; }
+    .stat-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .stat-box { flex: 1 1 120px; text-align: center; padding: 16px 8px; background: #f9fafb; border-radius: 6px; min-width: 120px; }
+    .stat-value { font-size: 28px; font-weight: 700; line-height: 1.2; }
+    .stat-label { font-size: 12px; color: #71717a; margin-top: 4px; }
+    .text-danger { color: #ef4444; }
+    .text-success { color: #22c55e; }
+    .text-warning { color: #f59e0b; }
+    .text-muted { color: #71717a; }
+    .text-primary { color: #3b82f6; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-critical { background: #fef2f2; color: #ef4444; }
+    .badge-high { background: #fff7ed; color: #f97316; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e4e7; font-size: 14px; }
+    th { font-weight: 600; color: #71717a; font-size: 12px; text-transform: uppercase; }
+    a { color: #3b82f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .comparison { display: flex; gap: 16px; justify-content: center; align-items: center; padding: 12px; background: #f9fafb; border-radius: 6px; }
+    .comparison .delta { font-size: 20px; font-weight: 700; }
+    .footer { text-align: center; padding: 20px; color: #a1a1aa; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>RED Error Digest</h1>
+      <div class="subtitle"><%= @digest[:period_label] %> — <%= @digest[:generated_at].strftime('%B %d, %Y') %></div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-value text-primary"><%= @digest[:stats][:new_errors] %></div>
+          <div class="stat-label">New Errors</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= @digest[:stats][:total_occurrences] %></div>
+          <div class="stat-label">Occurrences</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value text-success"><%= @digest[:stats][:resolved] %></div>
+          <div class="stat-label">Resolved</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value text-warning"><%= @digest[:stats][:unresolved] %></div>
+          <div class="stat-label">Unresolved</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value text-danger"><%= @digest[:stats][:critical_high] %></div>
+          <div class="stat-label">Critical/High</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value"><%= @digest[:stats][:resolution_rate] %>%</div>
+          <div class="stat-label">Resolution Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison -->
+    <% if @digest[:comparison][:error_delta_percentage] %>
+      <div class="card">
+        <%
+          delta = @digest[:comparison][:error_delta]
+          pct = @digest[:comparison][:error_delta_percentage]
+          delta_class = delta > 0 ? "text-danger" : (delta < 0 ? "text-success" : "text-muted")
+          arrow = delta > 0 ? "&#9650;" : (delta < 0 ? "&#9660;" : "&#8212;")
+        %>
+        <div class="comparison">
+          <div>
+            <span class="text-muted">vs previous <%= @digest[:period] %>:</span>
+          </div>
+          <div class="delta <%= delta_class %>">
+            <%== arrow %> <%= delta > 0 ? "+#{delta}" : delta %> errors
+            (<%= pct > 0 ? "+#{pct}" : pct %>%)
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Critical / High Unresolved -->
+    <% if @digest[:critical_unresolved].any? %>
+      <div class="card">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px;">Critical &amp; High Unresolved</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Error</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @digest[:critical_unresolved].each do |error| %>
+              <tr>
+                <td>
+                  <span class="badge badge-<%= error[:severity].to_s.downcase %>"><%= error[:severity].to_s.upcase %></span>
+                </td>
+                <td>
+                  <strong><%= error[:error_type] %></strong><br>
+                  <small class="text-muted"><%= error[:message] %></small>
+                </td>
+                <td>
+                  <a href="<%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>">View</a>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <!-- Top Errors -->
+    <% if @digest[:top_errors].any? %>
+      <div class="card">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px;">Top Errors by Count</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Error Type</th>
+              <th>Count</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @digest[:top_errors].each do |error| %>
+              <tr>
+                <td>
+                  <strong><%= error[:error_type] %></strong><br>
+                  <small class="text-muted"><%= error[:message] %></small>
+                </td>
+                <td><%= error[:count] %></td>
+                <td>
+                  <% if error[:id] %>
+                    <a href="<%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>">View</a>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <!-- CTA -->
+    <div class="card" style="text-align: center;">
+      <a href="<%= @dashboard_url %>/error_dashboard" style="display: inline-block; padding: 10px 24px; background: #3b82f6; color: #ffffff; border-radius: 6px; font-weight: 600; text-decoration: none;">
+        Open Dashboard
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Automated digest from <strong>RED</strong> (Rails Error Dashboard)<br>
+      <a href="<%= @dashboard_url %>/error_dashboard/settings">Manage digest settings</a>
+    </div>
+  </div>
+</body>
+</html>
