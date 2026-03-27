@@ -626,7 +626,7 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 | | | | | |
 | **v0.5** | Deploy/release tracking | 2 days | Workflow +++ | Phase 5: Workflow |
 | ~~**v0.5**~~ | ~~Error replay — copy as curl/RSpec (E)~~ | ~~1-2 days~~ | ~~Novel +++~~ | ~~Phase 5~~ **DONE (v0.4.0)** |
-| **v0.5** | GitHub/GitLab issue creation | 1-2 days | Workflow ++ | Phase 5 |
+| **v0.6** | GitHub/GitLab/Codeberg issue creation (Tier 1: manual, Tier 2: auto-create + lifecycle sync, Tier 3: webhooks) | 3-5 days | Workflow +++ | Phase 5 — PLANNED, see `.claude/plans/` |
 | **v0.5** | Telegram notifications (7a) | Half day | Adoption ++ | Phase 5 |
 | **v0.5** | Optional PostgreSQL partitioning generator | 1-2 days | Scale ++ | Phase 5 |
 | **v0.5** | User impact scoring | 1 day | Prioritization ++ | Phase 5 |
@@ -660,7 +660,18 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 | **v1.0** | Comparison mode | 1-2 days | Analytics ++ | Phase 8 |
 | **v1.0** | Production code path coverage — Coverage oneshot_lines (V) | 2-3 days | Debugging ++ | Phase 8 |
 | **v1.0** | Lazy backtrace — Thread.each_caller_location (Y) | Half day | Performance + | Phase 8 |
+| | | | | |
+| **v0.6** | LLM call breadcrumbs — capture model, provider, tokens, duration, tool calls as breadcrumbs when errors occur during LLM requests. Support RubyLLM (via OTel spans if `opentelemetry-instrumentation-ruby_llm` present), langchain.rb, OpenAI SDK, Anthropic SDK. Content capture opt-in (PII risk). No monkey-patching — subscribe to existing instrumentation. Fields: `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.request.temperature`, tool call name/arguments. Ref: [thoughtbot/opentelemetry-instrumentation-ruby_llm](https://github.com/thoughtbot/opentelemetry-instrumentation-ruby_llm) | 2-3 days | Novel +++ | Phase 9: AI Observability |
+| **v0.6** | LLM tool call tracking — capture tool executions (name, arguments, result) nested within LLM calls. When an error occurs during a tool call, the breadcrumb shows which tool failed and why | 1 day | Debugging +++ | Phase 9 |
+| **v0.6** | LLM health dashboard page — `/errors/llm_health_summary` showing per-model breakdown: call count, avg tokens, avg latency, error rate, cost estimate. Sorted by error correlation (models with most errors first) | 2-3 days | Unique +++ | Phase 9 |
+| **v0.6** | OpenTelemetry span export — emit error capture operations as OTel spans for Datadog/Honeycomb/Jaeger. Error logged → span with error type, severity, capture latency. Integrates with existing OTel collector if present | 2-3 days | Ecosystem +++ | Phase 9 |
+| **v0.6** | Copy for LLM — include LLM call context when available (model, tokens, tool calls, prompt if opt-in). The LLM debugging an error can see the LLM call that preceded it | 1 day | Meta +++ | Phase 9 |
+| **v0.8** | Self-instrumentation — measure gem overhead as OTel spans (error capture latency, breadcrumb collection, system health snapshot). Users can verify <5ms budget in their own observability dashboards | 1 day | Trust ++ | Phase 9 |
 | **ICEBOX** | Method complexity analysis (Q) | 1 day | Unique + | Deferred |
+| **ICEBOX** | GitHub App with check runs (requires OAuth flow) | 3-5 days | Enterprise + | Deferred |
+| **ICEBOX** | PR comments warning about errors (requires GitHub App) | 2-3 days | DX ++ | Deferred |
+| **ICEBOX** | CODEOWNERS-based auto-assignment | 1-2 days | Workflow + | Deferred |
+| **ICEBOX** | Bidirectional comment sync (complex, fragile) | 3-5 days | Workflow + | Deferred |
 
 ---
 
@@ -691,7 +702,7 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 - Performance monitoring (0/10) — no request timing or slow query tracking (findbug has this, planned v0.6)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN indexes added. See [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)
 - Testing (9.5/10) — 2800+ unit specs, 7 system tests, 1264+ chaos test assertions
-- Community growth — not yet on awesome-ruby or Ruby Toolbox (highest-leverage growth actions)
+- Community growth — Ruby Toolbox PR submitted ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033), awaiting merge). awesome-ruby requires 30K+ downloads (we're at ~11K) — not eligible yet
 
 ### What Was Fixed (v0.2 Quick Wins)
 - ~~Auto-reopen (0/10)~~ — Now auto-reopens resolved/wont_fix errors on recurrence

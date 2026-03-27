@@ -232,6 +232,28 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 |--------|------|---------|-------------|
 | `enable_activestorage_tracking` | Boolean | `false` | Track ActiveStorage service operations (uploads, downloads, deletes, existence checks) as breadcrumbs. Works with any backend (Disk, S3, GCS, Azure). Requires `enable_breadcrumbs = true` |
 
+### Issue Tracking — GitHub/GitLab/Codeberg (v0.5.8+)
+
+One switch enables all platform integration: issue creation, auto-create, lifecycle sync, platform state mirroring, and comment display. When enabled, workflow controls (Resolve, Assign, Priority) are replaced by platform state.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_issue_tracking` | Boolean | `false` | Master switch — enables all issue tracking features |
+| `issue_tracker_token` | String/Lambda | `ENV["RED_BOT_TOKEN"]` | API token. Supports lambda: `-> { Rails.application.credentials.dig(:github, :token) }` |
+| `issue_tracker_provider` | Symbol | auto-detected | `:github`, `:gitlab`, or `:codeberg`. Auto-detected from `git_repository_url` |
+| `issue_tracker_repo` | String | auto-detected | `"owner/repo"`. Auto-extracted from `git_repository_url` |
+| `issue_tracker_labels` | Array | `["bug"]` | Labels added to new issues |
+| `issue_tracker_api_url` | String | auto-detected | Custom API URL for self-hosted GitLab/Gitea/Forgejo |
+| `issue_tracker_auto_create_severities` | Array | `[:critical, :high]` | Auto-create issues for these severities |
+| `issue_webhook_secret` | String | `ENV["ISSUE_WEBHOOK_SECRET"]` | HMAC secret — webhooks activate when set |
+
+Minimal setup:
+
+```ruby
+config.enable_issue_tracking = true
+config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
+```
+
 ### Process Crash Capture (v0.4.0)
 
 | Option | Type | Default | Description |

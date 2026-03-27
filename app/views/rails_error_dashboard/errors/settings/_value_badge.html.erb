@@ -245,6 +245,21 @@
 <%
     end
 
+  when :secret
+    if value.present?
+%>
+    <span class="badge bg-success fs-6">
+      <i class="bi bi-check-circle"></i> Set
+    </span>
+<%
+    else
+%>
+    <span class="badge bg-warning text-dark fs-6">
+      <i class="bi bi-exclamation-triangle"></i> Not set
+    </span>
+<%
+    end
+
   when :retention_days
     # Show retention configuration with manual cleanup instructions
     if value.present?

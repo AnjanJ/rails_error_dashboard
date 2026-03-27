@@ -276,6 +276,14 @@ module RailsErrorDashboard
       @platform_specific_errors = correlation.platform_specific_errors
     end
 
+    def releases
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::ReleaseTimeline.call(days, application_id: @current_application_id)
+      @releases = result[:releases]
+      @summary = result[:summary]
+    end
+
     def deprecations
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"

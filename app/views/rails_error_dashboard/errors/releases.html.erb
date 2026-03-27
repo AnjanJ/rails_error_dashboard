@@ -1,0 +1,280 @@
+<% content_for :page_title, "Releases" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-rocket-takeoff me-2"></i>
+      Releases
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to releases_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to releases_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to releases_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <% if @releases.empty? %>
+    <div class="text-center py-5">
+      <i class="bi bi-rocket-takeoff display-1 text-muted mb-3"></i>
+      <h4 class="text-muted">No Release Data Found</h4>
+      <p class="text-muted">
+        No version data was detected in errors over the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How to enable release tracking:</h6>
+          <ul class="mb-0">
+            <li>Set <code>config.app_version</code> in your initializer</li>
+            <li>Or set the <code>APP_VERSION</code> environment variable</li>
+            <li>Git SHA is auto-detected from <code>GIT_SHA</code>, <code>HEROKU_SLUG_COMMIT</code>, or <code>RENDER_GIT_COMMIT</code></li>
+            <li>Version and SHA are captured automatically when errors occur</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <%
+      current_release = @releases.find { |r| r[:current] }
+    %>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-primary"><%= @summary[:total_releases] %></div>
+            <small class="text-muted">Releases</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6"><code><%= @summary[:current_version] || "N/A" %></code></div>
+            <small class="text-muted">Current Release</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= @summary[:avg_errors_per_release] %></div>
+            <small class="text-muted">Avg Errors / Release</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <%
+              problematic_count = @releases.count { |r| r[:problematic] }
+            %>
+            <div class="display-6 <%= problematic_count > 0 ? 'text-danger' : 'text-success' %>"><%= problematic_count %></div>
+            <small class="text-muted">Problematic Releases</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <% if current_release %>
+      <!-- Current Release Card -->
+      <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-broadcast"></i> Current Release: <strong><%= current_release[:version] %></strong>
+          </h5>
+          <span class="badge bg-light text-primary">Live</span>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-2">
+              <div class="h4 mb-0"><%= current_release[:total_errors] %></div>
+              <small class="text-muted">Errors</small>
+            </div>
+            <div class="col-md-2">
+              <div class="h4 mb-0"><%= current_release[:unique_error_types] %></div>
+              <small class="text-muted">Error Types</small>
+            </div>
+            <div class="col-md-2">
+              <div class="h4 mb-0">
+                <% if current_release[:new_error_count] > 0 %>
+                  <span class="text-danger"><%= current_release[:new_error_count] %></span>
+                <% else %>
+                  <span class="text-success">0</span>
+                <% end %>
+              </div>
+              <small class="text-muted">New Errors</small>
+            </div>
+            <div class="col-md-2">
+              <%
+                stability_color = case current_release[:stability]
+                                  when :green then "success"
+                                  when :yellow then "warning"
+                                  when :red then "danger"
+                                  else "secondary"
+                                  end
+              %>
+              <div class="h4 mb-0">
+                <span class="badge bg-<%= stability_color %>">
+                  <%= current_release[:stability].to_s.capitalize %>
+                </span>
+              </div>
+              <small class="text-muted">Stability</small>
+            </div>
+            <div class="col-md-2">
+              <% if current_release[:git_shas].any? %>
+                <div class="h4 mb-0"><%= git_commit_link(current_release[:git_shas].first) %></div>
+              <% else %>
+                <div class="h4 mb-0 text-muted">N/A</div>
+              <% end %>
+              <small class="text-muted">Git SHA</small>
+            </div>
+            <div class="col-md-2">
+              <% if current_release[:delta_from_previous] %>
+                <%
+                  delta = current_release[:delta_from_previous]
+                  delta_class = delta > 0 ? "text-danger" : (delta < 0 ? "text-success" : "text-muted")
+                  delta_icon = delta > 0 ? "bi-arrow-up" : (delta < 0 ? "bi-arrow-down" : "bi-dash")
+                %>
+                <div class="h4 mb-0 <%= delta_class %>">
+                  <i class="bi <%= delta_icon %>"></i> <%= delta.abs %>
+                </div>
+              <% else %>
+                <div class="h4 mb-0 text-muted">&mdash;</div>
+              <% end %>
+              <small class="text-muted">vs Previous</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Release Timeline Table -->
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-clock-history text-primary me-2"></i>
+          Release Timeline
+          <span class="badge bg-primary"><%= @releases.size %></span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Version</th>
+                <th>Git SHA</th>
+                <th>Time Range</th>
+                <th width="100">Errors</th>
+                <th width="100">Types</th>
+                <th width="120">New Errors</th>
+                <th width="100">Stability</th>
+                <th width="120">vs Previous</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @releases.each do |release| %>
+                <tr class="<%= 'table-active' if release[:current] %>">
+                  <td>
+                    <strong><%= release[:version] %></strong>
+                    <% if release[:current] %>
+                      <span class="badge bg-primary ms-1">Current</span>
+                    <% end %>
+                    <% if release[:problematic] %>
+                      <span class="badge bg-danger ms-1">Problematic</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if release[:git_shas].any? %>
+                      <%= git_commit_link(release[:git_shas].first) %>
+                      <% if release[:git_shas].size > 1 %>
+                        <small class="text-muted">+<%= release[:git_shas].size - 1 %></small>
+                      <% end %>
+                    <% else %>
+                      <span class="text-muted">N/A</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <small>
+                      <%= local_time_ago(release[:first_seen]) %>
+                      <% unless release[:first_seen] == release[:last_seen] %>
+                        &rarr; <%= local_time_ago(release[:last_seen]) %>
+                      <% end %>
+                    </small>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary"><%= release[:total_errors] %></span>
+                  </td>
+                  <td>
+                    <span class="badge bg-info"><%= release[:unique_error_types] %></span>
+                  </td>
+                  <td>
+                    <% if release[:new_error_count] > 0 %>
+                      <span class="badge bg-danger">
+                        <i class="bi bi-exclamation-circle"></i> <%= release[:new_error_count] %> new
+                      </span>
+                    <% else %>
+                      <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> 0 new
+                      </span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <%
+                      stability_color = case release[:stability]
+                                        when :green then "success"
+                                        when :yellow then "warning"
+                                        when :red then "danger"
+                                        else "secondary"
+                                        end
+                    %>
+                    <span class="badge bg-<%= stability_color %>">
+                      <i class="bi bi-circle-fill" style="font-size: 0.5em; vertical-align: middle;"></i>
+                      <%= release[:stability].to_s.capitalize %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if release[:delta_from_previous] %>
+                      <%
+                        delta = release[:delta_from_previous]
+                        pct = release[:delta_percentage]
+                        delta_class = delta > 0 ? "text-danger" : (delta < 0 ? "text-success" : "text-muted")
+                        delta_icon = delta > 0 ? "bi-arrow-up" : (delta < 0 ? "bi-arrow-down" : "bi-dash")
+                      %>
+                      <span class="<%= delta_class %>">
+                        <i class="bi <%= delta_icon %>"></i>
+                        <%= delta > 0 ? "+#{delta}" : delta %>
+                        <% if pct %>
+                          <small>(<%= pct > 0 ? "+#{pct}" : pct %>%)</small>
+                        <% end %>
+                      </span>
+                    <% else %>
+                      <span class="text-muted">&mdash;</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top">
+        <small class="text-muted">
+          <i class="bi bi-info-circle"></i>
+          Stability: <span class="badge bg-success">Green</span> &le; avg errors,
+          <span class="badge bg-warning">Yellow</span> 1-2x avg,
+          <span class="badge bg-danger">Red</span> &gt; 2x avg.
+          "New" errors are error types first seen in that release.
+        </small>
+      </div>
+    </div>
+  <% end %>
+</div>

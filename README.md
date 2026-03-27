@@ -150,18 +150,19 @@ config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = tru
 <details>
 <summary><strong>Issue Tracking — GitHub, GitLab, Codeberg</strong></summary>
 
-Create, link, and manage issues directly from error detail pages. Supports GitHub, GitLab, and Codeberg/Gitea/Forgejo with provider auto-detection.
+One switch connects errors to your issue tracker. Platform becomes the source of truth — status, assignees, labels, and comments are mirrored live in the dashboard.
 
-- **Manual:** "Create Issue" button + "Link Existing Issue" URL input
-- **Auto-create:** On first occurrence and/or severity threshold — configurable
-- **Lifecycle sync:** Resolve → close issue, recur → reopen + comment (throttled)
-- **Two-way webhooks:** Issue closed/reopened on platform syncs to dashboard
+- **Create & link:** "Create Issue" button or paste an existing URL
+- **Auto-create:** New errors auto-create issues. Critical/high severity always creates
+- **Lifecycle sync:** Resolve → close, recur → reopen + comment, all via background jobs
+- **Platform mirror:** Issue state, assignees (with avatars), labels (with colors), and comments displayed in the dashboard. Workflow controls (Resolve, Assign, Priority) replaced by platform state
+- **Two-way webhooks:** Issue closed/reopened on platform syncs back to dashboard
 - **RED branding:** Issues show "Created by RED (Rails Error Dashboard)"
 
 ```ruby
 config.enable_issue_tracking = true
 config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
-# Provider and repo auto-detected from git_repository_url
+# That's it — provider and repo auto-detected from git_repository_url
 ```
 
 [Complete documentation →](docs/guides/CONFIGURATION.md)

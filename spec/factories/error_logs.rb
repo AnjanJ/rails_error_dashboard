@@ -47,6 +47,11 @@ FactoryBot.define do
       reopened_at { Time.current }
     end
 
+    trait :with_version do
+      app_version { "1.0.0" }
+      git_sha { SecureRandom.hex(20) }
+    end
+
     trait :with_backtrace do
       backtrace { "app/models/user.rb:10:in `save'\napp/controllers/users_controller.rb:20:in `create'\napp/services/user_service.rb:5:in `process'" }
     end
