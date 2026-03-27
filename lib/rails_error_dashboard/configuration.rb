@@ -91,6 +91,8 @@ module RailsErrorDashboard
     attr_accessor :auto_create_issues              # Boolean (default: false) — auto-create issues for new errors
     attr_accessor :auto_create_issues_on_first_occurrence  # Boolean (default: true) — create on first occurrence
     attr_accessor :auto_create_issues_for_severities       # Array of symbols (default: [:critical, :high])
+    attr_accessor :enable_issue_webhooks            # Boolean (default: false) — receive webhooks for two-way sync
+    attr_accessor :issue_webhook_secret             # String — HMAC secret for webhook signature verification
 
     # Advanced error analysis features
     attr_accessor :enable_similar_errors          # Fuzzy error matching
@@ -252,6 +254,8 @@ module RailsErrorDashboard
       @auto_create_issues = false
       @auto_create_issues_on_first_occurrence = true
       @auto_create_issues_for_severities = [ :critical, :high ]
+      @enable_issue_webhooks = false
+      @issue_webhook_secret = ENV["ISSUE_WEBHOOK_SECRET"]
 
       # Advanced error analysis features (all OFF by default - opt-in)
       @enable_similar_errors = false        # Fuzzy error matching

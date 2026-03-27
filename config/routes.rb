@@ -7,6 +7,9 @@ RailsErrorDashboard::Engine.routes.draw do
   # Settings page
   get "settings", to: "errors#settings", as: :settings
 
+  # Webhook endpoint for two-way issue sync (GitHub/GitLab/Codeberg)
+  post "webhooks/:provider", to: "webhooks#receive", as: :webhook
+
   resources :errors, only: [ :index, :show ] do
     member do
       post :resolve
