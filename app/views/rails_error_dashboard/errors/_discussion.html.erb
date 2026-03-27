@@ -1,65 +1,98 @@
 <% has_linked_issue = error.respond_to?(:external_issue_url) && error.external_issue_url.present? %>
-<% has_comments = error.respond_to?(:comments) && error.comments.any? %>
+<% has_audit_comments = error.respond_to?(:comments) && error.comments.any? %>
+<% platform_comments = @platform_comments || [] %>
 <% issue_tracking_enabled = RailsErrorDashboard.configuration.enable_issue_tracking %>
 
-<% if has_linked_issue || has_comments || issue_tracking_enabled %>
+<% if has_linked_issue && (platform_comments.any? || has_audit_comments) %>
   <div class="card mb-4" id="section-discussion">
-    <div class="card-header bg-white">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="bi bi-chat-dots"></i> Discussion
-        <% if has_comments %>
-          <span class="badge bg-secondary ms-2"><%= error.comments.count %></span>
+        <% if platform_comments.any? %>
+          <span class="badge bg-secondary ms-2"><%= platform_comments.size %></span>
         <% end %>
       </h5>
+      <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-box-arrow-up-right me-1"></i> Reply on <%= error.external_issue_provider&.capitalize || "Platform" %>
+      </a>
     </div>
-    <div class="card-body">
-      <% if has_linked_issue %>
-        <!-- Platform discussion link -->
-        <% provider = error.external_issue_provider&.capitalize || "Platform" %>
-        <% icon = case error.external_issue_provider
-                   when "github" then "bi-github"
-                   when "gitlab" then "bi-gitlab"
-                   when "codeberg" then "bi-git"
-                   else "bi-chat-dots"
-                   end %>
-        <div class="text-center py-3 mb-3">
-          <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-primary">
-            <i class="bi <%= icon %> me-1"></i>
-            Discuss on <%= provider %> #<%= error.external_issue_number || "?" %>
-            <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.8em;"></i>
-          </a>
-        </div>
-      <% elsif issue_tracking_enabled %>
-        <div class="text-center py-3 mb-3">
-          <p class="text-muted small mb-0">
-            <i class="bi bi-link-45deg"></i>
-            Link or create an issue above to start a discussion on your issue tracker.
-          </p>
+    <div class="card-body p-0">
+      <% if platform_comments.any? %>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <% platform_comments.each_with_index do |comment, index| %>
+            <div class="px-3 py-3 <%= index < platform_comments.size - 1 ? 'border-bottom' : '' %>">
+              <div class="d-flex align-items-start gap-2 mb-2">
+                <% if comment[:avatar_url].present? %>
+                  <img src="<%= comment[:avatar_url] %>" alt="<%= comment[:author] %>" width="24" height="24" class="rounded-circle" style="flex-shrink: 0;">
+                <% else %>
+                  <i class="bi bi-person-circle" style="font-size: 1.3em; flex-shrink: 0;"></i>
+                <% end %>
+                <div>
+                  <strong class="text-primary"><%= comment[:author] || "Unknown" %></strong>
+                  <small class="text-muted ms-2"><%= comment[:created_at] ? Time.parse(comment[:created_at]).strftime("%b %d, %Y %H:%M") : "" %></small>
+                </div>
+              </div>
+              <div class="ms-4 text-break" style="font-size: 0.9em;">
+                <%= simple_format(h(comment[:body].to_s.truncate(500)), {}, wrapper_tag: "span") %>
+              </div>
+            </div>
+          <% end %>
         </div>
       <% end %>
 
-      <% if has_comments %>
-        <!-- Audit trail — read-only workflow comments (snooze, mute, status changes) -->
-        <% if has_linked_issue || issue_tracking_enabled %>
-          <hr class="my-3">
-          <h6 class="text-muted mb-3"><i class="bi bi-clock-history"></i> Activity Log</h6>
-        <% end %>
+      <% if has_audit_comments %>
+        <!-- Audit trail — workflow actions -->
+        <div class="px-3 py-2 bg-light border-top">
+          <small class="text-muted fw-bold"><i class="bi bi-clock-history"></i> Activity Log</small>
+        </div>
         <% error.comments.recent_first.each_with_index do |comment, index| %>
-          <div class="<%= index < error.comments.count - 1 ? 'border-bottom' : '' %> pb-3 mb-3">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="px-3 py-2 <%= index < error.comments.count - 1 ? 'border-bottom' : '' %>">
+            <div class="d-flex justify-content-between align-items-start">
               <div>
-                <strong class="text-primary">
-                  <i class="bi bi-person-circle"></i> <%= comment.author_name %>
-                </strong>
+                <small class="text-primary fw-bold"><i class="bi bi-person-circle"></i> <%= comment.author_name %></small>
                 <small class="text-muted ms-2"><%= comment.formatted_time %></small>
-                <% if comment.recent? %>
-                  <span class="badge bg-info ms-1">New</span>
-                <% end %>
               </div>
             </div>
-            <p class="mb-0 text-break"><%= simple_format(h(comment.body), {}, wrapper_tag: "span") %></p>
+            <small class="text-muted text-break"><%= simple_format(h(comment.body), {}, wrapper_tag: "span") %></small>
           </div>
         <% end %>
+      <% end %>
+    </div>
+  </div>
+<% elsif has_linked_issue %>
+  <!-- Issue linked but no comments yet -->
+  <div class="card mb-4" id="section-discussion">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">
+        <i class="bi bi-chat-dots"></i> Discussion
+      </h5>
+      <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-box-arrow-up-right me-1"></i> Start discussion on <%= error.external_issue_provider&.capitalize || "Platform" %>
+      </a>
+    </div>
+    <div class="card-body text-center py-3">
+      <p class="text-muted small mb-0">No comments yet. Be the first to discuss this error on <%= error.external_issue_provider&.capitalize || "the platform" %>.</p>
+    </div>
+  </div>
+<% elsif has_audit_comments %>
+  <!-- No issue linked, but has audit trail -->
+  <div class="card mb-4" id="section-discussion">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">
+        <i class="bi bi-clock-history"></i> Activity Log
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <% error.comments.recent_first.each_with_index do |comment, index| %>
+        <div class="px-3 py-2 <%= index < error.comments.count - 1 ? 'border-bottom' : '' %>">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <small class="text-primary fw-bold"><i class="bi bi-person-circle"></i> <%= comment.author_name %></small>
+              <small class="text-muted ms-2"><%= comment.formatted_time %></small>
+            </div>
+          </div>
+          <small class="text-muted text-break"><%= simple_format(h(comment.body), {}, wrapper_tag: "span") %></small>
+        </div>
       <% end %>
     </div>
   </div>

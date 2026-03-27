@@ -8,7 +8,7 @@
     </div>
     <div class="card-body">
       <% if @error.external_issue_url.present? %>
-        <!-- Linked issue display -->
+        <!-- Linked issue — just show the badge and link -->
         <% provider = @error.external_issue_provider %>
         <% icon = case provider
                    when "github" then "bi-github"
@@ -16,18 +16,13 @@
                    when "codeberg" then "bi-git"
                    else "bi-link-45deg"
                    end %>
-        <div class="d-flex align-items-center justify-content-between">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success">
-              <i class="bi <%= icon %> me-1"></i>
-              <%= provider&.capitalize || "Linked" %> #<%= @error.external_issue_number || "?" %>
-            </span>
-            <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="text-decoration-none">
-              View Issue <i class="bi bi-box-arrow-up-right" style="font-size: 0.8em;"></i>
-            </a>
-          </div>
-          <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-chat-dots me-1"></i> Discuss on <%= provider&.capitalize || "Platform" %>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-success">
+            <i class="bi <%= icon %> me-1"></i>
+            <%= provider&.capitalize || "Linked" %> #<%= @error.external_issue_number || "?" %>
+          </span>
+          <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="text-decoration-none">
+            View Issue <i class="bi bi-box-arrow-up-right" style="font-size: 0.8em;"></i>
           </a>
         </div>
       <% else %>
@@ -64,7 +59,6 @@
 
   <% if flash[:new_issue_url].present? %>
     <script>
-      // Open newly created issue in new tab and scroll to issue section
       (function() {
         window.open('<%= j flash[:new_issue_url] %>', '_blank');
       })();
