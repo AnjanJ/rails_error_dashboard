@@ -20,23 +20,27 @@ Gem::Specification.new do |spec|
 
   spec.post_install_message = <<~MESSAGE
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      Rails Error Dashboard v#{RailsErrorDashboard::VERSION}
+      RED (Rails Error Dashboard) v#{RailsErrorDashboard::VERSION}
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    🆕 First time? Quick start:
+    First install:
        rails generate rails_error_dashboard:install
        rails db:migrate
-       # Add to config/routes.rb:
-       mount RailsErrorDashboard::Engine => '/error_dashboard'
+       # Route and config are set up automatically by the generator.
 
-    🔄 Upgrading from v0.1.x?
+    Upgrading from a previous version:
+       rails generate rails_error_dashboard:install
        rails db:migrate
-       📝 Changelog: https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md
+       # The generator detects your existing config and only adds new migrations.
 
-    🎮 Live demo: https://rails-error-dashboard.anjan.dev
-       (gandalf / youshallnotpass)
+    Separate database users:
+       rails generate rails_error_dashboard:install
+       rails db:migrate:error_dashboard
+       # See docs for full separate-DB setup.
 
-    📖 Full docs: https://github.com/AnjanJ/rails_error_dashboard
+    Live demo: https://rails-error-dashboard.anjan.dev
+    Full docs:  https://github.com/AnjanJ/rails_error_dashboard
+    Changelog:  https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   MESSAGE
 

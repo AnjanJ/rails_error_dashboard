@@ -110,16 +110,16 @@ Next steps:
   1. Edit config/initializers/rails_error_dashboard.rb
   2. Set environment variables (if needed)
   3. Run: rails db:migrate
-  4. Visit: http://localhost:3000/error_dashboard
+  4. Visit: http://localhost:3000/red
 ```
 
-That's it! The dashboard is now available at `/error_dashboard` in your Rails app.
+That's it! The dashboard is now available at `/red` in your Rails app.
 
 ## First Steps
 
 ### Access the Dashboard
 
-Visit `http://localhost:3000/error_dashboard` to see the error dashboard.
+Visit `http://localhost:3000/red` to see the error dashboard.
 
 Initially, you won't see any errors. Let's create one to test:
 

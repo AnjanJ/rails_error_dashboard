@@ -535,7 +535,7 @@ curl http://localhost:3000/test_error
 ```
 
 **Check the dashboard:**
-1. Visit `http://localhost:3000/error_dashboard`
+1. Visit `http://localhost:3000/red`
 2. Click on the error
 3. Find `app/controllers/test_controller.rb` in the backtrace
 4. Click "View Source"

@@ -361,7 +361,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 2. **Verify HTTP Basic Auth header**:
    ```bash
    # Test with curl
-   curl -u admin:password http://localhost:3000/error_dashboard
+   curl -u admin:password http://localhost:3000/red
    # Should return 200, not 401
    ```
 

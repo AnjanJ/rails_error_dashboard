@@ -52,10 +52,8 @@ bundle install
 rails generate rails_error_dashboard:install
 rails db:migrate
 
-# Mount in config/routes.rb
-mount RailsErrorDashboard::Engine => '/error_dashboard'
-
-# Start your app and visit /error_dashboard
+# Route is added automatically by the generator
+# Start your app and visit /red
 ```
 
 ## Why Rails Error Dashboard?

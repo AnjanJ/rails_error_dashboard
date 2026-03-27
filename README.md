@@ -403,7 +403,7 @@ The installer guides you through optional feature selection — notifications, p
 ### 3. Visit your dashboard
 
 ```
-http://localhost:3000/error_dashboard
+http://localhost:3000/red
 ```
 
 Default credentials: `gandalf` / `youshallnotpass`

@@ -641,7 +641,7 @@ rails runner "raise ArgumentError, 'Test error'"
 ```
 
 **Browser:**
-Open dashboard at `http://localhost:3000/error_dashboard`
+Open dashboard at `http://localhost:3000/red`
 - Error should appear instantly
 - Stats should update
 - Yellow highlight animation should play

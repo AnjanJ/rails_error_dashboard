@@ -1912,7 +1912,7 @@ See [Database Optimization Guide](/rails_error_dashboard/docs/guides/database-op
 
 3. **Test credentials**
    ```bash
-   curl -u admin:password http://localhost:3000/error_dashboard
+   curl -u admin:password http://localhost:3000/red
    ```
 
 4. **Check for proxy/load balancer issues**

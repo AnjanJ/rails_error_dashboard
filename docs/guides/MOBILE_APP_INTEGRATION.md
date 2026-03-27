@@ -316,7 +316,7 @@ console.log('Errors:', stats.total, 'Synced:', stats.synced);
 ```
 
 ### 3. Verify in Dashboard
-1. Open `http://localhost:3000/error_dashboard`
+1. Open `http://localhost:3000/red`
 2. Filter by platform: iOS or Android
 3. Check error details
 4. Verify user association

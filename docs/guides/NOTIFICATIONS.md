@@ -250,7 +250,7 @@ Webhooks receive a JSON payload with complete error details:
     ],
     "metadata": {
       "error_hash": "abc123def456",
-      "dashboard_url": "https://yourapp.com/error_dashboard/errors/123"
+      "dashboard_url": "https://yourapp.com/red/errors/123"
     }
   }
 }
