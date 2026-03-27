@@ -40,6 +40,8 @@ RailsErrorDashboard::Engine.routes.draw do
       get :releases
       get :diagnostic_dumps
       post :create_diagnostic_dump
+      post :enable_coverage
+      post :disable_coverage
       post :batch_action
     end
   end

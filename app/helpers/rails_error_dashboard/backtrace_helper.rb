@@ -168,6 +168,18 @@ module RailsErrorDashboard
       end
     end
 
+    # Read coverage data for a file when coverage tracking is active
+    # @return [Hash{Integer => Boolean}] line_number => executed?, or nil
+    def read_coverage_for_file(file_path)
+      return nil unless RailsErrorDashboard.configuration.enable_coverage_tracking
+      return nil unless Services::CoverageTracker.active?
+
+      Services::CoverageTracker.peek(file_path)
+    rescue => e
+      Rails.logger.error("[RailsErrorDashboard] read_coverage_for_file failed: #{e.class}: #{e.message}")
+      nil
+    end
+
     # Read git blame for a backtrace frame
     # Returns blame data hash or nil
     def read_git_blame(frame)

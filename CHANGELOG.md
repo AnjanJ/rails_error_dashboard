@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.11] - 2026-03-27
+
+### Added
+- **Code path coverage (diagnostic mode)** — Enable via dashboard button to see which lines were executed in production. Uses Ruby's `Coverage.setup(oneshot_lines: true)` (Ruby 3.2+). Source code viewer overlays green checkmarks on executed lines and gray dots on unexecuted lines. Zero overhead when off — coverage only runs between explicit enable/disable. SimpleCov-compatible (piggybacks on existing sessions). No migration needed (live in-memory data via `Coverage.peek_result`). 19 service specs + 7 request specs
+
+```ruby
+config.enable_coverage_tracking = true  # shows Enable/Disable buttons on error detail page
+```
+
+---
+
 ## [0.5.10] - 2026-03-27
 
 ### Added

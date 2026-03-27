@@ -529,6 +529,27 @@ module RailsErrorDashboard
       redirect_to diagnostic_dumps_errors_path
     end
 
+    def enable_coverage
+      unless RailsErrorDashboard.configuration.enable_coverage_tracking
+        flash[:alert] = "Coverage tracking is not enabled in configuration."
+        redirect_to errors_path
+        return
+      end
+
+      if Services::CoverageTracker.enable!
+        flash[:notice] = "Code path coverage enabled. Reproduce the error, then view source code to see executed lines."
+      else
+        flash[:alert] = "Could not enable coverage. Requires Ruby 3.2+."
+      end
+      redirect_back fallback_location: errors_path
+    end
+
+    def disable_coverage
+      Services::CoverageTracker.disable!
+      flash[:notice] = "Code path coverage disabled."
+      redirect_back fallback_location: errors_path
+    end
+
     def settings
       @config = RailsErrorDashboard.configuration
     end

@@ -55,14 +55,27 @@
 
       <!-- Source code lines with syntax highlighting -->
       <div class="source-code-content bg-white">
+        <%
+          # Find the error line number for highlighting
+          error_line_number = source_data[:lines].find { |l| l[:highlight] }&.dig(:number)
+          # Get start line number (first line in context)
+          start_line = source_data[:lines].first[:number]
+          # Coverage data (if active)
+          coverage_data = read_coverage_for_file(frame[:file_path])
+        %>
+        <% if coverage_data %>
+          <div class="px-3 py-1 bg-info bg-opacity-10 border-bottom">
+            <small class="text-info">
+              <i class="bi bi-broadcast"></i> Coverage active — <span class="text-success">green</span> = executed, <span class="text-secondary">gray</span> = not executed
+            </small>
+          </div>
+        <% end %>
         <div class="code-block" style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
-          <%
-            # Find the error line number for highlighting
-            error_line_number = source_data[:lines].find { |l| l[:highlight] }&.dig(:number)
-            # Get start line number (first line in context)
-            start_line = source_data[:lines].first[:number]
-          %>
-          <pre class="mb-0"><code class="language-<%= source_data[:language] || 'plaintext' %>" data-error-line="<%= error_line_number %>" data-start-line="<%= start_line %>"><%= source_data[:lines].map { |l| l[:content] }.join("\n") %></code></pre>
+          <% if coverage_data %>
+            <pre class="mb-0" style="position: relative;"><code class="language-<%= source_data[:language] || 'plaintext' %>" data-error-line="<%= error_line_number %>" data-start-line="<%= start_line %>"><% source_data[:lines].each_with_index do |l, i| %><% line_num = l[:number] %><% executed = coverage_data[line_num] %><% marker = executed == true ? "\u2713" : (executed == false ? "\u00b7" : " ") %><% color = executed == true ? "color: #22c55e;" : (executed == false ? "color: #9ca3af;" : "") %><span style="<%= color %> user-select: none;"><%= marker %></span> <%= l[:content] %><%= "\n" unless i == source_data[:lines].size - 1 %><% end %></code></pre>
+          <% else %>
+            <pre class="mb-0"><code class="language-<%= source_data[:language] || 'plaintext' %>" data-error-line="<%= error_line_number %>" data-start-line="<%= start_line %>"><%= source_data[:lines].map { |l| l[:content] }.join("\n") %></code></pre>
+          <% end %>
         </div>
       </div>
     </div>

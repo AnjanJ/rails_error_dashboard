@@ -168,6 +168,9 @@ module RailsErrorDashboard
     # On-demand diagnostic dump (rake task + dashboard endpoint)
     attr_accessor :enable_diagnostic_dump               # Master switch (default: false)
 
+    # Code path coverage (diagnostic mode — Ruby 3.2+)
+    attr_accessor :enable_coverage_tracking             # Master switch (default: false)
+
     # Rack Attack event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
 
@@ -324,6 +327,9 @@ module RailsErrorDashboard
 
       # Diagnostic dump defaults - OFF by default (opt-in)
       @enable_diagnostic_dump = false   # On-demand system state snapshot
+
+      # Code path coverage defaults - OFF by default (opt-in, Ruby 3.2+)
+      @enable_coverage_tracking = false
 
       # Rack Attack event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_rack_attack_tracking = false

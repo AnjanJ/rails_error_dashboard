@@ -201,6 +201,17 @@ config.enable_git_blame = true
 </details>
 
 <details>
+<summary><strong>Code Path Coverage (Diagnostic Mode)</strong></summary>
+
+Enable coverage via a dashboard button to see which production code paths were executed. Source code viewer overlays green checkmarks on executed lines and gray dots on unexecuted lines. Uses Ruby's `Coverage.setup(oneshot_lines: true)` — near-zero overhead, each line fires once. Zero overhead when off.
+
+```ruby
+config.enable_coverage_tracking = true   # shows Enable/Disable buttons on error detail page
+config.enable_source_code_integration = true  # required for source code viewer
+```
+</details>
+
+<details>
 <summary><strong>Error Replay — Copy as cURL / RSpec / LLM Markdown</strong></summary>
 
 Replay failing requests with one click. Copy the request as a cURL command, generate an RSpec test, or **copy all error details as clean Markdown** for pasting into an LLM session. The LLM export includes app backtrace, cause chain, local/instance variables, breadcrumbs, environment, system health, and related errors — with framework frames filtered and sensitive data preserved as `[FILTERED]`.

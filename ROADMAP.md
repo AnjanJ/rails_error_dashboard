@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: March 27, 2026 | Current version: v0.5.10
+> Last updated: March 27, 2026 | Current version: v0.5.11
 > Deep introspection analysis: [DEEP_INTROSPECTION_ANALYSIS.md](DEEP_INTROSPECTION_ANALYSIS.md)
 > Faultline comparison: [FAULTLINE_COMPARISON.md](FAULTLINE_COMPARISON.md)
 > Time-series strategy: [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)
@@ -302,12 +302,13 @@ Environment:
 - **Effort:** Half day
 - **Impact:** Operational + (useful for apps with file uploads)
 
-### V. Production Code Path Coverage
+### V. Production Code Path Coverage — DONE (v0.5.11)
 - **What:** Use Ruby's `Coverage.setup(oneshot_lines: true)` (near-zero ongoing overhead) combined with `Coverage.suspend/resume` (Ruby 3.2+) to track which code paths were executed before an error occurred. Show "executed lines" overlay on source view
 - **Why:** Knowing exactly which lines ran before a crash narrows debugging scope dramatically. `oneshot_lines` mode fires each line callback only once, making it practical for production
 - **Implementation:** Enable in diagnostic mode only. Suspend/resume around error capture. Store as compact bitset per file. **Caveat:** Coverage is process-global (not thread-local), so results may blend in multi-threaded Puma. Best for diagnostic/single-threaded use
 - **Effort:** 2-3 days
 - **Impact:** Debugging ++ (unique, no competitor has this)
+- **Implemented:** Diagnostic mode — `CoverageTracker` service wraps Ruby Coverage API. Enable/disable via dashboard button on error detail page. Source code viewer overlays green checkmarks (executed) / gray dots (not executed). Zero overhead when off. SimpleCov-compatible. No migration (live in-memory `Coverage.peek_result`). 19 service specs + 7 request specs
 
 ### W. YJIT Runtime Stats — DONE (v0.4.0)
 - **What:** Capture `RubyVM::YJIT.runtime_stats` (Ruby 3.1+) at error time — JIT code region size, compilation count, cache invalidations. Surface on system health panel
@@ -659,7 +660,7 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 | **v1.0** | Error-environment correlation | 3-5 days | Analytics ++ | Phase 8 |
 | **v1.0** | AI error summaries | 2-3 days | Buzz +++ | Phase 8 |
 | **v1.0** | Comparison mode | 1-2 days | Analytics ++ | Phase 8 |
-| **v1.0** | Production code path coverage — Coverage oneshot_lines (V) | 2-3 days | Debugging ++ | Phase 8 |
+| ~~**v1.0**~~ | ~~Production code path coverage — Coverage oneshot_lines (V)~~ | ~~2-3 days~~ | ~~Debugging ++~~ | ~~Phase 8~~ **DONE (v0.5.11)** |
 | **v1.0** | Lazy backtrace — Thread.each_caller_location (Y) | Half day | Performance + | Phase 8 |
 | | | | | |
 | **v0.6** | LLM call breadcrumbs — capture model, provider, tokens, duration, tool calls as breadcrumbs when errors occur during LLM requests. Support RubyLLM (via OTel spans if `opentelemetry-instrumentation-ruby_llm` present), langchain.rb, OpenAI SDK, Anthropic SDK. Content capture opt-in (PII risk). No monkey-patching — subscribe to existing instrumentation. Fields: `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.request.temperature`, tool call name/arguments. Ref: [thoughtbot/opentelemetry-instrumentation-ruby_llm](https://github.com/thoughtbot/opentelemetry-instrumentation-ruby_llm) | 2-3 days | Novel +++ | Phase 9: AI Observability |

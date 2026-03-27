@@ -133,7 +133,8 @@
         enable_instance_variables: { label: "Instance Variable Capture", description: "Capture self's ivars at exception time", type: :boolean },
         detect_swallowed_exceptions: { label: "Swallowed Exception Detection", description: "TracePoint(:raise) + (:rescue) — detect silently rescued exceptions (Ruby 3.3+)", type: :boolean },
         enable_diagnostic_dump: { label: "Diagnostic Dump", description: "On-demand system state snapshots", type: :boolean },
-        enable_crash_capture: { label: "Process Crash Capture", description: "at_exit hook for unhandled crashes", type: :boolean }
+        enable_crash_capture: { label: "Process Crash Capture", description: "at_exit hook for unhandled crashes", type: :boolean },
+        enable_coverage_tracking: { label: "Code Path Coverage", description: "Diagnostic mode — enable via dashboard to see executed lines in source view (Ruby 3.2+)", type: :boolean }
       }
     },
     "Event Tracking" => {
