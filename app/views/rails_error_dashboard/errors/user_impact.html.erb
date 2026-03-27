@@ -1,0 +1,172 @@
+<% content_for :page_title, "User Impact" %>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-people me-2"></i>
+      User Impact
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to user_impact_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        7 Days
+      <% end %>
+      <%= link_to user_impact_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        30 Days
+      <% end %>
+      <%= link_to user_impact_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        90 Days
+      <% end %>
+    </div>
+  </div>
+
+  <% if @entries.empty? %>
+    <div class="text-center py-5">
+      <i class="bi bi-people display-1 text-muted mb-3"></i>
+      <h4 class="text-muted">No User Impact Data</h4>
+      <p class="text-muted">
+        No errors with user attribution were found in the last <%= @days %> days.
+      </p>
+      <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body text-start">
+          <h6>How user impact is tracked:</h6>
+          <ul class="mb-0">
+            <li>Errors must have a <code>user_id</code> associated</li>
+            <li>Auto-detected via <code>CurrentAttributes</code> or <code>current_user</code></li>
+            <li>Or set <code>config.user_model = "User"</code> in your initializer</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-primary"><%= @summary[:total_error_types_with_users] %></div>
+            <small class="text-muted">Error Types with Users</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @summary[:total_unique_users_affected] %></div>
+            <small class="text-muted">Total Users Affected</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6"><code><%= @summary[:most_impactful] || "N/A" %></code></div>
+            <small class="text-muted">Most Impactful Error</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @summary[:total_users] ? number_with_delimiter(@summary[:total_users]) : "N/A" %></div>
+            <small class="text-muted">Total Users (for %)</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Impact Table -->
+    <div class="card mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-bar-chart text-primary me-2"></i>
+          Errors Ranked by User Impact
+          <span class="badge bg-primary"><%= @summary[:total_error_types_with_users] %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="40">#</th>
+                <th>Error Type</th>
+                <th width="120">Unique Users</th>
+                <th width="120">Occurrences</th>
+                <% if @summary[:total_users] %>
+                  <th width="150">User Impact %</th>
+                <% end %>
+                <th width="100">Severity</th>
+                <th width="140">Last Seen</th>
+                <th width="80"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @entries.each_with_index do |entry, index| %>
+                <tr>
+                  <td><strong><%= (@pagy.from || 1) + index %></strong></td>
+                  <td>
+                    <strong><%= entry[:error_type] %></strong>
+                    <br><small class="text-muted"><%= entry[:message] %></small>
+                  </td>
+                  <td>
+                    <span class="badge bg-danger"><%= entry[:unique_users] %> users</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary"><%= entry[:total_occurrences] %>x</span>
+                  </td>
+                  <% if @summary[:total_users] && entry[:impact_percentage] %>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height: 18px;">
+                          <%
+                            pct = entry[:impact_percentage]
+                            bar_class = pct > 10 ? "bg-danger" : (pct > 5 ? "bg-warning" : "bg-info")
+                          %>
+                          <div class="progress-bar <%= bar_class %>" style="width: <%= [ pct, 100 ].min %>%;">
+                            <%= pct %>%
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  <% end %>
+                  <td>
+                    <%
+                      sev = entry[:severity].to_s
+                      sev_class = case sev
+                                  when "critical" then "bg-danger"
+                                  when "high" then "bg-warning text-dark"
+                                  when "medium" then "bg-info"
+                                  else "bg-secondary"
+                                  end
+                    %>
+                    <span class="badge <%= sev_class %>"><%= sev.capitalize %></span>
+                  </td>
+                  <td><small><%= local_time_ago(entry[:last_seen]) %></small></td>
+                  <td>
+                    <% if entry[:id] %>
+                      <%= link_to error_path(entry[:id]), class: "btn btn-sm btn-outline-primary" do %>
+                        <i class="bi bi-eye"></i>
+                      <% end %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="bi bi-info-circle"></i>
+          Ranked by unique users affected, not occurrence count.
+          An error hitting 1000 users once is worse than hitting 1 user 1000 times.
+        </small>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

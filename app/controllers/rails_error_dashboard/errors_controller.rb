@@ -286,6 +286,16 @@ module RailsErrorDashboard
       @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
     end
 
+    def user_impact
+      days = (params[:days] || 30).to_i
+      @days = days
+      result = Queries::UserImpactSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+      @summary = result[:summary]
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+    end
+
     def deprecations
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
