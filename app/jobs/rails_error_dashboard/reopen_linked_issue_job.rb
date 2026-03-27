@@ -22,9 +22,10 @@ module RailsErrorDashboard
       result = client.reopen_issue(number: error.external_issue_number)
 
       # Add recurrence comment
-      comment = "Error recurred — reopened automatically.\n\n"
+      comment = "**Reopened** — error recurred.\n\n"
       comment += "- **Occurrences:** #{error.occurrence_count}\n"
       comment += "- **Last seen:** #{error.last_seen_at&.utc&.strftime("%Y-%m-%d %H:%M:%S UTC")}"
+      comment += "\n\n---\n*[RED](https://github.com/AnjanJ/rails_error_dashboard) (Rails Error Dashboard)*"
 
       client.add_comment(number: error.external_issue_number, body: comment)
 

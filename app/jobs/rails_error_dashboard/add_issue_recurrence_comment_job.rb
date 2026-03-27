@@ -33,6 +33,7 @@ module RailsErrorDashboard
       comment = "Error occurred again (#{error.occurrence_count} total occurrences).\n\n"
       comment += "- **Last seen:** #{error.last_seen_at&.utc&.strftime("%Y-%m-%d %H:%M:%S UTC")}\n"
       comment += "- **First seen:** #{error.first_seen_at&.utc&.strftime("%Y-%m-%d %H:%M:%S UTC")}"
+      comment += "\n\n---\n*[RED](https://github.com/AnjanJ/rails_error_dashboard) (Rails Error Dashboard)*"
 
       result = client.add_comment(number: error.external_issue_number, body: comment)
 

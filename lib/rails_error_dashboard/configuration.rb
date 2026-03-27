@@ -498,6 +498,18 @@ module RailsErrorDashboard
         @enable_activestorage_tracking = false
       end
 
+      # Validate issue tracking configuration
+      if enable_issue_tracking && effective_issue_tracker_token.blank?
+        warnings << "enable_issue_tracking is true but no token configured. " \
+                    "Set issue_tracker_token or RED_BOT_TOKEN env var. " \
+                    "Tip: Create a dedicated RED (Rails Error Dashboard) bot account on your platform."
+      end
+
+      if enable_issue_tracking && effective_issue_tracker_provider.nil?
+        warnings << "enable_issue_tracking is true but provider could not be detected. " \
+                    "Set issue_tracker_provider or git_repository_url."
+      end
+
       # Validate crash capture path (must exist if custom path specified)
       if enable_crash_capture && crash_capture_path
         unless Dir.exist?(crash_capture_path)

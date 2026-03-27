@@ -524,6 +524,14 @@ module RailsErrorDashboard
         say "  Session-based: config.authenticate_with = -> { session[:admin] == true }", :white
         say "  See: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#custom-authentication", :white
         say "\n"
+        say "Issue Tracking (optional):", :cyan
+        say "  Create a dedicated RED (Rails Error Dashboard) bot account on your platform:", :white
+        say "  GitHub:   github.com/join → username: 'red-bot' or 'yourapp-red'", :white
+        say "  GitLab:   Use a Project Access Token (Settings > Access Tokens)", :white
+        say "  Codeberg: codeberg.org → username: 'red-bot'", :white
+        say "  Then: config.issue_tracker_token = ENV['RED_BOT_TOKEN']", :white
+        say "  Issues will appear as created by your RED bot account.", :white
+        say "\n"
         say "Documentation:", :white
         say "   Quick Start: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/QUICKSTART.md", :white
         say "   Database Setup: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/DATABASE_OPTIONS.md", :white

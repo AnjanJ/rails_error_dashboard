@@ -20,8 +20,9 @@ module RailsErrorDashboard
 
       # Add resolution comment
       resolved_by = error.resolved_by_name.presence || "a team member"
-      comment = "Resolved in Rails Error Dashboard by #{resolved_by}."
+      comment = "**Resolved** by #{resolved_by}."
       comment += "\n\nResolution: #{error.resolution_comment}" if error.resolution_comment.present?
+      comment += "\n\n---\n*[RED](https://github.com/AnjanJ/rails_error_dashboard) (Rails Error Dashboard)*"
 
       client.add_comment(number: error.external_issue_number, body: comment)
 

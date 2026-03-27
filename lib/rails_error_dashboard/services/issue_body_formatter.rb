@@ -114,9 +114,11 @@ module RailsErrorDashboard
       end
 
       def dashboard_link_section
-        return nil if @dashboard_url.blank?
+        parts = []
+        parts << "[View in Dashboard](#{@dashboard_url})" if @dashboard_url.present?
+        parts << "Created by [RED](https://github.com/AnjanJ/rails_error_dashboard) (Rails Error Dashboard)"
 
-        "---\n\n[View in Rails Error Dashboard](#{@dashboard_url})"
+        "---\n\n#{parts.join(" | ")}"
       end
 
       def parse_json(raw)

@@ -62,15 +62,18 @@ RSpec.describe RailsErrorDashboard::Services::IssueBodyFormatter do
       expect(result).to include("3.2.0")
     end
 
-    it "includes dashboard link when provided" do
+    it "includes dashboard link and RED branding when provided" do
       result = described_class.call(make_error, dashboard_url: "https://app.com/error_dashboard/errors/42")
-      expect(result).to include("View in Rails Error Dashboard")
+      expect(result).to include("View in Dashboard")
       expect(result).to include("https://app.com/error_dashboard/errors/42")
+      expect(result).to include("RED")
+      expect(result).to include("Rails Error Dashboard")
     end
 
-    it "omits dashboard link when not provided" do
+    it "includes RED branding even without dashboard URL" do
       result = described_class.call(make_error)
-      expect(result).not_to include("View in Rails Error Dashboard")
+      expect(result).to include("RED")
+      expect(result).not_to include("View in Dashboard")
     end
 
     it "includes metadata" do
