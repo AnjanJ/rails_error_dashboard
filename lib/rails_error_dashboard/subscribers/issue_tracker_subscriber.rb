@@ -13,7 +13,8 @@ module RailsErrorDashboard
         # Called when a new error is first logged
         def on_error_logged(error_log)
           return unless should_auto_create?(error_log)
-          CreateIssueJob.perform_later(error_log.id)
+          dashboard_url = Services::NotificationHelpers.dashboard_url(error_log)
+          CreateIssueJob.perform_later(error_log.id, dashboard_url: dashboard_url)
         rescue => e
           nil
         end

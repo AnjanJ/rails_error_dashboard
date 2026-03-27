@@ -21,7 +21,7 @@ RSpec.describe RailsErrorDashboard::Subscribers::IssueTrackerSubscriber do
   describe ".on_error_logged" do
     it "enqueues CreateIssueJob for first occurrence" do
       error_log.update!(occurrence_count: 1)
-      expect(RailsErrorDashboard::CreateIssueJob).to receive(:perform_later).with(error_log.id)
+      expect(RailsErrorDashboard::CreateIssueJob).to receive(:perform_later).with(error_log.id, dashboard_url: anything)
       described_class.on_error_logged(error_log)
     end
 
@@ -41,7 +41,7 @@ RSpec.describe RailsErrorDashboard::Subscribers::IssueTrackerSubscriber do
     it "enqueues for high severity even if not first occurrence" do
       error_log.update!(occurrence_count: 5)
       allow(error_log).to receive(:severity).and_return("high")
-      expect(RailsErrorDashboard::CreateIssueJob).to receive(:perform_later).with(error_log.id)
+      expect(RailsErrorDashboard::CreateIssueJob).to receive(:perform_later).with(error_log.id, dashboard_url: anything)
       described_class.on_error_logged(error_log)
     end
 
