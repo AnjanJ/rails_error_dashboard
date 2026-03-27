@@ -15,7 +15,9 @@ module RailsErrorDashboard
     private
 
     def dashboard_base_url
-      RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000"
+      base = RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000"
+      mount_path = RailsErrorDashboard.configuration.engine_mount_path
+      "#{base}#{mount_path}"
     end
   end
 end

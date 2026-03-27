@@ -114,7 +114,7 @@
                   <small class="text-muted"><%= error[:message] %></small>
                 </td>
                 <td>
-                  <a href="<%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>">View</a>
+                  <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>">View</a>
                 </td>
               </tr>
             <% end %>
@@ -145,7 +145,7 @@
                 <td><%= error[:count] %></td>
                 <td>
                   <% if error[:id] %>
-                    <a href="<%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>">View</a>
+                    <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>">View</a>
                   <% end %>
                 </td>
               </tr>
@@ -157,7 +157,7 @@
 
     <!-- CTA -->
     <div class="card" style="text-align: center;">
-      <a href="<%= @dashboard_url %>/error_dashboard" style="display: inline-block; padding: 10px 24px; background: #3b82f6; color: #ffffff; border-radius: 6px; font-weight: 600; text-decoration: none;">
+      <a href="<%= @dashboard_url %>" style="display: inline-block; padding: 10px 24px; background: #3b82f6; color: #ffffff; border-radius: 6px; font-weight: 600; text-decoration: none;">
         Open Dashboard
       </a>
     </div>
@@ -165,7 +165,7 @@
     <!-- Footer -->
     <div class="footer">
       Automated digest from <strong>RED</strong> (Rails Error Dashboard)<br>
-      <a href="<%= @dashboard_url %>/error_dashboard/settings">Manage digest settings</a>
+      <a href="<%= @dashboard_url %>/settings">Manage digest settings</a>
     </div>
   </div>
 </body>

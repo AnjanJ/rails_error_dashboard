@@ -14,7 +14,8 @@ module RailsErrorDashboard
       # @return [String] Full URL to the error detail page
       def dashboard_url(error_log)
         base_url = RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000"
-        "#{base_url}/error_dashboard/errors/#{error_log.id}"
+        mount_path = RailsErrorDashboard.configuration.engine_mount_path
+        "#{base_url}#{mount_path}/errors/#{error_log.id}"
       end
 
       # Truncate a message to a maximum length

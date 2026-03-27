@@ -5,14 +5,9 @@ module RailsErrorDashboard
     # Rate limiting middleware for Rails Error Dashboard routes
     # Protects both dashboard UI and API endpoints from abuse
     class RateLimiter
-      # Rate limits by endpoint type
-      LIMITS = {
-        # API endpoints (mobile/frontend) - stricter limits
-        "/error_dashboard/api" => { limit: 100, period: 60 }, # 100 req/min
-
-        # Dashboard pages (human users) - more lenient
-        "/error_dashboard" => { limit: 300, period: 60 } # 300 req/min
-      }.freeze
+      # Rate limits by endpoint type (relative to engine mount path)
+      API_LIMIT = { limit: 100, period: 60 }.freeze   # 100 req/min
+      DASHBOARD_LIMIT = { limit: 300, period: 60 }.freeze # 300 req/min
 
       def initialize(app)
         @app = app
@@ -51,13 +46,22 @@ module RailsErrorDashboard
         RailsErrorDashboard.configuration.enable_rate_limiting
       end
 
+      def engine_mount_path
+        @engine_mount_path ||= RailsErrorDashboard.configuration.engine_mount_path
+      rescue
+        "/red"
+      end
+
       def error_dashboard_route?(path)
-        path.start_with?("/error_dashboard")
+        path.start_with?(engine_mount_path)
       end
 
       def find_limit_config(path)
-        # Match most specific route first (API before dashboard)
-        LIMITS.find { |pattern, _| path.start_with?(pattern) }&.last
+        if path.start_with?("#{engine_mount_path}/api")
+          API_LIMIT
+        else
+          DASHBOARD_LIMIT
+        end
       end
 
       def rate_limit_key(request)
@@ -71,7 +75,7 @@ module RailsErrorDashboard
 
       def rate_limit_response(request, limit_config)
         # Return JSON for API requests, HTML for dashboard
-        if request.path.start_with?("/error_dashboard/api")
+        if request.path.start_with?("#{engine_mount_path}/api")
           json_rate_limit_response(limit_config)
         else
           html_rate_limit_response(limit_config)

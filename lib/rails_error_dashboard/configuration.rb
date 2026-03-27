@@ -668,6 +668,14 @@ module RailsErrorDashboard
       end
     end
 
+    # Detect the engine's mount path from the host app routes.
+    # Falls back to "/red" if detection fails.
+    #
+    # @return [String] The mount path (e.g. "/red", "/admin/red", "/error_dashboard")
+    def engine_mount_path
+      @engine_mount_path ||= detect_engine_mount_path
+    end
+
     # Get the effective user model (auto-detected if not configured)
     #
     # @return [String, nil] User model class name
@@ -704,6 +712,27 @@ module RailsErrorDashboard
     # Clear the total users cache
     def clear_total_users_cache!
       @total_users_cache = {}
+    end
+
+    # Detect where the engine is mounted in the host app's routes.
+    # @return [String] mount path (default: "/red")
+    def detect_engine_mount_path
+      return "/red" unless defined?(Rails) && Rails.application
+
+      Rails.application.routes.routes.each do |route|
+        app = route.app
+        app = app.app if app.respond_to?(:app)
+        if app == RailsErrorDashboard::Engine || (app.is_a?(Class) && app <= RailsErrorDashboard::Engine)
+          path = route.path.spec.to_s.sub("(.:format)", "").chomp("/")
+          return path if path.present?
+        end
+      rescue => e
+        next
+      end
+
+      "/red"
+    rescue => e
+      "/red"
     end
   end
 end

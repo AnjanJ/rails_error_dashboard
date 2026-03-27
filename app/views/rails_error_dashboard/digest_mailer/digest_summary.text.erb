@@ -28,7 +28,7 @@ CRITICAL / HIGH UNRESOLVED
 ------------------------------------------
 <% @digest[:critical_unresolved].each do |error| %>
   [<%= error[:severity].to_s.upcase %>] <%= error[:error_type] %>: <%= error[:message] %>
-  → <%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>
+  → <%= @dashboard_url %>/errors/<%= error[:id] %>
 <% end %>
 <% end %>
 
@@ -38,13 +38,12 @@ TOP ERRORS BY COUNT
 ------------------------------------------
 <% @digest[:top_errors].each_with_index do |error, i| %>
   <%= i + 1 %>. <%= error[:error_type] %> (<%= error[:count] %>x): <%= error[:message] %>
-     → <%= @dashboard_url %>/error_dashboard/errors/<%= error[:id] %>
+     → <%= @dashboard_url %>/errors/<%= error[:id] %>
 <% end %>
 <% end %>
 
 ------------------------------------------
 
 View the full dashboard:
-<%= @dashboard_url %>/error_dashboard
-
+<%= @dashboard_url %>
 This is an automated digest from RED (Rails Error Dashboard).
