@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for?(:page_title) ? "#{content_for(:page_title)} | " : "" %><%= Rails.application.class.module_parent_name %> - Error Dashboard</title>
+    <title><%= content_for?(:page_title) ? "#{content_for(:page_title)} | " : "" %><%= Rails.application.class.module_parent_name %> - RED</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="turbo-visit-control" content="reload">
     <% if respond_to?(:csrf_meta_tags) %>
@@ -1547,18 +1547,24 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
             end
           %>
           <% if has_root %>
-            <a class="navbar-brand" href="<%= root_url %>" title="Back to <%= Rails.application.class.module_parent_name %>">
+            <a class="navbar-brand d-flex align-items-center" href="<%= root_url %>" title="Back to <%= Rails.application.class.module_parent_name %>">
               <i class="bi bi-bug-fill"></i>
               <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
               <span class="d-none d-md-inline text-white-50 mx-2">|</span>
-              <span class="d-none d-md-inline">Error Dashboard</span>
+              <span class="d-none d-md-inline">
+                <strong>RED</strong>
+                <small class="text-white-50 ms-1" style="font-size: 0.65em; vertical-align: middle;">Rails Error Dashboard</small>
+              </span>
             </a>
           <% else %>
-            <span class="navbar-brand">
+            <span class="navbar-brand d-flex align-items-center">
               <i class="bi bi-bug-fill"></i>
               <span class="d-none d-sm-inline"><%= Rails.application.class.module_parent_name %></span>
               <span class="d-none d-md-inline text-white-50 mx-2">|</span>
-              <span class="d-none d-md-inline">Error Dashboard</span>
+              <span class="d-none d-md-inline">
+                <strong>RED</strong>
+                <small class="text-white-50 ms-1" style="font-size: 0.65em; vertical-align: middle;">Rails Error Dashboard</small>
+              </span>
             </span>
           <% end %>
         </div>
@@ -1827,7 +1833,7 @@ body.dark-mode .sidebar-section-body { background: var(--ctp-mantle); }
       <div class="container">
         <p class="text-muted mb-1">
           <i class="bi bi-bug-fill text-primary"></i>
-          Built with <a href="https://github.com/AnjanJ/rails_error_dashboard" target="_blank" class="text-decoration-none">Rails Error Dashboard</a>
+          Built with <a href="https://github.com/AnjanJ/rails_error_dashboard" target="_blank" class="text-decoration-none"><strong>RED</strong> — Rails Error Dashboard</a>
         </p>
         <p class="text-muted small mb-0">
           Created by <a href="https://www.anjan.dev/" target="_blank" class="text-decoration-none">Anjan Jagirdar</a>
