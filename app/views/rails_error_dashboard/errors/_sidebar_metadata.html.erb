@@ -71,8 +71,21 @@
             <% end %>
           </div>
 
+          <% if RailsErrorDashboard.configuration.enable_issue_tracking %>
+            <div class="mb-3">
+              <small class="text-muted" style="font-size: 0.78em;">
+                <i class="bi bi-info-circle me-1"></i>
+                Status, assignment, and priority are managed via your
+                <% if error.respond_to?(:external_issue_url) && error.external_issue_url.present? %>
+                  <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener">linked issue</a>.
+                <% else %>
+                  issue tracker. Link an issue to see details.
+                <% end %>
+              </small>
+            </div>
+          <% end %>
           <% unless RailsErrorDashboard.configuration.enable_issue_tracking %>
-            <!-- Workflow Status (hidden when issue tracking enabled — platform is source of truth) -->
+            <!-- Workflow Status -->
             <div class="mb-3">
               <small class="metadata-label d-block mb-1">Workflow Status</small>
               <% if error.respond_to?(:status) %>
