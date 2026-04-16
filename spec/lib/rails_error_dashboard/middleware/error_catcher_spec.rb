@@ -9,8 +9,55 @@ RSpec.describe RailsErrorDashboard::Middleware::ErrorCatcher do
   let(:collector) { RailsErrorDashboard::Services::BreadcrumbCollector }
 
   after do
+    Thread.current[:rails_error_dashboard_request_env] = nil
+    Thread.current[:rails_error_dashboard_reported_errors] = nil
     collector.clear_buffer
     RailsErrorDashboard.reset_configuration!
+  end
+
+  describe "request env thread-local" do
+    it "stores request env in Thread.current during the request" do
+      env_during_request = nil
+      app_spy = lambda do |_env|
+        env_during_request = Thread.current[:rails_error_dashboard_request_env]
+        [ 200, {}, [ "OK" ] ]
+      end
+      middleware = described_class.new(app_spy)
+
+      middleware.call(env)
+
+      expect(env_during_request).to eq(env)
+    end
+
+    it "clears request env after a successful request" do
+      middleware.call(env)
+
+      expect(Thread.current[:rails_error_dashboard_request_env]).to be_nil
+    end
+
+    it "clears request env after an exception" do
+      error_app = ->(_env) { raise StandardError, "boom" }
+      error_middleware = described_class.new(error_app)
+
+      expect { error_middleware.call(env) }.to raise_error(StandardError)
+      expect(Thread.current[:rails_error_dashboard_request_env]).to be_nil
+    end
+
+    it "clears reported errors set after a successful request" do
+      Thread.current[:rails_error_dashboard_reported_errors] = Set.new([ 12345 ])
+      middleware.call(env)
+
+      expect(Thread.current[:rails_error_dashboard_reported_errors]).to be_nil
+    end
+
+    it "clears reported errors set after an exception" do
+      Thread.current[:rails_error_dashboard_reported_errors] = Set.new([ 12345 ])
+      error_app = ->(_env) { raise StandardError, "boom" }
+      error_middleware = described_class.new(error_app)
+
+      expect { error_middleware.call(env) }.to raise_error(StandardError)
+      expect(Thread.current[:rails_error_dashboard_reported_errors]).to be_nil
+    end
   end
 
   describe "breadcrumb integration" do

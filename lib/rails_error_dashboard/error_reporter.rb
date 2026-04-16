@@ -24,6 +24,32 @@ module RailsErrorDashboard
 
       # CRITICAL: Wrap entire process in rescue to ensure failures don't break the app
       begin
+        # Enrich context with request data from Thread.current when available.
+        # Rails internals (ActionDispatch::Executor) report errors with
+        # source: "application.action_dispatch" but pass NO request object,
+        # resulting in placeholder values ("Rails Application", "{}", etc.).
+        # Our middleware stores the Rack env in Thread.current so we can
+        # build a proper request here — fixing issue #106.
+        if context[:request].nil? && Thread.current[:rails_error_dashboard_request_env]
+          env = Thread.current[:rails_error_dashboard_request_env]
+          context = context.merge(request: ActionDispatch::Request.new(env))
+        end
+
+        # Skip duplicate reports from our own middleware when the subscriber
+        # already captured this error with full request context above.
+        # Without this, async logging enqueues two jobs for one exception —
+        # and non-deterministic job ordering can overwrite good data.
+        if source == "rack.middleware" &&
+           Thread.current[:rails_error_dashboard_reported_errors]&.include?(error.object_id)
+          return
+        end
+
+        # Track that we've reported this error (for dedup with middleware)
+        if Thread.current[:rails_error_dashboard_request_env]
+          Thread.current[:rails_error_dashboard_reported_errors] ||= Set.new
+          Thread.current[:rails_error_dashboard_reported_errors].add(error.object_id)
+        end
+
         # Extract context information
         error_context = ValueObjects::ErrorContext.new(context, source)
 

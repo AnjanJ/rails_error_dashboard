@@ -23,6 +23,11 @@ module RailsErrorDashboard
         # Record request start time for duration calculation
         env["rails_error_dashboard.request_start"] = Time.now.to_f
 
+        # Store request env in thread-local so the ErrorReporter subscriber
+        # can access request context when Rails.error.report fires from
+        # Rails internals (e.g., ActionDispatch::ShowExceptions)
+        Thread.current[:rails_error_dashboard_request_env] = env
+
         # Initialize breadcrumb buffer for this request
         if RailsErrorDashboard.configuration.enable_breadcrumbs
           RailsErrorDashboard::Services::BreadcrumbCollector.init_buffer
@@ -52,6 +57,8 @@ module RailsErrorDashboard
         raise exception
       ensure
         # CRITICAL: Always clean up thread-local storage (Puma reuses threads)
+        Thread.current[:rails_error_dashboard_request_env] = nil
+        Thread.current[:rails_error_dashboard_reported_errors] = nil
         RailsErrorDashboard::Services::BreadcrumbCollector.clear_buffer
       end
     end
