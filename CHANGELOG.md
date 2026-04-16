@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.12] - 2026-04-16
+
+### Fixed
+- **Request context capture (#106)** — Fixed controller exceptions recording wrong `request_url` ("application.action_dispatch"), empty `request_params`, wrong `user_agent` ("Rails Application"), and missing `controller_name`/`action_name`. Root cause: Rails' `ActionDispatch::Executor` reports errors to `Rails.error` without a request object. The subscriber now enriches context from the Rack env stored by our middleware. Duplicate middleware reports are deduplicated to prevent `occurrence_count` inflation with async logging
+- **Request params preserved in async logging** — Fixed `request_params` always being `{}` when `async_logging = true`. The `ErrorContext` value object now preserves pre-serialized params through the double-ErrorContext path (subscriber → LogError → async job → LogError)
+- **Docker build safety (SECRET_KEY_BASE_DUMMY)** — All runtime features (error subscriber, TracePoint hooks, crash capture, issue tracker wiring) are now skipped when `SECRET_KEY_BASE_DUMMY` is set. Prevents infinite retry loops and Postgres connection failures during `assets:precompile` in Docker builds. Credential-dependent validations (Slack/Discord/PagerDuty webhooks, issue tracker tokens) also skip during builds
+- **crash_capture_path auto-creation** — The validator now auto-creates the crash capture directory with `FileUtils.mkdir_p` instead of failing with "does not exist". Works for fresh deploys and first boot
+- **Settings page auto-detect display** — Issue tracker provider and repository now display their auto-detected values (from `git_repository_url`) instead of showing "Not set" when only `git_repository_url` is configured
+- **Turbo Stream broadcast route helpers** — Fixed `undefined method 'error_path'` error when broadcasting new/updated errors via Turbo Streams. The `_error_row` partial now uses `rails_error_dashboard.error_path()` (engine-prefixed) which works in both controller and broadcast contexts
+
+---
+
 ## [0.5.11] - 2026-03-28
 
 ### Added
