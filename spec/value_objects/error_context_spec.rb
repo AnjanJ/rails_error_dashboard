@@ -145,6 +145,29 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
       end
     end
 
+    context 'with pre-serialized request_params (async logging path)' do
+      let(:context) do
+        {
+          request_url: '/users?name=XXX',
+          request_params: '{"name":"XXX","player_id":"42"}',
+          user_agent: 'Mozilla/5.0',
+          ip_address: '10.0.0.1'
+        }
+      end
+
+      subject { described_class.new(context) }
+
+      it 'preserves pre-serialized request_params' do
+        expect(subject.request_params).to eq('{"name":"XXX","player_id":"42"}')
+      end
+
+      it 'preserves other pre-serialized fields' do
+        expect(subject.request_url).to eq('/users?name=XXX')
+        expect(subject.user_agent).to eq('Mozilla/5.0')
+        expect(subject.ip_address).to eq('10.0.0.1')
+      end
+    end
+
     context 'with custom source' do
       let(:context) { {} }
       let(:source) { 'Custom Service' }

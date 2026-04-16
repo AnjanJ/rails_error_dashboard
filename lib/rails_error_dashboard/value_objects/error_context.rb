@@ -110,6 +110,11 @@ module RailsErrorDashboard
         # Additional context (from mobile apps, etc.)
         params.merge!(@context[:additional_context]) if @context[:additional_context]
 
+        # Pre-serialized params (from async logging or double-ErrorContext path).
+        # LogError creates a second ErrorContext from error_context.to_h which
+        # has :request_params as a JSON string but no :request object.
+        return @context[:request_params] if params.empty? && @context[:request_params].present?
+
         params.to_json
       end
 
