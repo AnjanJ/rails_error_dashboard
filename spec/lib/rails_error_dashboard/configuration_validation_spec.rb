@@ -727,13 +727,25 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       expect { config.validate! }.not_to raise_error
     end
 
-    it "rejects non-existent crash_capture_path" do
+    it "rejects uncreatable crash_capture_path" do
       config.enable_crash_capture = true
-      config.crash_capture_path = "/nonexistent/crash/path"
+      # /proc is read-only on Linux; use a path that will fail mkdir_p
+      config.crash_capture_path = "/proc/nonexistent/crash/path"
       expect { config.validate! }.to raise_error(
         RailsErrorDashboard::ConfigurationError,
-        /crash_capture_path.*does not exist/
+        /crash_capture_path.*could not be created/
       )
+    end
+
+    it "auto-creates crash_capture_path if missing" do
+      require "tmpdir"
+      dir = File.join(Dir.tmpdir, "red_crash_test_#{Process.pid}")
+      FileUtils.rm_rf(dir)
+      config.enable_crash_capture = true
+      config.crash_capture_path = dir
+      expect { config.validate! }.not_to raise_error
+      expect(Dir.exist?(dir)).to be true
+      FileUtils.rm_rf(dir)
     end
 
     it "does not validate path when feature is disabled" do
@@ -876,6 +888,51 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
 
+      expect { config.validate! }.not_to raise_error
+    end
+  end
+
+  describe "build environment (SECRET_KEY_BASE_DUMMY)" do
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
+      allow(ENV).to receive(:fetch).and_call_original
+      allow(ENV).to receive(:[]).with("RAILS_MASTER_KEY").and_return(nil)
+    end
+
+    it "skips Slack webhook validation during builds" do
+      config.enable_slack_notifications = true
+      config.slack_webhook_url = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips Discord webhook validation during builds" do
+      config.enable_discord_notifications = true
+      config.discord_webhook_url = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips PagerDuty key validation during builds" do
+      config.enable_pagerduty_notifications = true
+      config.pagerduty_integration_key = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips webhook URLs validation during builds" do
+      config.enable_webhook_notifications = true
+      config.webhook_urls = []
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips issue tracker token warning during builds" do
+      config.enable_issue_tracking = true
+      config.issue_tracker_token = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips crash_capture_path validation during builds" do
+      config.enable_crash_capture = true
+      config.crash_capture_path = "/nonexistent/build/path"
       expect { config.validate! }.not_to raise_error
     end
   end

@@ -205,7 +205,7 @@
               should_show = show_if_key.nil? || @config.send(show_if_key)
               next unless should_show
 
-              value = @config.send(setting_key)
+              value = @config.send(setting_meta[:method] || setting_key)
             %>
             <div class="col-md-6 mb-3">
               <div class="d-flex justify-content-between align-items-center">

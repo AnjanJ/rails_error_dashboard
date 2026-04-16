@@ -61,6 +61,16 @@ module RailsErrorDashboard
 
     # Subscribe to Rails error reporter
     config.after_initialize do
+      # Skip all runtime features during Docker asset precompilation.
+      # SECRET_KEY_BASE_DUMMY=1 signals a build environment — no database,
+      # no credentials, no external services are available. Activating
+      # TracePoint hooks, error subscribers, or background jobs here causes
+      # infinite retry loops and connection failures (issues #1-5).
+      if ENV["SECRET_KEY_BASE_DUMMY"].present?
+        Rails.logger.info "[Rails Error Dashboard] Build environment detected (SECRET_KEY_BASE_DUMMY) — skipping runtime features."
+        next
+      end
+
       if RailsErrorDashboard.configuration.enable_error_subscriber
         Rails.error.subscribe(RailsErrorDashboard::ErrorReporter.new)
       end

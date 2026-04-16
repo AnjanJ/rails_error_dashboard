@@ -511,44 +511,56 @@ module RailsErrorDashboard
         @enable_activestorage_tracking = false
       end
 
+      # Skip credential/service-dependent validations during Docker builds.
+      # SECRET_KEY_BASE_DUMMY=1 means no credentials or external services available.
+      build_env = ENV["SECRET_KEY_BASE_DUMMY"].present?
+
       # Validate issue tracking configuration
-      if enable_issue_tracking && effective_issue_tracker_token.blank?
-        warnings << "enable_issue_tracking is true but no token configured. " \
-                    "Set issue_tracker_token or RED_BOT_TOKEN env var. " \
-                    "Tip: Create a dedicated RED (Rails Error Dashboard) bot account on your platform."
-      end
+      unless build_env
+        if enable_issue_tracking && effective_issue_tracker_token.blank?
+          warnings << "enable_issue_tracking is true but no token configured. " \
+                      "Set issue_tracker_token or RED_BOT_TOKEN env var. " \
+                      "Tip: Create a dedicated RED (Rails Error Dashboard) bot account on your platform."
+        end
 
-      if enable_issue_tracking && effective_issue_tracker_provider.nil?
-        warnings << "enable_issue_tracking is true but provider could not be detected. " \
-                    "Set issue_tracker_provider or git_repository_url."
-      end
-
-      # Validate crash capture path (must exist if custom path specified)
-      if enable_crash_capture && crash_capture_path
-        unless Dir.exist?(crash_capture_path)
-          errors << "crash_capture_path '#{crash_capture_path}' does not exist"
+        if enable_issue_tracking && effective_issue_tracker_provider.nil?
+          warnings << "enable_issue_tracking is true but provider could not be detected. " \
+                      "Set issue_tracker_provider or git_repository_url."
         end
       end
 
-      # Validate notification dependencies
-      if enable_slack_notifications && (slack_webhook_url.nil? || slack_webhook_url.strip.empty?)
-        errors << "slack_webhook_url is required when enable_slack_notifications is true"
+      # Validate crash capture path — auto-create if missing
+      if enable_crash_capture && crash_capture_path && !build_env
+        unless Dir.exist?(crash_capture_path)
+          begin
+            FileUtils.mkdir_p(crash_capture_path)
+          rescue => e
+            errors << "crash_capture_path '#{crash_capture_path}' could not be created: #{e.message}"
+          end
+        end
       end
 
-      if enable_email_notifications && notification_email_recipients.empty?
-        errors << "notification_email_recipients is required when enable_email_notifications is true"
-      end
+      # Validate notification dependencies (skip during builds — credentials unavailable)
+      unless build_env
+        if enable_slack_notifications && (slack_webhook_url.nil? || slack_webhook_url.strip.empty?)
+          errors << "slack_webhook_url is required when enable_slack_notifications is true"
+        end
 
-      if enable_discord_notifications && (discord_webhook_url.nil? || discord_webhook_url.strip.empty?)
-        errors << "discord_webhook_url is required when enable_discord_notifications is true"
-      end
+        if enable_email_notifications && notification_email_recipients.empty?
+          errors << "notification_email_recipients is required when enable_email_notifications is true"
+        end
 
-      if enable_pagerduty_notifications && (pagerduty_integration_key.nil? || pagerduty_integration_key.strip.empty?)
-        errors << "pagerduty_integration_key is required when enable_pagerduty_notifications is true"
-      end
+        if enable_discord_notifications && (discord_webhook_url.nil? || discord_webhook_url.strip.empty?)
+          errors << "discord_webhook_url is required when enable_discord_notifications is true"
+        end
 
-      if enable_webhook_notifications && webhook_urls.empty?
-        errors << "webhook_urls is required when enable_webhook_notifications is true"
+        if enable_pagerduty_notifications && (pagerduty_integration_key.nil? || pagerduty_integration_key.strip.empty?)
+          errors << "pagerduty_integration_key is required when enable_pagerduty_notifications is true"
+        end
+
+        if enable_webhook_notifications && webhook_urls.empty?
+          errors << "webhook_urls is required when enable_webhook_notifications is true"
+        end
       end
 
       # Validate separate database configuration
