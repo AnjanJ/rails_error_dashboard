@@ -67,6 +67,27 @@ RSpec.describe RailsErrorDashboard::Services::CurlGenerator do
       expect(result).to include("http://localhost:3000/api")
     end
 
+    it "uses http:// for 127.0.0.1" do
+      error = make_error(hostname: "127.0.0.1:3000", request_url: "/api")
+      result = described_class.call(error)
+
+      expect(result).to include("http://127.0.0.1:3000/api")
+    end
+
+    it "uses http:// for ::1 (IPv6 loopback)" do
+      error = make_error(hostname: "::1:3000", request_url: "/api")
+      result = described_class.call(error)
+
+      expect(result).to include("http://::1:3000/api")
+    end
+
+    it "uses http:// for 0.0.0.0" do
+      error = make_error(hostname: "0.0.0.0:3000", request_url: "/api")
+      result = described_class.call(error)
+
+      expect(result).to include("http://0.0.0.0:3000/api")
+    end
+
     it "returns empty string when request_url is missing" do
       error = make_error(request_url: nil, hostname: nil)
       expect(described_class.call(error)).to eq("")
