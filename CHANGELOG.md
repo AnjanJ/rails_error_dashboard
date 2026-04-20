@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.13] - 2026-04-20
+
+### Fixed
+- **Engine route helpers in views (#110)** — Fixed `ActionView::Template::Error: undefined local variable or method 'rails_error_dashboard'` when mounting the engine at a custom path or with a custom `as:` name. The `_error_row` partial was using `rails_error_dashboard.error_path()` which is a host-app route proxy not available inside the engine's own views. Reverted to plain `error_path()` which works correctly with `isolate_namespace`. Turbo Stream broadcasts now pre-render partials via the engine's own `ApplicationController.render` to ensure route helpers are available outside the engine's routing context
+
+### Added
+- **Application name in notifications (#111)** — All notification channels now include the application name for quick identification in multi-app setups. Email subject lines are prefixed with `[AppName]`, email body includes an Application row, Slack/Discord payloads include an Application field, PagerDuty summary is prefixed with `[AppName]` and includes an `application` custom detail, webhook payloads include an `application` field, and baseline anomaly alerts include application name across all three formats (Slack, Discord, Webhook). Added `NotificationHelpers.app_name` helper for consistent extraction
+
+---
+
 ## [0.5.12] - 2026-04-16
 
 ### Fixed
@@ -13,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker build safety (SECRET_KEY_BASE_DUMMY)** — All runtime features (error subscriber, TracePoint hooks, crash capture, issue tracker wiring) are now skipped when `SECRET_KEY_BASE_DUMMY` is set. Prevents infinite retry loops and Postgres connection failures during `assets:precompile` in Docker builds. Credential-dependent validations (Slack/Discord/PagerDuty webhooks, issue tracker tokens) also skip during builds
 - **crash_capture_path auto-creation** — The validator now auto-creates the crash capture directory with `FileUtils.mkdir_p` instead of failing with "does not exist". Works for fresh deploys and first boot
 - **Settings page auto-detect display** — Issue tracker provider and repository now display their auto-detected values (from `git_repository_url`) instead of showing "Not set" when only `git_repository_url` is configured
-- **Turbo Stream broadcast route helpers** — Fixed `undefined method 'error_path'` error when broadcasting new/updated errors via Turbo Streams. The `_error_row` partial now uses `rails_error_dashboard.error_path()` (engine-prefixed) which works in both controller and broadcast contexts
+- **Turbo Stream broadcast route helpers** — Fixed `undefined method 'error_path'` error when broadcasting new/updated errors via Turbo Streams. Note: this approach was superseded in v0.5.13 (#110) with a more correct fix that renders via the engine's own controller
 
 ---
 
