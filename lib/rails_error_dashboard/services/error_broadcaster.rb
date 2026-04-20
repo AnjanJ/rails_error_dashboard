@@ -9,6 +9,11 @@ module RailsErrorDashboard
     #
     # IMPORTANT: Broadcasting failures MUST NOT block error logging.
     # All public methods rescue exceptions and log them.
+    #
+    # NOTE: Turbo broadcasts render partials via ApplicationController.render,
+    # which is the HOST app's controller — engine route helpers (error_path, etc.)
+    # are NOT available there. We render via the engine's own controller renderer
+    # and pass pre-rendered HTML to the broadcast to ensure route helpers work.
     class ErrorBroadcaster
       # Broadcast a new error (prepend to error list + refresh stats)
       # @param error_log [ErrorLog] The newly created error
@@ -19,11 +24,13 @@ module RailsErrorDashboard
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
 
+        html = render_partial("rails_error_dashboard/errors/error_row",
+          error: error_log, show_platform: show_platform)
+
         Turbo::StreamsChannel.broadcast_prepend_to(
           "error_list",
           target: "error_list",
-          partial: "rails_error_dashboard/errors/error_row",
-          locals: { error: error_log, show_platform: show_platform }
+          html: html
         )
         broadcast_stats
       rescue => e
@@ -40,11 +47,13 @@ module RailsErrorDashboard
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
 
+        html = render_partial("rails_error_dashboard/errors/error_row",
+          error: error_log, show_platform: show_platform)
+
         Turbo::StreamsChannel.broadcast_replace_to(
           "error_list",
           target: "error_#{error_log.id}",
-          partial: "rails_error_dashboard/errors/error_row",
-          locals: { error: error_log, show_platform: show_platform }
+          html: html
         )
         broadcast_stats
       rescue => e
@@ -59,15 +68,26 @@ module RailsErrorDashboard
         stats = Queries::DashboardStats.call
         return unless stats.is_a?(Hash) && stats.present?
 
+        html = render_partial("rails_error_dashboard/errors/stats", stats: stats)
+
         Turbo::StreamsChannel.broadcast_replace_to(
           "error_list",
           target: "dashboard_stats",
-          partial: "rails_error_dashboard/errors/stats",
-          locals: { stats: stats }
+          html: html
         )
       rescue => e
         Rails.logger.error("[RailsErrorDashboard] Failed to broadcast stats update: #{e.class} - #{e.message}")
         Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
+      end
+
+      # Render a partial using the engine's controller renderer.
+      # This ensures engine route helpers (error_path, etc.) are available,
+      # unlike Turbo's default ApplicationController.render which uses the host app's context.
+      def self.render_partial(partial, **locals)
+        RailsErrorDashboard::ApplicationController.render(
+          partial: partial,
+          locals: locals
+        )
       end
 
       # Check if broadcasting infrastructure is available

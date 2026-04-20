@@ -2,7 +2,7 @@
   <td onclick="event.stopPropagation();">
     <input type="checkbox" class="error-checkbox form-check-input" value="<%= error.id %>" data-error-id="<%= error.id %>">
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <% severity = error.severity %>
     <% if severity == :critical %>
       <span class="badge bg-danger" data-bs-toggle="tooltip" title="Critical severity - requires immediate attention">CRITICAL</span>
@@ -17,7 +17,7 @@
       <br><small class="text-muted" data-bs-toggle="tooltip" title="Priority score (0-100) based on severity, frequency, recency, and user impact">P<%= error.priority_score %></small>
     <% end %>
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <code class="text-danger" data-bs-toggle="tooltip" title="<%= error.error_type %>"><%= error.error_type.split('::').last %></code>
     <% if error.recent? %>
       <span class="badge bg-success ms-1" data-bs-toggle="tooltip" title="Error occurred within the last hour">NEW</span>
@@ -26,29 +26,29 @@
       <br><small class="badge bg-light text-dark" data-bs-toggle="tooltip" title="App version when error occurred">v<%= error.app_version %></small>
     <% end %>
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <div class="text-truncate" style="max-width: 300px;" title="<%= error.message %>">
       <%= error.message %>
     </div>
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <span class="badge bg-primary"><%= error.occurrence_count %>x</span>
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <small>
       <strong>First:</strong> <%= local_time(error.first_seen_at, format: :short) %><br>
       <strong>Last:</strong> <%= local_time(error.last_seen_at, format: :short) %>
     </small>
   </td>
   <% if local_assigns[:show_application] %>
-    <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+    <td onclick="window.location='<%= error_path(error) %>';">
       <span class="badge bg-info">
         <%= error.application&.name || 'Unknown' %>
       </span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>
-    <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+    <td onclick="window.location='<%= error_path(error) %>';">
       <% if error.platform == 'iOS' %>
         <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
       <% elsif error.platform == 'Android' %>
@@ -60,7 +60,7 @@
       <% end %>
     </td>
   <% end %>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <% if error.user_id %>
       <small data-bs-toggle="tooltip" title="User affected by this error">User #<%= error.user_id %></small>
       <% if error.respond_to?(:user_impact_percentage) %>
@@ -73,7 +73,7 @@
       <small class="text-muted" data-bs-toggle="tooltip" title="No specific user affected">-</small>
     <% end %>
   </td>
-  <td onclick="window.location='<%= rails_error_dashboard.error_path(error) %>';">
+  <td onclick="window.location='<%= error_path(error) %>';">
     <% if error.resolved? %>
       <i class="bi bi-check-circle-fill text-success"
          data-bs-toggle="tooltip"
@@ -95,7 +95,7 @@
     <% end %>
   </td>
   <td onclick="event.stopPropagation();">
-    <%= link_to rails_error_dashboard.error_path(error), class: "btn btn-sm btn-outline-primary" do %>
+    <%= link_to error_path(error), class: "btn btn-sm btn-outline-primary" do %>
       <i class="bi bi-eye"></i>
     <% end %>
   </td>
