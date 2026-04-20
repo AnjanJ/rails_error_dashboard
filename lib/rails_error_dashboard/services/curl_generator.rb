@@ -66,7 +66,7 @@ module RailsErrorDashboard
         hostname = @error.respond_to?(:hostname) && @error.hostname.presence
         return nil unless hostname
 
-        scheme = hostname.include?("localhost") ? "http" : "https"
+        scheme = local_host?(hostname) ? "http" : "https"
         "#{scheme}://#{hostname}#{request_url}"
       end
 
@@ -74,6 +74,10 @@ module RailsErrorDashboard
         # Replace ' with '\'' (end quote, escaped quote, start quote)
         escaped = str.to_s.gsub("'") { "'\\''" }
         "'#{escaped}'"
+      end
+
+      def local_host?(hostname)
+        hostname.match?(/\A(localhost|127\.\d+\.\d+\.\d+|::1|0\.0\.0\.0)(:\d+)?\z/)
       end
     end
   end
