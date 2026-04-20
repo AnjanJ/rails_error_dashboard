@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.14] - 2026-04-20
+
+### Fixed
+- **Curl URL scheme for loopback addresses (#112, #113)** — Fixed "Copy as curl" generating `https://` URLs for `127.0.0.1`, `::1`, and `0.0.0.0` hosts. Added `local_host?` helper with regex matching for all loopback/bind-all variants with optional port suffixes @gmarziou
+
+### Community
+- Added @gmarziou to contributors for curl loopback fix (#113)
+
+---
+
 ## [0.5.13] - 2026-04-20
 
 ### Fixed

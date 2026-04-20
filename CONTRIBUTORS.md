@@ -54,6 +54,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Gaël Marziou ([@gmarziou](https://github.com/gmarziou))
+
+- 🐛 [#113](https://github.com/AnjanJ/rails_error_dashboard/pull/113) - Fixed "Copy as curl" generating `https://` URLs for loopback addresses (`127.0.0.1`, `::1`, `0.0.0.0`). Added `local_host?` regex helper covering all loopback variants with optional port suffixes (#112)
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -124,8 +130,8 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 6 (including maintainer)
-**External Contributors:** 5
+**Total Contributors:** 7 (including maintainer)
+**External Contributors:** 6
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
@@ -145,6 +151,7 @@ When you contribute to Rails Error Dashboard, you get:
 ### 🐛 Bug Hunters
 - [@bonniesimon](https://github.com/bonniesimon) - Turbo helpers production fix
 - [@gundestrup](https://github.com/gundestrup) - Security vulnerabilities
+- [@gmarziou](https://github.com/gmarziou) - Curl loopback address fix
 
 ### 🧹 Code Quality Contributors
 - [@gundestrup](https://github.com/gundestrup) - RuboCop lint corrections
@@ -173,4 +180,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: March 24, 2026*
+*This page is updated with each release. Last updated: April 20, 2026*
