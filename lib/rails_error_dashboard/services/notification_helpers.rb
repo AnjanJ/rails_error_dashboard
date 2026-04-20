@@ -82,6 +82,13 @@ module RailsErrorDashboard
         {}
       end
 
+      # Application name for notifications
+      # @param error_log [ErrorLog] The error
+      # @return [String] Application name or "Unknown"
+      def app_name(error_log)
+        error_log.application&.name || "Unknown"
+      end
+
       # Error source description for PagerDuty
       # @param error_log [ErrorLog] The error
       # @return [String] Source description

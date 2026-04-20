@@ -133,6 +133,9 @@
 
     <div class="content">
       <div class="info-grid">
+        <div class="label">Application:</div>
+        <div class="value"><strong><%= @error_log.application&.name || 'Unknown' %></strong></div>
+
         <div class="label">Error Type:</div>
         <div class="value"><code><%= @error_log.error_type %></code></div>
 

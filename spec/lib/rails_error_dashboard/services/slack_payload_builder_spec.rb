@@ -30,6 +30,12 @@ RSpec.describe RailsErrorDashboard::Services::SlackPayloadBuilder do
       expect(header[:text][:text]).to eq("🚨 Error Alert")
     end
 
+    it "includes application name in fields" do
+      section = payload[:blocks].find { |b| b[:type] == "section" && b[:fields] }
+      app_field = section[:fields].find { |f| f[:text].include?("Application") }
+      expect(app_field[:text]).to include(application.name)
+    end
+
     it "includes error type in fields" do
       section = payload[:blocks].find { |b| b[:type] == "section" && b[:fields] }
       error_field = section[:fields].find { |f| f[:text].include?("Error Type") }

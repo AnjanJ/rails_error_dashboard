@@ -30,6 +30,10 @@ RSpec.describe RailsErrorDashboard::Services::WebhookPayloadBuilder do
       expect(payload[:timestamp]).to match(/\d{4}-\d{2}-\d{2}T/)
     end
 
+    it "includes application name" do
+      expect(payload[:error][:application]).to eq(application.name)
+    end
+
     it "includes error details" do
       error = payload[:error]
       expect(error[:id]).to eq(error_log.id)

@@ -27,6 +27,10 @@ RSpec.describe RailsErrorDashboard::Services::PagerdutyPayloadBuilder do
       expect(payload[:event_action]).to eq("trigger")
     end
 
+    it "includes application name in summary" do
+      expect(payload[:payload][:summary]).to include(application.name)
+    end
+
     it "includes summary with error type and platform" do
       expect(payload[:payload][:summary]).to include("SecurityError")
       expect(payload[:payload][:summary]).to include("Web")
@@ -42,6 +46,7 @@ RSpec.describe RailsErrorDashboard::Services::PagerdutyPayloadBuilder do
 
     it "includes custom details" do
       details = payload[:payload][:custom_details]
+      expect(details[:application]).to eq(application.name)
       expect(details[:message]).to eq("Unauthorized access detected")
       expect(details[:controller]).to eq("admin")
       expect(details[:action]).to eq("destroy")

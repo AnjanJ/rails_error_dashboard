@@ -122,6 +122,17 @@ RSpec.describe RailsErrorDashboard::Services::NotificationHelpers do
     end
   end
 
+  describe ".app_name" do
+    it "returns application name" do
+      expect(described_class.app_name(error_log)).to eq(application.name)
+    end
+
+    it "returns Unknown when application is nil" do
+      allow(error_log).to receive(:application).and_return(nil)
+      expect(described_class.app_name(error_log)).to eq("Unknown")
+    end
+  end
+
   describe ".error_source" do
     it "returns controller#action when both present" do
       expect(described_class.error_source(error_log)).to eq("users#show")

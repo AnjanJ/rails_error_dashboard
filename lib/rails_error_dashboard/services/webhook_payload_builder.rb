@@ -18,6 +18,7 @@ module RailsErrorDashboard
           timestamp: Time.current.iso8601,
           error: {
             id: error_log.id,
+            application: NotificationHelpers.app_name(error_log),
             type: error_log.error_type,
             message: error_log.message,
             severity: error_log.severity.to_s,

@@ -29,6 +29,12 @@ RSpec.describe RailsErrorDashboard::Services::BaselineAlertPayloadBuilder do
       expect(payload[:blocks]).to be_an(Array)
     end
 
+    it "includes application name in fields" do
+      fields_block = payload[:blocks].find { |b| b[:type] == "section" && b[:fields] }
+      app_field = fields_block[:fields].find { |f| f[:text].include?("Application") }
+      expect(app_field[:text]).to include(application.name)
+    end
+
     it "includes error type in fields" do
       fields_block = payload[:blocks].find { |b| b[:type] == "section" && b[:fields] }
       error_field = fields_block[:fields].find { |f| f[:text].include?("Error Type") }
@@ -74,6 +80,7 @@ RSpec.describe RailsErrorDashboard::Services::BaselineAlertPayloadBuilder do
 
     it "includes all fields" do
       fields = payload[:embeds].first[:fields]
+      expect(fields.find { |f| f[:name] == "Application" }[:value]).to eq(application.name)
       expect(fields.find { |f| f[:name] == "Error Type" }[:value]).to eq("TimeoutError")
       expect(fields.find { |f| f[:name] == "Platform" }[:value]).to eq("API")
       expect(fields.find { |f| f[:name] == "Severity" }[:value]).to eq("HIGH")
@@ -88,6 +95,7 @@ RSpec.describe RailsErrorDashboard::Services::BaselineAlertPayloadBuilder do
     end
 
     it "includes error details" do
+      expect(payload[:error][:application]).to eq(application.name)
       expect(payload[:error][:type]).to eq("TimeoutError")
       expect(payload[:error][:platform]).to eq("API")
     end

@@ -27,6 +27,11 @@ module RailsErrorDashboard
             color: severity_color(error_log),
             fields: [
               {
+                name: "Application",
+                value: NotificationHelpers.app_name(error_log),
+                inline: true
+              },
+              {
                 name: "Platform",
                 value: error_log.platform || "Unknown",
                 inline: true

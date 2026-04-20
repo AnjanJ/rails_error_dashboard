@@ -33,6 +33,12 @@ RSpec.describe RailsErrorDashboard::Services::DiscordPayloadBuilder do
       expect(payload[:embeds].first[:description]).to include("Something went wrong")
     end
 
+    it "includes application name field" do
+      fields = payload[:embeds].first[:fields]
+      app_field = fields.find { |f| f[:name] == "Application" }
+      expect(app_field[:value]).to eq(application.name)
+    end
+
     it "includes platform field" do
       fields = payload[:embeds].first[:fields]
       platform_field = fields.find { |f| f[:name] == "Platform" }

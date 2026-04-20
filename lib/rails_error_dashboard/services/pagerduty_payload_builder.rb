@@ -18,13 +18,14 @@ module RailsErrorDashboard
           routing_key: routing_key,
           event_action: "trigger",
           payload: {
-            summary: "Critical Error: #{error_log.error_type} in #{error_log.platform}",
+            summary: "[#{NotificationHelpers.app_name(error_log)}] Critical Error: #{error_log.error_type} in #{error_log.platform}",
             severity: "critical",
             source: NotificationHelpers.error_source(error_log),
             component: error_log.controller_name || "Unknown",
             group: error_log.error_type,
             class: error_log.error_type,
             custom_details: {
+              application: NotificationHelpers.app_name(error_log),
               message: error_log.message,
               controller: error_log.controller_name,
               action: error_log.action_name,

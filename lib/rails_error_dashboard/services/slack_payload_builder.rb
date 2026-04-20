@@ -44,6 +44,10 @@ module RailsErrorDashboard
           fields: [
             {
               type: "mrkdwn",
+              text: "*Application:*\n#{NotificationHelpers.app_name(error_log)}"
+            },
+            {
+              type: "mrkdwn",
               text: "*Error Type:*\n`#{error_log.error_type}`"
             },
             {

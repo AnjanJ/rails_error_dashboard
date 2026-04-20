@@ -46,6 +46,10 @@ module RailsErrorDashboard
               fields: [
                 {
                   type: "mrkdwn",
+                  text: "*Application:*\n#{NotificationHelpers.app_name(error_log)}"
+                },
+                {
+                  type: "mrkdwn",
                   text: "*Error Type:*\n#{error_log.error_type}"
                 },
                 {
@@ -104,6 +108,7 @@ module RailsErrorDashboard
               title: "🚨 Baseline Anomaly Detected",
               color: anomaly_color(anomaly_data[:level]),
               fields: [
+                { name: "Application", value: NotificationHelpers.app_name(error_log), inline: true },
                 { name: "Error Type", value: error_log.error_type, inline: true },
                 { name: "Platform", value: error_log.platform, inline: true },
                 { name: "Severity", value: anomaly_data[:level].to_s.upcase, inline: true },
@@ -129,6 +134,7 @@ module RailsErrorDashboard
           timestamp: Time.current.iso8601,
           error: {
             id: error_log.id,
+            application: NotificationHelpers.app_name(error_log),
             type: error_log.error_type,
             message: error_log.message,
             platform: error_log.platform,

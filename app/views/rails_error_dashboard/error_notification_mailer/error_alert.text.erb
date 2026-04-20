@@ -2,6 +2,7 @@
 🚨 ERROR ALERT
 ==========================================
 
+Application: <%= @error_log.application&.name || 'Unknown' %>
 Error Type: <%= @error_log.error_type %>
 <% if @error_log.platform.present? %>Platform: <%= @error_log.platform %><% end %>
 Occurred At: <%= @error_log.occurred_at.strftime('%B %d, %Y at %I:%M %p %Z') %>
