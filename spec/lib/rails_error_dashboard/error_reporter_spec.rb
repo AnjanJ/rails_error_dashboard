@@ -197,5 +197,56 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
         reporter.report(error, handled: false, severity: :error, context: {})
       }.not_to raise_error
     end
+
+    context "re-entrancy guard (issue #114)" do
+      after do
+        Thread.current[:rails_error_dashboard_logging] = nil
+      end
+
+      it "skips recursive calls when already logging" do
+        Thread.current[:rails_error_dashboard_logging] = true
+
+        expect(RailsErrorDashboard::Commands::LogError).not_to receive(:call)
+
+        reporter.report(error, handled: false, severity: :error, context: {})
+      end
+
+      it "clears the guard after successful logging" do
+        allow(RailsErrorDashboard::Commands::LogError).to receive(:call)
+
+        reporter.report(error, handled: false, severity: :error, context: {})
+
+        expect(Thread.current[:rails_error_dashboard_logging]).to be_nil
+      end
+
+      it "clears the guard even when logging raises" do
+        allow(RailsErrorDashboard::Commands::LogError).to receive(:call).and_raise(RuntimeError, "DB down")
+
+        reporter.report(error, handled: false, severity: :error, context: {})
+
+        expect(Thread.current[:rails_error_dashboard_logging]).to be_nil
+      end
+
+      it "prevents recursive error capture when LogError triggers an error" do
+        call_count = 0
+        allow(RailsErrorDashboard::Commands::LogError).to receive(:call) do
+          call_count += 1
+          # Simulate LogError triggering another Rails.error.report (e.g., Redis down)
+          if call_count == 1
+            reporter.report(
+              RuntimeError.new("Redis connection refused"),
+              handled: false,
+              severity: :error,
+              context: {}
+            )
+          end
+        end
+
+        reporter.report(error, handled: false, severity: :error, context: {})
+
+        # LogError should only be called ONCE — the recursive call is blocked
+        expect(call_count).to eq(1)
+      end
+    end
   end
 end

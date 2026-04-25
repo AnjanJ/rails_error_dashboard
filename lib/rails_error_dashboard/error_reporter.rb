@@ -22,8 +22,16 @@ module RailsErrorDashboard
       # Skip low-severity warnings
       return if handled && severity == :warning
 
+      # Prevent recursive error capture (issue #114).
+      # If LogError.call itself triggers a new error (e.g., Redis down causes
+      # perform_later to fail), Rails.error.report fires again for that failure.
+      # Without this guard, each cycle double-escapes JSON → exponential payload growth.
+      return if Thread.current[:rails_error_dashboard_logging]
+
       # CRITICAL: Wrap entire process in rescue to ensure failures don't break the app
       begin
+        Thread.current[:rails_error_dashboard_logging] = true
+
         # Enrich context with request data from Thread.current when available.
         # Rails internals (ActionDispatch::Executor) report errors with
         # source: "application.action_dispatch" but pass NO request object,
@@ -60,9 +68,11 @@ module RailsErrorDashboard
         # Log failure for debugging but NEVER propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original error: #{error.class} - #{error.message}") if error
-        RailsErrorDashboard::Logger.error("Context: #{context.inspect}") if context
+        RailsErrorDashboard::Logger.error("Context: #{context.inspect.truncate(500)}") if context
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
         nil # Explicitly return nil, never raise
+      ensure
+        Thread.current[:rails_error_dashboard_logging] = nil
       end
     end
   end

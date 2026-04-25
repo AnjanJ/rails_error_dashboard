@@ -67,7 +67,18 @@ module RailsErrorDashboard
 
         # Enqueue the async job using ActiveJob
         # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
-        AsyncErrorLoggingJob.perform_later(exception_data, context)
+        begin
+          AsyncErrorLoggingJob.perform_later(exception_data, context)
+        rescue => e
+          # Queue adapter failed (e.g., Redis down for Sidekiq). Fall back to
+          # sync logging so the error is still captured. Without this rescue,
+          # the exception propagates back to ErrorReporter, which re-reports it
+          # via Rails.error.report → infinite recursion (issue #114).
+          RailsErrorDashboard::Logger.error(
+            "[RailsErrorDashboard] Async enqueue failed (#{e.class}: #{e.message}), falling back to sync logging"
+          )
+          new(exception, context).call
+        end
       end
 
       # Serialize cause chain for async job serialization
@@ -292,7 +303,7 @@ module RailsErrorDashboard
         # CRITICAL: Log but never propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
-        RailsErrorDashboard::Logger.error("Context: #{@context.inspect}") if @context
+        RailsErrorDashboard::Logger.error("Context: #{@context.inspect.truncate(500)}") if @context
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
         nil # Explicitly return nil, never raise
       end

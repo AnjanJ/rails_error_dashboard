@@ -209,6 +209,44 @@ RSpec.describe "Async Error Logging", type: :integration do
     end
   end
 
+  describe "async enqueue failure fallback (issue #114)" do
+    before do
+      RailsErrorDashboard.configure do |config|
+        config.async_logging = true
+        config.async_adapter = :async
+      end
+    end
+
+    it "falls back to sync logging when perform_later fails" do
+      error = StandardError.new("Redis down test")
+      error.set_backtrace([ "test.rb:1" ])
+
+      # Simulate queue adapter failure (e.g., Redis down for Sidekiq)
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob).to receive(:perform_later)
+        .and_raise(RuntimeError, "Error connecting to Redis on 127.0.0.1:6379 (Errno::ECONNREFUSED)")
+
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+
+      error_log = RailsErrorDashboard::ErrorLog.last
+      expect(error_log.error_type).to eq("StandardError")
+      expect(error_log.message).to eq("Redis down test")
+    end
+
+    it "falls back to sync logging when perform_later raises any error" do
+      error = StandardError.new("Enqueue failure test")
+      error.set_backtrace([ "test.rb:1" ])
+
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob).to receive(:perform_later)
+        .and_raise(RuntimeError, "Queue adapter unavailable")
+
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+    end
+  end
+
   describe "interaction with sampling" do
     before do
       RailsErrorDashboard.configure do |config|
