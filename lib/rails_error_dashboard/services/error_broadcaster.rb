@@ -90,17 +90,32 @@ module RailsErrorDashboard
         )
       end
 
-      # Check if broadcasting infrastructure is available
+      # Check if broadcasting infrastructure is available.
+      # Returns false when Turbo/ActionCable isn't loaded, or when the
+      # ActionCable pubsub adapter can't be reached (e.g., Redis down).
+      # Uses a 60-second cooldown after failure to avoid hammering a
+      # dead Redis on every error (issue #114).
       # @return [Boolean]
       def self.available?
         return false unless defined?(Turbo)
         return false unless defined?(ActionCable)
 
-        Rails.cache.write("rails_error_dashboard_broadcast_test", true, expires_in: 1.second)
-        Rails.cache.delete("rails_error_dashboard_broadcast_test")
+        # Circuit breaker: skip broadcast attempts for 60s after a failure
+        if @broadcast_unavailable_until && Time.current < @broadcast_unavailable_until
+          return false
+        end
+
+        # Verify the pubsub adapter is reachable — without this,
+        # broadcast_* calls attempt Redis and fail loudly when it's down
+        server = ActionCable.server
+        return false unless server.respond_to?(:pubsub)
+
+        server.pubsub
+        @broadcast_unavailable_until = nil
         true
       rescue => e
-        Rails.logger.debug("[RailsErrorDashboard] Broadcast not available: #{e.message}")
+        @broadcast_unavailable_until = Time.current + 60
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Broadcast not available (pausing 60s): #{e.message}")
         false
       end
     end

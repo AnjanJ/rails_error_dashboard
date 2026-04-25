@@ -18,10 +18,27 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
 
     it "returns true when Turbo and ActionCable are available" do
       stub_const("Turbo", Module.new)
-      stub_const("ActionCable", Module.new)
+      pubsub = double("pubsub")
+      server = double("server", pubsub: pubsub)
+      cable = Module.new
+      cable.define_singleton_method(:server) { server }
+      stub_const("ActionCable", cable)
+
+      # Clear any circuit breaker state from other tests
+      described_class.instance_variable_set(:@broadcast_unavailable_until, nil)
 
       expect(described_class.available?).to be true
     end
+  end
+
+  # Helper to stub ActionCable with a working server/pubsub for available? check
+  def stub_actioncable_available
+    pubsub = double("pubsub")
+    server = double("server", pubsub: pubsub)
+    cable = Module.new
+    cable.define_singleton_method(:server) { server }
+    stub_const("ActionCable", cable)
+    described_class.instance_variable_set(:@broadcast_unavailable_until, nil)
   end
 
   describe ".broadcast_new" do
@@ -40,7 +57,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
     context "when broadcasting raises an error" do
       it "rescues the error and does not re-raise" do
         stub_const("Turbo", Module.new)
-        stub_const("ActionCable", Module.new)
+        stub_actioncable_available
         turbo_channel = class_double("Turbo::StreamsChannel").as_stubbed_const
         allow(turbo_channel).to receive(:broadcast_prepend_to).and_raise(StandardError, "broadcast failed")
         allow(turbo_channel).to receive(:broadcast_replace_to)
@@ -66,7 +83,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
     context "when broadcasting raises an error" do
       it "rescues the error and does not re-raise" do
         stub_const("Turbo", Module.new)
-        stub_const("ActionCable", Module.new)
+        stub_actioncable_available
         turbo_channel = class_double("Turbo::StreamsChannel").as_stubbed_const
         allow(turbo_channel).to receive(:broadcast_prepend_to)
         allow(turbo_channel).to receive(:broadcast_replace_to).and_raise(StandardError, "broadcast failed")
