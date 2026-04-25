@@ -13,9 +13,16 @@ module RailsErrorDashboard
       # @param error_log [ErrorLog] The error
       # @return [String] Full URL to the error detail page
       def dashboard_url(error_log)
-        base_url = RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000"
+        base_url = (RailsErrorDashboard.configuration.dashboard_base_url || "http://localhost:3000").chomp("/")
         mount_path = RailsErrorDashboard.configuration.engine_mount_path
-        "#{base_url}#{mount_path}/errors/#{error_log.id}"
+
+        # Avoid doubling the mount path when base_url already includes it.
+        # e.g., base_url="https://app.com/red" + mount_path="/red" → don't produce "/red/red"
+        if mount_path.present? && base_url.end_with?(mount_path.chomp("/"))
+          "#{base_url}/errors/#{error_log.id}"
+        else
+          "#{base_url}#{mount_path}/errors/#{error_log.id}"
+        end
       end
 
       # Truncate a message to a maximum length

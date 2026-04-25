@@ -53,6 +53,27 @@ module RailsErrorDashboard
           return false unless config.enable_issue_tracking
           return false if error_log.external_issue_url.present?
 
+          # Check if another error record with the same hash already has a linked
+          # issue. The 24-hour dedup window in FindOrIncrementError can create new
+          # ErrorLog records for the same logical error — we must not create
+          # duplicate GitHub/GitLab issues for them (issue #114 screenshot).
+          existing = ErrorLog
+            .where(error_hash: error_log.error_hash, application_id: error_log.application_id)
+            .where.not(external_issue_url: [ nil, "" ])
+            .where.not(id: error_log.id)
+            .order(created_at: :desc)
+            .first
+
+          if existing
+            # Link this record to the existing issue instead of creating a new one
+            error_log.update_columns(
+              external_issue_url: existing.external_issue_url,
+              external_issue_number: existing.external_issue_number,
+              external_issue_provider: existing.external_issue_provider
+            )
+            return false
+          end
+
           # First occurrence — always auto-create
           return true if error_log.occurrence_count == 1
 
