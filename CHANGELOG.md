@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.15] - 2026-04-25
+
+### Fixed
+- **Recursive error capture when Redis is unavailable (#114)** — When ActionCable was configured for Redis but Redis was down, error logging triggered infinite recursion: LogError → perform_later fails → Rails.error.report → LogError → repeat. Each cycle double-escaped JSON backslashes, producing exponentially growing payloads (62MB+ database reported). Fixed with a Thread.current re-entrancy guard on ErrorReporter, async perform_later fallback to sync logging, and context.inspect truncation
+- **ErrorBroadcaster Redis connection attempts (#114)** — The `available?` check tested Rails.cache instead of ActionCable's pubsub adapter. Now verifies the actual pubsub adapter is reachable with a 60-second circuit breaker cooldown after failure
+- **Turbo Stream WebSocket retries when Redis is down (#114)** — The `turbo_stream_from` tag on the errors index page caused ActionCable to continuously retry Redis connections (the "polling" behavior). Now only rendered when the pubsub adapter is confirmed reachable
+- **Duplicate GitHub issues for recurring errors** — The 24-hour dedup window in FindOrIncrementError created new ErrorLog records for the same logical error, each triggering a new GitHub issue. Now checks if any record with the same error_hash already has a linked issue and copies the link instead
+- **Dashboard URL double mount path** — When `dashboard_base_url` included the mount path (e.g., `https://app.com/red`), the "View in Dashboard" link in GitHub issues had a doubled path (`/red/red/errors/123`). Now detects and avoids the duplication
+- **Stimulus CDN loading error** — Changed from `stimulus.min.js` (ES module build) to `stimulus.umd.js` (UMD build) to fix `SyntaxError: Unexpected token 'export'` on every page load
+
+### Added
+- **Backtrace path shortening (#115)** — Backtrace paths stored in the database are now shortened to save disk space. User-specific prefixes are stripped: `/home/user/.gem/ruby/3.4.0/gems/rack-3.2.6/lib/...` becomes `gems/rack-3.2.6/lib/...`, application paths become `app/...` or `lib/...`. Preserves gem name and version for debugging. Also shortens cause chain backtraces @gmarziou
+
+### Community
+- Thanks to @gmarziou for reporting #114 and #115
+
+---
+
 ## [0.5.14] - 2026-04-20
 
 ### Fixed
