@@ -98,7 +98,7 @@ module RailsErrorDashboard
           chain << {
             class_name: current.class.name,
             message: current.message&.to_s,
-            backtrace: current.backtrace&.first(20)
+            backtrace: current.backtrace&.first(20)&.map { |line| Services::BacktraceProcessor.shorten_gem_path(line) }
           }
 
           current = current.respond_to?(:cause) ? current.cause : nil

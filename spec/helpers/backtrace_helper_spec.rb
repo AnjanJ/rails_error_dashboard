@@ -410,7 +410,7 @@ RSpec.describe RailsErrorDashboard::BacktraceHelper, type: :helper do
         frames = helper.parse_backtrace(backtrace_string)
         app_frames = helper.filter_app_code(frames)
 
-        expect(app_frames).to all(have_attributes(category: :app))
+        expect(app_frames).to all(include(category: :app))
       end
     end
   end

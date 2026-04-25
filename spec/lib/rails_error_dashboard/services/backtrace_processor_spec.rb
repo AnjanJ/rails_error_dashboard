@@ -65,6 +65,70 @@ RSpec.describe RailsErrorDashboard::Services::BacktraceProcessor do
     end
   end
 
+  describe ".shorten_gem_path" do
+    it "shortens gem paths by stripping prefix before /gems/" do
+      line = "/home/gael/.local/share/mise/installs/ruby/4.0.2/lib/ruby/gems/4.0.0/gems/actionpack-8.1.3/lib/action_controller/metal/basic_implicit_render.rb:8:in 'send_action'"
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "gems/actionpack-8.1.3/lib/action_controller/metal/basic_implicit_render.rb:8:in 'send_action'"
+      )
+    end
+
+    it "shortens vendor/bundle gem paths" do
+      line = "/Users/deploy/app/vendor/bundle/ruby/3.2.0/gems/rack-3.2.6/lib/rack/head.rb:15:in 'call'"
+      # vendor/bundle paths also contain /gems/ so the same rule applies
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "gems/rack-3.2.6/lib/rack/head.rb:15:in 'call'"
+      )
+    end
+
+    it "shortens Ruby stdlib paths" do
+      line = "/Users/gael/.local/share/mise/installs/ruby/4.0.2/lib/ruby/4.0.0/net/http.rb:1234:in 'request'"
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "ruby/4.0.0/net/http.rb:1234:in 'request'"
+      )
+    end
+
+    it "shortens application app/ paths" do
+      line = "/Users/gael/projects/myapp/app/controllers/users_controller.rb:10:in 'create'"
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "app/controllers/users_controller.rb:10:in 'create'"
+      )
+    end
+
+    it "shortens application lib/ paths" do
+      line = "/Users/gael/projects/myapp/lib/my_service.rb:42:in 'call'"
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "lib/my_service.rb:42:in 'call'"
+      )
+    end
+
+    it "does not modify lines without recognizable path patterns" do
+      line = "unknown_file.rb:1:in 'main'"
+      expect(described_class.shorten_gem_path(line)).to eq(line)
+    end
+
+    it "handles .gem/ruby paths" do
+      line = "/Users/dev/.gem/ruby/3.4.0/gems/activerecord-8.0.4/lib/active_record/base.rb:10:in 'find'"
+      expect(described_class.shorten_gem_path(line)).to eq(
+        "gems/activerecord-8.0.4/lib/active_record/base.rb:10:in 'find'"
+      )
+    end
+  end
+
+  describe ".truncate path shortening" do
+    it "shortens gem paths in the stored backtrace" do
+      backtrace = [
+        "/Users/gael/.local/share/mise/installs/ruby/4.0.2/lib/ruby/gems/4.0.0/gems/actionpack-8.1.3/lib/action_controller/metal.rb:252:in 'dispatch'",
+        "/Users/gael/projects/myapp/app/controllers/users_controller.rb:10:in 'create'"
+      ]
+      result = described_class.truncate(backtrace)
+
+      expect(result).to include("gems/actionpack-8.1.3/lib/action_controller/metal.rb:252")
+      expect(result).to include("app/controllers/users_controller.rb:10")
+      expect(result).not_to include("/Users/gael")
+    end
+  end
+
   describe ".calculate_signature" do
     it "returns nil for nil backtrace" do
       expect(described_class.calculate_signature(nil)).to be_nil

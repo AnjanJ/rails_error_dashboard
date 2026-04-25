@@ -763,8 +763,8 @@ RSpec.describe "Query Integration", type: :system do
       wait_for_page_load
 
       expect(page).to have_content("Phase 10 backtrace test")
-      # Backtrace was truncated to 15 lines — the collapsed section shows 15 framework frames
-      expect(page).to have_content("15 framework/gems")
+      # Backtrace was truncated to 15 lines — paths starting with app/ are correctly categorized as app code
+      expect(page).to have_content("15 your code")
       # Verify the truncation notice is in the page source (inside collapsed section)
       expect(page.html).to include("185 more lines truncated")
     end

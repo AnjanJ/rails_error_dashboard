@@ -94,13 +94,19 @@ module RailsErrorDashboard
       end
 
       def app_code?(file_path)
-        # Match /app/, /lib/ directories in the application
-        file_path.include?("/app/") ||
-          (file_path.include?("/lib/") && !file_path.include?("/gems/") && !file_path.include?("/ruby/"))
+        # Match /app/ or app/ (shortened paths start without leading /)
+        return true if file_path.include?("/app/") || file_path.start_with?("app/")
+
+        # Match /lib/ or lib/ but exclude gems and ruby stdlib
+        lib_path = file_path.include?("/lib/") || file_path.start_with?("lib/")
+        return false unless lib_path
+
+        !file_path.include?("/gems/") && !file_path.include?("/ruby/") &&
+          !file_path.start_with?("gems/") && !file_path.start_with?("ruby/")
       end
 
       def gem_code?(file_path)
-        file_path.include?("/gems/") ||
+        file_path.include?("/gems/") || file_path.start_with?("gems/") ||
           file_path.include?("/bundler/gems/") ||
           file_path.include?("/vendor/bundle/")
       end
