@@ -24,7 +24,7 @@ module SystemHelpers
 
   # Wait for the dashboard layout to fully render
   def wait_for_page_load
-    expect(page).to have_css("nav.navbar", wait: 10)
+    expect(page).to have_css("header.red-navbar, nav.navbar", wait: 10)
   end
 end
 

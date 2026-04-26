@@ -21,10 +21,24 @@
           <%= @error.severity %>
         </span>
         <%
-          status_text = @error.resolved? ? 'resolved' : (@error.respond_to?(:muted?) && @error.muted? ? 'muted' : (@error.respond_to?(:snoozed?) && @error.snoozed? ? 'snoozed' : (@error.respond_to?(:assignee_name) && @error.assignee_name.present? ? 'assigned' : 'unresolved')))
+          raw_status = @error.respond_to?(:status) ? @error.status : nil
+          status_text = if @error.respond_to?(:muted?) && @error.muted?
+            'muted'
+          elsif @error.respond_to?(:snoozed?) && @error.snoozed?
+            'snoozed'
+          elsif raw_status.present? && raw_status != 'new'
+            raw_status.tr('_', ' ')
+          elsif @error.resolved?
+            'resolved'
+          else
+            'unresolved'
+          end
           status_colors = {
             'unresolved' => { bg: 'var(--status-critical-bg)', color: 'var(--status-critical)' },
             'resolved' => { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
+            'in progress' => { bg: 'var(--status-info-bg)', color: 'var(--status-info)' },
+            'investigating' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
+            'wont fix' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
             'assigned' => { bg: 'var(--accent-subtle)', color: 'var(--accent)' },
             'snoozed' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
             'muted' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
