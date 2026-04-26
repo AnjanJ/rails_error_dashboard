@@ -71,7 +71,7 @@
           Resolve
         </button>
       <% end %>
-      <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#assignModal">
+      <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#assignModal" id="hero-assign-btn">
         Assign
       </button>
       <button type="button" class="btn" onclick="copyToClipboard(this.dataset.markdown.replace(/\\(.)/g, function(m,c){return c==='n'?'\n':c}), this)" data-markdown="<%= j @error_markdown %>">
@@ -140,6 +140,9 @@
       <!-- Tab: History -->
       <div id="panel-history">
         <%= render "timeline" %>
+        <% unless RailsErrorDashboard.configuration.enable_issue_tracking %>
+          <%= render "discussion", error: @error %>
+        <% end %>
         <%= render "similar_errors", error: @error %>
         <%= render "co_occurring_errors", error: @error %>
         <%= render "error_cascades", error: @error %>

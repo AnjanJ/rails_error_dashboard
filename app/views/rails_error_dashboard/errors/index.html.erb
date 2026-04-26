@@ -53,6 +53,30 @@
     </div>
   </div>
 
+  <!-- Spike Detection Alert -->
+  <% if @stats[:spike_detected] %>
+    <div class="alert alert-warning" role="alert" style="display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-5); background: var(--status-caution-bg); border: 1px solid var(--status-caution); border-radius: var(--radius-md); margin-bottom: var(--space-4); font-size: 13px; color: var(--text-primary);">
+      <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; color: var(--status-caution); flex-shrink: 0;"></i>
+      <div>
+        <strong>
+          <% case @stats[:spike_info][:severity] %>
+          <% when :critical %>
+            Critical Error Spike Detected!
+          <% when :high %>
+            High Error Spike Detected
+          <% when :elevated %>
+            Elevated Error Activity
+          <% end %>
+        </strong>
+        <span style="color: var(--text-secondary);">
+          Today: <strong><%= @stats[:spike_info][:today_count] %> errors</strong>
+          (7-day avg: <%= @stats[:spike_info][:avg_count] %>) &mdash;
+          <strong><%= @stats[:spike_info][:multiplier] %>x normal levels</strong>
+        </span>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Filter bar -->
   <%= form_with url: errors_path, method: :get, data: { turbo: false, action: "submit->loading#submit" }, id: "filter-form" do %>
     <% if params[:reopened].present? %>

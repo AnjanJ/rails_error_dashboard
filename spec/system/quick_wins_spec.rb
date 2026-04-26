@@ -54,20 +54,20 @@ RSpec.describe "Quick Wins UI Features", type: :system do
       visit_error(error_with_context)
       wait_for_page_load
 
-      # HTTP method badge
-      expect(page).to have_css(".badge.bg-primary", text: "POST")
+      # HTTP method badge (text-transform: uppercase in new design)
+      expect(page).to have_css(".badge.bg-primary", text: /POST/i)
 
-      # Hostname
-      expect(page).to have_content("Hostname")
+      # Hostname (table headers may be uppercased by CSS)
+      expect(page).to have_content(/Hostname/i)
       expect(page).to have_content("api.example.com")
 
       # Content type
-      expect(page).to have_content("Content Type")
+      expect(page).to have_content(/Content Type/i)
       expect(page).to have_content("application/json")
 
-      # Duration badge
-      expect(page).to have_content("Request Duration")
-      expect(page).to have_content("2.3s")
+      # Duration badge (text-transform: uppercase makes "2.3s" → "2.3S")
+      expect(page).to have_content(/Request Duration/i)
+      expect(page).to have_content(/2\.3s/i)
     end
   end
 
@@ -91,11 +91,11 @@ RSpec.describe "Quick Wins UI Features", type: :system do
 
       # "Your Code" section should be visible (expanded by default)
       expect(page).to have_content("Your Code")
-      expect(page).to have_css(".badge.bg-success", text: /2 frames/)
+      expect(page).to have_css(".badge.bg-success", text: /2 frames/i)
 
       # "Framework & Gem Code" section should be present (collapsed by default)
       expect(page).to have_content("Framework & Gem Code")
-      expect(page).to have_css(".badge.bg-secondary", text: /2 frames/)
+      expect(page).to have_css(".badge.bg-secondary", text: /2 frames/i)
     end
   end
 
@@ -121,7 +121,7 @@ RSpec.describe "Quick Wins UI Features", type: :system do
       expect(page).to have_content("Environment")
       expect(page).to have_content("7.1.3")
       expect(page).to have_content("3.3.0")
-      expect(page).to have_css(".badge", text: "Production")
+      expect(page).to have_css(".badge", text: /Production/i)
       expect(page).to have_content("Puma")
       expect(page).to have_content("postgresql")
     end
@@ -168,16 +168,16 @@ RSpec.describe "Quick Wins UI Features", type: :system do
       visit_error(reopened_error)
       wait_for_page_load
 
-      expect(page).to have_css(".badge.bg-warning", text: "Reopened")
+      expect(page).to have_css(".badge.bg-warning", text: /Reopened/i)
     end
 
     it "shows reopened section in the sidebar" do
       visit_error(reopened_error)
       wait_for_page_load
 
-      # Sidebar reopened section
+      # Sidebar reopened section (text-transform: uppercase in new design)
       within(".col-md-4") do
-        expect(page).to have_content("Reopened")
+        expect(page).to have_content(/Reopened/i)
       end
     end
 

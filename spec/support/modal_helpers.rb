@@ -9,8 +9,9 @@ module ModalHelpers
   end
 
   # Open the Assign modal, fill in the assignee, and submit
+  # Use first() since the redesign has assign buttons in both hero card and sidebar
   def assign_error_to(name)
-    find("[data-bs-target='#assignModal']").click
+    first("[data-bs-target='#assignModal']").click
     within_modal("assignModal") do
       fill_in "assigned_to", with: name
       find("input[type='submit'][value='Assign']").click

@@ -17,7 +17,7 @@
       <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--status-critical); animation: pulse 2s infinite; flex-shrink: 0;"></span>
       <strong><%= alert_count %> Critical/High Error<%= alert_count != 1 ? 's' : '' %> in Last Hour</strong>
       <span style="color: var(--text-secondary);">&mdash;</span>
-      <span style="color: var(--text-secondary);"><code style="background: transparent; padding: 0; color: var(--status-critical);"><%= top_alert.error_type %></code> &middot; <%= top_alert.occurrence_count %> occurrences</span>
+      <span style="color: var(--text-secondary);"><%= link_to error_path(top_alert), style: "background: transparent; padding: 0; color: var(--status-critical); text-decoration: none; font-family: var(--font-mono); font-size: 13px;" do %><%= top_alert.error_type %><% end %> &middot; <%= top_alert.occurrence_count %> occurrences</span>
       <%= link_to errors_path(severity: 'critical'), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %>View<% end %>
     </div>
   <% end %>

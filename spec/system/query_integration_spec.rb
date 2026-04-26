@@ -214,7 +214,7 @@ RSpec.describe "Query Integration", type: :system do
       it "displays resolution rate from analytics stats" do
         visit_dashboard("/errors/analytics")
         wait_for_page_load
-        expect(page).to have_content("Resolution Rate")
+        expect(page).to have_content(/Resolution Rate/i)
       end
 
       it "displays errors by type breakdown" do
@@ -252,8 +252,8 @@ RSpec.describe "Query Integration", type: :system do
       assign_error_to("aragorn")
       wait_for_page_load
 
-      # The status badge should show "In Progress" (auto-set by AssignError command)
-      expect(page).to have_content("In Progress")
+      # The status badge should show "In Progress" (auto-set by AssignError command, badge uppercases)
+      expect(page).to have_content(/In Progress/i)
       expect(page).to have_content("aragorn")
 
       # Verify DB state
@@ -536,7 +536,7 @@ RSpec.describe "Query Integration", type: :system do
         expect(page).to have_content("WebhookTestError")
         expect(page).to have_content("Testing webhook payload structure")
         expect(page).to have_content("API")
-        expect(page).to have_content("5x")
+        expect(page).to have_content(/5x/i)
       end
     end
   end
@@ -558,8 +558,8 @@ RSpec.describe "Query Integration", type: :system do
         visit_dashboard
         wait_for_page_load
         expect(page).to have_content("Dashboard")
-        expect(page).to have_content("ERROR RATE")
-        expect(page).to have_content("UNRESOLVED ERRORS")
+        expect(page).to have_content(/Error Rate/i)
+        expect(page).to have_content(/Unresolved/i)
       end
     end
   end
@@ -616,10 +616,10 @@ RSpec.describe "Query Integration", type: :system do
         # The cascade section should show parent→child relationship
         expect(page).to have_content("Error Cascades")
         expect(page).to have_content("Triggered By")
-        expect(page).to have_content("DatabaseConnectionError")
+        expect(page).to have_content(/DatabaseConnectionError/i)
 
-        # Verify frequency: started at 7, incremented once = 8
-        expect(page).to have_content("8x")
+        # Verify frequency: started at 7, incremented once = 8 (badge uppercases to 8X)
+        expect(page).to have_content(/8x/i)
 
         # Verify avg_delay: ((10.0 * 7) + 14.0) / 8 = 84/8 = 10.5
         expect(page).to have_content("10.5s")
@@ -656,7 +656,7 @@ RSpec.describe "Query Integration", type: :system do
         wait_for_page_load
 
         expect(page).to have_content("Error Cascades")
-        expect(page).to have_content("6x")
+        expect(page).to have_content(/6x/i)
       ensure
         RailsErrorDashboard.configuration.enable_error_cascades = false
       end
@@ -686,7 +686,7 @@ RSpec.describe "Query Integration", type: :system do
 
         expect(page).to have_content("Phase9SystemTestError")
         expect(page).to have_content("FindOrIncrementError system test")
-        expect(page).to have_content("1x")
+        expect(page).to have_content(/1x/i)
       end
     end
 
@@ -724,7 +724,7 @@ RSpec.describe "Query Integration", type: :system do
         wait_for_page_load
 
         expect(page).to have_content("IncrementTestError")
-        expect(page).to have_content("5x")
+        expect(page).to have_content(/5x/i)
       end
     end
 
@@ -1101,7 +1101,7 @@ RSpec.describe "Query Integration", type: :system do
 
       visit_error(error)
       wait_for_page_load
-      expect(page).to have_content("resolved")
+      expect(page).to have_content(/resolved/i)
     end
   end
 

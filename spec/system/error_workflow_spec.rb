@@ -43,7 +43,7 @@ RSpec.describe "Error Workflow", type: :system do
       # Step 4: Set priority to Critical
       set_priority_to("Critical (P0)")
       wait_for_page_load
-      expect(page).to have_content("Critical (P0)")
+      expect(page).to have_content(/Critical \(P0\)/i)
 
       # Step 5: Snooze for 1 hour with reason
       snooze_error_for("1 hour", reason: "Investigating root cause")
@@ -73,7 +73,7 @@ RSpec.describe "Error Workflow", type: :system do
       # Step 7: Assign again → status auto-changes to "In Progress"
       assign_error_to("gandalf")
       wait_for_page_load
-      expect(page).to have_content("In Progress")
+      expect(page).to have_content(/In Progress/i)
 
       # Step 8: Resolve with comment
       resolve_error(
@@ -82,7 +82,7 @@ RSpec.describe "Error Workflow", type: :system do
         reference: "PR-42"
       )
       wait_for_page_load
-      expect(page).to have_content("Resolved")
+      expect(page).to have_content(/Resolved/i)
       expect(page).to have_content("gandalf")
 
       # Step 9: Manual comments removed — discussion now lives on issue tracker
@@ -104,7 +104,7 @@ RSpec.describe "Error Workflow", type: :system do
       visit_error(error_log)
       wait_for_page_load
       # Status should remain "Resolved" (invalid transition rejected)
-      expect(page).to have_content("Resolved")
+      expect(page).to have_content(/Resolved/i)
     end
   end
 
