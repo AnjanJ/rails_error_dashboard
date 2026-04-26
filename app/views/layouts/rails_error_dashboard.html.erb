@@ -888,7 +888,10 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
           <div class="red-sidebar-logo-icon">R</div>
           <div>
             <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">RED</div>
-            <div style="font-size: 10px; color: var(--text-tertiary); margin-top: -2px;"><%= Rails.application.class.module_parent_name %> &middot; <%= Rails.env %></div>
+            <% sidebar_app_name = if defined?(@current_application_id) && @current_application_id.present? && defined?(@applications)
+              @applications.find { |name, id| id.to_s == @current_application_id.to_s }&.first
+            end %>
+            <div style="font-size: 10px; color: var(--text-tertiary); margin-top: -2px;"><%= sidebar_app_name || Rails.application.class.module_parent_name %> &middot; <%= Rails.env %></div>
           </div>
         </div>
 
@@ -1064,19 +1067,27 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="appSwitcher">
                   <%
-                    base_route_params = request.path_parameters.slice(:controller, :action)
-                    current_filter_params = permitted_filter_params
+                    # On detail pages (show), switching apps should go to the errors list
+                    # since the current error may not belong to the selected app
+                    on_detail_page = request.path_parameters[:action] == "show"
+                    if on_detail_page
+                      switcher_base = { controller: request.path_parameters[:controller], action: "index" }
+                      switcher_filter_params = {}
+                    else
+                      switcher_base = request.path_parameters.slice(:controller, :action)
+                      switcher_filter_params = permitted_filter_params
+                    end
                   %>
                   <li>
                     <%= link_to "All Applications",
-                        url_for(base_route_params.merge(current_filter_params.except(:application_id))),
+                        url_for(switcher_base.merge(switcher_filter_params.except(:application_id))),
                         class: "dropdown-item #{'active' unless params[:application_id].present?}" %>
                   </li>
                   <li><hr class="dropdown-divider"></li>
                   <% @applications.each do |app_name, app_id| %>
                     <li>
                       <%= link_to app_name,
-                          url_for(base_route_params.merge(current_filter_params.merge(application_id: app_id))),
+                          url_for(switcher_base.merge(switcher_filter_params.merge(application_id: app_id))),
                           class: "dropdown-item #{params[:application_id].to_s == app_id.to_s ? 'active' : ''}" %>
                     </li>
                   <% end %>

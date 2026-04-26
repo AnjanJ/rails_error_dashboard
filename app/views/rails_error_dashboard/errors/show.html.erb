@@ -56,8 +56,11 @@
       </div>
       <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); margin: 0 0 4px; word-break: break-word;"><%= @error.error_type %></h2>
       <p style="font-size: 14px; color: var(--text-secondary); margin: 0; font-family: var(--font-mono);"><%= @error.message&.truncate(200) %></p>
-      <div style="display: flex; gap: var(--space-6); margin-top: var(--space-4); font-size: 12px; color: var(--text-tertiary);">
+      <div style="display: flex; gap: var(--space-6); margin-top: var(--space-4); font-size: 12px; color: var(--text-tertiary); flex-wrap: wrap;">
         <span><strong style="color: var(--text-primary);"><%= @error.occurrence_count %></strong> occurrences</span>
+        <% if @error.application&.name.present? %>
+          <span><i class="bi bi-layers" style="font-size: 10px;"></i> <strong style="color: var(--text-primary);"><%= @error.application.name %></strong></span>
+        <% end %>
         <% if @error.user_id %>
           <span>User <strong style="color: var(--text-primary);">#<%= @error.user_id %></strong></span>
         <% end %>
