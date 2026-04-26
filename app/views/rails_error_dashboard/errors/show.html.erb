@@ -159,7 +159,7 @@
     </div>
 
     <!-- Right: sidebar -->
-    <div class="col-md-4" style="display: flex; flex-direction: column; gap: var(--space-4);">
+    <div class="error-sidebar" style="display: flex; flex-direction: column; gap: var(--space-4); min-width: 0;">
       <%= render "sidebar_metadata", error: @error, related_errors: @related_errors %>
 
       <!-- Baseline Statistics -->

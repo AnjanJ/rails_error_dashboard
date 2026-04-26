@@ -176,7 +176,7 @@ RSpec.describe "Quick Wins UI Features", type: :system do
       wait_for_page_load
 
       # Sidebar reopened section (text-transform: uppercase in new design)
-      within(".col-md-4") do
+      within(".error-sidebar") do
         expect(page).to have_content(/Reopened/i)
       end
     end
