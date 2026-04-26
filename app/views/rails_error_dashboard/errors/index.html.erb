@@ -110,6 +110,11 @@
       <%= select_tag :timeframe, options_for_select([['All Time', ''], ['Last Hour', 'last_hour'], ['Today', 'today'], ['Yesterday', 'yesterday'], ['Last 7 Days', 'last_7_days'], ['Last 30 Days', 'last_30_days'], ['Last 90 Days', 'last_90_days']], params[:timeframe]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <%= select_tag :frequency, options_for_select([['All Frequencies', ''], ['Once', 'once'], ['2-9 Times', 'few'], ['10-99 Times', 'frequent'], ['100+ Times', 'very_frequent'], ['Recurring', 'recurring']], params[:frequency]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <%= select_tag :priority_level, options_for_select([['All Priorities', '']] + RailsErrorDashboard::ErrorLog.priority_options(include_emoji: true), params[:priority_level]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :assigned_to, options_for_select([['All Assignments', ''], ['Unassigned', '__unassigned__'], ['Assigned', '__assigned__']], params[:assigned_to]), class: "form-select", id: "assigned_to_filter", style: "width: auto; min-width: 120px;" %>
+      <div id="assignee_name_filter" style="<%= params[:assigned_to] == '__assigned__' ? '' : 'display: none;' %>">
+        <% assignees = defined?(@assignees) ? @assignees : [] %>
+        <%= select_tag :assignee_name, options_for_select([['All Assignees', '']] + assignees.map { |name| [name, name] }, params[:assignee_name]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      </div>
 
       <div style="display: flex; align-items: center; gap: var(--space-4); font-size: 12px; color: var(--text-secondary);">
         <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
@@ -134,7 +139,7 @@
       </div>
 
       <div style="display: flex; gap: 6px; margin-left: auto;">
-        <%= submit_tag "Apply", class: "btn btn-primary btn-sm", data: { loading_target: "submitButton" } %>
+        <%= submit_tag "Apply Filters", class: "btn btn-primary btn-sm", data: { loading_target: "submitButton" } %>
         <%= link_to "Clear", errors_path, class: "btn btn-sm", style: "font-size: 12px;" %>
       </div>
     </div>
@@ -326,5 +331,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Tab title with unresolved count
   var unresolvedCount = <%= @stats[:unresolved] || 0 %>;
   if (unresolvedCount > 0) { document.title = '(' + unresolvedCount + ') ' + document.title; }
+
+  // Toggle assignee name filter visibility
+  var assignedToFilter = document.getElementById('assigned_to_filter');
+  var assigneeNameFilter = document.getElementById('assignee_name_filter');
+  if (assignedToFilter && assigneeNameFilter) {
+    assignedToFilter.addEventListener('change', function() {
+      assigneeNameFilter.style.display = this.value === '__assigned__' ? '' : 'none';
+    });
+  }
 });
 </script>
