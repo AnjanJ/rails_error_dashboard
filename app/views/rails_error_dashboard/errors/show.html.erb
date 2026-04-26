@@ -132,13 +132,13 @@
       </div>
 
       <!-- Tab: Context -->
-      <div id="panel-context" style="display: none;">
+      <div id="panel-context">
         <%= render "request_context", error: @error %>
         <%= render "breadcrumbs_group", error: @error %>
       </div>
 
       <!-- Tab: History -->
-      <div id="panel-history" style="display: none;">
+      <div id="panel-history">
         <%= render "timeline" %>
         <%= render "similar_errors", error: @error %>
         <%= render "co_occurring_errors", error: @error %>
@@ -148,7 +148,7 @@
 
       <!-- Tab: Issues -->
       <% if RailsErrorDashboard.configuration.enable_issue_tracking %>
-        <div id="panel-issues" style="display: none;">
+        <div id="panel-issues">
           <%= render "issue_section", error: @error %>
           <%= render "discussion", error: @error %>
         </div>
@@ -221,17 +221,12 @@
 
 <script>
 function switchTab(tabId) {
-  // Hide all panels
-  document.querySelectorAll('[id^="panel-"]').forEach(function(el) { el.style.display = 'none'; });
   // Deactivate all tabs
   document.querySelectorAll('.red-tab').forEach(function(el) {
     el.style.color = 'var(--text-secondary)';
     el.style.fontWeight = '400';
     el.style.borderBottomColor = 'transparent';
   });
-  // Show selected panel
-  var panel = document.getElementById('panel-' + tabId);
-  if (panel) panel.style.display = 'block';
   // Activate selected tab
   var tab = document.getElementById('tab-' + tabId);
   if (tab) {
@@ -239,5 +234,8 @@ function switchTab(tabId) {
     tab.style.fontWeight = '600';
     tab.style.borderBottomColor = 'var(--accent)';
   }
+  // Scroll to selected panel
+  var panel = document.getElementById('panel-' + tabId);
+  if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 </script>

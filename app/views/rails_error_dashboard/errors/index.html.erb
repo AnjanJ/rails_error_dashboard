@@ -73,11 +73,11 @@
           current_status = params[:status]
           is_unresolved_only = params[:unresolved] != "false" && params[:unresolved] != "0"
         %>
-        <%= link_to errors_path, class: "filter-pill #{current_status.blank? && !is_unresolved_only ? 'active' : ''}", style: "text-decoration: none;" do %>All<% end %>
-        <%= link_to errors_path(unresolved: '1'), class: "filter-pill #{is_unresolved_only && current_status.blank? ? 'active' : ''}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
-        <%= link_to errors_path(status: 'resolved', unresolved: '0'), class: "filter-pill #{current_status == 'resolved' ? 'active' : ''}", style: "text-decoration: none;" do %>Resolved<% end %>
-        <%= link_to errors_path(assigned_to: '__assigned__'), class: "filter-pill #{params[:assigned_to] == '__assigned__' ? 'active' : ''}", style: "text-decoration: none;" do %>Assigned<% end %>
-        <%= link_to errors_path(reopened: 'true'), class: "filter-pill #{params[:reopened] == 'true' ? 'active' : ''}", style: "text-decoration: none;" do %>Reopened<% end %>
+        <%= link_to errors_path, class: "btn filter-pill #{current_status.blank? && !is_unresolved_only ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>All<% end %>
+        <%= link_to errors_path(unresolved: '1'), class: "btn filter-pill #{is_unresolved_only && current_status.blank? ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
+        <%= link_to errors_path(status: 'resolved', unresolved: '0'), class: "btn filter-pill #{current_status == 'resolved' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Resolved<% end %>
+        <%= link_to errors_path(assigned_to: '__assigned__'), class: "btn filter-pill #{params[:assigned_to] == '__assigned__' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Assigned<% end %>
+        <%= link_to errors_path(reopened: 'true'), class: "btn filter-pill #{params[:reopened] == 'true' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Reopened<% end %>
       </div>
 
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
