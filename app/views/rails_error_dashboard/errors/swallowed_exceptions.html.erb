@@ -1,8 +1,8 @@
 <% content_for :page_title, "Swallowed Exceptions" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-eye-slash me-2"></i>
       Swallowed Exceptions
     </h1>
@@ -21,9 +21,9 @@
   </div>
 
   <% if @unique_count == 0 %>
-    <div class="text-center py-5">
-      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-      <h4 class="text-muted">No Swallowed Exceptions Detected</h4>
+    <div class="red-empty-state">
+      <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
+      <div class="red-empty-state-title">No Swallowed Exceptions Detected</div>
       <p class="text-muted">
         No exceptions with a rescue ratio above <%= (RailsErrorDashboard.configuration.swallowed_exception_threshold * 100).round %>% were detected in the last <%= @days %> days.
       </p>
@@ -68,7 +68,7 @@
     </div>
 
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-eye-slash text-danger me-2"></i>
           Swallowed Exception Patterns
@@ -111,7 +111,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
             <i class="bi bi-lightbulb text-warning"></i> Swallowed exceptions are raised then silently rescued. They may hide real bugs.

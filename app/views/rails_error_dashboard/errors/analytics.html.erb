@@ -3,7 +3,7 @@
 <script>
   // Dynamic chart colors based on theme
   window.getChartColors = function() {
-    const isDark = document.body.classList.contains('dark-mode');
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     return {
       textColor: isDark ? '#cdd6f4' : '#1f2937',
       gridColor: isDark ? 'rgba(88, 91, 112, 0.2)' : 'rgba(0, 0, 0, 0.1)'
@@ -32,53 +32,37 @@
   };
 </script>
 
-<div class="py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Error Analytics</h2>
-    <div>
-      <%= form_with url: analytics_errors_path, method: :get, class: "d-flex gap-2" do %>
-        <%= select_tag :days, options_for_select([
-          ['Last 7 Days', 7],
-          ['Last 14 Days', 14],
-          ['Last 30 Days', 30],
-          ['Last 60 Days', 60],
-          ['Last 90 Days', 90]
-        ], @days), class: "form-select", onchange: "this.form.submit()" %>
-      <% end %>
-    </div>
+<div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Analytics</h1>
+  </div>
+
+  <!-- Time range pills -->
+  <div style="display: flex; gap: 6px; margin-bottom: var(--space-6);">
+    <% [['7d', 7], ['14d', 14], ['30d', 30], ['60d', 60], ['90d', 90]].each do |label, days| %>
+      <%= link_to analytics_errors_path(days: days), class: "filter-pill #{@days == days ? 'active' : ''}", style: "text-decoration: none;" do %><%= label %><% end %>
+    <% end %>
   </div>
 
   <!-- Summary Stats -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-4">
-      <div class="card stat-card border-primary">
-        <div class="card-body">
-          <div class="stat-label mb-2 text-primary">Total Errors</div>
-          <div class="stat-value text-primary"><%= @error_stats[:total] %></div>
-        </div>
-      </div>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+    <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Total Errors</div>
+      <span class="stat-value"><%= @error_stats[:total] %></span>
     </div>
-    <div class="col-md-4">
-      <div class="card stat-card border-danger">
-        <div class="card-body">
-          <div class="stat-label mb-2 text-danger">Unresolved</div>
-          <div class="stat-value text-danger"><%= @error_stats[:unresolved] %></div>
-        </div>
-      </div>
+    <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Unresolved</div>
+      <span class="stat-value" style="color: var(--status-critical);"><%= @error_stats[:unresolved] %></span>
     </div>
-    <div class="col-md-4">
-      <div class="card stat-card border-success">
-        <div class="card-body">
-          <div class="stat-label mb-2 text-success">Resolution Rate</div>
-          <div class="stat-value text-success"><%= @resolution_rate %>%</div>
-        </div>
-      </div>
+    <div class="card stat-card" style="border-left: 3px solid var(--status-success); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Resolution Rate</div>
+      <span class="stat-value" style="color: var(--status-success);"><%= @resolution_rate %>%</span>
     </div>
   </div>
 
   <!-- Error Trend Chart -->
   <div class="card mb-4">
-    <div class="card-header bg-white">
+    <div class="card-header">
       <h5 class="mb-0"><i class="bi bi-graph-up"></i> Error Trend (Last <%= @days %> Days)</h5>
     </div>
     <div class="card-body">
@@ -87,7 +71,7 @@
         document.addEventListener('DOMContentLoaded', function() {
           const colors = window.getChartColors();
           new Chartkick.LineChart("errors-over-time-chart", <%= raw @errors_over_time.to_json %>, {
-            color: "#8B5CF6",
+            color: "#DC2626",
             curve: false,
             points: true,
             height: "300px",
@@ -123,7 +107,7 @@
     <div class="row g-4 mb-4">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-phone"></i> Errors by Platform</h5>
           </div>
           <div class="card-body">
@@ -160,7 +144,7 @@
               });
             </script>
           </div>
-          <div class="card-footer bg-white border-top-0">
+          <div class="card-footer border-top-0">
             <div class="d-flex gap-2 flex-wrap">
               <small class="text-muted me-2">Quick Links:</small>
               <% @errors_by_platform.keys.each do |platform| %>
@@ -177,7 +161,7 @@
   <div class="row g-4 mb-4">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-bug"></i> Top 10 Error Types</h5>
         </div>
         <div class="card-body">
@@ -219,7 +203,7 @@
   <div class="row g-4 mb-4">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-clock"></i> Errors by Hour of Day</h5>
         </div>
         <div class="card-body">
@@ -228,7 +212,7 @@
             document.addEventListener('DOMContentLoaded', function() {
               const colors = window.getChartColors();
               new Chartkick.ColumnChart("errors-by-hour-chart", <%= raw @errors_by_hour.to_json %>, {
-                color: "#8B5CF6",
+                color: "#DC2626",
                 height: "300px",
                 xtitle: "Hour",
                 ytitle: "Number of Errors",
@@ -262,7 +246,7 @@
     <div class="row g-4 mb-4">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-people"></i> Top 10 Affected Users</h5>
           </div>
           <div class="card-body p-0">
@@ -285,7 +269,7 @@
   <div class="row g-4">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0"><i class="bi bi-list-check"></i> Error Type Breakdown</h5>
           <small class="text-muted">Last <%= @days %> days</small>
         </div>
@@ -334,7 +318,7 @@
 
   <!-- Recurring Issues Analysis -->
   <div class="card mb-4">
-    <div class="card-header bg-white">
+    <div class="card-header">
       <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Recurring Issues</h5>
     </div>
     <div class="card-body">
@@ -421,7 +405,7 @@
       <!-- Errors by Version Chart -->
       <div class="col-md-8">
         <div class="card">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-git"></i> Errors by Release Version</h5>
           </div>
           <div class="card-body">
@@ -447,7 +431,7 @@
       <!-- Release Comparison Card -->
       <div class="col-md-4">
         <div class="card">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0">Latest vs Previous</h5>
           </div>
           <div class="card-body">
@@ -510,7 +494,7 @@
   <!-- MTTR (Mean Time to Resolution) -->
   <% if @mttr_stats[:total_resolved] > 0 %>
     <div class="card mb-4">
-      <div class="card-header bg-white">
+      <div class="card-header">
         <h5 class="mb-0"><i class="bi bi-clock-history"></i> Resolution Performance (MTTR)</h5>
       </div>
       <div class="card-body">

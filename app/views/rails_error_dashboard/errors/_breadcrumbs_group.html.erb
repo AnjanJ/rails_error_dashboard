@@ -5,7 +5,7 @@
           <% deprecation_crumbs = breadcrumbs.select { |c| c["c"] == "deprecation" } %>
           <% if deprecation_crumbs.any? %>
             <div class="card mb-4" id="section-deprecation-warnings" style="border-color: var(--bs-danger);">
-              <div class="card-header bg-white">
+              <div class="card-header">
                 <h5 class="mb-0">
                   <i class="bi bi-exclamation-triangle text-danger"></i> Deprecation Warnings
                   <span class="badge bg-danger"><%= deprecation_crumbs.size %></span>
@@ -49,7 +49,7 @@
             <% n_plus_one_patterns = RailsErrorDashboard::Services::NplusOneDetector.call(breadcrumbs) %>
             <% if n_plus_one_patterns.any? %>
               <div class="card mb-4" id="section-n-plus-one" style="border-color: var(--bs-warning);">
-                <div class="card-header bg-white">
+                <div class="card-header">
                   <h5 class="mb-0">
                     <i class="bi bi-arrow-repeat text-warning"></i> N+1 Query Detection
                     <span class="badge bg-warning text-dark"><%= n_plus_one_patterns.size %> pattern<%= n_plus_one_patterns.size == 1 ? "" : "s" %></span>
@@ -108,7 +108,7 @@
           <% cache_analysis = RailsErrorDashboard::Services::CacheAnalyzer.call(breadcrumbs) %>
           <% if cache_analysis %>
             <div class="card mb-4" id="section-cache-health" style="border-color: var(--bs-info);">
-              <div class="card-header bg-white">
+              <div class="card-header">
                 <h5 class="mb-0">
                   <i class="bi bi-lightning-charge text-info"></i> Cache Health
                   <span class="badge bg-info text-dark"><%= cache_analysis[:reads] + cache_analysis[:writes] %> operations</span>
@@ -189,7 +189,7 @@
           <% end %>
 
           <div class="card mb-4" id="section-breadcrumbs">
-            <div class="card-header bg-white">
+            <div class="card-header">
               <h5 class="mb-0">
                 <i class="bi bi-signpost-2"></i> Breadcrumbs
                 <span class="badge bg-secondary"><%= breadcrumbs.size %> events</span>

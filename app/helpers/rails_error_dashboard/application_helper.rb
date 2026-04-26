@@ -26,15 +26,15 @@ module RailsErrorDashboard
     def severity_color_var(severity)
       case severity&.to_sym
       when :critical
-        "var(--ctp-red)"
+        "var(--status-critical)"
       when :high
-        "var(--ctp-peach)"
+        "var(--status-warning)"
       when :medium
-        "var(--ctp-blue)"
+        "var(--status-info)"
       when :low
-        "var(--ctp-overlay1)"
+        "var(--text-tertiary)"
       else
-        "var(--ctp-overlay1)"
+        "var(--text-tertiary)"
       end
     end
 

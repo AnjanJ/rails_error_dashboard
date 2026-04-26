@@ -3,7 +3,7 @@
         <% local_vars = JSON.parse(error.local_variables) rescue {} %>
         <% if local_vars.any? %>
           <div class="card mb-4" id="section-local-variables">
-            <div class="card-header bg-white">
+            <div class="card-header">
               <h5 class="mb-0">
                 <i class="bi bi-braces"></i> Local Variables
                 <span class="badge bg-secondary"><%= local_vars.size %> captured</span>

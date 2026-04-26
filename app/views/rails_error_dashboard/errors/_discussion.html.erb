@@ -5,7 +5,7 @@
 
 <% if has_linked_issue && (platform_comments.any? || has_audit_comments) %>
   <div class="card mb-4" id="section-discussion">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="bi bi-chat-dots"></i> Discussion
         <% if platform_comments.any? %>
@@ -62,7 +62,7 @@
 <% elsif has_linked_issue %>
   <!-- Issue linked but no comments yet -->
   <div class="card mb-4" id="section-discussion">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
         <i class="bi bi-chat-dots"></i> Discussion
       </h5>
@@ -77,7 +77,7 @@
 <% elsif has_audit_comments %>
   <!-- No issue linked, but has audit trail -->
   <div class="card mb-4" id="section-discussion">
-    <div class="card-header bg-white">
+    <div class="card-header">
       <h5 class="mb-0">
         <i class="bi bi-clock-history"></i> Activity Log
       </h5>

@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-26 — UI/UX Redesign
+
+### Overview
+
+Complete visual overhaul of the dashboard. Every page, every component, every pixel has been redesigned from the ground up. The gem now ships with a distinctive, professional design system built on design tokens — no more generic Bootstrap look. Dark mode works flawlessly with zero `!important` rules (was 142). Total CSS reduced by 34%, external CSS reduced by 153KB.
+
+### Design System
+
+- **Removed Bootstrap CSS dependency** — Saves ~160KB. Replaced with a custom design token system (~800 lines of CSS). Bootstrap JS is kept for modals, tooltips, and dropdowns
+- **Design tokens** — All colors, spacing, typography, shadows, and radii defined as CSS custom properties. Components reference semantic tokens like `var(--surface-primary)` that automatically resolve correctly in both themes
+- **Dark mode via `html[data-theme]`** — Replaced `body.dark-mode` class + 142 `!important` override rules with a clean `[data-theme="dark"]` token remap. Zero overrides needed
+- **Catppuccin palette** — Light mode uses Catppuccin Latte-inspired warm tones. Dark mode uses Catppuccin Mocha. Both feel cohesive and intentional
+- **Inter + JetBrains Mono** — Professional font pairing loaded via Google Fonts CDN. Tabular figures (`font-variant-numeric: tabular-nums`) on all numeric values for perfect alignment
+- **Configurable accent color** — Default crimson red (#DC2626), with 4 options: `:crimson`, `:ruby`, `:ember`, `:violet`. Set via `config.accent_color` in your initializer
+
+### Layout & Navigation
+
+- **New sidebar** — Grouped navigation (Core / Health / Diagnostics / Insights) with collapsible sections, chevron toggles, and localStorage persistence. Settings pinned to bottom. "R" logo badge with app name + environment
+- **Unresolved error badge** — Shows count on the Errors nav link
+- **New navbar** — Clean flat design with search input (/ shortcut), theme toggle, environment badge, multi-app switcher dropdown. Removed the old purple gradient
+- **Quick filters removed from sidebar** — Moved to the Error List page where they belong (as pill toggles)
+
+### Core Pages Redesigned
+
+- **Overview** — Spike detection banner with pulsing dot, 3 hero stat cards with accent stripes (Error Rate, Unresolved, Resolution Rate), 3 secondary stats, Top Errors by Impact ranked list, Platform Health grid cards, Correlation Insights
+- **Error List** — Summary line ("334 errors . 334 unresolved . All time"), horizontal filter bar with status + severity pill toggles, "More filters" expandable panel, inline batch actions, table with hover severity bar
+- **Error Detail** — Hero card with severity/status badges + action buttons, **tab-based layout** (Details / Context / History / Issues) replacing the old 12-section vertical scroll, 280px sidebar with metadata cards
+- **Analytics** — Time range pill buttons (7d/14d/30d/60d/90d) replacing dropdown, stat cards with accent stripes, branded chart colors
+- **Settings** — Collapsible sections with item counts, mono key/value/description layout, clean read-only display
+
+### Component Polish
+
+- **Tables** — 2px header borders, hover adds left accent bar, active/press state, thin custom scrollbar, no border on last row
+- **Modals** — Slide-in animation, backdrop blur (`backdrop-filter: blur(4px)`), deep layered shadows, larger form inputs with 3px accent focus glow, borderless header/footer
+- **Empty states** — Accent-colored circular icon, structured title/message/CTA, gentle fade-in animation, contextual action buttons ("Clear all filters")
+- **Page transitions** — Subtle content fade-in on every navigation
+- **Badges** — Unified system using semantic color tokens, consistent across both themes
+- **Filter pills** — Active state with accent border + subtle background, instant toggling
+
+### Added
+
+- `accent_color` configuration option (`:crimson`, `:ruby`, `:ember`, `:violet`)
+- `prefers-color-scheme` media query support — auto-detects system theme when no preference is saved
+- Page content fade-in animation
+- Table row hover accent bar
+- Modal entrance animation with backdrop blur
+- Empty state component with fade-in and contextual CTAs
+
+### Changed
+
+- Theme storage key changed from `theme` to `red-theme` in localStorage
+- Theme detection moved from `<body>` to `<html>` element (`data-theme` attribute)
+- `severity_color_var` helper updated to use `--status-*` tokens instead of `--ctp-*` variables
+- Chart colors updated to use accent color instead of hardcoded purple
+- All 14 feature-gated pages updated with consistent headers and design tokens
+- All 14 error detail partials updated to remove `bg-white` card headers
+- Bootstrap Icons updated from 1.11.0 to 1.11.3
+
+### Performance
+
+- External CSS: ~240KB → ~95KB (-60%)
+- Inline CSS: ~1,490 lines → ~800 lines (-46%)
+- `!important` rules: 142 → 0 (-100%)
+- Layout file: 2,376 lines → 1,577 lines (-34%)
+- Net lines across all files: -1,442 removed
+
+### Fixed
+
+- `assignee_name` NoMethodError on apps running older migrations — added `respond_to?` guard in error row and detail page
+- Dark mode chart text visibility — removed aggressive `!important` SVG overrides, Chart.js defaults now set via token-aware JS
+
+---
+
 ## [0.5.15] - 2026-04-25
 
 ### Fixed

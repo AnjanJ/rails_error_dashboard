@@ -1,8 +1,8 @@
 <% content_for :page_title, "Releases" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-rocket-takeoff me-2"></i>
       Releases
     </h1>
@@ -21,9 +21,9 @@
   </div>
 
   <% if @releases.empty? %>
-    <div class="text-center py-5">
+    <div class="red-empty-state">
       <i class="bi bi-rocket-takeoff display-1 text-muted mb-3"></i>
-      <h4 class="text-muted">No Release Data Found</h4>
+      <div class="red-empty-state-title">No Release Data Found</div>
       <p class="text-muted">
         No version data was detected in errors over the last <%= @days %> days.
       </p>
@@ -158,7 +158,7 @@
 
     <!-- Release Timeline Table -->
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-clock-history text-primary me-2"></i>
           Release Timeline
@@ -267,7 +267,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <small class="text-muted">
           <i class="bi bi-info-circle"></i>
           Stability: <span class="badge bg-success">Green</span> &le; avg errors,

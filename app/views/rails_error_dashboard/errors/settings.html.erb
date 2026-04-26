@@ -168,68 +168,48 @@
   }
 %>
 
-<div class="container-fluid py-4">
-  <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
-      <i class="bi bi-gear me-2"></i>
-      Configuration Settings
-    </h1>
-    <div>
-      <%= link_to root_path, class: "btn btn-outline-secondary btn-sm" do %>
-        <i class="bi bi-arrow-left"></i> Back to Dashboard
-      <% end %>
-    </div>
-  </div>
+<div>
+  <h1 style="font-size: 20px; font-weight: 700; margin-bottom: var(--space-4);">Settings</h1>
 
-  <div class="alert alert-info mb-4">
-    <i class="bi bi-info-circle me-2"></i>
-    <strong>Read-only view</strong> - These settings are configured in your initializer file:
-    <code>config/initializers/rails_error_dashboard.rb</code>
-  </div>
+  <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: var(--space-6);">
+    Read-only view of current configuration. Edit via <code>config/initializers/rails_error_dashboard.rb</code> or environment variables.
+  </p>
 
   <!-- Dynamically render setting groups -->
   <% setting_groups.each do |group_name, group_config| %>
-    <div class="card mb-4">
-      <div class="card-header bg-<%= group_config[:color] %> <%= group_config[:color] == 'light' ? 'text-dark' : 'text-white' %>">
-        <h5 class="mb-0">
-          <i class="<%= group_config[:icon] %>"></i> <%= group_name %>
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <% group_config[:settings].each do |setting_key, setting_meta| %>
-            <%
-              # Check if this setting should be displayed based on show_if condition
-              show_if_key = setting_meta[:show_if]
-              should_show = show_if_key.nil? || @config.send(show_if_key)
-              next unless should_show
-
-              value = @config.send(setting_meta[:method] || setting_key)
-            %>
-            <div class="col-md-6 mb-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <strong><%= setting_meta[:label] %></strong>
-                  <br><small class="text-muted"><%= setting_meta[:description] %></small>
-                </div>
-                <div class="text-end">
-                  <%= render partial: 'rails_error_dashboard/errors/settings/value_badge',
-                             locals: { value: value, type: setting_meta[:type], unit: setting_meta[:unit] } %>
-                </div>
-              </div>
-            </div>
-          <% end %>
+    <div class="card" style="margin-bottom: var(--space-4);">
+      <button onclick="var b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none'; var chev = this.querySelector('.chev'); if(chev) chev.className = b.style.display === 'none' ? 'bi bi-chevron-down chev' : 'bi bi-chevron-up chev';" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: var(--space-4) var(--space-6); background: none; border: none; cursor: pointer; border-bottom: 1px solid var(--border-primary);">
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"><i class="<%= group_config[:icon] %>" style="margin-right: 6px;"></i> <%= group_name %></span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 11px; color: var(--text-tertiary);"><%= group_config[:settings].size %> options</span>
+          <i class="bi bi-chevron-up chev" style="font-size: 12px; color: var(--text-tertiary);"></i>
         </div>
+      </button>
+      <div>
+        <% group_config[:settings].each do |setting_key, setting_meta| %>
+          <%
+            show_if_key = setting_meta[:show_if]
+            should_show = show_if_key.nil? || @config.send(show_if_key)
+            next unless should_show
+            value = @config.send(setting_meta[:method] || setting_key)
+          %>
+          <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--border-primary); font-size: 13px;">
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-weight: 500; width: 240px; flex-shrink: 0;"><%= setting_key %></span>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 500; width: 180px; flex-shrink: 0;">
+              <%= render partial: 'rails_error_dashboard/errors/settings/value_badge',
+                         locals: { value: value, type: setting_meta[:type], unit: setting_meta[:unit] } %>
+            </span>
+            <span style="color: var(--text-tertiary); font-size: 12px;"><%= setting_meta[:description] %></span>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>
 
   <!-- Active Plugins -->
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">
-        <i class="bi bi-puzzle"></i> Active Plugins
+  <div class="card" style="margin-bottom: var(--space-4);">
+    <div style="padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
+      <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"><i class="bi bi-puzzle" style="margin-right: 6px;"></i> Active Plugins</span>
       </h5>
     </div>
     <div class="card-body">

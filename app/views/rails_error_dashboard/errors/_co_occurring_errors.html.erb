@@ -3,7 +3,7 @@
         <% co_occurring = error.co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 5) %>
         <% if co_occurring.any? %>
           <div class="card mb-4" id="section-co-occurring">
-            <div class="card-header bg-white">
+            <div class="card-header">
               <h5 class="mb-0">
                 <i class="bi bi-clock-history"></i> Co-occurring Errors
                 <span class="badge bg-info text-dark">Time Patterns</span>

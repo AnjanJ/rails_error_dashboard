@@ -1,8 +1,8 @@
 <% content_for :page_title, "User Impact" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-people me-2"></i>
       User Impact
     </h1>
@@ -21,9 +21,9 @@
   </div>
 
   <% if @entries.empty? %>
-    <div class="text-center py-5">
+    <div class="red-empty-state">
       <i class="bi bi-people display-1 text-muted mb-3"></i>
-      <h4 class="text-muted">No User Impact Data</h4>
+      <div class="red-empty-state-title">No User Impact Data</div>
       <p class="text-muted">
         No errors with user attribution were found in the last <%= @days %> days.
       </p>
@@ -77,7 +77,7 @@
 
     <!-- User Impact Table -->
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-bar-chart text-primary me-2"></i>
           Errors Ranked by User Impact
@@ -157,7 +157,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <small class="text-muted">
           <i class="bi bi-info-circle"></i>
           Ranked by unique users affected, not occurrence count.

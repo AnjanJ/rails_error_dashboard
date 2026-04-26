@@ -184,6 +184,9 @@ module RailsErrorDashboard
     # ActiveStorage event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_activestorage_tracking        # Master switch (default: false)
 
+    # Dashboard UI appearance
+    attr_accessor :accent_color  # :crimson (default), :ruby, :ember, :violet
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -352,6 +355,9 @@ module RailsErrorDashboard
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
+
+      # Dashboard UI
+      @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
 
       @notification_callbacks = {
         error_logged: [],

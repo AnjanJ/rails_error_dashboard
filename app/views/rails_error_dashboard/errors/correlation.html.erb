@@ -1,8 +1,8 @@
 <% content_for :page_title, "Error Correlation" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-diagram-3 me-2"></i>
       Error Correlation Analysis
     </h1>
@@ -23,7 +23,7 @@
   <!-- Period Comparison -->
   <% if @period_comparison.present? %>
     <div class="card mb-4">
-      <div class="card-header bg-white">
+      <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-graph-up-arrow me-2"></i>
           Trend Analysis
@@ -69,7 +69,7 @@
         <h5 class="mb-0">
           <i class="bi bi-exclamation-triangle-fill me-2"></i>
           Problematic Releases
-          <span class="badge bg-white text-danger"><%= @problematic_releases.count %></span>
+          <span class="badge text-danger"><%= @problematic_releases.count %></span>
         </h5>
         <small>Versions with more than 2x the average error rate</small>
       </div>
@@ -121,7 +121,7 @@
     <% if @errors_by_version.present? && @errors_by_version.any? %>
       <div class="col-lg-6 mb-4">
         <div class="card h-100">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-tag me-2"></i>
               Errors by App Version
@@ -165,7 +165,7 @@
     <% if @errors_by_git_sha.present? && @errors_by_git_sha.any? %>
       <div class="col-lg-6 mb-4">
         <div class="card h-100">
-          <div class="card-header bg-white">
+          <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-git me-2"></i>
               Errors by Git SHA
@@ -207,7 +207,7 @@
   <!-- Multi-Error Users -->
   <% if @multi_error_users.present? && @multi_error_users.any? %>
     <div class="card mb-4">
-      <div class="card-header bg-white">
+      <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-people-fill me-2"></i>
           Users Affected by Multiple Error Types
@@ -239,7 +239,7 @@
   <!-- Time-Correlated Errors -->
   <% if @time_correlated_errors.present? && @time_correlated_errors.any? %>
     <div class="card mb-4">
-      <div class="card-header bg-white">
+      <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-clock-history me-2"></i>
           Time-Correlated Errors
@@ -300,7 +300,7 @@
   <!-- Platform-Specific Errors -->
   <% if @platform_specific_errors.present? && @platform_specific_errors.any? %>
     <div class="card mb-4">
-      <div class="card-header bg-white">
+      <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-phone me-2"></i>
           Platform-Specific vs Cross-Platform Errors
@@ -344,9 +344,9 @@
 
   <!-- Empty State -->
   <% if @errors_by_version.blank? && @multi_error_users.blank? && @time_correlated_errors.blank? %>
-    <div class="text-center py-5">
+    <div class="red-empty-state">
       <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
-      <h4 class="text-muted">Not Enough Data for Correlation Analysis</h4>
+      <div class="red-empty-state-title">Not Enough Data for Correlation Analysis</div>
       <p class="text-muted">
         Correlation analysis requires more error data to identify patterns.
       </p>

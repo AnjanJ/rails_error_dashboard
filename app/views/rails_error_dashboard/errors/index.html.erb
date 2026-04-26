@@ -5,175 +5,149 @@
   <%= turbo_stream_from "error_list" %>
 <% end %>
 
-<div class="py-4" data-controller="loading">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="bi bi-bug-fill text-primary"></i> Error Overview</h2>
-    <div class="text-muted">
-      <small>
-        Last updated: <%= local_time(Time.current, format: :full) %>
-        <span class="badge bg-success ms-2" id="live-indicator">
-          <i class="bi bi-broadcast"></i> Live
+<div data-controller="loading">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Errors</h1>
+    <span style="font-size: 12px; color: var(--text-tertiary);">
+      Last updated: <%= local_time(Time.current, format: :full) %>
+      <% if defined?(Turbo::StreamsHelper) && defined?(ActionCable) && respond_to?(:turbo_stream_from) && RailsErrorDashboard::Services::ErrorBroadcaster.available? %>
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 6px;">
+          <i class="bi bi-broadcast" style="font-size: 10px;"></i> Live
         </span>
-      </small>
+      <% end %>
+    </span>
+  </div>
+
+  <!-- Hidden skeleton placeholders for loading state management -->
+  <div class="loading-skeleton" data-loading-target="skeleton" style="display: none;">
+    <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-4);">
+      <div class="skeleton skeleton-card" style="flex: 1;"></div>
+      <div class="skeleton skeleton-card" style="flex: 1;"></div>
+      <div class="skeleton skeleton-card" style="flex: 1;"></div>
     </div>
   </div>
 
-  <!-- Stats Cards -->
-  <div id="dashboard_stats" class="mb-4">
-    <div data-loading-target="content">
-      <%= render "stats", stats: @stats %>
+  <!-- Summary line + batch actions -->
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
+    <span style="font-size: 13px; color: var(--text-secondary);">
+      <strong style="color: var(--text-primary);"><%= @pagy.count %></strong> errors
+      <span style="margin: 0 6px; color: var(--border-secondary);">&middot;</span>
+      <strong style="color: var(--status-critical);"><%= @stats[:unresolved] %></strong> unresolved
+      <span style="margin: 0 6px; color: var(--border-secondary);">&middot;</span>
+      <% if params[:timeframe].present? %>
+        <%= params[:timeframe].humanize %>
+      <% else %>
+        All time
+      <% end %>
+    </span>
+    <div id="batch-actions-inline" style="display: none; gap: 6px;">
+      <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 6px; align-items: center;" do |f| %>
+        <span id="selected-count" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);"></span>
+        <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
+          Resolve
+        <% end %>
+        <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
+          Delete
+        <% end %>
+      <% end %>
     </div>
-    <div class="loading-skeleton" data-loading-target="skeleton">
-      <div class="row g-4">
-        <% 4.times do %>
-          <div class="col-md-3">
-            <div class="card stat-card">
-              <div class="card-body">
-                <div class="skeleton skeleton-text skeleton-text-short mb-2"></div>
-                <div class="skeleton skeleton-card"></div>
-              </div>
-            </div>
-          </div>
+  </div>
+
+  <!-- Filter bar -->
+  <%= form_with url: errors_path, method: :get, data: { turbo: false, action: "submit->loading#submit" }, id: "filter-form" do %>
+    <% if params[:reopened].present? %>
+      <%= hidden_field_tag :reopened, params[:reopened] %>
+    <% end %>
+    <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-primary); border-radius: var(--radius-md); border: 1px solid var(--border-primary); margin-bottom: var(--space-4); flex-wrap: wrap;">
+      <!-- Search -->
+      <div style="position: relative; flex: 1 1 200px; min-width: 160px;">
+        <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-tertiary);"></i>
+        <%= text_field_tag :search, params[:search], placeholder: "Search errors...", style: "width: 100%; padding: 6px 10px 6px 30px; font-size: 13px; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); background: var(--surface-base); color: var(--text-primary); outline: none; font-family: var(--font-sans);" %>
+      </div>
+
+      <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
+
+      <!-- Status pills -->
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        <%
+          current_status = params[:status]
+          is_unresolved_only = params[:unresolved] != "false" && params[:unresolved] != "0"
+        %>
+        <%= link_to errors_path, class: "filter-pill #{current_status.blank? && !is_unresolved_only ? 'active' : ''}", style: "text-decoration: none;" do %>All<% end %>
+        <%= link_to errors_path(unresolved: '1'), class: "filter-pill #{is_unresolved_only && current_status.blank? ? 'active' : ''}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
+        <%= link_to errors_path(status: 'resolved', unresolved: '0'), class: "filter-pill #{current_status == 'resolved' ? 'active' : ''}", style: "text-decoration: none;" do %>Resolved<% end %>
+        <%= link_to errors_path(assigned_to: '__assigned__'), class: "filter-pill #{params[:assigned_to] == '__assigned__' ? 'active' : ''}", style: "text-decoration: none;" do %>Assigned<% end %>
+        <%= link_to errors_path(reopened: 'true'), class: "filter-pill #{params[:reopened] == 'true' ? 'active' : ''}", style: "text-decoration: none;" do %>Reopened<% end %>
+      </div>
+
+      <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
+
+      <!-- Severity pills -->
+      <div style="display: flex; gap: 4px;">
+        <% current_severity = params[:severity] %>
+        <%= link_to errors_path(permitted_filter_params.except(:severity)), class: "filter-pill #{current_severity.blank? ? 'active' : ''}", style: "text-decoration: none;" do %>Any severity<% end %>
+        <% %w[critical high medium low].each do |sev| %>
+          <%= link_to errors_path(permitted_filter_params.merge(severity: sev)), class: "filter-pill #{current_severity == sev ? 'active' : ''}", style: "text-decoration: none;" do %><%= sev.capitalize %><% end %>
         <% end %>
       </div>
-    </div>
-  </div>
 
-  <!-- Top Error Types (Only show if there are errors) -->
-  <% if @stats[:top_errors].any? %>
-    <div class="row g-4 mb-4">
-      <div class="col-md-12">
-        <div class="card">
-          <div class="card-header bg-white">
-            <h5 class="mb-0">Top Error Types</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <% @stats[:top_errors].first(5).each do |error_type, count| %>
-                <div class="col-md-2">
-                  <div class="text-center p-3 border rounded">
-                    <div class="fw-bold text-danger" style="font-size: 1.5rem;"><%= count %></div>
-                    <small class="text-muted text-truncate d-block" title="<%= error_type %>"><%= error_type.split('::').last %></small>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        </div>
+      <!-- Advanced filters toggle -->
+      <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
+      <button type="button" onclick="document.getElementById('advanced-filters').style.display = document.getElementById('advanced-filters').style.display === 'none' ? 'flex' : 'none'" class="filter-pill" style="border: none;">
+        <i class="bi bi-sliders"></i> More filters
+      </button>
+    </div>
+
+    <!-- Advanced filters (hidden by default) -->
+    <div id="advanced-filters" style="display: <%= params[:error_type].present? || params[:timeframe].present? || params[:frequency].present? || params[:priority_level].present? || params[:platform].present? ? 'flex' : 'none' %>; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface-primary); border-radius: var(--radius-md); border: 1px solid var(--border-primary);">
+      <% if @applications.size > 1 %>
+        <%= select_tag :application_id, options_for_select([['All Apps', '']] + @applications, params[:application_id]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <% end %>
+      <% if @platforms.size > 1 %>
+        <%= select_tag :platform, options_for_select([['All Platforms', '']] + @platforms.map { |p| [p, p] }, params[:platform]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <% end %>
+      <%= select_tag :error_type, options_for_select([['All Types', '']] + @error_types.map { |t| [t, t] }, params[:error_type]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :timeframe, options_for_select([['All Time', ''], ['Last Hour', 'last_hour'], ['Today', 'today'], ['Yesterday', 'yesterday'], ['Last 7 Days', 'last_7_days'], ['Last 30 Days', 'last_30_days'], ['Last 90 Days', 'last_90_days']], params[:timeframe]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :frequency, options_for_select([['All Frequencies', ''], ['Once', 'once'], ['2-9 Times', 'few'], ['10-99 Times', 'frequent'], ['100+ Times', 'very_frequent'], ['Recurring', 'recurring']], params[:frequency]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :priority_level, options_for_select([['All Priorities', '']] + RailsErrorDashboard::ErrorLog.priority_options(include_emoji: true), params[:priority_level]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+
+      <div style="display: flex; align-items: center; gap: var(--space-4); font-size: 12px; color: var(--text-secondary);">
+        <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
+          <%
+            is_checked = if params[:unresolved].nil?
+              true
+            else
+              params[:unresolved] != "false" && params[:unresolved] != "0"
+            end
+          %>
+          <%= check_box_tag :unresolved, "1", is_checked, class: "form-check-input", id: "unresolved_checkbox", style: "width: 14px; height: 14px;" %>
+          Unresolved only
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
+          <%= check_box_tag :hide_snoozed, "1", params[:hide_snoozed] == "1", class: "form-check-input", style: "width: 14px; height: 14px;" %>
+          Hide snoozed
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
+          <%= check_box_tag :hide_muted, "1", params[:hide_muted] == "1", class: "form-check-input", style: "width: 14px; height: 14px;" %>
+          Hide muted
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-left: auto;">
+        <%= submit_tag "Apply", class: "btn btn-primary btn-sm", data: { loading_target: "submitButton" } %>
+        <%= link_to "Clear", errors_path, class: "btn btn-sm", style: "font-size: 12px;" %>
       </div>
     </div>
   <% end %>
 
-  <!-- Spike Detection Alert -->
-  <% if @stats[:spike_detected] %>
-    <div class="alert alert-warning mb-4" role="alert">
-      <div class="d-flex align-items-center">
-        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
-        <div>
-          <h5 class="alert-heading mb-1">
-            <% case @stats[:spike_info][:severity] %>
-            <% when :critical %>
-              🚨 Critical Error Spike Detected!
-            <% when :high %>
-              ⚠️ High Error Spike Detected
-            <% when :elevated %>
-              📈 Elevated Error Activity
-            <% end %>
-          </h5>
-          <p class="mb-0">
-            Today: <strong><%= @stats[:spike_info][:today_count] %> errors</strong>
-            (7-day avg: <%= @stats[:spike_info][:avg_count] %>) —
-            <strong><%= @stats[:spike_info][:multiplier] %>x normal levels</strong>
-          </p>
-        </div>
-      </div>
-    </div>
-  <% end %>
-
-  <!-- 7-Day Error Trend (requires chartkick gem) -->
-  <% if @stats[:errors_trend_7d]&.any? && respond_to?(:line_chart) %>
-    <div class="row g-4 mb-4">
-      <div class="col-md-8" data-loading-target="content">
-        <div class="card">
-          <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-graph-up"></i> 7-Day Error Trend</h5>
-            <%= link_to analytics_errors_path, class: "btn btn-sm btn-outline-primary" do %>
-              <i class="bi bi-bar-chart"></i> Full Analytics
-            <% end %>
-          </div>
-          <div class="card-body">
-            <%= line_chart @stats[:errors_trend_7d],
-                color: "#8B5CF6",
-                curve: false,
-                points: true,
-                height: "250px",
-                library: {
-                  plugins: {
-                    legend: { display: false }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: { precision: 0 }
-                    }
-                  }
-                } %>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4" data-loading-target="content">
-        <div class="card">
-          <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-pie-chart"></i> By Severity (7d)</h5>
-          </div>
-          <div class="card-body">
-            <%= pie_chart @stats[:errors_by_severity_7d],
-                colors: ["#EF4444", "#F59E0B", "#3B82F6", "#6B7280"],
-                height: "250px",
-                legend: "bottom",
-                donut: true %>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="loading-skeleton" data-loading-target="skeleton">
-      <div class="row g-4 mb-4">
-        <div class="col-md-8">
-          <div class="card">
-            <div class="card-header bg-white">
-              <div class="skeleton skeleton-text" style="width: 200px;"></div>
-            </div>
-            <div class="card-body">
-              <div class="skeleton skeleton-chart"></div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card">
-            <div class="card-header bg-white">
-              <div class="skeleton skeleton-text" style="width: 150px;"></div>
-            </div>
-            <div class="card-body">
-              <div class="skeleton skeleton-chart"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  <% end %>
-
-  <!-- Active Filters Pills -->
+  <!-- Active Filter Pills -->
   <%
     active_filters = []
     active_filters << { label: "Search: #{params[:search]}", param: :search } if params[:search].present?
-
-    # Application filter pill
     if params[:application_id].present? && defined?(@applications)
       app_name = @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first
       active_filters << { label: "App: #{app_name}", param: :application_id } if app_name
     end
-
     active_filters << { label: "Platform: #{params[:platform]}", param: :platform } if params[:platform].present?
     active_filters << { label: "Type: #{params[:error_type]}", param: :error_type } if params[:error_type].present?
     active_filters << { label: "Severity: #{params[:severity].titleize}", param: :severity } if params[:severity].present?
@@ -181,519 +155,176 @@
     active_filters << { label: "Frequency: #{params[:frequency].humanize}", param: :frequency } if params[:frequency].present?
     active_filters << { label: "Status: #{params[:status].humanize}", param: :status } if params[:status].present?
     active_filters << { label: "Priority: P#{params[:priority_level]}", param: :priority_level } if params[:priority_level].present?
-
-    # Special handling for assigned_to
-    if params[:assigned_to].present? && params[:assigned_to] != '__unassigned__' && params[:assigned_to] != '__assigned__'
-      active_filters << { label: "Assigned to: #{params[:assigned_to]}", param: :assigned_to }
-    elsif params[:assigned_to] == '__unassigned__'
+    if params[:assigned_to] == '__unassigned__'
       active_filters << { label: "Unassigned", param: :assigned_to }
     elsif params[:assigned_to] == '__assigned__'
       active_filters << { label: "Assigned", param: :assigned_to }
-      # Show assignee name filter if present
-      if params[:assignee_name].present?
-        active_filters << { label: "Assignee: #{params[:assignee_name]}", param: :assignee_name }
-      end
     end
   %>
-
   <% if active_filters.any? %>
-    <div class="mb-3">
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <small class="text-muted fw-bold">Active filters:</small>
-        <% active_filters.each do |filter| %>
-          <%
-            # Build URL without this specific filter
-            filter_params = permitted_filter_params.except(filter[:param])
-          %>
-          <%= link_to errors_path(filter_params), class: "badge bg-primary text-decoration-none filter-pill" do %>
-            <%= filter[:label] %>
-            <i class="bi bi-x ms-1"></i>
-          <% end %>
+    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: var(--space-4); font-size: 12px;">
+      <span style="color: var(--text-tertiary); font-weight: 500;">Filters:</span>
+      <% active_filters.each do |filter| %>
+        <%= link_to errors_path(permitted_filter_params.except(filter[:param])), class: "filter-pill active", style: "text-decoration: none; font-size: 11px; padding: 3px 8px;" do %>
+          <%= filter[:label] %> <i class="bi bi-x" style="font-size: 12px;"></i>
         <% end %>
-        <%= link_to errors_path, class: "badge bg-secondary text-decoration-none filter-pill" do %>
-          <i class="bi bi-x-circle me-1"></i>
-          Clear All
-        <% end %>
-      </div>
+      <% end %>
+      <%= link_to errors_path, style: "color: var(--text-tertiary); font-size: 11px;" do %>Clear all<% end %>
     </div>
   <% end %>
 
-  <!-- Filters -->
-  <div class="card mb-4" id="filters-section">
-    <div class="card-header bg-white">
-      <h5 class="mb-0">Filters & Search</h5>
-    </div>
-    <div class="card-body">
-      <!-- Quick Filter Buttons -->
-      <div class="d-flex gap-2 mb-3">
-        <%= link_to "All Errors", errors_path,
-            class: "btn btn-sm #{params[:assigned_to].blank? && params[:reopened].blank? ? 'btn-primary' : 'btn-outline-primary'}" %>
-        <%= link_to "Unassigned", errors_path(assigned_to: '__unassigned__'),
-            class: "btn btn-sm #{params[:assigned_to] == '__unassigned__' ? 'btn-primary' : 'btn-outline-primary'}" %>
-        <%= link_to "Reopened", errors_path(reopened: 'true'),
-            class: "btn btn-sm #{params[:reopened] == 'true' ? 'btn-primary' : 'btn-outline-primary'}" %>
+  <!-- Error Table -->
+  <div class="card" style="overflow: hidden;">
+    <% if @errors.any? %>
+      <div data-loading-target="content">
+        <table class="table table-hover" style="margin-bottom: 0;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-primary);">
+              <th style="width: 40px; padding: var(--space-3) var(--space-4); text-align: center;">
+                <input type="checkbox" id="select-all" class="form-check-input" style="accent-color: var(--accent);">
+              </th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: left;">Error</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: left; width: 90px;">Status</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 90px;">Events</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 70px;">Users</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 90px;">Last seen</th>
+              <% if @applications.size > 1 && params[:application_id].blank? %>
+                <th style="padding: var(--space-3) var(--space-4); width: 90px;">App</th>
+              <% end %>
+              <% if @platforms.size > 1 %>
+                <th style="padding: var(--space-3) var(--space-4); width: 80px;">Platform</th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody id="error_list">
+            <% @errors.each do |error| %>
+              <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
+            <% end %>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <% if @pagy.pages > 1 %>
+          <div style="padding: var(--space-4); border-top: 1px solid var(--border-primary);">
+            <%== @pagy.series_nav(:bootstrap) %>
+          </div>
+        <% end %>
       </div>
 
-      <%= form_with url: errors_path, method: :get, class: "row g-3", data: { turbo: false, action: "submit->loading#submit" } do %>
-        <% if params[:reopened].present? %>
-          <%= hidden_field_tag :reopened, params[:reopened] %>
-        <% end %>
-        <div class="col-md-4">
-          <%= text_field_tag :search, params[:search], placeholder: "Search errors...", class: "form-control" %>
-        </div>
-
-        <!-- Application Filter (only show if multiple apps) -->
-        <% if @applications.size > 1 %>
-          <div class="col-md-2">
-            <%= select_tag :application_id,
-                options_for_select(
-                  [['All Apps', '']] + @applications,
-                  params[:application_id]
-                ),
-                class: "form-select" %>
-          </div>
-        <% end %>
-
-        <% if @platforms.size > 1 %>
-          <div class="col-md-2">
-            <%= select_tag :platform, options_for_select([['All Platforms', '']] + @platforms.map { |p| [p, p] }, params[:platform]), class: "form-select" %>
-          </div>
-        <% end %>
-
-        <div class="col-md-2">
-          <%= select_tag :error_type, options_for_select([['All Types', '']] + @error_types.map { |t| [t, t] }, params[:error_type]), class: "form-select" %>
-        </div>
-
-        <div class="col-md-2">
-          <%= select_tag :severity, options_for_select([
-            ['All Severities', ''],
-            ['🔴 Critical', 'critical'],
-            ['🟠 High', 'high'],
-            ['🟡 Medium', 'medium'],
-            ['⚪ Low', 'low']
-          ], params[:severity]), class: "form-select" %>
-        </div>
-
-        <!-- Time Range Filter -->
-        <div class="col-md-2">
-          <%= select_tag :timeframe, options_for_select([
-            ['All Time', ''],
-            ['Last Hour', 'last_hour'],
-            ['Today', 'today'],
-            ['Yesterday', 'yesterday'],
-            ['Last 7 Days', 'last_7_days'],
-            ['Last 30 Days', 'last_30_days'],
-            ['Last 90 Days', 'last_90_days']
-          ], params[:timeframe]), class: "form-select" %>
-        </div>
-
-        <!-- Frequency Filter -->
-        <div class="col-md-2">
-          <%= select_tag :frequency, options_for_select([
-            ['All Frequencies', ''],
-            ['Once', 'once'],
-            ['2-9 Times', 'few'],
-            ['10-99 Times', 'frequent'],
-            ['100+ Times', 'very_frequent'],
-            ['Recurring (Active)', 'recurring']
-          ], params[:frequency]), class: "form-select" %>
-        </div>
-
-        <!-- Phase 3: Workflow Filters -->
-        <div class="col-md-2">
-          <%= select_tag :status, options_for_select([
-            ['All Statuses', ''],
-            ['🆕 New', 'new'],
-            ['🔵 In Progress', 'in_progress'],
-            ['🟡 Investigating', 'investigating'],
-            ['✅ Resolved', 'resolved'],
-            ['⚫ Won\'t Fix', 'wont_fix']
-          ], params[:status]), class: "form-select" %>
-        </div>
-
-        <div class="col-md-2">
-          <%= select_tag :assigned_to, options_for_select([
-            ['All Assignments', ''],
-            ['Unassigned', '__unassigned__'],
-            ['Assigned', '__assigned__']
-          ], params[:assigned_to]), class: "form-select", id: "assigned_to_filter" %>
-        </div>
-
-        <!-- Assignee Name Filter - Only shown when "Assigned" is selected -->
-        <div class="col-md-2" id="assignee_name_filter" style="<%= params[:assigned_to] == '__assigned__' ? '' : 'display: none;' %>">
-          <%= select_tag :assignee_name, options_for_select(
-            [['All Assignees', '']] + @assignees.map { |name| [name, name] },
-            params[:assignee_name]
-          ), class: "form-select", placeholder: "Filter by assignee..." %>
-        </div>
-
-        <div class="col-md-2">
-          <%= select_tag :priority_level, options_for_select(
-            [['All Priorities', '']] + RailsErrorDashboard::ErrorLog.priority_options(include_emoji: true),
-            params[:priority_level]
-          ), class: "form-select" %>
-        </div>
-
-        <!-- Checkboxes on their own row -->
-        <div class="col-12 mt-2">
-          <div class="row g-3">
-            <div class="col-auto">
-              <div class="form-check">
-                <%
-                  # Determine checkbox state based on params
-                  # If unresolved param is missing or nil, default to checked (true)
-                  # If unresolved param is explicitly "false" or "0", uncheck it
-                  is_checked = if params[:unresolved].nil?
-                    true  # Default to checked when first loading
-                  else
-                    params[:unresolved] != "false" && params[:unresolved] != "0"
-                  end
-                %>
-                <%= check_box_tag :unresolved, "1", is_checked, class: "form-check-input", id: "unresolved_checkbox" %>
-                <%= label_tag :unresolved, "Unresolved only", class: "form-check-label" %>
-              </div>
-            </div>
-
-            <div class="col-auto">
-              <div class="form-check">
-                <%= check_box_tag :hide_snoozed, "1", params[:hide_snoozed] == "1", class: "form-check-input" %>
-                <%= label_tag :hide_snoozed, "Hide snoozed", class: "form-check-label" %>
-              </div>
-            </div>
-
-            <div class="col-auto">
-              <div class="form-check">
-                <%= check_box_tag :hide_muted, "1", params[:hide_muted] == "1", class: "form-check-input" %>
-                <%= label_tag :hide_muted, "Hide muted", class: "form-check-label" %>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 mt-3">
-          <%= submit_tag "Apply Filters", class: "btn btn-primary", data: { loading_target: "submitButton" } %>
-          <%= link_to "Clear", errors_path, class: "btn btn-outline-secondary" %>
-        </div>
-      <% end %>
-    </div>
-  </div>
-
-  <!-- Error List Table -->
-  <div class="card">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Recent Errors</h5>
-      <small class="text-muted"><%== @pagy.info_tag %></small>
-    </div>
-
-    <!-- Batch Actions Toolbar -->
-    <div class="card-body border-bottom" id="batch-actions-toolbar" style="display: none;">
-      <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form" do |f| %>
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <span id="selected-count" class="fw-bold">0 selected</span>
-          </div>
-          <div class="col-auto">
-            <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm btn-success" do %>
-              <i class="bi bi-check-circle"></i> Resolve Selected
-            <% end %>
-          </div>
-          <div class="col-auto">
-            <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm btn-danger", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
-              <i class="bi bi-trash"></i> Delete Selected
-            <% end %>
-          </div>
-          <div class="col-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-selection">
-              Clear Selection
-            </button>
-          </div>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="card-body p-0">
-      <% if @errors.any? %>
-        <div data-loading-target="content">
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 40px;">
-                    <input type="checkbox" id="select-all" class="form-check-input">
-                  </th>
-                  <th><%= sortable_header("Severity", "severity") %></th>
-                  <th><%= sortable_header("Error Type", "error_type") %></th>
-                  <th>Message</th>
-                  <th><%= sortable_header("Occurrences", "occurrence_count") %></th>
-                  <th><%= sortable_header("First / Last Seen", "last_seen_at") %></th>
-
-                  <!-- Show App column only when viewing all apps -->
-                  <% if @applications.size > 1 && params[:application_id].blank? %>
-                    <th><%= sortable_header("Application", "application_id") %></th>
-                  <% end %>
-
-                  <% if @platforms.size > 1 %>
-                    <th><%= sortable_header("Platform", "platform") %></th>
-                  <% end %>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="error_list">
-                <% @errors.each do |error| %>
-                  <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination -->
-          <div class="p-3">
-            <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
-          </div>
-        </div>
-
-        <div class="loading-skeleton" data-loading-target="skeleton">
-          <div class="p-3">
-            <% 5.times do %>
-              <div class="skeleton skeleton-row mb-2"></div>
-            <% end %>
-          </div>
-        </div>
-      <% else %>
-        <div class="text-center py-5">
-          <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-          <h4 class="text-muted">All Clear!</h4>
-          <p class="text-muted">
-            <% if params[:search].present? || params[:error_type].present? || params[:platform].present? || params[:severity].present? %>
-              No errors match your current filters. Try adjusting your search criteria.
-            <% else %>
-              No errors have been logged yet. Your application is running smoothly!
-            <% end %>
-          </p>
-          <% unless params.values.compact.any? %>
-            <small class="text-muted d-block mt-3">
-              <i class="bi bi-lightbulb"></i> Errors will appear here automatically when they occur.
-            </small>
+      <div class="loading-skeleton" data-loading-target="skeleton">
+        <div style="padding: var(--space-4);">
+          <% 5.times do %>
+            <div class="skeleton skeleton-row" style="margin-bottom: 2px;"></div>
           <% end %>
         </div>
-      <% end %>
-    </div>
+      </div>
+    <% else %>
+      <!-- Empty State -->
+      <div class="red-empty-state">
+        <% if params[:search].present? || params[:error_type].present? || params[:severity].present? %>
+          <div class="red-empty-state-icon"><i class="bi bi-funnel"></i></div>
+          <div class="red-empty-state-title">No errors match your filters</div>
+          <div class="red-empty-state-message">Try adjusting your search or filter criteria to find what you're looking for.</div>
+          <%= link_to errors_path, class: "red-empty-state-cta" do %><i class="bi bi-x-circle"></i> Clear all filters<% end %>
+        <% else %>
+          <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
+          <div class="red-empty-state-title">All clear!</div>
+          <div class="red-empty-state-message">No errors have been logged yet. Your application is running smoothly. Errors will appear here automatically when they occur.</div>
+        <% end %>
+      </div>
+    <% end %>
   </div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const selectAllCheckbox = document.getElementById('select-all');
-    const errorCheckboxes = document.querySelectorAll('.error-checkbox');
-    const batchToolbar = document.getElementById('batch-actions-toolbar');
-    const selectedCountSpan = document.getElementById('selected-count');
-    const batchForm = document.getElementById('batch-form');
-    const clearSelectionBtn = document.getElementById('clear-selection');
+document.addEventListener('DOMContentLoaded', function() {
+  var selectAllCheckbox = document.getElementById('select-all');
+  var batchInline = document.getElementById('batch-actions-inline');
+  var selectedCountSpan = document.getElementById('selected-count');
+  var batchForm = document.getElementById('batch-form');
 
-    function updateBatchToolbar() {
-      const checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
-      const count = checkedBoxes.length;
+  function getErrorCheckboxes() {
+    return document.querySelectorAll('.error-checkbox');
+  }
 
-      if (count > 0) {
-        batchToolbar.style.display = 'block';
-        selectedCountSpan.textContent = `${count} selected`;
-      } else {
-        batchToolbar.style.display = 'none';
+  function updateBatchToolbar() {
+    var checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
+    var count = checkedBoxes.length;
+    if (count > 0) {
+      batchInline.style.display = 'flex';
+      selectedCountSpan.textContent = count + ' selected';
+    } else {
+      batchInline.style.display = 'none';
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      getErrorCheckboxes().forEach(function(cb) { cb.checked = selectAllCheckbox.checked; });
+      updateBatchToolbar();
+    });
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('error-checkbox')) {
+      updateBatchToolbar();
+      var boxes = getErrorCheckboxes();
+      var allChecked = Array.from(boxes).every(function(cb) { return cb.checked; });
+      var someChecked = Array.from(boxes).some(function(cb) { return cb.checked; });
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allChecked;
+        selectAllCheckbox.indeterminate = someChecked && !allChecked;
       }
     }
-
-    // Select all checkbox
-    if (selectAllCheckbox) {
-      selectAllCheckbox.addEventListener('change', function() {
-        errorCheckboxes.forEach(checkbox => {
-          checkbox.checked = this.checked;
-        });
-        updateBatchToolbar();
-      });
-    }
-
-    // Individual checkboxes
-    errorCheckboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        updateBatchToolbar();
-
-        // Update "select all" checkbox state
-        const allChecked = Array.from(errorCheckboxes).every(cb => cb.checked);
-        const someChecked = Array.from(errorCheckboxes).some(cb => cb.checked);
-
-        if (selectAllCheckbox) {
-          selectAllCheckbox.checked = allChecked;
-          selectAllCheckbox.indeterminate = someChecked && !allChecked;
-        }
-      });
-    });
-
-    // Clear selection button
-    if (clearSelectionBtn) {
-      clearSelectionBtn.addEventListener('click', function() {
-        errorCheckboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        });
-        if (selectAllCheckbox) {
-          selectAllCheckbox.checked = false;
-          selectAllCheckbox.indeterminate = false;
-        }
-        updateBatchToolbar();
-      });
-    }
-
-    // Form submission - add selected error IDs
-    if (batchForm) {
-      batchForm.addEventListener('submit', function(e) {
-        const checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
-
-        if (checkedBoxes.length === 0) {
-          e.preventDefault();
-          alert('Please select at least one error');
-          return false;
-        }
-
-        // Add hidden inputs for each selected error ID
-        checkedBoxes.forEach(checkbox => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = 'error_ids[]';
-          input.value = checkbox.value;
-          this.appendChild(input);
-        });
-      });
-    }
   });
 
-  // Turbo Stream animation for new errors
-  document.addEventListener('turbo:before-stream-render', (event) => {
-    const { target, action } = event.detail.newStream;
+  if (batchForm) {
+    batchForm.addEventListener('submit', function(e) {
+      var checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
+      if (checkedBoxes.length === 0) { e.preventDefault(); return false; }
+      checkedBoxes.forEach(function(cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'error_ids[]'; input.value = cb.value;
+        batchForm.appendChild(input);
+      });
+    });
+  }
 
-    // Highlight new errors when prepended
+  // Turbo Stream animations
+  document.addEventListener('turbo:before-stream-render', function(event) {
+    var target = event.detail.newStream.target;
+    var action = event.detail.newStream.action;
     if (action === 'prepend' && target === 'error_list') {
-      setTimeout(() => {
-        const firstRow = document.querySelector('#error_list tr:first-child');
+      setTimeout(function() {
+        var firstRow = document.querySelector('#error_list tr:first-child');
         if (firstRow) {
-          firstRow.classList.add('new-error');
-
-          // Remove class after animation completes
-          setTimeout(() => {
-            firstRow.classList.remove('new-error');
-          }, 3000);
+          firstRow.style.background = 'var(--status-success-bg)';
+          setTimeout(function() { firstRow.style.background = ''; }, 3000);
         }
-      }, 10);
-    }
-
-    // Pulse stats cards when updated
-    if (action === 'replace' && target === 'dashboard_stats') {
-      setTimeout(() => {
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach(card => {
-          card.classList.add('updated');
-          setTimeout(() => card.classList.remove('updated'), 500);
-        });
       }, 10);
     }
   });
 
-  // Initialize Bootstrap tooltips
-  document.addEventListener('DOMContentLoaded', function() {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
+  // Scroll position preservation
+  var scrollPos = sessionStorage.getItem('scrollPos');
+  if (scrollPos) { window.scrollTo(0, parseInt(scrollPos)); sessionStorage.removeItem('scrollPos'); }
+
+  var filterForm = document.getElementById('filter-form');
+  if (filterForm) {
+    filterForm.addEventListener('submit', function() {
+      sessionStorage.setItem('scrollPos', window.pageYOffset);
+      var unresolvedCb = document.getElementById('unresolved_checkbox');
+      if (unresolvedCb && !unresolvedCb.checked) {
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden'; hidden.name = 'unresolved'; hidden.value = '0';
+        filterForm.appendChild(hidden);
+        unresolvedCb.disabled = true;
+      }
     });
-  });
+  }
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', function(e) {
-    // Ignore if typing in input/textarea
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-    // 'r' - Refresh page
-    if (e.key === 'r') {
-      location.reload();
-    }
-
-    // '/' - Focus search
-    if (e.key === '/') {
-      e.preventDefault();
-      const searchInput = document.querySelector('input[name="search"]');
-      if (searchInput) searchInput.focus();
-    }
-
-    // 'a' - Go to analytics
-    if (e.key === 'a') {
-      window.location.href = '<%= analytics_errors_path %>';
-    }
-
-    // '?' - Show keyboard shortcuts help
-    if (e.key === '?') {
-      e.preventDefault();
-      const modal = new bootstrap.Modal(document.getElementById('keyboardShortcutsModal'));
-      modal.show();
-    }
-  });
-
-  // Preserve scroll position on page load
-  document.addEventListener('DOMContentLoaded', function() {
-    const scrollPos = sessionStorage.getItem('scrollPos');
-    if (scrollPos) {
-      window.scrollTo(0, parseInt(scrollPos));
-      sessionStorage.removeItem('scrollPos');
-    }
-  });
-
-  // Handle filter form submission
-  document.addEventListener('DOMContentLoaded', function() {
-    const filterForm = document.querySelector('form[action="<%= errors_path %>"]');
-    if (filterForm) {
-      filterForm.addEventListener('submit', function(e) {
-        // Save scroll position before form submission
-        sessionStorage.setItem('scrollPos', window.pageYOffset);
-
-        // Handle unchecked checkbox - when unchecked, send "0" explicitly
-        const unresolvedCheckbox = document.getElementById('unresolved_checkbox');
-        if (unresolvedCheckbox && !unresolvedCheckbox.checked) {
-          // Create hidden input to send "0" when unchecked
-          const hiddenInput = document.createElement('input');
-          hiddenInput.type = 'hidden';
-          hiddenInput.name = 'unresolved';
-          hiddenInput.value = '0';
-          filterForm.appendChild(hiddenInput);
-          // Remove the checkbox from form submission to avoid sending empty value
-          unresolvedCheckbox.disabled = true;
-        }
-      });
-    }
-  });
-
-  // Update browser tab title with unresolved error count
-  document.addEventListener('DOMContentLoaded', function() {
-    const unresolvedCount = <%= @stats[:unresolved] || 0 %>;
-    if (unresolvedCount > 0) {
-      document.title = `(${unresolvedCount}) ${document.title}`;
-    }
-  });
-
-  // Toggle assignee name filter visibility based on assigned_to selection
-  document.addEventListener('DOMContentLoaded', function() {
-    const assignedToFilter = document.getElementById('assigned_to_filter');
-    const assigneeNameFilter = document.getElementById('assignee_name_filter');
-
-    if (assignedToFilter && assigneeNameFilter) {
-      assignedToFilter.addEventListener('change', function() {
-        if (this.value === '__assigned__') {
-          assigneeNameFilter.style.display = 'block';
-        } else {
-          assigneeNameFilter.style.display = 'none';
-          // Reset assignee name filter when hiding
-          const assigneeNameSelect = assigneeNameFilter.querySelector('select');
-          if (assigneeNameSelect) {
-            assigneeNameSelect.value = '';
-          }
-        }
-      });
-    }
-  });
+  // Tab title with unresolved count
+  var unresolvedCount = <%= @stats[:unresolved] || 0 %>;
+  if (unresolvedCount > 0) { document.title = '(' + unresolvedCount + ') ' + document.title; }
+});
 </script>

@@ -1,8 +1,8 @@
 <% content_for :page_title, "Deprecation Warnings" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-exclamation-triangle me-2"></i>
       Deprecation Warnings
     </h1>
@@ -21,9 +21,9 @@
   </div>
 
   <% if @unique_count == 0 %>
-    <div class="text-center py-5">
-      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-      <h4 class="text-muted">No Deprecation Warnings Found</h4>
+    <div class="red-empty-state">
+      <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
+      <div class="red-empty-state-title">No Deprecation Warnings Found</div>
       <p class="text-muted">
         No deprecation warnings were detected in error breadcrumbs over the last <%= @days %> days.
       </p>
@@ -67,7 +67,7 @@
     </div>
 
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-exclamation-triangle text-danger me-2"></i>
           All Deprecation Warnings
@@ -109,7 +109,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
             <i class="bi bi-lightbulb text-warning"></i> Fix deprecations before upgrading Rails to avoid breaking changes.

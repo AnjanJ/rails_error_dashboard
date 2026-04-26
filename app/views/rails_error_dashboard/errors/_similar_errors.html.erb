@@ -4,7 +4,7 @@
         <% if similar.any? %>
           <% cache [error, 'similar_errors_v1', similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
           <div class="card mb-4" id="section-similar-errors">
-            <div class="card-header bg-white">
+            <div class="card-header">
               <h5 class="mb-0">
                 <i class="bi bi-diagram-3"></i> Similar Errors
                 <span class="badge bg-info text-dark">Fuzzy Matching</span>

@@ -1,54 +1,68 @@
-<tr id="error_<%= error.id %>">
-  <td onclick="event.stopPropagation();">
-    <input type="checkbox" class="error-checkbox form-check-input" value="<%= error.id %>" data-error-id="<%= error.id %>">
+<tr id="error_<%= error.id %>"
+    onclick="window.location='<%= error_path(error) %>'"
+    style="border-bottom: 1px solid var(--border-primary); cursor: pointer; transition: background 0.1s ease;"
+    onmouseenter="this.style.background='var(--surface-hover)'; this.querySelector('.sev-bar').style.opacity='1';"
+    onmouseleave="this.style.background='transparent'; this.querySelector('.sev-bar').style.opacity='0';">
+  <td style="padding: var(--space-3) var(--space-4); text-align: center; position: relative;" onclick="event.stopPropagation(); var cb = this.querySelector('input'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change'));">
+    <span class="sev-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: <%= severity_color_var(error.severity) %>; opacity: 0; transition: opacity 0.1s ease; border-radius: 0 2px 2px 0;"></span>
+    <input type="checkbox" class="error-checkbox form-check-input" value="<%= error.id %>" data-error-id="<%= error.id %>" onclick="event.stopPropagation();" style="accent-color: var(--accent);">
   </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <% severity = error.severity %>
-    <% if severity == :critical %>
-      <span class="badge bg-danger" data-bs-toggle="tooltip" title="Critical severity - requires immediate attention">CRITICAL</span>
-    <% elsif severity == :high %>
-      <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="High severity - should be fixed soon">HIGH</span>
-    <% elsif severity == :medium %>
-      <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="Medium severity - fix when possible">MEDIUM</span>
-    <% else %>
-      <span class="badge bg-secondary" data-bs-toggle="tooltip" title="Low severity - minor issue">LOW</span>
-    <% end %>
-    <% if error.respond_to?(:priority_score) && error.priority_score %>
-      <br><small class="text-muted" data-bs-toggle="tooltip" title="Priority score (0-100) based on severity, frequency, recency, and user impact">P<%= error.priority_score %></small>
-    <% end %>
-  </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <code class="text-danger" data-bs-toggle="tooltip" title="<%= error.error_type %>"><%= error.error_type.split('::').last %></code>
-    <% if error.recent? %>
-      <span class="badge bg-success ms-1" data-bs-toggle="tooltip" title="Error occurred within the last hour">NEW</span>
-    <% end %>
-    <% if error.respond_to?(:app_version) && error.app_version.present? %>
-      <br><small class="badge bg-light text-dark" data-bs-toggle="tooltip" title="App version when error occurred">v<%= error.app_version %></small>
-    <% end %>
-  </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <div class="text-truncate" style="max-width: 300px;" title="<%= error.message %>">
-      <%= error.message %>
+  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error) %>'">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="badge bg-<%= severity_color(error.severity) %>" style="display: inline-flex; align-items: center; gap: 4px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+        <%= error.severity %>
+      </span>
+      <div style="min-width: 0;">
+        <div style="font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          <%= error.error_type %>
+          <% if error.recent? %>
+            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 4px; text-transform: uppercase;">NEW</span>
+          <% end %>
+        </div>
+        <div style="color: var(--text-tertiary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;" title="<%= error.message %>"><%= error.message %></div>
+      </div>
     </div>
   </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <span class="badge bg-primary"><%= error.occurrence_count %>x</span>
+  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error) %>'">
+    <%
+      status_text = error.resolved? ? 'resolved' : (error.respond_to?(:muted?) && error.muted? ? 'muted' : (error.respond_to?(:snoozed?) && error.snoozed? ? 'snoozed' : (error.respond_to?(:assignee_name) && error.assignee_name.present? ? 'assigned' : 'unresolved')))
+      status_colors = {
+        'unresolved' => { bg: 'var(--status-critical-bg)', color: 'var(--status-critical)' },
+        'resolved' => { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
+        'assigned' => { bg: 'var(--accent-subtle)', color: 'var(--accent)' },
+        'snoozed' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
+        'muted' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
+      }
+      sc = status_colors[status_text] || status_colors['unresolved']
+    %>
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: var(--radius-full); background: <%= sc[:bg] %>; color: <%= sc[:color] %>; text-transform: capitalize;">
+      <%= status_text %>
+    </span>
+    <% if error.reopened? %>
+      <i class="bi bi-arrow-counterclockwise" style="color: var(--status-warning); margin-left: 4px; font-size: 12px;" title="Reopened"></i>
+    <% end %>
   </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <small>
-      <strong>First:</strong> <%= local_time(error.first_seen_at, format: :short) %><br>
-      <strong>Last:</strong> <%= local_time(error.last_seen_at, format: :short) %>
-    </small>
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary);" onclick="window.location='<%= error_path(error) %>'">
+    <%= error.occurrence_count.to_s(:delimited) rescue error.occurrence_count %>
+  </td>
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);" onclick="window.location='<%= error_path(error) %>'">
+    <% if error.user_id %>
+      <%= error.user_id %>
+    <% else %>
+      <span style="color: var(--text-tertiary);">&mdash;</span>
+    <% end %>
+  </td>
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; color: var(--text-tertiary); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
+    <%= local_time_ago(error.last_seen_at) %>
   </td>
   <% if local_assigns[:show_application] %>
-    <td onclick="window.location='<%= error_path(error) %>';">
-      <span class="badge bg-info">
-        <%= error.application&.name || 'Unknown' %>
-      </span>
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
+      <span class="badge bg-info"><%= error.application&.name || 'Unknown' %></span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>
-    <td onclick="window.location='<%= error_path(error) %>';">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
       <% if error.platform == 'iOS' %>
         <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
       <% elsif error.platform == 'Android' %>
@@ -60,43 +74,4 @@
       <% end %>
     </td>
   <% end %>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <% if error.user_id %>
-      <small data-bs-toggle="tooltip" title="User affected by this error">User #<%= error.user_id %></small>
-      <% if error.respond_to?(:user_impact_percentage) %>
-        <% impact = error.user_impact_percentage %>
-        <% if impact > 0 %>
-          <br><small class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="Percentage of users affected by this error type"><%= impact %>% impact</small>
-        <% end %>
-      <% end %>
-    <% else %>
-      <small class="text-muted" data-bs-toggle="tooltip" title="No specific user affected">-</small>
-    <% end %>
-  </td>
-  <td onclick="window.location='<%= error_path(error) %>';">
-    <% if error.resolved? %>
-      <i class="bi bi-check-circle-fill text-success"
-         data-bs-toggle="tooltip"
-         data-bs-placement="left"
-         data-bs-html="true"
-         title="<%= if error.resolution_comment.present?
-                   "<strong>Resolved</strong><br><em>#{error.resolution_comment.truncate(100).gsub('"', '&quot;').gsub("'", '&#39;')}</em>"
-                 else
-                   'Resolved'
-                 end %>"></i>
-    <% else %>
-      <i class="bi bi-exclamation-circle-fill text-danger" data-bs-toggle="tooltip" title="Unresolved"></i>
-    <% end %>
-    <% if error.reopened? %>
-      <i class="bi bi-arrow-counterclockwise text-warning ms-1" data-bs-toggle="tooltip" title="Reopened"></i>
-    <% end %>
-    <% if error.respond_to?(:muted?) && error.muted? %>
-      <i class="bi bi-bell-slash text-secondary ms-1" data-bs-toggle="tooltip" title="Muted - notifications silenced"></i>
-    <% end %>
-  </td>
-  <td onclick="event.stopPropagation();">
-    <%= link_to error_path(error), class: "btn btn-sm btn-outline-primary" do %>
-      <i class="bi bi-eye"></i>
-    <% end %>
-  </td>
 </tr>

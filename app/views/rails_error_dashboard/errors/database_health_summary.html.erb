@@ -1,8 +1,8 @@
 <% content_for :page_title, "DB Health" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-database me-2"></i>
       Database Health
     </h1>
@@ -22,7 +22,7 @@
 
   <%# ===== SECTION A: Live Database Health ===== %>
 
-  <h4 class="mb-3"><i class="bi bi-activity text-primary me-2"></i>Live Database Health</h4>
+  <h4 class="mb-3"><i class="bi bi-activity text-primary me-2"></i>Live Database Health</div>
 
   <% unless @live_health[:postgresql] %>
     <div class="alert alert-info mb-3">
@@ -124,7 +124,7 @@
     <%# Host App Tables %>
     <% if @host_tables.any? %>
       <div class="card mb-4">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-table text-primary me-2"></i>
             Host App Tables
@@ -173,7 +173,7 @@
     <%# Gem Tables (collapsible) %>
     <% if @gem_tables.any? %>
       <div class="card mb-4">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <a class="text-decoration-none" data-bs-toggle="collapse" href="#gemTablesCollapse" role="button" aria-expanded="false" aria-controls="gemTablesCollapse">
             <h5 class="mb-0">
               <i class="bi bi-table text-secondary me-2"></i>
@@ -227,7 +227,7 @@
     <%# Unused Indexes %>
     <% if @live_health[:unused_indexes]&.any? %>
       <div class="card mb-4">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-exclamation-triangle text-warning me-2"></i>
             Unused Indexes
@@ -262,7 +262,7 @@
     <%# Activity by State %>
     <% if @live_health[:activity] %>
       <div class="card mb-4">
-        <div class="card-header bg-white">
+        <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-people text-info me-2"></i>
             Connection Activity
@@ -307,12 +307,12 @@
   <%# ===== SECTION B: Historical Connection Pool at Error Time ===== %>
 
   <hr class="my-4">
-  <h4 class="mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Historical Connection Pool at Error Time</h4>
+  <h4 class="mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Historical Connection Pool at Error Time</div>
 
   <% if @errors_with_pool == 0 %>
-    <div class="text-center py-5">
-      <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-      <h4 class="text-muted">No Connection Pool Data Found</h4>
+    <div class="red-empty-state">
+      <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
+      <div class="red-empty-state-title">No Connection Pool Data Found</div>
       <p class="text-muted">
         No connection pool stats were detected in system health snapshots over the last <%= @days %> days.
       </p>
@@ -368,7 +368,7 @@
     </div>
 
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-database text-info me-2"></i>
           Connection Pool by Error
@@ -430,7 +430,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
             <i class="bi bi-lightbulb text-warning"></i> High utilization during errors may indicate connection pool exhaustion or long-running queries.

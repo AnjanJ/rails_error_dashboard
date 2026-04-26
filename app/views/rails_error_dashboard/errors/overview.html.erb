@@ -1,167 +1,222 @@
 <% content_for :page_title, "Dashboard" %>
-<div class="container-fluid py-4">
-  <!-- Page Header -->
+<div style="max-width: 100%;">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
-      <i class="bi bi-speedometer2 me-2"></i>
-      Dashboard Overview
-    </h1>
-    <div class="text-muted">
-      <small>
-        Last updated: <%= local_time(Time.current, format: :full) %>
-      </small>
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Overview</h1>
+    <span style="font-size: 12px; color: var(--text-tertiary);">
+      Last updated: <%= local_time(Time.current, format: :full) %>
+    </span>
+  </div>
+
+  <!-- Spike / Critical Alerts Banner -->
+  <% if @critical_alerts.any? %>
+    <%
+      top_alert = @critical_alerts.first
+      alert_count = @critical_alerts.count
+    %>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px var(--space-5); background: var(--status-critical-bg); border-radius: var(--radius-md); border: 1px solid var(--status-critical); margin-bottom: var(--space-6); font-size: 13px; color: var(--status-critical);">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--status-critical); animation: pulse 2s infinite; flex-shrink: 0;"></span>
+      <strong><%= alert_count %> critical/high error<%= alert_count != 1 ? 's' : '' %> in last hour</strong>
+      <span style="color: var(--text-secondary);">&mdash;</span>
+      <span style="color: var(--text-secondary);"><code style="background: transparent; padding: 0; color: var(--status-critical);"><%= top_alert.error_type %></code> &middot; <%= top_alert.occurrence_count %> occurrences</span>
+      <%= link_to errors_path(severity: 'critical'), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %>View<% end %>
+    </div>
+  <% end %>
+
+  <!-- Hero Stats (3 cards) -->
+  <%
+    total_errors = @stats[:resolved] + @stats[:unresolved]
+    resolution_rate = total_errors > 0 ? ((@stats[:resolved].to_f / total_errors) * 100).round(1) : 0.0
+  %>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+    <!-- Error Rate -->
+    <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Error Rate</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="stat-value" style="color: var(--status-critical);"><%= @stats[:error_rate] %>%</span>
+        <% if @stats[:trend_percentage].present? && @stats[:trend_percentage] != 0 %>
+          <span style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: <%= @stats[:trend_percentage] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>;">
+            <i class="bi <%= @stats[:trend_percentage] > 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' %>" style="font-size: 10px;"></i>
+            <%= @stats[:trend_percentage].abs %>%
+          </span>
+        <% end %>
+      </div>
+      <small style="color: var(--text-tertiary);">Errors per hour today</small>
+    </div>
+
+    <!-- Unresolved -->
+    <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Unresolved</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="stat-value"><%= @stats[:unresolved] %></span>
+      </div>
+      <small style="color: var(--text-tertiary);">Pending resolution</small>
+    </div>
+
+    <!-- Resolution Rate -->
+    <div class="card stat-card" style="border-left: 3px solid var(--status-success); padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Resolution Rate</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="stat-value" style="color: var(--status-success);"><%= resolution_rate %>%</span>
+      </div>
+      <small style="color: var(--text-tertiary);"><%= @stats[:resolved] %> of <%= total_errors %> resolved</small>
     </div>
   </div>
 
-  <!-- Key Metrics Cards (Mobile-first: stack on mobile, 3 columns on desktop) -->
-  <div class="row g-3 mb-4">
-    <!-- Error Rate Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100 <%= error_rate_border_class(@stats[:error_rate]) %>">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">ERROR RATE</div>
-          <div class="stat-value <%= error_rate_text_class(@stats[:error_rate]) %>">
-            <%= @stats[:error_rate] %>%
-          </div>
-          <small class="text-muted">Errors per hour today</small>
-        </div>
+  <!-- Secondary Stats (3 cards) -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+    <!-- Affected Users -->
+    <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Affected Users</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="stat-value"><%= @stats[:affected_users_today] %></span>
+        <% if @stats[:affected_users_change] != 0 %>
+          <span style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: <%= @stats[:affected_users_change] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>;">
+            <i class="bi <%= @stats[:affected_users_change] > 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' %>" style="font-size: 10px;"></i>
+            <%= @stats[:affected_users_change].abs %> from yesterday
+          </span>
+        <% end %>
       </div>
     </div>
 
-    <!-- Affected Users Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">AFFECTED USERS</div>
-          <div class="stat-value text-primary">
-            <%= @stats[:affected_users_today] %>
-          </div>
-          <small class="<%= trend_color_class(@stats[:affected_users_change]) %>">
-            <%= trend_arrow(@stats[:affected_users_change]) %>
-            <%= @stats[:affected_users_change].abs %>
-            from yesterday
-          </small>
-        </div>
+    <!-- Avg Resolution Time -->
+    <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Avg Resolution</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <% if @stats[:average_resolution_time].present? %>
+          <span class="stat-value"><%= @stats[:average_resolution_time] %>h</span>
+        <% else %>
+          <span class="stat-value" style="color: var(--text-tertiary);">&mdash;</span>
+        <% end %>
       </div>
+      <small style="color: var(--text-tertiary);">Mean time to resolution</small>
     </div>
 
-    <!-- Unresolved Errors Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">UNRESOLVED ERRORS</div>
-          <div class="stat-value text-danger">
-            <%= @stats[:unresolved] %>
-          </div>
-          <small class="text-muted">
-            Pending resolution
-          </small>
-        </div>
+    <!-- Error Trend -->
+    <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
+      <div class="stat-label" style="margin-bottom: 4px;">Error Trend</div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span class="stat-value"><%= trend_arrow(@stats[:trend_percentage]) %> <%= @stats[:trend_percentage].abs %>%</span>
       </div>
+      <small style="color: var(--text-tertiary);"><%= trend_text(@stats[:trend_direction]) %></small>
     </div>
+  </div>
 
-    <!-- Trend Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">ERROR TREND</div>
-          <div class="stat-value <%= trend_color_class(@stats[:trend_percentage]) %>">
-            <%= trend_arrow(@stats[:trend_percentage]) %>
-            <%= @stats[:trend_percentage].abs %>%
-          </div>
-          <small class="text-muted">
-            <%= trend_text(@stats[:trend_direction]) %>
-          </small>
-        </div>
+  <!-- Top Errors by Impact -->
+  <% if @stats[:top_errors_by_impact].any? %>
+    <div class="card" style="margin-bottom: var(--space-6);">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Top Errors by Impact</span>
+        <%= link_to errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>View all &rarr;<% end %>
       </div>
-    </div>
-
-    <!-- Resolution Rate Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">RESOLUTION RATE</div>
-          <%
-            total_errors = @stats[:resolved] + @stats[:unresolved]
-            resolution_rate = total_errors > 0 ? ((@stats[:resolved].to_f / total_errors) * 100).round(1) : 0.0
-          %>
-          <div class="stat-value <%= resolution_rate >= 80 ? 'text-success' : resolution_rate >= 50 ? 'text-warning' : 'text-danger' %>">
-            <%= resolution_rate %>%
-          </div>
-          <small class="text-muted">
-            <%= @stats[:resolved] %> of <%= total_errors %> resolved
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Average Resolution Time Card -->
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card stat-card h-100">
-        <div class="card-body text-center">
-          <div class="stat-label mb-2">AVG RESOLUTION TIME</div>
-          <% if @stats[:average_resolution_time].present? %>
-            <div class="stat-value text-warning">
-              <%= @stats[:average_resolution_time] %>h
+      <div>
+        <% @stats[:top_errors_by_impact].each_with_index do |error, i| %>
+          <%= link_to error_path(error[:id]), style: "display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: #{i < @stats[:top_errors_by_impact].length - 1 ? '1px solid var(--border-primary)' : 'none'}; cursor: pointer; transition: background 0.1s ease; text-decoration: none; color: inherit;", class: "top-error-row" do %>
+            <span style="width: 24px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-tertiary);"><%= i + 1 %></span>
+            <span class="badge bg-<%= severity_color(error[:severity]) %>" style="display: inline-flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+              <%= error[:severity] %>
+            </span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 12px;">
+                <%= error[:error_type] %>
+              </div>
+              <div style="font-size: 12px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= error[:message]&.truncate(80) %></div>
             </div>
-            <small class="text-muted">
-              Mean time to resolution
-            </small>
-          <% else %>
-            <div class="stat-value text-muted">
-              --
+            <div style="text-align: right; flex-shrink: 0;">
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums;"><%= error[:occurrence_count]&.to_s(:delimited) rescue error[:occurrence_count] %></div>
+              <div style="font-size: 11px; color: var(--text-tertiary);"><%= error[:affected_users] %> users</div>
             </div>
-            <small class="text-muted">
-              No resolved errors yet
-            </small>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Platform Health Summary -->
+  <% if @platform_health.any? %>
+    <div class="card" style="margin-bottom: var(--space-6);">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Platform Health</span>
+        <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
+          <%= link_to platform_comparison_errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full comparison &rarr;<% end %>
+        <% end %>
+      </div>
+      <div style="padding: var(--space-5) var(--space-6);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+          <% @platform_health.each do |platform, health| %>
+            <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
+                <span style="font-size: 13px; font-weight: 600; text-transform: capitalize;"><%= platform %></span>
+                <span class="badge bg-<%= health_status_color(health[:health_status]) %>"><%= health_status_text(health[:health_status]) %></span>
+              </div>
+              <div style="margin-bottom: var(--space-2);">
+                <div style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;"><%= health[:stability_score] %><span style="font-size: 12px; color: var(--text-tertiary); font-weight: 400;">/100</span></div>
+              </div>
+              <div class="progress" style="height: 4px; margin-bottom: var(--space-3);">
+                <div class="progress-bar" style="width: <%= health[:stability_score] %>%; background: var(--status-<%= health[:health_status] == :healthy ? 'success' : health[:health_status] == :warning ? 'warning' : 'critical' %>);"></div>
+              </div>
+              <div style="font-size: 12px; color: var(--text-tertiary);">
+                <%= health[:total_errors] %> errors &middot; <%= health[:critical_errors] %> critical &middot; <%= health[:unresolved_errors] %> open
+              </div>
+            </div>
           <% end %>
         </div>
       </div>
     </div>
-  </div>
+  <% end %>
 
-  <!-- Top 6 Errors by Impact (Mobile: stack, Desktop: 2 columns) -->
-  <% if @stats[:top_errors_by_impact].any? %>
-    <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-          <i class="bi bi-exclamation-triangle me-2"></i>
-          Top 6 Errors by Impact
-        </h5>
-        <%= link_to "View All Errors →", errors_path, class: "btn btn-sm btn-outline-primary" %>
+  <!-- Correlation Insights -->
+  <% if RailsErrorDashboard.configuration.enable_error_correlation && (@problematic_releases.any? || @time_correlated_errors.any? || @multi_error_users.any?) %>
+    <div class="card" style="margin-bottom: var(--space-6);">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Correlation Insights</span>
+        <%= link_to correlation_errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full analysis &rarr;<% end %>
       </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <% @stats[:top_errors_by_impact].each do |error| %>
-            <div class="col-12 col-lg-6">
-              <%= link_to error_path(error[:id]), class: "text-decoration-none" do %>
-                <div class="card h-100 border-start border-<%= severity_color(error[:severity]) %> border-3">
-                  <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <div class="flex-grow-1">
-                        <h6 class="mb-1">
-                          <span class="badge bg-<%= severity_color(error[:severity]) %> me-2">
-                            <%= severity_icon(error[:severity]) %> <%= error[:severity].to_s.titleize %>
-                          </span>
-                          <code class="small"><%= error[:error_type] %></code>
-                        </h6>
-                        <p class="small text-muted mb-2"><%= error[:message] %></p>
-                      </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center small">
-                      <span class="text-muted">
-                        <i class="bi bi-people-fill me-1"></i>
-                        <%= error[:affected_users] %> user<%= error[:affected_users] != 1 ? 's' : '' %>
-                      </span>
-                      <span class="text-muted">
-                        <i class="bi bi-arrow-repeat me-1"></i>
-                        <%= error[:occurrence_count] %> occurrence<%= error[:occurrence_count] != 1 ? 's' : '' %>
-                      </span>
-                      <span class="fw-bold text-danger">
-                        Impact: <%= error[:impact_score] %>
-                      </span>
-                    </div>
+      <div style="padding: var(--space-5) var(--space-6);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4);">
+          <% if @problematic_releases.any? %>
+            <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-warning);">
+              <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
+                <i class="bi bi-tag me-1"></i> Problematic Releases
+              </div>
+              <% @problematic_releases.each do |release| %>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
+                  <code style="font-size: 11px;"><%= release[:version] || release[:git_sha]&.truncate(8, omission: '') %></code>
+                  <span style="font-weight: 600;"><%= release[:error_count] %> errors</span>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @time_correlated_errors.any? %>
+            <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-info);">
+              <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
+                <i class="bi bi-clock-history me-1"></i> Time-Correlated
+              </div>
+              <% @time_correlated_errors.each do |_, data| %>
+                <div style="padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <code style="font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;"><%= data[:error_type_a] %></code>
+                    <i class="bi bi-arrow-left-right" style="color: var(--text-tertiary); font-size: 10px;"></i>
+                    <code style="font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;"><%= data[:error_type_b] %></code>
                   </div>
+                  <div style="color: var(--text-tertiary); margin-top: 2px;">
+                    <strong><%= (data[:correlation] * 100).round(0) %>%</strong> correlation (<%= data[:strength] %>)
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @multi_error_users.any? %>
+            <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-critical);">
+              <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
+                <i class="bi bi-people-fill me-1"></i> Multi-Error Users
+              </div>
+              <% @multi_error_users.each do |user| %>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
+                  <span>User <strong><%= user[:user_id] %></strong> &middot; <%= user[:error_types].size %> types</span>
+                  <span style="font-weight: 600; color: var(--status-critical);"><%= user[:total_errors] %></span>
                 </div>
               <% end %>
             </div>
@@ -170,260 +225,8 @@
       </div>
     </div>
   <% end %>
-
-  <!-- Platform Health Summary (Mobile: stack, Desktop: 3 columns) -->
-  <% if @platform_health.any? %>
-    <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-          <i class="bi bi-phone me-2"></i>
-          Platform Health
-        </h5>
-        <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-          <%= link_to "Full Comparison →", platform_comparison_errors_path, class: "btn btn-sm btn-outline-primary" %>
-        <% end %>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <% @platform_health.each do |platform, health| %>
-            <div class="col-12 col-md-4">
-              <div class="card h-100 border-<%= health_status_color(health[:health_status]) %>">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h6 class="text-capitalize mb-0"><%= platform %></h6>
-                    <span class="badge bg-<%= health_status_color(health[:health_status]) %>">
-                      <%= health_status_text(health[:health_status]) %>
-                    </span>
-                  </div>
-
-                  <div class="mb-2">
-                    <small class="text-muted">Stability Score</small>
-                    <div class="d-flex align-items-center">
-                      <h4 class="mb-0 me-2"><%= health[:stability_score] %>/100</h4>
-                      <div class="progress flex-grow-1" style="height: 8px;">
-                        <div class="progress-bar bg-<%= health_status_color(health[:health_status]) %>"
-                             role="progressbar"
-                             style="width: <%= health[:stability_score] %>%">
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="small">
-                    <div class="d-flex justify-content-between mb-1">
-                      <span class="text-muted">Total Errors:</span>
-                      <strong><%= health[:total_errors] %></strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                      <span class="text-muted">Critical:</span>
-                      <strong class="text-danger"><%= health[:critical_errors] %></strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span class="text-muted">Unresolved:</span>
-                      <strong><%= health[:unresolved_errors] %></strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  <% end %>
-
-  <!-- Correlation Summary (Last 7 days) -->
-  <% if RailsErrorDashboard.configuration.enable_error_correlation && (@problematic_releases.any? || @time_correlated_errors.any? || @multi_error_users.any?) %>
-    <%
-      # Calculate column width based on number of cards present
-      cards_present = [@problematic_releases.any?, @time_correlated_errors.any?, @multi_error_users.any?].count(true)
-      col_class = case cards_present
-                  when 1 then "col-12"
-                  when 2 then "col-12 col-lg-6"
-                  else "col-12 col-lg-4"
-                  end
-    %>
-    <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-          <i class="bi bi-diagram-3 me-2"></i>
-          Error Correlation Insights
-        </h5>
-        <%= link_to "Full Analysis →", correlation_errors_path, class: "btn btn-sm btn-outline-primary" %>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <!-- Problematic Releases -->
-          <% if @problematic_releases.any? %>
-            <div class="<%= col_class %>">
-              <div class="card h-100 border-warning">
-                <div class="card-body">
-                  <h6 class="mb-3">
-                    <i class="bi bi-tag me-2"></i>
-                    Problematic Releases
-                  </h6>
-                  <div class="list-group list-group-flush">
-                    <% @problematic_releases.each do |release| %>
-                      <div class="list-group-item px-0 py-2">
-                        <div class="d-flex justify-content-between align-items-start">
-                          <div class="flex-grow-1">
-                            <code class="small"><%= release[:version] || release[:git_sha]&.truncate(8, omission: '') %></code>
-                            <div class="small text-muted">
-                              <%= release[:error_count] %> error<%= release[:error_count] != 1 ? 's' : '' %> •
-                              <%= release[:unique_types] %> type<%= release[:unique_types] != 1 ? 's' : '' %>
-                            </div>
-                          </div>
-                          <span class="badge bg-danger"><%= release[:severity_score] %></span>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-
-          <!-- Time-Correlated Errors -->
-          <% if @time_correlated_errors.any? %>
-            <div class="<%= col_class %>">
-              <div class="card h-100 border-info">
-                <div class="card-body">
-                  <h6 class="mb-3">
-                    <i class="bi bi-clock-history me-2"></i>
-                    Time-Correlated Errors
-                  </h6>
-                  <div class="list-group list-group-flush">
-                    <% @time_correlated_errors.each do |_, data| %>
-                      <div class="list-group-item px-0 py-2">
-                        <div class="small">
-                          <div class="d-flex align-items-center gap-1">
-                            <code class="text-truncate"><%= data[:error_type_a] %></code>
-                            <i class="bi bi-arrow-left-right text-muted"></i>
-                            <code class="text-truncate"><%= data[:error_type_b] %></code>
-                          </div>
-                          <div class="text-muted mt-1">
-                            Correlation: <strong><%= (data[:correlation] * 100).round(0) %>%</strong>
-                            (<%= data[:strength] %>)
-                          </div>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-
-          <!-- Multi-Error Users -->
-          <% if @multi_error_users.any? %>
-            <div class="<%= col_class %>">
-              <div class="card h-100 border-danger">
-                <div class="card-body">
-                  <h6 class="mb-3">
-                    <i class="bi bi-people-fill me-2"></i>
-                    Users with Multiple Errors
-                  </h6>
-                  <div class="list-group list-group-flush">
-                    <% @multi_error_users.each do |user| %>
-                      <div class="list-group-item px-0 py-2">
-                        <div class="d-flex justify-content-between align-items-start">
-                          <div class="flex-grow-1">
-                            <div class="small">
-                              User ID: <strong><%= user[:user_id] %></strong>
-                            </div>
-                            <div class="small text-muted">
-                              <%= user[:error_types].size %> different error type<%= user[:error_types].size != 1 ? 's' : '' %>
-                            </div>
-                          </div>
-                          <span class="badge bg-danger"><%= user[:total_errors] %></span>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  <% end %>
-
-  <!-- Critical Alerts (Last hour) -->
-  <% if @critical_alerts.any? %>
-    <div class="alert alert-danger border-danger mb-4" role="alert">
-      <div class="d-flex align-items-center mb-2">
-        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
-        <div>
-          <h5 class="alert-heading mb-0">
-            🚨 <%= @critical_alerts.count %> Critical/High Error<%= @critical_alerts.count != 1 ? 's' : '' %> in Last Hour
-          </h5>
-        </div>
-      </div>
-      <div class="list-group list-group-flush">
-        <% @critical_alerts.first(5).each do |error| %>
-          <%= link_to error_path(error), class: "list-group-item list-group-item-action" do %>
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="flex-grow-1">
-                <div class="d-flex align-items-center mb-1">
-                  <span class="badge bg-<%= severity_color(error.severity) %> me-2">
-                    <%= severity_icon(error.severity) %>
-                  </span>
-                  <code class="small"><%= error.error_type %></code>
-                </div>
-                <p class="mb-1 small"><%= error.message&.truncate(100) %></p>
-                <small class="text-muted">
-                  <i class="bi bi-clock me-1"></i>
-                  <%= local_time_ago(error.occurred_at) %>
-                  •
-                  <i class="bi bi-arrow-repeat me-1"></i>
-                  <%= error.occurrence_count %> occurrence<%= error.occurrence_count != 1 ? 's' : '' %>
-                </small>
-              </div>
-              <i class="bi bi-chevron-right"></i>
-            </div>
-          <% end %>
-        <% end %>
-      </div>
-      <% if @critical_alerts.count > 5 %>
-        <div class="mt-2">
-          <%= link_to "View all #{@critical_alerts.count} critical errors →",
-                     errors_path(severity: 'critical'),
-                     class: "btn btn-sm btn-outline-danger" %>
-        </div>
-      <% end %>
-    </div>
-  <% end %>
-
-  <!-- Quick Actions -->
-  <div class="row g-3">
-    <div class="col-12 col-md-6 col-lg-3">
-      <%= link_to errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
-        <i class="bi bi-list-ul d-block fs-3 mb-2"></i>
-        View All Errors
-      <% end %>
-    </div>
-    <div class="col-12 col-md-6 col-lg-3">
-      <%= link_to analytics_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
-        <i class="bi bi-graph-up d-block fs-3 mb-2"></i>
-        Analytics
-      <% end %>
-    </div>
-    <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-      <div class="col-12 col-md-6 col-lg-3">
-        <%= link_to platform_comparison_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
-          <i class="bi bi-phone d-block fs-3 mb-2"></i>
-          Platform Health
-        <% end %>
-      </div>
-    <% end %>
-    <% if RailsErrorDashboard.configuration.enable_error_correlation %>
-      <div class="col-12 col-md-6 col-lg-3">
-        <%= link_to correlation_errors_path, class: "btn btn-lg btn-outline-primary w-100" do %>
-          <i class="bi bi-diagram-3 d-block fs-3 mb-2"></i>
-          Correlation
-        <% end %>
-      </div>
-    <% end %>
-  </div>
 </div>
+
+<style>
+.top-error-row:hover { background: var(--surface-hover); }
+</style>

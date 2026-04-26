@@ -1,8 +1,8 @@
 <% content_for :page_title, "ActionCable Health" %>
 
-<div class="container-fluid py-4">
+<div>
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-broadcast me-2"></i>
       ActionCable Health
     </h1>
@@ -21,9 +21,9 @@
   </div>
 
   <% if @unique_channels == 0 %>
-    <div class="text-center py-5">
+    <div class="red-empty-state">
       <i class="bi bi-broadcast display-1 text-success mb-3"></i>
-      <h4 class="text-muted">No ActionCable Events Found</h4>
+      <div class="red-empty-state-title">No ActionCable Events Found</div>
       <p class="text-muted">
         No ActionCable channel actions, transmissions, or subscription events were detected in error breadcrumbs over the last <%= @days %> days.
       </p>
@@ -68,7 +68,7 @@
     </div>
 
     <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-broadcast text-primary me-2"></i>
           ActionCable Events by Channel
@@ -112,7 +112,7 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
             <i class="bi bi-lightbulb text-warning"></i> ActionCable events are captured when they coincide with errors. High rejection counts may indicate authentication or authorization issues.
