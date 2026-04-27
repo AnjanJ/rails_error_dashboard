@@ -75,6 +75,18 @@ Complete visual overhaul of the dashboard. Every page, every component, every pi
 
 - `assignee_name` NoMethodError on apps running older migrations — added `respond_to?` guard in error row and detail page
 - Dark mode chart text visibility — removed aggressive `!important` SVG overrides, Chart.js defaults now set via token-aware JS
+- **Error detail sidebar layout** — `col-md-4` class was overriding the CSS grid's 280px column, making the metadata sidebar too narrow with text wrapping badly
+- **Database health page layout** — Replaced Bootstrap row/col grid with CSS grid for stat cards and connection pool stats. Fixes cramped layout with overlapping time range buttons
+- **Multi-app context persistence** — Application selection (`application_id`) was lost when navigating between pages. Now preserved across all links: error rows, breadcrumbs, quick actions, filter pills, batch actions form, and all controller redirects (resolve, assign, snooze, mute, etc.)
+- **Sidebar app name** — Now updates to show the selected app name instead of always showing the host app name
+- **App switcher on error detail** — Redirects to errors list when switching apps (since the current error may not belong to the new app)
+- **Error detail shows app name** — Application name now visible in the hero card metadata line
+- **Spike detection banner** — Restored on the error list page (was removed during redesign)
+- **Critical alert link** — Error type in overview critical alert is now clickable (navigates to error detail)
+- **Activity log visibility** — Audit trail comments (snooze/mute actions) now render in the History section when issue tracking is disabled
+- **Sparkline bar charts** — Added CSS-only sparklines to the 3 hero stat cards on the overview page using 7-day trend data
+- System test assertions updated for CSS `text-transform: uppercase` on badges
+- Ambiguous assign modal selector fixed (hero card + sidebar both target `#assignModal`)
 
 ---
 
