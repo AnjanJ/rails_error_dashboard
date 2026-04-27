@@ -17,8 +17,8 @@
       <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--status-critical); animation: pulse 2s infinite; flex-shrink: 0;"></span>
       <strong><%= alert_count %> Critical/High Error<%= alert_count != 1 ? 's' : '' %> in Last Hour</strong>
       <span style="color: var(--text-secondary);">&mdash;</span>
-      <span style="color: var(--text-secondary);"><%= link_to error_path(top_alert), style: "background: transparent; padding: 0; color: var(--status-critical); text-decoration: none; font-family: var(--font-mono); font-size: 13px;" do %><%= top_alert.error_type %><% end %> &middot; <%= top_alert.occurrence_count %> occurrences</span>
-      <%= link_to errors_path(severity: 'critical'), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %>View<% end %>
+      <span style="color: var(--text-secondary);"><%= link_to error_path(top_alert, **app_context), style: "background: transparent; padding: 0; color: var(--status-critical); text-decoration: none; font-family: var(--font-mono); font-size: 13px;" do %><%= top_alert.error_type %><% end %> &middot; <%= top_alert.occurrence_count %> occurrences</span>
+      <%= link_to errors_path(app_context.merge(severity: 'critical')), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %>View<% end %>
     </div>
   <% end %>
 
@@ -106,11 +106,11 @@
     <div class="card" style="margin-bottom: var(--space-6);">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
         <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Top Errors by Impact</span>
-        <%= link_to errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>View all &rarr;<% end %>
+        <%= link_to errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>View all &rarr;<% end %>
       </div>
       <div>
         <% @stats[:top_errors_by_impact].each_with_index do |error, i| %>
-          <%= link_to error_path(error[:id]), style: "display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: #{i < @stats[:top_errors_by_impact].length - 1 ? '1px solid var(--border-primary)' : 'none'}; cursor: pointer; transition: background 0.1s ease; text-decoration: none; color: inherit;", class: "top-error-row" do %>
+          <%= link_to error_path(error[:id], **app_context), style: "display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: #{i < @stats[:top_errors_by_impact].length - 1 ? '1px solid var(--border-primary)' : 'none'}; cursor: pointer; transition: background 0.1s ease; text-decoration: none; color: inherit;", class: "top-error-row" do %>
             <span style="width: 24px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-tertiary);"><%= i + 1 %></span>
             <span class="badge bg-<%= severity_color(error[:severity]) %>" style="display: inline-flex; align-items: center; gap: 4px;">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
@@ -138,7 +138,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
         <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Platform Health</span>
         <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-          <%= link_to platform_comparison_errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full comparison &rarr;<% end %>
+          <%= link_to platform_comparison_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full comparison &rarr;<% end %>
         <% end %>
       </div>
       <div style="padding: var(--space-5) var(--space-6);">
@@ -170,7 +170,7 @@
     <div class="card" style="margin-bottom: var(--space-6);">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
         <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Correlation Insights</span>
-        <%= link_to correlation_errors_path, style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full analysis &rarr;<% end %>
+        <%= link_to correlation_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full analysis &rarr;<% end %>
       </div>
       <div style="padding: var(--space-5) var(--space-6);">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4);">

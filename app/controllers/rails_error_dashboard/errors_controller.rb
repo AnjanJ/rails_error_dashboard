@@ -98,49 +98,49 @@ module RailsErrorDashboard
         resolution_reference: params[:resolution_reference]
       )
 
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     # Phase 3: Workflow Integration Actions (via Commands)
 
     def assign
       @error = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def unassign
       @error = Commands::UnassignError.call(params[:id])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def update_priority
       @error = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def snooze
       @error = Commands::SnoozeError.call(params[:id], hours: params[:hours].to_i, reason: params[:reason])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def unsnooze
       @error = Commands::UnsnoozeError.call(params[:id])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def mute
       @error = Commands::MuteError.call(params[:id], muted_by: params[:muted_by], reason: params[:reason])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def unmute
       @error = Commands::UnmuteError.call(params[:id])
-      redirect_to error_path(@error)
+      redirect_to error_path(@error, **app_context_params)
     end
 
     def update_status
       result = Commands::UpdateErrorStatus.call(params[:id], status: params[:status], comment: params[:comment])
-      redirect_to error_path(result[:error])
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def create_issue
@@ -153,7 +153,7 @@ module RailsErrorDashboard
       else
         flash[:alert] = "Failed to create issue: #{result[:error]}"
       end
-      redirect_to error_path(params[:id], anchor: "issue-tracking")
+      redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
 
     def link_issue
@@ -164,7 +164,7 @@ module RailsErrorDashboard
       else
         flash[:alert] = "Failed to link issue: #{result[:error]}"
       end
-      redirect_to error_path(params[:id], anchor: "issue-tracking")
+      redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
 
     def analytics
@@ -205,7 +205,7 @@ module RailsErrorDashboard
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_platform_comparison
         flash[:alert] = "Platform Comparison is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -252,14 +252,14 @@ module RailsErrorDashboard
         flash[:alert] = "Batch operation failed: #{result[:errors].join(', ')}"
       end
 
-      redirect_to errors_path
+      redirect_to errors_path(**app_context_params)
     end
 
     def correlation
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_error_correlation
         flash[:alert] = "Error Correlation is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -299,7 +299,7 @@ module RailsErrorDashboard
     def deprecations
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -319,7 +319,7 @@ module RailsErrorDashboard
     def n_plus_one_summary
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -339,7 +339,7 @@ module RailsErrorDashboard
     def cache_health_summary
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -360,7 +360,7 @@ module RailsErrorDashboard
     def job_health_summary
       unless RailsErrorDashboard.configuration.enable_system_health
         flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -380,7 +380,7 @@ module RailsErrorDashboard
     def database_health_summary
       unless RailsErrorDashboard.configuration.enable_system_health
         flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -416,7 +416,7 @@ module RailsErrorDashboard
         else
           flash[:alert] = "Swallowed exception detection is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
         end
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -437,7 +437,7 @@ module RailsErrorDashboard
       unless RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "Rack Attack tracking is not enabled. Enable enable_rack_attack_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -458,7 +458,7 @@ module RailsErrorDashboard
       unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "ActionCable tracking is not enabled. Enable enable_actioncable_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -479,7 +479,7 @@ module RailsErrorDashboard
       unless RailsErrorDashboard.configuration.enable_activestorage_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
         flash[:alert] = "ActiveStorage tracking is not enabled. Enable enable_activestorage_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -499,7 +499,7 @@ module RailsErrorDashboard
     def diagnostic_dumps
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
         flash[:alert] = "Diagnostic dumps are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -513,7 +513,7 @@ module RailsErrorDashboard
     def create_diagnostic_dump
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
         flash[:alert] = "Diagnostic dumps are not enabled."
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -542,7 +542,7 @@ module RailsErrorDashboard
     def enable_coverage
       unless RailsErrorDashboard.configuration.enable_coverage_tracking
         flash[:alert] = "Coverage tracking is not enabled in configuration."
-        redirect_to errors_path
+        redirect_to errors_path(**app_context_params)
         return
       end
 
@@ -593,6 +593,11 @@ module RailsErrorDashboard
     def set_application_context
       @current_application_id = params[:application_id].presence
       @applications = Application.ordered_by_name.pluck(:name, :id)
+    end
+
+    # Preserves the application_id param across redirects
+    def app_context_params
+      @current_application_id.present? ? { application_id: @current_application_id } : {}
     end
 
     def fetch_platform_issue(error)

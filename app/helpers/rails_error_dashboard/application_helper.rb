@@ -74,6 +74,13 @@ module RailsErrorDashboard
       end
     end
 
+    # Returns the current application context param for preserving app selection across navigation.
+    # Use this in link helpers: errors_path(app_context) or error_path(error, **app_context)
+    # @return [Hash] { application_id: X } if an app is selected, empty hash otherwise
+    def app_context
+      params[:application_id].present? ? { application_id: params[:application_id] } : {}
+    end
+
     # Returns a sanitized hash of filter params safe for query links
     # @param extra_keys [Array<Symbol>] Additional permitted keys for specific contexts
     # @return [Hash] Whitelisted params for building URLs

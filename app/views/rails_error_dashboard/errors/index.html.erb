@@ -42,6 +42,9 @@
     </span>
     <div id="batch-actions-inline" style="display: none; gap: 6px;">
       <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 6px; align-items: center;" do |f| %>
+        <% if params[:application_id].present? %>
+          <%= hidden_field_tag :application_id, params[:application_id] %>
+        <% end %>
         <span id="selected-count" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);"></span>
         <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
           Resolve
@@ -97,11 +100,11 @@
           current_status = params[:status]
           is_unresolved_only = params[:unresolved] != "false" && params[:unresolved] != "0"
         %>
-        <%= link_to errors_path, class: "btn filter-pill #{current_status.blank? && !is_unresolved_only ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>All<% end %>
-        <%= link_to errors_path(unresolved: '1'), class: "btn filter-pill #{is_unresolved_only && current_status.blank? ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
-        <%= link_to errors_path(status: 'resolved', unresolved: '0'), class: "btn filter-pill #{current_status == 'resolved' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Resolved<% end %>
-        <%= link_to errors_path(assigned_to: '__assigned__'), class: "btn filter-pill #{params[:assigned_to] == '__assigned__' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Assigned<% end %>
-        <%= link_to errors_path(reopened: 'true'), class: "btn filter-pill #{params[:reopened] == 'true' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Reopened<% end %>
+        <%= link_to errors_path(app_context), class: "btn filter-pill #{current_status.blank? && !is_unresolved_only ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>All<% end %>
+        <%= link_to errors_path(app_context.merge(unresolved: '1')), class: "btn filter-pill #{is_unresolved_only && current_status.blank? ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
+        <%= link_to errors_path(app_context.merge(status: 'resolved', unresolved: '0')), class: "btn filter-pill #{current_status == 'resolved' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Resolved<% end %>
+        <%= link_to errors_path(app_context.merge(assigned_to: '__assigned__')), class: "btn filter-pill #{params[:assigned_to] == '__assigned__' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Assigned<% end %>
+        <%= link_to errors_path(app_context.merge(reopened: 'true')), class: "btn filter-pill #{params[:reopened] == 'true' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Reopened<% end %>
       </div>
 
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>

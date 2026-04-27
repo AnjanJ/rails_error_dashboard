@@ -5,7 +5,7 @@
 <div data-controller="loading">
   <!-- Back + breadcrumb -->
   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-4); font-size: 13px; color: var(--text-tertiary);">
-    <%= link_to errors_path, style: "background: none; border: none; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; text-decoration: none; font-size: 13px;" do %>
+    <%= link_to errors_path(app_context), style: "background: none; border: none; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; text-decoration: none; font-size: 13px;" do %>
       <i class="bi bi-arrow-left"></i> Errors
     <% end %>
     <span>/</span>
@@ -203,18 +203,18 @@
           <span style="font-size: 13px; font-weight: 600;">Quick Actions</span>
         </div>
         <div style="padding: var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2);">
-          <%= link_to errors_path(error_type: @error.error_type), class: "btn btn-sm" do %>
+          <%= link_to errors_path(app_context.merge(error_type: @error.error_type)), class: "btn btn-sm" do %>
             <i class="bi bi-filter"></i> View Similar Errors
           <% end %>
           <% if @error.user_id %>
-            <%= link_to errors_path(user_id: @error.user_id), class: "btn btn-sm" do %>
+            <%= link_to errors_path(app_context.merge(user_id: @error.user_id)), class: "btn btn-sm" do %>
               <i class="bi bi-person"></i> View User's Errors
             <% end %>
           <% end %>
-          <%= link_to errors_path(platform: @error.platform), class: "btn btn-sm" do %>
+          <%= link_to errors_path(app_context.merge(platform: @error.platform)), class: "btn btn-sm" do %>
             <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
           <% end %>
-          <%= link_to analytics_errors_path, class: "btn btn-sm" do %>
+          <%= link_to analytics_errors_path(app_context), class: "btn btn-sm" do %>
             <i class="bi bi-bar-chart-line"></i> Analytics
           <% end %>
         </div>

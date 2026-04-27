@@ -1,5 +1,5 @@
 <tr id="error_<%= error.id %>"
-    onclick="window.location='<%= error_path(error) %>'"
+    onclick="window.location='<%= error_path(error, **app_context) %>'"
     style="border-bottom: 1px solid var(--border-primary); cursor: pointer; transition: background 0.1s ease;"
     onmouseenter="this.style.background='var(--surface-hover)'; this.querySelector('.sev-bar').style.opacity='1';"
     onmouseleave="this.style.background='transparent'; this.querySelector('.sev-bar').style.opacity='0';">
@@ -7,7 +7,7 @@
     <span class="sev-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: <%= severity_color_var(error.severity) %>; opacity: 0; transition: opacity 0.1s ease; border-radius: 0 2px 2px 0;"></span>
     <input type="checkbox" class="error-checkbox form-check-input" value="<%= error.id %>" data-error-id="<%= error.id %>" onclick="event.stopPropagation();" style="accent-color: var(--accent);">
   </td>
-  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error) %>'">
+  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error, **app_context) %>'">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span class="badge bg-<%= severity_color(error.severity) %>" style="display: inline-flex; align-items: center; gap: 4px;">
         <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
@@ -24,7 +24,7 @@
       </div>
     </div>
   </td>
-  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error) %>'">
+  <td style="padding: var(--space-3) var(--space-4);" onclick="window.location='<%= error_path(error, **app_context) %>'">
     <%
       # Use the model's status field if it has a meaningful workflow status
       raw_status = error.respond_to?(:status) ? error.status : nil
@@ -58,26 +58,26 @@
       <i class="bi bi-arrow-counterclockwise" style="color: var(--status-warning); margin-left: 4px; font-size: 12px;" title="Reopened"></i>
     <% end %>
   </td>
-  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary);" onclick="window.location='<%= error_path(error) %>'">
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary);" onclick="window.location='<%= error_path(error, **app_context) %>'">
     <%= error.occurrence_count.to_s(:delimited) rescue error.occurrence_count %>
   </td>
-  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);" onclick="window.location='<%= error_path(error) %>'">
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);" onclick="window.location='<%= error_path(error, **app_context) %>'">
     <% if error.user_id %>
       <%= error.user_id %>
     <% else %>
       <span style="color: var(--text-tertiary);">&mdash;</span>
     <% end %>
   </td>
-  <td style="padding: var(--space-3) var(--space-4); text-align: right; color: var(--text-tertiary); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
+  <td style="padding: var(--space-3) var(--space-4); text-align: right; color: var(--text-tertiary); font-size: 12px;" onclick="window.location='<%= error_path(error, **app_context) %>'">
     <%= local_time_ago(error.last_seen_at) %>
   </td>
   <% if local_assigns[:show_application] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <span class="badge bg-info"><%= error.application&.name || 'Unknown' %></span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <% if error.platform == 'iOS' %>
         <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
       <% elsif error.platform == 'Android' %>
