@@ -27,6 +27,11 @@
     total_errors = @stats[:resolved] + @stats[:unresolved]
     resolution_rate = total_errors > 0 ? ((@stats[:resolved].to_f / total_errors) * 100).round(1) : 0.0
   %>
+  <%
+    # Build sparkline data from 7-day trend
+    trend_values = @stats[:errors_trend_7d].values rescue []
+    trend_max = [ trend_values.max || 1, 1 ].max
+  %>
   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
     <!-- Error Rate -->
     <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
@@ -40,7 +45,14 @@
           </span>
         <% end %>
       </div>
-      <small style="color: var(--text-tertiary);">Errors per hour today</small>
+      <% if trend_values.any? %>
+        <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px; margin-top: var(--space-2);">
+          <% trend_values.each do |v| %>
+            <div style="flex: 1; background: var(--status-critical); border-radius: 1px; min-height: 2px; height: <%= (v.to_f / trend_max * 100).round %>%; opacity: <%= v > 0 ? 0.7 : 0.15 %>;"></div>
+          <% end %>
+        </div>
+      <% end %>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);">Errors per hour today</small>
     </div>
 
     <!-- Unresolved -->
@@ -49,7 +61,14 @@
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value"><%= @stats[:unresolved] %></span>
       </div>
-      <small style="color: var(--text-tertiary);">Pending resolution</small>
+      <% if trend_values.any? %>
+        <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px; margin-top: var(--space-2);">
+          <% trend_values.each do |v| %>
+            <div style="flex: 1; background: var(--accent); border-radius: 1px; min-height: 2px; height: <%= (v.to_f / trend_max * 100).round %>%; opacity: <%= v > 0 ? 0.7 : 0.15 %>;"></div>
+          <% end %>
+        </div>
+      <% end %>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);">Pending resolution</small>
     </div>
 
     <!-- Resolution Rate -->
@@ -58,7 +77,14 @@
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value" style="color: var(--status-success);"><%= resolution_rate %>%</span>
       </div>
-      <small style="color: var(--text-tertiary);"><%= @stats[:resolved] %> of <%= total_errors %> resolved</small>
+      <% if trend_values.any? %>
+        <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px; margin-top: var(--space-2);">
+          <% trend_values.each do |v| %>
+            <div style="flex: 1; background: var(--status-success); border-radius: 1px; min-height: 2px; height: <%= (v.to_f / trend_max * 100).round %>%; opacity: <%= v > 0 ? 0.7 : 0.15 %>;"></div>
+          <% end %>
+        </div>
+      <% end %>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);"><%= @stats[:resolved] %> of <%= total_errors %> resolved</small>
     </div>
   </div>
 
