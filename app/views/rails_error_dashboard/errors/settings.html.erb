@@ -169,7 +169,10 @@
 %>
 
 <div>
-  <h1 style="font-size: 20px; font-weight: 700; margin-bottom: var(--space-4);">Settings</h1>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Settings</h1>
+    <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-tertiary); padding: 2px 10px; border: 1px solid var(--border-primary); border-radius: var(--radius-full);">v<%= RailsErrorDashboard::VERSION %></span>
+  </div>
 
   <p style="font-size: 13px; color: var(--text-tertiary); margin-bottom: var(--space-6);">
     Read-only view of current configuration. Edit via <code>config/initializers/rails_error_dashboard.rb</code> or environment variables.
