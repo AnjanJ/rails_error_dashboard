@@ -29,6 +29,21 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
 
       expect(described_class.available?).to be true
     end
+
+    it "returns false and activates circuit breaker when pubsub adapter gem is missing (Gem::LoadError)" do
+      stub_const("Turbo", Module.new)
+      server = double("server")
+      allow(server).to receive(:respond_to?).with(:pubsub).and_return(true)
+      allow(server).to receive(:pubsub).and_raise(Gem::LoadError, "redis is not part of the bundle. Add it to your Gemfile.")
+      cable = Module.new
+      cable.define_singleton_method(:server) { server }
+      stub_const("ActionCable", cable)
+
+      described_class.instance_variable_set(:@broadcast_unavailable_until, nil)
+
+      expect(described_class.available?).to be false
+      expect(described_class.instance_variable_get(:@broadcast_unavailable_until)).to be_a(ActiveSupport::TimeWithZone).or be_a(Time)
+    end
   end
 
   # Helper to stub ActionCable with a working server/pubsub for available? check

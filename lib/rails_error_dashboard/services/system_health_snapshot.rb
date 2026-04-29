@@ -195,7 +195,7 @@ module RailsErrorDashboard
           connections: server.connections.count,
           adapter: server.pubsub&.class&.name&.demodulize
         }
-      rescue => e
+      rescue LoadError, StandardError => e
         nil
       end
 

@@ -113,7 +113,7 @@ module RailsErrorDashboard
         server.pubsub
         @broadcast_unavailable_until = nil
         true
-      rescue => e
+      rescue LoadError, StandardError => e
         @broadcast_unavailable_until = Time.current + 60
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Broadcast not available (pausing 60s): #{e.message}")
         false
