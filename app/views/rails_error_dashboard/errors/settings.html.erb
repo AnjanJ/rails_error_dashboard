@@ -258,6 +258,25 @@
     </div>
   </div>
 
+  <!-- Test Error -->
+  <div class="card" style="margin-bottom: var(--space-4);">
+    <div style="padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
+      <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"><i class="bi bi-send-check" style="margin-right: 6px;"></i> Test Notifications</span>
+    </div>
+    <div style="padding: var(--space-5) var(--space-6);">
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-4);">
+        Send a test error through the full capture and notification pipeline. This creates a <code>RailsErrorDashboard::TestError</code> in the
+        error log and dispatches notifications to all configured channels (Slack, Discord, PagerDuty, email, webhooks).
+        The test error is clearly marked and safe to resolve or delete.
+      </p>
+      <%= form_tag test_error_errors_path(application_id: @current_application_id.presence), method: :post, style: "display: inline;" do %>
+        <button type="submit" class="btn btn-outline" onclick="return confirm('This will create a test error and send notifications to all configured channels. Continue?')">
+          <i class="bi bi-send" style="margin-right: 4px;"></i> Send Test Error
+        </button>
+      <% end %>
+    </div>
+  </div>
+
   <!-- Help Text -->
   <div class="alert alert-light border">
     <h6 class="alert-heading">

@@ -44,6 +44,7 @@ RailsErrorDashboard::Engine.routes.draw do
       post :enable_coverage
       post :disable_coverage
       post :batch_action
+      post :test_error
     end
   end
 end

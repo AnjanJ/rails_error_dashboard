@@ -560,6 +560,23 @@ module RailsErrorDashboard
       redirect_back fallback_location: errors_path
     end
 
+    def test_error
+      exception = RailsErrorDashboard::TestError.new(
+        "[RED Test] This is a test error sent from the dashboard to verify " \
+        "that error capture and notification delivery are working correctly. " \
+        "It is safe to resolve or delete this error."
+      )
+      exception.set_backtrace(caller)
+
+      Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
+
+      flash[:notice] = "Test error logged successfully. Check your notification channels (Slack, Discord, email, etc.) to confirm delivery."
+      redirect_to errors_path(**app_context_params)
+    rescue => e
+      flash[:alert] = "Failed to log test error: #{e.message}"
+      redirect_to settings_path(**app_context_params)
+    end
+
     def settings
       @config = RailsErrorDashboard.configuration
     end
