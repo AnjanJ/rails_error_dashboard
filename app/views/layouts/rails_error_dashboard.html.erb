@@ -137,7 +137,7 @@
   --surface-hover: #313244;
   --text-primary: #cdd6f4;
   --text-secondary: #a6adc8;
-  --text-tertiary: #6c7086;
+  --text-tertiary: #9399b2;
   --border-primary: #313244;
   --border-secondary: #45475a;
   --accent: <%= ac[:dark] %>;
@@ -279,13 +279,13 @@ dd { color: var(--text-primary); }
 .ps-3 { padding-left: var(--space-4); }
 .pe-2 { padding-right: var(--space-2); }
 
-/* Display */
-.d-none { display: none; }
-.d-block { display: block; }
-.d-inline { display: inline; }
-.d-inline-block { display: inline-block; }
-@media (min-width: 576px) { .d-sm-inline { display: inline; } .d-sm-block { display: block; } }
-@media (min-width: 768px) { .d-md-block { display: block; } .d-md-none { display: none; } .d-md-flex { display: flex; } .d-md-inline { display: inline; } .ms-sm-auto { margin-left: auto; } .px-md-4 { padding-left: var(--space-6); padding-right: var(--space-6); } }
+/* Display (use !important to match Bootstrap utility behavior) */
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
+@media (min-width: 576px) { .d-sm-inline { display: inline !important; } .d-sm-block { display: block !important; } }
+@media (min-width: 768px) { .d-md-block { display: block !important; } .d-md-none { display: none !important; } .d-md-flex { display: flex !important; } .d-md-inline { display: inline !important; } .ms-sm-auto { margin-left: auto; } .px-md-4 { padding-left: var(--space-6); padding-right: var(--space-6); } }
 
 /* Text */
 .text-muted { color: var(--text-tertiary); }
@@ -884,7 +884,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
       <!-- Sidebar -->
       <nav class="red-sidebar d-none d-md-flex" id="sidebar">
         <!-- Logo -->
-        <div class="red-sidebar-logo">
+        <a href="/" class="red-sidebar-logo" title="Back to <%= Rails.application.class.module_parent_name %>" style="text-decoration: none; color: inherit;">
           <div class="red-sidebar-logo-icon">R</div>
           <div>
             <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">RED</div>
@@ -893,7 +893,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
             end %>
             <div style="font-size: 10px; color: var(--text-tertiary); margin-top: -2px;"><%= sidebar_app_name || Rails.application.class.module_parent_name %> &middot; <%= Rails.env %></div>
           </div>
-        </div>
+        </a>
 
         <!-- Nav groups -->
         <div style="flex: 1; overflow: auto; padding: var(--space-3) 0;">
@@ -1094,7 +1094,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
                 </ul>
               </div>
             <% end %>
-            <kbd>?</kbd>
+            <button type="button" title="Keyboard shortcuts (?)" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal" style="background: none; border: none; padding: 0; cursor: pointer; line-height: 1;"><kbd>?</kbd></button>
             <button class="red-theme-toggle" id="themeToggle" title="Toggle theme">
               <i class="bi bi-moon" id="themeIcon"></i>
             </button>
@@ -1133,10 +1133,10 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
     <!-- Mobile Sidebar (Offcanvas) -->
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
       <div class="offcanvas-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;" title="Back to app home">
           <div class="red-sidebar-logo-icon">R</div>
           <strong>RED</strong>
-        </div>
+        </a>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">

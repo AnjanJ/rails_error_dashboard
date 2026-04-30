@@ -40,20 +40,6 @@
         All time
       <% end %>
     </span>
-    <div id="batch-actions-inline" style="display: none; gap: 6px;">
-      <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 6px; align-items: center;" do |f| %>
-        <% if params[:application_id].present? %>
-          <%= hidden_field_tag :application_id, params[:application_id] %>
-        <% end %>
-        <span id="selected-count" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);"></span>
-        <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
-          Resolve
-        <% end %>
-        <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
-          Delete
-        <% end %>
-      <% end %>
-    </div>
   </div>
 
   <!-- Spike Detection Alert -->
@@ -211,7 +197,7 @@
       <div data-loading-target="content">
         <table class="table table-hover" style="margin-bottom: 0;">
           <thead>
-            <tr style="border-bottom: 1px solid var(--border-primary);">
+            <tr id="thead-columns" style="border-bottom: 1px solid var(--border-primary);">
               <th style="width: 40px; padding: var(--space-3) var(--space-4); text-align: center;">
                 <input type="checkbox" id="select-all" class="form-check-input" style="accent-color: var(--accent);">
               </th>
@@ -226,6 +212,25 @@
               <% if @platforms.size > 1 %>
                 <th style="padding: var(--space-3) var(--space-4); width: 80px;">Platform</th>
               <% end %>
+            </tr>
+            <tr id="thead-batch" style="display: none; border-bottom: 1px solid var(--border-primary); background: var(--surface-secondary);">
+              <th style="width: 40px; padding: var(--space-3) var(--space-4); text-align: center;">
+                <input type="checkbox" id="select-all-batch" class="form-check-input" style="accent-color: var(--accent);" checked>
+              </th>
+              <th colspan="99" style="padding: var(--space-3) var(--space-4);">
+                <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 8px; align-items: center;" do |f| %>
+                  <% if params[:application_id].present? %>
+                    <%= hidden_field_tag :application_id, params[:application_id] %>
+                  <% end %>
+                  <span id="selected-count" style="font-size: 13px; font-weight: 600; color: var(--text-primary);"></span>
+                  <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
+                    <i class="bi bi-check-circle"></i> Resolve
+                  <% end %>
+                  <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
+                    <i class="bi bi-trash"></i> Delete
+                  <% end %>
+                <% end %>
+              </th>
             </tr>
           </thead>
           <tbody id="error_list">
@@ -271,7 +276,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var selectAllCheckbox = document.getElementById('select-all');
-  var batchInline = document.getElementById('batch-actions-inline');
+  var selectAllBatchCheckbox = document.getElementById('select-all-batch');
+  var theadColumns = document.getElementById('thead-columns');
+  var theadBatch = document.getElementById('thead-batch');
   var selectedCountSpan = document.getElementById('selected-count');
   var batchForm = document.getElementById('batch-form');
 
@@ -282,31 +289,47 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateBatchToolbar() {
     var checkedBoxes = document.querySelectorAll('.error-checkbox:checked');
     var count = checkedBoxes.length;
+    var boxes = getErrorCheckboxes();
+    var allChecked = boxes.length > 0 && Array.from(boxes).every(function(cb) { return cb.checked; });
+    var someChecked = Array.from(boxes).some(function(cb) { return cb.checked; });
+
     if (count > 0) {
-      batchInline.style.display = 'flex';
+      theadColumns.style.display = 'none';
+      theadBatch.style.display = '';
       selectedCountSpan.textContent = count + ' selected';
+      selectAllBatchCheckbox.checked = allChecked;
+      selectAllBatchCheckbox.indeterminate = someChecked && !allChecked;
     } else {
-      batchInline.style.display = 'none';
+      theadColumns.style.display = '';
+      theadBatch.style.display = 'none';
     }
+
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+  }
+
+  function handleSelectAll(checked) {
+    getErrorCheckboxes().forEach(function(cb) { cb.checked = checked; });
+    updateBatchToolbar();
   }
 
   if (selectAllCheckbox) {
     selectAllCheckbox.addEventListener('change', function() {
-      getErrorCheckboxes().forEach(function(cb) { cb.checked = selectAllCheckbox.checked; });
-      updateBatchToolbar();
+      handleSelectAll(selectAllCheckbox.checked);
+    });
+  }
+
+  if (selectAllBatchCheckbox) {
+    selectAllBatchCheckbox.addEventListener('change', function() {
+      handleSelectAll(selectAllBatchCheckbox.checked);
     });
   }
 
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('error-checkbox')) {
       updateBatchToolbar();
-      var boxes = getErrorCheckboxes();
-      var allChecked = Array.from(boxes).every(function(cb) { return cb.checked; });
-      var someChecked = Array.from(boxes).some(function(cb) { return cb.checked; });
-      if (selectAllCheckbox) {
-        selectAllCheckbox.checked = allChecked;
-        selectAllCheckbox.indeterminate = someChecked && !allChecked;
-      }
     }
   });
 
