@@ -196,22 +196,22 @@
     <% if @errors.any? %>
       <div data-loading-target="content">
         <div style="overflow-x: auto;">
-        <table class="table table-hover" style="margin-bottom: 0;">
+        <table class="table table-hover" style="margin-bottom: 0; width: 100%; table-layout: fixed;">
           <thead>
             <tr id="thead-columns" style="border-bottom: 1px solid var(--border-primary);">
-              <th style="width: 40px; padding: var(--space-3) var(--space-4); text-align: center;">
+              <th style="width: 36px; padding: var(--space-3) var(--space-4); text-align: center;">
                 <input type="checkbox" id="select-all" class="form-check-input" style="accent-color: var(--accent);">
               </th>
               <th style="padding: var(--space-3) var(--space-4); text-align: left;">Error</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: left; width: 90px;">Status</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 90px;">Events</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 70px;">Users</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 90px;">Last seen</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: left; width: 100px;">Status</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 70px;">Events</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 55px;">Users</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 85px;">Last seen</th>
               <% if @applications.size > 1 && params[:application_id].blank? %>
-                <th style="padding: var(--space-3) var(--space-4); width: 90px;">App</th>
+                <th style="padding: var(--space-3) var(--space-4); width: 100px;">App</th>
               <% end %>
               <% if @platforms.size > 1 %>
-                <th style="padding: var(--space-3) var(--space-4); width: 80px;">Platform</th>
+                <th style="padding: var(--space-3) var(--space-4); width: 100px;">Platform</th>
               <% end %>
             </tr>
             <tr id="thead-batch" style="display: none; border-bottom: 1px solid var(--border-primary); background: var(--surface-secondary);">

@@ -87,11 +87,11 @@
               </div>
 
               <% if error.resolved? && error.resolution_comment.present? %>
-                <div class="mt-2 p-2 bg-success bg-opacity-10 border border-success rounded">
-                  <small class="text-success fw-bold">
+                <div style="margin-top: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--status-success-bg); border: 1px solid var(--status-success); border-radius: var(--radius-sm);">
+                  <small style="color: var(--status-success); font-weight: 600;">
                     <i class="bi bi-journal-text"></i> Resolution Notes:
                   </small>
-                  <div class="mb-0 small text-muted mt-1">
+                  <div style="font-size: 13px; color: var(--text-primary); margin-top: 4px;">
                     <%= auto_link_urls(truncate(error.resolution_comment, length: 200), error: error).html_safe %>
                   </div>
                 </div>

@@ -20,7 +20,7 @@
             <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 4px; text-transform: uppercase;">NEW</span>
           <% end %>
         </div>
-        <div style="color: var(--text-tertiary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;" title="<%= error.message %>"><%= error.message %></div>
+        <div style="color: var(--text-tertiary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= error.message %>"><%= error.message %></div>
       </div>
     </div>
   </td>
@@ -72,12 +72,12 @@
     <%= local_time_ago(error.last_seen_at) %>
   </td>
   <% if local_assigns[:show_application] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error, **app_context) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <span class="badge bg-info"><%= error.application&.name || 'Unknown' %></span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px;" onclick="window.location='<%= error_path(error, **app_context) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <% if error.platform == 'iOS' %>
         <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
       <% elsif error.platform == 'Android' %>
