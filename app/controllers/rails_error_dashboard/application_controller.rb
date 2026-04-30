@@ -23,29 +23,54 @@ module RailsErrorDashboard
       Rails.logger.error("Params: #{params.inspect}")
       Rails.logger.error(exception.backtrace&.first(10)&.join("\n")) if exception.backtrace
 
-      # Render user-friendly error page
-      render plain: "The Error Dashboard encountered an issue displaying this page.\n\n" \
-                    "Your application is unaffected - this is only a dashboard display error.\n\n" \
-                    "Error: #{exception.message}\n\n" \
-                    "Check Rails logs for details: [RailsErrorDashboard]",
-             status: :internal_server_error,
-             layout: false
+      render_dashboard_error(
+        icon: "bi-exclamation-triangle",
+        icon_style: "background: var(--status-warning-bg); color: var(--status-warning);",
+        title: "Something went wrong",
+        message: "The Error Dashboard encountered an issue displaying this page. Your application is unaffected.",
+        detail: exception.message,
+        status: :internal_server_error
+      )
     end
 
     # Handle record not found — return 404 instead of 500
     rescue_from ActiveRecord::RecordNotFound do |exception|
       Rails.logger.warn("[RailsErrorDashboard] Record not found: #{exception.message}")
-      render plain: "The requested error was not found.\n\n" \
-                    "It may have been deleted or the ID is invalid.\n\n" \
-                    "Error: #{exception.message}",
-             status: :not_found,
-             layout: false
+
+      render_dashboard_error(
+        icon: "bi-search",
+        title: "The requested error was not found",
+        message: "It may have been deleted or the ID is invalid.",
+        detail: exception.message,
+        status: :not_found
+      )
     end
 
     # Handle Pagy pagination errors — redirect to page 1
     rescue_from Pagy::RangeError, Pagy::OptionError do |exception|
       Rails.logger.warn("[RailsErrorDashboard] Pagination error: #{exception.message}")
       redirect_to request.path, status: :moved_permanently
+    end
+
+    private
+
+    def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
+      set_common_view_variables
+      error_html = <<~ERB
+        <div class="red-empty-state" style="margin-top: var(--space-6);">
+          <div class="red-empty-state-icon"#{icon_style ? " style=\"#{icon_style}\"" : ""}><i class="bi #{icon}"></i></div>
+          <div class="red-empty-state-title">#{ERB::Util.html_escape(title)}</div>
+          <div class="red-empty-state-message">#{ERB::Util.html_escape(message)}</div>
+          #{"<div style=\"font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-2); font-family: var(--font-mono);\">" + ERB::Util.html_escape(detail) + "</div>" if detail}
+          <a href="#{errors_path}" class="red-empty-state-cta" style="margin-top: var(--space-4);"><i class="bi bi-arrow-left"></i> Back to errors</a>
+        </div>
+      ERB
+      render html: error_html.html_safe, status: status, layout: "rails_error_dashboard"
+    end
+
+    def set_common_view_variables
+      @applications = Application.ordered_by_name.pluck(:name, :id) rescue []
+      @default_credentials_warning = RailsErrorDashboard.configuration.default_credentials? rescue false
     end
   end
 end
