@@ -632,6 +632,10 @@ dd { color: var(--text-primary); }
   .red-sidebar.collapsed { display: none; }
 }
 
+/* Error detail responsive grid */
+.red-detail-grid { display: grid; grid-template-columns: 1fr 280px; gap: var(--space-4); }
+@media (max-width: 767.98px) { .red-detail-grid { grid-template-columns: 1fr; } }
+
 /* Env badge */
 .red-env-badge {
   padding: 3px 10px; font-size: 11px; font-weight: 600;
@@ -1062,7 +1066,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
                   <% if params[:application_id].present? %>
                     <%= @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first || 'Unknown' %>
                   <% else %>
-                    All Apps
+                    All Apps (<%= @applications.size %>)
                   <% end %>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="appSwitcher">
@@ -1105,14 +1109,16 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
         <!-- Main content -->
         <main style="flex: 1; padding: var(--space-6) var(--space-8); max-width: 1200px; width: 100%; margin: 0 auto;">
           <% if @default_credentials_warning %>
-            <div class="alert alert-warning" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid var(--status-warning);">
-              <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>
-              <div>
+            <div id="security-warning" class="alert alert-warning" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid var(--status-warning);">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; flex-shrink: 0;"></i>
+              <div style="flex: 1;">
                 <strong>Security Warning:</strong> You are using default credentials (gandalf/youshallnotpass).
                 Set <code>ERROR_DASHBOARD_USER</code> and <code>ERROR_DASHBOARD_PASSWORD</code> environment variables,
                 or configure <code>authenticate_with</code> in your initializer.
               </div>
+              <button type="button" onclick="this.parentElement.style.display='none'; try { sessionStorage.setItem('red_dismiss_creds_warning','1') } catch(e) {}" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="Dismiss for this session">&times;</button>
             </div>
+            <script>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
           <% end %>
           <%= yield %>
         </main>

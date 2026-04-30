@@ -26,6 +26,11 @@ module SystemHelpers
   def wait_for_page_load
     expect(page).to have_css("header.red-navbar, nav.navbar", wait: 10)
   end
+
+  # Expand the advanced filters section (collapsed by default)
+  def expand_advanced_filters
+    click_button "More filters"
+  end
 end
 
 RSpec.configure do |config|

@@ -35,6 +35,7 @@ RSpec.describe "Loading States", type: :system do
     it "has loading action on filter submit button" do
       visit_dashboard("/errors")
       wait_for_page_load
+      expand_advanced_filters
 
       expect(page).to have_css("[data-loading-target='submitButton']")
     end

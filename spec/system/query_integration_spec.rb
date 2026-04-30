@@ -132,6 +132,7 @@ RSpec.describe "Query Integration", type: :system do
       it "shows assignee dropdown when Assigned filter is selected" do
         visit_dashboard("/errors")
         wait_for_page_load
+        expand_advanced_filters
         # Select "Assigned" from the assignment filter
         select "Assigned", from: "assigned_to_filter"
         # The assignee name filter should become visible

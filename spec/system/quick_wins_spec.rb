@@ -220,7 +220,8 @@ RSpec.describe "Quick Wins UI Features", type: :system do
         expect(reopened_btn[:class]).to include("btn-primary")
         expect(reopened_btn[:class]).not_to include("btn-outline-primary")
 
-        # Uncheck "Unresolved only" and apply filters
+        # Expand advanced filters, uncheck "Unresolved only" and apply
+        expand_advanced_filters
         find("#unresolved_checkbox").uncheck
         click_button "Apply Filters"
         wait_for_page_load
