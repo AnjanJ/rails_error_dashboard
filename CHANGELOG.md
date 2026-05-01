@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-05-01 — UI/UX Polish & Accessibility
+
+### Fixed
+
+- **Dark mode text contrast** — Primary text now pure white (#ffffff), secondary/tertiary bumped up for better visibility across all pages
+- **Dark mode text-tertiary** — Improved from #6c7086 to #a6adc8 for WCAG AA compliance
+- **text-muted readability** — Remapped `.text-muted` CSS class from `--text-tertiary` to `--text-secondary`, fixing 326 occurrences across 33 view files (swallowed exceptions, analytics, correlation, releases, sidebar metadata, breadcrumbs, etc.)
+- **table-light styling** — Added proper theme-aware styling for Bootstrap `table-light` class used in database health, rack attack, and other table headers
+- **Timeline resolution notes** — Replaced Bootstrap `bg-success` classes with CSS variable styling so resolution comment text is readable in both light and dark modes
+- **Error table horizontal scroll on desktop** — Used `table-layout: fixed` with proportional column widths so tables fit without horizontal scrolling on laptop/desktop screens; mobile still scrolls horizontally
+- **Error detail sidebar overflow** — Sidebar now stacks below content at <1024px (raised from 768px) to prevent clipping on laptop-sized screens
+- **Menu toggle overlap** — Added `!important` to display utility classes (matching Bootstrap behavior) so mobile and desktop toggles never show simultaneously
+- **Keyboard shortcut `?` hint** — Bare `<kbd>?</kbd>` in header now wrapped in a clickable button with tooltip; opens the keyboard shortcuts modal on click
+- **Sidebar logo home link** — "RED" logo in both desktop sidebar and mobile offcanvas now links to host app root (`/`)
+- **App/Platform badge tooltips** — Truncated app and platform names in error table now show full text on hover via `title` attribute
+- **Security warning dismissible** — Default credentials banner now has a close button; dismissal persists for the session via `sessionStorage`
+- **404/500 error pages styled** — `RecordNotFound` and generic error pages now render within the dashboard layout with the empty-state pattern and "Back to errors" link, instead of raw plain text
+- **Advanced filters collapsed by default** — Filter dropdowns (Types, Time, Frequencies, etc.) start hidden behind "More filters" button, showing the error table immediately on page load
+
+### Added
+
+- **Pagination context** — "Showing 1–25 of 323 errors" label next to pagination controls
+- **App switcher count** — Header dropdown shows "All Apps (4)" instead of just "All Apps" when multiple apps exist
+- **GitHub-style batch actions** — Selecting error checkboxes replaces the table header with a batch action bar showing selected count + Resolve/Delete buttons (like GitHub's issue list)
+
+### Changed
+
+- Footer wording changed from "Created with" to "Built with"
+- Error detail sidebar width reduced from 280px to 260px
+- Error message `max-width: 400px` constraint removed for better table layout
+
 ## [0.6.0] - 2026-04-26 — UI/UX Redesign
 
 ### Overview
