@@ -79,23 +79,23 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Exception Class</th>
-                <th width="250">Raise Location</th>
-                <th width="250">Rescue Location</th>
-                <th width="100">Raises</th>
-                <th width="100">Rescues</th>
-                <th width="100">Ratio</th>
-                <th width="140">Last Seen</th>
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-primary);">
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Exception Class</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250">Raise Location</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250">Rescue Location</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Raises</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Rescues</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Ratio</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="140">Last Seen</th>
               </tr>
             </thead>
             <tbody>
               <% @entries.each do |entry| %>
                 <tr>
                   <td><code style="font-size: 0.85em;"><%= entry[:exception_class] %></code></td>
-                  <td><small class="text-muted text-break"><%= entry[:raise_location] %></small></td>
-                  <td><small class="text-muted text-break"><%= entry[:rescue_location] || "Unknown" %></small></td>
+                  <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:raise_location] %></td>
+                  <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:rescue_location] || "Unknown" %></td>
                   <td><span class="badge bg-info text-dark"><%= number_with_delimiter(entry[:raise_count]) %></span></td>
                   <td><span class="badge bg-warning text-dark"><%= number_with_delimiter(entry[:rescue_count]) %></span></td>
                   <td>
@@ -104,7 +104,7 @@
                       <%= ratio_pct %>%
                     </span>
                   </td>
-                  <td><%= local_time_ago(entry[:last_seen]) %></td>
+                  <td style="color: var(--text-secondary); font-size: 12px;"><%= local_time_ago(entry[:last_seen]) %></td>
                 </tr>
               <% end %>
             </tbody>
