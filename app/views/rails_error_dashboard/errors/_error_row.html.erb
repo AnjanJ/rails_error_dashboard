@@ -72,12 +72,12 @@
     <%= local_time_ago(error.last_seen_at) %>
   </td>
   <% if local_assigns[:show_application] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location='<%= error_path(error, **app_context) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= error.application&.name || 'Unknown' %>" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <span class="badge bg-info"><%= error.application&.name || 'Unknown' %></span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location='<%= error_path(error, **app_context) %>'">
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= error.platform || 'API' %>" onclick="window.location='<%= error_path(error, **app_context) %>'">
       <% if error.platform == 'iOS' %>
         <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
       <% elsif error.platform == 'Android' %>
