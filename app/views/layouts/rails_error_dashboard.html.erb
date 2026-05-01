@@ -288,8 +288,12 @@ dd { color: var(--text-primary); }
 @media (min-width: 768px) { .d-md-block { display: block !important; } .d-md-none { display: none !important; } .d-md-flex { display: flex !important; } .d-md-inline { display: inline !important; } .ms-sm-auto { margin-left: auto; } .px-md-4 { padding-left: var(--space-6); padding-right: var(--space-6); } }
 
 /* Text */
-.text-muted { color: var(--text-tertiary); }
+.text-muted { color: var(--text-secondary); }
 .text-secondary { color: var(--text-secondary); }
+
+/* Bootstrap compat: table-light thead */
+.table-light, thead.table-light { background: var(--surface-secondary); }
+.table-light th { color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .text-center { text-align: center; }
 .text-end { text-align: right; }
 .text-start { text-align: left; }
