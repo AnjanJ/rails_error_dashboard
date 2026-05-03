@@ -107,7 +107,9 @@
                 <tr>
                   <td><strong><%= (@pagy.from || 1) + index %></strong></td>
                   <td>
-                    <strong><%= entry[:error_type] %></strong>
+                    <%= link_to errors_path(error_type: entry[:error_type], unresolved: '0'), class: "text-decoration-none" do %>
+                      <strong><%= entry[:error_type] %></strong>
+                    <% end %>
                     <br><small class="text-muted"><%= entry[:message] %></small>
                   </td>
                   <td>

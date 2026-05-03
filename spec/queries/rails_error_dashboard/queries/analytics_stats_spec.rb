@@ -134,10 +134,17 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
         expect(result[:errors_by_hour]).to be_a(Hash)
       end
 
-      it "includes time keys" do
+      it "uses hour-of-day integer keys (0..23) so the chart shows diurnal patterns" do
+        # Regression: was group_by_hour returning chronological Time keys; now
+        # group_by_hour_of_day returns Integer 0..23 keys matching the chart's
+        # "Errors by Hour of Day" title and x-axis label.
         result = described_class.call(30)
+        keys = result[:errors_by_hour].keys
 
-        expect(result[:errors_by_hour].keys.first).to be_a(Time)
+        unless keys.empty?
+          expect(keys.first).to be_a(Integer)
+          expect(keys).to all(be_between(0, 23))
+        end
       end
     end
 

@@ -92,7 +92,7 @@
   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
     <!-- Affected Users -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Affected Users</div>
+      <div class="stat-label" style="margin-bottom: 4px;">Affected Users (Today)</div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value"><%= @stats[:affected_users_today] %></span>
         <% if @stats[:affected_users_change] != 0 %>

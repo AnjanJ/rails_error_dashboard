@@ -185,7 +185,9 @@
               <% @releases.each do |release| %>
                 <tr class="<%= 'table-active' if release[:current] %>">
                   <td>
-                    <strong><%= release[:version] %></strong>
+                    <%= link_to errors_path(app_version: release[:version], unresolved: '0'), class: "text-decoration-none" do %>
+                      <strong><%= release[:version] %></strong>
+                    <% end %>
                     <% if release[:current] %>
                       <span class="badge bg-primary ms-1">Current</span>
                     <% end %>
