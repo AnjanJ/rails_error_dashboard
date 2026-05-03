@@ -35,37 +35,49 @@
           <div class="mb-3">
             <small class="metadata-label d-block mb-1">Severity Level</small>
             <% severity = error.severity %>
-            <% if severity == :critical %>
-              <span class="badge bg-danger fs-6">CRITICAL</span>
-            <% elsif severity == :high %>
-              <span class="badge bg-warning text-dark fs-6">HIGH</span>
-            <% elsif severity == :medium %>
-              <span class="badge bg-info text-dark fs-6">MEDIUM</span>
-            <% else %>
-              <span class="badge bg-secondary fs-6">LOW</span>
+            <%= link_to errors_path(severity: severity, unresolved: '0'), class: "text-decoration-none", title: "View all #{severity} errors" do %>
+              <% if severity == :critical %>
+                <span class="badge bg-danger fs-6">CRITICAL</span>
+              <% elsif severity == :high %>
+                <span class="badge bg-warning text-dark fs-6">HIGH</span>
+              <% elsif severity == :medium %>
+                <span class="badge bg-info text-dark fs-6">MEDIUM</span>
+              <% else %>
+                <span class="badge bg-secondary fs-6">LOW</span>
+              <% end %>
             <% end %>
           </div>
 
           <div class="mb-3">
             <small class="metadata-label d-block mb-1">Platform</small>
-            <% if error.platform == 'iOS' %>
-              <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
-            <% elsif error.platform == 'Android' %>
-              <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
-            <% elsif error.platform == 'Web' %>
-              <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
+            <% if error.platform.present? %>
+              <%= link_to errors_path(platform: error.platform, unresolved: '0'), class: "text-decoration-none", title: "View all #{error.platform} errors" do %>
+                <% if error.platform == 'iOS' %>
+                  <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
+                <% elsif error.platform == 'Android' %>
+                  <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
+                <% elsif error.platform == 'Web' %>
+                  <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
+                <% else %>
+                  <span class="badge badge-api"><i class="bi bi-server"></i> <%= error.platform %></span>
+                <% end %>
+              <% end %>
             <% else %>
-              <span class="badge badge-api"><i class="bi bi-server"></i> <%= error.platform || 'API' %></span>
+              <span class="badge badge-api"><i class="bi bi-server"></i> API</span>
             <% end %>
           </div>
 
           <div class="mb-3">
             <small class="metadata-label d-block mb-1">User</small>
             <% if error.respond_to?(:user) && error.user %>
-              <strong><%= error.user.email %></strong><br>
-              <small class="text-muted">ID: <%= error.user_id %></small>
+              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none", title: "View all errors for this user" do %>
+                <strong><%= error.user.email %></strong><br>
+                <small class="text-muted">ID: <%= error.user_id %></small>
+              <% end %>
             <% elsif error.user_id %>
-              <span class="text-muted">User ID: <%= error.user_id %></span>
+              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none text-muted", title: "View all errors for this user" do %>
+                User ID: <%= error.user_id %>
+              <% end %>
             <% else %>
               <span class="text-muted">Guest / Unauthenticated</span>
             <% end %>
