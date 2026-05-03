@@ -172,7 +172,13 @@
     active_filters << { label: "Timeframe: #{params[:timeframe].humanize}", param: :timeframe } if params[:timeframe].present?
     active_filters << { label: "Frequency: #{params[:frequency].humanize}", param: :frequency } if params[:frequency].present?
     active_filters << { label: "Status: #{params[:status].humanize}", param: :status } if params[:status].present?
-    active_filters << { label: "Priority: P#{params[:priority_level]}", param: :priority_level } if params[:priority_level].present?
+    if params[:priority_level].present?
+      # priority_level is the integer key (3=Critical/P0, 0=Low/P3); look up the short_label
+      # rather than interpolating the raw integer, which inverts the P-number.
+      priority_data = RailsErrorDashboard::ErrorLog::PRIORITY_LEVELS[params[:priority_level].to_i]
+      priority_short = priority_data ? priority_data[:short_label] : "P?"
+      active_filters << { label: "Priority: #{priority_short}", param: :priority_level }
+    end
     if params[:assigned_to] == '__unassigned__'
       active_filters << { label: "Unassigned", param: :assigned_to }
     elsif params[:assigned_to] == '__assigned__'
