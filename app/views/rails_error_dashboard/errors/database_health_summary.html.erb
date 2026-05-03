@@ -338,7 +338,11 @@
               <% @entries.each do |entry| %>
                 <tr>
                   <td><%= link_to "##{entry[:error_id]}", error_path(entry[:error_id]), class: "text-decoration-none" %></td>
-                  <td><code><%= truncate(entry[:error_type].to_s, length: 40) %></code></td>
+                  <td>
+                    <%= link_to errors_path(error_type: entry[:error_type], unresolved: '0'), class: "text-decoration-none" do %>
+                      <code><%= truncate(entry[:error_type].to_s, length: 40) %></code>
+                    <% end %>
+                  </td>
                   <td>
                     <% util = entry[:utilization] %>
                     <% util_badge = util >= 80 ? "danger" : (util >= 60 ? "warning" : "success") %>
