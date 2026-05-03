@@ -1,6 +1,7 @@
       <!-- Local Variables (captured via TracePoint) -->
       <% if RailsErrorDashboard.configuration.enable_local_variables && error.respond_to?(:local_variables) && error.local_variables.present? %>
         <% local_vars = JSON.parse(error.local_variables) rescue {} %>
+        <% local_vars = {} unless local_vars.is_a?(Hash) %>
         <% if local_vars.any? %>
           <div class="card mb-4" id="section-local-variables">
             <div class="card-header">

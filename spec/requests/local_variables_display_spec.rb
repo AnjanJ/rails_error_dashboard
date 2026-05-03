@@ -136,5 +136,27 @@ RSpec.describe "Local Variables display on error show page", type: :request do
         expect(response.body).to include("&lt;script&gt;")
       end
     end
+
+    context "when local_variables column has a non-Hash JSON shape" do
+      # Regression: the partial parsed and immediately called .any? / .each on
+      # the result. If a serializer ever wrote an Array or scalar instead of
+      # a Hash, the show page would crash with NoMethodError.
+      let!(:error_log) do
+        create(:error_log, application: application).tap do |e|
+          next unless e.class.column_names.include?("local_variables")
+          e.update_column(:local_variables, "[1, 2, 3]") # Array, not Hash
+        end
+      end
+
+      before do
+        skip "column not present" unless RailsErrorDashboard::ErrorLog.column_names.include?("local_variables")
+      end
+
+      it "renders the page without raising and hides the section" do
+        get "/error_dashboard/errors/#{error_log.id}"
+        expect(response).to have_http_status(:ok)
+        expect(response.body).not_to include('id="section-local-variables"')
+      end
+    end
   end
 end

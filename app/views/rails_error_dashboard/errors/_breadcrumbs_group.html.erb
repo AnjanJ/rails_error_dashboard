@@ -1,6 +1,7 @@
       <!-- Breadcrumbs (Request Activity Trail) -->
       <% if RailsErrorDashboard.configuration.enable_breadcrumbs && error.respond_to?(:breadcrumbs) && error.breadcrumbs.present? %>
         <% breadcrumbs = JSON.parse(error.breadcrumbs) rescue [] %>
+        <% breadcrumbs = [] unless breadcrumbs.is_a?(Array) %>
         <% if breadcrumbs.any? %>
           <% deprecation_crumbs = breadcrumbs.select { |c| c["c"] == "deprecation" } %>
           <% if deprecation_crumbs.any? %>

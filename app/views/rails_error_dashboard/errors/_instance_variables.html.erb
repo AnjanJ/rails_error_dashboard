@@ -1,6 +1,7 @@
       <!-- Instance Variables (captured from receiver object at raise time) -->
       <% if RailsErrorDashboard.configuration.enable_instance_variables && error.class.column_names.include?("instance_variables") && error.read_attribute(:instance_variables).present? %>
         <% instance_vars = JSON.parse(error.read_attribute(:instance_variables)) rescue {} %>
+        <% instance_vars = {} unless instance_vars.is_a?(Hash) %>
         <% self_class = instance_vars.delete("_self_class") %>
         <% if instance_vars.any? %>
           <div class="card mb-4" id="section-instance-variables">
