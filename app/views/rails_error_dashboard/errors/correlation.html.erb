@@ -90,7 +90,11 @@
             <tbody>
               <% @problematic_releases.each do |release| %>
                 <tr>
-                  <td><code><%= release[:version] %></code></td>
+                  <td>
+                    <%= link_to errors_path(app_version: release[:version], unresolved: '0'), class: "text-decoration-none" do %>
+                      <code><%= release[:version] %></code>
+                    <% end %>
+                  </td>
                   <td><strong class="text-danger"><%= release[:error_count] %></strong></td>
                   <td>
                     <span class="badge bg-danger">
@@ -105,7 +109,7 @@
                     <% end %>
                   </td>
                   <td>
-                    <%= link_to "View", errors_path(search: release[:version], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
+                    <%= link_to "View", errors_path(app_version: release[:version], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>
@@ -141,7 +145,11 @@
                 <tbody>
                   <% @errors_by_version.sort_by { |_, v| -v[:count] }.first(10).each do |version, data| %>
                     <tr>
-                      <td><code><%= version %></code></td>
+                      <td>
+                        <%= link_to errors_path(app_version: version, unresolved: '0'), class: "text-decoration-none" do %>
+                          <code><%= version %></code>
+                        <% end %>
+                      </td>
                       <td><%= data[:count] %></td>
                       <td><%= data[:error_types] %></td>
                       <td>
@@ -185,7 +193,11 @@
                 <tbody>
                   <% @errors_by_git_sha.sort_by { |_, v| -v[:count] }.first(10).each do |sha, data| %>
                     <tr>
-                      <td><code class="small"><%= sha[0..7] %></code></td>
+                      <td>
+                        <%= link_to errors_path(git_sha: sha, unresolved: '0'), class: "text-decoration-none" do %>
+                          <code class="small"><%= sha[0..7] %></code>
+                        <% end %>
+                      </td>
                       <td><%= data[:count] %></td>
                       <td><%= data[:error_types] %></td>
                       <td>

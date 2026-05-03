@@ -22,6 +22,9 @@ module RailsErrorDashboard
       hide_snoozed
       hide_muted
       reopened
+      user_id
+      app_version
+      git_sha
       sort_by
       sort_direction
     ].freeze

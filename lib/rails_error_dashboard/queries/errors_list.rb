@@ -30,6 +30,8 @@ module RailsErrorDashboard
         query = filter_by_platform(query)
         query = filter_by_application(query)
         query = filter_by_user_id(query)
+        query = filter_by_app_version(query)
+        query = filter_by_git_sha(query)
         query = filter_by_search(query)
         query = filter_by_severity(query)
         query = filter_by_timeframe(query)
@@ -42,6 +44,18 @@ module RailsErrorDashboard
         query = filter_by_muted(query)
         query = filter_by_reopened(query)
         query
+      end
+
+      def filter_by_app_version(query)
+        return query unless @filters[:app_version].present?
+        return query unless ErrorLog.column_names.include?("app_version")
+        query.where(app_version: @filters[:app_version])
+      end
+
+      def filter_by_git_sha(query)
+        return query unless @filters[:git_sha].present?
+        return query unless ErrorLog.column_names.include?("git_sha")
+        query.where(git_sha: @filters[:git_sha])
       end
 
       def filter_by_error_type(query)
