@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-05-03 — Strict CSP Compatibility & UI Bug Fixes
+
+### Fixed
+
+- **Strict Content Security Policy compatibility** — The dashboard now works correctly inside host apps that enforce a strict CSP (e.g. `script-src 'self' 'nonce-...'`). All inline `<script>` blocks pick up the host's CSP nonce automatically via `content_security_policy_nonce`, and every inline event handler (`onclick=`, `onmouseenter=`, …) was replaced with delegated `data-red-action` listeners. Previously, on CSP-enforced hosts every dashboard page logged dozens of "Executing inline event handler violates CSP" errors and error rows could not be clicked.
+- **Select-all UI overlap on errors index** — Selecting one or more errors no longer collapses the table column widths. The bulk-action toolbar (Resolve / Delete) now sits as a sibling above the table instead of replacing the `<thead>` row via `colspan="99"`, so column widths defined by `table-layout: fixed` are preserved and severity badges no longer overlap row text.
+- **Out-of-range page redirect** — Pagy 43.x changed its behavior: out-of-range `?page=N` numbers no longer raise an exception by default, so users hitting a stale or bookmarked URL saw the "All clear!" empty state even though their dashboard summary said errors existed. Pass `raise_range_error: true` on the errors index pagy call so the existing rescue handler kicks in and redirects to a valid page.
+- **"All" filter pill** — Clicking "All" was indistinguishable from "Unresolved" because the link omitted the `unresolved=0` param, causing the controller's default unresolved-only behavior to render. The link now passes `unresolved: '0'` explicitly so resolved/snoozed/wont-fix errors appear alongside unresolved ones.
+
 ## [0.6.1] - 2026-05-01 — UI/UX Polish & Accessibility
 
 ### Fixed
