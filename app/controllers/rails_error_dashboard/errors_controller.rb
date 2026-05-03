@@ -174,7 +174,7 @@ module RailsErrorDashboard
     end
 
     def analytics
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
 
       # Use Query to get analytics data (pass application filter)
@@ -215,7 +215,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 7).to_i
+      days = days_param(default: 7)
       @days = days
 
       # Use Query to get platform comparison data (pass application filter)
@@ -269,7 +269,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       correlation = Queries::ErrorCorrelation.new(days: days, application_id: @current_application_id)
 
@@ -283,7 +283,7 @@ module RailsErrorDashboard
     end
 
     def releases
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::ReleaseTimeline.call(days, application_id: @current_application_id)
       all_releases = result[:releases]
@@ -293,7 +293,7 @@ module RailsErrorDashboard
     end
 
     def user_impact
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::UserImpactSummary.call(days, application_id: @current_application_id)
       all_entries = result[:entries]
@@ -309,7 +309,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::DeprecationWarnings.call(days, application_id: @current_application_id)
       all_deprecations = result[:deprecations]
@@ -329,7 +329,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::NplusOneSummary.call(days, application_id: @current_application_id)
       all_patterns = result[:patterns]
@@ -349,7 +349,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::CacheHealthSummary.call(days, application_id: @current_application_id)
       all_entries = result[:entries]
@@ -370,7 +370,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::JobHealthSummary.call(days, application_id: @current_application_id)
       all_entries = result[:entries]
@@ -390,7 +390,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
 
       # Live database health (display-time only)
@@ -426,7 +426,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::SwallowedExceptionSummary.call(days, application_id: @current_application_id)
       all_entries = result[:entries]
@@ -447,7 +447,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::RackAttackSummary.call(days, application_id: @current_application_id)
       all_events = result[:events]
@@ -468,7 +468,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::ActionCableSummary.call(days, application_id: @current_application_id)
       all_channels = result[:channels]
@@ -489,7 +489,7 @@ module RailsErrorDashboard
         return
       end
 
-      days = (params[:days] || 30).to_i
+      days = days_param(default: 30)
       @days = days
       result = Queries::ActiveStorageSummary.call(days, application_id: @current_application_id)
       all_services = result[:services]
@@ -611,6 +611,14 @@ module RailsErrorDashboard
 
     def filter_params
       params.permit(*FILTERABLE_PARAMS).to_h.symbolize_keys
+    end
+
+    # Coerce params[:days] into a sane integer in [1, 365]. Without clamping,
+    # a request like ?days=99999999 would scan the full table on every health
+    # query, defeating index pruning and burning CPU.
+    def days_param(default:)
+      raw = params[:days].presence || default
+      raw.to_i.clamp(1, 365)
     end
 
     def set_application_context
