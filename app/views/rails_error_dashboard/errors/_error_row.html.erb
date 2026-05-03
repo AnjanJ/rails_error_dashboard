@@ -61,7 +61,7 @@
   </td>
   <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);">
     <% if error.user_id %>
-      <%= error.user_id %>
+      <%= link_to error.user_id, errors_path(user_id: error.user_id, unresolved: '0'), style: "color: inherit; text-decoration: none;", title: "View all errors for user #{error.user_id}" %>
     <% else %>
       <span style="color: var(--text-tertiary);">&mdash;</span>
     <% end %>
