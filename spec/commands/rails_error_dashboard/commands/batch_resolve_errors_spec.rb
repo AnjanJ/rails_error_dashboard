@@ -29,6 +29,19 @@ RSpec.describe RailsErrorDashboard::Commands::BatchResolveErrors do
         end
       end
 
+      it "sets status to 'resolved' so the Resolved filter pill picks them up" do
+        # Regression test: BatchResolveErrors used to update only the boolean
+        # `resolved` flag and `resolved_at`, but not the `status` column. The
+        # errors index "Resolved" filter pill links to ?status=resolved, which
+        # filters via where(status: 'resolved') — bulk-resolved errors didn't
+        # appear there even though they were marked resolved.
+        described_class.call(error_ids)
+
+        expect(error1.reload.status).to eq("resolved")
+        expect(error2.reload.status).to eq("resolved")
+        expect(error3.reload.status).to eq("resolved")
+      end
+
       it "returns success result" do
         result = described_class.call(error_ids)
 

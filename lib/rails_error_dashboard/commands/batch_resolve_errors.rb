@@ -31,7 +31,8 @@ module RailsErrorDashboard
               resolved: true,
               resolved_at: Time.current,
               resolved_by_name: @resolved_by_name,
-              resolution_comment: @resolution_comment
+              resolution_comment: @resolution_comment,
+              status: "resolved"
             )
             resolved_count += 1
             resolved_errors << error
