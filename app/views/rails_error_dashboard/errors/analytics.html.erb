@@ -339,7 +339,11 @@
             <tbody>
               <% @recurring_data[:high_frequency_errors].first(10).each do |error| %>
                 <tr>
-                  <td><code class="small"><%= error[:error_type] %></code></td>
+                  <td>
+                    <%= link_to errors_path(error_type: error[:error_type], unresolved: '0'), class: "text-decoration-none" do %>
+                      <code class="small"><%= error[:error_type] %></code>
+                    <% end %>
+                  </td>
                   <td><span class="badge bg-danger"><%= error[:total_occurrences] %></span></td>
                   <td><%= error[:duration_days] %> days</td>
                   <td><small class="text-muted"><%= local_time(error[:first_seen], format: :date_only) %></small></td>

@@ -89,7 +89,10 @@ module RailsErrorDashboard
       end
 
       def errors_by_hour
-        base_query.group_by_hour(:occurred_at).count
+        # group_by_hour_of_day buckets into 0..23 to show diurnal patterns
+        # (when in the day errors peak). The chart title says "Errors by Hour
+        # of Day" — group_by_hour produced a chronological time series instead.
+        base_query.group_by_hour_of_day(:occurred_at).count
       end
 
       def top_affected_users
