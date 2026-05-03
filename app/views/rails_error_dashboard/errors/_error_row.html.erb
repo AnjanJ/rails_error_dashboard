@@ -57,7 +57,7 @@
     <% end %>
   </td>
   <td style="padding: var(--space-3) var(--space-4); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary);">
-    <%= error.occurrence_count.to_s(:delimited) rescue error.occurrence_count %>
+    <%= number_with_delimiter(error.occurrence_count) %>
   </td>
   <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);">
     <% if error.user_id %>

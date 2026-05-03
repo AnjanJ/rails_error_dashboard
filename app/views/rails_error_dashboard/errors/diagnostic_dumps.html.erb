@@ -139,7 +139,7 @@
                 <small class="text-muted d-block">GC</small>
                 <small>
                   <% gc_health = health["gc"] || {} %>
-                  Live: <%= gc_health["heap_live_slots"]&.to_s(:delimited) rescue gc_health["heap_live_slots"] || "?" %> /
+                  Live: <%= gc_health["heap_live_slots"] ? number_with_delimiter(gc_health["heap_live_slots"]) : "?" %> /
                   Major GC: <%= gc_health["major_gc_count"] || "?" %>
                 </small>
               </div>

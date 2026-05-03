@@ -88,6 +88,25 @@ RSpec.describe "Diagnostic Dumps page", type: :request do
         expect(response.body).to include("Memory (Latest)")
       end
 
+      it "formats heap_live_slots with thousand separators" do
+        # Regression: was `to_s(:delimited)` which Rails 7 removed; the silent
+        # `rescue` masked a TypeError and rendered the raw integer.
+        dump_data = {
+          captured_at: Time.current.iso8601,
+          system_health: { gc: { heap_live_slots: 1_234_567, major_gc_count: 8 } }
+        }
+
+        RailsErrorDashboard::DiagnosticDump.create!(
+          application: application,
+          dump_data: dump_data.to_json,
+          captured_at: 1.hour.ago
+        )
+
+        get "/error_dashboard/errors/diagnostic_dumps"
+        expect(response.body).to include("1,234,567")
+        expect(response.body).not_to match(/Live:\s*1234567\b/)
+      end
+
       it "shows expandable JSON detail block" do
         dump_data = { captured_at: Time.current.iso8601, pid: 9999 }
 
