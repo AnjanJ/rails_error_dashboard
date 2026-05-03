@@ -133,4 +133,37 @@ RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
       end
     end
   end
+
+  describe "#parse_pg_timestamp" do
+    # Regression: database_health_summary used Time.parse(value) which raises
+    # TypeError when value is already a Time/TimeWithZone (which is what some
+    # PG configs return from raw connection.select_all on timestamp columns).
+    it "returns the value unchanged when given a Time" do
+      time = Time.now
+      expect(helper.parse_pg_timestamp(time)).to eq(time)
+    end
+
+    it "returns the value unchanged when given a TimeWithZone" do
+      time = Time.zone.now
+      expect(helper.parse_pg_timestamp(time)).to eq(time)
+    end
+
+    it "parses an ISO8601 string into a Time" do
+      result = helper.parse_pg_timestamp("2026-05-03 12:00:00 UTC")
+      expect(result).to be_a(Time)
+      expect(result.year).to eq(2026)
+    end
+
+    it "returns nil for nil input" do
+      expect(helper.parse_pg_timestamp(nil)).to be_nil
+    end
+
+    it "returns nil for blank input" do
+      expect(helper.parse_pg_timestamp("")).to be_nil
+    end
+
+    it "returns nil for an unparseable string instead of raising" do
+      expect(helper.parse_pg_timestamp("not a date")).to be_nil
+    end
+  end
 end

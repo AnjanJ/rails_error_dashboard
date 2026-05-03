@@ -209,6 +209,17 @@ module RailsErrorDashboard
       )
     end
 
+    # Raw connection.select_all returns timestamps as Time in some PG configs
+    # and as ISO8601 strings in others — accept both shapes.
+    def parse_pg_timestamp(value)
+      return nil if value.blank?
+      return value if value.is_a?(Time) || value.is_a?(DateTime)
+
+      Time.parse(value.to_s)
+    rescue ArgumentError
+      nil
+    end
+
     # Renders a relative time ("3 hours ago") that updates automatically
     # @param time [Time, DateTime, nil] The timestamp to display
     # @param fallback [String] Text to show if time is nil

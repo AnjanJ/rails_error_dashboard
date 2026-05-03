@@ -150,7 +150,7 @@
                         <%= number_with_delimiter(table[:dead_tuples]) %>
                       <% end %>
                     </td>
-                    <td><%= table[:last_autovacuum] ? local_time_ago(Time.parse(table[:last_autovacuum])) : "Never" %></td>
+                    <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : "Never" %></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -203,7 +203,7 @@
                           <%= number_with_delimiter(table[:dead_tuples]) %>
                         <% end %>
                       </td>
-                      <td><%= table[:last_autovacuum] ? local_time_ago(Time.parse(table[:last_autovacuum])) : "Never" %></td>
+                      <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : "Never" %></td>
                     </tr>
                   <% end %>
                 </tbody>
