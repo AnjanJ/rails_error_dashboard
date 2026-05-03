@@ -2,7 +2,7 @@
 <div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <%= form_with url: resolve_error_path(error), method: :post, class: "modal-content" do |f| %>
+      <%= form_with url: resolve_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="resolveModalLabel">
             <i class="bi bi-check-circle"></i> Mark Error as Resolved
