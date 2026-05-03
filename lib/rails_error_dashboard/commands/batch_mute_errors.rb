@@ -4,13 +4,14 @@ module RailsErrorDashboard
   module Commands
     # Command: Mute multiple errors at once
     class BatchMuteErrors
-      def self.call(error_ids, muted_by: nil)
-        new(error_ids, muted_by).call
+      def self.call(error_ids, muted_by: nil, reason: nil)
+        new(error_ids, muted_by, reason).call
       end
 
-      def initialize(error_ids, muted_by = nil)
+      def initialize(error_ids, muted_by = nil, reason = nil)
         @error_ids = Array(error_ids).compact
         @muted_by = muted_by
+        @reason = reason
       end
 
       def call
@@ -27,7 +28,8 @@ module RailsErrorDashboard
             error.update!(
               muted: true,
               muted_at: Time.current,
-              muted_by: @muted_by
+              muted_by: @muted_by,
+              muted_reason: @reason
             )
             muted_count += 1
             muted_errors << error

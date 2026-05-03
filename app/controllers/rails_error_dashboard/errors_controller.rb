@@ -240,7 +240,7 @@ module RailsErrorDashboard
           resolution_comment: params[:resolution_comment]
         )
       when "mute"
-        Commands::BatchMuteErrors.call(error_ids, muted_by: params[:muted_by])
+        Commands::BatchMuteErrors.call(error_ids, muted_by: params[:muted_by], reason: params[:reason])
       when "unmute"
         Commands::BatchUnmuteErrors.call(error_ids)
       when "delete"

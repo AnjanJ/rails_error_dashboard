@@ -49,6 +49,27 @@ RSpec.describe RailsErrorDashboard::Commands::BatchMuteErrors do
         end
       end
 
+      context "with reason" do
+        # Regression test: BatchMuteErrors used to silently drop the reason
+        # because it didn't accept the kwarg, while the single MuteError
+        # command (`Commands::MuteError`) does support `:reason` and stores
+        # it as `muted_reason`. Single/batch parity matters because callers
+        # plug either command in interchangeably.
+        it "sets muted_reason on each error" do
+          described_class.call(error_ids, reason: "expected during deploy")
+
+          expect(error1.reload.muted_reason).to eq("expected during deploy")
+          expect(error2.reload.muted_reason).to eq("expected during deploy")
+          expect(error3.reload.muted_reason).to eq("expected during deploy")
+        end
+
+        it "leaves muted_reason nil when not provided" do
+          described_class.call(error_ids)
+
+          expect(error1.reload.muted_reason).to be_nil
+        end
+      end
+
       it "dispatches plugin event for muted errors" do
         expect(RailsErrorDashboard::PluginRegistry).to receive(:dispatch)
           .with(:on_errors_batch_muted, kind_of(Array))
