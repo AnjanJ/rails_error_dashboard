@@ -60,8 +60,11 @@ module RailsErrorDashboard
       # Use Query to get filtered errors
       errors_query = Queries::ErrorsList.call(filter_params)
 
-      # Paginate with Pagy
-      @pagy, @errors = pagy(:offset, errors_query, limit: params[:per_page] || 25)
+      # Paginate with Pagy. raise_range_error makes pagy 43.x raise Pagy::RangeError
+      # on out-of-range pages (e.g. ?page=999999) so application_controller.rb's
+      # rescue_from can redirect to a valid page. Without this, pagy 43.x silently
+      # returns an empty result and users see "All clear!" instead of their data.
+      @pagy, @errors = pagy(:offset, errors_query, limit: params[:per_page] || 25, raise_range_error: true)
 
       # Get dashboard stats using Query (pass application filter)
       @stats = Queries::DashboardStats.call(application_id: @current_application_id)
