@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard-v0.6.2...rails_error_dashboard/v0.6.3) (2026-05-03)
+
+
+### 🐛 Bug Fixes
+
+* Assigned and Reopened pills hid resolved errors ([ad1703a](https://github.com/AnjanJ/rails_error_dashboard/commit/ad1703af92cbc9faa2c10191e911ac17c37d02fe))
+* BatchMuteErrors accepts and persists mute reason ([27f0bc0](https://github.com/AnjanJ/rails_error_dashboard/commit/27f0bc03671e5d8a7e63f8ca0ef660b8e192c07f))
+* bulk-resolved errors now appear under the Resolved filter ([e2c407c](https://github.com/AnjanJ/rails_error_dashboard/commit/e2c407ce66039826cef3a029f73ba317a9d11d31))
+* cross-page errors_path links no longer hide resolved errors ([93544e9](https://github.com/AnjanJ/rails_error_dashboard/commit/93544e950c33b9e628b02640a46630d09e3e3aa3))
+
+
+### 🧹 Maintenance
+
+* backfill status='resolved' for errors bulk-resolved on v0.6.0–v0.6.2 ([ce1d304](https://github.com/AnjanJ/rails_error_dashboard/commit/ce1d304cf4b2f0745eca3d35aec6f1dc895d3ebc))
+* sync release-please manifest with actual published version ([fd50923](https://github.com/AnjanJ/rails_error_dashboard/commit/fd5092372351117eaf980f11c5d0a98375225e8f))
+
 ## [0.6.2] - 2026-05-03 — Strict CSP Compatibility & UI Bug Fixes
 
 ### Fixed
