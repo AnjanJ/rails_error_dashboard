@@ -211,8 +211,10 @@
               <i class="bi bi-person"></i> View User's Errors
             <% end %>
           <% end %>
-          <%= link_to errors_path(app_context.merge(platform: @error.platform, unresolved: '0')), class: "btn btn-sm" do %>
-            <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
+          <% if @error.platform.present? %>
+            <%= link_to errors_path(app_context.merge(platform: @error.platform, unresolved: '0')), class: "btn btn-sm" do %>
+              <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
+            <% end %>
           <% end %>
           <%= link_to analytics_errors_path(app_context), class: "btn btn-sm" do %>
             <i class="bi bi-bar-chart-line"></i> Analytics
