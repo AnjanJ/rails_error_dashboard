@@ -106,7 +106,7 @@
 
       <!-- Advanced filters toggle -->
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
-      <button type="button" onclick="document.getElementById('advanced-filters').style.display = document.getElementById('advanced-filters').style.display === 'none' ? 'flex' : 'none'" class="filter-pill" style="border: none;">
+      <button type="button" data-red-action="toggle-display" data-red-target="#advanced-filters" data-red-display="flex" class="filter-pill" style="border: none;">
         <i class="bi bi-sliders"></i> More filters
       </button>
     </div>
@@ -194,6 +194,23 @@
   <!-- Error Table -->
   <div class="card" style="overflow: hidden;">
     <% if @errors.any? %>
+      <!-- Batch action toolbar (shown when one or more errors are selected). Sits above the table
+           so it doesn't disrupt the table's column widths the way a colspan thead row does. -->
+      <div id="batch-toolbar" style="display: none; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); background: var(--surface-secondary);">
+        <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 8px; align-items: center; flex-wrap: wrap;" do |f| %>
+          <% if params[:application_id].present? %>
+            <%= hidden_field_tag :application_id, params[:application_id] %>
+          <% end %>
+          <input type="checkbox" id="select-all-batch" class="form-check-input" style="accent-color: var(--accent); margin: 0;" checked>
+          <span id="selected-count" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-right: var(--space-2);"></span>
+          <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
+            <i class="bi bi-check-circle"></i> Resolve
+          <% end %>
+          <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
+            <i class="bi bi-trash"></i> Delete
+          <% end %>
+        <% end %>
+      </div>
       <div data-loading-target="content">
         <div style="overflow-x: auto;">
         <table class="table table-hover" style="margin-bottom: 0; width: 100%; table-layout: fixed;">
@@ -213,25 +230,6 @@
               <% if @platforms.size > 1 %>
                 <th style="padding: var(--space-3) var(--space-4); width: 100px;">Platform</th>
               <% end %>
-            </tr>
-            <tr id="thead-batch" style="display: none; border-bottom: 1px solid var(--border-primary); background: var(--surface-secondary);">
-              <th style="width: 40px; padding: var(--space-3) var(--space-4); text-align: center;">
-                <input type="checkbox" id="select-all-batch" class="form-check-input" style="accent-color: var(--accent);" checked>
-              </th>
-              <th colspan="99" style="padding: var(--space-3) var(--space-4);">
-                <%= form_with url: batch_action_errors_path, method: :post, id: "batch-form", style: "display: flex; gap: 8px; align-items: center;" do |f| %>
-                  <% if params[:application_id].present? %>
-                    <%= hidden_field_tag :application_id, params[:application_id] %>
-                  <% end %>
-                  <span id="selected-count" style="font-size: 13px; font-weight: 600; color: var(--text-primary);"></span>
-                  <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
-                    <i class="bi bi-check-circle"></i> Resolve
-                  <% end %>
-                  <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
-                    <i class="bi bi-trash"></i> Delete
-                  <% end %>
-                <% end %>
-              </th>
             </tr>
           </thead>
           <tbody id="error_list">
@@ -276,12 +274,11 @@
   </div>
 </div>
 
-<script>
+<%= red_javascript_tag do %>
 document.addEventListener('DOMContentLoaded', function() {
   var selectAllCheckbox = document.getElementById('select-all');
   var selectAllBatchCheckbox = document.getElementById('select-all-batch');
-  var theadColumns = document.getElementById('thead-columns');
-  var theadBatch = document.getElementById('thead-batch');
+  var batchToolbar = document.getElementById('batch-toolbar');
   var selectedCountSpan = document.getElementById('selected-count');
   var batchForm = document.getElementById('batch-form');
 
@@ -297,14 +294,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var someChecked = Array.from(boxes).some(function(cb) { return cb.checked; });
 
     if (count > 0) {
-      theadColumns.style.display = 'none';
-      theadBatch.style.display = '';
-      selectedCountSpan.textContent = count + ' selected';
-      selectAllBatchCheckbox.checked = allChecked;
-      selectAllBatchCheckbox.indeterminate = someChecked && !allChecked;
+      if (batchToolbar) batchToolbar.style.display = '';
+      if (selectedCountSpan) selectedCountSpan.textContent = count + ' selected';
+      if (selectAllBatchCheckbox) {
+        selectAllBatchCheckbox.checked = allChecked;
+        selectAllBatchCheckbox.indeterminate = someChecked && !allChecked;
+      }
     } else {
-      theadColumns.style.display = '';
-      theadBatch.style.display = 'none';
+      if (batchToolbar) batchToolbar.style.display = 'none';
     }
 
     if (selectAllCheckbox) {
@@ -394,4 +391,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-</script>
+<% end %>

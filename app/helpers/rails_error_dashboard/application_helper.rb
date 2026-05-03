@@ -1,5 +1,32 @@
 module RailsErrorDashboard
   module ApplicationHelper
+    # Returns the host app's CSP nonce (if any) so inline <script> tags pass strict CSP.
+    # Falls back to nil when the host has no CSP configured — in that case the script tag
+    # works without a nonce attribute. Strict CSPs (script-src 'self' 'nonce-...') require
+    # this; without it the script is blocked.
+    def red_csp_nonce
+      return nil unless respond_to?(:content_security_policy_nonce)
+      content_security_policy_nonce
+    rescue StandardError
+      nil
+    end
+
+    # Wraps an inline <script> block with the host app's CSP nonce when available.
+    # Use everywhere we have <script>...</script> in our views so they pass strict CSP.
+    #
+    #   <%= red_javascript_tag do %>
+    #     console.log('hi');
+    #   <% end %>
+    def red_javascript_tag(&block)
+      nonce = red_csp_nonce
+      content = capture(&block)
+      if nonce
+        content_tag(:script, content.html_safe, nonce: nonce)
+      else
+        content_tag(:script, content.html_safe)
+      end
+    end
+
     # Returns Bootstrap color class for error severity
     # Uses Catppuccin Mocha colors in dark theme via CSS variables
     # @param severity [Symbol] The severity level (:critical, :high, :medium, :low, :info)

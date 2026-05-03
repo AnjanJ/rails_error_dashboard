@@ -77,10 +77,10 @@
       <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#assignModal" id="hero-assign-btn">
         Assign
       </button>
-      <button type="button" class="btn" onclick="copyToClipboard(this.dataset.markdown.replace(/\\(.)/g, function(m,c){return c==='n'?'\n':c}), this)" data-markdown="<%= j @error_markdown %>">
+      <button type="button" class="btn" data-red-action="copy-markdown" data-markdown="<%= j @error_markdown %>">
         <i class="bi bi-clipboard" style="margin-right: 4px;"></i>Copy for LLM
       </button>
-      <button type="button" class="btn" onclick="downloadErrorJSON(event)" title="Export JSON">
+      <button type="button" class="btn" data-red-action="download-json" title="Export JSON">
         <i class="bi bi-download"></i>
       </button>
     </div>
@@ -92,17 +92,17 @@
     <div>
       <!-- Tab bar -->
       <div style="display: flex; gap: 0; border-bottom: 1px solid var(--border-primary); margin-bottom: var(--space-4);">
-        <button onclick="switchTab('details')" class="red-tab active" id="tab-details" style="padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: none; border-bottom: 2px solid var(--accent); margin-bottom: -1px; cursor: pointer;">
+        <button type="button" data-red-action="switch-tab" data-red-tab="details" class="red-tab active" id="tab-details" style="padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: none; border-bottom: 2px solid var(--accent); margin-bottom: -1px; cursor: pointer;">
           <i class="bi bi-code-slash" style="margin-right: 6px;"></i>Details
         </button>
-        <button onclick="switchTab('context')" class="red-tab" id="tab-context" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
+        <button type="button" data-red-action="switch-tab" data-red-tab="context" class="red-tab" id="tab-context" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
           <i class="bi bi-layers" style="margin-right: 6px;"></i>Context
         </button>
-        <button onclick="switchTab('history')" class="red-tab" id="tab-history" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
+        <button type="button" data-red-action="switch-tab" data-red-tab="history" class="red-tab" id="tab-history" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
           <i class="bi bi-clock-history" style="margin-right: 6px;"></i>History
         </button>
         <% if RailsErrorDashboard.configuration.enable_issue_tracking %>
-          <button onclick="switchTab('issues')" class="red-tab" id="tab-issues" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
+          <button type="button" data-red-action="switch-tab" data-red-tab="issues" class="red-tab" id="tab-issues" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
             <i class="bi bi-github" style="margin-right: 6px;"></i>Issues
           </button>
         <% end %>
@@ -225,8 +225,8 @@
 
 <%= render "modals", error: @error %>
 
-<script>
-function switchTab(tabId) {
+<%= red_javascript_tag do %>
+window.switchTab = function(tabId) {
   // Deactivate all tabs
   document.querySelectorAll('.red-tab').forEach(function(el) {
     el.style.color = 'var(--text-secondary)';
@@ -243,5 +243,5 @@ function switchTab(tabId) {
   // Scroll to selected panel
   var panel = document.getElementById('panel-' + tabId);
   if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-}
-</script>
+};
+<% end %>

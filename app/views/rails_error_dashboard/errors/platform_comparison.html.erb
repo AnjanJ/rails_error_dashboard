@@ -290,7 +290,7 @@
   <% end %>
 </div>
 
-<script>
+<script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
   // Platform color mapping - consistent with analytics page
   const platformColorMap = {
     'api': '#2563EB',           // Blue

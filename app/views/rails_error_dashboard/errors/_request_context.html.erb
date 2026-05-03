@@ -84,17 +84,17 @@
                 <th>Replay Request:</th>
                 <td>
                   <% if curl_cmd.present? %>
-                    <button class="btn btn-sm btn-outline-primary me-2"
-                            onclick="copyToClipboard(this.dataset.curl, this)"
-                            data-curl="<%= h curl_cmd %>"
+                    <button type="button" class="btn btn-sm btn-outline-primary me-2"
+                            data-red-action="copy"
+                            data-red-copy-text="<%= h curl_cmd %>"
                             title="Copy curl command to clipboard">
                       <i class="bi bi-terminal"></i> Copy as curl
                     </button>
                   <% end %>
                   <% if rspec_cmd.present? %>
-                    <button class="btn btn-sm btn-outline-success"
-                            onclick="copyToClipboard(this.dataset.curl, this)"
-                            data-curl="<%= h rspec_cmd %>"
+                    <button type="button" class="btn btn-sm btn-outline-success"
+                            data-red-action="copy"
+                            data-red-copy-text="<%= h rspec_cmd %>"
                             title="Copy RSpec request spec to clipboard">
                       <i class="bi bi-code-slash"></i> Copy as RSpec
                     </button>

@@ -1,5 +1,5 @@
-<script>
-  function downloadErrorJSON(event) {
+<script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
+  window.downloadErrorJSON = function(event) {
     const errorData = {
       id: <%= raw error.id.to_json %>,
       error_type: <%= raw error.error_type.to_json %>,
@@ -52,7 +52,7 @@
       button.classList.remove('btn-success');
       button.classList.add('btn-outline-secondary');
     }, 2000);
-  }
+  };
 
   // Section Navigation — pill bar with scroll spy
   document.addEventListener('DOMContentLoaded', function() {

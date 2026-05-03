@@ -526,7 +526,7 @@
             <small class="metadata-label d-block mb-1">Error ID</small>
             <div class="d-flex align-items-center gap-2">
               <code><%= error.id %></code>
-              <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('<%= error.id %>', this)" title="Copy error ID">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= error.id %>" title="Copy error ID">
                 <i class="bi bi-clipboard"></i>
               </button>
             </div>

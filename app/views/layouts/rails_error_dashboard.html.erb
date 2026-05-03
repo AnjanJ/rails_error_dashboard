@@ -39,7 +39,7 @@
     <% end %>
 
     <!-- Early theme detection (prevents flash of wrong theme) -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
     (function(){
       var t = localStorage.getItem('red-theme');
       if (t === 'dark' || (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -880,6 +880,12 @@ main { animation: contentFadeIn 0.15s ease; }
 details { background: var(--surface-primary); border: 1px solid var(--border-primary); border-radius: var(--radius-md); }
 summary { padding: var(--space-3) var(--space-4); cursor: pointer; font-weight: 500; color: var(--text-primary); background: var(--surface-hover); }
 details[open] summary { border-bottom: 1px solid var(--border-primary); }
+
+/* Error row hover (replaces inline onmouseenter/onmouseleave) */
+tr[data-red-row-href] { transition: background 0.1s ease; }
+tr[data-red-row-href]:hover { background: var(--surface-hover); }
+tr[data-red-row-href] .sev-bar { transition: opacity 0.1s ease; }
+tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
     </style>
   </head>
 
@@ -957,7 +963,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
 
           <% if health_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navHealthSection">
-              <button class="red-sidebar-section-label" onclick="toggleNavSection('navHealthItems')">
+              <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navHealthItems">
                 Health
                 <i class="bi bi-chevron-down" style="font-size: 10px;" id="navHealthChevron"></i>
               </button>
@@ -988,7 +994,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
 
           <% if diag_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navDiagSection">
-              <button class="red-sidebar-section-label" onclick="toggleNavSection('navDiagItems')">
+              <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navDiagItems">
                 Diagnostics
                 <i class="bi bi-chevron-down" style="font-size: 10px;" id="navDiagChevron"></i>
               </button>
@@ -1006,7 +1012,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
 
           <!-- INSIGHTS section -->
           <div style="margin-bottom: var(--space-2);" id="navInsightsSection">
-            <button class="red-sidebar-section-label" onclick="toggleNavSection('navInsightsItems')">
+            <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navInsightsItems">
               Insights
               <i class="bi bi-chevron-down" style="font-size: 10px;" id="navInsightsChevron"></i>
             </button>
@@ -1120,9 +1126,9 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
                 Set <code>ERROR_DASHBOARD_USER</code> and <code>ERROR_DASHBOARD_PASSWORD</code> environment variables,
                 or configure <code>authenticate_with</code> in your initializer.
               </div>
-              <button type="button" onclick="this.parentElement.style.display='none'; try { sessionStorage.setItem('red_dismiss_creds_warning','1') } catch(e) {}" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="Dismiss for this session">&times;</button>
+              <button type="button" data-red-action="dismiss-creds-warning" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="Dismiss for this session">&times;</button>
             </div>
-            <script>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
+            <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
           <% end %>
           <%= yield %>
         </main>
@@ -1211,7 +1217,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
     <script src="https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.umd.js"></script>
 
     <!-- Loading State Controller -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
 (function() {
   'use strict';
   if (typeof Stimulus === 'undefined') return;
@@ -1290,7 +1296,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
     </script>
 
     <!-- Syntax Highlighting -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
 (function() {
   'use strict';
   if (typeof hljs === 'undefined') return;
@@ -1334,7 +1340,7 @@ details[open] summary { border-bottom: 1px solid var(--border-primary); }
     </script>
 
     <!-- Theme Toggle + Chart Theme -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
 document.addEventListener('DOMContentLoaded', function() {
   var themeToggle = document.getElementById('themeToggle');
   var themeIcon = document.getElementById('themeIcon');
@@ -1421,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 
     <!-- Utilities (tooltips, clipboard, time conversion, keyboard shortcuts) -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
 document.addEventListener('DOMContentLoaded', function() {
 
   // Tooltips
@@ -1591,11 +1597,114 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = '<%= analytics_errors_path %>';
     }
   });
+
+  // ==========================================================================
+  // Delegated event handlers for [data-red-action]
+  // Replaces inline event handlers (which strict CSP blocks).
+  // ==========================================================================
+  function findActionEl(target) {
+    var el = target;
+    while (el && el !== document.body) {
+      if (el.dataset && el.dataset.redAction) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  document.addEventListener('click', function(e) {
+    // Row navigation: <tr data-red-row-href="/path"> — clicking anywhere on the row
+    // navigates, except when clicking inside a checkbox cell or interactive elements.
+    var rowEl = e.target.closest && e.target.closest('[data-red-row-href]');
+    if (rowEl && !e.defaultPrevented) {
+      var inIgnore = e.target.closest('input, button, a, label, [data-red-stop]');
+      if (!inIgnore) {
+        window.location = rowEl.dataset.redRowHref;
+        return;
+      }
+    }
+
+    var actionEl = findActionEl(e.target);
+    if (!actionEl) return;
+    var action = actionEl.dataset.redAction;
+
+    switch (action) {
+      case 'navigate':
+        if (actionEl.dataset.redHref) {
+          window.location = actionEl.dataset.redHref;
+        }
+        break;
+      case 'copy':
+        if (typeof window.copyToClipboard === 'function') {
+          var text = actionEl.dataset.redCopyText;
+          if (text == null && actionEl.dataset.redCopyFrom) {
+            text = actionEl.dataset[actionEl.dataset.redCopyFrom];
+          }
+          window.copyToClipboard(text || '', actionEl);
+        }
+        break;
+      case 'copy-markdown':
+        if (typeof window.copyToClipboard === 'function') {
+          var md = (actionEl.dataset.markdown || '').replace(/\\(.)/g, function(m, c) {
+            return c === 'n' ? '\n' : c;
+          });
+          window.copyToClipboard(md, actionEl);
+        }
+        break;
+      case 'download-json':
+        if (typeof window.downloadErrorJSON === 'function') {
+          // Provide currentTarget pointing at the button so the handler can show feedback.
+          window.downloadErrorJSON({ currentTarget: actionEl });
+        }
+        break;
+      case 'switch-tab':
+        if (typeof window.switchTab === 'function' && actionEl.dataset.redTab) {
+          window.switchTab(actionEl.dataset.redTab);
+        }
+        break;
+      case 'toggle-display':
+        var tgtSel = actionEl.dataset.redTarget;
+        if (tgtSel) {
+          var tgt = document.querySelector(tgtSel);
+          if (tgt) {
+            var openDisplay = actionEl.dataset.redDisplay || 'block';
+            tgt.style.display = (tgt.style.display === 'none' || tgt.style.display === '') ? openDisplay : 'none';
+          }
+        }
+        break;
+      case 'toggle-next':
+        var nextEl = actionEl.nextElementSibling;
+        if (nextEl) {
+          var isHidden = nextEl.style.display === 'none' || nextEl.style.display === '';
+          nextEl.style.display = isHidden ? (actionEl.dataset.redDisplay || 'block') : 'none';
+          var chev = actionEl.querySelector('.chev');
+          if (chev) {
+            chev.className = isHidden ? 'bi bi-chevron-up chev' : 'bi bi-chevron-down chev';
+          }
+        }
+        break;
+      case 'dismiss-creds-warning':
+        if (actionEl.parentElement) actionEl.parentElement.style.display = 'none';
+        try { sessionStorage.setItem('red_dismiss_creds_warning', '1'); } catch (err) {}
+        break;
+      case 'toggle-nav-section':
+        if (typeof window.toggleNavSection === 'function' && actionEl.dataset.redTarget) {
+          window.toggleNavSection(actionEl.dataset.redTarget);
+        }
+        break;
+      case 'confirm-submit':
+        var msg = actionEl.dataset.redConfirmMessage || 'Are you sure?';
+        if (!window.confirm(msg)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        break;
+    }
+  });
 });
     </script>
 
     <!-- Sidebar Toggle + Nav Section Toggle -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
 document.addEventListener('DOMContentLoaded', function() {
   var sidebarToggle = document.getElementById('sidebarToggle');
   var sidebar = document.getElementById('sidebar');
@@ -1622,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Nav section collapse/expand
-function toggleNavSection(itemsId) {
+window.toggleNavSection = function(itemsId) {
   var items = document.getElementById(itemsId);
   var chevron = document.getElementById(itemsId.replace('Items', 'Chevron'));
   if (items) {
@@ -1631,7 +1740,7 @@ function toggleNavSection(itemsId) {
     if (chevron) chevron.className = hidden ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
     localStorage.setItem('red_nav_' + itemsId, hidden ? 'open' : 'closed');
   }
-}
+};
 
 // Restore nav section states
 document.addEventListener('DOMContentLoaded', function() {
@@ -1648,7 +1757,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 
     <!-- Flash Messages -->
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
       <% if defined?(flash) && flash.present? %>
         <% if flash[:notice] %>
           showToast('<%= j flash[:notice] %>', 'success');

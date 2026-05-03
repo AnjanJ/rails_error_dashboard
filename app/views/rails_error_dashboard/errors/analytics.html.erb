@@ -1,6 +1,6 @@
 <% content_for :page_title, "Analytics" %>
 
-<script>
+<script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
   // Dynamic chart colors based on theme
   window.getChartColors = function() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -67,7 +67,7 @@
     </div>
     <div class="card-body">
       <div id="errors-over-time-chart"></div>
-      <script>
+      <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
         document.addEventListener('DOMContentLoaded', function() {
           const colors = window.getChartColors();
           new Chartkick.LineChart("errors-over-time-chart", <%= raw @errors_over_time.to_json %>, {
@@ -112,7 +112,7 @@
           </div>
           <div class="card-body">
             <div id="errors-by-platform-chart"></div>
-            <script>
+            <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
                 // Distinct, accessible colors for 5 platforms with good contrast
@@ -166,7 +166,7 @@
         </div>
         <div class="card-body">
           <div id="errors-by-type-chart"></div>
-          <script>
+          <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
             document.addEventListener('DOMContentLoaded', function() {
               const colors = window.getChartColors();
               new Chartkick.BarChart("errors-by-type-chart", <%= raw @errors_by_type.to_json %>, {
@@ -208,7 +208,7 @@
         </div>
         <div class="card-body">
           <div id="errors-by-hour-chart"></div>
-          <script>
+          <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
             document.addEventListener('DOMContentLoaded', function() {
               const colors = window.getChartColors();
               new Chartkick.ColumnChart("errors-by-hour-chart", <%= raw @errors_by_hour.to_json %>, {
@@ -410,7 +410,7 @@
           </div>
           <div class="card-body">
             <div id="errors-by-version-chart"></div>
-            <script>
+            <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
                 const versionData = <%= raw @errors_by_version.transform_values { |v| v[:count] }.to_json %>;
                 const colors = window.getChartColors();
@@ -549,7 +549,7 @@
           <div class="mt-4">
             <h6 class="text-muted mb-3">MTTR by Platform</h6>
             <div id="mttr-by-platform-chart"></div>
-            <script>
+            <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
                 new Chartkick.BarChart("mttr-by-platform-chart",
@@ -602,7 +602,7 @@
           <div class="mt-4">
             <h6 class="text-muted mb-3">MTTR Trend (Weekly)</h6>
             <div id="mttr-trend-chart"></div>
-            <script>
+            <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
                 new Chartkick.LineChart("mttr-trend-chart",

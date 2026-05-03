@@ -181,7 +181,7 @@
   <!-- Dynamically render setting groups -->
   <% setting_groups.each do |group_name, group_config| %>
     <div class="card" style="margin-bottom: var(--space-4);">
-      <button onclick="var b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none'; var chev = this.querySelector('.chev'); if(chev) chev.className = b.style.display === 'none' ? 'bi bi-chevron-down chev' : 'bi bi-chevron-up chev';" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: var(--space-4) var(--space-6); background: none; border: none; cursor: pointer; border-bottom: 1px solid var(--border-primary);">
+      <button type="button" data-red-action="toggle-next" data-red-display="block" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: var(--space-4) var(--space-6); background: none; border: none; cursor: pointer; border-bottom: 1px solid var(--border-primary);">
         <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"><i class="<%= group_config[:icon] %>" style="margin-right: 6px;"></i> <%= group_name %></span>
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 11px; color: var(--text-tertiary);"><%= group_config[:settings].size %> options</span>
@@ -270,7 +270,7 @@
         The test error is clearly marked and safe to resolve or delete.
       </p>
       <%= form_tag test_error_errors_path(application_id: @current_application_id.presence), method: :post, style: "display: inline;" do %>
-        <button type="submit" class="btn btn-outline" onclick="return confirm('This will create a test error and send notifications to all configured channels. Continue?')">
+        <button type="submit" class="btn btn-outline" data-red-action="confirm-submit" data-red-confirm-message="This will create a test error and send notifications to all configured channels. Continue?">
           <i class="bi bi-send" style="margin-right: 4px;"></i> Send Test Error
         </button>
       <% end %>

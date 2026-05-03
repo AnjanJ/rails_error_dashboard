@@ -112,7 +112,7 @@
   </div>
 
   <% if flash[:new_issue_url].present? %>
-    <script>
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
       (function() {
         window.open('<%= j flash[:new_issue_url] %>', '_blank');
       })();
