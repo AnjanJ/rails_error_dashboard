@@ -105,7 +105,7 @@
                     <% end %>
                   </td>
                   <td>
-                    <%= link_to "View", errors_path(search: release[:version]), class: "btn btn-sm btn-outline-primary" %>
+                    <%= link_to "View", errors_path(search: release[:version], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>

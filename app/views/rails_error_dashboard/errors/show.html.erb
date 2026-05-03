@@ -203,15 +203,15 @@
           <span style="font-size: 13px; font-weight: 600;">Quick Actions</span>
         </div>
         <div style="padding: var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2);">
-          <%= link_to errors_path(app_context.merge(error_type: @error.error_type)), class: "btn btn-sm" do %>
+          <%= link_to errors_path(app_context.merge(error_type: @error.error_type, unresolved: '0')), class: "btn btn-sm" do %>
             <i class="bi bi-filter"></i> View Similar Errors
           <% end %>
           <% if @error.user_id %>
-            <%= link_to errors_path(app_context.merge(user_id: @error.user_id)), class: "btn btn-sm" do %>
+            <%= link_to errors_path(app_context.merge(user_id: @error.user_id, unresolved: '0')), class: "btn btn-sm" do %>
               <i class="bi bi-person"></i> View User's Errors
             <% end %>
           <% end %>
-          <%= link_to errors_path(app_context.merge(platform: @error.platform)), class: "btn btn-sm" do %>
+          <%= link_to errors_path(app_context.merge(platform: @error.platform, unresolved: '0')), class: "btn btn-sm" do %>
             <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
           <% end %>
           <%= link_to analytics_errors_path(app_context), class: "btn btn-sm" do %>

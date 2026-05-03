@@ -148,7 +148,7 @@
             <div class="d-flex gap-2 flex-wrap">
               <small class="text-muted me-2">Quick Links:</small>
               <% @errors_by_platform.keys.each do |platform| %>
-                <%= link_to platform, errors_path(platform: platform), class: "btn btn-sm btn-outline-secondary" %>
+                <%= link_to platform, errors_path(platform: platform, unresolved: '0'), class: "btn btn-sm btn-outline-secondary" %>
               <% end %>
             </div>
           </div>
@@ -304,7 +304,7 @@
                       </div>
                     </td>
                     <td>
-                      <%= link_to "View Errors", errors_path(error_type: error_type), class: "btn btn-sm btn-outline-primary" %>
+                      <%= link_to "View Errors", errors_path(error_type: error_type, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                     </td>
                   </tr>
                 <% end %>
@@ -587,7 +587,7 @@
                       </td>
                       <td><strong><%= hours %> hours</strong></td>
                       <td>
-                        <%= link_to "View", errors_path(severity: severity), class: "btn btn-sm btn-outline-primary" %>
+                        <%= link_to "View", errors_path(severity: severity, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                       </td>
                     </tr>
                   <% end %>
