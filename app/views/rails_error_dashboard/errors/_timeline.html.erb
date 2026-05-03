@@ -78,8 +78,7 @@
                         <% if error.resolution_comment.present? %>
                           data-bs-toggle="tooltip"
                           data-bs-placement="top"
-                          data-bs-html="true"
-                          title="<strong>Resolution Notes:</strong><br><%= error.resolution_comment.truncate(150).gsub('"', '&quot;') %>"
+                          title="Resolution Notes: <%= error.resolution_comment.truncate(150) %>"
                         <% end %>>
                     <i class="bi bi-check-circle"></i> Resolved
                   </span>
