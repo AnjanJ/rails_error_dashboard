@@ -93,7 +93,11 @@
             <tbody>
               <% @entries.each do |entry| %>
                 <tr>
-                  <td><code style="font-size: 0.85em;"><%= entry[:exception_class] %></code></td>
+                  <td>
+                    <%= link_to errors_path(error_type: entry[:exception_class], unresolved: '0'), class: "text-decoration-none", title: "View any unrescued #{entry[:exception_class]} errors that leaked into error_log" do %>
+                      <code style="font-size: 0.85em;"><%= entry[:exception_class] %></code>
+                    <% end %>
+                  </td>
                   <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:raise_location] %></td>
                   <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:rescue_location] || "Unknown" %></td>
                   <td><span class="badge bg-info text-dark"><%= number_with_delimiter(entry[:raise_count]) %></span></td>

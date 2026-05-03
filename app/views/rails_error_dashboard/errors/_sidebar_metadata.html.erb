@@ -249,7 +249,9 @@
               <% if error.app_version.present? %>
                 <div class="mb-1">
                   <small class="text-muted">App Version:</small>
-                  <code class="ms-1"><%= error.app_version %></code>
+                  <%= link_to errors_path(app_version: error.app_version, unresolved: '0'), class: "ms-1 text-decoration-none", title: "View all errors in #{error.app_version}" do %>
+                    <code><%= error.app_version %></code>
+                  <% end %>
                 </div>
               <% end %>
 
