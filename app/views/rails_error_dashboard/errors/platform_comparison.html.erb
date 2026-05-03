@@ -227,7 +227,9 @@
                 <% @cross_platform_errors.first(10).each do |error| %>
                   <tr>
                     <td>
-                      <code class="small"><%= error[:error_type] %></code>
+                      <%= link_to errors_path(error_type: error[:error_type], unresolved: '0'), class: "text-decoration-none" do %>
+                        <code class="small"><%= error[:error_type] %></code>
+                      <% end %>
                     </td>
                     <td>
                       <% error[:platforms].each do |platform| %>
