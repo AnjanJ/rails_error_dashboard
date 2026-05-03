@@ -1,5 +1,5 @@
 {
-  "bootstrap-sha": "0d6d91e94df1faf158a022c41161635b4c1d0953",
+  "bootstrap-sha": "c02a1081bb7d3a7fe52f4245bc77dbad7fc5b6e7",
   "packages": {
     ".": {
       "package-name": "rails_error_dashboard",
