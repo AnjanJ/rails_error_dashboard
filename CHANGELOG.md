@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.6.4...rails_error_dashboard/v0.6.5) (2026-05-04)
+
+
+### 📚 Documentation
+
+* add testimonial from [@gmarziou](https://github.com/gmarziou) (discussion [#116](https://github.com/AnjanJ/rails_error_dashboard/issues/116)) ([6f21319](https://github.com/AnjanJ/rails_error_dashboard/commit/6f21319f88dc7b18f700f670fd9965df5b8cd342))
+
 ## [0.6.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.6.3...rails_error_dashboard/v0.6.4) (2026-05-04)
 
 
