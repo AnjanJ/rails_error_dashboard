@@ -17,7 +17,7 @@ hero:
 features:
   - icon: "\U0001F3A8"
     title: Beautiful UI
-    details: Modern Bootstrap 5 design with dark/light mode, real-time updates, and responsive layout.
+    details: Custom design system with dark/light mode, real-time updates, and responsive layout.
   - icon: "\U0001F4CA"
     title: Real-time Analytics
     details: Error trends, platform health, correlation insights, baseline monitoring, and occurrence patterns.

@@ -63,7 +63,7 @@ gem 'rails_error_dashboard'
 
 ### Core (Always Enabled)
 
-Error capture from controllers, jobs, and middleware. Beautiful Bootstrap 5 dashboard with dark/light mode, search, filtering, and real-time updates. Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
+Error capture from controllers, jobs, and middleware. Custom-designed dashboard with dark/light mode, search, filtering, and real-time updates. Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
 
 ### Optional Features
 
@@ -521,7 +521,7 @@ Available as open source under the [MIT License](https://opensource.org/licenses
 
 ## Acknowledgments
 
-Built with [Rails](https://rubyonrails.org/) · UI by [Bootstrap 5](https://getbootstrap.com/) · Charts by [Chart.js](https://www.chartjs.org/) · Pagination by [Pagy](https://github.com/ddnexus/pagy) · Docs theme by [Jekyll VitePress Theme](https://jekyll-vitepress.dev/) by [@crmne](https://github.com/crmne)
+Built with [Rails](https://rubyonrails.org/) · Custom design tokens with [Bootstrap 5 JS](https://getbootstrap.com/) for tooltips and modals · Charts by [Chart.js](https://www.chartjs.org/) · Pagination by [Pagy](https://github.com/ddnexus/pagy) · Docs theme by [Jekyll VitePress Theme](https://jekyll-vitepress.dev/) by [@crmne](https://github.com/crmne)
 
 ## Contributors
 

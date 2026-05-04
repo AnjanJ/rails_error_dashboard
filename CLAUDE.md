@@ -12,7 +12,7 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 2. **CQRS** — Commands for writes (`app/commands/`), Queries for reads (`app/queries/`), Services for algorithms (`app/services/`)
 3. **NEVER depend on Rails asset pipeline** — no Sprockets, no Propshaft, no `app/assets/`, no `public/` directory serving
 4. All CSS is inline in the layout `<style>` block, all JS is inline in `<script>` blocks
-5. External dependencies (Bootstrap, Chart.js, Highlight.js) loaded via CDN only
+5. External dependencies (Bootstrap JS for tooltips/modals, Chart.js, Highlight.js) loaded via CDN only — Bootstrap CSS was removed in v0.6.0 in favor of a custom design token system
 6. Layout must be fully self-contained — works with any proxy (Thruster, Nginx, etc.)
 
 ## Testing
