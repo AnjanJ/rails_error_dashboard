@@ -37,6 +37,14 @@ gem 'rails_error_dashboard'
 
 ---
 
+## From the Community
+
+> All three [self-hosted alternatives] had an issue with error backtrace when using Turbo — RED did fix it… solid_errors and Faultline are not very active projects, RED is very active and @AnjanJ is very responsive in fixing issues. So, RED was my final choice.
+>
+> — **Gael Marziou** ([@gmarziou](https://github.com/gmarziou)) · [read the full discussion](https://github.com/AnjanJ/rails_error_dashboard/discussions/116)
+
+---
+
 ## Who This Is For
 
 - **Solo bootstrappers** who need professional error tracking without recurring costs

@@ -56,6 +56,12 @@ rails db:migrate
 # Start your app and visit /red
 ```
 
+## From the Community
+
+> All three [self-hosted alternatives] had an issue with error backtrace when using Turbo — RED did fix it… solid_errors and Faultline are not very active projects, RED is very active and @AnjanJ is very responsive in fixing issues. So, RED was my final choice.
+>
+> — **Gael Marziou** ([@gmarziou](https://github.com/gmarziou)) · [discussion #116](https://github.com/AnjanJ/rails_error_dashboard/discussions/116)
+
 ## Why Rails Error Dashboard?
 
 ### Free Forever
