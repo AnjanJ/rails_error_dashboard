@@ -27,6 +27,16 @@ module RailsErrorDashboard
       end
     end
 
+    # Serialize a value to JSON safely for inlining inside a <script> block.
+    # Ruby's #to_json escapes JSON special chars but does NOT escape "</" — a
+    # value containing the literal string "</script>" would break out of the
+    # surrounding <script> tag. Replace "</" with "<\/" (semantically equivalent
+    # in JSON and in JavaScript string literals) to neutralize the close tag.
+    # Returns html_safe for direct interpolation into a script body.
+    def js_safe_json(value)
+      value.to_json.gsub("</", '<\/').html_safe
+    end
+
     # Returns Bootstrap color class for error severity
     # Uses Catppuccin Mocha colors in dark theme via CSS variables
     # @param severity [Symbol] The severity level (:critical, :high, :medium, :low, :info)

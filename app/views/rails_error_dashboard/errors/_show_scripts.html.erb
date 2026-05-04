@@ -1,32 +1,33 @@
 <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
   window.downloadErrorJSON = function(event) {
     const errorData = {
-      id: <%= raw error.id.to_json %>,
-      error_type: <%= raw error.error_type.to_json %>,
-      message: <%= raw error.message.to_json %>,
-      backtrace: <%= raw error.backtrace.to_json %>,
-      occurred_at: <%= raw error.occurred_at.to_json %>,
-      first_seen_at: <%= raw error.first_seen_at.to_json %>,
-      last_seen_at: <%= raw error.last_seen_at.to_json %>,
-      occurrence_count: <%= raw error.occurrence_count.to_json %>,
-      resolved: <%= raw error.resolved?.to_json %>,
-      resolved_at: <%= raw error.resolved_at.to_json %>,
-      resolved_by_name: <%= raw error.resolved_by_name.to_json %>,
-      platform: <%= raw error.platform.to_json %>,
-      user_id: <%= raw error.user_id.to_json %>,
-      severity: <%= raw error.severity.to_json %>,
-      priority_level: <%= raw (error.priority_level || 0).to_json %>,
+      id: <%= js_safe_json(error.id) %>,
+      error_type: <%= js_safe_json(error.error_type) %>,
+      message: <%= js_safe_json(error.message) %>,
+      backtrace: <%= js_safe_json(error.backtrace) %>,
+      occurred_at: <%= js_safe_json(error.occurred_at) %>,
+      first_seen_at: <%= js_safe_json(error.first_seen_at) %>,
+      last_seen_at: <%= js_safe_json(error.last_seen_at) %>,
+      occurrence_count: <%= js_safe_json(error.occurrence_count) %>,
+      resolved: <%= js_safe_json(error.resolved?) %>,
+      resolved_at: <%= js_safe_json(error.resolved_at) %>,
+      resolved_by_name: <%= js_safe_json(error.resolved_by_name) %>,
+      platform: <%= js_safe_json(error.platform) %>,
+      user_id: <%= js_safe_json(error.user_id) %>,
+      severity: <%= js_safe_json(error.severity) %>,
+      priority_level: <%= js_safe_json(error.priority_level || 0) %>,
       <% if error.respond_to?(:exception_cause) && error.exception_cause.present? %>
-      exception_cause: <%= raw error.exception_cause %>,
+      <% parsed_cause = (JSON.parse(error.exception_cause) rescue nil) %>
+      exception_cause: <%= js_safe_json(parsed_cause) %>,
       <% end %>
       <% if error.respond_to?(:app_version) %>
-      app_version: <%= raw error.app_version.to_json %>,
+      app_version: <%= js_safe_json(error.app_version) %>,
       <% end %>
       <% if error.respond_to?(:git_commit) %>
-      git_commit: <%= raw error.git_commit.to_json %>,
+      git_commit: <%= js_safe_json(error.git_commit) %>,
       <% end %>
-      created_at: <%= raw error.created_at.to_json %>,
-      updated_at: <%= raw error.updated_at.to_json %>
+      created_at: <%= js_safe_json(error.created_at) %>,
+      updated_at: <%= js_safe_json(error.updated_at) %>
     };
 
     const jsonString = JSON.stringify(errorData, null, 2);

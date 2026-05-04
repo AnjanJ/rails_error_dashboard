@@ -166,6 +166,35 @@ RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
     end
   end
 
+  describe "#js_safe_json" do
+    # Defense-in-depth: ActiveSupport's to_json already escapes < and > to
+    # < / > by default (escape_html_entities_in_json = true), so
+    # </script> bypass via to_json is not exploitable on default Rails.
+    # We add an explicit </ → <\/ replacement so the helper remains safe even
+    # if a host app disables the AS default, and so the intent is auditable
+    # at the call site.
+    it "neutralizes </script> in string values" do
+      result = helper.js_safe_json("danger </script><script>alert(1)</script>")
+      expect(result).not_to include("</script>")
+      expect(result).to be_html_safe
+    end
+
+    it "neutralizes </script> in nested hash values" do
+      result = helper.js_safe_json({ msg: "evil </script>" })
+      expect(result).not_to include("</script>")
+    end
+
+    it "returns valid JSON for nil, numbers, and booleans" do
+      expect(helper.js_safe_json(nil)).to eq("null")
+      expect(helper.js_safe_json(42)).to eq("42")
+      expect(helper.js_safe_json(true)).to eq("true")
+    end
+
+    it "returns html_safe for direct script-body interpolation" do
+      expect(helper.js_safe_json("hello").html_safe?).to be true
+    end
+  end
+
   describe "#parse_pg_timestamp" do
     # Regression: database_health_summary used Time.parse(value) which raises
     # TypeError when value is already a Time/TimeWithZone (which is what some
