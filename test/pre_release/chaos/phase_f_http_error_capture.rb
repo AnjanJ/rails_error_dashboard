@@ -297,8 +297,12 @@ if nm_error
   # controller_name may be "test_errors" (from request.params[:controller])
   # or "TestErrorsController" (from controller.class.name via Executor context)
   if nm_error.controller_name.present?
+    # controller_name may be "test_errors" (snake_case from request.params[:controller])
+    # or "TestErrorsController" (from controller.class.name via Executor context).
+    # Normalize both to a comparable form before asserting.
+    normalized = nm_error.controller_name.downcase.delete("_")
     assert "context: controller_name captured",
-      nm_error.controller_name.downcase.include?("testerror"),
+      normalized.include?("testerrors"),
       "got #{nm_error.controller_name.inspect}"
   else
     assert "context: controller_name not available (Executor path — OK)", true
