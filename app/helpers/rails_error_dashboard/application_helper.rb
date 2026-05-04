@@ -276,6 +276,13 @@ module RailsErrorDashboard
     def auto_link_urls(text, error: nil)
       return "" if text.blank?
 
+      # SECURITY: escape HTML special chars in the input before any further
+      # processing. simple_format(..., sanitize: false) at the end means
+      # whatever survives this pipeline is rendered as raw HTML; any unescaped
+      # `<script>` or `<img onerror=>` in the user's text would XSS.
+      # We only intentionally inject our own <a> / <code> tags after this point.
+      text = ERB::Util.html_escape(text)
+
       # Get repository URL from error's application or global config
       repo_url = if error&.application.respond_to?(:repository_url) && error.application.repository_url.present?
         error.application.repository_url
@@ -313,32 +320,34 @@ module RailsErrorDashboard
         )
       }xi
 
-      # Replace URLs with clickable links
+      # Replace URLs with clickable links. The url, code_content, and file_path
+      # values below are slices of `text` which we already escaped at function
+      # entry, so we don't re-escape them here (would double-escape `&amp;`,
+      # breaking visual rendering). repo_url is from config so we escape it
+      # explicitly before interpolating.
+      escaped_repo_url = repo_url ? ERB::Util.html_escape(repo_url.chomp("/")) : nil
+
       linked_text = text_with_placeholders.gsub(url_regex) do |url|
-        # Clean up the URL
         clean_url = url.strip
 
-        # Add protocol if missing
         href = clean_url.start_with?("http://", "https://") ? clean_url : "https://#{clean_url}"
 
-        # Truncate display text for very long URLs
         display_text = clean_url.length > 60 ? "#{clean_url[0..57]}..." : clean_url
 
-        "<a href=\"#{ERB::Util.html_escape(href)}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary text-decoration-underline\">#{ERB::Util.html_escape(display_text)}</a>"
+        "<a href=\"#{href}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary text-decoration-underline\">#{display_text}</a>"
       end
 
-      # Restore file paths with GitHub links (elvish magic! 🧝‍♀️)
+      # Restore file paths with GitHub links
       linked_text.gsub!(/###FILE_PATH_(\d+)###/) do
         file_path = file_paths[Regexp.last_match(1).to_i]
-        github_url = "#{repo_url.chomp('/')}/blob/main/#{file_path}"
-        "<a href=\"#{ERB::Util.html_escape(github_url)}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-decoration-none\" title=\"View on GitHub\">" \
-        "<code class=\"inline-code-highlight file-path-link\">#{ERB::Util.html_escape(file_path)}</code></a>"
+        "<a href=\"#{escaped_repo_url}/blob/main/#{file_path}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-decoration-none\" title=\"View on GitHub\">" \
+        "<code class=\"inline-code-highlight file-path-link\">#{file_path}</code></a>"
       end
 
       # Restore code blocks with styling
       linked_text.gsub!(/###CODE_BLOCK_(\d+)###/) do
         code_content = code_blocks[Regexp.last_match(1).to_i]
-        "<code class=\"inline-code-highlight\">#{ERB::Util.html_escape(code_content)}</code>"
+        "<code class=\"inline-code-highlight\">#{code_content}</code>"
       end
 
       # Preserve line breaks and return as HTML safe

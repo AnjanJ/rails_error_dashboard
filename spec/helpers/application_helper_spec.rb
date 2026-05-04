@@ -132,6 +132,38 @@ RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
         expect(result).not_to include("<img onerror")
       end
     end
+
+    context "HTML escaping in plain text (XSS regression)" do
+      # Regression: auto_link_urls fed its input straight into
+      # simple_format(..., sanitize: false). Anything outside backticks/URLs
+      # rendered as raw HTML, executing stored XSS for any user resolving an
+      # error with HTML in the comment.
+      it "escapes <script> tags in plain text" do
+        result = helper.auto_link_urls("hello <script>alert(1)</script> world")
+        expect(result).not_to include("<script>")
+        expect(result).to include("&lt;script&gt;")
+      end
+
+      it "escapes <img onerror> in plain text" do
+        result = helper.auto_link_urls("see <img src=x onerror=alert(1)> here")
+        # The literal <img tag must NOT appear — that's the XSS vector.
+        # The text "onerror=" inside escaped &lt;...&gt; is harmless plain text.
+        expect(result).not_to include("<img src=x")
+        expect(result).to include("&lt;img src=x onerror=alert(1)&gt;")
+      end
+
+      it "escapes ampersands in plain text" do
+        result = helper.auto_link_urls("a & b")
+        expect(result).to include("a &amp; b")
+      end
+
+      it "still produces clickable links for safe URLs alongside escaped HTML" do
+        result = helper.auto_link_urls("visit https://example.com but beware <script>x</script>")
+        expect(result).to include('href="https://example.com"')
+        expect(result).to include("&lt;script&gt;")
+        expect(result).not_to include("<script>")
+      end
+    end
   end
 
   describe "#parse_pg_timestamp" do
