@@ -37,11 +37,13 @@ module RailsErrorDashboard
         versions.each_with_object({}) do |(version, count), result|
           errors = base_query.where(app_version: version)
 
-          # Count unique error types
-          error_types = errors.distinct.pluck(:error_type).count
-
-          # Count critical errors
-          critical_count = errors.select { |error| error.severity == :critical }.count
+          # Pluck error_types once; both the unique-types count and the critical
+          # count classify off this string array. Avoids loading full ErrorLog
+          # records into memory just to compute counts (severity is a Ruby-side
+          # method on error_type, not a column).
+          types_for_version = errors.pluck(:error_type)
+          error_types = types_for_version.uniq.size
+          critical_count = types_for_version.count { |t| Services::SeverityClassifier.classify(t) == :critical }
 
           # Get platforms for this version
           platforms = errors.distinct.pluck(:platform).compact

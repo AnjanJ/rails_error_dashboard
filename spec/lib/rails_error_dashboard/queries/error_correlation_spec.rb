@@ -60,6 +60,27 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorCorrelation do
 
       expect(result["1.0.0"][:count]).to eq(1)
     end
+
+    it "does not load full ErrorLog records when computing critical_count" do
+      # Regression: the old implementation called
+      #   errors.select { |e| e.severity == :critical }.count
+      # which triggered to_a on the relation, materializing every error in
+      # memory just to count critical ones. Severity is a Ruby-side method on
+      # error_type, so we can pluck only :error_type instead.
+      create(:error_log, app_version: "1.0.0", error_type: "SecurityError", occurred_at: 1.day.ago)
+      create(:error_log, app_version: "1.0.0", error_type: "NoMethodError", occurred_at: 1.day.ago)
+
+      full_record_loads = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+        next if payload[:name] == "SCHEMA"
+        full_record_loads += 1 if payload[:sql] =~ /SELECT.*"rails_error_dashboard_error_logs"\.\*/
+      end
+
+      described_class.new(days: 30).errors_by_version
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+
+      expect(full_record_loads).to eq(0)
+    end
   end
 
   describe "#errors_by_git_sha" do
