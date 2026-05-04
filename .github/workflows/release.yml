@@ -23,7 +23,7 @@ jobs:
       # This will create/update a Release PR when commits are pushed to main
       # When the Release PR is merged, it will create a GitHub release
       - name: Create Release PR or Publish Release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
