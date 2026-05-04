@@ -182,15 +182,17 @@ module RailsErrorDashboard
         error_types = base_query.distinct.pluck(:error_type)
         return {} if error_types.count < 2
 
-        hourly_distributions = {}
-        error_types.each do |error_type|
-          distribution = base_query
-            .where(error_type: error_type)
-            .group_by { |error| error.occurred_at.hour }
-            .transform_values(&:count)
+        # Bucket counts by (error_type, hour-of-day) in a single SQL GROUP BY.
+        # Groupdate's group_by_hour_of_day generates database-portable SQL
+        # (PG/MySQL/SQLite) so we don't load full ErrorLog records into Ruby.
+        # Result shape: { [hour_int, error_type] => count }
+        grouped = base_query
+          .group_by_hour_of_day(:occurred_at)
+          .group(:error_type)
+          .count
 
-          # Normalize to 0-23 hours
-          hourly_distributions[error_type] = (0..23).map { |h| distribution[h] || 0 }
+        hourly_distributions = error_types.each_with_object({}) do |error_type, h|
+          h[error_type] = (0..23).map { |hour| grouped[[ hour, error_type ]] || 0 }
         end
 
         # Calculate correlation between error type pairs

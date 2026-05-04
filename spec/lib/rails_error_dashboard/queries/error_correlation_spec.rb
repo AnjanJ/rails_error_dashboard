@@ -341,6 +341,28 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorCorrelation do
         expect(first_correlation[:strength]).to be_in([ :weak, :moderate, :strong ])
       end
     end
+
+    it "computes hourly distributions via SQL GROUP BY without loading full ErrorLog records" do
+      # Regression: the old implementation called
+      #   base_query.where(error_type: type).group_by { |e| e.occurred_at.hour }
+      # for each error_type. Ruby's #group_by triggers .to_a, materializing
+      # every matching ErrorLog row. With N error types, that was N full
+      # SELECT * scans. Replaced by a single grouped SQL query.
+      5.times { create(:error_log, error_type: "ErrorA", occurred_at: 1.day.ago.change(hour: 10)) }
+      5.times { create(:error_log, error_type: "ErrorB", occurred_at: 1.day.ago.change(hour: 10)) }
+      5.times { create(:error_log, error_type: "ErrorC", occurred_at: 1.day.ago.change(hour: 10)) }
+
+      full_record_loads = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+        next if payload[:name] == "SCHEMA"
+        full_record_loads += 1 if payload[:sql] =~ /SELECT.*"rails_error_dashboard_error_logs"\.\*/
+      end
+
+      described_class.new(days: 30).time_correlated_errors
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+
+      expect(full_record_loads).to eq(0)
+    end
   end
 
   describe "#period_comparison" do
