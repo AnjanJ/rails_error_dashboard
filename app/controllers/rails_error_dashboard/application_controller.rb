@@ -46,10 +46,14 @@ module RailsErrorDashboard
       )
     end
 
-    # Handle Pagy pagination errors — redirect to page 1, preserving filters
+    # Handle Pagy pagination errors — redirect to page 1, preserving filters.
+    # Drop both :page and :per_page from the preserved query string. Either can
+    # trigger the rescue (page out of range, per_page negative or non-numeric);
+    # carrying them into the redirect would loop the user right back into the
+    # same error.
     rescue_from Pagy::RangeError, Pagy::OptionError do |exception|
       Rails.logger.warn("[RailsErrorDashboard] Pagination error: #{exception.message}")
-      preserved = request.query_parameters.except("page", :page)
+      preserved = request.query_parameters.except("page", :page, "per_page", :per_page)
       target = preserved.any? ? "#{request.path}?#{preserved.to_query}" : request.path
       redirect_to target, status: :moved_permanently
     end
