@@ -216,5 +216,53 @@ RSpec.describe RailsErrorDashboard::Services::CascadeDetector do
       expect(result[:detected]).to eq(0)
       expect(result[:updated]).to eq(0)
     end
+
+    it "issues O(1) SQL queries regardless of occurrence count" do
+      # Regression: the original implementation ran one inner SQL query per
+      # parent occurrence to find children in the time window. With N
+      # occurrences in the lookback window we issued N+1 queries, scaling
+      # linearly with traffic. The fix loads (error_log_id, occurred_at)
+      # once via pluck and walks the sorted array with a two-pointer sweep.
+      #
+      # The before block creates ~10 occurrences. Pre-fix this method would
+      # have issued ~11 read queries on error_occurrences. The fix should
+      # issue one — but we tolerate up to 2 to allow for one schema-cache
+      # check on cold runs in the spec environment.
+      query_count = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_, _, _, _, payload|
+        next if payload[:name] == "SCHEMA"
+        next if payload[:sql].include?("schema_migrations")
+        query_count += 1 if payload[:sql].include?('"rails_error_dashboard_error_occurrences"')
+      end
+
+      described_class.call(lookback_hours: 24)
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+
+      expect(query_count).to be <= 2
+    end
+
+    it "treats simultaneous (same-timestamp) occurrences as not cascading" do
+      # Regression for parity with the original SQL-based algorithm which
+      # used `occurred_at > ?` (strictly greater). Two occurrences at the
+      # exact same instant on different error_log_ids should not register
+      # as a cascade pair — neither is "after" the other.
+      same_time = 30.minutes.ago
+      simultaneous_a = create(:error_log, error_type: "SimErrorA")
+      simultaneous_b = create(:error_log, error_type: "SimErrorB")
+
+      3.times do
+        create(:error_occurrence, error_log: simultaneous_a, occurred_at: same_time)
+        create(:error_occurrence, error_log: simultaneous_b, occurred_at: same_time)
+      end
+
+      RailsErrorDashboard::CascadePattern.delete_all
+      described_class.call(lookback_hours: 1)
+
+      simultaneous_pair = RailsErrorDashboard::CascadePattern.where(
+        parent_error_id: simultaneous_a.id,
+        child_error_id: simultaneous_b.id
+      )
+      expect(simultaneous_pair).to be_empty
+    end
   end
 end

@@ -28,27 +28,37 @@ module RailsErrorDashboard
       def detect_cascades
         return { detected: 0, updated: 0 } unless can_detect?
 
-        # Get recent error occurrences
+        # Pluck (error_log_id, occurred_at) for every occurrence in the window
+        # ordered chronologically. Using pluck instead of loading full
+        # ActiveRecord rows keeps memory bounded to ~16 bytes/row instead of
+        # ~5KB/row, which matters because the host app schedules this job and
+        # the lookback window may contain a lot of occurrences.
         start_time = @lookback_hours.hours.ago
-        occurrences = ErrorOccurrence.where("occurred_at >= ?", start_time).order(:occurred_at)
+        rows = ErrorOccurrence
+          .where("occurred_at >= ?", start_time)
+          .order(:occurred_at)
+          .pluck(:error_log_id, :occurred_at)
 
-        # For each error occurrence, find potential children
+        # Two-pointer sweep: occurrences are time-sorted, so for each parent we
+        # only advance the child pointer forward through occurrences within the
+        # detection window. O(N + pairs) instead of O(N) inner SQL queries.
         patterns_found = Hash.new { |h, k| h[k] = { delays: [], count: 0 } }
 
-        occurrences.each do |parent_occ|
-          # Find occurrences within detection window
-          potential_children = ErrorOccurrence
-            .where("occurred_at > ? AND occurred_at <= ?",
-                   parent_occ.occurred_at,
-                   parent_occ.occurred_at + DETECTION_WINDOW)
-            .where.not(error_log_id: parent_occ.error_log_id)
+        rows.each_with_index do |(parent_id, parent_time), i|
+          window_end = parent_time + DETECTION_WINDOW
+          j = i + 1
+          while j < rows.length
+            child_id, child_time = rows[j]
+            break if child_time > window_end
 
-          potential_children.each do |child_occ|
-            key = [ parent_occ.error_log_id, child_occ.error_log_id ]
-            delay = (child_occ.occurred_at - parent_occ.occurred_at).to_f
-
-            patterns_found[key][:delays] << delay
-            patterns_found[key][:count] += 1
+            # Match the original SQL `occurred_at > parent` — strict, so two
+            # occurrences with identical timestamps don't form a cascade pair.
+            if child_id != parent_id && child_time > parent_time
+              key = [ parent_id, child_id ]
+              patterns_found[key][:delays] << (child_time - parent_time).to_f
+              patterns_found[key][:count] += 1
+            end
+            j += 1
           end
         end
 
