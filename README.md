@@ -13,7 +13,7 @@
 gem 'rails_error_dashboard'
 ```
 
-**5-minute setup** · **Works out-of-the-box** · **100% Rails + Postgres** · **No vendor lock-in**
+**5-minute setup** · **Works out-of-the-box** · **Postgres, MySQL/Trilogy, SQLite** · **No vendor lock-in**
 
 [Full Documentation](https://anjanj.github.io/rails_error_dashboard/) · [Live Demo](https://rails-error-dashboard.anjan.dev) · [RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
@@ -132,7 +132,7 @@ Requires breadcrumbs to be enabled.
 
 ![Job Health](docs/images/job-health.png)
 
-**Database Health** — PgHero-style live PostgreSQL stats (table sizes, unused indexes, dead tuples, vacuum timestamps) plus historical connection pool data from error snapshots.
+**Database Health** — PgHero-style live PostgreSQL stats (table sizes, unused indexes, dead tuples, vacuum timestamps) plus historical connection pool data from error snapshots. PostgreSQL-only for the system-table views; MySQL and SQLite show connection pool stats and hide the rest.
 
 ![Database Health](docs/images/database-health.png)
 
