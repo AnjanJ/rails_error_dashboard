@@ -194,12 +194,20 @@ module RailsErrorDashboard
       related_errors = error.related_errors(limit: 5, application_id: @current_application_id)
       context = Services::MarkdownErrorFormatter.call(error, related_errors: related_errors)
 
-      result = Services::LlmClient.call(error: error, question: question, context: context)
-      render json: result
-    rescue Services::LlmClient::ConfigurationError => e
-      render json: { error: e.message }, status: :unprocessable_entity
-    rescue Services::LlmClient::RequestError => e
-      render json: { error: e.message }, status: :bad_gateway
+      response.headers["Content-Type"] = "text/event-stream"
+      response.headers["Cache-Control"] = "no-cache"
+      response.headers["X-Accel-Buffering"] = "no"
+
+      self.response_body = Enumerator.new do |stream|
+        begin
+          result = Services::LlmClient.stream(error: error, question: question, context: context) do |text|
+            stream << sse_event("chunk", text: text)
+          end
+          stream << sse_event("done", result)
+        rescue Services::LlmClient::ConfigurationError, Services::LlmClient::RequestError => e
+          stream << sse_event("error", error: e.message)
+        end
+      end
     end
 
     def analytics
@@ -636,6 +644,10 @@ module RailsErrorDashboard
         previous_critical: previous[1][:critical_count],
         change_percentage: previous[1][:count] > 0 ? ((latest[1][:count] - previous[1][:count]).to_f / previous[1][:count] * 100).round(1) : 0.0
       }
+    end
+
+    def sse_event(event, payload)
+      "event: #{event}\ndata: #{payload.to_json}\n\n"
     end
 
     def filter_params

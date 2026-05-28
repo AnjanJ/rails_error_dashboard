@@ -65,27 +65,30 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
       expect(response.body).to include("gpt-5")
     end
 
-    it "returns a provider answer from the AI Help endpoint" do
+    it "streams a provider answer from the AI Help endpoint" do
       RailsErrorDashboard.configuration.llm_provider = :openai
       RailsErrorDashboard.configuration.llm_api_key = "test-key"
       RailsErrorDashboard.configuration.llm_model = "gpt-5"
       error = create(:error_log, application: application, error_type: "QuestDataCorruptionError")
 
-      allow(RailsErrorDashboard::Services::LlmClient).to receive(:call).and_return(
-        { answer: "Check the quest data at index 3.", provider: "openai", model: "gpt-5" }
-      )
+      allow(RailsErrorDashboard::Services::LlmClient).to receive(:stream) do |error:, question:, context:, &block|
+        block.call("Check the quest ")
+        block.call("data at index 3.")
+        { provider: "openai", model: "gpt-5" }
+      end
 
       post "/error_dashboard/errors/#{error.id}/ai_help",
         params: { question: "What caused this?" },
         as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body)).to include(
-        "answer" => "Check the quest data at index 3.",
-        "provider" => "openai",
-        "model" => "gpt-5"
-      )
-      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:call).with(
+      expect(response.media_type).to eq("text/event-stream")
+      expect(response.body).to include('event: chunk')
+      expect(response.body).to include('"text":"Check the quest "')
+      expect(response.body).to include('"text":"data at index 3."')
+      expect(response.body).to include('event: done')
+      expect(response.body).to include('"provider":"openai"')
+      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream).with(
         error: error,
         question: "What caused this?",
         context: a_string_including("QuestDataCorruptionError")

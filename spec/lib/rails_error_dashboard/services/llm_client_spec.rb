@@ -108,6 +108,97 @@ RSpec.describe RailsErrorDashboard::Services::LlmClient do
     end
   end
 
+  describe ".stream" do
+    it "streams OpenAI Responses API text deltas" do
+      configure_llm(provider: :openai, model: "gpt-5")
+
+      stub = stub_request(:post, "https://api.openai.com/v1/responses")
+        .with do |request|
+          body = JSON.parse(request.body)
+          body["model"] == "gpt-5" &&
+            body["stream"] == true &&
+            body["input"].include?("RuntimeError")
+        end
+        .to_return(status: 200, body: [
+          "event: response.output_text.delta",
+          'data: {"type":"response.output_text.delta","delta":"Check"}',
+          "",
+          "event: response.output_text.delta",
+          'data: {"type":"response.output_text.delta","delta":" callbacks"}',
+          "",
+          "event: response.completed",
+          'data: {"type":"response.completed"}',
+          ""
+        ].join("\n"), headers: { "Content-Type" => "text/event-stream" })
+
+      chunks = []
+      result = described_class.stream(error: error, question: "What should I check?", context: context) do |text|
+        chunks << text
+      end
+
+      expect(stub).to have_been_requested
+      expect(chunks).to eq([ "Check", " callbacks" ])
+      expect(result).to include(provider: "openai", model: "gpt-5")
+    end
+
+    it "streams OpenAI Chat Completions content deltas" do
+      configure_llm(provider: :openai, model: "gpt-4.1")
+      RailsErrorDashboard.configuration.llm_openai_endpoint = :chat_completions
+
+      stub_request(:post, "https://api.openai.com/v1/chat/completions")
+        .to_return(status: 200, body: [
+          'data: {"choices":[{"delta":{"content":"Inspect"}}]}',
+          "",
+          'data: {"choices":[{"delta":{"content":" params"}}]}',
+          "",
+          "data: [DONE]",
+          ""
+        ].join("\n"), headers: { "Content-Type" => "text/event-stream" })
+
+      chunks = []
+      described_class.stream(error: error, question: "How do I debug it?", context: context) do |text|
+        chunks << text
+      end
+
+      expect(chunks).to eq([ "Inspect", " params" ])
+    end
+
+    it "streams Anthropic text deltas" do
+      configure_llm(provider: :anthropic, model: "claude-sonnet-4-20250514")
+
+      stub = stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .with do |request|
+          body = JSON.parse(request.body)
+          body["model"] == "claude-sonnet-4-20250514" &&
+            body["stream"] == true &&
+            body["messages"].first["content"].include?("RuntimeError")
+        end
+        .to_return(status: 200, body: [
+          "event: message_start",
+          'data: {"type":"message_start","message":{"content":[]}}',
+          "",
+          "event: content_block_delta",
+          'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Missing"}}',
+          "",
+          "event: content_block_delta",
+          'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" row"}}',
+          "",
+          "event: message_stop",
+          'data: {"type":"message_stop"}',
+          ""
+        ].join("\n"), headers: { "Content-Type" => "text/event-stream" })
+
+      chunks = []
+      result = described_class.stream(error: error, question: "Why?", context: context) do |text|
+        chunks << text
+      end
+
+      expect(stub).to have_been_requested
+      expect(chunks).to eq([ "Missing", " row" ])
+      expect(result).to include(provider: "anthropic", model: "claude-sonnet-4-20250514")
+    end
+  end
+
   def configure_llm(provider:, model:)
     RailsErrorDashboard.configuration.llm_provider = provider
     RailsErrorDashboard.configuration.llm_api_key = "test-key"

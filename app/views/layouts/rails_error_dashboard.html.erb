@@ -538,7 +538,21 @@ dd { color: var(--text-primary); }
 .red-ai-help-empty { padding: var(--space-4); border: 1px dashed var(--border-primary); border-radius: var(--radius-md); color: var(--text-secondary); font-size: 13px; }
 .red-ai-help-message { border: 1px solid var(--border-primary); border-radius: var(--radius-md); padding: var(--space-3); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .red-ai-help-message.user { align-self: flex-end; max-width: 88%; background: var(--accent-subtle); border-color: color-mix(in oklch, var(--accent) 35%, var(--border-primary)); color: var(--text-primary); }
-.red-ai-help-message.assistant { background: var(--surface-base); color: var(--text-primary); }
+.red-ai-help-message.assistant { background: var(--surface-base); color: var(--text-primary); white-space: normal; }
+.red-ai-help-message.assistant > *:first-child { margin-top: 0; }
+.red-ai-help-message.assistant > *:last-child { margin-bottom: 0; }
+.red-ai-help-message.assistant p { margin: 0 0 var(--space-2); }
+.red-ai-help-message.assistant h1,
+.red-ai-help-message.assistant h2,
+.red-ai-help-message.assistant h3 { margin: var(--space-3) 0 var(--space-2); font-size: 14px; line-height: 1.35; }
+.red-ai-help-message.assistant ul,
+.red-ai-help-message.assistant ol { margin: 0 0 var(--space-2) var(--space-5); padding: 0; }
+.red-ai-help-message.assistant li { margin: 2px 0; }
+.red-ai-help-message.assistant pre { margin: var(--space-2) 0; padding: var(--space-3); max-width: 100%; overflow-x: auto; background: var(--surface-secondary); border: 1px solid var(--border-primary); }
+.red-ai-help-message.assistant pre code { color: var(--text-primary); white-space: pre; }
+.red-ai-help-message.assistant code { font-size: 12px; overflow-wrap: anywhere; }
+.red-ai-help-message.assistant blockquote { margin: var(--space-2) 0; padding-left: var(--space-3); border-left: 3px solid var(--border-primary); color: var(--text-secondary); }
+.red-ai-help-message.assistant a { overflow-wrap: anywhere; }
 .red-ai-help-message.error { background: var(--status-critical-bg); border-color: var(--status-critical); color: var(--status-critical); }
 .red-ai-help-form { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border-top: 1px solid var(--border-primary); background: var(--surface-primary); }
 .red-ai-help-form textarea { width: 100%; resize: vertical; min-height: 92px; max-height: 220px; padding: var(--space-3); border: 1px solid var(--border-primary); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-primary); font: inherit; outline: none; }
@@ -1663,10 +1677,120 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var message = document.createElement('div');
     message.className = 'red-ai-help-message ' + role;
-    message.textContent = text;
+    if (role === 'assistant') {
+      message.dataset.markdown = text || '';
+      renderAiHelpMarkdown(message);
+    } else {
+      message.textContent = text;
+    }
     messages.appendChild(message);
     messages.scrollTop = messages.scrollHeight;
     return message;
+  }
+
+  function escapeAiHelpHtml(text) {
+    return String(text || '').replace(/[&<>"']/g, function(ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function renderAiHelpInlineMarkdown(text) {
+    var escaped = escapeAiHelpHtml(text);
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    return escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, function(_, label, url) {
+      return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
+    });
+  }
+
+  function renderAiHelpMarkdown(message) {
+    var markdown = message.dataset.markdown || '';
+    var lines = markdown.replace(/\r\n/g, '\n').split('\n');
+    var html = [];
+    var paragraph = [];
+    var listType = null;
+    var inCode = false;
+    var codeLines = [];
+
+    function flushParagraph() {
+      if (!paragraph.length) return;
+      html.push('<p>' + renderAiHelpInlineMarkdown(paragraph.join(' ')) + '</p>');
+      paragraph = [];
+    }
+
+    function flushList() {
+      if (!listType) return;
+      html.push('</' + listType + '>');
+      listType = null;
+    }
+
+    lines.forEach(function(line) {
+      var codeFence = line.match(/^```/);
+      if (codeFence) {
+        if (inCode) {
+          html.push('<pre><code>' + escapeAiHelpHtml(codeLines.join('\n')) + '</code></pre>');
+          codeLines = [];
+          inCode = false;
+        } else {
+          flushParagraph();
+          flushList();
+          inCode = true;
+        }
+        return;
+      }
+
+      if (inCode) {
+        codeLines.push(line);
+        return;
+      }
+
+      if (/^\s*$/.test(line)) {
+        flushParagraph();
+        flushList();
+        return;
+      }
+
+      var heading = line.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        flushParagraph();
+        flushList();
+        html.push('<h' + heading[1].length + '>' + renderAiHelpInlineMarkdown(heading[2]) + '</h' + heading[1].length + '>');
+        return;
+      }
+
+      var unordered = line.match(/^\s*[-*]\s+(.+)$/);
+      var ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+      if (unordered || ordered) {
+        flushParagraph();
+        var desiredList = unordered ? 'ul' : 'ol';
+        if (listType !== desiredList) {
+          flushList();
+          html.push('<' + desiredList + '>');
+          listType = desiredList;
+        }
+        html.push('<li>' + renderAiHelpInlineMarkdown((unordered || ordered)[1]) + '</li>');
+        return;
+      }
+
+      var quote = line.match(/^>\s?(.+)$/);
+      if (quote) {
+        flushParagraph();
+        flushList();
+        html.push('<blockquote>' + renderAiHelpInlineMarkdown(quote[1]) + '</blockquote>');
+        return;
+      }
+
+      paragraph.push(line.trim());
+    });
+
+    if (inCode) {
+      html.push('<pre><code>' + escapeAiHelpHtml(codeLines.join('\n')) + '</code></pre>');
+    }
+    flushParagraph();
+    flushList();
+
+    message.innerHTML = html.join('') || '<p></p>';
   }
 
   function submitAiHelpQuestion(form) {
@@ -1681,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     appendAiHelpMessage('user', question);
     if (input) input.value = '';
-    if (status) status.textContent = 'Thinking...';
+    if (status) status.textContent = 'Streaming...';
     if (button) button.disabled = true;
 
     var tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -1694,13 +1818,78 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       body: JSON.stringify({ question: question })
     }).then(function(response) {
-      return response.json().then(function(data) {
-        if (!response.ok) throw new Error(data.error || 'AI Help request failed.');
-        return data;
-      });
-    }).then(function(data) {
-      appendAiHelpMessage('assistant', data.answer || '');
-      if (status) status.textContent = data.provider && data.model ? data.provider + ' · ' + data.model : '';
+      if (!response.ok) {
+        return response.json().then(function(data) {
+          throw new Error(data.error || 'AI Help request failed.');
+        });
+      }
+      if (!response.body || !window.TextDecoder) {
+        throw new Error('Streaming is not supported by this browser.');
+      }
+
+      var assistantMessage = appendAiHelpMessage('assistant', '');
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var streamError = null;
+
+      function processEvent(rawEvent) {
+        var eventName = 'message';
+        var dataLines = [];
+
+        rawEvent.split('\n').forEach(function(line) {
+          if (!line || line.charAt(0) === ':') return;
+          var separator = line.indexOf(':');
+          var field = separator === -1 ? line : line.slice(0, separator);
+          var value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
+          if (field === 'event') eventName = value;
+          if (field === 'data') dataLines.push(value);
+        });
+
+        if (!dataLines.length) return;
+        var data = JSON.parse(dataLines.join('\n'));
+
+        if (eventName === 'chunk') {
+          assistantMessage.dataset.markdown = (assistantMessage.dataset.markdown || '') + (data.text || '');
+          renderAiHelpMarkdown(assistantMessage);
+          var messages = document.getElementById('red-ai-help-messages');
+          if (messages) messages.scrollTop = messages.scrollHeight;
+        } else if (eventName === 'done') {
+          if (status) status.textContent = data.provider && data.model ? data.provider + ' - ' + data.model : '';
+        } else if (eventName === 'error') {
+          streamError = data.error || 'AI Help request failed.';
+        }
+      }
+
+      function processBuffer(finalChunk) {
+        var separator;
+        while ((separator = buffer.indexOf('\n\n')) !== -1) {
+          processEvent(buffer.slice(0, separator));
+          buffer = buffer.slice(separator + 2);
+        }
+        if (finalChunk && buffer.trim()) {
+          processEvent(buffer);
+          buffer = '';
+        }
+      }
+
+      function readNext() {
+        return reader.read().then(function(result) {
+          if (result.done) {
+            buffer += decoder.decode();
+            processBuffer(true);
+            if (streamError) throw new Error(streamError);
+            return;
+          }
+
+          buffer += decoder.decode(result.value, { stream: true }).replace(/\r\n/g, '\n');
+          processBuffer(false);
+          if (streamError) throw new Error(streamError);
+          return readNext();
+        });
+      }
+
+      return readNext();
     }).catch(function(error) {
       appendAiHelpMessage('error', error.message);
       if (status) status.textContent = 'Request failed.';
