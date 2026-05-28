@@ -19,7 +19,9 @@ begin; require "turbo-rails"; rescue LoadError; end
 
 # Core library files
 require "rails_error_dashboard/value_objects/error_context"
+require "rails_error_dashboard/value_objects/llm_call_event"
 require "rails_error_dashboard/helpers/user_model_detector"
+require "rails_error_dashboard/services/llm_cost_estimator"
 require "rails_error_dashboard/services/platform_detector"
 require "rails_error_dashboard/services/backtrace_parser"
 require "rails_error_dashboard/services/similarity_calculator"

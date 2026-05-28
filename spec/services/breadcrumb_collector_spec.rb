@@ -179,6 +179,41 @@ RSpec.describe RailsErrorDashboard::Services::BreadcrumbCollector do
       expect(result.size).to eq(3)
       expect(result.map { |c| c[:m] }).to eq([ "query 2", "query 3", "query 4" ])
     end
+
+    context "LLM categories" do
+      it "accepts 'llm' category like any other" do
+        described_class.add("llm", "anthropic · claude-sonnet-4-6", duration_ms: 421.5,
+          metadata: { provider: "anthropic", model: "claude-sonnet-4-6", input_tokens: 100, output_tokens: 50 })
+
+        crumb = described_class.harvest.first
+        expect(crumb[:c]).to eq("llm")
+        expect(crumb[:m]).to eq("anthropic · claude-sonnet-4-6")
+        expect(crumb[:d]).to eq(421.5)
+        expect(crumb[:meta][:provider]).to eq("anthropic")
+      end
+
+      it "accepts 'llm_tool' category for nested tool calls" do
+        described_class.add("llm_tool", "tool: search_db",
+          metadata: { tool_name: "search_db", tool_arguments: '{"q":"users"}' })
+
+        crumb = described_class.harvest.first
+        expect(crumb[:c]).to eq("llm_tool")
+        expect(crumb[:meta][:tool_name]).to eq("search_db")
+      end
+
+      it "honors breadcrumb_categories filter for llm and llm_tool" do
+        RailsErrorDashboard.configuration.breadcrumb_categories = [ :llm, :llm_tool ]
+
+        described_class.add("sql", "SELECT 1")
+        described_class.add("llm", "openai · gpt-4o")
+        described_class.add("llm_tool", "tool: search")
+        described_class.add("controller", "Errors#show")
+
+        result = described_class.harvest
+        expect(result.size).to eq(2)
+        expect(result.map { |c| c[:c] }).to eq(%w[ llm llm_tool ])
+      end
+    end
   end
 
   describe ".harvest" do
