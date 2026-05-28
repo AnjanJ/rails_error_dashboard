@@ -35,6 +35,10 @@ gem 'rails_error_dashboard'
 
 ![Error Detail](docs/images/error-detail.png)
 
+**AI Help** — Optional OpenAI or Anthropic assistance streamed directly inside the error detail page.
+
+![AI Help](docs/images/ai-help.png)
+
 ---
 
 ## From the Community
@@ -242,9 +246,17 @@ config.enable_source_code_integration = true  # required for source code viewer
 </details>
 
 <details>
-<summary><strong>Error Replay — Copy as cURL / RSpec / LLM Markdown</strong></summary>
+<summary><strong>AI Help + Error Replay — Ask, Copy as cURL / RSpec / LLM Markdown</strong></summary>
 
 Replay failing requests with one click. Copy the request as a cURL command, generate an RSpec test, or **copy all error details as clean Markdown** for pasting into an LLM session. The LLM export includes app backtrace, cause chain, local/instance variables, breadcrumbs, environment, system health, and related errors — with framework frames filtered and sensitive data preserved as `[FILTERED]`.
+
+When an LLM provider is configured, the error detail page also shows an **AI Help** drawer. Users can ask follow-up questions about the current error and receive streamed Markdown answers from OpenAI or Anthropic without leaving the dashboard.
+
+```ruby
+config.llm_provider = :openai # or :anthropic
+config.llm_api_key = -> { Rails.application.credentials.dig(:openai, :api_key) }
+config.llm_model = "gpt-5"
+```
 
 [Complete documentation →](docs/FEATURES.md#error-details-page)
 </details>
