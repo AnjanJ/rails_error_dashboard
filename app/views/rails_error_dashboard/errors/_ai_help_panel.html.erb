@@ -1,0 +1,36 @@
+<div id="red-ai-help-backdrop" class="red-ai-help-backdrop" data-red-action="close-ai-help" hidden></div>
+
+<aside id="red-ai-help-panel" class="red-ai-help-panel" aria-labelledby="red-ai-help-title" aria-hidden="true">
+  <div class="red-ai-help-header">
+    <div>
+      <div id="red-ai-help-title" class="red-ai-help-title">
+        <i class="bi bi-stars"></i>
+        AI Help
+      </div>
+      <div class="red-ai-help-subtitle">
+        <%= RailsErrorDashboard.configuration.effective_llm_provider.to_s.titleize %>
+        &middot;
+        <%= RailsErrorDashboard.configuration.effective_llm_model %>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-red-action="close-ai-help" aria-label="Close AI Help"></button>
+  </div>
+
+  <div id="red-ai-help-messages" class="red-ai-help-messages" aria-live="polite">
+    <div class="red-ai-help-empty">
+      Ask about root cause, reproduction steps, likely fixes, or what to inspect next.
+    </div>
+  </div>
+
+  <form id="red-ai-help-form" class="red-ai-help-form" data-ai-help-url="<%= ai_help_error_path(error, **app_context) %>">
+    <label for="red-ai-help-question">Question</label>
+    <textarea id="red-ai-help-question" name="question" rows="4" maxlength="4000" placeholder="What is the likely root cause?"></textarea>
+    <div class="red-ai-help-footer">
+      <span id="red-ai-help-status" class="red-ai-help-status"></span>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-send"></i>
+        Ask
+      </button>
+    </div>
+  </form>
+</aside>

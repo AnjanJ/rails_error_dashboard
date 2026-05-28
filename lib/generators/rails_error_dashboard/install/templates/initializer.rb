@@ -457,6 +457,33 @@ RailsErrorDashboard.configure do |config|
   # config.git_repository_url = ENV["GIT_REPOSITORY_URL"]
 
   # ============================================================================
+  # AI HELP (OpenAI / Anthropic)
+  # ============================================================================
+  #
+  # When provider and API key are configured, error detail pages show an
+  # "AI Help" drawer where dashboard users can ask questions about the current
+  # error. Error details, backtrace, and related dashboard context are sent to
+  # the configured provider.
+  #
+  # OpenAI uses the Responses API by default and supports GPT-5 and GPT-4 family
+  # models such as "gpt-5" and "gpt-4.1". Set llm_openai_endpoint to
+  # :chat_completions only if you need the older Chat Completions endpoint.
+  #
+  # config.llm_provider = :openai
+  # config.llm_api_key = -> { Rails.application.credentials.dig(:openai, :api_key) }
+  # config.llm_model = "gpt-5"
+  # config.llm_openai_endpoint = :auto # :auto, :responses, or :chat_completions
+  #
+  # config.llm_provider = :anthropic
+  # config.llm_api_key = -> { Rails.application.credentials.dig(:anthropic, :api_key) }
+  # config.llm_model = "claude-sonnet-4-20250514"
+  #
+  # Shared options:
+  # config.llm_timeout_seconds = 30
+  # config.llm_max_output_tokens = 900
+  # config.llm_system_prompt = "Prefer concise answers with file-level next steps."
+
+  # ============================================================================
   # ISSUE TRACKING (GitHub / GitLab / Codeberg)
   # ============================================================================
   #

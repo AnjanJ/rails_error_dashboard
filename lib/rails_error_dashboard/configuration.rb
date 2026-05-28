@@ -187,6 +187,15 @@ module RailsErrorDashboard
     # Dashboard UI appearance
     attr_accessor :accent_color  # :crimson (default), :ruby, :ember, :violet
 
+    # LLM-powered AI help (disabled unless provider and API key are configured)
+    attr_accessor :llm_provider              # :openai or :anthropic
+    attr_accessor :llm_api_key               # String or lambda/proc
+    attr_accessor :llm_model                 # e.g. "gpt-5", "gpt-4.1", "claude-sonnet-4-20250514"
+    attr_accessor :llm_openai_endpoint       # :responses, :chat_completions, or :auto
+    attr_accessor :llm_timeout_seconds       # HTTP timeout for provider calls
+    attr_accessor :llm_max_output_tokens     # Response length cap
+    attr_accessor :llm_system_prompt         # Optional prompt override/addition
+
     # Notification callbacks (managed via helper methods, not set directly)
     attr_reader :notification_callbacks
 
@@ -358,6 +367,15 @@ module RailsErrorDashboard
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
+
+      # LLM-powered AI help defaults - OFF until provider and API key are configured
+      @llm_provider = ENV["RED_LLM_PROVIDER"]&.to_sym
+      @llm_api_key = ENV["RED_LLM_API_KEY"]
+      @llm_model = ENV["RED_LLM_MODEL"]
+      @llm_openai_endpoint = (ENV["RED_LLM_OPENAI_ENDPOINT"] || "auto").to_sym
+      @llm_timeout_seconds = 30
+      @llm_max_output_tokens = 900
+      @llm_system_prompt = nil
 
       @notification_callbacks = {
         error_logged: [],
@@ -582,6 +600,33 @@ module RailsErrorDashboard
         end
       end
 
+      # Validate LLM configuration only when partially or fully configured.
+      if llm_provider.present? || effective_llm_api_key.present? || llm_model.present?
+        valid_llm_providers = %i[openai anthropic]
+        unless effective_llm_provider && valid_llm_providers.include?(effective_llm_provider)
+          errors << "llm_provider must be one of #{valid_llm_providers.inspect} (got: #{llm_provider.inspect})"
+        end
+
+        if effective_llm_api_key.blank? && !build_env
+          warnings << "llm_provider is configured but no LLM API key is set. " \
+                      "Set llm_api_key or RED_LLM_API_KEY to enable AI Help."
+        end
+
+        valid_openai_endpoints = %i[auto responses chat_completions]
+        if llm_openai_endpoint && !valid_openai_endpoints.include?(llm_openai_endpoint.to_sym)
+          errors << "llm_openai_endpoint must be one of #{valid_openai_endpoints.inspect} " \
+                    "(got: #{llm_openai_endpoint.inspect})"
+        end
+
+        if llm_timeout_seconds && llm_timeout_seconds.to_i < 1
+          errors << "llm_timeout_seconds must be at least 1 (got: #{llm_timeout_seconds})"
+        end
+
+        if llm_max_output_tokens && llm_max_output_tokens.to_i < 1
+          errors << "llm_max_output_tokens must be at least 1 (got: #{llm_max_output_tokens})"
+        end
+      end
+
       # Validate total_users_for_impact (must be positive if set)
       if total_users_for_impact && total_users_for_impact < 1
         errors << "total_users_for_impact must be at least 1 (got: #{total_users_for_impact})"
@@ -683,6 +728,43 @@ module RailsErrorDashboard
       when :github then "https://api.github.com"
       when :gitlab then "https://gitlab.com/api/v4"
       when :codeberg then "https://codeberg.org/api/v1"
+      end
+    end
+
+    # Whether the dashboard can show AI Help controls.
+    #
+    # @return [Boolean]
+    def llm_configured?
+      effective_llm_provider.present? && effective_llm_api_key.present?
+    end
+
+    # Resolve the configured LLM provider.
+    #
+    # @return [Symbol, nil] :openai, :anthropic, or nil
+    def effective_llm_provider
+      provider = llm_provider.presence
+      provider&.to_sym
+    end
+
+    # Resolve the configured LLM API key (supports string or lambda).
+    #
+    # @return [String, nil]
+    def effective_llm_api_key
+      return nil if llm_api_key.nil?
+      llm_api_key.respond_to?(:call) ? llm_api_key.call : llm_api_key
+    rescue => e
+      nil
+    end
+
+    # Resolve the configured model with provider-specific defaults.
+    #
+    # @return [String, nil]
+    def effective_llm_model
+      return llm_model if llm_model.present?
+
+      case effective_llm_provider
+      when :openai then "gpt-5"
+      when :anthropic then "claude-sonnet-4-20250514"
       end
     end
 

@@ -80,6 +80,11 @@
       <button type="button" class="btn" data-red-action="copy-markdown" data-markdown="<%= j @error_markdown %>">
         <i class="bi bi-clipboard" style="margin-right: 4px;"></i>Copy for LLM
       </button>
+      <% if RailsErrorDashboard.configuration.llm_configured? %>
+        <button type="button" class="btn" data-red-action="open-ai-help">
+          <i class="bi bi-stars" style="margin-right: 4px;"></i>AI Help
+        </button>
+      <% end %>
       <button type="button" class="btn" data-red-action="download-json" title="Export JSON">
         <i class="bi bi-download"></i>
       </button>
@@ -226,6 +231,7 @@
 </div>
 
 <%= render "modals", error: @error %>
+<%= render "ai_help_panel", error: @error if RailsErrorDashboard.configuration.llm_configured? %>
 
 <%= red_javascript_tag do %>
 window.switchTab = function(tabId) {

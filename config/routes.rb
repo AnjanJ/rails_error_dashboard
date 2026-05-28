@@ -23,6 +23,7 @@ RailsErrorDashboard::Engine.routes.draw do
       post :update_status
       post :create_issue
       post :link_issue
+      post :ai_help
     end
     collection do
       get :analytics

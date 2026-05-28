@@ -173,6 +173,35 @@ module RailsErrorDashboard
       redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
 
+    def ai_help
+      unless RailsErrorDashboard.configuration.llm_configured?
+        render json: { error: "AI Help is not configured" }, status: :not_found
+        return
+      end
+
+      question = params[:question].to_s.strip
+      if question.blank?
+        render json: { error: "Question cannot be blank" }, status: :unprocessable_entity
+        return
+      end
+
+      if question.length > 4000
+        render json: { error: "Question is too long. Keep it under 4,000 characters." }, status: :unprocessable_entity
+        return
+      end
+
+      error = ErrorLog.includes(:comments, :parent_cascade_patterns, :child_cascade_patterns).find(params[:id])
+      related_errors = error.related_errors(limit: 5, application_id: @current_application_id)
+      context = Services::MarkdownErrorFormatter.call(error, related_errors: related_errors)
+
+      result = Services::LlmClient.call(error: error, question: question, context: context)
+      render json: result
+    rescue Services::LlmClient::ConfigurationError => e
+      render json: { error: e.message }, status: :unprocessable_entity
+    rescue Services::LlmClient::RequestError => e
+      render json: { error: e.message }, status: :bad_gateway
+    end
+
     def analytics
       days = days_param(default: 30)
       @days = days
