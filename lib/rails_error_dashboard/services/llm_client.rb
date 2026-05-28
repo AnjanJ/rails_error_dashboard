@@ -218,7 +218,7 @@ module RailsErrorDashboard
         parsed = parse_json_response(response)
         return parsed if response.is_a?(Net::HTTPSuccess)
 
-        message = parsed.dig("error", "message") || parsed["error"] || response.message
+        message = provider_error_message(parsed, response.message)
         raise RequestError, "LLM request failed (#{response.code}): #{message}"
       rescue JSON::ParserError
         raise RequestError, "LLM provider returned invalid JSON"
@@ -265,7 +265,7 @@ module RailsErrorDashboard
               body = +""
               response.read_body { |chunk| body << chunk }
               parsed = JSON.parse(body) rescue {}
-              message = parsed.dig("error", "message") || parsed["error"] || response.message
+              message = provider_error_message(parsed, response.message)
               raise RequestError, "LLM request failed (#{response.code}): #{message}"
             end
 
@@ -326,7 +326,7 @@ module RailsErrorDashboard
 
       def handle_openai_stream_event(event, data)
         if event == "error" || data["type"] == "error"
-          message = data.dig("error", "message") || data["message"] || "OpenAI stream failed"
+          message = provider_error_message(data, "OpenAI stream failed")
           raise RequestError, message
         end
 
@@ -341,13 +341,27 @@ module RailsErrorDashboard
 
       def handle_anthropic_stream_event(event, data)
         if event == "error" || data["type"] == "error"
-          message = data.dig("error", "message") || data["message"] || "Anthropic stream failed"
+          message = provider_error_message(data, "Anthropic stream failed")
           raise RequestError, message
         end
 
         delta = data["delta"] || {}
         text = delta["text"] if data["type"] == "content_block_delta" && delta["type"] == "text_delta"
         yield text if text.present?
+      end
+
+      def provider_error_message(parsed, fallback)
+        return fallback unless parsed.is_a?(Hash)
+
+        error = parsed["error"]
+        case error
+        when Hash
+          error["message"].presence || parsed["message"].presence || fallback
+        when String
+          error.presence || parsed["message"].presence || fallback
+        else
+          parsed["message"].presence || fallback
+        end
       end
     end
   end

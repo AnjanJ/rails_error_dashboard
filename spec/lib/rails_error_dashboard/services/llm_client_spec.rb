@@ -106,6 +106,17 @@ RSpec.describe RailsErrorDashboard::Services::LlmClient do
         described_class.call(error: error, question: "What failed?", context: context)
       }.to raise_error(described_class::RequestError, /bad key/)
     end
+
+    it "raises a request error for string provider error payloads" do
+      configure_llm(provider: :openai, model: "gpt-5")
+
+      stub_request(:post, "https://api.openai.com/v1/responses")
+        .to_return(status: 401, body: { error: "bad key" }.to_json)
+
+      expect {
+        described_class.call(error: error, question: "What failed?", context: context)
+      }.to raise_error(described_class::RequestError, /bad key/)
+    end
   end
 
   describe ".stream" do
@@ -200,6 +211,17 @@ RSpec.describe RailsErrorDashboard::Services::LlmClient do
       expect(stub).to have_been_requested
       expect(chunks).to eq([ "Missing", " row" ])
       expect(result).to include(provider: "anthropic", model: "claude-sonnet-4-20250514")
+    end
+
+    it "raises a request error for string provider error payloads before streaming" do
+      configure_llm(provider: :anthropic, model: "claude-sonnet-4-20250514")
+
+      stub_request(:post, "https://api.anthropic.com/v1/messages")
+        .to_return(status: 401, body: { error: "bad key" }.to_json)
+
+      expect {
+        described_class.stream(error: error, question: "Why?", context: context) { |_text| }
+      }.to raise_error(described_class::RequestError, /bad key/)
     end
   end
 
