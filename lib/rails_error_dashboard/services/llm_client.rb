@@ -249,7 +249,12 @@ module RailsErrorDashboard
 
       def post_stream_json(url, headers, payload)
         uri = URI.parse(url)
-        request = Net::HTTP::Post.new(uri.request_uri, headers)
+        stream_headers = headers.merge(
+          "Accept" => "text/event-stream",
+          "Accept-Encoding" => "identity",
+          "Cache-Control" => "no-cache"
+        )
+        request = Net::HTTP::Post.new(uri.request_uri, stream_headers)
         request.body = JSON.generate(payload)
 
         Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",

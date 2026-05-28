@@ -117,7 +117,9 @@ RSpec.describe RailsErrorDashboard::Services::LlmClient do
           body = JSON.parse(request.body)
           body["model"] == "gpt-5" &&
             body["stream"] == true &&
-            body["input"].include?("RuntimeError")
+            body["input"].include?("RuntimeError") &&
+            request.headers["Accept"] == "text/event-stream" &&
+            request.headers["Accept-Encoding"] == "identity"
         end
         .to_return(status: 200, body: [
           "event: response.output_text.delta",
@@ -171,7 +173,9 @@ RSpec.describe RailsErrorDashboard::Services::LlmClient do
           body = JSON.parse(request.body)
           body["model"] == "claude-sonnet-4-20250514" &&
             body["stream"] == true &&
-            body["messages"].first["content"].include?("RuntimeError")
+            body["messages"].first["content"].include?("RuntimeError") &&
+            request.headers["Accept"] == "text/event-stream" &&
+            request.headers["Accept-Encoding"] == "identity"
         end
         .to_return(status: 200, body: [
           "event: message_start",
