@@ -32,7 +32,7 @@ Core features that are always enabled - no configuration needed:
 - Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns
 
 **🔍 Developer Tools (7 features)**
-- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page, Copy for LLM (Markdown export)
+- Source Code Integration, Git Blame, Breadcrumbs, System Health Snapshot, Job Health Page, Database Health Page, Copy for LLM (Markdown export), LLM Observability (calls / tokens / cost / tool use)
 
 **🔬 Deep Debugging (6 features)** — v0.4.0
 - Local Variable Capture, Instance Variable Capture, Swallowed Exception Detection, On-Demand Diagnostic Dump, Rack Attack Event Tracking, Process Crash Capture
@@ -439,6 +439,8 @@ Unlike Sentry or Honeybadger (which require SDK configuration), Rails Error Dash
 | `job` | `perform.active_job` | `SendWelcomeEmailJob` |
 | `mailer` | `deliver.action_mailer` | `UserMailer to: [user@example.com]` |
 | `deprecation` | `deprecation.rails` | `Method #foo is deprecated` (with caller location) |
+| `llm` | `red.llm_call` + OTel GenAI spans + Faraday middleware | `openai · gpt-4o-mini · in:1200/out:350 · $0.0003` |
+| `llm_tool` | `red.llm_tool_call` + OTel `execute_tool` spans + Faraday tool-use detection | `tool: search_database` |
 | `custom` | Manual API | `checkout started` |
 
 ### Timeline Display
@@ -518,6 +520,39 @@ The **Cache Health** page (`/errors/cache_health_summary`) provides an app-wide 
 ![Cache Health](images/cache-health.png)
 
 This page helps identify errors associated with poor cache performance across your application.
+
+### LLM Observability — Calls, Tokens, Cost, Tool Use
+
+LLM breadcrumbs (`llm` for chat completions, `llm_tool` for tool execution) capture every LLM call your application makes — model, latency, token counts, estimated USD cost, and tool-use requests:
+
+```ruby
+config.enable_breadcrumbs        = true   # required
+config.enable_llm_observability  = true
+# Optional — override per-model rates for your account
+# config.llm_pricing_overrides = { "claude-sonnet-4-6" => { input: 3.0, output: 15.0 } }
+```
+
+Three capture paths, all additive:
+
+- **`ruby-openai`** — `f.use RailsErrorDashboard::Integrations::LlmMiddleware` inside `OpenAI::Client.new do |f| ... end` (Faraday middleware)
+- **`ruby_llm`** — install `opentelemetry-instrumentation-ruby_llm`; our `LlmSpanProcessor` auto-registers with `OpenTelemetry.tracer_provider` and consumes GenAI-semconv spans
+- **Anything else** (Anthropic official, Net::HTTP, Ollama, gRPC) — wrap calls in `ActiveSupport::Notifications.instrument("red.llm_call", payload) { ... }` and mutate the payload after the call to record token counts
+
+#### Where LLM Data Appears
+
+- **Sidebar card** — Per-error totals (calls, tokens, cost, errors), input/output split, per-model rollup, danger banner on failed calls
+- **Breadcrumb trail** — Each call inline with provider · model · tokens · cost · status; tool calls visually nested under their parent chat (↪ glyph + 2rem indent)
+- **Copy-for-LLM Markdown export** — Full `## LLM Calls` section with one-line totals, By Model table, last-10-calls table, and Failures bullet list (zero-cost rows render `—` for Ollama-style local models)
+
+#### What's Captured (and What Isn't)
+
+Captured: provider, model, input/output tokens, duration, cost (auto-estimated from a built-in pricing table covering Claude 4.x / GPT-4o / o1 / Gemini 2.5), status (success/error/timeout), tool names + counts.
+
+**NOT captured by default**: prompt content, completion text, conversation history. Privacy by design — LLM prompts routinely contain user PII, and recording them by default would silently exfiltrate sensitive data into error reports.
+
+#### Host App Safety
+
+Same guarantees as the rest of the gem. Worst-case hot-path cost is **~4 microseconds per breadcrumb** (benchmarked at 125× under the 0.5ms-per-op budget). The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
 
 ### Manual Breadcrumbs API
 

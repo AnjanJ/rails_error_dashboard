@@ -46,6 +46,10 @@ RailsErrorDashboard.configure do |config|
   config.enable_middleware = true
   config.enable_error_subscriber = true
 
+  # Breadcrumbs + LLM observability (Phase L exercises this stack)
+  config.enable_breadcrumbs = true
+  config.enable_llm_observability = true
+
   # Internal logging
   config.enable_internal_logging = true
   config.log_level = :warn

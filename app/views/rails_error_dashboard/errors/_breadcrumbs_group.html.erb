@@ -210,13 +210,71 @@
                   </thead>
                   <tbody>
                     <% breadcrumbs.each_with_index do |crumb, i| %>
-                      <tr>
+                      <% cat = crumb["c"].to_s %>
+                      <% meta = crumb["meta"].is_a?(Hash) ? crumb["meta"] : {} %>
+                      <% is_llm = cat == "llm" %>
+                      <% is_tool = cat == "llm_tool" %>
+                      <% prev_cat = i > 0 ? breadcrumbs[i - 1]["c"].to_s : nil %>
+                      <% nested = is_tool && (prev_cat == "llm" || prev_cat == "llm_tool") %>
+                      <tr<%= nested ? ' class="llm-tool-row"'.html_safe : "".html_safe %>>
                         <td class="text-muted"><%= i + 1 %></td>
-                        <td><span class="badge bg-<%= breadcrumb_badge_color(crumb["c"]) %>"><%= crumb["c"] %></span></td>
-                        <td>
+                        <td><span class="badge bg-<%= breadcrumb_badge_color(cat) %>"><%= cat %></span></td>
+                        <td<%= ' style="padding-left: 2rem;"'.html_safe if nested %>>
+                          <% if nested %><i class="bi bi-arrow-return-right text-muted me-1" aria-hidden="true"></i><% end %>
                           <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(crumb["m"].to_s, length: 200) %></code>
-                          <% if crumb["meta"].present? %>
-                            <br><small class="text-muted"><%= crumb["meta"].inspect %></small>
+                          <% if is_llm %>
+                            <% provider = meta["provider"].presence %>
+                            <% model = meta["model"].presence %>
+                            <% in_tok = meta["input_tokens"].presence %>
+                            <% out_tok = meta["output_tokens"].presence %>
+                            <% cost = meta["cost_usd"].presence %>
+                            <% status = meta["status"].presence %>
+                            <% err_class = meta["error_class"].presence %>
+                            <% err_msg = meta["error_message"].presence %>
+                            <br><small class="text-muted">
+                              <% if provider || model %>
+                                <i class="bi bi-cpu" aria-hidden="true"></i>
+                                <%= [ provider, model ].compact.join(" · ") %>
+                              <% end %>
+                              <% if in_tok || out_tok %>
+                                · <i class="bi bi-input-cursor-text" aria-hidden="true"></i>
+                                in:<strong><%= in_tok || "?" %></strong>
+                                / out:<strong><%= out_tok || "?" %></strong>
+                              <% end %>
+                              <% if cost %>
+                                · <i class="bi bi-currency-dollar" aria-hidden="true"></i>
+                                <strong>$<%= "%.6f" % cost.to_f %></strong>
+                              <% end %>
+                              <% if status && status != "success" %>
+                                · <span class="badge bg-danger"><%= status %></span>
+                              <% end %>
+                            </small>
+                            <% if err_class || err_msg %>
+                              <br><small class="text-danger">
+                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                <%= [ err_class, err_msg ].compact.join(": ") %>
+                              </small>
+                            <% end %>
+                          <% elsif is_tool %>
+                            <% tool_name = meta["tool_name"].presence %>
+                            <% tool_args = meta["tool_arguments"].presence %>
+                            <% tool_result = meta["tool_result"].presence %>
+                            <% if tool_name || tool_args || tool_result %>
+                              <br><small class="text-muted">
+                                <% if tool_name %>
+                                  <i class="bi bi-wrench-adjustable" aria-hidden="true"></i>
+                                  <strong><%= tool_name %></strong>
+                                <% end %>
+                                <% if tool_args %>
+                                  · args: <code style="font-size: 0.85em;"><%= truncate(tool_args, length: 120) %></code>
+                                <% end %>
+                                <% if tool_result %>
+                                  · result: <code style="font-size: 0.85em;"><%= truncate(tool_result, length: 120) %></code>
+                                <% end %>
+                              </small>
+                            <% end %>
+                          <% elsif meta.present? %>
+                            <br><small class="text-muted"><%= meta.inspect %></small>
                           <% end %>
                         </td>
                         <td>

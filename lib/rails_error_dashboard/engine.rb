@@ -101,6 +101,20 @@ module RailsErrorDashboard
         RailsErrorDashboard::Subscribers::ActiveStorageSubscriber.subscribe!
       end
 
+      # Register OpenTelemetry SpanProcessor for LLM observability — Tier 1 path
+      # for hosts already running OTel (ruby_llm, thoughtbot/instrumentation).
+      # Internally guards on Integrations::OTel.available? + tracer provider
+      # capability, so this is safe to call unconditionally.
+      RailsErrorDashboard::Integrations::LlmSpanProcessor.register!
+
+      # Subscribe to red.llm_call / red.llm_tool_call AS::Notifications — Tier 3
+      # path for hosts using direct Net::HTTP / gRPC / local inference servers
+      # that aren't covered by OTel or the Faraday middleware.
+      if RailsErrorDashboard.configuration.enable_llm_observability &&
+         RailsErrorDashboard.configuration.enable_breadcrumbs
+        RailsErrorDashboard::Subscribers::LlmCallSubscriber.subscribe!
+      end
+
       # Enable TracePoint(:raise) for local variable and/or instance variable capture
       if RailsErrorDashboard.configuration.enable_local_variables ||
          RailsErrorDashboard.configuration.enable_instance_variables

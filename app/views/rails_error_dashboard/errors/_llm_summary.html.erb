@@ -1,0 +1,97 @@
+<% if RailsErrorDashboard.configuration.enable_llm_observability &&
+      RailsErrorDashboard.configuration.enable_breadcrumbs &&
+      error.respond_to?(:breadcrumbs) && error.breadcrumbs.present? %>
+  <% breadcrumbs = JSON.parse(error.breadcrumbs) rescue [] %>
+  <% breadcrumbs = [] unless breadcrumbs.is_a?(Array) %>
+  <% llm_summary = RailsErrorDashboard::Services::LlmSummary.call(breadcrumbs) %>
+  <% if llm_summary %>
+    <div class="card mb-4" id="section-llm-summary">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-robot text-info" aria-hidden="true"></i> LLM Calls
+          <span class="badge bg-info text-dark"><%= llm_summary[:total_calls] %></span>
+        </h5>
+        <small class="text-muted">Aggregated from request breadcrumbs</small>
+      </div>
+      <div class="card-body">
+        <div class="row text-center mb-3">
+          <div class="col-4">
+            <div class="fs-4 fw-bold"><%= llm_summary[:total_calls] %></div>
+            <small class="text-muted">Calls</small>
+          </div>
+          <div class="col-4">
+            <div class="fs-4 fw-bold"><%= number_with_delimiter(llm_summary[:total_tokens]) %></div>
+            <small class="text-muted">Tokens</small>
+          </div>
+          <div class="col-4">
+            <div class="fs-4 fw-bold">
+              <% if llm_summary[:total_cost_usd] > 0 %>
+                $<%= "%.4f" % llm_summary[:total_cost_usd] %>
+              <% else %>
+                <span class="text-muted">--</span>
+              <% end %>
+            </div>
+            <small class="text-muted">Cost</small>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">Input</small>
+            <small><strong><%= number_with_delimiter(llm_summary[:total_input_tokens]) %></strong></small>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">Output</small>
+            <small><strong><%= number_with_delimiter(llm_summary[:total_output_tokens]) %></strong></small>
+          </div>
+          <% if llm_summary[:total_tool_calls] > 0 %>
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-muted">Tool calls</small>
+              <small><strong><%= llm_summary[:total_tool_calls] %></strong></small>
+            </div>
+          <% end %>
+          <div class="d-flex justify-content-between mb-1">
+            <small class="text-muted">Total time</small>
+            <small><strong><%= "%.1f" % llm_summary[:total_duration_ms] %>ms</strong></small>
+          </div>
+          <% if llm_summary[:error_count] > 0 %>
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-muted">Errors</small>
+              <small><span class="badge bg-danger"><%= llm_summary[:error_count] %></span></small>
+            </div>
+          <% end %>
+        </div>
+
+        <% if llm_summary[:by_model].any? %>
+          <hr class="my-2">
+          <small class="text-muted d-block mb-2">By model</small>
+          <% llm_summary[:by_model].each do |row| %>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <small style="word-break: break-all;">
+                <% if row[:provider].present? %>
+                  <span class="text-muted"><%= row[:provider] %>·</span>
+                <% end %>
+                <strong><%= row[:model].presence || "unknown" %></strong>
+              </small>
+              <small class="text-muted">
+                <%= row[:calls] %> · <%= number_with_delimiter(row[:tokens]) %>tok
+                <% if row[:cost_usd] > 0 %>
+                  · $<%= "%.4f" % row[:cost_usd] %>
+                <% end %>
+              </small>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% if llm_summary[:error_count] > 0 %>
+          <div class="alert alert-danger py-1 px-2 mb-0 mt-2">
+            <small>
+              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+              <%= llm_summary[:error_count] %> failed call<%= llm_summary[:error_count] == 1 ? "" : "s" %> — see breadcrumbs trail for details.
+            </small>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

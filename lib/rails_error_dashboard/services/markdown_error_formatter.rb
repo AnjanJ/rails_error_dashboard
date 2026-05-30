@@ -15,6 +15,7 @@ module RailsErrorDashboard
       MAX_BACKTRACE_LINES = 15
       MAX_BREADCRUMBS = 10
       MAX_VARIABLES = 10
+      MAX_LLM_CALL_ROWS = 10
 
       # @param error [ErrorLog] An error log record
       # @param related_errors [Array] Related error results with :error and :similarity
@@ -41,6 +42,7 @@ module RailsErrorDashboard
         sections << local_variables_section
         sections << instance_variables_section
         sections << request_context_section
+        sections << llm_calls_section
         sections << breadcrumbs_section
         sections << environment_section
         sections << system_health_section
@@ -196,6 +198,91 @@ module RailsErrorDashboard
         end
 
         "## Request Context\n\n#{items.join("\n")}"
+      end
+
+      def llm_calls_section
+        raw = @error.breadcrumbs
+        return nil if raw.blank?
+
+        crumbs = parse_json(raw)
+        return nil unless crumbs.is_a?(Array) && crumbs.any?
+
+        summary = LlmSummary.call(crumbs)
+        return nil unless summary
+
+        llm_crumbs = crumbs.select { |c| c.is_a?(Hash) && (c["c"] == "llm" || c["c"] == "llm_tool") }
+        return nil if llm_crumbs.empty?
+
+        # One-line totals: tokens / cost / duration / errors
+        totals_parts = []
+        totals_parts << "#{summary[:total_calls]} call#{summary[:total_calls] == 1 ? "" : "s"}"
+        totals_parts << "#{summary[:total_tool_calls]} tool call#{summary[:total_tool_calls] == 1 ? "" : "s"}" if summary[:total_tool_calls] > 0
+        totals_parts << "#{summary[:total_tokens]} tokens (in:#{summary[:total_input_tokens]}/out:#{summary[:total_output_tokens]})" if summary[:total_tokens] > 0
+        totals_parts << "$#{format("%.6f", summary[:total_cost_usd])}" if summary[:total_cost_usd] > 0
+        totals_parts << "#{summary[:total_duration_ms]}ms total"
+        totals_parts << "**#{summary[:error_count]} error#{summary[:error_count] == 1 ? "" : "s"}**" if summary[:error_count] > 0
+
+        out = [ "## LLM Calls", "", totals_parts.join(" · ") ]
+
+        if summary[:by_model].any?
+          out << ""
+          out << "**By Model**"
+          out << ""
+          out << "| Provider | Model | Calls | Tokens | Cost |"
+          out << "|----------|-------|-------|--------|------|"
+          summary[:by_model].each do |row|
+            cost_cell = row[:cost_usd] > 0 ? "$#{format("%.6f", row[:cost_usd])}" : "—"
+            out << "| #{row[:provider].presence || "—"} | #{row[:model].presence || "—"} | #{row[:calls]} | #{row[:tokens]} | #{cost_cell} |"
+          end
+        end
+
+        # Per-call detail table — last N events (chat + tool, in order)
+        recent = llm_crumbs.last(MAX_LLM_CALL_ROWS)
+        out << ""
+        out << "**Calls (last #{recent.size})**"
+        out << ""
+        out << "| Time | Type | Provider/Model | Status | Tokens | Cost | Duration |"
+        out << "|------|------|----------------|--------|--------|------|----------|"
+        recent.each do |c|
+          meta = c["meta"].is_a?(Hash) ? c["meta"] : {}
+          time = c["t"] ? Time.at(c["t"] / 1000.0).utc.strftime("%H:%M:%S.%L") : "—"
+          type = c["c"] == "llm_tool" ? "tool" : "chat"
+          provider_model = if c["c"] == "llm_tool"
+            "tool: #{truncate_value(meta["tool_name"], 40)}"
+          else
+            [ meta["provider"].presence, meta["model"].presence ].compact.join("/").presence || "—"
+          end
+          status = meta["status"].presence || "—"
+          tokens = if meta["input_tokens"].present? || meta["output_tokens"].present?
+            "#{meta["input_tokens"] || "?"}/#{meta["output_tokens"] || "?"}"
+          else
+            "—"
+          end
+          cost = meta["cost_usd"].present? && meta["cost_usd"].to_f > 0 ? "$#{format("%.6f", meta["cost_usd"].to_f)}" : "—"
+          duration = c["d"] ? "#{c["d"]}ms" : "—"
+          out << "| #{time} | #{type} | #{truncate_value(provider_model, 40)} | #{status} | #{tokens} | #{cost} | #{duration} |"
+        end
+
+        # Surface error messages so the LLM consumer sees them inline rather than
+        # having to cross-reference the breadcrumb stream below.
+        error_lines = llm_crumbs.select { |c|
+          c["c"] == "llm" && c["meta"].is_a?(Hash) && c["meta"]["status"] && c["meta"]["status"] != "success"
+        }
+        if error_lines.any?
+          out << ""
+          out << "**Failures**"
+          out << ""
+          error_lines.each do |c|
+            meta = c["meta"]
+            label = [ meta["provider"], meta["model"] ].compact.join("/")
+            err_class = meta["error_class"].presence
+            err_msg = meta["error_message"].presence
+            detail = [ err_class, err_msg ].compact.join(": ")
+            out << "- `#{label}` — #{meta["status"]}#{detail.empty? ? "" : ": #{detail}"}"
+          end
+        end
+
+        out.join("\n")
       end
 
       def breadcrumbs_section

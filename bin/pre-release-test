@@ -496,7 +496,8 @@ test_full_sync() {
     "$CHAOS_DIR/phase_b_edge_cases.rb" \
     "$CHAOS_DIR/phase_c_queries.rb" \
     "$CHAOS_DIR/phase_g_quick_wins.rb" \
-    "$CHAOS_DIR/phase_h_database_setup.rb"
+    "$CHAOS_DIR/phase_h_database_setup.rb" \
+    "$CHAOS_DIR/phase_l_llm_observability.rb"
 }
 
 test_full_async() {
@@ -641,7 +642,8 @@ test_full_kitchen_sink() {
   run_chaos_tests "$app_dir" \
     "$CHAOS_DIR/phase_k_kitchen_sink.rb" \
     "$CHAOS_DIR/phase_g_quick_wins.rb" \
-    "$CHAOS_DIR/phase_h_database_setup.rb"
+    "$CHAOS_DIR/phase_h_database_setup.rb" \
+    "$CHAOS_DIR/phase_l_llm_observability.rb"
 }
 
 test_full_multi_app() {

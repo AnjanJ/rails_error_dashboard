@@ -80,6 +80,12 @@ RailsErrorDashboard.configure do |config|
   config.enable_middleware = true
   config.enable_error_subscriber = true
 
+  # Breadcrumbs + LLM observability (v0.7.0 — tests interaction with every
+  # other option being ON simultaneously)
+  config.enable_breadcrumbs = true
+  config.enable_llm_observability = true
+  config.llm_pricing_overrides = { "my-local-llm" => { input: 0.0, output: 0.0 } }
+
   # Internal logging
   config.enable_internal_logging = true
   config.log_level = :warn

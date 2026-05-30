@@ -164,6 +164,23 @@ Buffer Size                      40 events
 
 ---
 
+### 6a. LLM Observability
+
+Shows LLM call capture configuration (requires breadcrumbs):
+
+- **LLM Observability**: Whether LLM call capture is enabled
+- **Pricing Overrides**: Count of custom per-model rate overrides (shown when any are configured)
+
+**Example Display:**
+```text
+LLM Observability                ✓ Enabled
+Pricing Overrides                2 model(s) overridden
+```
+
+When enabled, the dashboard captures `llm` and `llm_tool` breadcrumbs from three paths: a Faraday middleware for `ruby-openai`, an OpenTelemetry `SpanProcessor` for `ruby_llm` and similar OTel-instrumented clients, and an `ActiveSupport::Notifications` subscriber (`red.llm_call` / `red.llm_tool_call`) for everything else. See [LLM Observability Guide](../LLM_OBSERVABILITY.md).
+
+---
+
 ### 7. Enhanced Metrics
 
 Displays additional context being tracked with errors (shown only if any of these are configured):
