@@ -95,7 +95,7 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
       # ActionController::Live enumerator, so :stream may be invoked more than
       # once. Assert it was called and verify the arguments from the first
       # invocation rather than pinning an exact call count via .with.
-      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream)
+      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream).at_least(:once)
       expect(received_args[:error]).to eq(error)
       expect(received_args[:question]).to eq("What caused this?")
       expect(received_args[:context]).to include("QuestDataCorruptionError")
