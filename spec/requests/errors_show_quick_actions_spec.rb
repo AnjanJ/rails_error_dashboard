@@ -71,7 +71,9 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
       RailsErrorDashboard.configuration.llm_model = "gpt-5"
       error = create(:error_log, application: application, error_type: "QuestDataCorruptionError")
 
+      received_args = nil
       allow(RailsErrorDashboard::Services::LlmClient).to receive(:stream) do |error:, question:, context:, &block|
+        received_args ||= { error: error, question: question, context: context }
         block.call("Check the quest ")
         block.call("data at index 3.")
         { provider: "openai", model: "gpt-5" }
@@ -88,11 +90,15 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
       expect(response.body).to include('"text":"data at index 3."')
       expect(response.body).to include('event: done')
       expect(response.body).to include('"provider":"openai"')
-      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream).with(
-        error: error,
-        question: "What caused this?",
-        context: a_string_including("QuestDataCorruptionError")
-      )
+
+      # On Rails 7.1/7.2 reading response.body re-iterates the
+      # ActionController::Live enumerator, so :stream may be invoked more than
+      # once. Assert it was called and verify the arguments from the first
+      # invocation rather than pinning an exact call count via .with.
+      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream)
+      expect(received_args[:error]).to eq(error)
+      expect(received_args[:question]).to eq("What caused this?")
+      expect(received_args[:context]).to include("QuestDataCorruptionError")
     end
 
     it "rejects blank AI Help questions" do
