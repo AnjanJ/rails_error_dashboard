@@ -120,12 +120,33 @@ module RailsErrorDashboard
       # Harvest breadcrumbs from the current buffer and clear it
       # @return [Array<Hash>] Array of breadcrumb hashes (empty if none)
       def self.harvest
-        buffer = Thread.current[THREAD_KEY]
-        return [] unless buffer
+        # OTel: emit a child span around the harvest so operators see the
+        # buffer-drain step in the capture trace. Cheap to compute (single
+        # Array#size + JSON byte estimate) and contained to LogError invocations
+        # via the parent rails_error_dashboard.capture_error span.
+        RailsErrorDashboard::Integrations::Tracer.in_span(
+          "breadcrumb_collection",
+          kind: :breadcrumbs
+        ) do |span|
+          buffer = Thread.current[THREAD_KEY]
+          if buffer.nil?
+            span&.set_attribute("breadcrumb_count", 0)
+            next []
+          end
 
-        result = buffer.to_a
-        buffer.clear
-        result
+          result = buffer.to_a
+          buffer.clear
+
+          # Only pay for attribute computation when a real span is recording.
+          # NoopSpan is the singleton returned when OTel is off — skip the work
+          # entirely so the harvest path stays free in the common case.
+          if span && !span.equal?(RailsErrorDashboard::Integrations::Tracer::NOOP_SPAN)
+            span.set_attribute("breadcrumb_count", result.size)
+            span.set_attribute("bytes_serialized_estimate", estimate_byte_size(result))
+          end
+
+          result
+        end
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BreadcrumbCollector.harvest failed: #{e.message}")
         []
@@ -222,6 +243,25 @@ module RailsErrorDashboard
         {}
       end
       private_class_method :truncate_metadata
+
+      # Rough byte-size estimate without paying the full JSON serialization
+      # cost. Sums the (already-truncated) message lengths and metadata string
+      # values. Used as the bytes_serialized_estimate attribute on the OTel
+      # breadcrumb_collection span.
+      def self.estimate_byte_size(breadcrumbs)
+        return 0 unless breadcrumbs.is_a?(Array)
+        breadcrumbs.sum do |c|
+          next 0 unless c.is_a?(Hash)
+          # ~12 bytes constant overhead per crumb (timestamp + category key)
+          base = 12 + (c[:m] || c["m"]).to_s.bytesize
+          meta = c[:meta] || c["meta"]
+          base += meta.values.sum { |v| v.to_s.bytesize } if meta.is_a?(Hash)
+          base
+        end
+      rescue StandardError
+        0
+      end
+      private_class_method :estimate_byte_size
     end
   end
 end

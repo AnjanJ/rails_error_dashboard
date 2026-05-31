@@ -24,7 +24,16 @@ module RailsErrorDashboard
       # Capture current system health metrics
       # @return [Hash] Health snapshot (always safe, never raises)
       def self.capture
-        new.capture
+        # OTel: emit a child span around the snapshot so operators can verify
+        # the <1ms health-budget claim from their own tracing dashboard. The
+        # snapshot itself is read-only (GC.stat, pool.stat, procfs reads) so
+        # the span carries no useful attributes beyond timing.
+        RailsErrorDashboard::Integrations::Tracer.in_span(
+          "system_health_snapshot",
+          kind: :health
+        ) do |_span|
+          new.capture
+        end
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] SystemHealthSnapshot.capture failed: #{e.message}")
         { captured_at: Time.current.iso8601 }
