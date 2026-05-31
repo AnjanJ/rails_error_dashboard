@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.6.4...rails_error_dashboard/v0.7.0) (2026-05-31)
+
+
+### ✨ Features
+
+* AI Help drawer for errors ([#123](https://github.com/AnjanJ/rails_error_dashboard/issues/123)) ([7a88632](https://github.com/AnjanJ/rails_error_dashboard/commit/7a8863229e08d8ec665a9878e3150d7fea37bf1d))
+* **llm-observability:** three capture paths, sidebar UI, markdown export ([#125](https://github.com/AnjanJ/rails_error_dashboard/issues/125)) ([09c63dc](https://github.com/AnjanJ/rails_error_dashboard/commit/09c63dc6b234b9b936f4d9ad451bf84df4f01803))
+
 ## [Unreleased]
 
 ### ✨ Features
