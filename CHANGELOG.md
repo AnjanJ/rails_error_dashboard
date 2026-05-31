@@ -13,17 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * AI Help drawer for errors ([#123](https://github.com/AnjanJ/rails_error_dashboard/issues/123)) ([7a88632](https://github.com/AnjanJ/rails_error_dashboard/commit/7a8863229e08d8ec665a9878e3150d7fea37bf1d))
 * **llm-observability:** three capture paths, sidebar UI, markdown export ([#125](https://github.com/AnjanJ/rails_error_dashboard/issues/125)) ([09c63dc](https://github.com/AnjanJ/rails_error_dashboard/commit/09c63dc6b234b9b936f4d9ad451bf84df4f01803))
 
-## [Unreleased]
-
-### ✨ Features
-
-* add optional AI Help drawer on error detail pages with OpenAI and Anthropic provider support
-* stream AI Help responses to the browser and render provider Markdown in the dashboard
-* support OpenAI GPT-5 via the Responses API and GPT-4 models via Chat Completions
-
-### 📚 Documentation
-
-* document AI Help configuration in the README with a screenshot
 
 ### 🙏 Contributors
 
