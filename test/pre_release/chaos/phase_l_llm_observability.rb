@@ -163,7 +163,7 @@ end
 # tool-call with string keys (host code may pass either symbol or string)
 ActiveSupport::Notifications.instrument("red.llm_tool_call",
   "tool_name" => "string_key_tool"
-) {}
+) { }
 
 string_keyed = (RailsErrorDashboard::Services::BreadcrumbCollector.current_buffer&.to_a || [])
   .find { |c| (c[:meta] || {})[:tool_name] == "string_key_tool" }
@@ -308,7 +308,7 @@ RailsErrorDashboard::Services::BreadcrumbCollector.init_buffer
 ActiveSupport::Notifications.instrument("red.llm_call",
   provider: "openai", model: "gpt-4o-mini",
   input_tokens: 100, output_tokens: 50, status: :success
-) {}
+) { }
 
 after_disable = (RailsErrorDashboard::Services::BreadcrumbCollector.current_buffer&.to_a || [])
   .select { |c| c[:c] == "llm" || c[:c] == "llm_tool" }
@@ -323,7 +323,7 @@ RailsErrorDashboard::Services::BreadcrumbCollector.init_buffer
 ActiveSupport::Notifications.instrument("red.llm_call",
   provider: "openai", model: "gpt-4o-mini",
   input_tokens: 100, output_tokens: 50, status: :success
-) {}
+) { }
 
 after_disable2 = (RailsErrorDashboard::Services::BreadcrumbCollector.current_buffer&.to_a || [])
   .select { |c| c[:c] == "llm" || c[:c] == "llm_tool" }
@@ -538,7 +538,7 @@ PreReleaseTestHarness.section("L10: Host-app safety smoke")
 # Malformed payload to AS::Notifications — subscriber must not raise
 no_raise = true
 begin
-  ActiveSupport::Notifications.instrument("red.llm_call", nil) {}
+  ActiveSupport::Notifications.instrument("red.llm_call", nil) { }
 rescue => e
   no_raise = false
   puts "    raised: #{e.class}: #{e.message}"
@@ -548,7 +548,7 @@ assert "L10: nil payload to red.llm_call never raises", no_raise
 no_raise2 = true
 begin
   ActiveSupport::Notifications.instrument("red.llm_call",
-    provider: nil, model: nil, input_tokens: "abc", output_tokens: nil) {}
+    provider: nil, model: nil, input_tokens: "abc", output_tokens: nil) { }
 rescue => e
   no_raise2 = false
 end
