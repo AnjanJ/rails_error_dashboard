@@ -107,6 +107,20 @@ module RailsErrorDashboard
       # capability, so this is safe to call unconditionally.
       RailsErrorDashboard::Integrations::LlmSpanProcessor.register!
 
+      # Outbound OTel export — warn at boot if the feature is enabled but
+      # the OTel API isn't loaded. The Tracer façade silently no-ops in that
+      # state, so without this warning users could enable the feature and
+      # see zero spans without knowing why. Don't auto-disable — the user
+      # may install OTel later in the boot sequence.
+      if RailsErrorDashboard.configuration.enable_otel_export &&
+         !RailsErrorDashboard::Integrations::Tracer.otel_api_loaded?
+        Rails.logger.warn(
+          "[RailsErrorDashboard] enable_otel_export = true but the OpenTelemetry API " \
+          "(opentelemetry-api gem) isn't loaded. Outbound spans will not emit. " \
+          "Add `gem \"opentelemetry-api\"` (or the full opentelemetry-sdk) to your Gemfile."
+        )
+      end
+
       # Subscribe to red.llm_call / red.llm_tool_call AS::Notifications — Tier 3
       # path for hosts using direct Net::HTTP / gRPC / local inference servers
       # that aren't covered by OTel or the Faraday middleware.
