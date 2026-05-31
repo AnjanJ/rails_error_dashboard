@@ -18,6 +18,23 @@ module RailsErrorDashboard
       MAX_METADATA_VALUE_LENGTH = 200
       MAX_METADATA_KEYS = 10
 
+      # Categories whose metadata is emitted by LlmCallEvent#to_breadcrumb_metadata.
+      LLM_CATEGORIES = %w[llm llm_tool].freeze
+
+      # Keys on llm / llm_tool crumbs whose values are structured (numeric counts,
+      # identifiers, durations, costs) and must not be redacted by the
+      # ActiveSupport::ParameterFilter substring matcher. Without this whitelist,
+      # the default `:token` pattern matches `input_tokens` / `output_tokens` and
+      # corrupts the LlmSummary rollup, sidebar card, and markdown export tokens
+      # column. Sensitive-looking fields like tool_arguments / tool_result /
+      # error_message are intentionally NOT in this list — they go through the
+      # filter as usual because they can carry user-provided content.
+      LLM_STRUCTURED_METADATA_KEYS = %w[
+        provider model status
+        input_tokens output_tokens duration_ms
+        tool_name error_class cost_usd
+      ].freeze
+
       # Fixed-size ring buffer — O(1) append, wraps around when full
       class RingBuffer
         def initialize(max_size)
@@ -156,7 +173,7 @@ module RailsErrorDashboard
 
           # Filter metadata values
           if filtered[:meta].is_a?(Hash)
-            filtered[:meta] = filter.filter(filtered[:meta])
+            filtered[:meta] = filter_metadata_for_crumb(filter, filtered[:c], filtered[:meta])
           end
 
           filtered
@@ -165,6 +182,22 @@ module RailsErrorDashboard
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BreadcrumbCollector.filter_sensitive failed: #{e.message}")
         breadcrumbs.is_a?(Array) ? breadcrumbs : []
       end
+
+      # Apply the sensitive-data filter to a single breadcrumb's metadata hash,
+      # with a narrow whitelist for llm/llm_tool crumbs. The default
+      # ActiveSupport::ParameterFilter does substring matching (e.g. the `:token`
+      # default redacts every key containing "token"), which corrupts the
+      # structured numeric metadata emitted by LlmCallEvent. For llm/llm_tool
+      # crumbs we filter only the non-whitelisted keys, then merge the
+      # untouched structured keys back in.
+      def self.filter_metadata_for_crumb(filter, category, metadata)
+        return filter.filter(metadata) unless LLM_CATEGORIES.include?(category.to_s)
+
+        structured, rest = metadata.partition { |k, _| LLM_STRUCTURED_METADATA_KEYS.include?(k.to_s) }
+        filtered_rest = filter.filter(rest.to_h)
+        structured.to_h.merge(filtered_rest)
+      end
+      private_class_method :filter_metadata_for_crumb
 
       # Truncate message to MAX_MESSAGE_LENGTH
       def self.truncate_message(message)

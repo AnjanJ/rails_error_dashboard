@@ -96,6 +96,21 @@ RSpec.describe "rails_error_dashboard/errors/_llm_summary.html.erb", type: :view
       expect(rendered).to include("openai")
     end
 
+    it "does not use word-break: break-all on the model name (Bug 3 regression)" do
+      # v0.7.0 used `word-break: break-all` which split "gemini-2.5-flash"
+      # mid-word as "gemini-2.5-fla" + "sh". Fix uses overflow-wrap: anywhere,
+      # which respects natural break points (hyphens) and only breaks mid-word
+      # as a last resort.
+      render_partial(error)
+      expect(rendered).not_to include("word-break: break-all")
+      expect(rendered).to include("overflow-wrap: anywhere")
+    end
+
+    it "adds a title tooltip showing the full provider · model string" do
+      render_partial(error)
+      expect(rendered).to include('title="openai · gpt-4o-mini"')
+    end
+
     it "does not render an error alert when all calls succeed" do
       render_partial(error)
       expect(rendered).not_to include("failed call")

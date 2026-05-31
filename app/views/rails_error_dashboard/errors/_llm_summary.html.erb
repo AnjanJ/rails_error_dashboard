@@ -66,14 +66,14 @@
           <hr class="my-2">
           <small class="text-muted d-block mb-2">By model</small>
           <% llm_summary[:by_model].each do |row| %>
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <small style="word-break: break-all;">
+            <div class="d-flex justify-content-between align-items-center mb-1" style="gap: 0.5rem;">
+              <small style="min-width: 0; overflow-wrap: anywhere;" title="<%= [ row[:provider], row[:model].presence || "unknown" ].compact.join(" · ") %>">
                 <% if row[:provider].present? %>
                   <span class="text-muted"><%= row[:provider] %>·</span>
                 <% end %>
                 <strong><%= row[:model].presence || "unknown" %></strong>
               </small>
-              <small class="text-muted">
+              <small class="text-muted text-nowrap">
                 <%= row[:calls] %> · <%= number_with_delimiter(row[:tokens]) %>tok
                 <% if row[:cost_usd] > 0 %>
                   · $<%= "%.4f" % row[:cost_usd] %>
