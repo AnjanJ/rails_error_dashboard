@@ -60,6 +60,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Antarr Byrd ([@antarr](https://github.com/antarr))
+
+- ✨ [#123](https://github.com/AnjanJ/rails_error_dashboard/pull/123) - Added the AI Help drawer on the error detail page. When an LLM provider is configured, users can ask follow-up questions about the current error and receive streamed Markdown answers from OpenAI (GPT-5 via Responses API, GPT-4 via Chat Completions) or Anthropic (Claude Sonnet via Messages API) without leaving the dashboard. Includes SSE streaming, lambda-friendly API keys, sensitive-data filtering integration, and a privacy note in the README
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -130,12 +136,12 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 7 (including maintainer)
-**External Contributors:** 6
+**Total Contributors:** 8 (including maintainer)
+**External Contributors:** 7
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
-**Tests Written:** 2,600+
+**Tests Written:** 3,300+
 
 ---
 
@@ -165,6 +171,7 @@ When you contribute to Rails Error Dashboard, you get:
 ### ✨ Feature Creators
 - [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
 - [@j4rs](https://github.com/j4rs) - Mute/unmute notification suppression
+- [@antarr](https://github.com/antarr) - AI Help drawer (OpenAI + Anthropic, streamed Markdown)
 
 ---
 
@@ -180,4 +187,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: April 20, 2026*
+*This page is updated with each release. Last updated: May 31, 2026*

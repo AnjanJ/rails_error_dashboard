@@ -622,7 +622,7 @@ Built with [Rails](https://rubyonrails.org/) · Custom design tokens with [Boots
 
 [![Contributors](https://contrib.rocks/image?repo=AnjanJ/rails_error_dashboard)](https://github.com/AnjanJ/rails_error_dashboard/graphs/contributors)
 
-Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), [@RafaelTurtle](https://github.com/RafaelTurtle), [@j4rs](https://github.com/j4rs), and [@gmarziou](https://github.com/gmarziou). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
+Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), [@RafaelTurtle](https://github.com/RafaelTurtle), [@j4rs](https://github.com/j4rs), [@gmarziou](https://github.com/gmarziou), and [@antarr](https://github.com/antarr). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
 
 ---
 
