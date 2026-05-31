@@ -160,6 +160,79 @@ config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = tru
 </details>
 
 <details>
+<summary><strong>LLM Observability — Calls, Tokens, Cost, Tool Use</strong></summary>
+
+Capture every LLM call your app makes — model, latency, token counts, estimated USD cost, and tool-use requests — as breadcrumbs on the error that follows. When a request crashes, you see the chat completion that preceded it: which model was called, how long it took, what it cost, and which tools it asked to invoke.
+
+- Three capture paths — pick whichever matches your stack
+- Cost estimated from a built-in pricing table (Claude 4.x, GPT-4o/o1, Gemini 2.5) — override per-model via `config.llm_pricing_overrides`
+- Tool-call requests summarized inline; tool *execution* spans captured separately via the OTel path
+- Content capture (prompts/completions) **OFF by default** — only token counts and metadata are recorded
+- Same host-app safety guarantees as the rest of the gem — never raises, never blocks the request, every callback rescue-wrapped
+
+```ruby
+config.enable_breadcrumbs        = true   # required — LLM crumbs ride the breadcrumb pipeline
+config.enable_llm_observability  = true
+# Optional — override the built-in pricing table for your account
+# config.llm_pricing_overrides = { "claude-sonnet-4-6" => { input: 3.0, output: 15.0 } }
+```
+
+**Path A — `ruby-openai` (Faraday middleware)**
+
+```ruby
+# Gemfile already has: gem "ruby-openai"
+client = OpenAI::Client.new do |f|
+  f.use RailsErrorDashboard::Integrations::LlmMiddleware
+end
+```
+
+**Path B — `ruby_llm` (OpenTelemetry)**
+
+`ruby_llm` doesn't expose a Faraday hook, but the thoughtbot OTel instrumentation gem emits GenAI-semconv spans that our SpanProcessor picks up automatically.
+
+```ruby
+# Gemfile
+gem "ruby_llm"
+gem "opentelemetry-sdk"
+gem "opentelemetry-instrumentation-ruby_llm"
+
+# config/initializers/opentelemetry.rb
+OpenTelemetry::SDK.configure do |c|
+  c.use "OpenTelemetry::Instrumentation::RubyLLM"
+end
+```
+
+The dashboard's `LlmSpanProcessor` registers itself with `OpenTelemetry.tracer_provider` during engine boot — no extra wiring.
+
+**Path C — anything else (Anthropic official SDK, Net::HTTP, gRPC, Ollama, …)**
+
+The official `anthropic` gem uses `Net::HTTP` directly (no Faraday hook), and many local-inference setups don't run OTel. Wrap any LLM call in `ActiveSupport::Notifications.instrument` — pass a mutable Hash so token counts can be filled in *after* the call:
+
+```ruby
+payload = { provider: "anthropic", model: "claude-sonnet-4-6" }
+
+ActiveSupport::Notifications.instrument("red.llm_call", payload) do
+  response = Anthropic::Client.new.messages.create(
+    model: "claude-sonnet-4-6",
+    messages: [ { role: "user", content: "hi" } ]
+  )
+  payload[:input_tokens]  = response.usage.input_tokens
+  payload[:output_tokens] = response.usage.output_tokens
+end
+
+# Tool execution — captured as its own llm_tool breadcrumb
+ActiveSupport::Notifications.instrument("red.llm_tool_call",
+  tool_name: "search_database",
+  tool_arguments: { query: "..." }
+) do
+  # run the tool
+end
+```
+
+Payload contract matches the `LlmCallEvent` value object — see [`docs/LLM_OBSERVABILITY.md`](docs/LLM_OBSERVABILITY.md) for the full field list.
+</details>
+
+<details>
 <summary><strong>Issue Tracking — GitHub, GitLab, Codeberg</strong></summary>
 
 One switch connects errors to your issue tracker. Platform becomes the source of truth — status, assignees, labels, and comments are mirrored live in the dashboard.
@@ -549,7 +622,7 @@ Built with [Rails](https://rubyonrails.org/) · Custom design tokens with [Boots
 
 [![Contributors](https://contrib.rocks/image?repo=AnjanJ/rails_error_dashboard)](https://github.com/AnjanJ/rails_error_dashboard/graphs/contributors)
 
-Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), [@RafaelTurtle](https://github.com/RafaelTurtle), [@j4rs](https://github.com/j4rs), and [@gmarziou](https://github.com/gmarziou). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
+Special thanks to [@bonniesimon](https://github.com/bonniesimon), [@gundestrup](https://github.com/gundestrup), [@midwire](https://github.com/midwire), [@RafaelTurtle](https://github.com/RafaelTurtle), [@j4rs](https://github.com/j4rs), [@gmarziou](https://github.com/gmarziou), and [@antarr](https://github.com/antarr). See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
 
 ---
 

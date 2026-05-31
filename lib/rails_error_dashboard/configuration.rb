@@ -184,6 +184,11 @@ module RailsErrorDashboard
     # ActiveStorage event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_activestorage_tracking        # Master switch (default: false)
 
+    # LLM observability (requires enable_breadcrumbs = true)
+    attr_accessor :enable_llm_observability             # Master switch (default: false)
+    attr_accessor :llm_observability_content_capture    # Capture prompt/completion text (default: false — PII risk)
+    attr_accessor :llm_pricing_overrides                # Hash of { "model-name" => { input: usd_per_1m, output: usd_per_1m } }
+
     # Dashboard UI appearance
     attr_accessor :accent_color  # :crimson (default), :ruby, :ember, :violet
 
@@ -313,7 +318,7 @@ module RailsErrorDashboard
       # Breadcrumbs defaults - OFF by default (opt-in)
       @enable_breadcrumbs = false         # Master switch
       @breadcrumb_buffer_size = 40        # Max events per request (Sentry uses 100, we're conservative)
-      @breadcrumb_categories = nil        # nil = all; or [:sql, :controller, :cache, :job, :mailer, :custom, :deprecation]
+      @breadcrumb_categories = nil        # nil = all; or [:sql, :controller, :cache, :job, :mailer, :custom, :deprecation, :llm, :llm_tool]
 
       # N+1 query detection defaults - ON by default (lightweight display-time analysis)
       @enable_n_plus_one_detection = true  # Analyze SQL breadcrumbs for repeated patterns
@@ -360,6 +365,12 @@ module RailsErrorDashboard
       @enable_actioncable_tracking = false
       # ActiveStorage event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_activestorage_tracking = false
+
+      # LLM observability defaults - OFF by default (opt-in, requires breadcrumbs)
+      # content_capture stays OFF even when master switch is on (privacy: prompts may contain PII/secrets)
+      @enable_llm_observability = false
+      @llm_observability_content_capture = false
+      @llm_pricing_overrides = {}
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
@@ -533,6 +544,13 @@ module RailsErrorDashboard
         warnings << "enable_activestorage_tracking requires enable_breadcrumbs = true. " \
                     "ActiveStorage tracking has been auto-disabled."
         @enable_activestorage_tracking = false
+      end
+
+      # Validate llm observability requires breadcrumbs
+      if enable_llm_observability && !enable_breadcrumbs
+        warnings << "enable_llm_observability requires enable_breadcrumbs = true. " \
+                    "LLM observability has been auto-disabled."
+        @enable_llm_observability = false
       end
 
       # Skip credential/service-dependent validations during Docker builds.

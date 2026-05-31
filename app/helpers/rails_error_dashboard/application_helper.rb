@@ -263,6 +263,8 @@ module RailsErrorDashboard
       when "mailer"     then "secondary"
       when "custom"     then "dark"
       when "deprecation" then "danger"
+      when "llm"        then "info"
+      when "llm_tool"   then "warning"
       else "light"
       end
     end

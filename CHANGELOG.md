@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * document AI Help configuration in the README with a screenshot
 
+### 🙏 Contributors
+
+* Thanks to [@antarr](https://github.com/antarr) for the AI Help drawer ([#123](https://github.com/AnjanJ/rails_error_dashboard/pull/123))
+
 ## [0.6.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.6.3...rails_error_dashboard/v0.6.4) (2026-05-04)
 
 

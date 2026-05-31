@@ -326,6 +326,158 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
       end
     end
 
+    context "LLM calls" do
+      # Production breadcrumbs are JSON-encoded strings with stringified meta
+      # values (BreadcrumbCollector#truncate_metadata stringifies everything).
+      def llm_chat(provider: "openai", model: "gpt-4o-mini",
+                   input: "100", output: "20", cost: "0.0005",
+                   status: "success", duration: 250.0, t: 1706025735000, **extra)
+        {
+          "t" => t, "c" => "llm", "m" => "#{provider} · #{model}", "d" => duration,
+          "meta" => {
+            "provider" => provider, "model" => model, "status" => status,
+            "input_tokens" => input, "output_tokens" => output,
+            "cost_usd" => cost
+          }.merge(extra.transform_keys(&:to_s))
+        }
+      end
+
+      def llm_tool(name: "get_weather", duration: 12.0, t: 1706025735100)
+        {
+          "t" => t, "c" => "llm_tool", "m" => "tool: #{name}", "d" => duration,
+          "meta" => { "tool_name" => name }
+        }
+      end
+
+      it "omits the section when breadcrumbs has no LLM entries" do
+        crumbs = [ { "t" => 1, "c" => "sql", "m" => "SELECT 1", "d" => 1 } ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).not_to include("## LLM Calls")
+      end
+
+      it "omits the section when breadcrumbs is nil" do
+        result = described_class.call(make_error(breadcrumbs: nil))
+        expect(result).not_to include("## LLM Calls")
+      end
+
+      it "renders the section header and one-line totals for a single call" do
+        crumbs = [ llm_chat ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("## LLM Calls")
+        expect(result).to include("1 call")
+        expect(result).to include("120 tokens (in:100/out:20)")
+        expect(result).to include("$0.000500")
+        expect(result).to include("250.0ms total")
+      end
+
+      it "renders a By Model table aggregating across providers" do
+        crumbs = [
+          llm_chat(provider: "openai", model: "gpt-4o-mini", input: "100", output: "20", cost: "0.0005"),
+          llm_chat(provider: "openai", model: "gpt-4o-mini", input: "200", output: "30", cost: "0.0008"),
+          llm_chat(provider: "anthropic", model: "claude-sonnet-4-5", input: "500", output: "100", cost: "0.0050")
+        ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("**By Model**")
+        expect(result).to include("| Provider | Model | Calls | Tokens | Cost |")
+        expect(result).to include("| openai | gpt-4o-mini | 2 | 350 |")
+        expect(result).to include("| anthropic | claude-sonnet-4-5 | 1 | 600 |")
+      end
+
+      it "renders a per-call detail table" do
+        crumbs = [ llm_chat ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("**Calls (last 1)**")
+        expect(result).to include("| Time | Type | Provider/Model | Status | Tokens | Cost | Duration |")
+        expect(result).to include("| chat | openai/gpt-4o-mini | success | 100/20 |")
+      end
+
+      it "renders tool calls as type=tool with the tool name" do
+        crumbs = [ llm_chat, llm_tool(name: "get_weather") ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("1 tool call")
+        expect(result).to include("| tool | tool: get_weather |")
+      end
+
+      it "truncates the per-call table to the last MAX_LLM_CALL_ROWS entries" do
+        crumbs = (1..15).map { |i|
+          llm_chat(t: 1706025735000 + i, model: "model_#{i}", input: "10", output: "5", cost: "0.0001")
+        }.to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("**Calls (last 10)**")
+
+        # Extract just the Calls table to assert on row presence — the By Model
+        # rollup table will include every model, so a substring assertion on the
+        # full document is too coarse.
+        calls_block = result[/\*\*Calls \(last 10\)\*\*.*?(?=\n\n##|\z)/m]
+        expect(calls_block).to include("model_15")
+        expect(calls_block).to include("model_6")
+        expect(calls_block).not_to include("model_5 ")
+      end
+
+      it "renders the Failures section when a call has non-success status" do
+        crumbs = [
+          llm_chat,
+          llm_chat(
+            provider: "anthropic", model: "claude-sonnet-4-5",
+            status: "timeout", error_class: "Net::OpenTimeout", error_message: "execution expired"
+          )
+        ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("**1 error**")
+        expect(result).to include("**Failures**")
+        expect(result).to include("anthropic/claude-sonnet-4-5")
+        expect(result).to include("timeout")
+        expect(result).to include("Net::OpenTimeout")
+        expect(result).to include("execution expired")
+      end
+
+      it "renders — for missing cost rather than $0.000000" do
+        crumbs = [ llm_chat(provider: "ollama", model: "llama3", input: "10", output: "5", cost: "0.0") ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        # In the By Model row, cost cell is "—" when zero
+        expect(result).to match(/\| ollama \| llama3 \| 1 \| 15 \| — \|/)
+      end
+
+      it "renders the section even when the only LLM entry is a tool call" do
+        crumbs = [ llm_tool ].to_json
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("## LLM Calls")
+        expect(result).to include("0 calls")
+        expect(result).to include("1 tool call")
+      end
+
+      it "is resilient when an LLM crumb has nil meta" do
+        crumbs = [ { "t" => 1, "c" => "llm", "m" => "no meta", "d" => 50.0 } ].to_json
+        expect {
+          described_class.call(make_error(breadcrumbs: crumbs))
+        }.not_to raise_error
+        result = described_class.call(make_error(breadcrumbs: crumbs))
+        expect(result).to include("## LLM Calls")
+      end
+
+      it "appears between Request Context and Breadcrumbs in section order" do
+        crumbs = [
+          { "t" => 1, "c" => "sql", "m" => "SELECT 1", "d" => 1 },
+          llm_chat
+        ].to_json
+        result = described_class.call(make_error(
+          breadcrumbs: crumbs,
+          request_url: "https://example.com/foo",
+          controller_name: "FoosController",
+          action_name: "show"
+        ))
+        # Section ordering: Request Context → LLM Calls → Breadcrumbs
+        rc_pos = result.index("## Request Context")
+        llm_pos = result.index("## LLM Calls")
+        bc_pos = result.index("## Breadcrumbs")
+        expect(rc_pos).not_to be_nil
+        expect(llm_pos).not_to be_nil
+        expect(bc_pos).not_to be_nil
+        expect(rc_pos).to be < llm_pos
+        expect(llm_pos).to be < bc_pos
+      end
+    end
+
     context "environment info" do
       it "includes ruby and rails versions" do
         env = {
