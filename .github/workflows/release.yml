@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.7.0). Must match lib/rails_error_dashboard/version.rb on main. Used only to confirm intent."
+        required: true
+        type: string
 
 permissions:
   contents: write      # Create releases and tags
@@ -11,7 +17,10 @@ permissions:
   id-token: write      # Required for trusted publishing (OIDC)
 
 jobs:
+  # Automated path: release-please opens/merges release PRs and publishes
+  # on successful merge. Triggered by every push to main.
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -54,3 +63,45 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         uses: rubygems/release-gem@v1
         # No API key needed! Trusted publishing handles authentication via OIDC
+
+  # Manual escape hatch: republishes the gem at the current version on main
+  # WITHOUT going through release-please. Use this when:
+  #   - The automated `release` job above created a tag + GitHub release but
+  #     a transient failure (flaky test, network blip) blocked the publish step
+  #   - Re-running the workflow won't help because release-please sees the
+  #     release already exists and skips its downstream steps
+  #
+  # Required: the `version` input must match lib/rails_error_dashboard/version.rb
+  # on the current main. This is a guardrail to confirm intent and prevent
+  # accidental publishes of the wrong version.
+  republish:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify input version matches version.rb
+        run: |
+          file_version=$(ruby -r ./lib/rails_error_dashboard/version.rb -e 'puts RailsErrorDashboard::VERSION')
+          input_version="${{ inputs.version }}"
+          if [ "$file_version" != "$input_version" ]; then
+            echo "::error::Input version '$input_version' does not match version.rb '$file_version'. Aborting."
+            exit 1
+          fi
+          echo "Version match confirmed: $file_version"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Run tests before publishing
+        run: bundle exec rspec
+
+      - name: Run RuboCop before publishing
+        run: bundle exec rubocop
+
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@v1
