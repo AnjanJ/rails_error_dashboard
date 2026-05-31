@@ -17,6 +17,21 @@ module RailsErrorDashboard
         end
       end
 
+      # Build the base OTel span attributes available before any work happens.
+      # Kept as a module-level helper so both sync and async paths can call it.
+      # @return [Hash<String, Object>]
+      def self.build_capture_span_attributes(exception, was_async:)
+        msg = exception.message.to_s
+        {
+          "error.type" => exception.class.name,
+          "error.message" => msg.length > 200 ? "#{msg[0, 200]}…" : msg,
+          "rails_error_dashboard.environment" => (defined?(Rails) && Rails.env.to_s) || "unknown",
+          "rails_error_dashboard.was_async" => was_async
+        }
+      rescue StandardError
+        { "error.type" => "unknown", "rails_error_dashboard.was_async" => was_async }
+      end
+
       # Queue error logging as a background job
       def self.call_async(exception, context = {})
         # Serialize exception data for the job
@@ -68,7 +83,17 @@ module RailsErrorDashboard
         # Enqueue the async job using ActiveJob
         # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
         begin
-          AsyncErrorLoggingJob.perform_later(exception_data, context)
+          # OTel: emit a capture span around the enqueue itself. The real capture
+          # work runs in the job (which starts its own root span via .new(...).call).
+          # For the async path the span here measures *enqueue latency only* — used
+          # to detect queue-adapter backpressure or Redis slowness.
+          Integrations::Tracer.in_span(
+            "capture_error",
+            kind: :capture,
+            attributes: build_capture_span_attributes(exception, was_async: true)
+          ) do |_span|
+            AsyncErrorLoggingJob.perform_later(exception_data, context)
+          end
         rescue => e
           # Queue adapter failed (e.g., Redis down for Sidekiq). Fall back to
           # sync logging so the error is still captured. Without this rescue,
@@ -118,13 +143,31 @@ module RailsErrorDashboard
       end
 
       def call
+        # OTel: parent capture span. Wraps the entire sync capture path so
+        # operators can audit how long error capture takes from their existing
+        # tracing pipeline. Child spans (breadcrumbs, health, notifications)
+        # nest under this one automatically via OTel context propagation.
+        #
+        # The span lives INSIDE the rescue clause — if the span itself raises
+        # somehow, the outer rescue still catches it and returns nil. Defense
+        # in depth. When the block raises, the Tracer façade records the
+        # exception on the span and re-raises so the rescue can swallow it.
+        Integrations::Tracer.in_span(
+          "capture_error",
+          kind: :capture,
+          attributes: self.class.build_capture_span_attributes(@exception, was_async: false)
+        ) do |span|
         # Check if this exception should be logged (ignore list + sampling)
-        return nil unless Services::ExceptionFilter.should_log?(@exception)
+        if !Services::ExceptionFilter.should_log?(@exception)
+          span&.set_attribute("rails_error_dashboard.filtered", true)
+          next nil
+        end
 
         error_context = ValueObjects::ErrorContext.new(@context, @context[:source])
 
         # Find or create application (cached lookup)
         application = find_or_create_application
+        span&.set_attribute("rails_error_dashboard.application", application.name.to_s) if application.respond_to?(:name)
 
         # Build error attributes
         truncated_backtrace = Services::BacktraceProcessor.truncate(@exception.backtrace)
@@ -262,6 +305,14 @@ module RailsErrorDashboard
         # This ensures accurate occurrence tracking
         error_log = ErrorLog.find_or_increment_by_hash(error_hash, attributes.merge(error_hash: error_hash))
 
+        # OTel: now that the error_log exists, attach its id + dedup flag + severity
+        # to the parent capture span so operators can correlate to dashboard URLs.
+        if span && error_log
+          span.set_attribute("rails_error_dashboard.error_id", error_log.id) if error_log.id
+          span.set_attribute("rails_error_dashboard.deduplicated", error_log.occurrence_count.to_i > 1)
+          span.set_attribute("rails_error_dashboard.severity", error_log.severity.to_s) if error_log.respond_to?(:severity) && error_log.severity
+        end
+
         #  Track individual error occurrence for co-occurrence analysis (if table exists)
         if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
           begin
@@ -298,6 +349,7 @@ module RailsErrorDashboard
         check_baseline_anomaly(error_log)
 
         error_log
+        end
       rescue => e
         # Don't let error logging cause more errors - fail silently
         # CRITICAL: Log but never propagate exception
