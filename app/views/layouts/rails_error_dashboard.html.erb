@@ -1002,6 +1002,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <% if RailsErrorDashboard.configuration.enable_activestorage_tracking && RailsErrorDashboard.configuration.enable_breadcrumbs %>
             <% health_items << { path: activestorage_health_summary_errors_path(nav_params), icon: 'bi-cloud-arrow-up', label: 'ActiveStorage' } %>
           <% end %>
+          <% if RailsErrorDashboard.configuration.enable_llm_observability && RailsErrorDashboard.configuration.enable_breadcrumbs %>
+            <% health_items << { path: llm_health_summary_errors_path(nav_params), icon: 'bi-cpu-fill', label: 'LLM' } %>
+          <% end %>
 
           <% if health_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navHealthSection">
