@@ -4,11 +4,11 @@
 # This file documents the Rails versions we support and test against.
 #
 # To test locally against a specific Rails version, use:
-#   RAILS_VERSION=7.0 bundle update && bundle exec rspec
-#   RAILS_VERSION=7.1 bundle update && bundle exec rspec
-#   RAILS_VERSION=7.2 bundle update && bundle exec rspec
-#   RAILS_VERSION=8.0 bundle update && bundle exec rspec
-#   RAILS_VERSION=8.1 bundle update && bundle exec rspec
+#   RAILS_VERSION=7.0 bundle update && RAILS_VERSION=7.0 bundle exec rspec
+#   RAILS_VERSION=7.1 bundle update && RAILS_VERSION=7.1 bundle exec rspec
+#   RAILS_VERSION=7.2 bundle update && RAILS_VERSION=7.2 bundle exec rspec
+#   RAILS_VERSION=8.0 bundle update && RAILS_VERSION=8.0 bundle exec rspec
+#   RAILS_VERSION=8.1 bundle update && RAILS_VERSION=8.1 bundle exec rspec
 #
 # CI/CD testing is handled by .github/workflows/test.yml
 

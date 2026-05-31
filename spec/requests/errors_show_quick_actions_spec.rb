@@ -12,6 +12,10 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
 
   after do
     RailsErrorDashboard.configuration.authenticate_with = nil
+    RailsErrorDashboard.configuration.llm_provider = nil
+    RailsErrorDashboard.configuration.llm_api_key = nil
+    RailsErrorDashboard.configuration.llm_model = nil
+    RailsErrorDashboard.configuration.llm_openai_endpoint = :auto
     ActionController::Base.allow_forgery_protection = true
   end
 
@@ -35,6 +39,79 @@ RSpec.describe "Errors show — Quick Actions", type: :request do
       error = create(:error_log, application: application, platform: "")
       get "/error_dashboard/errors/#{error.id}"
       expect(response.body).not_to match(/View\s+Errors/)
+    end
+  end
+
+  describe "AI Help" do
+    it "does not render the AI Help button when LLM is not configured" do
+      error = create(:error_log, application: application)
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response.body).not_to include('data-red-action="open-ai-help"')
+      expect(response.body).not_to include('id="red-ai-help-panel"')
+    end
+
+    it "renders the AI Help button and panel when LLM is configured" do
+      RailsErrorDashboard.configuration.llm_provider = :openai
+      RailsErrorDashboard.configuration.llm_api_key = "test-key"
+      RailsErrorDashboard.configuration.llm_model = "gpt-5"
+      error = create(:error_log, application: application)
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response.body).to include("AI Help")
+      expect(response.body).to include("red-ai-help-panel")
+      expect(response.body).to include("gpt-5")
+    end
+
+    it "streams a provider answer from the AI Help endpoint" do
+      RailsErrorDashboard.configuration.llm_provider = :openai
+      RailsErrorDashboard.configuration.llm_api_key = "test-key"
+      RailsErrorDashboard.configuration.llm_model = "gpt-5"
+      error = create(:error_log, application: application, error_type: "QuestDataCorruptionError")
+
+      received_args = nil
+      allow(RailsErrorDashboard::Services::LlmClient).to receive(:stream) do |error:, question:, context:, &block|
+        received_args ||= { error: error, question: question, context: context }
+        block.call("Check the quest ")
+        block.call("data at index 3.")
+        { provider: "openai", model: "gpt-5" }
+      end
+
+      post "/error_dashboard/errors/#{error.id}/ai_help",
+        params: { question: "What caused this?" },
+        as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/event-stream")
+      expect(response.body).to include('event: chunk')
+      expect(response.body).to include('"text":"Check the quest "')
+      expect(response.body).to include('"text":"data at index 3."')
+      expect(response.body).to include('event: done')
+      expect(response.body).to include('"provider":"openai"')
+
+      # On Rails 7.1/7.2 reading response.body re-iterates the
+      # ActionController::Live enumerator, so :stream may be invoked more than
+      # once. Assert it was called and verify the arguments from the first
+      # invocation rather than pinning an exact call count via .with.
+      expect(RailsErrorDashboard::Services::LlmClient).to have_received(:stream).at_least(:once)
+      expect(received_args[:error]).to eq(error)
+      expect(received_args[:question]).to eq("What caused this?")
+      expect(received_args[:context]).to include("QuestDataCorruptionError")
+    end
+
+    it "rejects blank AI Help questions" do
+      RailsErrorDashboard.configuration.llm_provider = :openai
+      RailsErrorDashboard.configuration.llm_api_key = "test-key"
+      error = create(:error_log, application: application)
+
+      post "/error_dashboard/errors/#{error.id}/ai_help",
+        params: { question: " " },
+        as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)["error"]).to eq("Question cannot be blank")
     end
   end
 end

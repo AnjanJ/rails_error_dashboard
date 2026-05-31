@@ -92,6 +92,16 @@ RSpec.describe RailsErrorDashboard::Configuration do
       end
     end
 
+    describe "LLM configuration defaults" do
+      it { expect(config.llm_provider).to be_nil }
+      it { expect(config.llm_api_key).to be_nil }
+      it { expect(config.llm_model).to be_nil }
+      it { expect(config.llm_openai_endpoint).to eq(:auto) }
+      it { expect(config.llm_timeout_seconds).to eq(30) }
+      it { expect(config.llm_max_output_tokens).to eq(900) }
+      it { expect(config.llm_configured?).to be false }
+    end
+
     describe "rack attack tracking configuration defaults" do
       it "sets enable_rack_attack_tracking to false (opt-in)" do
         expect(config.enable_rack_attack_tracking).to be false
@@ -371,6 +381,45 @@ RSpec.describe RailsErrorDashboard::Configuration do
 
         expect(config.effective_total_users).to be_nil
       end
+    end
+  end
+
+  describe "LLM configuration" do
+    it "is configured when provider and API key are set" do
+      config.llm_provider = :openai
+      config.llm_api_key = "secret"
+
+      expect(config.llm_configured?).to be true
+      expect(config.effective_llm_model).to eq("gpt-5")
+    end
+
+    it "resolves API keys from callables" do
+      config.llm_provider = :anthropic
+      config.llm_api_key = -> { "anthropic-secret" }
+
+      expect(config.effective_llm_api_key).to eq("anthropic-secret")
+      expect(config.llm_configured?).to be true
+    end
+
+    it "validates supported providers" do
+      config.llm_provider = :unknown
+      config.llm_api_key = "secret"
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /llm_provider must be one of/
+      )
+    end
+
+    it "validates supported OpenAI endpoints" do
+      config.llm_provider = :openai
+      config.llm_api_key = "secret"
+      config.llm_openai_endpoint = :legacy
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /llm_openai_endpoint must be one of/
+      )
     end
   end
 

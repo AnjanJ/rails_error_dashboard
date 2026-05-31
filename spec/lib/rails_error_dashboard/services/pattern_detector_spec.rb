@@ -148,7 +148,11 @@ RSpec.describe RailsErrorDashboard::Services::PatternDetector do
         friday = Time.current
         friday -= 1.day until friday.wday == 5
 
-        timestamps = [ monday, monday + 1.hour, friday ]
+        timestamps = [
+          monday.change(hour: 9),
+          monday.change(hour: 10),
+          friday.change(hour: 9)
+        ]
 
         result = described_class.analyze_cyclical_pattern(timestamps: timestamps, days: 30)
 

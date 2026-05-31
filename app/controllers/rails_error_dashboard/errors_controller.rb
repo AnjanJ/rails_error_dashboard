@@ -173,6 +173,43 @@ module RailsErrorDashboard
       redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
 
+    def ai_help
+      unless RailsErrorDashboard.configuration.llm_configured?
+        render json: { error: "AI Help is not configured" }, status: :not_found
+        return
+      end
+
+      question = params[:question].to_s.strip
+      if question.blank?
+        render json: { error: "Question cannot be blank" }, status: :unprocessable_entity
+        return
+      end
+
+      if question.length > 4000
+        render json: { error: "Question is too long. Keep it under 4,000 characters." }, status: :unprocessable_entity
+        return
+      end
+
+      error = ErrorLog.includes(:comments, :parent_cascade_patterns, :child_cascade_patterns).find(params[:id])
+      related_errors = error.related_errors(limit: 5, application_id: @current_application_id)
+      context = Services::MarkdownErrorFormatter.call(error, related_errors: related_errors)
+
+      response.headers["Content-Type"] = "text/event-stream"
+      response.headers["Cache-Control"] = "no-cache"
+      response.headers["X-Accel-Buffering"] = "no"
+
+      self.response_body = Enumerator.new do |stream|
+        begin
+          result = Services::LlmClient.stream(error: error, question: question, context: context) do |text|
+            stream << sse_event("chunk", text: text)
+          end
+          stream << sse_event("done", result)
+        rescue Services::LlmClient::ConfigurationError, Services::LlmClient::RequestError => e
+          stream << sse_event("error", error: e.message)
+        end
+      end
+    end
+
     def analytics
       days = days_param(default: 30)
       @days = days
@@ -607,6 +644,10 @@ module RailsErrorDashboard
         previous_critical: previous[1][:critical_count],
         change_percentage: previous[1][:count] > 0 ? ((latest[1][:count] - previous[1][:count]).to_f / previous[1][:count] * 100).round(1) : 0.0
       }
+    end
+
+    def sse_event(event, payload)
+      "event: #{event}\ndata: #{payload.to_json}\n\n"
     end
 
     def filter_params
