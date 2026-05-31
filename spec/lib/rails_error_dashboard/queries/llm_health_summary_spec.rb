@@ -189,6 +189,36 @@ RSpec.describe RailsErrorDashboard::Queries::LlmHealthSummary do
       expect(entry[:avg_output_tokens]).to eq(75)
     end
 
+    it "coerces stringified token values back to numeric (regression — see BreadcrumbCollector#truncate_metadata)" do
+      # BreadcrumbCollector.add stringifies every metadata value via value.to_s,
+      # so by the time these crumbs reach the query the numeric fields are all
+      # strings. This regression test exercises the production code path.
+      create(:error_log,
+        breadcrumbs: [
+          {
+            "c" => "llm",
+            "m" => "anthropic · claude-3-5-sonnet",
+            "meta" => {
+              "provider" => "anthropic",
+              "model" => "claude-3-5-sonnet",
+              "status" => "success",
+              "input_tokens" => "1200",     # stringified by truncate_metadata
+              "output_tokens" => "350",
+              "duration_ms" => "421.5",
+              "cost_usd" => "0.0125"
+            }
+          }
+        ].to_json,
+        occurred_at: 1.day.ago)
+
+      result = described_class.call(30)
+      entry = result[:models].first
+      expect(entry[:avg_input_tokens]).to eq(1200)
+      expect(entry[:avg_output_tokens]).to eq(350)
+      expect(entry[:avg_duration_ms]).to eq(421.5)
+      expect(entry[:cost_usd_sum]).to eq(0.0125)
+    end
+
     it "returns nil avg tokens when no token data" do
       create(:error_log,
         breadcrumbs: breadcrumbs_json(llm_crumb),

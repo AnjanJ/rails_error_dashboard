@@ -84,20 +84,29 @@ module RailsErrorDashboard
             status = meta["status"].to_s
             entry[:error_count] += 1 if status == "error" || status == "timeout"
 
-            if (it = meta["input_tokens"]).is_a?(Numeric)
-              entry[:input_tokens_sum] += it
+            # BreadcrumbCollector#truncate_metadata stringifies every metadata
+            # value (input_tokens "42", cost_usd "0.0003", etc.), so we coerce
+            # back to numeric here using the same pattern as LlmSummary. nil and
+            # blank values skip the accumulator entirely so they don't pollute
+            # averages.
+            if (it = meta["input_tokens"]).present?
+              entry[:input_tokens_sum] += it.to_i
               entry[:input_tokens_seen] += 1
             end
-            if (ot = meta["output_tokens"]).is_a?(Numeric)
-              entry[:output_tokens_sum] += ot
+            if (ot = meta["output_tokens"]).present?
+              entry[:output_tokens_sum] += ot.to_i
               entry[:output_tokens_seen] += 1
             end
-            if (d = meta["duration_ms"] || crumb["d"]).is_a?(Numeric) && d > 0
-              entry[:duration_sum] += d
-              entry[:duration_seen] += 1
+            duration_raw = meta["duration_ms"] || crumb["d"]
+            if duration_raw.present?
+              d = duration_raw.to_f
+              if d > 0
+                entry[:duration_sum] += d
+                entry[:duration_seen] += 1
+              end
             end
-            if (cost = meta["cost_usd"]).is_a?(Numeric)
-              entry[:cost_usd_sum] += cost
+            if (cost = meta["cost_usd"]).present?
+              entry[:cost_usd_sum] += cost.to_f
             end
 
             if (err_class = meta["error_class"]).is_a?(String) && !err_class.empty?
