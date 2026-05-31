@@ -554,6 +554,34 @@ Captured: provider, model, input/output tokens, duration, cost (auto-estimated f
 
 Same guarantees as the rest of the gem. Worst-case hot-path cost is **~4 microseconds per breadcrumb** (benchmarked at 125× under the 0.5ms-per-op budget). The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
 
+### AI Help — Ask an LLM About the Current Error
+
+Opt-in drawer on the error detail page. When an LLM provider is configured, you can ask a follow-up question about the current error and the answer streams back as Markdown inside the dashboard. Supports OpenAI (GPT-5 via the Responses API, GPT-4 family via Chat Completions) and Anthropic (Claude Sonnet via the Messages API).
+
+```ruby
+config.llm_provider = :openai   # or :anthropic
+config.llm_api_key  = -> { Rails.application.credentials.dig(:openai, :api_key) }
+config.llm_model    = "gpt-5"
+```
+
+API keys can be passed as a String or a callable — using a callable keeps secrets in Rails credentials rather than the initializer. Responses are streamed via Server-Sent Events and rendered as sanitized Markdown live in the drawer; no chat history is persisted. Error context sent to the provider goes through the same `filter_sensitive_data` pipeline as the rest of the dashboard, so PII and secrets are redacted as `[FILTERED]` before leaving your app.
+
+> **Privacy:** AI Help sends error details (backtrace, context, your question) to the configured provider. Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted before transmission. Review your provider's data-retention policy before enabling in production.
+
+#### How AI Help differs from LLM Observability
+
+These are two distinct features that happen to both involve LLMs:
+
+| | LLM Observability (above) | AI Help (this section) |
+|---|---|---|
+| **Direction** | Captures the **host app's** outbound LLM calls | The **dashboard** makes its own LLM calls |
+| **Trigger** | Automatic on every host LLM call | User clicks "Ask AI" on an error |
+| **Storage** | Breadcrumbs (JSONB) | None — streamed only |
+| **Default** | OFF (requires `enable_breadcrumbs`) | OFF (until provider configured) |
+| **Cost to you** | Zero (passive observation) | Per-token billing on your provider |
+
+Both are opt-in, privacy-first, and orthogonal. Enable either, both, or neither.
+
 ### Manual Breadcrumbs API
 
 Add custom breadcrumbs from anywhere in your application code:
