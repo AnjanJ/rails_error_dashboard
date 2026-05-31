@@ -38,6 +38,7 @@ RailsErrorDashboard::Engine.routes.draw do
       get :rack_attack_summary
       get :actioncable_health_summary
       get :activestorage_health_summary
+      get :llm_health_summary
       get :releases
       get :user_impact
       get :diagnostic_dumps

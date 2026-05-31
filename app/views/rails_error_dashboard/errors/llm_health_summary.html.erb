@@ -1,0 +1,249 @@
+<% content_for :page_title, "LLM Health" %>
+
+<div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
+      <i class="bi bi-cpu-fill me-2"></i>
+      LLM Health
+    </h1>
+
+    <% unless @feature_disabled %>
+      <div class="btn-group" role="group">
+        <%= link_to llm_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          7 Days
+        <% end %>
+        <%= link_to llm_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          30 Days
+        <% end %>
+        <%= link_to llm_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          90 Days
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @feature_disabled %>
+    <div class="red-empty-state">
+      <i class="bi bi-cpu-fill display-1 text-muted mb-3"></i>
+      <div class="red-empty-state-title">LLM Observability Not Enabled</div>
+      <p class="text-muted">
+        To see per-model LLM stats here, enable LLM observability and breadcrumbs.
+      </p>
+      <div class="card mx-auto" style="max-width: 600px;">
+        <div class="card-body text-start">
+          <h6>Enable in <code>config/initializers/rails_error_dashboard.rb</code>:</h6>
+          <pre class="mb-0" style="background: var(--bg-subtle); padding: var(--space-3); border-radius: var(--radius-md); font-size: 12px;"><code>RailsErrorDashboard.configure do |config|
+  config.enable_breadcrumbs = true
+  config.enable_llm_observability = true
+end</code></pre>
+        </div>
+      </div>
+    </div>
+
+  <% elsif @totals[:total_calls] == 0 && @totals[:total_tool_calls] == 0 %>
+    <div class="red-empty-state">
+      <i class="bi bi-cpu-fill display-1 text-success mb-3"></i>
+      <div class="red-empty-state-title">No LLM Calls Detected</div>
+      <p class="text-muted">
+        No LLM API calls were captured in error breadcrumbs over the last <%= @days %> days.
+        Instrument LLM calls in one of three ways:
+      </p>
+
+      <div class="card mx-auto" style="max-width: 720px;">
+        <div class="card-body p-0">
+          <ul class="nav nav-tabs" role="tablist" id="llmPathTabs">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#llmPathOtel" type="button" role="tab">
+                <i class="bi bi-diagram-3 me-1"></i> OpenTelemetry
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#llmPathFaraday" type="button" role="tab">
+                <i class="bi bi-arrow-left-right me-1"></i> Faraday / RubyLLM
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#llmPathManual" type="button" role="tab">
+                <i class="bi bi-pencil-square me-1"></i> Manual
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content p-3 text-start">
+            <div class="tab-pane fade show active" id="llmPathOtel" role="tabpanel">
+              <p class="mb-2"><small>Already running an OTel collector? Drop in this gem and we'll subscribe automatically.</small></p>
+              <pre class="mb-2" style="background: var(--bg-subtle); padding: var(--space-3); border-radius: var(--radius-md); font-size: 12px;"><code># Gemfile
+gem "opentelemetry-instrumentation-ruby_llm"
+
+# Then nothing else — OTel spans flow into RED breadcrumbs.</code></pre>
+              <small class="text-muted">Requires <code>enable_llm_observability = true</code>.</small>
+            </div>
+
+            <div class="tab-pane fade" id="llmPathFaraday" role="tabpanel">
+              <p class="mb-2"><small>Using <code>ruby_llm</code>, <code>openai</code>, <code>anthropic</code>, or any Faraday-based SDK? Insert the middleware once.</small></p>
+              <pre class="mb-2" style="background: var(--bg-subtle); padding: var(--space-3); border-radius: var(--radius-md); font-size: 12px;"><code>Faraday.default_connection_options.builder.tap do |b|
+  b.use RailsErrorDashboard::Integrations::LlmMiddleware
+end</code></pre>
+              <small class="text-muted">RED auto-detects provider/model and tokens from the request/response.</small>
+            </div>
+
+            <div class="tab-pane fade" id="llmPathManual" role="tabpanel">
+              <p class="mb-2"><small>Direct <code>Net::HTTP</code>, gRPC, local inference, or anything else — instrument by hand.</small></p>
+              <pre class="mb-2" style="background: var(--bg-subtle); padding: var(--space-3); border-radius: var(--radius-md); font-size: 12px;"><code>ActiveSupport::Notifications.instrument(
+  "red.llm_call",
+  provider: "anthropic",
+  model: "claude-3-5-sonnet",
+  input_tokens: 1200,
+  output_tokens: 350
+) do
+  call_anthropic(...)
+end</code></pre>
+              <small class="text-muted">Cost is auto-estimated from tokens — payload can override with <code>cost_usd_estimate:</code>.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-primary"><%= @totals[:total_calls] %></div>
+            <small class="text-muted">LLM Calls</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-secondary"><%= @totals[:model_count] %></div>
+            <small class="text-muted">Models</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <% err_color = @totals[:error_rate] >= 10 ? "danger" : (@totals[:error_rate] >= 5 ? "warning" : "success") %>
+            <div class="display-6 text-<%= err_color %>"><%= @totals[:unique_error_count] %></div>
+            <small class="text-muted">Errors with LLM (<%= @totals[:error_rate] %>%)</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info">$<%= format("%.2f", @totals[:total_cost_usd]) %></div>
+            <small class="text-muted">Total Cost</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-cpu-fill text-primary me-2"></i>
+          Performance by Model
+          <span class="badge bg-primary"><%= @totals[:model_count] %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Provider · Model</th>
+                <th width="90">Calls</th>
+                <th width="80">Tools</th>
+                <th width="130">Avg tokens</th>
+                <th width="110">Avg latency</th>
+                <th width="100">Error rate</th>
+                <th width="100">Cost</th>
+                <th>Top error</th>
+                <th width="140">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @models.each do |entry| %>
+                <tr>
+                  <td>
+                    <small class="text-muted"><%= entry[:provider] %></small><br>
+                    <code><%= entry[:model] %></code>
+                  </td>
+                  <td><%= entry[:call_count] %></td>
+                  <td>
+                    <% if entry[:tool_call_count].positive? %>
+                      <span class="badge bg-info"><%= entry[:tool_call_count] %></span>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if entry[:avg_input_tokens] || entry[:avg_output_tokens] %>
+                      <small>
+                        in <strong><%= number_with_delimiter(entry[:avg_input_tokens] || 0) %></strong><br>
+                        out <strong><%= number_with_delimiter(entry[:avg_output_tokens] || 0) %></strong>
+                      </small>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if entry[:avg_duration_ms] %>
+                      <% lat_color = entry[:avg_duration_ms] > 5000 ? "text-danger" : entry[:avg_duration_ms] > 2000 ? "text-warning" : "text-muted" %>
+                      <span class="<%= lat_color %>"><%= number_with_delimiter(entry[:avg_duration_ms].round) %>ms</span>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% sev_color = entry[:severity] == :danger ? "danger" : (entry[:severity] == :warning ? "warning" : "success") %>
+                    <span class="badge bg-<%= sev_color %>"><%= entry[:error_rate] %>%</span>
+                    <% if entry[:error_count].positive? %>
+                      <br><small class="text-muted"><%= entry[:error_count] %> failed</small>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if entry[:cost_usd_sum].positive? %>
+                      $<%= format("%.4f", entry[:cost_usd_sum]) %>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if entry[:top_error_class] %>
+                      <code style="font-size: 11px;"><%= entry[:top_error_class] %></code>
+                      <small class="text-muted">×<%= entry[:top_error_class_count] %></small>
+                    <% else %>
+                      <span class="text-muted">—</span>
+                    <% end %>
+                  </td>
+                  <td><%= local_time_ago(entry[:last_seen]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> High error rates on a model often signal quota or rate-limit issues. Slow latency (&gt;5s) suggests provider degradation.
+          </small>
+          <small class="ms-3">
+            <a href="https://github.com/thoughtbot/opentelemetry-instrumentation-ruby_llm" target="_blank" rel="noopener" class="text-decoration-none">
+              <i class="bi bi-book"></i> Instrumentation Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+            </a>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

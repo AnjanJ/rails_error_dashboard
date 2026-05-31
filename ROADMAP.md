@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: March 27, 2026 | Current version: v0.5.11
+> Last updated: May 31, 2026 | Current version: v0.7.0
 > Deep introspection analysis: [DEEP_INTROSPECTION_ANALYSIS.md](DEEP_INTROSPECTION_ANALYSIS.md)
 > Faultline comparison: [FAULTLINE_COMPARISON.md](FAULTLINE_COMPARISON.md)
 > Time-series strategy: [TIMESERIES_ANALYSIS.md](TIMESERIES_ANALYSIS.md)
@@ -663,12 +663,12 @@ Each phase builds on the previous. Phase 1 features are quick wins (hours each).
 | ~~**v1.0**~~ | ~~Production code path coverage — Coverage oneshot_lines (V)~~ | ~~2-3 days~~ | ~~Debugging ++~~ | ~~Phase 8~~ **DONE (v0.5.11)** |
 | **v1.0** | Lazy backtrace — Thread.each_caller_location (Y) | Half day | Performance + | Phase 8 |
 | | | | | |
-| **v0.6** | LLM call breadcrumbs — capture model, provider, tokens, duration, tool calls as breadcrumbs when errors occur during LLM requests. Support RubyLLM (via OTel spans if `opentelemetry-instrumentation-ruby_llm` present), langchain.rb, OpenAI SDK, Anthropic SDK. Content capture opt-in (PII risk). No monkey-patching — subscribe to existing instrumentation. Fields: `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.request.temperature`, tool call name/arguments. Ref: [thoughtbot/opentelemetry-instrumentation-ruby_llm](https://github.com/thoughtbot/opentelemetry-instrumentation-ruby_llm) | 2-3 days | Novel +++ | Phase 9: AI Observability |
-| **v0.6** | LLM tool call tracking — capture tool executions (name, arguments, result) nested within LLM calls. When an error occurs during a tool call, the breadcrumb shows which tool failed and why | 1 day | Debugging +++ | Phase 9 |
-| **v0.6** | LLM health dashboard page — `/errors/llm_health_summary` showing per-model breakdown: call count, avg tokens, avg latency, error rate, cost estimate. Sorted by error correlation (models with most errors first) | 2-3 days | Unique +++ | Phase 9 |
-| **v0.6** | OpenTelemetry span export — emit error capture operations as OTel spans for Datadog/Honeycomb/Jaeger. Error logged → span with error type, severity, capture latency. Integrates with existing OTel collector if present | 2-3 days | Ecosystem +++ | Phase 9 |
-| **v0.6** | Copy for LLM — include LLM call context when available (model, tokens, tool calls, prompt if opt-in). The LLM debugging an error can see the LLM call that preceded it | 1 day | Meta +++ | Phase 9 |
-| **v0.8** | Self-instrumentation — measure gem overhead as OTel spans (error capture latency, breadcrumb collection, system health snapshot). Users can verify <5ms budget in their own observability dashboards | 1 day | Trust ++ | Phase 9 |
+| ~~**v0.7**~~ | ~~LLM call breadcrumbs — capture model, provider, tokens, duration, tool calls as breadcrumbs when errors occur during LLM requests. Support RubyLLM (via OTel spans if `opentelemetry-instrumentation-ruby_llm` present), langchain.rb, OpenAI SDK, Anthropic SDK. Content capture opt-in (PII risk). No monkey-patching — subscribe to existing instrumentation. Fields: `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.request.temperature`, tool call name/arguments. Ref: [thoughtbot/opentelemetry-instrumentation-ruby_llm](https://github.com/thoughtbot/opentelemetry-instrumentation-ruby_llm)~~ | ~~2-3 days~~ | ~~Novel +++~~ | ~~Phase 9: AI Observability~~ **DONE (v0.7.0)** |
+| ~~**v0.7**~~ | ~~LLM tool call tracking — capture tool executions (name, arguments, result) nested within LLM calls. When an error occurs during a tool call, the breadcrumb shows which tool failed and why~~ | ~~1 day~~ | ~~Debugging +++~~ | ~~Phase 9~~ **DONE (v0.7.0)** |
+| ~~**v0.7**~~ | ~~LLM health dashboard page — `/errors/llm_health_summary` showing per-model breakdown: call count, avg tokens, avg latency, error rate, cost estimate. Sorted by error correlation (models with most errors first)~~ | ~~2-3 days~~ | ~~Unique +++~~ | ~~Phase 9~~ **DONE (commit 9c1be38 on fix/llm-observability-filter-and-css)** |
+| **v0.8** | OpenTelemetry span export (outbound) — emit error capture operations as OTel spans for Datadog/Honeycomb/Jaeger. Error logged → span with error type, severity, capture latency. Integrates with existing OTel collector if present. Note: v0.7.0 ships the inbound direction (OTel spans → RED breadcrumbs via LlmSpanProcessor); this item is the symmetric outbound direction | 2-3 days | Ecosystem +++ | Phase 9 |
+| ~~**v0.7**~~ | ~~Copy for LLM — include LLM call context when available (model, tokens, tool calls, prompt if opt-in). The LLM debugging an error can see the LLM call that preceded it~~ | ~~1 day~~ | ~~Meta +++~~ | ~~Phase 9~~ **DONE (v0.7.0)** — `MarkdownErrorFormatter#llm_calls_section` |
+| **v0.8** | Self-instrumentation — measure gem overhead as OTel spans (error capture latency, breadcrumb collection, system health snapshot). Users can verify <5ms budget in their own observability dashboards. Depends on outbound OTel span export above | 1 day | Trust ++ | Phase 9 |
 | **ICEBOX** | Method complexity analysis (Q) | 1 day | Unique + | Deferred |
 | **ICEBOX** | GitHub App with check runs (requires OAuth flow) | 3-5 days | Enterprise + | Deferred |
 | **ICEBOX** | PR comments warning about errors (requires GitHub App) | 2-3 days | DX ++ | Deferred |

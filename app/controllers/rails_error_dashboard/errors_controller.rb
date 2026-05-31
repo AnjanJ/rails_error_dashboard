@@ -518,6 +518,26 @@ module RailsErrorDashboard
       @pagy, @channels = pagy(:offset, all_channels, limit: params[:per_page] || 25)
     end
 
+    def llm_health_summary
+      unless RailsErrorDashboard.configuration.enable_llm_observability &&
+             RailsErrorDashboard.configuration.enable_breadcrumbs
+        @feature_disabled = true
+        @days = days_param(default: 30)
+        @models = []
+        @totals = Queries::LlmHealthSummary.blank_totals
+        @pagy = nil
+        return
+      end
+
+      days = days_param(default: 30)
+      @days = days
+      result = Queries::LlmHealthSummary.call(days, application_id: @current_application_id)
+      @totals = result[:totals]
+      all_models = result[:models]
+
+      @pagy, @models = pagy(:offset, all_models, limit: params[:per_page] || 25)
+    end
+
     def activestorage_health_summary
       unless RailsErrorDashboard.configuration.enable_activestorage_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
