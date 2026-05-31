@@ -351,5 +351,64 @@ RSpec.describe RailsErrorDashboard::Services::BreadcrumbCollector do
       expect { described_class.filter_sensitive(nil) }.not_to raise_error
       expect { described_class.filter_sensitive("bad") }.not_to raise_error
     end
+
+    context "LLM crumb numeric metadata" do
+      # Regression for v0.7.0 zerocourse integration test: the default
+      # ParameterFilter pattern `:token` does substring matching, so it
+      # was redacting `input_tokens` / `output_tokens` (and any other
+      # `*_token*` key) on LLM breadcrumbs. That broke the LlmSummary
+      # rollup (showed 0 tokens), the sidebar card, and the markdown
+      # export tokens column.
+      it "preserves input_tokens and output_tokens on llm crumbs" do
+        breadcrumbs = [
+          { c: "llm", m: "gemini · gemini-2.5-flash · in:13/out:197", t: 1000,
+            meta: { "input_tokens" => 13, "output_tokens" => 197, "model" => "gemini-2.5-flash", "cost_usd" => 0.00006 } }
+        ]
+
+        result = described_class.filter_sensitive(breadcrumbs)
+        expect(result.first[:meta]["input_tokens"]).to eq(13)
+        expect(result.first[:meta]["output_tokens"]).to eq(197)
+        expect(result.first[:meta]["model"]).to eq("gemini-2.5-flash")
+        expect(result.first[:meta]["cost_usd"]).to eq(0.00006)
+      end
+
+      it "preserves the same numeric metadata on llm_tool crumbs" do
+        breadcrumbs = [
+          { c: "llm_tool", m: "tool: read_file", t: 1000,
+            meta: { "input_tokens" => 12, "output_tokens" => 8, "tool_name" => "read_file", "duration_ms" => 42 } }
+        ]
+
+        result = described_class.filter_sensitive(breadcrumbs)
+        expect(result.first[:meta]["input_tokens"]).to eq(12)
+        expect(result.first[:meta]["output_tokens"]).to eq(8)
+        expect(result.first[:meta]["tool_name"]).to eq("read_file")
+      end
+
+      it "still filters genuinely sensitive keys on llm crumbs" do
+        breadcrumbs = [
+          { c: "llm", m: "tool: send_email", t: 1000,
+            meta: { "input_tokens" => 10, "tool_arguments" => "api_key=sk-real-secret", "password" => "hunter2" } }
+        ]
+
+        result = described_class.filter_sensitive(breadcrumbs)
+        # Numeric metadata preserved
+        expect(result.first[:meta]["input_tokens"]).to eq(10)
+        # Actually-sensitive keys still redacted
+        expect(result.first[:meta]["password"]).to eq("[FILTERED]")
+      end
+
+      it "leaves non-llm crumb metadata behavior unchanged" do
+        # A `custom` crumb with the same `input_tokens` key should still
+        # be redacted — the fix is scoped to llm/llm_tool categories only.
+        breadcrumbs = [
+          { c: "custom", m: "weird app metric", t: 1000,
+            meta: { "input_tokens" => 42, "password" => "secret" } }
+        ]
+
+        result = described_class.filter_sensitive(breadcrumbs)
+        expect(result.first[:meta]["input_tokens"]).to eq("[FILTERED]")
+        expect(result.first[:meta]["password"]).to eq("[FILTERED]")
+      end
+    end
   end
 end

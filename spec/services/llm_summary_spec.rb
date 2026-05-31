@@ -178,5 +178,44 @@ RSpec.describe RailsErrorDashboard::Services::LlmSummary do
         expect(described_class.call([ weird ])).to be_nil
       end
     end
+
+    context "post-filter integration with BreadcrumbCollector" do
+      # Regression for v0.7.0 Bug 2 (sidebar Tokens rollup shows 0): the rollup
+      # was reading "[FILTERED]" out of the filtered metadata and calling .to_i
+      # on it, getting 0. The fix is in BreadcrumbCollector.filter_sensitive
+      # (whitelisting structured LLM metadata keys); this spec proves the full
+      # pipeline now produces a correct rollup.
+      before do
+        RailsErrorDashboard.configuration.filter_sensitive_data = true
+        RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+      end
+
+      after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+      it "rolls up real token counts after running through filter_sensitive" do
+        # Crumbs as BreadcrumbCollector produces them (string values per
+        # truncate_metadata's stringification step).
+        raw = [
+          { c: "llm", m: "gemini · gemini-2.5-flash", t: 1, d: 1771.7,
+            meta: { "provider" => "gemini", "model" => "gemini-2.5-flash",
+                    "status" => "success",
+                    "input_tokens" => "13", "output_tokens" => "197",
+                    "cost_usd" => "0.00006" } }
+        ]
+
+        filtered = RailsErrorDashboard::Services::BreadcrumbCollector.filter_sensitive(raw)
+        # LlmSummary expects string keys (HashWithIndifferentAccess from JSON.parse
+        # in views). Convert symbol keys for parity with the production path.
+        stringified = filtered.map { |c| c.transform_keys(&:to_s) }
+        result = described_class.call(stringified)
+
+        expect(result[:total_input_tokens]).to eq(13)
+        expect(result[:total_output_tokens]).to eq(197)
+        expect(result[:total_tokens]).to eq(210)
+        expect(result[:total_cost_usd]).to be_within(0.000001).of(0.00006)
+        expect(result[:by_model].first[:tokens]).to eq(210)
+      end
+    end
   end
 end
