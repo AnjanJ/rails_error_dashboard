@@ -12,11 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **llm-observability:** per-model LLM health dashboard page ([#128](https://github.com/AnjanJ/rails_error_dashboard/issues/128)) ([75c8f1a](https://github.com/AnjanJ/rails_error_dashboard/commit/75c8f1a1b9a6be6e1926bd80bf59776dc784a0ed))
 
-
-### 🧹 Maintenance
-
-* release 0.7.2 ([da471a9](https://github.com/AnjanJ/rails_error_dashboard/commit/da471a957a0523a1fb257a0737705791515ecc49))
-
 ## [0.7.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.7.0...rails_error_dashboard/v0.7.1) (2026-05-31)
 
 
