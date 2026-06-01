@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.7.1...rails_error_dashboard/v0.7.2) (2026-06-01)
+
+
+### ✨ Features
+
+* **llm-observability:** per-model LLM health dashboard page ([#128](https://github.com/AnjanJ/rails_error_dashboard/issues/128)) ([75c8f1a](https://github.com/AnjanJ/rails_error_dashboard/commit/75c8f1a1b9a6be6e1926bd80bf59776dc784a0ed))
+
 ## [0.7.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.7.0...rails_error_dashboard/v0.7.1) (2026-05-31)
 
 
