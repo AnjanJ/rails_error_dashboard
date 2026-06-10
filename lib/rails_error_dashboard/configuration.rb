@@ -189,6 +189,14 @@ module RailsErrorDashboard
     attr_accessor :llm_observability_content_capture    # Capture prompt/completion text (default: false — PII risk)
     attr_accessor :llm_pricing_overrides                # Hash of { "model-name" => { input: usd_per_1m, output: usd_per_1m } }
 
+    # OpenTelemetry outbound export — emit gem operations as OTel spans for
+    # Datadog/Honeycomb/Jaeger. Requires the host app to already run OTel.
+    # When OTel is absent OR enable_otel_export is false, all emit calls
+    # are no-ops with zero overhead.
+    attr_accessor :enable_otel_export                   # Master switch (default: false)
+    attr_accessor :otel_service_name                    # Falls back to application_name when nil
+    attr_accessor :otel_spans                           # Array of enabled span kinds — see Integrations::Tracer::ALL_SPAN_KINDS
+
     # Dashboard UI appearance
     attr_accessor :accent_color  # :crimson (default), :ruby, :ember, :violet
 
@@ -372,6 +380,13 @@ module RailsErrorDashboard
       @llm_observability_content_capture = false
       @llm_pricing_overrides = {}
 
+      # OTel outbound export defaults — OFF (opt-in). All four span kinds enabled
+      # by default once master switch flips on; users can pass a subset to opt out
+      # of e.g. notification spans without code changes.
+      @enable_otel_export = false
+      @otel_service_name = nil
+      @otel_spans = %i[capture breadcrumbs health notifications]
+
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
       @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
@@ -551,6 +566,28 @@ module RailsErrorDashboard
         warnings << "enable_llm_observability requires enable_breadcrumbs = true. " \
                     "LLM observability has been auto-disabled."
         @enable_llm_observability = false
+      end
+
+      # Validate OTel export config — coerce or warn rather than raise so a
+      # config typo never blocks the host app from booting.
+      if enable_otel_export
+        unless otel_spans.is_a?(Array)
+          warnings << "otel_spans must be an Array of symbols (e.g. [:capture, :breadcrumbs]). " \
+                      "Resetting to all-enabled."
+          @otel_spans = %i[capture breadcrumbs health notifications]
+        end
+
+        invalid = otel_spans - %i[capture breadcrumbs health notifications]
+        if invalid.any?
+          warnings << "otel_spans contains unknown kinds: #{invalid.inspect}. Allowed: " \
+                      "[:capture, :breadcrumbs, :health, :notifications]. Ignoring unknown values."
+          @otel_spans = otel_spans - invalid
+        end
+
+        if @otel_spans.empty?
+          warnings << "enable_otel_export = true but otel_spans is empty — no spans will be emitted. " \
+                      "Set otel_spans to enable at least one of [:capture, :breadcrumbs, :health, :notifications]."
+        end
       end
 
       # Skip credential/service-dependent validations during Docker builds.

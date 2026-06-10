@@ -21,6 +21,7 @@ begin; require "turbo-rails"; rescue LoadError; end
 require "rails_error_dashboard/value_objects/error_context"
 require "rails_error_dashboard/value_objects/llm_call_event"
 require "rails_error_dashboard/integrations/o_tel"
+require "rails_error_dashboard/integrations/tracer"
 require "rails_error_dashboard/integrations/llm_span_processor"
 require "rails_error_dashboard/integrations/llm_middleware"
 require "rails_error_dashboard/helpers/user_model_detector"

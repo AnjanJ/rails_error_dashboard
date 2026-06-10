@@ -484,6 +484,41 @@ RailsErrorDashboard.configure do |config|
   # config.llm_system_prompt = "Prefer concise answers with file-level next steps."
 
   # ============================================================================
+  # OPENTELEMETRY EXPORT (OUTBOUND)
+  # ============================================================================
+  #
+  # Emit gem operations as OpenTelemetry spans so the host's existing
+  # Datadog / Honeycomb / Jaeger / Grafana Tempo pipeline gets a trace
+  # of every error capture. Useful for:
+  #   - Auditing "when did this error get captured?" against deploy events
+  #   - Measuring how much time the gem spends in the capture path
+  #   - Proving the <5ms host-safety budget from operator dashboards
+  #
+  # Emits four spans per error capture:
+  #   rails_error_dashboard.capture_error           — parent, wraps everything
+  #   rails_error_dashboard.breadcrumb_collection   — buffer drain (~µs)
+  #   rails_error_dashboard.system_health_snapshot  — GC.stat etc. (<1ms)
+  #   rails_error_dashboard.notification_dispatch   — Slack/email enqueue
+  #
+  # Disabled by default. Requires the host app to already run OpenTelemetry
+  # (the gem does NOT add an opentelemetry-* runtime dependency). When OTel
+  # is absent, every span call is a zero-overhead no-op.
+  #
+  # config.enable_otel_export = true
+  # config.otel_service_name = "my-app"  # Falls back to application_name when nil
+  #
+  # Per-span opt-out: pass any subset to disable individual span kinds
+  # without code changes. Useful when e.g. notification dispatch is slow due
+  # to outbound HTTP and you don't want it polluting your trace dashboards.
+  #
+  # config.otel_spans = [:capture, :breadcrumbs, :health, :notifications]  # all (default)
+  # config.otel_spans = [:capture]                                          # parent only
+  # config.otel_spans = [:capture, :health]                                 # parent + health
+  #
+  # No PII or request bodies in span attributes — just metadata + timing.
+  # Safe to enable on production OTel pipelines.
+
+  # ============================================================================
   # ISSUE TRACKING (GitHub / GitLab / Codeberg)
   # ============================================================================
   #

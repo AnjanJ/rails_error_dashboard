@@ -475,6 +475,32 @@ end
 [Plugin System guide →](docs/PLUGIN_SYSTEM.md)
 </details>
 
+<details>
+<summary><strong>OpenTelemetry Export — Emit Gem Operations as Spans</strong></summary>
+
+Send the gem's error-capture pipeline as OpenTelemetry spans to your existing Datadog, Honeycomb, or Jaeger collector. Each stage of the capture path — DB write, breadcrumb harvest, system health snapshot, and notification dispatch — becomes a named child span so you can audit gem overhead from your own observability dashboards.
+
+- Off by default — zero impact unless you opt in
+- No-op when the OTel API gem isn't loaded
+- Per-span-kind opt-in: enable only the stages you care about
+- Every span individually rescue-wrapped — never raises into host code
+- Boot-time warning if `enable_otel_export = true` but `opentelemetry-api` isn't in the Gemfile
+
+```ruby
+# Gemfile — only the API gem is required; the SDK is optional
+gem "opentelemetry-api"
+
+# config/initializers/rails_error_dashboard.rb
+config.enable_otel_export  = true
+config.otel_service_name   = "my-app"   # falls back to application_name
+config.otel_spans          = [:capture, :breadcrumbs, :health, :notifications]  # all (default)
+# config.otel_spans        = [:capture]                                          # parent span only
+```
+
+Span names follow the `rails_error_dashboard.<operation>` convention, e.g. `rails_error_dashboard.capture_error`. Both attributes are attached to every span: `rails_error_dashboard.version` and `rails_error_dashboard.service_name` — use them to filter the gem's traffic in your dashboards.
+
+</details>
+
 ---
 
 ## Quick Start
@@ -538,6 +564,8 @@ end
 [Complete configuration guide →](docs/guides/CONFIGURATION.md)
 
 **Multi-App Support** — Track errors from multiple Rails apps in a single shared database. Auto-detects app name, supports per-app filtering. [Multi-App guide →](docs/MULTI_APP_PERFORMANCE.md)
+
+**OpenTelemetry Export** — Emit error-capture operations as OTel spans to Datadog, Honeycomb, or Jaeger. Add `gem "opentelemetry-api"` and set `config.enable_otel_export = true`. See [OpenTelemetry Export](#opentelemetry-export--emit-gem-operations-as-spans) above for full options.
 
 ---
 
