@@ -164,12 +164,12 @@ module RailsErrorDashboard
           attrs.each_with_object({}) do |(k, v), acc|
             key = k.to_s
             acc[key] = case v
-                      when String, Numeric, TrueClass, FalseClass then v
-                      when Array
-                        v.map { |x| x.is_a?(String) || x.is_a?(Numeric) || x == true || x == false ? x : x.to_s }
-                      when nil then nil
-                      else v.to_s
-                      end
+            when String, Numeric, TrueClass, FalseClass then v
+            when Array
+              v.map { |x| x.is_a?(String) || x.is_a?(Numeric) || x == true || x == false ? x : x.to_s }
+            when nil then nil
+            else v.to_s
+            end
           end.compact
         rescue StandardError
           {}
