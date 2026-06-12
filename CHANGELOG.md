@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard-v0.8.0...rails_error_dashboard/v0.8.1) (2026-06-12)
+
+
+### ✨ Features
+
+* AI Help drawer for errors ([#123](https://github.com/AnjanJ/rails_error_dashboard/issues/123)) ([7a88632](https://github.com/AnjanJ/rails_error_dashboard/commit/7a8863229e08d8ec665a9878e3150d7fea37bf1d))
+* **issue-tracking:** add Linear as a fourth issue tracker provider ([#133](https://github.com/AnjanJ/rails_error_dashboard/issues/133)) ([e39a549](https://github.com/AnjanJ/rails_error_dashboard/commit/e39a5498f3c13936ef0f0222b1e1fb0ccd50bcb6))
+* **llm-observability:** per-model LLM health dashboard page ([#128](https://github.com/AnjanJ/rails_error_dashboard/issues/128)) ([75c8f1a](https://github.com/AnjanJ/rails_error_dashboard/commit/75c8f1a1b9a6be6e1926bd80bf59776dc784a0ed))
+* **llm-observability:** three capture paths, sidebar UI, markdown export ([#125](https://github.com/AnjanJ/rails_error_dashboard/issues/125)) ([09c63dc](https://github.com/AnjanJ/rails_error_dashboard/commit/09c63dc6b234b9b936f4d9ad451bf84df4f01803))
+* **otel-export:** outbound OpenTelemetry span export ([#130](https://github.com/AnjanJ/rails_error_dashboard/issues/130)) ([ea523b1](https://github.com/AnjanJ/rails_error_dashboard/commit/ea523b15f36e32348ce088a1ce43a3601cee9fcd))
+
+
+### 🐛 Bug Fixes
+
+* Assigned and Reopened pills hid resolved errors ([ad1703a](https://github.com/AnjanJ/rails_error_dashboard/commit/ad1703af92cbc9faa2c10191e911ac17c37d02fe))
+* BatchMuteErrors accepts and persists mute reason ([27f0bc0](https://github.com/AnjanJ/rails_error_dashboard/commit/27f0bc03671e5d8a7e63f8ca0ef660b8e192c07f))
+* bulk-resolved errors now appear under the Resolved filter ([e2c407c](https://github.com/AnjanJ/rails_error_dashboard/commit/e2c407ce66039826cef3a029f73ba317a9d11d31))
+* clamp days param to [1, 365] across all health/analytics actions ([c8632aa](https://github.com/AnjanJ/rails_error_dashboard/commit/c8632aaab860061d4b97d8c36ea6365c6c6fb9aa))
+* cross-page errors_path links no longer hide resolved errors ([93544e9](https://github.com/AnjanJ/rails_error_dashboard/commit/93544e950c33b9e628b02640a46630d09e3e3aa3))
+* cross-platform errors table now links each error_type to filtered list ([3a58499](https://github.com/AnjanJ/rails_error_dashboard/commit/3a584992ba59affdc24741dbdf7143a0169b2b5d))
+* drill-downs and label clarity from page-by-page audit ([4c45c60](https://github.com/AnjanJ/rails_error_dashboard/commit/4c45c609c763ed79e8d3b9e0a6dc75e61fef7907))
+* Errors by Hour of Day chart shows hours 0-23, not chronological dates ([9c0d94f](https://github.com/AnjanJ/rails_error_dashboard/commit/9c0d94fb9f1440bbef76950900d00a05141b6c97))
+* guard JSON-parsing partials against unexpected shapes ([96e4755](https://github.com/AnjanJ/rails_error_dashboard/commit/96e4755a8a3822f1b4886eaf2fb24aebc172273e))
+* handle Time objects in PostgreSQL last_autovacuum cells ([cdfc82f](https://github.com/AnjanJ/rails_error_dashboard/commit/cdfc82f52184f8d519fa3f297671848d4045cab4))
+* hide platform quick-action button when error has no platform ([660fede](https://github.com/AnjanJ/rails_error_dashboard/commit/660fede743fab180e7ffa6e1bb99cb694e8ef27c))
+* link error_type cells on database_health_summary to filtered errors ([2ed804b](https://github.com/AnjanJ/rails_error_dashboard/commit/2ed804b31c7fd99117b7aa59a974d7d4579016ee))
+* link Severity, Platform, and User badges in error sidebar to filtered errors ([dd7161a](https://github.com/AnjanJ/rails_error_dashboard/commit/dd7161a832feed9669eabaa78e238de1a938c05f))
+* link user_id column on errors index to that user's filtered errors ([409f20b](https://github.com/AnjanJ/rails_error_dashboard/commit/409f20b09d5e9e9e463618d523550a9163c47279))
+* **llm-observability:** filter overreach + word-break ([#126](https://github.com/AnjanJ/rails_error_dashboard/issues/126)) ([3e4aaae](https://github.com/AnjanJ/rails_error_dashboard/commit/3e4aaae699b23f26b942c2f19719905fa2042d7a))
+* more drill-down links from page audit ([2bd4c9e](https://github.com/AnjanJ/rails_error_dashboard/commit/2bd4c9e643d398fb58b823915c2579d9bb2d2971))
+* Pagy rescue must drop both :page and :per_page from redirect target ([eb43b41](https://github.com/AnjanJ/rails_error_dashboard/commit/eb43b412b42ed34f6a71003f10ba7600735920f4))
+* preserve query string when redirecting from Pagy out-of-range page ([6f743c7](https://github.com/AnjanJ/rails_error_dashboard/commit/6f743c733783b0055f5316507854ec3c78eb2596))
+* priority filter pill shows correct P-number short_label ([0f647d8](https://github.com/AnjanJ/rails_error_dashboard/commit/0f647d852d785c86b90845079d70e06c5d65da6c))
+* remove duplicate .modal-content class from resolve modal form ([a944779](https://github.com/AnjanJ/rails_error_dashboard/commit/a944779087777d86dc228cb34a81dd562720c35b))
+* remove stray &lt;/h5&gt; in settings.html.erb ([c331877](https://github.com/AnjanJ/rails_error_dashboard/commit/c3318779984670899a48e4807479d16390a39428))
+* render error counts with thousand separators ([dc1bef9](https://github.com/AnjanJ/rails_error_dashboard/commit/dc1bef9199a5c825cc942c4412430d271b1f35d1))
+* **security:** defense-in-depth against &lt;/script&gt; injection in inline JSON ([6500d86](https://github.com/AnjanJ/rails_error_dashboard/commit/6500d86ace71f9ba06b7619ed2afc81d09f40141))
+* **security:** prevent stored XSS in auto_link_urls helper ([5b9d70b](https://github.com/AnjanJ/rails_error_dashboard/commit/5b9d70b25ba2d5957cb90be5e8805f491bdb4a63))
+* **security:** prevent stored XSS in resolved-badge tooltip on timeline ([9f89336](https://github.com/AnjanJ/rails_error_dashboard/commit/9f89336b385e8db0321c33e110f8a2b488bda408))
+* user_id, app_version, git_sha filters were silently dropped ([22a3123](https://github.com/AnjanJ/rails_error_dashboard/commit/22a31237ad8ba360d9378c655760b373bb56c12f))
+
+
+### ⚡ Performance
+
+* avoid full-record load when counting critical errors per version ([9b909bd](https://github.com/AnjanJ/rails_error_dashboard/commit/9b909bd8ee4f3584efa79a69c224c97b59516b1a))
+* CascadeDetector single-pass over plucked occurrences ([85f60ad](https://github.com/AnjanJ/rails_error_dashboard/commit/85f60ad59102bb4a39d34c55a2807229e57d7707))
+* time_correlated_errors uses one SQL GROUP BY instead of N full loads ([bcc0ef9](https://github.com/AnjanJ/rails_error_dashboard/commit/bcc0ef9d5813a9f3d318400de2dbae0f47eb5c2f))
+
+
+### 🧹 Maintenance
+
+* release 0.7.2 ([da471a9](https://github.com/AnjanJ/rails_error_dashboard/commit/da471a957a0523a1fb257a0737705791515ecc49))
+
 ## [0.8.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.7.2...rails_error_dashboard/v0.8.0) (2026-06-10)
 
 
