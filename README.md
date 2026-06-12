@@ -80,6 +80,28 @@ Error capture from controllers, jobs, and middleware. Custom-designed dashboard 
 ### Optional Features
 
 <details>
+<summary><strong>Storm Protection — Circuit Breaker + Adaptive Sampling</strong></summary>
+
+When the error rate spikes (a bad deploy throwing thousands of errors a minute), the nightmare scenario for any in-process tracker is amplifying the outage with its own database writes. Storm protection makes the gem **provably degrade itself first** — ON by default.
+
+- **Per-fingerprint caps:** past N occurrences/minute per error, context is shed, then rows are sampled deterministically (a fresh exemplar is always kept each minute)
+- **Global circuit breaker:** sustained floods flip the gem to count-only mode — zero per-event I/O, exact in-memory counts reconciled onto error records every 30s. Async mode is gated too (a SolidQueue enqueue is itself a DB write)
+- **One storm notification** replaces hundreds of per-error pings; auto-issue creation is capped (default 5 per 10 min) so a storm of new errors can't open 500 GitHub/Linear issues
+- **Honest accounting:** a dashboard banner during/after the storm, a Storm History page with exact counts of everything shed, and `reached_open`/peak-rate per episode. Counts are never extrapolated
+- **Calm-weather economy:** after 25 full-context captures of the same error per day, context is sampled (occurrence counting unaffected)
+- **Fails open:** any internal storm-protection error means full capture. Protection can never be the thing that loses an error
+
+```ruby
+config.enable_storm_protection = true  # default
+config.storm_open_threshold_per_second = 50  # per process
+```
+
+All thresholds are per process and individually configurable. Disable with one flag.
+
+**Measured overhead** (Apple Silicon, Ruby 4.0): 2.4µs/error with protection active and calm, 2.95µs in count-only mode, 0.2µs when disabled — against a 5µs budget. The check is a digest plus an atomic increment; there is no I/O on the hot path.
+</details>
+
+<details>
 <summary><strong>Breadcrumbs — Request Activity Trail</strong></summary>
 
 See exactly what happened before the crash — SQL queries, controller actions, cache operations, job executions, and mailer deliveries captured automatically via `ActiveSupport::Notifications`.

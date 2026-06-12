@@ -18,6 +18,20 @@ RSpec.configure do |config|
     Rails.cache.clear
   end
 
+  # Storm protection holds per-process state (breaker, buckets, counters).
+  # Reset before each example so storm-spec state never leaks into
+  # unrelated specs (config-pollution discipline).
+  #
+  # The config flag is also forced off here because the gem default is ON
+  # and `RailsErrorDashboard.reset_configuration!` (used by many specs)
+  # restores gem defaults, not dummy-initializer values — without this,
+  # any spec that resets configuration re-enables storms for the rest of
+  # the suite. Storm specs opt back in via their own (later-running) hooks.
+  config.before(:each) do
+    RailsErrorDashboard::Services::StormProtection::Gate.reset!
+    RailsErrorDashboard.configuration.enable_storm_protection = false
+  end
+
   # ActiveJob test adapter
   config.include ActiveJob::TestHelper
   config.before(:each) do

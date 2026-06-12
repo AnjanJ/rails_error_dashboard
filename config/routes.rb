@@ -40,6 +40,7 @@ RailsErrorDashboard::Engine.routes.draw do
       get :activestorage_health_summary
       get :llm_health_summary
       get :releases
+      get :storms
       get :user_impact
       get :diagnostic_dumps
       post :create_diagnostic_dump

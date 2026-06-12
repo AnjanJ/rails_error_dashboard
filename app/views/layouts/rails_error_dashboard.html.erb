@@ -1036,6 +1036,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <% if RailsErrorDashboard.configuration.enable_diagnostic_dump %>
             <% diag_items << { path: diagnostic_dumps_errors_path(nav_params), icon: 'bi-clipboard-pulse', label: 'Diagnostics' } %>
           <% end %>
+          <% if RailsErrorDashboard.configuration.enable_storm_protection %>
+            <% diag_items << { path: storms_errors_path(nav_params), icon: 'bi-cloud-lightning-rain', label: 'Storms' } %>
+          <% end %>
 
           <% if diag_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navDiagSection">
@@ -1174,6 +1177,24 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               <button type="button" data-red-action="dismiss-creds-warning" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="Dismiss for this session">&times;</button>
             </div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
+          <% end %>
+          <% if defined?(@storm_banner_event) && @storm_banner_event %>
+            <% storm_active = @storm_banner_event.active? %>
+            <div id="storm-banner" class="alert <%= storm_active ? 'alert-danger' : 'alert-info' %>" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid <%= storm_active ? 'var(--status-critical)' : 'var(--status-info)' %>;">
+              <i class="bi <%= storm_active ? 'bi-cloud-lightning-rain-fill' : 'bi-cloud-check' %>" style="font-size: 18px; flex-shrink: 0;"></i>
+              <div style="flex: 1;">
+                <% if storm_active %>
+                  <strong>Error storm in progress</strong> (since <%= @storm_banner_event.started_at.strftime("%H:%M %Z") %>) —
+                  storm protection engaged. Occurrences are being counted exactly;
+                  <%= @storm_banner_event.reached_open ? "detail capture is paused (count-only mode)" : "context capture is sampled" %>.
+                <% else %>
+                  <strong>Storm protection engaged recently</strong> (ended <%= @storm_banner_event.ended_at.strftime("%H:%M %Z") %>) —
+                  <%= number_with_delimiter(@storm_banner_event.events_counted_only.to_i + @storm_banner_event.events_overflow.to_i) %> occurrences
+                  were recorded as exact counts with sampled detail.
+                <% end %>
+                <a href="<%= storms_errors_path %>" style="margin-left: 4px;">View storm history</a>
+              </div>
+            </div>
           <% end %>
           <%= yield %>
         </main>
