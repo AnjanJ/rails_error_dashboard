@@ -756,6 +756,8 @@ RSpec.describe "Query Integration", type: :system do
       error = StandardError.new("Phase 10 backtrace test")
       error.set_backtrace(200.times.map { |i| "app/models/model_#{i}.rb:#{i}:in `method_#{i}'" })
 
+      # Ensure synchronous logging so LogError.call returns an ErrorLog record
+      RailsErrorDashboard.configuration.async_logging = false
       RailsErrorDashboard.configuration.max_backtrace_lines = 15
       error_log = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "phase10_test" })
       RailsErrorDashboard.reset_configuration!
