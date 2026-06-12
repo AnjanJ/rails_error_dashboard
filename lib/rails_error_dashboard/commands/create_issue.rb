@@ -2,7 +2,7 @@
 
 module RailsErrorDashboard
   module Commands
-    # Command: Create an issue on the configured issue tracker (GitHub/GitLab/Codeberg)
+    # Command: Create an issue on the configured issue tracker (GitHub/GitLab/Codeberg/Linear)
     #
     # Creates the issue via the provider API, then stores the issue URL, number,
     # and provider on the error record for linking.

@@ -34,6 +34,15 @@ RSpec.describe RailsErrorDashboard::Commands::LinkExistingIssue do
       expect(error_log.external_issue_provider).to eq("codeberg")
     end
 
+    it "links a Linear issue URL" do
+      result = described_class.call(error_log.id, issue_url: "https://linear.app/acme/issue/ENG-123/payment-error")
+
+      expect(result[:success]).to be true
+      error_log.reload
+      expect(error_log.external_issue_number).to eq(123)
+      expect(error_log.external_issue_provider).to eq("linear")
+    end
+
     it "handles unknown provider URLs gracefully" do
       result = described_class.call(error_log.id, issue_url: "https://git.mycompany.com/org/app/issues/15")
 

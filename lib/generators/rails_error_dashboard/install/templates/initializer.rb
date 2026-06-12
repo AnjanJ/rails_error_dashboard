@@ -519,7 +519,7 @@ RailsErrorDashboard.configure do |config|
   # Safe to enable on production OTel pipelines.
 
   # ============================================================================
-  # ISSUE TRACKING (GitHub / GitLab / Codeberg)
+  # ISSUE TRACKING (GitHub / GitLab / Codeberg / Linear)
   # ============================================================================
   #
   # One switch enables everything: issue creation, auto-create on first
@@ -534,7 +534,7 @@ RailsErrorDashboard.configure do |config|
   #   - Priority → labels from platform (with colors)
   #   - Snooze and Mute remain (no platform equivalent)
   #
-  # Setup:
+  # Setup (GitHub/GitLab/Codeberg):
   #   1. Create a RED bot account on GitHub/GitLab/Codeberg
   #   2. Generate a token and set RED_BOT_TOKEN env var
   #   3. Set git_repository_url above (already used for source code linking)
@@ -542,6 +542,17 @@ RailsErrorDashboard.configure do |config|
   #
   # config.enable_issue_tracking = true
   # config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
+  #
+  # Setup (Linear):
+  #   Linear is not a git forge, so it cannot be auto-detected from
+  #   git_repository_url — set provider and team key explicitly. Issues are
+  #   created in the team matching the key (e.g. "ENG" for ENG-123 issues).
+  #   Generate a personal API key under Settings > Security & access.
+  #
+  # config.enable_issue_tracking = true
+  # config.issue_tracker_provider = :linear
+  # config.issue_tracker_repo = "ENG"                              # Linear team key
+  # config.issue_tracker_token = ENV["RED_BOT_TOKEN"]              # lin_api_... key
   #
   # Optional overrides:
   # config.issue_tracker_labels = ["bug"]                          # Labels added to new issues

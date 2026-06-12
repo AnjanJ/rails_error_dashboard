@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module RailsErrorDashboard
-  # Receives webhooks from GitHub/GitLab/Codeberg for two-way issue sync.
+  # Receives webhooks from GitHub/GitLab/Codeberg/Linear for two-way issue sync.
   #
   # When an issue is closed/reopened on the platform, the corresponding
   # error in the dashboard is resolved/reopened to match.
@@ -10,6 +10,7 @@ module RailsErrorDashboard
   # - GitHub:   X-Hub-Signature-256 (HMAC-SHA256)
   # - GitLab:   X-Gitlab-Token (shared secret)
   # - Codeberg: X-Gitea-Signature (HMAC-SHA256)
+  # - Linear:   Linear-Signature (HMAC-SHA256)
   class WebhooksController < ActionController::Base
     skip_before_action :verify_authenticity_token
 
@@ -29,6 +30,8 @@ module RailsErrorDashboard
         handle_gitlab(payload)
       when "codeberg"
         handle_codeberg(payload)
+      when "linear"
+        handle_linear(payload)
       else
         head :not_found
         return
@@ -69,6 +72,8 @@ module RailsErrorDashboard
         verify_gitlab_token(secret)
       when "codeberg"
         verify_codeberg_signature(body, secret)
+      when "linear"
+        verify_linear_signature(body, secret)
       else
         false
       end
@@ -93,6 +98,14 @@ module RailsErrorDashboard
 
     def verify_codeberg_signature(body, secret)
       signature = request.headers["X-Gitea-Signature"]
+      return false unless signature
+
+      expected = OpenSSL::HMAC.hexdigest("SHA256", secret, body)
+      ActiveSupport::SecurityUtils.secure_compare(expected, signature)
+    end
+
+    def verify_linear_signature(body, secret)
+      signature = request.headers["Linear-Signature"]
       return false unless signature
 
       expected = OpenSSL::HMAC.hexdigest("SHA256", secret, body)
@@ -158,6 +171,27 @@ module RailsErrorDashboard
       when "closed"
         resolve_error(error, "Closed on Codeberg by #{payload.dig("sender", "login")}")
       when "reopened"
+        reopen_error(error)
+      end
+    end
+
+    # Linear: Issue webhook fires with action create/update/remove. State changes
+    # arrive as updates with the old stateId in updatedFrom. Linear has no
+    # open/closed binary — completed/canceled state types map to resolved.
+    def handle_linear(payload)
+      return unless payload["type"] == "Issue" && payload["action"] == "update"
+      return unless payload["updatedFrom"]&.key?("stateId")
+
+      issue_number = payload.dig("data", "number")
+      return unless issue_number
+
+      error = find_error_by_issue(issue_number, "linear")
+      return unless error
+
+      state_type = payload.dig("data", "state", "type")
+      if state_type.in?(%w[completed canceled])
+        resolve_error(error, "Completed on Linear by #{payload.dig("actor", "name")}")
+      elsif state_type.in?(%w[triage backlog unstarted started])
         reopen_error(error)
       end
     end

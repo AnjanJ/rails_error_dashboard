@@ -19,6 +19,11 @@ RSpec.describe RailsErrorDashboard::Services::IssueTrackerClient do
       expect(client).to be_a(RailsErrorDashboard::Services::CodebergIssueClient)
     end
 
+    it "returns LinearIssueClient for :linear" do
+      client = described_class.for(:linear, token: "lin_api_tok", repo: "ENG")
+      expect(client).to be_a(RailsErrorDashboard::Services::LinearIssueClient)
+    end
+
     it "accepts string provider name" do
       client = described_class.for("github", token: "tok", repo: "user/repo")
       expect(client).to be_a(RailsErrorDashboard::Services::GitHubIssueClient)
@@ -67,6 +72,23 @@ RSpec.describe RailsErrorDashboard::Services::IssueTrackerClient do
       RailsErrorDashboard.configuration.issue_tracker_token = "tok_test"
       client = described_class.from_config
       expect(client).to be_a(RailsErrorDashboard::Services::CodebergIssueClient)
+    end
+
+    it "builds a Linear client from explicit provider + team key" do
+      RailsErrorDashboard.configuration.enable_issue_tracking = true
+      RailsErrorDashboard.configuration.issue_tracker_provider = :linear
+      RailsErrorDashboard.configuration.issue_tracker_repo = "ENG"
+      RailsErrorDashboard.configuration.issue_tracker_token = "lin_api_test"
+      client = described_class.from_config
+      expect(client).to be_a(RailsErrorDashboard::Services::LinearIssueClient)
+    end
+
+    it "returns nil for Linear without an explicit team key (no git URL fallback)" do
+      RailsErrorDashboard.configuration.enable_issue_tracking = true
+      RailsErrorDashboard.configuration.issue_tracker_provider = :linear
+      RailsErrorDashboard.configuration.git_repository_url = "https://github.com/user/repo"
+      RailsErrorDashboard.configuration.issue_tracker_token = "lin_api_test"
+      expect(described_class.from_config).to be_nil
     end
   end
 end

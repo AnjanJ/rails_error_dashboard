@@ -233,7 +233,7 @@ Payload contract matches the `LlmCallEvent` value object — see [`docs/LLM_OBSE
 </details>
 
 <details>
-<summary><strong>Issue Tracking — GitHub, GitLab, Codeberg</strong></summary>
+<summary><strong>Issue Tracking — GitHub, GitLab, Codeberg, Linear</strong></summary>
 
 One switch connects errors to your issue tracker. Platform becomes the source of truth — status, assignees, labels, and comments are mirrored live in the dashboard.
 
@@ -249,6 +249,17 @@ config.enable_issue_tracking = true
 config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 # That's it — provider and repo auto-detected from git_repository_url
 ```
+
+Linear works too — it's not a git forge, so set the provider and team key explicitly:
+
+```ruby
+config.enable_issue_tracking = true
+config.issue_tracker_provider = :linear
+config.issue_tracker_repo = "ENG"  # Linear team key (issues land as ENG-123)
+config.issue_tracker_token = ENV["RED_BOT_TOKEN"]  # lin_api_... personal API key
+```
+
+Closing maps to the team's first `completed` workflow state, reopening to `unstarted`/`backlog`. Two-way sync uses Linear webhooks (`Linear-Signature` HMAC verification).
 
 [Complete documentation →](docs/guides/CONFIGURATION.md)
 </details>
