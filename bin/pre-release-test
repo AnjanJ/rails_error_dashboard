@@ -197,7 +197,11 @@ install_gem() {
   cp "$initializer_file" "$app_dir/config/initializers/rails_error_dashboard.rb"
 
   log_step "Running migrations..."
-  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+  if ! (cd "$app_dir" && bin/rails db:migrate > /tmp/red_chaos_migrate.log 2>&1); then
+    tail -20 /tmp/red_chaos_migrate.log
+    log_error "db:migrate FAILED — aborting (a silent failure here masks missing tables)"
+    exit 1
+  fi
 
   log_success "Gem installed and configured"
 }
@@ -497,7 +501,8 @@ test_full_sync() {
     "$CHAOS_DIR/phase_c_queries.rb" \
     "$CHAOS_DIR/phase_g_quick_wins.rb" \
     "$CHAOS_DIR/phase_h_database_setup.rb" \
-    "$CHAOS_DIR/phase_l_llm_observability.rb"
+    "$CHAOS_DIR/phase_l_llm_observability.rb" \
+    "$CHAOS_DIR/phase_m_storm_protection.rb"
 }
 
 test_full_async() {
