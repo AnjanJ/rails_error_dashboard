@@ -92,8 +92,8 @@ module RailsErrorDashboard
     # issue_webhook_secret is set.
     attr_accessor :enable_issue_tracking         # Master switch (default: false) — enables all platform integration
     attr_accessor :issue_tracker_token            # String or lambda/proc for Rails credentials
-    attr_accessor :issue_tracker_provider         # :github, :gitlab, :codeberg (auto-detected from git_repository_url)
-    attr_accessor :issue_tracker_repo             # "owner/repo" (auto-extracted from git_repository_url)
+    attr_accessor :issue_tracker_provider         # :github, :gitlab, :codeberg (auto-detected from git_repository_url), or :linear (explicit only)
+    attr_accessor :issue_tracker_repo             # "owner/repo" (auto-extracted from git_repository_url), or Linear team key like "ENG"
     attr_accessor :issue_tracker_labels           # Array of label strings (default: ["bug"])
     attr_accessor :issue_tracker_api_url          # Custom API base URL for self-hosted instances
     attr_accessor :issue_tracker_auto_create_severities  # Auto-create for these severities (default: [:critical, :high])
@@ -604,7 +604,8 @@ module RailsErrorDashboard
 
         if enable_issue_tracking && effective_issue_tracker_provider.nil?
           warnings << "enable_issue_tracking is true but provider could not be detected. " \
-                      "Set issue_tracker_provider or git_repository_url."
+                      "Set issue_tracker_provider (:github, :gitlab, :codeberg, :linear) or git_repository_url. " \
+                      "Note: :linear is never auto-detected — set it explicitly with issue_tracker_repo as the team key."
         end
       end
 
@@ -736,9 +737,11 @@ module RailsErrorDashboard
       default || blank
     end
 
-    # Resolve the effective issue tracker provider (auto-detect from git_repository_url)
+    # Resolve the effective issue tracker provider (auto-detect from git_repository_url).
+    # Linear is never auto-detected (it is not a git forge) — set issue_tracker_provider
+    # explicitly.
     #
-    # @return [Symbol, nil] :github, :gitlab, :codeberg, or nil
+    # @return [Symbol, nil] :github, :gitlab, :codeberg, :linear, or nil
     def effective_issue_tracker_provider
       return issue_tracker_provider&.to_sym if issue_tracker_provider.present?
       return nil if git_repository_url.blank?
@@ -751,11 +754,13 @@ module RailsErrorDashboard
       end
     end
 
-    # Resolve the effective issue tracker repository ("owner/repo")
+    # Resolve the effective issue tracker repository ("owner/repo", or Linear team key)
     #
-    # @return [String, nil] "owner/repo" or nil
+    # @return [String, nil] "owner/repo", Linear team key, or nil
     def effective_issue_tracker_repo
       return issue_tracker_repo if issue_tracker_repo.present?
+      # A git URL can never yield a Linear team key — require explicit config
+      return nil if effective_issue_tracker_provider == :linear
       return nil if git_repository_url.blank?
 
       # Extract owner/repo from URL: https://github.com/owner/repo(.git)
@@ -783,6 +788,7 @@ module RailsErrorDashboard
       when :github then "https://api.github.com"
       when :gitlab then "https://gitlab.com/api/v4"
       when :codeberg then "https://codeberg.org/api/v1"
+      when :linear then "https://api.linear.app/graphql"
       end
     end
 

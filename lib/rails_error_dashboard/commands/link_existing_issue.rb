@@ -14,7 +14,9 @@ module RailsErrorDashboard
       PROVIDER_PATTERNS = {
         github: %r{github\.com/([^/]+/[^/]+)/issues/(\d+)}i,
         gitlab: %r{gitlab\.com/([^/]+/[^/]+)/-/issues/(\d+)}i,
-        codeberg: %r{codeberg\.org/([^/]+/[^/]+)/issues/(\d+)}i
+        codeberg: %r{codeberg\.org/([^/]+/[^/]+)/issues/(\d+)}i,
+        # https://linear.app/<workspace>/issue/ENG-123/<slug> — capture team key + number
+        linear: %r{linear\.app/[^/]+/issue/([A-Za-z][A-Za-z0-9]*)-(\d+)}i
       }.freeze
 
       def self.call(error_id, issue_url:)

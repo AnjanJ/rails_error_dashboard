@@ -8,8 +8,9 @@ module RailsErrorDashboard
   module Services
     # Base class and factory for issue tracker API clients.
     #
-    # Supports GitHub, GitLab, and Codeberg/Gitea/Forgejo via a unified interface.
-    # Each provider implements the same methods with provider-specific API calls.
+    # Supports GitHub, GitLab, Codeberg/Gitea/Forgejo, and Linear via a unified
+    # interface. Each provider implements the same methods with provider-specific
+    # API calls.
     #
     # @example
     #   client = IssueTrackerClient.for(:github, token: "ghp_xxx", repo: "user/repo")
@@ -23,9 +24,9 @@ module RailsErrorDashboard
 
       # Factory method — returns the correct client for the provider
       #
-      # @param provider [Symbol] :github, :gitlab, or :codeberg
+      # @param provider [Symbol] :github, :gitlab, :codeberg, or :linear
       # @param token [String] API authentication token
-      # @param repo [String] Repository identifier ("owner/repo")
+      # @param repo [String] Repository identifier ("owner/repo"), or Linear team key ("ENG")
       # @param api_url [String, nil] Custom API base URL (for self-hosted)
       # @return [IssueTrackerClient] Provider-specific client instance
       def self.for(provider, token:, repo:, api_url: nil)
@@ -36,8 +37,10 @@ module RailsErrorDashboard
           GitLabIssueClient.new(token: token, repo: repo, api_url: api_url)
         when :codeberg
           CodebergIssueClient.new(token: token, repo: repo, api_url: api_url)
+        when :linear
+          LinearIssueClient.new(token: token, repo: repo, api_url: api_url)
         else
-          raise ArgumentError, "Unknown issue tracker provider: #{provider}. Supported: :github, :gitlab, :codeberg"
+          raise ArgumentError, "Unknown issue tracker provider: #{provider}. Supported: :github, :gitlab, :codeberg, :linear"
         end
       end
 
