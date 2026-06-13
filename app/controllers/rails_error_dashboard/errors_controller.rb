@@ -5,6 +5,7 @@ module RailsErrorDashboard
     before_action :authenticate_dashboard_user!
     before_action :set_application_context
     before_action :check_default_credentials
+    before_action :load_storm_banner
 
     FILTERABLE_PARAMS = %i[
       error_type
@@ -327,6 +328,12 @@ module RailsErrorDashboard
       @summary = result[:summary]
 
       @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
+    end
+
+    def storms
+      result = Queries::StormHistory.call
+      @active_storm = result[:active]
+      @storm_events = result[:events]
     end
 
     def user_impact
@@ -727,6 +734,10 @@ module RailsErrorDashboard
 
     def check_default_credentials
       @default_credentials_warning = RailsErrorDashboard.configuration.default_credentials?
+    end
+
+    def load_storm_banner
+      @storm_banner_event = Queries::StormHistory.banner_event
     end
 
     def authenticate_dashboard_user!

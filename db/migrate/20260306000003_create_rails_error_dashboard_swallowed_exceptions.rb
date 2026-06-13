@@ -2,6 +2,10 @@
 
 class CreateRailsErrorDashboardSwallowedExceptions < ActiveRecord::Migration[7.0]
   def change
+    # Guard against the squashed schema migration having already created this
+    # table — without it, every later migration is silently cancelled.
+    return if table_exists?(:rails_error_dashboard_swallowed_exceptions)
+
     create_table :rails_error_dashboard_swallowed_exceptions do |t|
       t.string   :exception_class,  null: false, limit: 250
       t.string   :raise_location,   null: false, limit: 250

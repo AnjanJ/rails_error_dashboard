@@ -1,0 +1,91 @@
+<% content_for :page_title, "Storm History" %>
+
+<div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
+      <i class="bi bi-cloud-lightning-rain me-2"></i>
+      Storm History
+    </h1>
+  </div>
+
+  <p class="text-muted" style="font-size: 13px; margin-bottom: var(--space-4);">
+    When the error rate spikes (a bad deploy, a dependency outage), storm protection
+    limits the gem's own database writes so it never amplifies the incident.
+    Occurrences are always counted exactly — only per-event detail is sampled.
+    Thresholds are configurable per process via <code>storm_*</code> options.
+  </p>
+
+  <% if @active_storm %>
+    <div class="alert alert-danger" style="border-left: 4px solid var(--status-critical);">
+      <i class="bi bi-cloud-lightning-rain-fill me-1"></i>
+      <strong>Storm in progress</strong> since <%= @active_storm.started_at.strftime("%Y-%m-%d %H:%M %Z") %> —
+      peak rate <%= number_with_delimiter(@active_storm.peak_rate_per_minute) %>/min.
+    </div>
+  <% end %>
+
+  <% if @storm_events.empty? %>
+    <div class="red-empty-state">
+      <i class="bi bi-cloud-sun display-1 text-muted mb-3"></i>
+      <div class="red-empty-state-title">No Storms Recorded</div>
+      <p class="text-muted">
+        Storm protection is standing by. If an error flood ever hits this app,
+        episodes will appear here with exact counts of what was shed.
+      </p>
+    </div>
+  <% else %>
+    <div class="card">
+      <div class="card-body" style="padding: 0;">
+        <table class="table" style="margin: 0;">
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Duration</th>
+              <th>Peak Rate</th>
+              <th>Mode</th>
+              <th class="text-end">Counted (exact)</th>
+              <th class="text-end">Overflow</th>
+              <th>Top Errors</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @storm_events.each do |event| %>
+              <tr>
+                <td style="white-space: nowrap;">
+                  <%= event.started_at.strftime("%Y-%m-%d %H:%M") %>
+                  <% if event.active? %>
+                    <span class="badge bg-danger ms-1">active</span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if event.duration_seconds %>
+                    <%= ActiveSupport::Duration.build(event.duration_seconds).inspect %>
+                  <% else %>
+                    &mdash;
+                  <% end %>
+                </td>
+                <td><%= number_with_delimiter(event.peak_rate_per_minute) %>/min</td>
+                <td>
+                  <% if event.reached_open %>
+                    <span class="badge bg-danger">count-only</span>
+                  <% else %>
+                    <span class="badge bg-warning text-dark">shedding</span>
+                  <% end %>
+                </td>
+                <td class="text-end"><%= number_with_delimiter(event.events_counted_only) %></td>
+                <td class="text-end"><%= number_with_delimiter(event.events_overflow) %></td>
+                <td style="max-width: 320px;">
+                  <% event.top_fingerprints_list.first(3).each do |fp| %>
+                    <div style="font-size: 12px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= fp["message"] %>">
+                      <strong><%= fp["class"] %></strong>
+                      <span class="text-muted">&times;<%= number_with_delimiter(fp["count"]) %></span>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -77,6 +77,7 @@ module RailsErrorDashboard
     def set_common_view_variables
       @applications = Application.ordered_by_name.pluck(:name, :id) rescue []
       @default_credentials_warning = RailsErrorDashboard.configuration.default_credentials? rescue false
+      @storm_banner_event = Queries::StormHistory.banner_event
     end
   end
 end

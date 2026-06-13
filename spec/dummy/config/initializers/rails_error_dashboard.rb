@@ -20,6 +20,11 @@ RailsErrorDashboard.configure do |config|
   config.async_logging = false # Sync for tests
   config.async_adapter = :sidekiq
 
+  # Storm protection OFF in tests (same rationale as async_logging = false):
+  # specs that loop LogError.call must capture deterministically. Storm
+  # behavior is exercised by specs that opt in explicitly.
+  config.enable_storm_protection = false
+
   # Test backtrace limit
   config.max_backtrace_lines = 50
 end
