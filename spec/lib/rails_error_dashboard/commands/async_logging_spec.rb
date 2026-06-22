@@ -66,7 +66,7 @@ RSpec.describe "Async Error Logging", type: :integration do
           backtrace: [ "test.rb:1" ],
           cause_chain: nil
         ),
-        {}
+        hash_including(_pre_filtered: true)
       )
 
       RailsErrorDashboard::Commands::LogError.call(error, {})
@@ -89,7 +89,7 @@ RSpec.describe "Async Error Logging", type: :integration do
           message: "wrapper",
           cause_chain: [ hash_including(class_name: "ArgumentError", message: "root cause") ]
         ),
-        {}
+        hash_including(_pre_filtered: true)
       )
 
       RailsErrorDashboard::Commands::LogError.call(error, {})
@@ -195,16 +195,13 @@ RSpec.describe "Async Error Logging", type: :integration do
     it "does not enqueue job for ignored exceptions" do
       error = ActionController::RoutingError.new("Not found")
 
-      # Note: Ignored exceptions are filtered in the sync call method,
-      # so they never reach the async job
-      # This test documents current behavior - ignored exceptions
-      # are still enqueued but will be filtered when job runs
+      # Ignored exceptions are filtered BEFORE the async branch (since storm
+      # protection moved the filter to LogError.call) — no job is enqueued
+      # at all, saving the queue round-trip entirely.
       expect {
         RailsErrorDashboard::Commands::LogError.call(error, {})
-      }.to have_enqueued_job(RailsErrorDashboard::AsyncErrorLoggingJob)
+      }.not_to have_enqueued_job(RailsErrorDashboard::AsyncErrorLoggingJob)
 
-      # But when the job runs, it's filtered
-      perform_enqueued_jobs
       expect(RailsErrorDashboard::ErrorLog.count).to eq(0)
     end
   end

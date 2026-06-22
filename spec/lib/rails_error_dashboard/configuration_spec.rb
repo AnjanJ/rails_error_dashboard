@@ -517,4 +517,72 @@ RSpec.describe RailsErrorDashboard::Configuration do
       expect(config.enable_actioncable_tracking).to be true
     end
   end
+
+  describe "storm protection configuration defaults" do
+    it { expect(config.enable_storm_protection).to be true }
+    it { expect(config.storm_fingerprint_full_per_minute).to eq(30) }
+    it { expect(config.storm_occurrence_sample_keep_every).to eq(10) }
+    it { expect(config.storm_shedding_threshold_per_second).to eq(10) }
+    it { expect(config.storm_open_threshold_per_second).to eq(50) }
+    it { expect(config.storm_cooldown_seconds).to eq(60) }
+    it { expect(config.storm_max_tracked_fingerprints).to eq(1000) }
+    it { expect(config.storm_flush_interval_seconds).to eq(30) }
+    it { expect(config.storm_notification).to be true }
+    it { expect(config.auto_issue_rate_limit_count).to eq(5) }
+    it { expect(config.auto_issue_rate_limit_window_minutes).to eq(10) }
+    it { expect(config.context_sampling_threshold_per_day).to eq(25) }
+    it { expect(config.context_sampling_keep_every).to eq(10) }
+  end
+
+  describe "storm protection validation" do
+    positive_storm_knobs = %i[
+      storm_fingerprint_full_per_minute storm_occurrence_sample_keep_every
+      storm_shedding_threshold_per_second storm_open_threshold_per_second
+      storm_cooldown_seconds storm_max_tracked_fingerprints
+      storm_flush_interval_seconds auto_issue_rate_limit_count
+      auto_issue_rate_limit_window_minutes context_sampling_threshold_per_day
+      context_sampling_keep_every
+    ]
+
+    it "a default config is valid" do
+      expect { config.validate! }.not_to raise_error
+    end
+
+    positive_storm_knobs.each do |knob|
+      it "rejects a nil #{knob}" do
+        config.public_send("#{knob}=", nil)
+        expect { config.validate! }.to raise_error(RailsErrorDashboard::ConfigurationError, /#{knob}/)
+      end
+    end
+
+    it "rejects a zero storm_open_threshold_per_second" do
+      config.storm_open_threshold_per_second = 0
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError, /storm_open_threshold_per_second/
+      )
+    end
+
+    it "rejects a negative storm_cooldown_seconds" do
+      config.storm_cooldown_seconds = -5
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError, /storm_cooldown_seconds/
+      )
+    end
+
+    it "rejects an open threshold below the shedding threshold" do
+      config.storm_shedding_threshold_per_second = 10
+      config.storm_open_threshold_per_second = 5
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /storm_open_threshold_per_second.*storm_shedding_threshold_per_second/m
+      )
+    end
+
+    it "skips storm validations entirely when protection is disabled" do
+      config.enable_storm_protection = false
+      config.storm_open_threshold_per_second = 0 # would be invalid if protection were on
+
+      expect { config.validate! }.not_to raise_error
+    end
+  end
 end

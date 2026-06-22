@@ -10,7 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_03_07_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_13_000001) do
+  create_table "rails_error_dashboard_storm_events", force: :cascade do |t|
+    t.datetime "started_at", null: false
+    t.datetime "ended_at"
+    t.integer "peak_rate_per_minute", default: 0
+    t.boolean "reached_open", default: false
+    t.bigint "events_total", default: 0
+    t.bigint "events_counted_only", default: 0
+    t.bigint "events_overflow", default: 0
+    t.integer "fingerprints_affected", default: 0
+    t.text "top_fingerprints"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "ended_at" ], name: "index_red_storm_events_on_ended_at"
+    t.index [ "started_at" ], name: "index_red_storm_events_on_started_at"
+  end
+
   create_table "rails_error_dashboard_applications", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.text "description"

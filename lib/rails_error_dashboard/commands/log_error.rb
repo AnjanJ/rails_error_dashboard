@@ -6,15 +6,59 @@ module RailsErrorDashboard
     # This is a write operation that creates an ErrorLog record
     class LogError
       def self.call(exception, context = {})
-        # Check if async logging is enabled
+        # Filter FIRST (ignore list + static sampling) so ignored exceptions
+        # never count toward storm state. _pre_filtered prevents the sync path
+        # from re-rolling the sampling dice (rate would square otherwise).
+        # The filter + gate run inside this method's rescue: nothing in the
+        # capture path may ever raise into the host app.
+        begin
+          unless Services::ExceptionFilter.should_log?(exception)
+            # Preserve the OTel contract: filtered captures still emit a span
+            # tagged filtered=true (no-op when OTel export is disabled).
+            Integrations::Tracer.in_span(
+              "capture_error",
+              kind: :capture,
+              attributes: build_capture_span_attributes(exception, was_async: false)
+            ) do |span|
+              span&.set_attribute("rails_error_dashboard.filtered", true)
+            end
+            return nil
+          end
+          context = context.merge(_pre_filtered: true)
+
+          # Storm protection gate — BEFORE the async branch, because with
+          # SolidQueue the enqueue itself is a DB write. :count_only events are
+          # tallied in memory and reconciled by StormFlushJob; nothing else
+          # happens for them (that's the point).
+          storm_decision = Services::StormProtection::Gate.admit!(exception, context)
+          return nil if storm_decision == :count_only
+          context = context.merge(_storm_decision: storm_decision) if storm_decision == :lite
+        rescue => e
+          RailsErrorDashboard::Logger.error(
+            "[RailsErrorDashboard] Capture pre-checks failed: #{e.class} - #{e.message}"
+          )
+          # Fall through and attempt full capture — fail open, never raise
+        end
+
         if RailsErrorDashboard.configuration.async_logging
           # For async logging, just enqueue the job
-          # All filtering happens when the job runs
           call_async(exception, context)
         else
           # For sync logging, execute immediately
           new(exception, context).call
         end
+      rescue => e
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] LogError.call failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      # :lite captures shed context (breadcrumbs/health/locals/ivars) — the
+      # storm shedding ladder's first economy. Symbol or string key: the
+      # async job round-trips context through the queue serializer.
+      def self.storm_lite?(context)
+        context[:_storm_decision].to_s == "lite"
       end
 
       # Build the base OTel span attributes available before any work happens.
@@ -42,18 +86,22 @@ module RailsErrorDashboard
           cause_chain: serialize_cause_chain(exception)
         }
 
+        # Storm shedding: :lite captures skip ALL pre-enqueue context harvest —
+        # this is request-thread CPU, the most valuable thing to shed.
+        lite = storm_lite?(context)
+
         # Harvest breadcrumbs NOW (before job dispatch — different thread won't have them)
-        if RailsErrorDashboard.configuration.enable_breadcrumbs
+        if !lite && RailsErrorDashboard.configuration.enable_breadcrumbs
           context = context.merge(_serialized_breadcrumbs: Services::BreadcrumbCollector.harvest)
         end
 
         # Capture system health NOW (metrics are time-sensitive, different thread = different state)
-        if RailsErrorDashboard.configuration.enable_system_health
+        if !lite && RailsErrorDashboard.configuration.enable_system_health
           context = context.merge(_serialized_system_health: Services::SystemHealthSnapshot.capture)
         end
 
         # Capture local variables NOW (TracePoint attaches to exception, must extract before job dispatch)
-        if RailsErrorDashboard.configuration.enable_local_variables
+        if !lite && RailsErrorDashboard.configuration.enable_local_variables
           begin
             raw_locals = Services::LocalVariableCapturer.extract(exception)
             if raw_locals.is_a?(Hash) && raw_locals.any?
@@ -65,7 +113,7 @@ module RailsErrorDashboard
         end
 
         # Capture instance variables NOW (same reason — attached to exception object)
-        if RailsErrorDashboard.configuration.enable_instance_variables
+        if !lite && RailsErrorDashboard.configuration.enable_instance_variables
           begin
             raw_ivars = Services::LocalVariableCapturer.extract_instance_vars(exception)
             if raw_ivars.is_a?(Hash) && raw_ivars.any?
@@ -157,11 +205,18 @@ module RailsErrorDashboard
           kind: :capture,
           attributes: self.class.build_capture_span_attributes(@exception, was_async: false)
         ) do |span|
-        # Check if this exception should be logged (ignore list + sampling)
-        if !Services::ExceptionFilter.should_log?(@exception)
+        # Check if this exception should be logged (ignore list + sampling).
+        # Skipped when self.call already filtered (re-rolling the sampling
+        # dice here would square the effective rate).
+        if !@context[:_pre_filtered] && !Services::ExceptionFilter.should_log?(@exception)
           span&.set_attribute("rails_error_dashboard.filtered", true)
           next nil
         end
+
+        # Storm shedding: :lite captures keep the error + occurrence row but
+        # shed context payloads (breadcrumbs/health/locals/ivars).
+        storm_lite = self.class.storm_lite?(@context)
+        span&.set_attribute("rails_error_dashboard.storm_degraded", true) if storm_lite
 
         error_context = ValueObjects::ErrorContext.new(@context, @context[:source])
 
@@ -239,7 +294,7 @@ module RailsErrorDashboard
         attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
 
         # Harvest breadcrumbs (if enabled and column exists)
-        if ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
+        if !storm_lite && ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
           # Sync path: harvest from current thread
           raw_breadcrumbs = Services::BreadcrumbCollector.harvest
 
@@ -256,13 +311,13 @@ module RailsErrorDashboard
         end
 
         # Capture system health snapshot (if enabled and column exists)
-        if ErrorLog.column_names.include?("system_health") && RailsErrorDashboard.configuration.enable_system_health
+        if !storm_lite && ErrorLog.column_names.include?("system_health") && RailsErrorDashboard.configuration.enable_system_health
           health_data = @context[:_serialized_system_health] || Services::SystemHealthSnapshot.capture
           attributes[:system_health] = health_data.to_json
         end
 
         # Capture local variables (if enabled and column exists)
-        if ErrorLog.column_names.include?("local_variables") && RailsErrorDashboard.configuration.enable_local_variables
+        if !storm_lite && ErrorLog.column_names.include?("local_variables") && RailsErrorDashboard.configuration.enable_local_variables
           begin
             # Sync path: extract from exception ivar
             raw_locals = Services::LocalVariableCapturer.extract(@exception)
@@ -278,7 +333,7 @@ module RailsErrorDashboard
         end
 
         # Capture instance variables (if enabled and column exists)
-        if ErrorLog.column_names.include?("instance_variables") && RailsErrorDashboard.configuration.enable_instance_variables
+        if !storm_lite && ErrorLog.column_names.include?("instance_variables") && RailsErrorDashboard.configuration.enable_instance_variables
           begin
             # Sync path: extract from exception ivar
             raw_ivars = Services::LocalVariableCapturer.extract_instance_vars(@exception)
@@ -364,8 +419,11 @@ module RailsErrorDashboard
 
       # Dispatch notification if error is not muted and the throttle check passes.
       # Muted errors skip notifications but still fire plugin events/callbacks.
+      # During a storm (breaker not closed) per-error notifications are
+      # suppressed — a single storm notification replaces them.
       def maybe_notify(error_log)
         return if error_log.muted?
+        return if Services::StormProtection::Gate.notifications_suppressed?
         return unless yield
 
         Services::ErrorNotificationDispatcher.call(error_log)

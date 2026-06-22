@@ -519,6 +519,42 @@ RailsErrorDashboard.configure do |config|
   # Safe to enable on production OTel pipelines.
 
   # ============================================================================
+  # STORM PROTECTION (circuit breaker + adaptive sampling) — ON by default
+  # ============================================================================
+  #
+  # When the error rate spikes (bad deploy, dependency outage), storm
+  # protection limits the gem's own database writes so it never amplifies
+  # the incident. Occurrences are ALWAYS counted exactly — only per-event
+  # detail (context payloads, occurrence rows) is sampled under load.
+  #
+  # How it degrades, in order:
+  #   1. Per-fingerprint cap: past N/min, context is shed, then rows sampled
+  #   2. Global breaker: shedding (context off) → open (count-only mode)
+  #   3. Per-error notifications replaced by ONE "storm in progress" message
+  #   4. Counts reconciled onto error records every flush interval
+  #
+  # All thresholds are PER PROCESS (each Puma worker runs its own breaker).
+  #
+  # config.enable_storm_protection = true
+  # config.storm_fingerprint_full_per_minute = 30   # full-fidelity captures per fingerprint/min
+  # config.storm_occurrence_sample_keep_every = 10  # past the cap, keep every Nth occurrence
+  # config.storm_shedding_threshold_per_second = 10 # global rate entering shedding state
+  # config.storm_open_threshold_per_second = 50     # global rate opening the breaker (count-only)
+  # config.storm_cooldown_seconds = 60              # open → half-open probe delay
+  # config.storm_notification = true                # one notification per storm episode
+  #
+  # Always-on issue cap (a storm of NEW critical errors must not open
+  # hundreds of GitHub/Linear issues):
+  # config.auto_issue_rate_limit_count = 5
+  # config.auto_issue_rate_limit_window_minutes = 10
+  #
+  # Calm-weather context economy: an error seen 1000x/day doesn't need 1000
+  # breadcrumb trails. After N full-context captures per fingerprint per day,
+  # context is kept every Mth time (occurrence rows are unaffected):
+  # config.context_sampling_threshold_per_day = 25
+  # config.context_sampling_keep_every = 10
+
+  # ============================================================================
   # ISSUE TRACKING (GitHub / GitLab / Codeberg / Linear)
   # ============================================================================
   #

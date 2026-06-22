@@ -11,6 +11,10 @@ RailsErrorDashboard.configure do |config|
   config.database = :error_dashboard
 
   # Synchronous logging
+  # Storm protection OFF for chaos tests: phases fire errors in tight
+  # loops far hotter than real traffic and must capture deterministically.
+  # Phase M exercises storm protection explicitly at runtime.
+  config.enable_storm_protection = false
   config.async_logging = false
 
   # All analytics features ON

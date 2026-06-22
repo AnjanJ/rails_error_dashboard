@@ -8,6 +8,10 @@ RailsErrorDashboard.configure do |config|
 
   # Async logging via Sidekiq adapter
   # ActiveJob queue_adapter set to :inline in separate initializer
+  # Storm protection OFF for chaos tests: phases fire errors in tight
+  # loops far hotter than real traffic and must capture deterministically.
+  # Phase M exercises storm protection explicitly at runtime.
+  config.enable_storm_protection = false
   config.async_logging = true
   config.async_adapter = :sidekiq
 

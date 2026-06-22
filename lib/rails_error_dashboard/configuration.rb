@@ -67,6 +67,25 @@ module RailsErrorDashboard
     # Sampling rate for non-critical errors (0.0 to 1.0, default 1.0 = 100%)
     attr_accessor :sampling_rate
 
+    # Storm protection — circuit breaker + adaptive sampling for error floods.
+    # Protects the HOST APP from the gem's own writes during an error storm
+    # (bad deploy throwing thousands of errors/minute). Default ON: this is
+    # the feature that makes the gem quieter, so ON is the conservative choice.
+    # All thresholds are PER PROCESS (no cross-process coordination by design).
+    attr_accessor :enable_storm_protection            # Master switch (default: true)
+    attr_accessor :storm_fingerprint_full_per_minute  # Full-fidelity captures per fingerprint per minute (default: 30)
+    attr_accessor :storm_occurrence_sample_keep_every # Past the cap, keep every Nth occurrence (default: 10)
+    attr_accessor :storm_shedding_threshold_per_second # Global rate that enters shedding state (default: 10)
+    attr_accessor :storm_open_threshold_per_second    # Global rate that opens the breaker = count-only (default: 50)
+    attr_accessor :storm_cooldown_seconds             # Open → half-open probe delay (default: 60)
+    attr_accessor :storm_max_tracked_fingerprints     # Bounded in-memory map size; beyond = overflow bucket (default: 1000)
+    attr_accessor :storm_flush_interval_seconds       # Count-buffer flush cadence (default: 30)
+    attr_accessor :storm_notification                 # Single "storm in progress" notification per episode (default: true)
+    attr_accessor :auto_issue_rate_limit_count        # Max auto-created issues per window — applies always (default: 5)
+    attr_accessor :auto_issue_rate_limit_window_minutes # Window for the above (default: 10)
+    attr_accessor :context_sampling_threshold_per_day # Full-context captures per fingerprint per day before sampling (default: 25)
+    attr_accessor :context_sampling_keep_every        # After threshold, keep full context every Nth (default: 10)
+
     # Async logging configuration
     attr_accessor :async_logging
     attr_accessor :async_adapter # :sidekiq, :solid_queue, or :async
@@ -268,6 +287,21 @@ module RailsErrorDashboard
       @ignored_exceptions = []
       @custom_fingerprint = nil # Lambda: ->(exception, context) { "custom_key" }
       @sampling_rate = 1.0 # 100% by default
+
+      # Storm protection defaults (thresholds tuned via chaos Phase G — see ROADMAP)
+      @enable_storm_protection = true
+      @storm_fingerprint_full_per_minute = 30
+      @storm_occurrence_sample_keep_every = 10
+      @storm_shedding_threshold_per_second = 10
+      @storm_open_threshold_per_second = 50
+      @storm_cooldown_seconds = 60
+      @storm_max_tracked_fingerprints = 1000
+      @storm_flush_interval_seconds = 30
+      @storm_notification = true
+      @auto_issue_rate_limit_count = 5
+      @auto_issue_rate_limit_window_minutes = 10
+      @context_sampling_threshold_per_day = 25
+      @context_sampling_keep_every = 10
       @async_logging = false
       @async_adapter = :sidekiq # Battle-tested default
       @max_backtrace_lines = 100 # Matches industry standard (Rollbar, Airbrake)
@@ -680,6 +714,32 @@ module RailsErrorDashboard
 
         if llm_max_output_tokens && llm_max_output_tokens.to_i < 1
           errors << "llm_max_output_tokens must be at least 1 (got: #{llm_max_output_tokens})"
+        end
+      end
+
+      # Validate storm protection thresholds (all must be positive when protection is on)
+      if enable_storm_protection
+        {
+          storm_fingerprint_full_per_minute: storm_fingerprint_full_per_minute,
+          storm_occurrence_sample_keep_every: storm_occurrence_sample_keep_every,
+          storm_shedding_threshold_per_second: storm_shedding_threshold_per_second,
+          storm_open_threshold_per_second: storm_open_threshold_per_second,
+          storm_cooldown_seconds: storm_cooldown_seconds,
+          storm_max_tracked_fingerprints: storm_max_tracked_fingerprints,
+          storm_flush_interval_seconds: storm_flush_interval_seconds,
+          auto_issue_rate_limit_count: auto_issue_rate_limit_count,
+          auto_issue_rate_limit_window_minutes: auto_issue_rate_limit_window_minutes,
+          context_sampling_threshold_per_day: context_sampling_threshold_per_day,
+          context_sampling_keep_every: context_sampling_keep_every
+        }.each do |name, value|
+          if value.nil? || value.to_i < 1
+            errors << "#{name} must be a positive integer (got: #{value.inspect})"
+          end
+        end
+
+        if storm_open_threshold_per_second.to_i < storm_shedding_threshold_per_second.to_i
+          errors << "storm_open_threshold_per_second (#{storm_open_threshold_per_second}) must be >= " \
+                    "storm_shedding_threshold_per_second (#{storm_shedding_threshold_per_second})"
         end
       end
 

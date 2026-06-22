@@ -13,6 +13,18 @@ module RailsErrorDashboard
         # Called when a new error is first logged
         def on_error_logged(error_log)
           return unless should_auto_create?(error_log)
+
+          # Always-on rate cap (default 5 per 10 min): a storm of NEW distinct
+          # fingerprints must not open hundreds of issues. Checked LAST so a
+          # token is only consumed when we were actually about to create.
+          unless Services::StormProtection::Gate.issue_creation_allowed?
+            RailsErrorDashboard::Logger.warn(
+              "[RailsErrorDashboard] Auto-issue creation rate limit reached — " \
+              "skipping issue for ErrorLog ##{error_log.id} (#{error_log.error_type})"
+            )
+            return
+          end
+
           dashboard_url = Services::NotificationHelpers.dashboard_url(error_log)
           CreateIssueJob.perform_later(error_log.id, dashboard_url: dashboard_url)
         rescue => e

@@ -77,6 +77,11 @@ module RailsErrorDashboard
     def set_common_view_variables
       @applications = Application.ordered_by_name.pluck(:name, :id) rescue []
       @default_credentials_warning = RailsErrorDashboard.configuration.default_credentials? rescue false
+      # Only query when a before_action (e.g. ErrorsController#load_storm_banner)
+      # hasn't already loaded it this request — the error renderer runs after
+      # those callbacks, so reuse their result instead of querying a second time.
+      # Tracked by a flag rather than the value, since the common case is nil.
+      @storm_banner_event = Queries::StormHistory.banner_event unless @storm_banner_loaded
     end
   end
 end

@@ -2,6 +2,10 @@
 
 class CreateRailsErrorDashboardDiagnosticDumps < ActiveRecord::Migration[7.0]
   def change
+    # Guard against the squashed schema migration having already created this
+    # table — without it, every later migration is silently cancelled.
+    return if table_exists?(:rails_error_dashboard_diagnostic_dumps)
+
     create_table :rails_error_dashboard_diagnostic_dumps do |t|
       t.references :application, null: false,
         foreign_key: { to_table: :rails_error_dashboard_applications }

@@ -11,6 +11,10 @@ RailsErrorDashboard.configure do |config|
 
   # Async logging via SolidQueue adapter
   # ActiveJob queue_adapter set to :async in separate initializer (thread pool)
+  # Storm protection OFF for chaos tests: phases fire errors in tight
+  # loops far hotter than real traffic and must capture deterministically.
+  # Phase M exercises storm protection explicitly at runtime.
+  config.enable_storm_protection = false
   config.async_logging = true
   config.async_adapter = :solid_queue
 
