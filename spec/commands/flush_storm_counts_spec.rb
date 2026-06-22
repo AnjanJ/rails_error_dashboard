@@ -147,6 +147,28 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
         described_class.call(entries: [ entry_for(count: 5) ])
       }.not_to change(RailsErrorDashboard::StormEvent, :count)
     end
+
+    # Regression: events_total is derived (counted_only + overflow), never
+    # independently accumulated, so it can't drift from its two components
+    # across multiple flushes. It is the honest count-only total.
+    it "keeps events_total == events_counted_only + events_overflow on a single flush" do
+      described_class.call(entries: [ entry_for(count: 10) ], overflow: 3, episode: episode)
+
+      event = RailsErrorDashboard::StormEvent.last
+      expect(event.events_total).to eq(event.events_counted_only + event.events_overflow)
+      expect(event.events_total).to eq(13)
+    end
+
+    it "keeps events_total derived (not drifting) across accumulating flushes" do
+      described_class.call(entries: [ entry_for(count: 10) ], overflow: 3, episode: episode)
+      described_class.call(entries: [ entry_for(count: 20) ], overflow: 4, episode: episode)
+
+      event = RailsErrorDashboard::StormEvent.last
+      expect(event.events_counted_only).to eq(30)
+      expect(event.events_overflow).to eq(7)
+      expect(event.events_total).to eq(37)
+      expect(event.events_total).to eq(event.events_counted_only + event.events_overflow)
+    end
   end
 
   describe "resilience" do
@@ -161,6 +183,33 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
 
     it "never raises" do
       expect { described_class.call(entries: nil) }.not_to raise_error
+    end
+
+    it "tolerates a malformed last_seen_at timestamp without raising" do
+      entry = entry_for(message: "bad time", count: 4).merge("last_seen_at" => "not-a-real-time")
+
+      result = described_class.call(entries: [ entry ])
+      expect(result[:success]).to be true
+      expect(RailsErrorDashboard::ErrorLog.find_by(message: "bad time").occurrence_count).to eq(4)
+    end
+
+    it "tolerates a corrupt (non-Hash) entry from a serializer without raising" do
+      good = entry_for(message: "still good", count: 2)
+
+      result = described_class.call(entries: [ "garbage-string", 12_345, good ])
+      expect(result[:success]).to be true
+      expect(RailsErrorDashboard::ErrorLog.find_by(message: "still good")).to be_present
+    end
+
+    it "reconciles messages containing quotes and null bytes into top fingerprints" do
+      nasty = entry_for(message: %(boom "quote" and   null), count: 7)
+      episode = { "started_at" => 1.minute.ago.iso8601, "reached_open" => true }
+
+      expect {
+        described_class.call(entries: [ nasty ], episode: episode)
+      }.not_to raise_error
+
+      expect(RailsErrorDashboard::StormEvent.last.top_fingerprints_list).to be_an(Array)
     end
   end
 end

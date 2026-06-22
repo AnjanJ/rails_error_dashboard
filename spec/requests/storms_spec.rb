@@ -83,5 +83,30 @@ RSpec.describe "Storm history page + banner", type: :request do
 
       expect(response.body).not_to include("storm-banner")
     end
+
+    # Regression: the banner is loaded once per request by the ErrorsController
+    # before_action. The rescue_from error renderer must reuse that result
+    # rather than re-querying StormHistory.banner_event a second time.
+    it "queries the banner only once on a normal request" do
+      RailsErrorDashboard::StormEvent.create!(started_at: 5.minutes.ago, reached_open: true)
+
+      expect(RailsErrorDashboard::Queries::StormHistory)
+        .to receive(:banner_event).once.and_call_original
+
+      get "/error_dashboard/errors", headers: auth
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "does not re-query the banner when an error page is rendered" do
+      RailsErrorDashboard::StormEvent.create!(started_at: 5.minutes.ago, reached_open: true)
+
+      # Force the rescue_from path: a non-existent error id 404s through
+      # render_dashboard_error, which calls set_common_view_variables after
+      # the load_storm_banner before_action has already run.
+      expect(RailsErrorDashboard::Queries::StormHistory)
+        .to receive(:banner_event).once.and_call_original
+
+      get "/error_dashboard/errors/999999999", headers: auth
+    end
   end
 end
