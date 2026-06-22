@@ -281,6 +281,28 @@ assert_http "wrong auth -> 401", wrong_auth_status, 401..401
 puts ""
 
 # ---------------------------------------------------------------------------
+# D13: Feature / health pages (incl. the storm history page)
+# These render over real HTTP and were previously unswept here.
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("D13: Feature / health pages")
+
+assert_http "GET /errors/storms (storm history)", get_status("/errors/storms")
+assert_http "GET /errors/releases", get_status("/errors/releases")
+assert_http "GET /errors/user_impact", get_status("/errors/user_impact")
+assert_http "GET /errors/deprecations", get_status("/errors/deprecations")
+assert_http "GET /errors/n_plus_one_summary", get_status("/errors/n_plus_one_summary")
+assert_http "GET /errors/cache_health_summary", get_status("/errors/cache_health_summary")
+assert_http "GET /errors/job_health_summary", get_status("/errors/job_health_summary")
+assert_http "GET /errors/database_health_summary", get_status("/errors/database_health_summary")
+assert_http "GET /errors/swallowed_exceptions", get_status("/errors/swallowed_exceptions")
+assert_http "GET /errors/rack_attack_summary", get_status("/errors/rack_attack_summary")
+assert_http "GET /errors/actioncable_health_summary", get_status("/errors/actioncable_health_summary")
+assert_http "GET /errors/activestorage_health_summary", get_status("/errors/activestorage_health_summary")
+assert_http "GET /errors/llm_health_summary", get_status("/errors/llm_health_summary")
+assert_http "GET /errors/diagnostic_dumps", get_status("/errors/diagnostic_dumps")
+puts ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 exit_code = PreReleaseTestHarness.summary("PHASE D")
