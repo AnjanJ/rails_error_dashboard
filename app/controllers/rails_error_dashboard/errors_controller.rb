@@ -737,6 +737,7 @@ module RailsErrorDashboard
     end
 
     def load_storm_banner
+      @storm_banner_loaded = true
       @storm_banner_event = Queries::StormHistory.banner_event
     end
 

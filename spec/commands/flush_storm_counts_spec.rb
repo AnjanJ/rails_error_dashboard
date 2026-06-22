@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
+  # Force synchronous logging so LogError.call returns the ErrorLog itself,
+  # not an enqueued AsyncErrorLoggingJob. Without this the examples below are
+  # order-dependent: a prior example leaving async_logging on makes `log`
+  # a job and `log.update!`/`log.reload` raise NoMethodError under some seeds.
+  before { RailsErrorDashboard.configuration.async_logging = false }
   after { RailsErrorDashboard.reset_configuration! }
 
   def entry_for(error_class: "StandardError", message: "storm boom", frame: "#{Rails.root}/app/models/widget.rb",
