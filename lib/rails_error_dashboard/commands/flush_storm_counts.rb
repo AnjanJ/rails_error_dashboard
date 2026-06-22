@@ -137,9 +137,14 @@ module RailsErrorDashboard
 
         event = StormEvent.active.recent_first.first || StormEvent.create!(started_at: started_at)
 
-        event.events_total = event.events_total.to_i + counted + @overflow
         event.events_counted_only = event.events_counted_only.to_i + counted
         event.events_overflow = event.events_overflow.to_i + @overflow
+        # events_total is the count-only total: in-map reconciled + overflow.
+        # It deliberately excludes :lite/:full admissions (those became real
+        # ErrorLog rows on the hot path and are never counted here), so it is
+        # always events_counted_only + events_overflow. Derive it rather than
+        # accumulate so it can't drift from its two components.
+        event.events_total = event.events_counted_only.to_i + event.events_overflow.to_i
         event.fingerprints_affected = [ event.fingerprints_affected.to_i, @entries.size ].max
         event.peak_rate_per_minute = [ event.peak_rate_per_minute.to_i, @episode["peak_rate_per_minute"].to_i ].max
         event.reached_open ||= @episode["reached_open"] == true
