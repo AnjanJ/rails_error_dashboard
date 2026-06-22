@@ -13,7 +13,7 @@
 gem 'rails_error_dashboard'
 ```
 
-**5-minute setup** · **Works out-of-the-box** · **Postgres, MySQL/Trilogy, SQLite** · **No vendor lock-in**
+**5-minute setup** · **Works out-of-the-box** · **PostgreSQL, MySQL/Trilogy, SQLite — shared or separate database** · **No vendor lock-in**
 
 [Full Documentation](https://anjanj.github.io/rails_error_dashboard/) · [Live Demo](https://rails-error-dashboard.anjan.dev) · [RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
@@ -599,6 +599,37 @@ end
 **Multi-App Support** — Track errors from multiple Rails apps in a single shared database. Auto-detects app name, supports per-app filtering. [Multi-App guide →](docs/MULTI_APP_PERFORMANCE.md)
 
 **OpenTelemetry Export** — Emit error-capture operations as OTel spans to Datadog, Honeycomb, or Jaeger. Add `gem "opentelemetry-api"` and set `config.enable_otel_export = true`. See [OpenTelemetry Export](#opentelemetry-export--emit-gem-operations-as-spans) above for full options.
+
+---
+
+## FAQ
+
+**Does Rails Error Dashboard support a separate database for errors?**
+Yes. You can store errors in your app's existing database (shared) **or** in a dedicated, isolated database (separate). Set `config.use_separate_database = true` (or `USE_SEPARATE_ERROR_DB=true`) and point it at a separate connection — the engine routes all of its tables through `connects_to`, keeping error data fully isolated from your app data. Both modes are first-class and covered by the [Database Options guide](docs/guides/DATABASE_OPTIONS.md).
+
+**Which databases does it work with?**
+SQLite, PostgreSQL, and MySQL/Trilogy — in either shared or separate-database mode.
+
+**Is this a self-hosted alternative to Sentry?**
+Yes. It runs entirely inside your own Rails process — no external services, no SDK calling out, no per-event pricing. Error data never leaves your infrastructure.
+
+**Does it capture local variables like Sentry?**
+Yes — local **and** instance variables at the moment the exception is raised, via `TracePoint(:raise)`, with sensitive-data filtering and configurable limits. This is opt-in and a capability Sentry charges extra for.
+
+**Will a flood of errors take down my app?**
+No. Storm protection (a circuit breaker with adaptive sampling, **ON by default**) makes the gem degrade itself first during error floods — occurrence counts stay exact while it sheds the expensive work. Measured hot-path overhead is ~2.4µs/error.
+
+**Does it work with my background jobs?**
+Yes — it auto-detects and supports Sidekiq, SolidQueue, and GoodJob, and can log errors asynchronously through any of them.
+
+**Does it work with my authentication?**
+Yes — HTTP Basic Auth out of the box, or a custom `authenticate_with` lambda that integrates with Devise, Warden, or session-based auth.
+
+**Can it track more than one app?**
+Yes — multi-app support tracks errors from multiple Rails apps in one dashboard with per-app filtering.
+
+**What Rails and Ruby versions are supported?**
+Rails 7.0–8.1 and Ruby 3.2–4.0.
 
 ---
 

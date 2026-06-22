@@ -6,13 +6,24 @@ Gem::Specification.new do |spec|
   spec.authors     = [ "Anjan Jagirdar" ]
   spec.email       = [ "anjan.jagirdar@gmail.com" ]
   spec.homepage    = "https://AnjanJ.github.io/rails_error_dashboard"
-  spec.summary     = "Self-hosted error tracking and exception monitoring for Rails. Free, forever."
+  spec.summary     = "Self-hosted error tracking for Rails — local variables, system health, " \
+                     "separate or shared database. A free, open-source Sentry alternative."
   spec.description = "Own your errors. Own your stack. A fully open-source, self-hosted error tracking " \
-                     "Rails engine for solo founders, indie hackers, and small teams. Exception monitoring " \
-                     "with beautiful dashboard UI, multi-channel notifications (Slack, Email, Discord, " \
-                     "PagerDuty), platform detection (iOS/Android/Web/API), advanced analytics, workflow " \
-                     "management, and cause chain capture. A self-hosted Sentry alternative with 5-minute " \
-                     "setup that works out-of-the-box. Production error monitoring for Rails 7.0-8.1. " \
+                     "Rails engine — a free Sentry alternative that runs entirely inside your own " \
+                     "process, with no external services and zero recurring cost. " \
+                     "Captures what SaaS tools charge extra for: local and instance variables at the " \
+                     "moment of failure (via TracePoint), exception cause chains, swallowed-exception " \
+                     "detection, breadcrumbs, and system-health snapshots (GC, memory, threads, " \
+                     "connection pool, Puma). Plus N+1 query detection, storm protection (a circuit " \
+                     "breaker that shields your app from error floods, ON by default), multi-app " \
+                     "support, error sampling, and async logging via Sidekiq, SolidQueue, or GoodJob. " \
+                     "Runs on SQLite, PostgreSQL, or MySQL/Trilogy — in your app's existing database " \
+                     "or an isolated separate error database. Beautiful dashboard UI (dark/light), " \
+                     "multi-channel notifications (Slack, Email, Discord, PagerDuty, webhooks), " \
+                     "workflow management, advanced analytics, platform detection (iOS/Android/Web/API), " \
+                     "and two-way issue sync with GitHub, GitLab, Codeberg, and Linear. Also: LLM " \
+                     "observability, AI-powered debugging help, and OpenTelemetry span export. " \
+                     "5-minute setup, works out-of-the-box. Rails 7.0-8.1, Ruby 3.2-4.0. " \
                      "BETA: API may change before v1.0.0. " \
                      "Live demo: https://rails-error-dashboard.anjan.dev (gandalf/youshallnotpass)"
   spec.license     = "MIT"
