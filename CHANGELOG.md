@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.1...rails_error_dashboard/v0.8.2) (2026-06-22)
+
+
+### ✨ Features
+
+* **storm-protection:** circuit breaker + adaptive sampling for error floods ([#135](https://github.com/AnjanJ/rails_error_dashboard/issues/135)) ([ffc7b67](https://github.com/AnjanJ/rails_error_dashboard/commit/ffc7b67c2fe71a45317dd9e100cf8a992b9e3b0e))
+
+
+### 🧹 Maintenance
+
+* release rails_error_dashboard as 0.8.2 ([749d4f2](https://github.com/AnjanJ/rails_error_dashboard/commit/749d4f275d6a4272dd9283ad21073025de5b5c47))
+
 ## [0.8.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard-v0.8.0...rails_error_dashboard/v0.8.1) (2026-06-12)
 
 
