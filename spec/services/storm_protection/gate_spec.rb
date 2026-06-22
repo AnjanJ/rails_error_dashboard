@@ -96,6 +96,59 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     end
   end
 
+  # The core safety promise: any internal storm-protection error degrades to
+  # the permissive value (admit fully / don't suppress / allow issues), so
+  # protection can never block, drop, or silence an error.
+  describe "fail-open contract" do
+    it "admit! returns :full when the breaker raises internally" do
+      allow(gate.breaker).to receive(:record!).and_raise(RuntimeError, "internal")
+      expect(gate.admit!(boom)).to eq(:full)
+    end
+
+    it "notifications_suppressed? returns false when the breaker raises internally" do
+      allow(gate.breaker).to receive(:state).and_raise(RuntimeError, "internal")
+      expect(gate.notifications_suppressed?).to be false
+    end
+
+    it "state returns :closed when the breaker raises internally" do
+      allow(gate.breaker).to receive(:state).and_raise(RuntimeError, "internal")
+      expect(gate.state).to eq(:closed)
+    end
+
+    it "issue_creation_allowed? returns true when an internal error occurs" do
+      allow(RailsErrorDashboard.configuration)
+        .to receive(:auto_issue_rate_limit_count).and_raise(RuntimeError, "internal")
+      expect(gate.issue_creation_allowed?).to be true
+    end
+  end
+
+  # Best-effort concurrency check: under count-only mode, concurrent admits
+  # of the SAME fingerprint must not lose a count. They all collapse onto one
+  # CountBuffer entry backed by an AtomicFixnum, so the total is exact
+  # regardless of thread interleaving — this is the safety net the design
+  # relies on. (Distinct fingerprints race through the bounded map, which the
+  # source documents as approximate; we deliberately don't assert exactness
+  # there, to avoid a flaky test.)
+  describe "concurrent admission under count-only mode" do
+    it "never loses counts when many threads admit the same fingerprint" do
+      allow(gate.breaker).to receive(:record!).and_return(:open)
+      allow(gate.breaker).to receive(:episode_snapshot).and_return(nil)
+      RailsErrorDashboard.configuration.storm_flush_interval_seconds = 3600 # no flush mid-test
+      gate.admit!(boom("racy")) # pre-create the single entry so threads only increment
+
+      threads = 8
+      per_thread = 250
+      workers = Array.new(threads) do
+        Thread.new { per_thread.times { gate.admit!(boom("racy")) } }
+      end
+      workers.each(&:join)
+
+      snapshot = gate.count_buffer.snapshot!
+      total = snapshot[:entries].sum { |e| e["count"] } + snapshot[:overflow]
+      expect(total).to eq(threads * per_thread + 1) # +1 for the pre-create
+    end
+  end
+
   describe "storm notification" do
     it "enqueues exactly one notification per episode" do
       allow(gate.breaker).to receive(:record!).and_return(:open)

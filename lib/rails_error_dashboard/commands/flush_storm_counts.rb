@@ -33,8 +33,12 @@ module RailsErrorDashboard
           entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
           counted += reconcile_entry(entry, application)
         rescue => e
+          # A corrupt (non-Hash) entry must not abort the whole batch — and the
+          # log line itself must not assume `entry` is subscriptable (an Integer
+          # from a broken serializer would raise again here, escaping this rescue).
+          error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
           RailsErrorDashboard::Logger.error(
-            "[RailsErrorDashboard] Storm count reconcile failed for #{entry["error_class"]}: #{e.class} - #{e.message}"
+            "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
           )
         end
 
