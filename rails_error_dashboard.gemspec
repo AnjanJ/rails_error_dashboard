@@ -86,7 +86,7 @@ Gem::Specification.new do |spec|
   # Fixed in Rails 7.0.10+ (https://github.com/rails/rails/pull/54264)
   # Allowing up to < 1.3.7 as tests pass with Rails 7.0.10+
   # See: https://github.com/rails/rails/issues/54271
-  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.7"
+  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.8"
 
   # Development and testing dependencies
   spec.add_development_dependency "rspec-rails", "~> 7.0"
