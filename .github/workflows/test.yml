@@ -18,7 +18,7 @@ jobs:
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
@@ -62,7 +62,7 @@ jobs:
     name: System Tests (Chrome)
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
