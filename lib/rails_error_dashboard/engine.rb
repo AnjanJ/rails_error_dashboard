@@ -80,9 +80,9 @@ module RailsErrorDashboard
         RailsErrorDashboard::Subscribers::BreadcrumbSubscriber.subscribe!
       end
 
-      # Subscribe to Rack Attack AS::Notifications events (requires breadcrumbs + Rack::Attack)
+      # Subscribe to Rack Attack AS::Notifications events (requires Rack::Attack).
+      # Breadcrumbs are NOT required — events persist to their own table (issue #143).
       if RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
-         RailsErrorDashboard.configuration.enable_breadcrumbs &&
          defined?(Rack::Attack)
         RailsErrorDashboard::Subscribers::RackAttackSubscriber.subscribe!
       end

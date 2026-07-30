@@ -3,247 +3,159 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Queries::RackAttackSummary do
-  def breadcrumbs_json(*crumbs)
-    crumbs.to_json
-  end
-
-  def rack_attack_crumb(rule:, type: "throttle", discriminator: "1.2.3.4", path: "/login", method: "POST")
-    {
-      "c" => "rack_attack",
-      "m" => "#{type}: #{rule} (#{discriminator}) #{method} #{path}",
-      "meta" => {
-        "rule" => rule,
-        "type" => type,
-        "discriminator" => discriminator,
-        "path" => path,
-        "method" => method
-      }
-    }
-  end
-
-  def sql_crumb(message)
-    { "c" => "sql", "m" => message, "d" => 1.2 }
+  def create_event(rule:, match_type: "throttle", discriminator: "1.2.3.4",
+                   path: "/login", http_method: "POST", count: 1,
+                   period_hour: 1.day.ago.beginning_of_hour, application_id: nil,
+                   last_seen_at: nil)
+    RailsErrorDashboard::RackAttackEvent.create!(
+      rule: rule,
+      match_type: match_type,
+      discriminator: discriminator,
+      path: path,
+      http_method: http_method,
+      event_count: count,
+      period_hour: period_hour,
+      last_seen_at: last_seen_at || period_hour,
+      application_id: application_id
+    )
   end
 
   describe ".call" do
-    it "returns empty events when no errors exist" do
+    it "returns empty events when no events exist" do
       result = described_class.call(30)
       expect(result[:events]).to eq([])
     end
 
-    it "returns empty events when errors have no breadcrumbs" do
-      create(:error_log, breadcrumbs: nil, occurred_at: 1.day.ago)
-      result = described_class.call(30)
-      expect(result[:events]).to eq([])
-    end
+    it "returns aggregated events for a single rule" do
+      create_event(rule: "logins/ip", count: 3)
 
-    it "returns empty events when no rack_attack breadcrumbs exist" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(sql_crumb("SELECT 1")),
-        occurred_at: 1.day.ago)
+      events = described_class.call(30)[:events]
 
-      result = described_class.call(30)
-      expect(result[:events]).to eq([])
-    end
-
-    it "extracts rack_attack events from breadcrumbs" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "login/ip", type: "throttle", discriminator: "192.168.1.1", path: "/login")
-        ),
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(1)
-
-      event = result[:events].first
-      expect(event[:rule]).to eq("login/ip")
-      expect(event[:match_type]).to eq("throttle")
-      expect(event[:count]).to eq(1)
-      expect(event[:unique_ips]).to eq(1)
-      expect(event[:ips]).to include("192.168.1.1")
+      expect(events.size).to eq(1)
+      expect(events.first[:rule]).to eq("logins/ip")
+      expect(events.first[:match_type]).to eq("throttle")
+      expect(events.first[:count]).to eq(3)
     end
 
     it "groups events by rule name" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "login/ip", discriminator: "1.1.1.1"),
-          rack_attack_crumb(rule: "login/ip", discriminator: "2.2.2.2"),
-          rack_attack_crumb(rule: "api/ip", discriminator: "3.3.3.3")
-        ),
-        occurred_at: 1.day.ago)
+      create_event(rule: "logins/ip", count: 2)
+      create_event(rule: "api/ip", count: 5, path: "/api")
 
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(2)
+      events = described_class.call(30)[:events]
 
-      login_rule = result[:events].find { |e| e[:rule] == "login/ip" }
-      expect(login_rule[:count]).to eq(2)
-      expect(login_rule[:unique_ips]).to eq(2)
+      expect(events.map { |e| e[:rule] }).to contain_exactly("logins/ip", "api/ip")
     end
 
-    it "aggregates across multiple errors" do
-      2.times do |i|
-        create(:error_log,
-          breadcrumbs: breadcrumbs_json(
-            rack_attack_crumb(rule: "login/ip", discriminator: "10.0.0.#{i + 1}")
-          ),
-          occurred_at: 1.day.ago)
-      end
+    it "sums counts across multiple hourly buckets for the same rule" do
+      create_event(rule: "logins/ip", count: 4, period_hour: 2.days.ago.beginning_of_hour)
+      create_event(rule: "logins/ip", count: 6, period_hour: 1.day.ago.beginning_of_hour)
 
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(1)
+      events = described_class.call(30)[:events]
 
-      event = result[:events].first
-      expect(event[:count]).to eq(2)
-      expect(event[:unique_ips]).to eq(2)
-      expect(event[:error_count]).to eq(2)
+      expect(events.size).to eq(1)
+      expect(events.first[:count]).to eq(10)
     end
 
     it "sorts by count descending" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "rare_rule"),
-          rack_attack_crumb(rule: "common_rule"),
-          rack_attack_crumb(rule: "common_rule"),
-          rack_attack_crumb(rule: "common_rule")
-        ),
-        occurred_at: 1.day.ago)
+      create_event(rule: "low", count: 1)
+      create_event(rule: "high", count: 99)
+      create_event(rule: "mid", count: 20)
 
-      result = described_class.call(30)
-      rules = result[:events].map { |e| e[:rule] }
-      expect(rules).to eq([ "common_rule", "rare_rule" ])
+      events = described_class.call(30)[:events]
+
+      expect(events.map { |e| e[:rule] }).to eq([ "high", "mid", "low" ])
     end
 
-    it "respects time range" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "old_rule")),
-        occurred_at: 40.days.ago)
+    it "respects the time range" do
+      create_event(rule: "recent", count: 1, period_hour: 2.days.ago.beginning_of_hour)
+      create_event(rule: "ancient", count: 1, period_hour: 60.days.ago.beginning_of_hour)
 
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "recent_rule")),
-        occurred_at: 1.day.ago)
+      events = described_class.call(30)[:events]
 
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(1)
-      expect(result[:events].first[:rule]).to eq("recent_rule")
+      expect(events.map { |e| e[:rule] }).to eq([ "recent" ])
     end
 
     it "filters by application_id" do
-      app1 = create(:application, name: "App1")
-      app2 = create(:application, name: "App2")
+      app = RailsErrorDashboard::Application.create!(name: "app-one")
+      create_event(rule: "scoped", count: 1, application_id: app.id)
+      create_event(rule: "other", count: 1, application_id: nil)
 
-      create(:error_log,
-        application: app1,
-        breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "rule_a")),
-        occurred_at: 1.day.ago)
+      events = described_class.call(30, application_id: app.id)[:events]
 
-      create(:error_log,
-        application: app2,
-        breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "rule_b")),
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30, application_id: app1.id)
-      expect(result[:events].size).to eq(1)
-      expect(result[:events].first[:rule]).to eq("rule_a")
+      expect(events.map { |e| e[:rule] }).to eq([ "scoped" ])
     end
 
-    it "handles malformed JSON breadcrumbs gracefully" do
-      create(:error_log,
-        breadcrumbs: "not valid json {{{",
-        occurred_at: 1.day.ago)
+    it "counts unique discriminators as unique IPs" do
+      create_event(rule: "logins/ip", discriminator: "1.1.1.1", count: 1)
+      create_event(rule: "logins/ip", discriminator: "2.2.2.2", count: 1)
+      create_event(rule: "logins/ip", discriminator: "1.1.1.1", count: 1,
+                   period_hour: 2.days.ago.beginning_of_hour)
 
-      result = described_class.call(30)
-      expect(result[:events]).to eq([])
+      events = described_class.call(30)[:events]
+
+      expect(events.first[:unique_ips]).to eq(2)
     end
 
-    it "deduplicates error_ids" do
-      error = create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "login/ip", discriminator: "1.1.1.1"),
-          rack_attack_crumb(rule: "login/ip", discriminator: "1.1.1.1")
-        ),
-        occurred_at: 1.day.ago)
+    it "reports top_path as the most frequent path, not the first seen" do
+      create_event(rule: "api/ip", path: "/rare", count: 1, discriminator: "1.1.1.1")
+      create_event(rule: "api/ip", path: "/hot", count: 50, discriminator: "2.2.2.2")
 
-      result = described_class.call(30)
-      event = result[:events].first
-      expect(event[:error_ids]).to eq([ error.id ])
-      expect(event[:error_count]).to eq(1)
+      events = described_class.call(30)[:events]
+
+      expect(events.first[:top_path]).to eq("/hot")
     end
 
-    it "tracks last_seen as the most recent error occurred_at" do
-      freeze_time do
-        create(:error_log,
-          breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "test")),
-          occurred_at: 5.days.ago)
+    it "prefers the most severe match type when a rule spans several" do
+      create_event(rule: "mixed", match_type: "track", count: 1, discriminator: "1.1.1.1")
+      create_event(rule: "mixed", match_type: "blocklist", count: 1, discriminator: "2.2.2.2")
 
-        create(:error_log,
-          breadcrumbs: breadcrumbs_json(rack_attack_crumb(rule: "test")),
-          occurred_at: 1.day.ago)
+      events = described_class.call(30)[:events]
 
-        result = described_class.call(30)
-        expect(result[:events].first[:last_seen]).to eq(1.day.ago)
+      expect(events.first[:match_type]).to eq("blocklist")
+    end
+
+    it "tracks last_seen as the most recent timestamp" do
+      older = 5.days.ago.beginning_of_hour
+      newer = 1.day.ago.beginning_of_hour
+      create_event(rule: "logins/ip", period_hour: older, last_seen_at: older, discriminator: "1.1.1.1")
+      create_event(rule: "logins/ip", period_hour: newer, last_seen_at: newer, discriminator: "2.2.2.2")
+
+      events = described_class.call(30)[:events]
+
+      expect(events.first[:last_seen]).to be_within(1.second).of(newer)
+    end
+
+    it "handles a blank discriminator without counting it as an IP" do
+      create_event(rule: "anon", discriminator: nil, count: 1)
+
+      events = described_class.call(30)[:events]
+
+      expect(events.first[:unique_ips]).to eq(0)
+    end
+
+    it "handles a blank path without raising" do
+      create_event(rule: "nopath", path: nil, count: 1)
+
+      events = described_class.call(30)[:events]
+
+      expect(events.first[:top_path]).to be_nil
+    end
+
+    it "handles a large number of events without error" do
+      60.times do |i|
+        create_event(rule: "rule-#{i % 5}", discriminator: "10.0.0.#{i}", count: i + 1)
       end
+
+      events = described_class.call(30)[:events]
+
+      expect(events.size).to eq(5)
+      expect(events.sum { |e| e[:count] }).to eq((1..60).sum)
     end
 
-    it "tracks unique IPs via Set" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "login/ip", discriminator: "1.1.1.1"),
-          rack_attack_crumb(rule: "login/ip", discriminator: "1.1.1.1"),
-          rack_attack_crumb(rule: "login/ip", discriminator: "2.2.2.2")
-        ),
-        occurred_at: 1.day.ago)
+    it "returns an empty array when the query raises" do
+      allow(RailsErrorDashboard::RackAttackEvent).to receive(:where).and_raise(StandardError, "boom")
 
-      result = described_class.call(30)
-      event = result[:events].first
-      expect(event[:unique_ips]).to eq(2)
-    end
-
-    it "captures different match types" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "block_rule", type: "blocklist"),
-          rack_attack_crumb(rule: "track_rule", type: "track")
-        ),
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30)
-      types = result[:events].map { |e| e[:match_type] }
-      expect(types).to contain_exactly("blocklist", "track")
-    end
-
-    it "handles breadcrumbs with missing meta hash" do
-      create(:error_log,
-        breadcrumbs: [ { "c" => "rack_attack", "m" => "throttle: unknown" } ].to_json,
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(1)
-      expect(result[:events].first[:rule]).to eq("unknown")
-    end
-
-    it "handles breadcrumbs with empty discriminator" do
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(
-          rack_attack_crumb(rule: "test_rule", discriminator: "")
-        ),
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30)
-      event = result[:events].first
-      expect(event[:unique_ips]).to eq(0)
-      expect(event[:ips]).to eq([])
-    end
-
-    it "handles large number of events without error" do
-      crumbs = 100.times.map { |i| rack_attack_crumb(rule: "rule_#{i % 5}", discriminator: "10.0.0.#{i}") }
-      create(:error_log,
-        breadcrumbs: breadcrumbs_json(*crumbs),
-        occurred_at: 1.day.ago)
-
-      result = described_class.call(30)
-      expect(result[:events].size).to eq(5)
-      expect(result[:events].sum { |e| e[:count] }).to eq(100)
+      expect(described_class.call(30)[:events]).to eq([])
     end
   end
 end

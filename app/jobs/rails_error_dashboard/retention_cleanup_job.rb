@@ -20,6 +20,12 @@ module RailsErrorDashboard
       return 0 if retention_days.blank?
 
       cutoff = retention_days.days.ago
+
+      # Rack Attack events live in their own table and expire independently of
+      # errors — clean them up BEFORE the early return below, which fires
+      # whenever no error logs happen to be expired.
+      cleanup_rack_attack_events(cutoff)
+
       expired_scope = ErrorLog.where("occurred_at < ?", cutoff)
       return 0 if expired_scope.none?
 
@@ -51,6 +57,30 @@ module RailsErrorDashboard
     rescue => e
       RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Retention cleanup failed: #{e.class} - #{e.message}")
       0
+    end
+
+    private
+
+    # Expire aggregated Rack Attack event rows. Isolated in its own rescue so a
+    # failure here (e.g. table not yet migrated) never blocks error cleanup.
+    def cleanup_rack_attack_events(cutoff)
+      return unless RailsErrorDashboard.configuration.enable_rack_attack_tracking
+      return unless RackAttackEvent.table_exists?
+
+      deleted = 0
+      RackAttackEvent.where("period_hour < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} rack attack events"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Rack attack retention cleanup failed: #{e.class} - #{e.message}"
+      )
     end
   end
 end

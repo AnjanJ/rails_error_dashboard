@@ -617,7 +617,7 @@ curl -u admin:password \
   "https://your-app.com/error_dashboard/errors/rack_attack_summary?days=7"
 ```
 
-**Requires:** `config.enable_rack_attack_tracking = true` and `config.enable_breadcrumbs = true`
+**Requires:** `config.enable_rack_attack_tracking = true`
 
 ---
 

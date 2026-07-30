@@ -564,7 +564,7 @@ RailsErrorDashboard.configure do |config|
   config.enable_instance_variables = false
   config.detect_swallowed_exceptions = false     # Requires Ruby 3.3+
   config.enable_diagnostic_dump = false
-  config.enable_rack_attack_tracking = false      # Requires breadcrumbs
+  config.enable_rack_attack_tracking = false      # Persists to its own table
   config.enable_crash_capture = false
 end
 ```
