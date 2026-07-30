@@ -661,7 +661,7 @@ config.enable_local_variables = true
 config.enable_instance_variables = true
 config.detect_swallowed_exceptions = true    # Requires Ruby 3.3+
 config.enable_diagnostic_dump = true
-config.enable_rack_attack_tracking = true    # Requires breadcrumbs
+config.enable_rack_attack_tracking = true    # Persists to its own table
 config.enable_crash_capture = true
 ```
 

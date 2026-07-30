@@ -2,9 +2,15 @@
 
 module RailsErrorDashboard
   module Queries
-    # Query: Aggregate Rack Attack events from breadcrumbs across all errors
-    # Scans error_logs breadcrumbs JSON, filters for "rack_attack" category crumbs,
-    # and groups by rule name with counts, unique IPs, paths, and error associations.
+    # Query: Aggregate Rack Attack events from the rack_attack_events table.
+    #
+    # Previously this scanned every error_log's breadcrumbs JSON in Ruby, which was
+    # both expensive (full-table scan + JSON.parse per row) and incomplete (events
+    # were only stored when an unrelated error happened to occur in the same
+    # request). Events now have their own table, so this is indexed SQL.
+    #
+    # Returns rows grouped by rule with counts, unique discriminators (IPs),
+    # the most frequent path, and last-seen timestamps.
     class RackAttackSummary
       def self.call(days = 30, application_id: nil)
         new(days, application_id: application_id).call
@@ -25,65 +31,70 @@ module RailsErrorDashboard
       private
 
       def base_query
-        scope = ErrorLog.where("occurred_at >= ?", @start_date)
-                        .where.not(breadcrumbs: nil)
-        scope = scope.where(application_id: @application_id) if @application_id.present?
+        scope = RackAttackEvent.where("period_hour >= ?", @start_date)
+        scope = scope.for_application(@application_id) if @application_id.present?
         scope
       end
 
       def aggregated_events
-        results = {}
+        rows = base_query.pluck(
+          :rule, :match_type, :discriminator, :path, :event_count, :last_seen_at, :period_hour
+        )
+        return [] if rows.empty?
 
-        base_query.select(:id, :breadcrumbs, :occurred_at).find_each(batch_size: 500) do |error_log|
-          crumbs = parse_breadcrumbs(error_log.breadcrumbs)
-          next if crumbs.empty?
+        grouped = {}
 
-          rack_attack_crumbs = crumbs.select { |c| c["c"] == "rack_attack" }
-          next if rack_attack_crumbs.empty?
+        rows.each do |rule, match_type, discriminator, path, event_count, last_seen_at, period_hour|
+          key = rule.to_s.presence || "unknown"
+          count = event_count.to_i
+          seen_at = last_seen_at || period_hour
 
-          rack_attack_crumbs.each do |crumb|
-            meta = crumb["meta"] || {}
-            rule = meta["rule"].to_s.presence || "unknown"
+          entry = grouped[key] ||= {
+            rule: key,
+            match_type: match_type.to_s,
+            count: 0,
+            ips: Set.new,
+            path_counts: Hash.new(0),
+            last_seen: nil
+          }
 
-            if results[rule]
-              results[rule][:count] += 1
-              results[rule][:ips] << meta["discriminator"].to_s if meta["discriminator"].present?
-              results[rule][:paths] << meta["path"].to_s if meta["path"].present?
-              results[rule][:error_ids] << error_log.id
-              results[rule][:last_seen] = [ results[rule][:last_seen], error_log.occurred_at ].compact.max
-            else
-              results[rule] = {
-                rule: rule,
-                match_type: meta["type"].to_s,
-                count: 1,
-                ips: Set.new([ meta["discriminator"].to_s ].reject(&:blank?)),
-                paths: Set.new([ meta["path"].to_s ].reject(&:blank?)),
-                error_ids: [ error_log.id ],
-                last_seen: error_log.occurred_at
-              }
-            end
-          end
+          entry[:count] += count
+          entry[:ips] << discriminator.to_s if discriminator.present?
+          entry[:path_counts][path.to_s] += count if path.present?
+          entry[:last_seen] = [ entry[:last_seen], seen_at ].compact.max
+
+          # Prefer the most severe match type when a rule spans several. A rule
+          # that both tracks and blocks should surface as "blocklist".
+          entry[:match_type] = match_type.to_s if severity(match_type) > severity(entry[:match_type])
         end
 
-        results.values.each do |r|
-          r[:error_ids] = r[:error_ids].uniq
-          r[:error_count] = r[:error_ids].size
+        grouped.values.each do |r|
+          # "Top path" now means genuinely most-frequent, not first-seen.
+          r[:top_path] = r[:path_counts].max_by { |_path, count| count }&.first
+          r[:paths] = r[:path_counts].sort_by { |_p, c| -c }.map(&:first)
           r[:unique_ips] = r[:ips].size
-          r[:top_path] = r[:paths].first
           r[:ips] = r[:ips].to_a
-          r[:paths] = r[:paths].to_a
+          # Distinct rate-limited clients is the meaningful figure here; the old
+          # breadcrumb-derived :error_count no longer applies now that events are
+          # stored independently of errors.
+          r[:error_count] = 0
+          r.delete(:path_counts)
         end
-        results.values.sort_by { |r| -r[:count] }
+
+        grouped.values.sort_by { |r| -r[:count] }
       rescue => e
         Rails.logger.error("[RailsErrorDashboard] RackAttackSummary query failed: #{e.class}: #{e.message}")
         []
       end
 
-      def parse_breadcrumbs(raw)
-        return [] if raw.blank?
-        JSON.parse(raw)
-      rescue JSON::ParserError
-        []
+      # Ordering used to pick the most severe match type for a rule.
+      def severity(match_type)
+        case match_type.to_s
+        when "blocklist" then 3
+        when "throttle"  then 2
+        when "track"     then 1
+        else 0
+        end
       end
     end
   end

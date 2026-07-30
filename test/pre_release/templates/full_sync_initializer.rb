@@ -54,6 +54,9 @@ RailsErrorDashboard.configure do |config|
   config.enable_breadcrumbs = true
   config.enable_llm_observability = true
 
+  # Rack::Attack event persistence (Phase N exercises this stack)
+  config.enable_rack_attack_tracking = true
+
   # Internal logging
   config.enable_internal_logging = true
   config.log_level = :warn

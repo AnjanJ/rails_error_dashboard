@@ -5,6 +5,20 @@ require "rails_helper"
 RSpec.describe "Rack Attack Summary page", type: :request do
   let!(:application) { create(:application) }
 
+  def create_event(rule:, match_type: "throttle", discriminator: "1.2.3.4",
+                   path: "/login", http_method: "POST", count: 1)
+    RailsErrorDashboard::RackAttackEvent.create!(
+      rule: rule,
+      match_type: match_type,
+      discriminator: discriminator,
+      path: path,
+      http_method: http_method,
+      event_count: count,
+      period_hour: 1.day.ago.beginning_of_hour,
+      last_seen_at: 1.day.ago
+    )
+  end
+
   before do
     RailsErrorDashboard.configuration.authenticate_with = -> { true }
   end
@@ -30,21 +44,28 @@ RSpec.describe "Rack Attack Summary page", type: :request do
       end
     end
 
-    context "when breadcrumbs are disabled" do
+    # Breadcrumbs are no longer a prerequisite — events persist independently
+    # of error capture (issue #143).
+    context "when tracking is enabled but breadcrumbs are disabled" do
       before do
         RailsErrorDashboard.configuration.enable_rack_attack_tracking = true
         RailsErrorDashboard.configuration.enable_breadcrumbs = false
       end
 
-      it "redirects to errors index with alert" do
+      it "still renders the page" do
         get "/error_dashboard/errors/rack_attack_summary"
-        expect(response).to redirect_to("/error_dashboard/errors")
-        follow_redirect!
-        expect(response.body).to include("Rack Attack tracking is not enabled")
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "shows recorded events" do
+        create_event(rule: "logins/ip")
+
+        get "/error_dashboard/errors/rack_attack_summary"
+        expect(response.body).to include("logins/ip")
       end
     end
 
-    context "when both flags are enabled" do
+    context "when tracking is enabled" do
       before do
         RailsErrorDashboard.configuration.enable_breadcrumbs = true
         RailsErrorDashboard.configuration.enable_rack_attack_tracking = true
@@ -60,15 +81,8 @@ RSpec.describe "Rack Attack Summary page", type: :request do
         expect(response.body).to include("No Rate Limit Events Found")
       end
 
-      it "shows rack_attack events from breadcrumbs" do
-        create(:error_log,
-          application: application,
-          breadcrumbs: [
-            { "c" => "rack_attack", "m" => "throttle: login/ip (1.2.3.4) POST /login",
-              "meta" => { "rule" => "login/ip", "type" => "throttle",
-                          "discriminator" => "1.2.3.4", "path" => "/login", "method" => "POST" } }
-          ].to_json,
-          occurred_at: 1.day.ago)
+      it "shows recorded rack_attack events" do
+        create_event(rule: "login/ip")
 
         get "/error_dashboard/errors/rack_attack_summary"
         expect(response.body).to include("login/ip")
@@ -76,14 +90,7 @@ RSpec.describe "Rack Attack Summary page", type: :request do
       end
 
       it "displays summary cards" do
-        create(:error_log,
-          application: application,
-          breadcrumbs: [
-            { "c" => "rack_attack", "m" => "throttle: test (1.1.1.1) GET /",
-              "meta" => { "rule" => "test", "type" => "throttle",
-                          "discriminator" => "1.1.1.1", "path" => "/", "method" => "GET" } }
-          ].to_json,
-          occurred_at: 1.day.ago)
+        create_event(rule: "test", discriminator: "1.1.1.1", path: "/", http_method: "GET")
 
         get "/error_dashboard/errors/rack_attack_summary"
         expect(response.body).to include("Unique Rules")
@@ -98,28 +105,15 @@ RSpec.describe "Rack Attack Summary page", type: :request do
       end
 
       it "includes Rack Attack docs link" do
-        create(:error_log,
-          application: application,
-          breadcrumbs: [
-            { "c" => "rack_attack", "m" => "throttle: x (1.1.1.1) GET /",
-              "meta" => { "rule" => "x", "type" => "throttle",
-                          "discriminator" => "1.1.1.1", "path" => "/", "method" => "GET" } }
-          ].to_json,
-          occurred_at: 1.day.ago)
+        create_event(rule: "x", discriminator: "1.1.1.1", path: "/", http_method: "GET")
 
         get "/error_dashboard/errors/rack_attack_summary"
         expect(response.body).to include("github.com/rack/rack-attack")
       end
 
       it "color-codes blocklist type as danger" do
-        create(:error_log,
-          application: application,
-          breadcrumbs: [
-            { "c" => "rack_attack", "m" => "blocklist: bad_ips (10.0.0.1) GET /admin",
-              "meta" => { "rule" => "bad_ips", "type" => "blocklist",
-                          "discriminator" => "10.0.0.1", "path" => "/admin", "method" => "GET" } }
-          ].to_json,
-          occurred_at: 1.day.ago)
+        create_event(rule: "bad_ips", match_type: "blocklist",
+                     discriminator: "10.0.0.1", path: "/admin", http_method: "GET")
 
         get "/error_dashboard/errors/rack_attack_summary"
         expect(response.body).to include("bg-danger")

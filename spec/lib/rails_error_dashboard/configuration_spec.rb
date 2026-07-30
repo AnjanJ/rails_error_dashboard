@@ -462,12 +462,14 @@ RSpec.describe RailsErrorDashboard::Configuration do
   end
 
   describe "rack_attack tracking validation" do
-    it "auto-disables when breadcrumbs are off" do
+    # Events persist to their own table, so tracking no longer depends on
+    # breadcrumbs being enabled (issue #143).
+    it "stays enabled when breadcrumbs are off" do
       config.enable_rack_attack_tracking = true
       config.enable_breadcrumbs = false
 
       expect { config.validate! }.not_to raise_error
-      expect(config.enable_rack_attack_tracking).to be false
+      expect(config.enable_rack_attack_tracking).to be true
     end
 
     it "stays enabled when breadcrumbs are on" do
@@ -477,6 +479,33 @@ RSpec.describe RailsErrorDashboard::Configuration do
       expect { config.validate! }.not_to raise_error
       expect(config.enable_rack_attack_tracking).to be true
     end
+
+    it "rejects a max_cache_size below 1" do
+      config.enable_rack_attack_tracking = true
+      config.rack_attack_max_cache_size = 0
+
+      expect { config.validate! }.to raise_error(/rack_attack_max_cache_size/)
+    end
+
+    it "rejects a flush_interval below 1" do
+      config.enable_rack_attack_tracking = true
+      config.rack_attack_flush_interval = 0
+
+      expect { config.validate! }.to raise_error(/rack_attack_flush_interval/)
+    end
+
+    it "ignores invalid tuning values when tracking is disabled" do
+      config.enable_rack_attack_tracking = false
+      config.rack_attack_flush_interval = 0
+
+      expect { config.validate! }.not_to raise_error
+    end
+  end
+
+  describe "rack_attack tracking defaults" do
+    it { expect(config.enable_rack_attack_tracking).to be false }
+    it { expect(config.rack_attack_max_cache_size).to eq(1000) }
+    it { expect(config.rack_attack_flush_interval).to eq(60) }
   end
 
   describe "instance variable capture defaults" do

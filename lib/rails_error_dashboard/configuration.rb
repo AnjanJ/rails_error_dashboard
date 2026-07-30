@@ -195,8 +195,11 @@ module RailsErrorDashboard
     # Code path coverage (diagnostic mode — Ruby 3.2+)
     attr_accessor :enable_coverage_tracking             # Master switch (default: false)
 
-    # Rack Attack event tracking (requires enable_breadcrumbs = true)
+    # Rack Attack event tracking — persists throttle/blocklist/track events to
+    # their own table, independent of error capture (breadcrumbs optional).
     attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
+    attr_accessor :rack_attack_max_cache_size           # Max buffered keys per thread (default: 1000)
+    attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 60)
 
     # ActionCable event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
@@ -400,8 +403,11 @@ module RailsErrorDashboard
       # Code path coverage defaults - OFF by default (opt-in, Ruby 3.2+)
       @enable_coverage_tracking = false
 
-      # Rack Attack event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
+      # Rack Attack event tracking defaults - OFF by default (opt-in).
+      # Persists to its own table; does NOT require breadcrumbs.
       @enable_rack_attack_tracking = false
+      @rack_attack_max_cache_size = 1000 # Max buffered keys per thread (LRU eviction)
+      @rack_attack_flush_interval = 60   # Seconds between DB flushes
 
       # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_actioncable_tracking = false
@@ -574,11 +580,16 @@ module RailsErrorDashboard
         end
       end
 
-      # Validate rack_attack tracking requires breadcrumbs
-      if enable_rack_attack_tracking && !enable_breadcrumbs
-        warnings << "enable_rack_attack_tracking requires enable_breadcrumbs = true. " \
-                    "Rack Attack tracking has been auto-disabled."
-        @enable_rack_attack_tracking = false
+      # Rack Attack tracking no longer requires breadcrumbs — events are persisted
+      # to their own table (issue #143). Breadcrumbs only add the event to the
+      # activity trail on error detail pages.
+      if enable_rack_attack_tracking
+        if rack_attack_max_cache_size && rack_attack_max_cache_size < 1
+          errors << "rack_attack_max_cache_size must be at least 1 (got: #{rack_attack_max_cache_size})"
+        end
+        if rack_attack_flush_interval && rack_attack_flush_interval < 1
+          errors << "rack_attack_flush_interval must be at least 1 (got: #{rack_attack_flush_interval})"
+        end
       end
 
       # Validate actioncable tracking requires breadcrumbs

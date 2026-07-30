@@ -502,7 +502,8 @@ test_full_sync() {
     "$CHAOS_DIR/phase_g_quick_wins.rb" \
     "$CHAOS_DIR/phase_h_database_setup.rb" \
     "$CHAOS_DIR/phase_l_llm_observability.rb" \
-    "$CHAOS_DIR/phase_m_storm_protection.rb"
+    "$CHAOS_DIR/phase_m_storm_protection.rb" \
+    "$CHAOS_DIR/phase_n_rack_attack_persistence.rb"
 }
 
 test_full_async() {

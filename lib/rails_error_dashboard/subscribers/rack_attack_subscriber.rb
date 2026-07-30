@@ -63,8 +63,6 @@ module RailsErrorDashboard
         end
 
         def handle_rack_attack(event, event_name)
-          return unless Services::BreadcrumbCollector.current_buffer
-
           request = event.payload[:request]
           return unless request
 
@@ -75,6 +73,22 @@ module RailsErrorDashboard
           discriminator = env["rack.attack.match_discriminator"].to_s
           path = request.respond_to?(:path) ? request.path.to_s : ""
           method = request.respond_to?(:request_method) ? request.request_method.to_s : ""
+
+          # Persist independently of error capture. A throttled request returns
+          # HTTP 429 and raises nothing, so it would otherwise never reach the
+          # database — breadcrumbs are only harvested by LogError (issue #143).
+          Services::RackAttackTracker.record(
+            rule: rule,
+            match_type: match_type,
+            discriminator: discriminator,
+            path: path,
+            http_method: method
+          )
+
+          # Also record a breadcrumb so the event still shows up in the activity
+          # trail on the error detail page when an error DOES occur in the same
+          # request. Requires an active request-scoped buffer.
+          return unless Services::BreadcrumbCollector.current_buffer
 
           message = "#{match_type}: #{rule} (#{discriminator}) #{method} #{path}"
 

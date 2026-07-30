@@ -484,9 +484,8 @@ module RailsErrorDashboard
     end
 
     def rack_attack_summary
-      unless RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
-             RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "Rack Attack tracking is not enabled. Enable enable_rack_attack_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+      unless RailsErrorDashboard.configuration.enable_rack_attack_tracking
+        flash[:alert] = "Rack Attack tracking is not enabled. Set enable_rack_attack_tracking = true in config/initializers/rails_error_dashboard.rb"
         redirect_to errors_path(**app_context_params)
         return
       end

@@ -25,16 +25,16 @@
       <i class="bi bi-shield-check display-1 text-success mb-3"></i>
       <div class="red-empty-state-title">No Rate Limit Events Found</div>
       <p class="text-muted">
-        No Rack Attack throttle, blocklist, or track events were detected in error breadcrumbs over the last <%= @days %> days.
+        No Rack Attack throttle, blocklist, or track events were recorded over the last <%= @days %> days.
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
           <h6>How Rack Attack tracking works:</h6>
           <ul class="mb-0">
-            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
             <li>Rack Attack tracking must be enabled (<code>enable_rack_attack_tracking = true</code>)</li>
             <li>Rack Attack must be installed and configured in your app</li>
-            <li>Throttle, blocklist, and track events are captured as breadcrumbs during requests that produce errors</li>
+            <li>Throttle, blocklist, and track events are recorded whenever a rule matches — no error required</li>
+            <li>Events are buffered and written every <%= RailsErrorDashboard.configuration.rack_attack_flush_interval %>s, so allow a short delay before they appear</li>
           </ul>
         </div>
       </div>
@@ -86,7 +86,6 @@
                 <th width="80">Count</th>
                 <th width="80">IPs</th>
                 <th>Top Path</th>
-                <th width="80">Errors</th>
                 <th width="140">Last Seen</th>
               </tr>
             </thead>
@@ -105,7 +104,6 @@
                   <td><strong><%= event[:count] %></strong></td>
                   <td><%= event[:unique_ips] %></td>
                   <td><code><%= event[:top_path] %></code></td>
-                  <td><%= event[:error_count] %></td>
                   <td><%= local_time_ago(event[:last_seen]) %></td>
                 </tr>
               <% end %>
@@ -116,7 +114,7 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Rate limit events are captured when they coincide with errors. High counts may indicate abuse or misconfigured rules.
+            <i class="bi bi-lightbulb text-warning"></i> High counts may indicate abuse or misconfigured rules.
           </small>
           <small class="ms-3">
             <a href="https://github.com/rack/rack-attack" target="_blank" rel="noopener" class="text-decoration-none">

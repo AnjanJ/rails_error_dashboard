@@ -10,7 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_13_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_30_000001) do
+  create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
+    t.string "rule", limit: 250, null: false
+    t.string "match_type", limit: 50, null: false
+    t.string "discriminator", limit: 191
+    t.string "path", limit: 191
+    t.string "http_method", limit: 10
+    t.datetime "period_hour", null: false
+    t.integer "event_count", default: 0, null: false
+    t.datetime "last_seen_at"
+    t.bigint "application_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "application_id", "period_hour" ], name: "index_rack_attack_events_on_app_and_hour"
+    t.index [ "period_hour" ], name: "index_rack_attack_events_on_period_hour"
+    t.index [ "rule", "match_type", "discriminator", "path", "period_hour", "application_id" ], name: "index_rack_attack_events_upsert_key", unique: true
+    t.index [ "rule", "period_hour" ], name: "index_rack_attack_events_on_rule_and_hour"
+  end
+
   create_table "rails_error_dashboard_storm_events", force: :cascade do |t|
     t.datetime "started_at", null: false
     t.datetime "ended_at"

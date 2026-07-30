@@ -218,7 +218,9 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_rack_attack_tracking` | Boolean | `false` | Track Rack::Attack throttle/blocklist events as breadcrumbs. Requires `enable_breadcrumbs = true` |
+| `enable_rack_attack_tracking` | Boolean | `false` | Record Rack::Attack throttle/blocklist/track events to their own table |
+| `rack_attack_max_cache_size` | Integer | `1000` | Max buffered event keys per thread before LRU eviction |
+| `rack_attack_flush_interval` | Integer | `60` | Seconds between background flushes of buffered events |
 
 ### ActionCable Connection Monitoring (v0.5.0)
 
