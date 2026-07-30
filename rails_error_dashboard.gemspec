@@ -98,12 +98,19 @@ Gem::Specification.new do |spec|
   # every user onto 1.3.6, which carries three CVEs fixed in 1.3.7:
   # CVE-2026-54904 (AtomicReference#update livelock on Float::NAN),
   # CVE-2026-54905 (ReentrantReadWriteLock read-count overflow),
-  # CVE-2026-54906 (ReadWriteLock thread-safety). We use AtomicReference and
-  # Map directly, so that exposure was real.
+  # CVE-2026-54906 (ReadWriteLock thread-safety).
+  #
+  # For the record, none of the three is reachable through OUR code: the single
+  # AtomicReference (count_buffer.rb) only ever holds a Concurrent::Map, never
+  # a Float, and we use no ReadWriteLock at all. The reason not to hold users
+  # on 1.3.6 is their OTHER gems, plus the bundle-audit noise it generates in
+  # every downstream app.
   #
   # "~> 1.3" matches how Rails itself depends on concurrent-ruby (~> 1.0,
-  # >= 1.3.1) rather than being stricter than the framework. New installs
-  # resolve to 1.3.8; existing lockfiles are free to stay where they are.
+  # >= 1.3.1) rather than being stricter than the framework. An upper bound in
+  # a Rails ENGINE is especially costly — it becomes an unsatisfiable-conflict
+  # generator against every other gem in the host app. New installs resolve to
+  # 1.3.8; existing lockfiles are free to stay where they are.
   spec.add_dependency "concurrent-ruby", "~> 1.3"
 
   # Development and testing dependencies
