@@ -81,12 +81,37 @@ Gem::Specification.new do |spec|
   # httparty (>= 0.24)  — Discord/PagerDuty/webhook notifications (falls back to Net::HTTP)
   # turbo-rails (~> 2.0) — real-time Turbo Stream updates (falls back to page refresh)
 
-  # Pin concurrent-ruby for Rails 7.0 compatibility
-  # Rails 7.0 had issues with concurrent-ruby 1.3.5+ which removed logger dependency
-  # Fixed in Rails 7.0.10+ (https://github.com/rails/rails/pull/54264)
-  # Allowing up to < 1.3.7 as tests pass with Rails 7.0.10+
-  # See: https://github.com/rails/rails/issues/54271
-  spec.add_dependency "concurrent-ruby", "~> 1.3.0", "< 1.3.7"
+  # concurrent-ruby powers the storm-protection primitives (AtomicReference,
+  # AtomicFixnum, Map) — a real runtime dependency, not incidental.
+  #
+  # This was previously pinned to "< 1.3.7" for Rails 7.0 compatibility:
+  # concurrent-ruby 1.3.5 dropped its `logger` dependency, which broke
+  # ActiveSupport on Rails < 7.0.10 (rails/rails#54271, fixed in
+  # rails/rails#54264).
+  #
+  # That ceiling was removed because it did not do what it claimed. Verified
+  # empirically on Ruby 3.2 and 3.4: Rails 7.0.8.7 raises
+  # `uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger`
+  # with concurrent-ruby 1.3.4 and 1.3.6 as well — both of which the old pin
+  # ALLOWED. The real boundary is Rails 7.0.10+, independent of the
+  # concurrent-ruby version, so the ceiling protected nobody while forcing
+  # every user onto 1.3.6, which carries three CVEs fixed in 1.3.7:
+  # CVE-2026-54904 (AtomicReference#update livelock on Float::NAN),
+  # CVE-2026-54905 (ReentrantReadWriteLock read-count overflow),
+  # CVE-2026-54906 (ReadWriteLock thread-safety).
+  #
+  # For the record, none of the three is reachable through OUR code: the single
+  # AtomicReference (count_buffer.rb) only ever holds a Concurrent::Map, never
+  # a Float, and we use no ReadWriteLock at all. The reason not to hold users
+  # on 1.3.6 is their OTHER gems, plus the bundle-audit noise it generates in
+  # every downstream app.
+  #
+  # "~> 1.3" matches how Rails itself depends on concurrent-ruby (~> 1.0,
+  # >= 1.3.1) rather than being stricter than the framework. An upper bound in
+  # a Rails ENGINE is especially costly — it becomes an unsatisfiable-conflict
+  # generator against every other gem in the host app. New installs resolve to
+  # 1.3.8; existing lockfiles are free to stay where they are.
+  spec.add_dependency "concurrent-ruby", "~> 1.3"
 
   # Development and testing dependencies
   spec.add_development_dependency "rspec-rails", "~> 7.0"
