@@ -10,9 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
-* **rack-attack:** persist events independently of error capture ([#143](https://github.com/AnjanJ/rails_error_dashboard/issues/143)) ([a85f67f](https://github.com/AnjanJ/rails_error_dashboard/commit/a85f67f1cb5b304055e36b7e724d851cfb774fad))
 * **rack-attack:** persist events independently of error capture ([#143](https://github.com/AnjanJ/rails_error_dashboard/issues/143)) ([2619282](https://github.com/AnjanJ/rails_error_dashboard/commit/261928255b352ee375ce4893d2ff0b47c6bf193c))
-* **specs,deps:** stop async_logging leaking between specs; unpin concurrent-ruby ([891180e](https://github.com/AnjanJ/rails_error_dashboard/commit/891180ea1196fd28e69132d682daf98183a444de))
 * **specs,deps:** stop async_logging leaking between specs; unpin concurrent-ruby ([54a8693](https://github.com/AnjanJ/rails_error_dashboard/commit/54a8693781b40405c1e7b5d7b8c77104d8eae251))
 * **specs:** stop system specs depending on live CDN requests ([de6d077](https://github.com/AnjanJ/rails_error_dashboard/commit/de6d077b622869d1019e9df003117e0e7ab2d165))
 
