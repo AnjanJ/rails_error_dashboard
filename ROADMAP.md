@@ -324,20 +324,12 @@ Environment:
 - **Effort:** Half day
 - **Impact:** Debugging + (niche but diagnostic)
 
-### Z. Performance Monitoring (Request Timing and SQL Analysis)
-- **What:** Lightweight request performance tracking using `ActiveSupport::Notifications`. Subscribe to `process_action.action_controller` for total request time, view time, and DB time. Subscribe to `sql.active_record` for query counts and slow query detection. Aggregate into a "Performance" dashboard page showing: slowest endpoints, request duration percentiles (p50/p95/p99), slow query patterns, and request throughput over time
-- **Why:** findbug (competitor) has performance monitoring as a key differentiator. We already subscribe to AS::Notifications for breadcrumbs, so extending to performance metrics is a natural evolution with minimal additional overhead. This turns the gem from "error tracking" into "error tracking + performance monitoring," which is how Sentry, New Relic, and Datadog position themselves
-- **Implementation:**
-  - Opt-in: `config.enable_performance_monitoring = false` (default off)
-  - Reuse existing breadcrumb AS::Notifications infrastructure (breadcrumb subscribers already capture SQL, controller, and cache events)
-  - New `PerformanceSample` model with: controller, action, method, status, total_duration, db_duration, view_duration, allocations, query_count, timestamp
-  - Sampling: configurable `config.performance_sampling_rate = 0.1` (sample 10% of requests by default to minimize storage)
-  - Dashboard page at `/errors/performance` with: slowest endpoints table, duration distribution chart, request volume over time, slow query patterns
-  - Per-error correlation: link performance data to errors occurring in slow requests
-  - **Storage budget:** Use same retention policy as errors. With 10% sampling and 90-day retention, a 100 req/s app stores ~77M rows/90 days. Consider rollup tables for aggregation
-- **Effort:** 3-4 days
-- **Impact:** Differentiation +++ (closes gap with findbug, positions us alongside Sentry/New Relic)
-- **Host app safety:** Sampling keeps overhead minimal. Subscriber is async, never blocks the request. Ring buffer pattern from breadcrumbs proven safe. Budget: <0.1ms per sampled request
+### Z. Performance Monitoring (Request Timing and SQL Analysis) — MAYBE (future, not committed)
+- **Status:** A possible *future* direction, explicitly **not** a near-term commitment. Gated behind a deliberate priority: we want to be unambiguously best-in-class at what we already do — error tracking and runtime monitoring (system / job / database / cache health) — **before** we consider broadening into a new category. APM is a different product with a much higher bar (sampling, aggregation, percentile storage at scale). We will only revisit this once the core experience is excellent and there is clear user demand. Depth before breadth.
+- **What (if pursued):** Lightweight request performance tracking using `ActiveSupport::Notifications`. Subscribe to `process_action.action_controller` for total request time, view time, and DB time. Subscribe to `sql.active_record` for query counts and slow-query detection. A "Performance" page could show slowest endpoints, request-duration percentiles (p50/p95/p99), slow query patterns, and throughput over time
+- **Why it's plausible:** We already subscribe to `ActiveSupport::Notifications` for breadcrumbs (SQL, controller, cache events), so the instrumentation surface largely exists. The natural correlation would be linking performance data to errors that occur inside slow requests — a debugging angle, not standalone APM
+- **Why it's deliberately deferred:** Shipping shallow APM invites comparison to mature tools and dilutes our core strength. Our real edge is *depth of debugging context from inside the process* (locals, cause chains, breadcrumbs, swallowed-exception detection, health panels) — that advantage compounds the further we push it, and APM doesn't draw on it. If we ever build this, it must be excellent and Redis-free, with a strict host-app-safety budget (opt-in, sampled, async, ring-buffer pattern, never blocks the request), not a checkbox
+- **Effort / Impact:** Not estimated — out of scope until core excellence is achieved
 
 ### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+)
 - **What:** Use `Thread.each_caller_location` (Ruby 3.2+) as a more efficient alternative to `caller_locations`. Stops iterating after finding the first app-code frame instead of generating the full backtrace
