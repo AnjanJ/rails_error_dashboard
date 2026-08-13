@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.3...rails_error_dashboard/v0.8.4) (2026-08-13)
+
+
+### 🐛 Bug Fixes
+
+* **dashboard:** render pagination in the dashboard's own locale ([#152](https://github.com/AnjanJ/rails_error_dashboard/issues/152)) ([abe49f5](https://github.com/AnjanJ/rails_error_dashboard/commit/abe49f5dfc0b278b24de73ce423c7a1881995036)), closes [#148](https://github.com/AnjanJ/rails_error_dashboard/issues/148)
+* **rack-attack:** surface a missing rack-attack gem instead of failing silently ([#150](https://github.com/AnjanJ/rails_error_dashboard/issues/150)) ([ebbe9e6](https://github.com/AnjanJ/rails_error_dashboard/commit/ebbe9e65c4181fbf9302a832598ff2203bdd6150))
+
 ## [0.8.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.2...rails_error_dashboard/v0.8.3) (2026-07-30)
 
 
