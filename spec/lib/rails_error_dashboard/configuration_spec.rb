@@ -500,6 +500,33 @@ RSpec.describe RailsErrorDashboard::Configuration do
 
       expect { config.validate! }.not_to raise_error
     end
+
+    # The rack-attack gem is not a dependency and is not loaded in the suite,
+    # so ::Rack::Attack is genuinely undefined here.
+    context "when the rack-attack gem is not loaded" do
+      it "logs a warning without raising" do
+        config.enable_rack_attack_tracking = true
+
+        expect(Rails.logger).to receive(:warn).with(/rack-attack gem does not appear to be loaded/)
+
+        expect { config.validate! }.not_to raise_error
+      end
+
+      it "does not auto-disable tracking" do
+        config.enable_rack_attack_tracking = true
+        config.validate!
+
+        expect(config.enable_rack_attack_tracking).to be true
+      end
+
+      it "stays silent when tracking is disabled" do
+        config.enable_rack_attack_tracking = false
+
+        expect(Rails.logger).not_to receive(:warn).with(/rack-attack/)
+
+        config.validate!
+      end
+    end
   end
 
   describe "rack_attack tracking defaults" do

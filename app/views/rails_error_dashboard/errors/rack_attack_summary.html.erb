@@ -22,11 +22,21 @@
 
   <% if @unique_rules == 0 %>
     <div class="red-empty-state">
-      <i class="bi bi-shield-check display-1 text-success mb-3"></i>
-      <div class="red-empty-state-title">No Rate Limit Events Found</div>
-      <p class="text-muted">
-        No Rack Attack throttle, blocklist, or track events were recorded over the last <%= @days %> days.
-      </p>
+      <% if @rack_attack_missing %>
+        <i class="bi bi-exclamation-triangle display-1 text-warning mb-3"></i>
+        <div class="red-empty-state-title">Rack Attack Is Not Installed</div>
+        <p class="text-muted">
+          Tracking is enabled, but the <code>rack-attack</code> gem is not loaded in this
+          application — so no events can be recorded. Add it to your Gemfile and configure
+          at least one rule, then events will appear here.
+        </p>
+      <% else %>
+        <i class="bi bi-shield-check display-1 text-success mb-3"></i>
+        <div class="red-empty-state-title">No Rate Limit Events Found</div>
+        <p class="text-muted">
+          No Rack Attack throttle, blocklist, or track events were recorded over the last <%= @days %> days.
+        </p>
+      <% end %>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
           <h6>How Rack Attack tracking works:</h6>
