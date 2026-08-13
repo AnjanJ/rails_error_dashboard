@@ -1,0 +1,53 @@
+# RED dashboard translations.
+#
+# This file is authoritative. Every other locale is a translation of it, and
+# every key here must exist before it can be translated elsewhere. A key
+# missing from another locale silently renders the English string — that is by
+# design (see lib/rails_error_dashboard/i18n_store.rb).
+#
+# These translations are loaded into RED's OWN I18n backend, not the host
+# app's. Adding keys here cannot collide with the host application.
+#
+# Conventions and the do-not-translate glossary live in
+# docs/guides/TRANSLATIONS.md. Read it before adding a locale.
+#
+# Namespaces (see tasks/i18n-sprint-plan.md, P1-T2):
+#   common        shared words reused across pages
+#   time          date/time formats and relative-time strings
+#   nav           sidebar and navbar labels
+#   errors        the errors index, detail page, and partials
+#   settings      the settings page
+#   analytics     analytics, correlation, releases, platform comparison
+#   health        the health summary pages
+#   flash         controller flash and JSON messages
+#   mailers       digest and alert emails
+#   notifications Slack/Discord/PagerDuty/webhook payload labels
+#   js            strings handed to inline JavaScript
+#
+# Phase 1 populates only `common` and `time` — the keys the foundation helpers
+# need. Phases 2-4 fill in the rest.
+en:
+  red:
+    common:
+      not_available: "N/A"
+
+    time:
+      # "%{duration} ago" as a single key. Never build this by concatenating a
+      # duration and the word "ago" — word order differs across languages, and
+      # several put the equivalent of "ago" first.
+      ago: "%{duration} ago"
+
+      # strftime patterns, one per preset in ApplicationHelper#local_time.
+      # These are per-locale on purpose: "%B %d, %Y" is a US ordering, not
+      # merely English words. A German locale wants "%d. %B %Y".
+      #
+      # The same patterns are handed to the browser via data-format and
+      # re-rendered by formatDateTime() in the dashboard layout, so any
+      # directive used here must be one that function supports:
+      #   %Y %y %B %b %m %d %e %A %a %H %I %M %S %p %P
+      formats:
+        full: "%B %d, %Y %I:%M:%S %p"
+        short: "%m/%d %I:%M%p"
+        date_only: "%B %d, %Y"
+        time_only: "%I:%M:%S %p"
+        datetime: "%b %d, %Y %H:%M"

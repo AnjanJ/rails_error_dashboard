@@ -59,7 +59,7 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `accent_color` | Symbol | `:crimson` | Dashboard accent colour — `:crimson`, `:ruby`, `:ember`, `:violet` |
-| `dashboard_locale` | String | `"en"` | Locale the dashboard renders in, independent of the host app's locale. Currently affects Pagy pagination labels; the rest of the UI is English-only. Unknown or wrong-cased values fall back to `"en"` |
+| `dashboard_locale` | String | `"en"` | Locale the dashboard renders in, independent of the host app's locale. Drives Pagy pagination labels and RED's own translation lookups. Only English ships today — the translation machinery is in place, but the UI strings are not yet extracted. Unknown or wrong-cased values fall back to `"en"` |
 
 The dashboard sets its own locale for the duration of each request and restores
 the previous value afterwards, so it neither inherits the host app's locale nor

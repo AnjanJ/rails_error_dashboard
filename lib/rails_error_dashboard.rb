@@ -1,5 +1,7 @@
 require "rails_error_dashboard/version"
 require "rails_error_dashboard/engine"
+require "rails_error_dashboard/i18n_store"
+require "rails_error_dashboard/current"
 require "rails_error_dashboard/configuration_error"
 require "rails_error_dashboard/test_error"
 require "rails_error_dashboard/configuration"

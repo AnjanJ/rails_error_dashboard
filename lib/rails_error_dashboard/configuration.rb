@@ -223,8 +223,12 @@ module RailsErrorDashboard
     attr_accessor :accent_color  # :crimson (default), :ruby, :ember, :violet
 
     # Locale the dashboard renders in, independent of the host app's locale.
-    # Currently applies to Pagy pagination labels — the rest of the dashboard
-    # UI is not yet translated (default: "en").
+    #
+    # Drives both Pagy's pagination labels and RED's own translation lookups.
+    # RED currently ships only English, so setting anything else changes little
+    # in practice — the translation machinery is in place (see I18nStore) but
+    # the UI strings have not been extracted yet. Unknown or wrong-cased values
+    # fall back to "en" (default: "en").
     attr_accessor :dashboard_locale
 
     # LLM-powered AI help (disabled unless provider and API key are configured)
@@ -438,7 +442,7 @@ module RailsErrorDashboard
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
-      @dashboard_locale = "en"  # Pagy pagination labels; rest of the UI is English-only
+      @dashboard_locale = "en"  # Pagy labels + RED's own strings; only English ships today
 
       # LLM-powered AI help defaults - OFF until provider and API key are configured
       @llm_provider = ENV["RED_LLM_PROVIDER"]&.to_sym

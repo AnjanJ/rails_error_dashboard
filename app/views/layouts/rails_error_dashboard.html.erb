@@ -26,7 +26,7 @@
     nil
   end
 %>
-<html lang="en" data-theme="light">
+<html lang="<%= red_locale %>" data-theme="light">
   <head>
     <title><%= content_for?(:page_title) ? "#{content_for(:page_title)} | " : "" %><%= Rails.application.class.module_parent_name %> - RED</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">

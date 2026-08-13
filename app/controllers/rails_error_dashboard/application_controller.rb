@@ -70,9 +70,10 @@ module RailsErrorDashboard
 
     private
 
-    # Set Pagy's locale for this request and restore whatever was there before.
+    # Set the dashboard's locale for this request and restore whatever was
+    # there before.
     #
-    # Two details are load-bearing:
+    # Three details are load-bearing:
     #
     # 1. The previous value is read from Thread.current directly, NOT from
     #    Pagy::I18n.locale. The getter coerces nil to "en", so restoring through
@@ -82,12 +83,30 @@ module RailsErrorDashboard
     #    the dashboard's locale on the thread for the host app's next request.
     #    The ensure also covers the rescue_from handlers above, which still
     #    render through the view layer.
+    # 3. RED's own locale is set on RailsErrorDashboard::Current, NOT via
+    #    I18n.with_locale. RED translates through a private backend
+    #    (I18nStore); touching the host's I18n.locale would mutate host global
+    #    state for no benefit and re-introduce exactly the coupling #148 removed.
+    #
+    # Pagy's locale and RED's are resolved independently: they ship different
+    # dictionaries, so a locale RED can serve but Pagy cannot must still render
+    # the UI translated, with English pagination, rather than raising.
     def with_dashboard_locale
-      previous = Thread.current[:pagy_locale]
+      previous_pagy = Thread.current[:pagy_locale]
       Pagy::I18n.locale = dashboard_pagy_locale
+      Current.locale = dashboard_locale
       yield
     ensure
-      Thread.current[:pagy_locale] = previous
+      Thread.current[:pagy_locale] = previous_pagy
+      Current.locale = nil
+    end
+
+    # The locale RED renders its own strings in. Resolved against the locales
+    # RED ships (not Pagy's), and never raises.
+    def dashboard_locale
+      Current.locale_or_default
+    rescue StandardError
+      I18nStore::DEFAULT_LOCALE
     end
 
     def dashboard_pagy_locale
