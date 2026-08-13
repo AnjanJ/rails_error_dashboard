@@ -7,13 +7,18 @@ user-invocable: false
 
 ## CRITICAL: Never Release Without Approval
 
-**NEVER** execute any of these commands without explicit user approval:
-- `gem push` — publishes to RubyGems (irreversible for that version number)
-- `git tag` — creates a version tag
-- `git push origin <tag>` — pushes tag to remote
-- `gh release create` — creates GitHub Release
+**NEVER** execute any of these without explicit user approval:
+- **Merging the release PR** (`chore(main): release …`) — this IS the publish
+  action. release-please tags, creates the GitHub Release, and pushes the gem to
+  RubyGems on merge. Irreversible for that version number.
+- `gem push`, `git tag`, `git push origin <tag>`, `gh release create` — all
+  handled by the automation. Running them by hand risks a state the workflow
+  cannot then publish.
 
-Prepare everything (version bump, changelog, commit, push to main), then STOP and ask: "Ready to publish vX.Y.Z to RubyGems and create the GitHub release?"
+Verify everything (full suite, RuboCop, chaos tests, CI on the release PR), then
+STOP and ask: "Ready to publish vX.Y.Z to RubyGems?"
+
+See `release` for the full workflow.
 
 ## CRITICAL: Never Close GitHub Issues
 
@@ -23,6 +28,16 @@ Always let the issue reporter verify the fix and close it themselves. When a fix
 3. Describe the fix and which version includes it
 4. Ask them to reopen if the issue persists
 5. Do NOT close the issue
+
+**Watch for auto-close.** GitHub closes an issue automatically when a merged
+commit or PR body contains a closing keyword — `Fixes #NNN`, `Closes #NNN`,
+`Resolves #NNN`. That silently violates this rule even though you never ran
+`gh issue close`. Write `Refs #NNN` or `See #NNN` instead.
+
+If an issue does auto-close, reopen it and say why:
+```bash
+gh issue reopen <N> --comment "Reopening so you can verify the fix yourself — it auto-closed from the commit reference."
+```
 
 ## Commit Message Conventions
 
@@ -54,18 +69,29 @@ Follows semantic versioning (SemVer):
 
 Current version: defined in `lib/rails_error_dashboard/version.rb`
 
+The bump is **derived from commit types**, not chosen by hand — `fix:` gives a
+patch, `feat:` a minor, `!` or `BREAKING CHANGE` a major. To change what version
+ships, change the commits. Editing `version.rb` directly will be overwritten by
+release-please.
+
 ## Release Artifacts
 
 A complete release produces:
-1. Version bump commit on `main`
-2. RubyGems package (`.gem` file)
-3. Git tag (`vX.Y.Z`)
-4. GitHub Release with changelog notes
-5. Updated demo app (blog_turbo) with new version
+1. Version bump + changelog commit on `main` (the merged release PR)
+2. RubyGems package, pushed via OIDC trusted publishing — no credentials involved
+3. Two git tags: `vX.Y.Z` **and** `rails_error_dashboard/vX.Y.Z`
+4. GitHub Release with changelog notes, marked Latest
+5. Updated demo app lockfile (see `demo-update`)
+
+Items 1-4 are produced by the automation on merging the release PR. Only item 5
+is manual.
 
 ## Git Tags vs GitHub Releases
 
-These are **separate entities**:
-- Pushing a tag does NOT create a GitHub Release
-- Must use `gh release create` for visible releases on the Releases page
-- The "Latest" badge only appears on GitHub Releases, not raw tags
+These are **separate entities** — pushing a tag does not by itself create a
+GitHub Release, and the "Latest" badge only appears on Releases. release-please
+creates both, so neither should be made by hand.
+
+Because releases carry a component prefix, `gh release view vX.Y.Z` reports
+"release not found" even when the release exists. Use `gh release list`, or the
+full name `rails_error_dashboard/vX.Y.Z`.
