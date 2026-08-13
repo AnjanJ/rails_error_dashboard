@@ -12,6 +12,16 @@ module RailsErrorDashboard
 
     protect_from_forgery with: :exception
 
+    # Render pagination in the dashboard's own locale, not the host app's.
+    #
+    # Pagy stores its locale in Thread.current[:pagy_locale] and never resets it
+    # (pagy 43.6.1, modules/i18n/i18n.rb:24-31 — the "for the duration of a single
+    # request" comment is aspirational; nothing in the gem enforces it). A host app
+    # that sets a per-request locale leaves that value on the Puma thread, so a
+    # dashboard request landing on a recycled thread inherits whatever language the
+    # host last used — Russian on one refresh, Portuguese on the next (issue #148).
+    around_action :with_dashboard_locale
+
     # CRITICAL: Ensure dashboard errors never break the app
     # Catch all exceptions and render user-friendly error page
     # NOTE: rescue_from is checked in reverse declaration order (last = highest priority).
@@ -59,6 +69,49 @@ module RailsErrorDashboard
     end
 
     private
+
+    # Set Pagy's locale for this request and restore whatever was there before.
+    #
+    # Two details are load-bearing:
+    #
+    # 1. The previous value is read from Thread.current directly, NOT from
+    #    Pagy::I18n.locale. The getter coerces nil to "en", so restoring through
+    #    it would stamp "en" onto a thread that started clean — making the
+    #    dashboard a source of the very leak it is fixing.
+    # 2. around_action + ensure, not before_action. A before_action would strand
+    #    the dashboard's locale on the thread for the host app's next request.
+    #    The ensure also covers the rescue_from handlers above, which still
+    #    render through the view layer.
+    def with_dashboard_locale
+      previous = Thread.current[:pagy_locale]
+      Pagy::I18n.locale = dashboard_pagy_locale
+      yield
+    ensure
+      Thread.current[:pagy_locale] = previous
+    end
+
+    def dashboard_pagy_locale
+      configured = RailsErrorDashboard.configuration.dashboard_locale.to_s.strip
+      return "en" if configured.empty?
+
+      self.class.resolved_pagy_locales[configured] ||= resolve_pagy_locale(configured)
+    rescue StandardError
+      "en"
+    end
+
+    # Pagy looks its dictionary up by exact filename AND by an exact top-level
+    # key inside that YAML, so "EN" finds en.yml but then reads a nil dictionary
+    # and raises mid-render. Match the shipped filenames case-insensitively and
+    # fall back to English for anything Pagy cannot serve.
+    def resolve_pagy_locale(configured)
+      available = Pagy::I18n.pathnames.flat_map { |dir| Dir.glob(dir.join("*.yml")) }
+                              .map { |path| File.basename(path, ".yml") }
+      available.find { |locale| locale.casecmp?(configured) } || "en"
+    end
+
+    def self.resolved_pagy_locales
+      @resolved_pagy_locales ||= {}
+    end
 
     def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
       set_common_view_variables
