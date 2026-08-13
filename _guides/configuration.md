@@ -54,6 +54,19 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 | `database` | Symbol/String | `nil` | Database connection name (nil = primary database) |
 | `use_separate_database` | Boolean | `false` | Use separate database for errors (ENV: `USE_SEPARATE_ERROR_DB`) |
 
+### Dashboard UI
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `accent_color` | Symbol | `:crimson` | Dashboard accent colour — `:crimson`, `:ruby`, `:ember`, `:violet` |
+| `dashboard_locale` | String | `"en"` | Locale the dashboard renders in, independent of the host app's locale. Currently affects Pagy pagination labels; the rest of the UI is English-only. Unknown or wrong-cased values fall back to `"en"` |
+
+The dashboard sets its own locale for the duration of each request and restores
+the previous value afterwards, so it neither inherits the host app's locale nor
+leaks its own back into the host. This matters because Pagy stores its locale in
+a thread-local it never resets — without this, a dashboard request landing on a
+recycled Puma thread would render in whatever language the host app last used.
+
 ### Notifications - Slack
 
 | Option | Type | Default | Description |
