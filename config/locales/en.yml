@@ -24,12 +24,106 @@
 #   notifications Slack/Discord/PagerDuty/webhook payload labels
 #   js            strings handed to inline JavaScript
 #
-# Phase 1 populates only `common` and `time` — the keys the foundation helpers
-# need. Phases 2-4 fill in the rest.
+# Phases 2-4 fill in the rest.
 en:
   red:
     common:
       not_available: "N/A"
+      close: "Close"
+      unknown: "Unknown"
+
+    nav:
+      # Section headings in the sidebar.
+      sections:
+        core: "Core"
+        health: "Health"
+        diagnostics: "Diagnostics"
+        insights: "Insights"
+
+      # Item labels. Shared by the desktop sidebar and the mobile offcanvas,
+      # which render the same destinations — a second copy of these strings
+      # would drift the moment one is edited.
+      overview: "Overview"
+      errors: "Errors"
+      analytics: "Analytics"
+      platform: "Platform"
+      cache: "Cache"
+      jobs: "Jobs"
+      database: "Database"
+      rate_limits: "Rate Limits"
+      actioncable: "ActionCable"
+      activestorage: "ActiveStorage"
+      llm: "LLM"
+      n_plus_one: "N+1 Queries"
+      deprecations: "Deprecations"
+      swallowed: "Swallowed"
+      diagnostic_dumps: "Diagnostics"
+      storms: "Storms"
+      correlation: "Correlation"
+      releases: "Releases"
+      user_impact: "User Impact"
+      settings: "Settings"
+
+    sidebar:
+      # %{app} is the host application's module name.
+      back_to_app: "Back to %{app}"
+      back_to_app_home: "Back to app home"
+
+    navbar:
+      search_placeholder: "Search errors... /"
+      toggle_sidebar: "Toggle sidebar (S)"
+      toggle_theme: "Toggle theme"
+      keyboard_shortcuts_title: "Keyboard shortcuts (?)"
+      all_applications: "All Applications"
+      # %{count} is the number of applications being aggregated.
+      all_apps: "All Apps (%{count})"
+
+    banners:
+      credentials:
+        # Rendered as "<strong>Security Warning:</strong> You are using…", so
+        # the label and body are separate keys rather than embedded markup.
+        label: "Security Warning:"
+        body_html: >-
+          You are using default credentials (gandalf/youshallnotpass).
+          Set <code>ERROR_DASHBOARD_USER</code> and <code>ERROR_DASHBOARD_PASSWORD</code>
+          environment variables, or configure <code>authenticate_with</code> in your
+          initializer.
+        dismiss: "Dismiss for this session"
+
+      storm:
+        # Whole sentences, not fragments. The English original assembled these
+        # from a stem plus a conditional clause, which cannot be reordered into
+        # a natural sentence in every language.
+        active_title: "Error storm in progress"
+        recent_title: "Storm protection engaged recently"
+        # %{time} is a formatted clock time.
+        active_paused: >-
+          (since %{time}) — storm protection engaged. Occurrences are being counted
+          exactly; detail capture is paused (count-only mode).
+        active_sampled: >-
+          (since %{time}) — storm protection engaged. Occurrences are being counted
+          exactly; context capture is sampled.
+        # %{count} is a delimited occurrence count.
+        recent_body: >-
+          (ended %{time}) — %{count} occurrences were recorded as exact counts with
+          sampled detail.
+        view_history: "View storm history"
+
+    footer:
+      # "RED — Rails Error Dashboard" is the product name; do not translate it.
+      built_with: "Built with"
+      # %{author} is a linked name (an <a> tag), so this key is _html.
+      # Languages differ on where the attribution goes, hence one whole string
+      # rather than "Built with ❤️ by" plus a trailing link.
+      credit_html: "Built with ❤️ by %{author}"
+
+    shortcuts:
+      title: "Keyboard Shortcuts"
+      refresh: "Refresh page"
+      focus_search: "Focus search"
+      analytics: "Analytics"
+      toggle_sidebar: "Toggle sidebar"
+      show_shortcuts: "Show shortcuts"
 
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a

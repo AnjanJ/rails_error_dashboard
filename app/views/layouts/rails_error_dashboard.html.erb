@@ -940,7 +940,7 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
       <!-- Sidebar -->
       <nav class="red-sidebar d-none d-md-flex" id="sidebar">
         <!-- Logo -->
-        <a href="/" class="red-sidebar-logo" title="Back to <%= Rails.application.class.module_parent_name %>" style="text-decoration: none; color: inherit;">
+        <a href="/" class="red-sidebar-logo" title="<%= red_t("red.sidebar.back_to_app", app: Rails.application.class.module_parent_name) %>" style="text-decoration: none; color: inherit;">
           <div class="red-sidebar-logo-icon">R</div>
           <div>
             <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">RED</div>
@@ -959,17 +959,17 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
 
           <!-- CORE section -->
           <div style="margin-bottom: var(--space-2);">
-            <div class="red-sidebar-section-label">Core</div>
+            <div class="red-sidebar-section-label"><%= red_t("red.nav.sections.core") %></div>
             <ul class="nav flex-column">
               <li class="nav-item">
                 <%= link_to root_path(nav_params), class: "nav-link #{request.path == root_path ? 'active' : ''}" do %>
-                  <i class="bi bi-grid-1x2"></i> Overview
+                  <i class="bi bi-grid-1x2"></i> <%= red_t("red.nav.overview") %>
                 <% end %>
               </li>
               <li class="nav-item">
                 <%= link_to errors_path(nav_params), class: "nav-link #{(controller_name == 'errors' && action_name == 'index') ? 'active' : ''}" do %>
                   <i class="bi bi-bug"></i>
-                  <span style="flex: 1;">Errors</span>
+                  <span style="flex: 1;"><%= red_t("red.nav.errors") %></span>
                   <% if unresolved_badge_count && unresolved_badge_count > 0 %>
                     <span class="red-nav-badge"><%= unresolved_badge_count %></span>
                   <% end %>
@@ -977,7 +977,7 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               </li>
               <li class="nav-item">
                 <%= link_to analytics_errors_path(nav_params), class: "nav-link #{request.path == analytics_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-bar-chart-line"></i> Analytics
+                  <i class="bi bi-bar-chart-line"></i> <%= red_t("red.nav.analytics") %>
                 <% end %>
               </li>
             </ul>
@@ -985,31 +985,31 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
 
           <!-- HEALTH section (feature-gated) -->
           <% health_items = [] %>
-          <% health_items << { path: platform_comparison_errors_path(nav_params), icon: 'bi-cpu', label: 'Platform' } %>
+          <% health_items << { path: platform_comparison_errors_path(nav_params), icon: 'bi-cpu', label: red_t("red.nav.platform") } %>
           <% if RailsErrorDashboard.configuration.enable_breadcrumbs %>
-            <% health_items << { path: cache_health_summary_errors_path(nav_params), icon: 'bi-hdd-stack', label: 'Cache' } %>
+            <% health_items << { path: cache_health_summary_errors_path(nav_params), icon: 'bi-hdd-stack', label: red_t("red.nav.cache") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_system_health %>
-            <% health_items << { path: job_health_summary_errors_path(nav_params), icon: 'bi-gear-wide-connected', label: 'Jobs' } %>
-            <% health_items << { path: database_health_summary_errors_path(nav_params), icon: 'bi-database', label: 'Database' } %>
+            <% health_items << { path: job_health_summary_errors_path(nav_params), icon: 'bi-gear-wide-connected', label: red_t("red.nav.jobs") } %>
+            <% health_items << { path: database_health_summary_errors_path(nav_params), icon: 'bi-database', label: red_t("red.nav.database") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_rack_attack_tracking %>
-            <% health_items << { path: rack_attack_summary_errors_path(nav_params), icon: 'bi-shield-exclamation', label: 'Rate Limits' } %>
+            <% health_items << { path: rack_attack_summary_errors_path(nav_params), icon: 'bi-shield-exclamation', label: red_t("red.nav.rate_limits") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_actioncable_tracking && RailsErrorDashboard.configuration.enable_breadcrumbs %>
-            <% health_items << { path: actioncable_health_summary_errors_path(nav_params), icon: 'bi-broadcast', label: 'ActionCable' } %>
+            <% health_items << { path: actioncable_health_summary_errors_path(nav_params), icon: 'bi-broadcast', label: red_t("red.nav.actioncable") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_activestorage_tracking && RailsErrorDashboard.configuration.enable_breadcrumbs %>
-            <% health_items << { path: activestorage_health_summary_errors_path(nav_params), icon: 'bi-cloud-arrow-up', label: 'ActiveStorage' } %>
+            <% health_items << { path: activestorage_health_summary_errors_path(nav_params), icon: 'bi-cloud-arrow-up', label: red_t("red.nav.activestorage") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_llm_observability && RailsErrorDashboard.configuration.enable_breadcrumbs %>
-            <% health_items << { path: llm_health_summary_errors_path(nav_params), icon: 'bi-cpu-fill', label: 'LLM' } %>
+            <% health_items << { path: llm_health_summary_errors_path(nav_params), icon: 'bi-cpu-fill', label: red_t("red.nav.llm") } %>
           <% end %>
 
           <% if health_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navHealthSection">
               <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navHealthItems">
-                Health
+                <%= red_t("red.nav.sections.health") %>
                 <i class="bi bi-chevron-down" style="font-size: 10px;" id="navHealthChevron"></i>
               </button>
               <ul class="nav flex-column" id="navHealthItems">
@@ -1027,23 +1027,23 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <!-- DIAGNOSTICS section (feature-gated) -->
           <% diag_items = [] %>
           <% if RailsErrorDashboard.configuration.enable_breadcrumbs %>
-            <% diag_items << { path: n_plus_one_summary_errors_path(nav_params), icon: 'bi-layers', label: 'N+1 Queries' } %>
-            <% diag_items << { path: deprecations_errors_path(nav_params), icon: 'bi-exclamation-triangle', label: 'Deprecations' } %>
+            <% diag_items << { path: n_plus_one_summary_errors_path(nav_params), icon: 'bi-layers', label: red_t("red.nav.n_plus_one") } %>
+            <% diag_items << { path: deprecations_errors_path(nav_params), icon: 'bi-exclamation-triangle', label: red_t("red.nav.deprecations") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.detect_swallowed_exceptions %>
-            <% diag_items << { path: swallowed_exceptions_errors_path(nav_params), icon: 'bi-eye-slash', label: 'Swallowed' } %>
+            <% diag_items << { path: swallowed_exceptions_errors_path(nav_params), icon: 'bi-eye-slash', label: red_t("red.nav.swallowed") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_diagnostic_dump %>
-            <% diag_items << { path: diagnostic_dumps_errors_path(nav_params), icon: 'bi-clipboard-pulse', label: 'Diagnostics' } %>
+            <% diag_items << { path: diagnostic_dumps_errors_path(nav_params), icon: 'bi-clipboard-pulse', label: red_t("red.nav.diagnostic_dumps") } %>
           <% end %>
           <% if RailsErrorDashboard.configuration.enable_storm_protection %>
-            <% diag_items << { path: storms_errors_path(nav_params), icon: 'bi-cloud-lightning-rain', label: 'Storms' } %>
+            <% diag_items << { path: storms_errors_path(nav_params), icon: 'bi-cloud-lightning-rain', label: red_t("red.nav.storms") } %>
           <% end %>
 
           <% if diag_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navDiagSection">
               <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navDiagItems">
-                Diagnostics
+                <%= red_t("red.nav.sections.diagnostics") %>
                 <i class="bi bi-chevron-down" style="font-size: 10px;" id="navDiagChevron"></i>
               </button>
               <ul class="nav flex-column" id="navDiagItems">
@@ -1061,23 +1061,23 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <!-- INSIGHTS section -->
           <div style="margin-bottom: var(--space-2);" id="navInsightsSection">
             <button type="button" class="red-sidebar-section-label" data-red-action="toggle-nav-section" data-red-target="navInsightsItems">
-              Insights
+              <%= red_t("red.nav.sections.insights") %>
               <i class="bi bi-chevron-down" style="font-size: 10px;" id="navInsightsChevron"></i>
             </button>
             <ul class="nav flex-column" id="navInsightsItems">
               <li class="nav-item">
                 <%= link_to correlation_errors_path(nav_params), class: "nav-link #{request.path == correlation_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-diagram-3"></i> Correlation
+                  <i class="bi bi-diagram-3"></i> <%= red_t("red.nav.correlation") %>
                 <% end %>
               </li>
               <li class="nav-item">
                 <%= link_to releases_errors_path(nav_params), class: "nav-link #{request.path == releases_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-rocket-takeoff"></i> Releases
+                  <i class="bi bi-rocket-takeoff"></i> <%= red_t("red.nav.releases") %>
                 <% end %>
               </li>
               <li class="nav-item">
                 <%= link_to user_impact_errors_path(nav_params), class: "nav-link #{request.path == user_impact_errors_path ? 'active' : ''}" do %>
-                  <i class="bi bi-people"></i> User Impact
+                  <i class="bi bi-people"></i> <%= red_t("red.nav.user_impact") %>
                 <% end %>
               </li>
             </ul>
@@ -1089,7 +1089,7 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <ul class="nav flex-column">
             <li class="nav-item">
               <%= link_to settings_path(nav_params), class: "nav-link #{request.path == settings_path ? 'active' : ''}" do %>
-                <i class="bi bi-sliders"></i> Settings
+                <i class="bi bi-sliders"></i> <%= red_t("red.nav.settings") %>
               <% end %>
             </li>
           </ul>
@@ -1106,13 +1106,13 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               <i class="bi bi-list"></i>
             </button>
             <!-- Desktop sidebar toggle -->
-            <button class="btn btn-link d-none d-md-flex" type="button" id="sidebarToggle" title="Toggle sidebar (S)" style="font-size: 16px; color: var(--text-secondary);">
+            <button class="btn btn-link d-none d-md-flex" type="button" id="sidebarToggle" title="<%= red_t("red.navbar.toggle_sidebar") %>" style="font-size: 16px; color: var(--text-secondary);">
               <i class="bi bi-layout-sidebar-inset"></i>
             </button>
             <!-- Search -->
             <div style="position: relative;">
               <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-tertiary);"></i>
-              <input class="red-search-input" placeholder="Search errors... /" id="globalSearch" />
+              <input class="red-search-input" placeholder="<%= red_t("red.navbar.search_placeholder") %>" id="globalSearch" />
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: var(--space-3);">
@@ -1122,9 +1122,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
                 <button class="red-app-switcher dropdown-toggle" type="button" id="appSwitcher" data-bs-toggle="dropdown" aria-expanded="false">
                   <i class="bi bi-layers"></i>
                   <% if params[:application_id].present? %>
-                    <%= @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first || 'Unknown' %>
+                    <%= @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first || red_t("red.common.unknown") %>
                   <% else %>
-                    All Apps (<%= @applications.size %>)
+                    <%= red_t("red.navbar.all_apps", count: @applications.size) %>
                   <% end %>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="appSwitcher">
@@ -1141,7 +1141,7 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
                     end
                   %>
                   <li>
-                    <%= link_to "All Applications",
+                    <%= link_to red_t("red.navbar.all_applications"),
                         url_for(switcher_base.merge(switcher_filter_params.except(:application_id))),
                         class: "dropdown-item #{'active' unless params[:application_id].present?}" %>
                   </li>
@@ -1156,8 +1156,8 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
                 </ul>
               </div>
             <% end %>
-            <button type="button" title="Keyboard shortcuts (?)" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal" style="background: none; border: none; padding: 0; cursor: pointer; line-height: 1;"><kbd>?</kbd></button>
-            <button class="red-theme-toggle" id="themeToggle" title="Toggle theme">
+            <button type="button" title="<%= red_t("red.navbar.keyboard_shortcuts_title") %>" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal" style="background: none; border: none; padding: 0; cursor: pointer; line-height: 1;"><kbd>?</kbd></button>
+            <button class="red-theme-toggle" id="themeToggle" title="<%= red_t("red.navbar.toggle_theme") %>">
               <i class="bi bi-moon" id="themeIcon"></i>
             </button>
             <span class="red-env-badge" style="background: var(--status-success-bg); color: var(--status-success);"><%= Rails.env %></span>
@@ -1170,11 +1170,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
             <div id="security-warning" class="alert alert-warning" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid var(--status-warning);">
               <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; flex-shrink: 0;"></i>
               <div style="flex: 1;">
-                <strong>Security Warning:</strong> You are using default credentials (gandalf/youshallnotpass).
-                Set <code>ERROR_DASHBOARD_USER</code> and <code>ERROR_DASHBOARD_PASSWORD</code> environment variables,
-                or configure <code>authenticate_with</code> in your initializer.
+                <strong><%= red_t("red.banners.credentials.label") %></strong> <%= red_t("red.banners.credentials.body_html") %>
               </div>
-              <button type="button" data-red-action="dismiss-creds-warning" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="Dismiss for this session">&times;</button>
+              <button type="button" data-red-action="dismiss-creds-warning" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 0 4px; flex-shrink: 0; line-height: 1;" title="<%= red_t("red.banners.credentials.dismiss") %>">&times;</button>
             </div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
           <% end %>
@@ -1184,15 +1182,20 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               <i class="bi <%= storm_active ? 'bi-cloud-lightning-rain-fill' : 'bi-cloud-check' %>" style="font-size: 18px; flex-shrink: 0;"></i>
               <div style="flex: 1;">
                 <% if storm_active %>
-                  <strong>Error storm in progress</strong> (since <%= @storm_banner_event.started_at.strftime("%H:%M %Z") %>) —
-                  storm protection engaged. Occurrences are being counted exactly;
-                  <%= @storm_banner_event.reached_open ? "detail capture is paused (count-only mode)" : "context capture is sampled" %>.
+                  <strong><%= red_t("red.banners.storm.active_title") %></strong>
+                  <%= red_t(
+                        @storm_banner_event.reached_open ? "red.banners.storm.active_paused" : "red.banners.storm.active_sampled",
+                        time: @storm_banner_event.started_at.strftime("%H:%M %Z")
+                      ) %>
                 <% else %>
-                  <strong>Storm protection engaged recently</strong> (ended <%= @storm_banner_event.ended_at.strftime("%H:%M %Z") %>) —
-                  <%= number_with_delimiter(@storm_banner_event.events_counted_only.to_i + @storm_banner_event.events_overflow.to_i) %> occurrences
-                  were recorded as exact counts with sampled detail.
+                  <strong><%= red_t("red.banners.storm.recent_title") %></strong>
+                  <%= red_t(
+                        "red.banners.storm.recent_body",
+                        time: @storm_banner_event.ended_at.strftime("%H:%M %Z"),
+                        count: number_with_delimiter(@storm_banner_event.events_counted_only.to_i + @storm_banner_event.events_overflow.to_i)
+                      ) %>
                 <% end %>
-                <a href="<%= storms_errors_path %>" style="margin-left: 4px;">View storm history</a>
+                <a href="<%= storms_errors_path %>" style="margin-left: 4px;"><%= red_t("red.banners.storm.view_history") %></a>
               </div>
             </div>
           <% end %>
@@ -1203,10 +1206,10 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
         <footer class="red-footer">
           <p style="margin-bottom: 4px;">
             <i class="bi bi-bug-fill" style="color: var(--accent);"></i>
-            Built with <a href="https://github.com/AnjanJ/rails_error_dashboard" target="_blank"><strong>RED</strong> &mdash; Rails Error Dashboard</a>
+            <%= red_t("red.footer.built_with") %> <a href="https://github.com/AnjanJ/rails_error_dashboard" target="_blank"><strong>RED</strong> &mdash; Rails Error Dashboard</a>
           </p>
           <p style="font-size: 12px; color: var(--text-tertiary); margin: 0;">
-            v<%= RailsErrorDashboard::VERSION %> &middot; Built with ❤️ by <a href="https://anjan.dev" target="_blank">Anjan Jagirdar</a>
+            v<%= RailsErrorDashboard::VERSION %> &middot; <%= red_t("red.footer.credit_html", author: '<a href="https://anjan.dev" target="_blank">Anjan Jagirdar</a>'.html_safe) %>
           </p>
         </footer>
       </div>
@@ -1215,25 +1218,25 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
     <!-- Mobile Sidebar (Offcanvas) -->
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
       <div class="offcanvas-header">
-        <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;" title="Back to app home">
+        <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;" title="<%= red_t("red.sidebar.back_to_app_home") %>">
           <div class="red-sidebar-logo-icon">R</div>
           <strong>RED</strong>
         </a>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="<%= red_t("red.common.close") %>"></button>
       </div>
       <div class="offcanvas-body">
         <%
           nav_params = params[:application_id].present? ? { application_id: params[:application_id] } : {}
         %>
         <ul class="nav flex-column">
-          <li class="nav-item"><%= link_to root_path(nav_params), class: "nav-link" do %><i class="bi bi-grid-1x2"></i> Overview<% end %></li>
-          <li class="nav-item"><%= link_to errors_path(nav_params), class: "nav-link" do %><i class="bi bi-bug"></i> Errors<% end %></li>
-          <li class="nav-item"><%= link_to analytics_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-bar-chart-line"></i> Analytics<% end %></li>
-          <li class="nav-item"><%= link_to platform_comparison_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-cpu"></i> Platform<% end %></li>
-          <li class="nav-item"><%= link_to correlation_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-diagram-3"></i> Correlation<% end %></li>
-          <li class="nav-item"><%= link_to releases_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-rocket-takeoff"></i> Releases<% end %></li>
-          <li class="nav-item"><%= link_to user_impact_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-people"></i> User Impact<% end %></li>
-          <li class="nav-item"><%= link_to settings_path(nav_params), class: "nav-link" do %><i class="bi bi-sliders"></i> Settings<% end %></li>
+          <li class="nav-item"><%= link_to root_path(nav_params), class: "nav-link" do %><i class="bi bi-grid-1x2"></i> <%= red_t("red.nav.overview") %><% end %></li>
+          <li class="nav-item"><%= link_to errors_path(nav_params), class: "nav-link" do %><i class="bi bi-bug"></i> <%= red_t("red.nav.errors") %><% end %></li>
+          <li class="nav-item"><%= link_to analytics_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-bar-chart-line"></i> <%= red_t("red.nav.analytics") %><% end %></li>
+          <li class="nav-item"><%= link_to platform_comparison_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-cpu"></i> <%= red_t("red.nav.platform") %><% end %></li>
+          <li class="nav-item"><%= link_to correlation_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-diagram-3"></i> <%= red_t("red.nav.correlation") %><% end %></li>
+          <li class="nav-item"><%= link_to releases_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-rocket-takeoff"></i> <%= red_t("red.nav.releases") %><% end %></li>
+          <li class="nav-item"><%= link_to user_impact_errors_path(nav_params), class: "nav-link" do %><i class="bi bi-people"></i> <%= red_t("red.nav.user_impact") %><% end %></li>
+          <li class="nav-item"><%= link_to settings_path(nav_params), class: "nav-link" do %><i class="bi bi-sliders"></i> <%= red_t("red.nav.settings") %><% end %></li>
         </ul>
       </div>
     </div>
@@ -1244,30 +1247,31 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="keyboardShortcutsModalLabel">
-              <i class="bi bi-keyboard"></i> Keyboard Shortcuts
+              <i class="bi bi-keyboard"></i> <%= red_t("red.shortcuts.title") %>
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
           </div>
           <div class="modal-body">
             <div class="list-group list-group-flush">
+              <%# Key names (R, /, A, S, ?) stay literal — they are physical keys, not words. %>
               <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-arrow-clockwise" style="color: var(--accent);"></i> Refresh page</span>
+                <span><i class="bi bi-arrow-clockwise" style="color: var(--accent);"></i> <%= red_t("red.shortcuts.refresh") %></span>
                 <kbd>R</kbd>
               </div>
               <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-search" style="color: var(--accent);"></i> Focus search</span>
+                <span><i class="bi bi-search" style="color: var(--accent);"></i> <%= red_t("red.shortcuts.focus_search") %></span>
                 <kbd>/</kbd>
               </div>
               <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-bar-chart-line" style="color: var(--accent);"></i> Analytics</span>
+                <span><i class="bi bi-bar-chart-line" style="color: var(--accent);"></i> <%= red_t("red.shortcuts.analytics") %></span>
                 <kbd>A</kbd>
               </div>
               <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-layout-sidebar" style="color: var(--accent);"></i> Toggle sidebar</span>
+                <span><i class="bi bi-layout-sidebar" style="color: var(--accent);"></i> <%= red_t("red.shortcuts.toggle_sidebar") %></span>
                 <kbd>S</kbd>
               </div>
               <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-keyboard" style="color: var(--accent);"></i> Show shortcuts</span>
+                <span><i class="bi bi-keyboard" style="color: var(--accent);"></i> <%= red_t("red.shortcuts.show_shortcuts") %></span>
                 <kbd>?</kbd>
               </div>
             </div>
