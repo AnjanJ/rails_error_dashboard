@@ -820,16 +820,19 @@ The page at `/errors/diagnostic_dumps` shows:
 
 ## Rack Attack Event Tracking (v0.4.0)
 
-**⚙️ Optional Feature** - Rack Attack tracking is disabled by default. **Requires breadcrumbs to be enabled.** Enable it to track Rack::Attack security events:
+**⚙️ Optional Feature** - Rack Attack tracking is disabled by default. Requires the `rack-attack` gem to be installed and configured in your app. Enable it to track Rack::Attack security events:
 
 ```ruby
-config.enable_breadcrumbs = true
 config.enable_rack_attack_tracking = true
 ```
 
 ### How It Works
 
-Subscribes to Rack::Attack's ActiveSupport::Notifications events and records them as breadcrumbs. When an error occurs after a throttle or blocklist event, the breadcrumbs show the security context — revealing whether rate limiting or blocking contributed to the error.
+Subscribes to Rack::Attack's ActiveSupport::Notifications events and persists them to their own table, independently of error capture. This matters because a throttled request returns HTTP 429 without raising — so these events would never be recorded if they depended on an error occurring.
+
+Events are aggregated into hourly buckets by rule, match type, discriminator, and path, so a rate-limit flood collapses into a handful of rows rather than one insert per request.
+
+If breadcrumbs are also enabled, the event is additionally recorded on the request's activity trail, so it shows up as security context on the error detail page when an error does occur in the same request.
 
 ### Tracked Events
 

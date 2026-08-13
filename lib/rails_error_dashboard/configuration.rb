@@ -590,6 +590,16 @@ module RailsErrorDashboard
         if rack_attack_flush_interval && rack_attack_flush_interval < 1
           errors << "rack_attack_flush_interval must be at least 1 (got: #{rack_attack_flush_interval})"
         end
+
+        # Warn rather than auto-disable: validation may run before the host's
+        # Rack::Attack initializer has loaded, so a missing constant here does
+        # not prove it will still be missing at after_initialize (when the
+        # subscriber actually registers). Auto-disabling would break that case.
+        unless defined?(::Rack::Attack)
+          warnings << "enable_rack_attack_tracking is enabled but the rack-attack gem " \
+                      "does not appear to be loaded. No events will be recorded until " \
+                      "Rack::Attack is installed and configured."
+        end
       end
 
       # Validate actioncable tracking requires breadcrumbs

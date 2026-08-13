@@ -76,9 +76,27 @@ RSpec.describe "Rack Attack Summary page", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
-      it "shows empty state when no rack_attack events exist" do
-        get "/error_dashboard/errors/rack_attack_summary"
-        expect(response.body).to include("No Rate Limit Events Found")
+      # The empty state distinguishes "gem not installed" from "installed but
+      # no rules matched" — both otherwise render an identical blank page,
+      # which is the ambiguity that made issue #143 hard to diagnose.
+      context "when the rack-attack gem is not loaded" do
+        it "says the gem is missing rather than reporting no events" do
+          get "/error_dashboard/errors/rack_attack_summary"
+
+          expect(response.body).to include("Rack Attack Is Not Installed")
+          expect(response.body).not_to include("No Rate Limit Events Found")
+        end
+      end
+
+      context "when the rack-attack gem is loaded" do
+        before { stub_const("Rack::Attack", Class.new) }
+
+        it "shows the no-events empty state" do
+          get "/error_dashboard/errors/rack_attack_summary"
+
+          expect(response.body).to include("No Rate Limit Events Found")
+          expect(response.body).not_to include("Rack Attack Is Not Installed")
+        end
       end
 
       it "shows recorded rack_attack events" do

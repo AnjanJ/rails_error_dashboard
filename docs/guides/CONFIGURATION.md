@@ -929,16 +929,17 @@ Trigger via dashboard button or `rails error_dashboard:diagnostic_dump NOTE="dep
 
 ## Rack Attack Event Tracking (v0.4.0)
 
-Track Rack::Attack throttle, blocklist, and track events as breadcrumbs. Requires breadcrumbs to be enabled.
+Record Rack::Attack throttle, blocklist, and track events to their own table, aggregated hourly. Requires the `rack-attack` gem to be installed and configured in your app. Breadcrumbs are **not** required.
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  config.enable_breadcrumbs = true              # Required dependency
   config.enable_rack_attack_tracking = true
+  config.rack_attack_max_cache_size = 1000      # Buffered keys per thread (LRU)
+  config.rack_attack_flush_interval = 60        # Seconds between DB flushes
 end
 ```
 
-Auto-disabled with warning if breadcrumbs are not enabled. Dashboard page at `/errors/rack_attack_summary`.
+If `rack-attack` is not loaded, a startup warning is logged and no events are recorded. Enabling breadcrumbs as well adds the event to the activity trail on error detail pages. Dashboard page at `/errors/rack_attack_summary`.
 
 ---
 

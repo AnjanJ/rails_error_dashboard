@@ -490,6 +490,10 @@ module RailsErrorDashboard
         return
       end
 
+      # Distinguishes "gem not installed" from "installed but no rules matched"
+      # in the empty state — both otherwise render an identical blank page.
+      @rack_attack_missing = !defined?(::Rack::Attack)
+
       days = days_param(default: 30)
       @days = days
       result = Queries::RackAttackSummary.call(days, application_id: @current_application_id)
