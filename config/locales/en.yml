@@ -346,6 +346,143 @@ en:
           view_platform_errors: "View %{platform} Errors"
           analytics: "Analytics"
 
+      sidebar:
+        title: "Metadata"
+
+        occurrence_count: "Occurrence Count"
+        # %{count} times. The badge above it shows "12x"; this is the sentence
+        # under it, shown only when the count is greater than one.
+        occurred_times:
+          one: "This error has occurred %{count} time"
+          other: "This error has occurred %{count} times"
+
+        first_seen: "First Seen"
+        last_seen: "Last Seen"
+        jump_to_timeline: "Jump to timeline"
+
+        severity_level: "Severity Level"
+        # %{severity} is a translated severity label.
+        view_all_severity: "View all %{severity} errors"
+        # Severity badges, stored already-uppercased. The English original
+        # hardcoded "CRITICAL"/"HIGH"/"MEDIUM"/"LOW" per branch; .upcase would
+        # be a Latin-alphabet assumption, so the casing lives in the value.
+        severity_badges:
+          critical: "CRITICAL"
+          high: "HIGH"
+          medium: "MEDIUM"
+          low: "LOW"
+
+        platform: "Platform"
+        # %{platform} is a platform name (iOS, Android, Web) and is not translated.
+        view_all_platform: "View all %{platform} errors"
+
+        user: "User"
+        view_user_errors: "View all errors for this user"
+        # %{id} is a user identifier.
+        user_id: "ID: %{id}"
+        user_id_label: "User ID: %{id}"
+        guest: "Guest / Unauthenticated"
+
+        # Shown when issue tracking owns status/assignment/priority. Two whole
+        # sentences rather than a stem plus two endings — the clause order is
+        # not universal.
+        #
+        # %{link} is a fully-built <a> element, NOT a bare URL. An _html key is
+        # html_safe, so interpolating the raw external_issue_url here would let
+        # a crafted URL break out of the href and inject an event handler. The
+        # tag is built with link_to in the view, which escapes it.
+        issue_tracking_linked_html: "Status, assignment, and priority are managed via your %{link}."
+        issue_tracking_link_text: "linked issue"
+        issue_tracking_unlinked: >-
+          Status, assignment, and priority are managed via your issue tracker.
+          Link an issue to see details.
+
+        workflow_status: "Workflow Status"
+        resolved: "Resolved"
+        unresolved: "Unresolved"
+
+        reopened: "Reopened"
+
+        assigned_to: "Assigned To"
+        assign: "Assign"
+        remove_assignment: "Remove assignment?"
+
+        priority: "Priority"
+
+        snooze: "Snooze"
+        snoozed: "Snoozed"
+        # %{time} is a <span class="local-time"> element from
+        # ApplicationHelper#local_time, so this key is _html.
+        snoozed_until_html: "Until %{time}"
+        unsnooze: "Unsnooze"
+
+        notifications: "Notifications"
+        muted: "Muted"
+        # %{name} is whoever muted it — free-form data, not translated.
+        muted_by: "By %{name}"
+        # %{time} is a <span class="local-time"> element, hence _html.
+        muted_since_html: "Since %{time}"
+        mute: "Mute"
+        unmute: "Unmute"
+
+        resolved_by: "Resolved By"
+        reference: "Reference"
+        resolution_notes: "Resolution Notes"
+
+        error_id: "Error ID"
+        copy_error_id: "Copy error ID"
+
+        environment:
+          title: "Environment"
+          hint: "Runtime context at error time"
+          app_version: "App Version:"
+          # %{version} is a version string.
+          view_all_version: "View all errors in %{version}"
+          git_sha: "Git SHA:"
+          rails: "Rails:"
+          ruby: "Ruby:"
+          environment: "Environment:"
+          server: "Server:"
+          database: "Database:"
+          key_gems: "Key Gems:"
+
+        health:
+          title: "System Health"
+          hint: "Runtime state when error fired"
+
+          # Metric labels. The values beside them are machine state rendered in
+          # <code> and stay English (see the glossary in TRANSLATIONS.md):
+          # close_wait, time_wait, enqueued, iseqs, adapter names and so on are
+          # diagnostic tokens developers search for, not prose.
+          memory_rss: "Memory (RSS):"
+          process_swap: "Process Swap:"
+          peak_rss: "Peak RSS:"
+          os_threads: "OS Threads:"
+          threads: "Threads:"
+          file_descriptors: "File Descriptors:"
+          load_average: "Load Average:"
+          system_memory: "System Memory:"
+          system_swap: "System Swap:"
+          tcp_connections: "TCP Connections:"
+          gc_live_objects: "GC Live Objects:"
+          major_gc_runs: "Major GC Runs:"
+          last_gc: "Last GC:"
+          connection_pool: "Connection Pool:"
+          puma_threads: "Puma Threads:"
+          # %{adapter} is the job backend's name (sidekiq, solid_queue) and is
+          # not translated.
+          job_queue: "Job Queue (%{adapter}):"
+          vm_cache_invalidations: "VM Cache Invalidations:"
+          vm_cache_misses: "VM Cache Misses:"
+          shape_cache_size: "Shape Cache Size:"
+          yjit_compiled: "YJIT Compiled:"
+          yjit_invalidations: "YJIT Invalidations:"
+          yjit_code_size: "YJIT Code Size:"
+          yjit_compile_time: "YJIT Compile Time:"
+
+          # %{count} is a Ruby thread count shown beside the OS thread count.
+          ruby_threads: "(Ruby: %{count})"
+
       info:
         new_badge: "NEW"
         new_tooltip: "Error occurred within the last hour"
