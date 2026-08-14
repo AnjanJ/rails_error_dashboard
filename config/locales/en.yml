@@ -346,6 +346,57 @@ en:
           view_platform_errors: "View %{platform} Errors"
           analytics: "Analytics"
 
+      variables:
+        local_title: "Local Variables"
+        local_hint: "Variables from the stack frame where the exception was raised"
+        instance_title: "Instance Variables"
+        # The English original split this sentence around a conditional <code>
+        # element ("Instance variables from" + class-or-"the object" + "where
+        # the exception was raised"). A clause cannot be spliced into the middle
+        # of a sentence in every language, so each branch is whole.
+        # %{klass} is a pre-formatted <code> element, hence _html.
+        instance_hint_html: "Instance variables from %{klass} where the exception was raised"
+        instance_hint_generic: "Instance variables from the object where the exception was raised"
+        # %{count} variables were captured.
+        captured:
+          one: "%{count} captured"
+          other: "%{count} captured"
+        column_variable: "Variable"
+        column_type: "Type"
+        column_value: "Value"
+        # Shown in place of a value scrubbed by the parameter filter.
+        filtered: "[FILTERED]"
+        truncated: "truncated"
+
+      source_code:
+        # %{host} is a repository host name (GitHub, GitLab, Bitbucket) — a
+        # brand name, not translated.
+        view_on: "View on %{host}"
+        view_source: "View Source"
+        # The coverage legend was assembled from coloured fragments
+        # ("green = executed, gray = not executed"). %{executed} and
+        # %{not_executed} arrive as pre-coloured <span>s, hence _html.
+        coverage_legend_html: "Coverage active — %{executed} = executed, %{not_executed} = not executed"
+        coverage_green: "green"
+        coverage_gray: "gray"
+        # %{message} is the underlying read error — diagnostic text, verbatim.
+        read_failed: "Could not read source: %{message}"
+
+      ai_help:
+        title: "AI Help"
+        # LLM provider display names. Brand names, so they are identical in
+        # every locale — but they are keys rather than titleize on the config
+        # value, which renders "openai" as "Openai". Neither that nor the bare
+        # identifier is how either company writes its own name.
+        providers:
+          openai: "OpenAI"
+          anthropic: "Anthropic"
+        close: "Close AI Help"
+        empty: "Ask about root cause, reproduction steps, likely fixes, or what to inspect next."
+        question_label: "Question"
+        question_placeholder: "What is the likely root cause?"
+        ask: "Ask"
+
       sidebar:
         title: "Metadata"
 

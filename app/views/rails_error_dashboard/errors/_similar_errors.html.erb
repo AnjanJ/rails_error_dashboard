@@ -2,7 +2,10 @@
       <% if RailsErrorDashboard.configuration.enable_similar_errors && error.respond_to?(:similar_errors) %>
         <% similar = error.similar_errors(threshold: 0.6, limit: 5) %>
         <% if similar.any? %>
-          <% cache [error, 'similar_errors_v1', similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
+          <%# The locale is part of the cache key: this fragment contains
+              translated text, and without it the first locale to render an
+              error would be served to every other one. %>
+          <% cache [error, 'similar_errors_v2', red_locale, similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
           <div class="card mb-4" id="section-similar-errors">
             <div class="card-header">
               <h5 class="mb-0">

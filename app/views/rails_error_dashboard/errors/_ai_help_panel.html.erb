@@ -5,31 +5,35 @@
     <div>
       <div id="red-ai-help-title" class="red-ai-help-title">
         <i class="bi bi-stars"></i>
-        AI Help
+        <%= red_t("red.errors.ai_help.title") %>
       </div>
       <div class="red-ai-help-subtitle">
-        <%= RailsErrorDashboard.configuration.effective_llm_provider.to_s.titleize %>
+        <%# Brand name, identical in every locale, but looked up rather than
+            titleized: "openai".titleize is "Openai", which is not how the
+            company writes it. An unknown provider falls back to its raw value. %>
+        <% llm_provider = RailsErrorDashboard.configuration.effective_llm_provider %>
+        <%= red_t("red.errors.ai_help.providers.#{llm_provider}", default: llm_provider.to_s) %>
         &middot;
         <%= RailsErrorDashboard.configuration.effective_llm_model %>
       </div>
     </div>
-    <button type="button" class="btn-close" data-red-action="close-ai-help" aria-label="Close AI Help"></button>
+    <button type="button" class="btn-close" data-red-action="close-ai-help" aria-label="<%= red_t("red.errors.ai_help.close") %>"></button>
   </div>
 
   <div id="red-ai-help-messages" class="red-ai-help-messages" aria-live="polite">
     <div class="red-ai-help-empty">
-      Ask about root cause, reproduction steps, likely fixes, or what to inspect next.
+      <%= red_t("red.errors.ai_help.empty") %>
     </div>
   </div>
 
   <form id="red-ai-help-form" class="red-ai-help-form" data-ai-help-url="<%= ai_help_error_path(error, **app_context) %>">
-    <label for="red-ai-help-question">Question</label>
-    <textarea id="red-ai-help-question" name="question" rows="4" maxlength="4000" placeholder="What is the likely root cause?"></textarea>
+    <label for="red-ai-help-question"><%= red_t("red.errors.ai_help.question_label") %></label>
+    <textarea id="red-ai-help-question" name="question" rows="4" maxlength="4000" placeholder="<%= red_t("red.errors.ai_help.question_placeholder") %>"></textarea>
     <div class="red-ai-help-footer">
       <span id="red-ai-help-status" class="red-ai-help-status"></span>
       <button type="submit" class="btn btn-primary">
         <i class="bi bi-send"></i>
-        Ask
+        <%= red_t("red.errors.ai_help.ask") %>
       </button>
     </div>
   </form>

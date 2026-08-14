@@ -6,19 +6,19 @@
           <div class="card mb-4" id="section-local-variables">
             <div class="card-header">
               <h5 class="mb-0">
-                <i class="bi bi-braces"></i> Local Variables
-                <span class="badge bg-secondary"><%= local_vars.size %> captured</span>
+                <i class="bi bi-braces"></i> <%= red_t("red.errors.variables.local_title") %>
+                <span class="badge bg-secondary"><%= red_tp("red.errors.variables.captured", count: local_vars.size) %></span>
               </h5>
-              <small class="text-muted">Variables from the stack frame where the exception was raised</small>
+              <small class="text-muted"><%= red_t("red.errors.variables.local_hint") %></small>
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th width="200">Variable</th>
-                      <th width="120">Type</th>
-                      <th>Value</th>
+                      <th width="200"><%= red_t("red.errors.variables.column_variable") %></th>
+                      <th width="120"><%= red_t("red.errors.variables.column_type") %></th>
+                      <th><%= red_t("red.errors.variables.column_value") %></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -28,11 +28,11 @@
                         <td><small class="text-muted"><%= info["type"] %></small></td>
                         <td>
                           <% if info["filtered"] %>
-                            <span class="badge bg-warning text-dark">[FILTERED]</span>
+                            <span class="badge bg-warning text-dark"><%= red_t("red.errors.variables.filtered") %></span>
                           <% else %>
                             <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(info["value"].to_s, length: 500) %></code>
                             <% if info["truncated"] %>
-                              <span class="badge bg-info text-dark ms-1" style="font-size: 0.7em;">truncated</span>
+                              <span class="badge bg-info text-dark ms-1" style="font-size: 0.7em;"><%= red_t("red.errors.variables.truncated") %></span>
                             <% end %>
                           <% end %>
                         </td>
