@@ -274,6 +274,119 @@ en:
             No errors have been logged yet. Your application is running smoothly.
             Errors will appear here automatically when they occur.
 
+      show:
+        # %{id} is the error's database id.
+        page_title: "Error #%{id}"
+        breadcrumb_errors: "Errors"
+
+        hero:
+          reopened: "Reopened"
+          # %{count} drives the plural form; %{value} is the same number
+          # wrapped in its <strong>, hence _html. Interpolating markup as
+          # %{count} would break form selection.
+          occurrences_html:
+            one: "%{value} occurrence"
+            other: "%{value} occurrences"
+          # %{value} is a <strong>-wrapped user identifier.
+          user_html: "User %{value}"
+          # %{time} is a relative time ("3 hours ago"), rendered as markup.
+          first_seen_html: "First seen %{time}"
+          last_seen_html: "Last seen %{time}"
+
+        actions:
+          resolve: "Resolve"
+          assign: "Assign"
+          copy_for_llm: "Copy for LLM"
+          ai_help: "AI Help"
+          export_json: "Export JSON"
+
+        tabs:
+          details: "Details"
+          context: "Context"
+          history: "History"
+          issues: "Issues"
+
+        coverage:
+          active_label: "Coverage Active"
+          active_body: "expand source code to see executed lines"
+          inactive_label: "Code Path Coverage"
+          inactive_body: "enable to see executed lines"
+          enable: "Enable"
+          disable: "Disable"
+
+        baselines:
+          title: "Baseline Statistics"
+          # %{sigma} is a standard-deviation count, %{level} an anomaly level.
+          anomaly_label: "Anomaly:"
+          anomaly_body: "%{sigma}σ above baseline (%{level})"
+
+          # Anomaly levels from ErrorBaseline#anomaly_level. These are NOT the
+          # severity levels — :elevated has no severity counterpart — so they
+          # get their own keys rather than reusing red.common.severity.
+          #
+          # Stored already uppercased. The English original called .upcase on
+          # the value, which is a Latin-alphabet assumption and mangles scripts
+          # with no case distinction or with different casing rules.
+          levels:
+            elevated: "ELEVATED"
+            high: "HIGH"
+            critical: "CRITICAL"
+          hourly: "Hourly"
+          daily: "Daily"
+          weekly: "Weekly"
+          mean: "Mean:"
+          std_dev: "σ:"
+          percentile_95: "P95:"
+
+        quick_actions:
+          title: "Quick Actions"
+          view_similar: "View Similar Errors"
+          view_user_errors: "View User's Errors"
+          # %{platform} is a platform name (iOS, Android, Web) and is not translated.
+          view_platform_errors: "View %{platform} Errors"
+          analytics: "Analytics"
+
+      info:
+        new_badge: "NEW"
+        new_tooltip: "Error occurred within the last hour"
+        reopened: "Reopened"
+        # %{time} is a formatted timestamp.
+        reopened_tooltip: "Previously resolved, recurred %{time}"
+        copy_error_type: "Copy error type"
+        message_label: "Error Message:"
+        copy_message: "Copy error message"
+        copy: "Copy"
+
+        cause_chain:
+          title: "Exception Cause Chain"
+          # The chain is a list; "Caused by:" labels one entry, and when there
+          # is more than one the index is appended. Two keys rather than a
+          # concatenated suffix, since the numbering may sit elsewhere in the
+          # sentence.
+          caused_by: "Caused by:"
+          # %{index} is the 1-based position in the chain.
+          caused_by_indexed: "Caused by (#%{index}):"
+          backtrace: "Backtrace"
+
+        backtrace:
+          label: "Backtrace:"
+          # %{app} frames are the user's own code, %{framework} are gems/Rails.
+          frame_counts: "(%{app} your code, %{framework} framework/gems)"
+          # The button label and its tooltip differ in the original ("Copy Full
+          # Backtrace" vs "Copy full backtrace"); kept as separate keys so a
+          # translator can decide whether the distinction is worth keeping.
+          copy_full: "Copy Full Backtrace"
+          copy_full_title: "Copy full backtrace"
+          your_code: "Your Code"
+          framework_code: "Framework & Gem Code"
+          # %{count} frames in the section.
+          frames:
+            one: "%{count} frame"
+            other: "%{count} frames"
+          click_to_expand: "(click to expand)"
+          view_source: "View Source"
+          none: "No backtrace available"
+
       row:
         # Badge on an error first seen within the recent window.
         new_badge: "NEW"
