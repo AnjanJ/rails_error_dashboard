@@ -1,18 +1,42 @@
-<% content_for :page_title, "Errors" %>
+<% content_for :page_title, red_t("red.errors.index.title") %>
 
 <!-- Subscribe to Turbo Stream updates (only if Turbo Streams + ActionCable pubsub are available) -->
 <% if defined?(Turbo::StreamsHelper) && defined?(ActionCable) && respond_to?(:turbo_stream_from) && RailsErrorDashboard::Services::ErrorBroadcaster.available? %>
   <%= turbo_stream_from "error_list" %>
 <% end %>
 
+<%
+  # Value -> label lookups for the machine-valued filters.
+  #
+  # These previously went through humanize/titleize/capitalize, which apply
+  # English morphology to an identifier ("last_7_days" -> "Last 7 days") and
+  # produce nonsense in any other language. Each known value now has a key, and
+  # an unrecognised one falls back to its raw value rather than raising — a
+  # hand-edited query string must never break the page.
+  #
+  # They live here as lambdas because P2-T2's scope is this view and the row
+  # partial; the helpers are P2-T10's task, which can promote these as-is.
+  timeframe_label = ->(value) do
+    red_t("red.errors.index.filters.timeframes.#{value}", default: value.to_s)
+  end
+  frequency_label = ->(value) do
+    red_t("red.errors.index.filters.frequencies.#{value}", default: value.to_s)
+  end
+  severity_label = ->(value) do
+    red_t("red.common.severity.#{value}", default: value.to_s)
+  end
+  status_label = ->(value) do
+    red_t("red.errors.index.filters.status.#{value}", default: value.to_s)
+  end
+%>
 <div data-controller="loading">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
-    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Errors</h1>
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;"><%= red_t("red.errors.index.title") %></h1>
     <span style="font-size: 12px; color: var(--text-tertiary);">
-      Last updated: <%= local_time(Time.current, format: :full) %>
+      <%= red_t("red.errors.index.last_updated_html", time: local_time(Time.current, format: :full)) %>
       <% if defined?(Turbo::StreamsHelper) && defined?(ActionCable) && respond_to?(:turbo_stream_from) && RailsErrorDashboard::Services::ErrorBroadcaster.available? %>
         <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 6px;">
-          <i class="bi bi-broadcast" style="font-size: 10px;"></i> Live
+          <i class="bi bi-broadcast" style="font-size: 10px;"></i> <%= red_t("red.errors.index.live") %>
         </span>
       <% end %>
     </span>
@@ -30,14 +54,16 @@
   <!-- Summary line + batch actions -->
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
     <span style="font-size: 13px; color: var(--text-secondary);">
-      <strong style="color: var(--text-primary);"><%= @pagy.count %></strong> errors
+      <%= red_tp("red.errors.index.summary.errors_html", count: @pagy.count,
+            value: tag.strong(@pagy.count, style: "color: var(--text-primary);")) %>
       <span style="margin: 0 6px; color: var(--border-secondary);">&middot;</span>
-      <strong style="color: var(--status-critical);"><%= @stats[:unresolved] %></strong> unresolved
+      <%= red_t("red.errors.index.summary.unresolved_html",
+            value: tag.strong(@stats[:unresolved], style: "color: var(--status-critical);")) %>
       <span style="margin: 0 6px; color: var(--border-secondary);">&middot;</span>
       <% if params[:timeframe].present? %>
-        <%= params[:timeframe].humanize %>
+        <%= timeframe_label.call(params[:timeframe]) %>
       <% else %>
-        All time
+        <%= red_t("red.errors.index.summary.all_time") %>
       <% end %>
     </span>
   </div>
@@ -50,17 +76,17 @@
         <strong>
           <% case @stats[:spike_info][:severity] %>
           <% when :critical %>
-            Critical Error Spike Detected!
+            <%= red_t("red.errors.index.spike.critical") %>
           <% when :high %>
-            High Error Spike Detected
+            <%= red_t("red.errors.index.spike.high") %>
           <% when :elevated %>
-            Elevated Error Activity
+            <%= red_t("red.errors.index.spike.elevated") %>
           <% end %>
         </strong>
         <span style="color: var(--text-secondary);">
-          Today: <strong><%= @stats[:spike_info][:today_count] %> errors</strong>
-          (7-day avg: <%= @stats[:spike_info][:avg_count] %>) &mdash;
-          <strong><%= @stats[:spike_info][:multiplier] %>x normal levels</strong>
+          <strong><%= red_tp("red.errors.index.spike.today", count: @stats[:spike_info][:today_count]) %></strong>
+          <%= red_t("red.errors.index.spike.average", avg: @stats[:spike_info][:avg_count]) %> &mdash;
+          <strong><%= red_t("red.errors.index.spike.multiplier", multiplier: @stats[:spike_info][:multiplier]) %></strong>
         </span>
       </div>
     </div>
@@ -75,7 +101,7 @@
       <!-- Search -->
       <div style="position: relative; flex: 1 1 200px; min-width: 160px;">
         <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-tertiary);"></i>
-        <%= text_field_tag :search, params[:search], placeholder: "Search errors...", style: "width: 100%; padding: 6px 10px 6px 30px; font-size: 13px; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); background: var(--surface-base); color: var(--text-primary); outline: none; font-family: var(--font-sans);" %>
+        <%= text_field_tag :search, params[:search], placeholder: red_t("red.errors.index.filters.search_placeholder"), style: "width: 100%; padding: 6px 10px 6px 30px; font-size: 13px; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); background: var(--surface-base); color: var(--text-primary); outline: none; font-family: var(--font-sans);" %>
       </div>
 
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
@@ -86,11 +112,11 @@
           current_status = params[:status]
           is_unresolved_only = params[:unresolved] != "false" && params[:unresolved] != "0"
         %>
-        <%= link_to errors_path(app_context.merge(unresolved: '0')), class: "btn filter-pill #{current_status.blank? && !is_unresolved_only ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>All<% end %>
-        <%= link_to errors_path(app_context.merge(unresolved: '1')), class: "btn filter-pill #{is_unresolved_only && current_status.blank? ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Unresolved <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
-        <%= link_to errors_path(app_context.merge(status: 'resolved', unresolved: '0')), class: "btn filter-pill #{current_status == 'resolved' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Resolved<% end %>
-        <%= link_to errors_path(app_context.merge(assigned_to: '__assigned__', unresolved: '0')), class: "btn filter-pill #{params[:assigned_to] == '__assigned__' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Assigned<% end %>
-        <%= link_to errors_path(app_context.merge(reopened: 'true', unresolved: '0')), class: "btn filter-pill #{params[:reopened] == 'true' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>Reopened<% end %>
+        <%= link_to errors_path(app_context.merge(unresolved: '0')), class: "btn filter-pill #{current_status.blank? && !is_unresolved_only ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.status.all") %><% end %>
+        <%= link_to errors_path(app_context.merge(unresolved: '1')), class: "btn filter-pill #{is_unresolved_only && current_status.blank? ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.status.unresolved") %> <span style="font-size: 11px; opacity: 0.7;"><%= @stats[:unresolved] %></span><% end %>
+        <%= link_to errors_path(app_context.merge(status: 'resolved', unresolved: '0')), class: "btn filter-pill #{current_status == 'resolved' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.status.resolved") %><% end %>
+        <%= link_to errors_path(app_context.merge(assigned_to: '__assigned__', unresolved: '0')), class: "btn filter-pill #{params[:assigned_to] == '__assigned__' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.status.assigned") %><% end %>
+        <%= link_to errors_path(app_context.merge(reopened: 'true', unresolved: '0')), class: "btn filter-pill #{params[:reopened] == 'true' ? 'active btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.status.reopened") %><% end %>
       </div>
 
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
@@ -98,35 +124,43 @@
       <!-- Severity pills -->
       <div style="display: flex; gap: 4px;">
         <% current_severity = params[:severity] %>
-        <%= link_to errors_path(permitted_filter_params.except(:severity)), class: "filter-pill #{current_severity.blank? ? 'active' : ''}", style: "text-decoration: none;" do %>Any severity<% end %>
+        <%= link_to errors_path(permitted_filter_params.except(:severity)), class: "filter-pill #{current_severity.blank? ? 'active' : ''}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.severity.any") %><% end %>
         <% %w[critical high medium low].each do |sev| %>
-          <%= link_to errors_path(permitted_filter_params.merge(severity: sev)), class: "filter-pill #{current_severity == sev ? 'active' : ''}", style: "text-decoration: none;" do %><%= sev.capitalize %><% end %>
+          <%= link_to errors_path(permitted_filter_params.merge(severity: sev)), class: "filter-pill #{current_severity == sev ? 'active' : ''}", style: "text-decoration: none;" do %><%= severity_label.call(sev) %><% end %>
         <% end %>
       </div>
 
       <!-- Advanced filters toggle -->
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
       <button type="button" data-red-action="toggle-display" data-red-target="#advanced-filters" data-red-display="flex" class="filter-pill" style="border: none;">
-        <i class="bi bi-sliders"></i> More filters
+        <i class="bi bi-sliders"></i> <%= red_t("red.errors.index.filters.more") %>
       </button>
     </div>
 
     <!-- Advanced filters -->
     <div id="advanced-filters" style="display: none; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface-primary); border-radius: var(--radius-md); border: 1px solid var(--border-primary);">
       <% if @applications.size > 1 %>
-        <%= select_tag :application_id, options_for_select([['All Apps', '']] + @applications, params[:application_id]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+        <%= select_tag :application_id, options_for_select([[red_t("red.errors.index.filters.all_apps"), '']] + @applications, params[:application_id]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <% end %>
       <% if @platforms.size > 1 %>
-        <%= select_tag :platform, options_for_select([['All Platforms', '']] + @platforms.map { |p| [p, p] }, params[:platform]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+        <%= select_tag :platform, options_for_select([[red_t("red.errors.index.filters.all_platforms"), '']] + @platforms.map { |p| [p, p] }, params[:platform]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <% end %>
-      <%= select_tag :error_type, options_for_select([['All Types', '']] + @error_types.map { |t| [t, t] }, params[:error_type]), class: "form-select", style: "width: auto; min-width: 120px;" %>
-      <%= select_tag :timeframe, options_for_select([['All Time', ''], ['Last Hour', 'last_hour'], ['Today', 'today'], ['Yesterday', 'yesterday'], ['Last 7 Days', 'last_7_days'], ['Last 30 Days', 'last_30_days'], ['Last 90 Days', 'last_90_days']], params[:timeframe]), class: "form-select", style: "width: auto; min-width: 120px;" %>
-      <%= select_tag :frequency, options_for_select([['All Frequencies', ''], ['Once', 'once'], ['2-9 Times', 'few'], ['10-99 Times', 'frequent'], ['100+ Times', 'very_frequent'], ['Recurring', 'recurring']], params[:frequency]), class: "form-select", style: "width: auto; min-width: 120px;" %>
-      <%= select_tag :priority_level, options_for_select([['All Priorities', '']] + RailsErrorDashboard::ErrorLog.priority_options(include_emoji: true), params[:priority_level]), class: "form-select", style: "width: auto; min-width: 120px;" %>
-      <%= select_tag :assigned_to, options_for_select([['All Assignments', ''], ['Unassigned', '__unassigned__'], ['Assigned', '__assigned__']], params[:assigned_to]), class: "form-select", id: "assigned_to_filter", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :error_type, options_for_select([[red_t("red.errors.index.filters.all_types"), '']] + @error_types.map { |t| [t, t] }, params[:error_type]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%
+        # Built from the same keys the active chips read, so a label can never
+        # differ between the select and the chip it produces.
+        timeframe_options = %w[last_hour today yesterday last_7_days last_30_days last_90_days]
+          .map { |value| [ timeframe_label.call(value), value ] }
+        frequency_options = %w[once few frequent very_frequent recurring]
+          .map { |value| [ frequency_label.call(value), value ] }
+      %>
+      <%= select_tag :timeframe, options_for_select([[red_t("red.errors.index.filters.all_timeframes"), '']] + timeframe_options, params[:timeframe]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :frequency, options_for_select([[red_t("red.errors.index.filters.all_frequencies"), '']] + frequency_options, params[:frequency]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :priority_level, options_for_select([[red_t("red.errors.index.filters.all_priorities"), '']] + RailsErrorDashboard::ErrorLog.priority_options(include_emoji: true), params[:priority_level]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <%= select_tag :assigned_to, options_for_select([[red_t("red.errors.index.filters.all_assignments"), ''], [red_t("red.errors.index.filters.unassigned"), '__unassigned__'], [red_t("red.errors.index.filters.assigned"), '__assigned__']], params[:assigned_to]), class: "form-select", id: "assigned_to_filter", style: "width: auto; min-width: 120px;" %>
       <div id="assignee_name_filter" style="<%= params[:assigned_to] == '__assigned__' ? '' : 'display: none;' %>">
         <% assignees = defined?(@assignees) ? @assignees : [] %>
-        <%= select_tag :assignee_name, options_for_select([['All Assignees', '']] + assignees.map { |name| [name, name] }, params[:assignee_name]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+        <%= select_tag :assignee_name, options_for_select([[red_t("red.errors.index.filters.all_assignees"), '']] + assignees.map { |name| [name, name] }, params[:assignee_name]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       </div>
 
       <div style="display: flex; align-items: center; gap: var(--space-4); font-size: 12px; color: var(--text-secondary);">
@@ -139,61 +173,66 @@
             end
           %>
           <%= check_box_tag :unresolved, "1", is_checked, class: "form-check-input", id: "unresolved_checkbox", style: "width: 14px; height: 14px;" %>
-          Unresolved only
+          <%= red_t("red.errors.index.filters.unresolved_only") %>
         </label>
         <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
           <%= check_box_tag :hide_snoozed, "1", params[:hide_snoozed] == "1", class: "form-check-input", style: "width: 14px; height: 14px;" %>
-          Hide snoozed
+          <%= red_t("red.errors.index.filters.hide_snoozed") %>
         </label>
         <label style="display: flex; align-items: center; gap: 4px; font-weight: 400;">
           <%= check_box_tag :hide_muted, "1", params[:hide_muted] == "1", class: "form-check-input", style: "width: 14px; height: 14px;" %>
-          Hide muted
+          <%= red_t("red.errors.index.filters.hide_muted") %>
         </label>
       </div>
 
       <div style="display: flex; gap: 6px; margin-left: auto;">
-        <%= submit_tag "Apply Filters", class: "btn btn-primary btn-sm", data: { loading_target: "submitButton" } %>
-        <%= link_to "Clear", errors_path, class: "btn btn-sm", style: "font-size: 12px;" %>
+        <%= submit_tag red_t("red.errors.index.filters.apply"), class: "btn btn-primary btn-sm", data: { loading_target: "submitButton" } %>
+        <%= link_to red_t("red.errors.index.filters.clear"), errors_path, class: "btn btn-sm", style: "font-size: 12px;" %>
       </div>
     </div>
   <% end %>
 
   <!-- Active Filter Pills -->
   <%
+    # Each chip is an interpolated key, never a concatenation — the label and
+    # its value are not always in that order across languages. Search terms and
+    # application, platform and type names are free-form user data and are
+    # interpolated verbatim, never translated.
     active_filters = []
-    active_filters << { label: "Search: #{params[:search]}", param: :search } if params[:search].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.search", value: params[:search]), param: :search } if params[:search].present?
     if params[:application_id].present? && defined?(@applications)
       app_name = @applications.find { |name, id| id.to_s == params[:application_id].to_s }&.first
-      active_filters << { label: "App: #{app_name}", param: :application_id } if app_name
+      active_filters << { label: red_t("red.errors.index.filters.chips.application", value: app_name), param: :application_id } if app_name
     end
-    active_filters << { label: "Platform: #{params[:platform]}", param: :platform } if params[:platform].present?
-    active_filters << { label: "Type: #{params[:error_type]}", param: :error_type } if params[:error_type].present?
-    active_filters << { label: "Severity: #{params[:severity].titleize}", param: :severity } if params[:severity].present?
-    active_filters << { label: "Timeframe: #{params[:timeframe].humanize}", param: :timeframe } if params[:timeframe].present?
-    active_filters << { label: "Frequency: #{params[:frequency].humanize}", param: :frequency } if params[:frequency].present?
-    active_filters << { label: "Status: #{params[:status].humanize}", param: :status } if params[:status].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.platform", value: params[:platform]), param: :platform } if params[:platform].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.error_type", value: params[:error_type]), param: :error_type } if params[:error_type].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.severity", value: severity_label.call(params[:severity])), param: :severity } if params[:severity].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.timeframe", value: timeframe_label.call(params[:timeframe])), param: :timeframe } if params[:timeframe].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.frequency", value: frequency_label.call(params[:frequency])), param: :frequency } if params[:frequency].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.status", value: status_label.call(params[:status])), param: :status } if params[:status].present?
     if params[:priority_level].present?
       # priority_level is the integer key (3=Critical/P0, 0=Low/P3); look up the short_label
       # rather than interpolating the raw integer, which inverts the P-number.
+      # P0-P3 are identifiers, not words, and stay untranslated.
       priority_data = RailsErrorDashboard::ErrorLog::PRIORITY_LEVELS[params[:priority_level].to_i]
       priority_short = priority_data ? priority_data[:short_label] : "P?"
-      active_filters << { label: "Priority: #{priority_short}", param: :priority_level }
+      active_filters << { label: red_t("red.errors.index.filters.chips.priority", value: priority_short), param: :priority_level }
     end
     if params[:assigned_to] == '__unassigned__'
-      active_filters << { label: "Unassigned", param: :assigned_to }
+      active_filters << { label: red_t("red.errors.index.filters.unassigned"), param: :assigned_to }
     elsif params[:assigned_to] == '__assigned__'
-      active_filters << { label: "Assigned", param: :assigned_to }
+      active_filters << { label: red_t("red.errors.index.filters.assigned"), param: :assigned_to }
     end
   %>
   <% if active_filters.any? %>
     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: var(--space-4); font-size: 12px;">
-      <span style="color: var(--text-tertiary); font-weight: 500;">Filters:</span>
+      <span style="color: var(--text-tertiary); font-weight: 500;"><%= red_t("red.errors.index.filters.active_label") %></span>
       <% active_filters.each do |filter| %>
-        <%= link_to errors_path(permitted_filter_params.except(filter[:param])), class: "filter-pill active", style: "text-decoration: none; font-size: 11px; padding: 3px 8px;" do %>
+        <%= link_to errors_path(permitted_filter_params.except(filter[:param])), class: "filter-pill active", style: "text-decoration: none; font-size: 11px; padding: 3px 8px;", "aria-label": red_t("red.errors.index.filters.chips.remove") do %>
           <%= filter[:label] %> <i class="bi bi-x" style="font-size: 12px;"></i>
         <% end %>
       <% end %>
-      <%= link_to errors_path, style: "color: var(--text-tertiary); font-size: 11px;" do %>Clear all<% end %>
+      <%= link_to errors_path, style: "color: var(--text-tertiary); font-size: 11px;" do %><%= red_t("red.errors.index.filters.clear_all") %><% end %>
     </div>
   <% end %>
 
@@ -210,10 +249,10 @@
           <input type="checkbox" id="select-all-batch" class="form-check-input" style="accent-color: var(--accent); margin: 0;" checked>
           <span id="selected-count" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-right: var(--space-2);"></span>
           <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
-            <i class="bi bi-check-circle"></i> Resolve
+            <i class="bi bi-check-circle"></i> <%= red_t("red.errors.index.batch.resolve") %>
           <% end %>
-          <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: "Are you sure you want to delete the selected errors?" } do %>
-            <i class="bi bi-trash"></i> Delete
+          <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: red_t("red.errors.index.batch.confirm_delete") } do %>
+            <i class="bi bi-trash"></i> <%= red_t("red.errors.index.batch.delete") %>
           <% end %>
         <% end %>
       </div>
@@ -223,18 +262,18 @@
           <thead>
             <tr id="thead-columns" style="border-bottom: 1px solid var(--border-primary);">
               <th style="width: 36px; padding: var(--space-3) var(--space-4); text-align: center;">
-                <input type="checkbox" id="select-all" class="form-check-input" style="accent-color: var(--accent);">
+                <input type="checkbox" id="select-all" class="form-check-input" style="accent-color: var(--accent);" aria-label="<%= red_t("red.errors.index.columns.select_all") %>">
               </th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: left;">Error</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: left; width: 100px;">Status</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 70px;">Events</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 55px;">Users</th>
-              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 85px;">Last seen</th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: left;"><%= red_t("red.errors.index.columns.error") %></th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: left; width: 100px;"><%= red_t("red.errors.index.columns.status") %></th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 70px;"><%= red_t("red.errors.index.columns.events") %></th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 55px;"><%= red_t("red.errors.index.columns.users") %></th>
+              <th style="padding: var(--space-3) var(--space-4); text-align: right; width: 85px;"><%= red_t("red.errors.index.columns.last_seen") %></th>
               <% if @applications.size > 1 && params[:application_id].blank? %>
-                <th style="padding: var(--space-3) var(--space-4); width: 100px;">App</th>
+                <th style="padding: var(--space-3) var(--space-4); width: 100px;"><%= red_t("red.errors.index.columns.application") %></th>
               <% end %>
               <% if @platforms.size > 1 %>
-                <th style="padding: var(--space-3) var(--space-4); width: 100px;">Platform</th>
+                <th style="padding: var(--space-3) var(--space-4); width: 100px;"><%= red_t("red.errors.index.columns.platform") %></th>
               <% end %>
             </tr>
           </thead>
@@ -249,7 +288,7 @@
         <!-- Pagination -->
         <% if @pagy.pages > 1 %>
           <div style="padding: var(--space-4); border-top: 1px solid var(--border-primary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-            <span style="font-size: 12px; color: var(--text-tertiary);">Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> errors</span>
+            <span style="font-size: 12px; color: var(--text-tertiary);"><%= red_t("red.errors.index.pagination", from: @pagy.from, to: @pagy.to, count: @pagy.count) %></span>
             <div><%== @pagy.series_nav(:bootstrap) %></div>
           </div>
         <% end %>
@@ -267,13 +306,13 @@
       <div class="red-empty-state">
         <% if params[:search].present? || params[:error_type].present? || params[:severity].present? %>
           <div class="red-empty-state-icon"><i class="bi bi-funnel"></i></div>
-          <div class="red-empty-state-title">No errors match your filters</div>
-          <div class="red-empty-state-message">Try adjusting your search or filter criteria to find what you're looking for.</div>
-          <%= link_to errors_path, class: "red-empty-state-cta" do %><i class="bi bi-x-circle"></i> Clear all filters<% end %>
+          <div class="red-empty-state-title"><%= red_t("red.errors.index.empty.filtered_title") %></div>
+          <div class="red-empty-state-message"><%= red_t("red.errors.index.empty.filtered_message") %></div>
+          <%= link_to errors_path, class: "red-empty-state-cta" do %><i class="bi bi-x-circle"></i> <%= red_t("red.errors.index.empty.filtered_cta") %><% end %>
         <% else %>
           <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-          <div class="red-empty-state-title">All clear!</div>
-          <div class="red-empty-state-message">No errors have been logged yet. Your application is running smoothly. Errors will appear here automatically when they occur.</div>
+          <div class="red-empty-state-title"><%= red_t("red.errors.index.empty.clear_title") %></div>
+          <div class="red-empty-state-message"><%= red_t("red.errors.index.empty.clear_message") %></div>
         <% end %>
       </div>
     <% end %>

@@ -32,6 +32,16 @@ en:
       close: "Close"
       unknown: "Unknown"
 
+      # Severity levels. The stored value is a machine string ("critical");
+      # displaying it previously meant capitalize/titleize, which is English
+      # morphology applied to an identifier. Shared across pages, so these live
+      # in common rather than under errors.
+      severity:
+        critical: "Critical"
+        high: "High"
+        medium: "Medium"
+        low: "Low"
+
     nav:
       # Section headings in the sidebar.
       sections:
@@ -124,6 +134,166 @@ en:
       analytics: "Analytics"
       toggle_sidebar: "Toggle sidebar"
       show_shortcuts: "Show shortcuts"
+
+    errors:
+      index:
+        title: "Errors"
+        # %{time} is a <span class="local-time"> element rendered by
+        # ApplicationHelper#local_time, so this key is _html and the markup
+        # must survive interpolation.
+        last_updated_html: "Last updated: %{time}"
+        live: "Live"
+
+        # The summary line above the table. The original placed a bare noun
+        # after a <strong>-wrapped number; these keys interpolate the styled
+        # number instead, so a translation can put it anywhere in the phrase.
+        #
+        # %{count} selects the plural form and is the plain number; %{value} is
+        # the same number wrapped in its <strong>, which is why these are _html.
+        # Interpolating markup as %{count} would break form selection.
+        summary:
+          errors_html:
+            one: "%{value} error"
+            other: "%{value} errors"
+          unresolved_html: "%{value} unresolved"
+          all_time: "All time"
+
+        spike:
+          critical: "Critical Error Spike Detected!"
+          high: "High Error Spike Detected"
+          elevated: "Elevated Error Activity"
+          # %{count} is today's error count, %{avg} the 7-day average and
+          # %{multiplier} the ratio between them. One sentence, not three
+          # fragments — the clause order is not universal.
+          today:
+            one: "Today: %{count} error"
+            other: "Today: %{count} errors"
+          average: "(7-day avg: %{avg})"
+          multiplier: "%{multiplier}x normal levels"
+
+        filters:
+          search_placeholder: "Search errors..."
+          more: "More filters"
+          apply: "Apply Filters"
+          clear: "Clear"
+          clear_all: "Clear all"
+          # Label preceding the active-filter chips.
+          active_label: "Filters:"
+
+          status:
+            all: "All"
+            unresolved: "Unresolved"
+            resolved: "Resolved"
+            assigned: "Assigned"
+            reopened: "Reopened"
+
+          severity:
+            any: "Any severity"
+
+          # Select-tag "all" options. Each is a whole phrase, not "All" plus a
+          # noun — languages differ on agreement between the two.
+          all_apps: "All Apps"
+          all_platforms: "All Platforms"
+          all_types: "All Types"
+          all_timeframes: "All Time"
+          all_frequencies: "All Frequencies"
+          all_priorities: "All Priorities"
+          all_assignments: "All Assignments"
+          all_assignees: "All Assignees"
+
+          unassigned: "Unassigned"
+          assigned: "Assigned"
+
+          unresolved_only: "Unresolved only"
+          hide_snoozed: "Hide snoozed"
+          hide_muted: "Hide muted"
+
+          # Timeframe and frequency option labels. These were previously
+          # produced by humanize() on the param value, which applies English
+          # morphology to a machine value and yields nonsense elsewhere. The
+          # same keys serve both the select options and the active chips, so
+          # the two can never disagree.
+          timeframes:
+            last_hour: "Last Hour"
+            today: "Today"
+            yesterday: "Yesterday"
+            last_7_days: "Last 7 Days"
+            last_30_days: "Last 30 Days"
+            last_90_days: "Last 90 Days"
+
+          frequencies:
+            once: "Once"
+            few: "2-9 Times"
+            frequent: "10-99 Times"
+            very_frequent: "100+ Times"
+            recurring: "Recurring"
+
+          # Chip labels. %{value} is the filter's display value — for search
+          # terms, application and platform names it is free-form user data and
+          # is never translated, only the label around it.
+          chips:
+            search: "Search: %{value}"
+            application: "App: %{value}"
+            platform: "Platform: %{value}"
+            error_type: "Type: %{value}"
+            severity: "Severity: %{value}"
+            timeframe: "Timeframe: %{value}"
+            frequency: "Frequency: %{value}"
+            status: "Status: %{value}"
+            priority: "Priority: %{value}"
+            remove: "Remove filter"
+
+        columns:
+          error: "Error"
+          status: "Status"
+          events: "Events"
+          users: "Users"
+          last_seen: "Last seen"
+          application: "App"
+          platform: "Platform"
+          select_all: "Select all errors"
+
+        batch:
+          # %{count} of the visible errors are selected.
+          selected:
+            one: "%{count} selected"
+            other: "%{count} selected"
+          resolve: "Resolve"
+          delete: "Delete"
+          confirm_delete: "Are you sure you want to delete the selected errors?"
+
+        # %{from}, %{to} and %{count} bound the current page.
+        pagination: "Showing %{from}–%{to} of %{count} errors"
+
+        empty:
+          filtered_title: "No errors match your filters"
+          filtered_message: "Try adjusting your search or filter criteria to find what you're looking for."
+          filtered_cta: "Clear all filters"
+          clear_title: "All clear!"
+          clear_message: >-
+            No errors have been logged yet. Your application is running smoothly.
+            Errors will appear here automatically when they occur.
+
+      row:
+        # Badge on an error first seen within the recent window.
+        new_badge: "NEW"
+        reopened: "Reopened"
+        # %{user} is a user identifier — free-form data, never translated.
+        view_user_errors: "View all errors for user %{user}"
+
+        # Workflow status labels. The status is a machine value ("in_progress");
+        # it was previously displayed by tr('_', ' ') plus a CSS capitalize,
+        # which is English morphology applied to an identifier. Each value now
+        # has its own key, and an unrecognized value falls back to the raw text.
+        status:
+          unresolved: "unresolved"
+          resolved: "resolved"
+          in_progress: "in progress"
+          investigating: "investigating"
+          wont_fix: "wont fix"
+          assigned: "assigned"
+          snoozed: "snoozed"
+          muted: "muted"
 
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a
