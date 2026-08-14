@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe "rails_error_dashboard/errors/_llm_summary.html.erb", type: :view do
   before(:all) do
     ActionView::TestCase::TestController.helper(RailsErrorDashboard::ApplicationHelper)
+    # Same reason: the partial now calls red_t, which lives in I18nHelper.
+    ActionView::TestCase::TestController.helper(RailsErrorDashboard::I18nHelper)
   end
 
   before do

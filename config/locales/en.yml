@@ -368,6 +368,295 @@ en:
         filtered: "[FILTERED]"
         truncated: "truncated"
 
+      # Issue-tracker provider display names. Brands, so identical in every
+      # locale, but keys rather than provider.capitalize — that renders "github"
+      # as "Github", which is not how any of them write their own name.
+      deprecations:
+        title: "Deprecation Warnings"
+        hint: "Rails deprecation warnings detected during this request"
+        column_warning: "Warning"
+        column_source: "Source"
+        footer_tip: "Fix deprecations before upgrading Rails to avoid breaking changes."
+        upgrade_guide: "Rails Upgrade Guide"
+
+      n_plus_one:
+        title: "N+1 Query Detection"
+        hint: "Repeated query patterns detected in this request's SQL breadcrumbs"
+        # %{count} repeated query patterns were found.
+        patterns:
+          one: "%{count} pattern"
+          other: "%{count} patterns"
+        column_repeats: "Repeats"
+        column_query: "Query Pattern"
+        column_total_time: "Total Time"
+        # %{fingerprint} is a normalized SQL fingerprint — diagnostic, verbatim.
+        fingerprint: "Fingerprint: %{fingerprint}"
+        # Whole sentences. The English original wrapped prose around <code>
+        # elements holding method names; the names stay English, but the words
+        # around them cannot be reassembled in that order in every language.
+        # %{table}, %{includes} and %{preload} arrive as markup, hence _html.
+        tip_preload_html: "Tip: Preload %{table} with %{includes} or %{preload}"
+        tip_generic_html: "Tip: Use %{includes} or %{preload} to eager load associations"
+        eager_loading_guide: "Rails Eager Loading Guide"
+
+      cache_health:
+        title: "Cache Health"
+        # %{count} cache operations were recorded.
+        operations:
+          one: "%{count} operation"
+          other: "%{count} operations"
+        hint: "Cache activity analysis from this request's breadcrumbs"
+        reads: "Reads"
+        writes: "Writes"
+        hit_rate: "Hit Rate"
+        # %{count} cache hits and misses.
+        hits:
+          one: "%{count} hit"
+          other: "%{count} hits"
+        misses:
+          one: "%{count} miss"
+          other: "%{count} misses"
+        # %{count} reads whose hit status was not recorded.
+        unknown_status:
+          one: "%{count} read with unknown hit status (older breadcrumbs)"
+          other: "%{count} reads with unknown hit status (older breadcrumbs)"
+        # %{duration} is a formatted millisecond figure wrapped in <strong>,
+        # hence _html.
+        total_time_html: "Total cache time: %{duration}"
+        slowest_html: "Slowest: %{duration}"
+        low_hit_rate: "Low hit rate — review cache key design and TTL settings."
+        moderate_hit_rate: "Moderate hit rate — consider warming caches or adjusting expiration."
+        caching_guide: "Rails Caching Guide"
+
+      breadcrumbs:
+        title: "Breadcrumbs"
+        # %{count} breadcrumb events were recorded.
+        events:
+          one: "%{count} event"
+          other: "%{count} events"
+        hint: "Activity trail leading up to this error"
+        column_category: "Category"
+        column_message: "Message"
+        column_duration: "Duration"
+
+      patterns:
+        title: "Occurrence Patterns"
+        # %{days} is the analysis window.
+        window: "(Last %{days} days)"
+        pattern_type: "Pattern Type"
+
+        types:
+          business_hours:
+            label: "Business Hours Pattern"
+            description: "Errors peak during business hours (9am-5pm), suggesting user activity correlation"
+          night:
+            label: "Night Pattern"
+            description: "Errors peak during night hours (midnight-6am), possibly from background jobs or automated tasks"
+          weekend:
+            label: "Weekend Pattern"
+            description: "Most errors occur on weekends, suggesting weekend-specific usage patterns"
+          uniform:
+            label: "Uniform Pattern"
+            description: "Errors distributed evenly throughout the day with no clear pattern"
+          none:
+            label: "No Pattern Detected"
+            description: "Not enough data to identify a clear occurrence pattern"
+
+        strength: "Pattern Strength"
+        # Each strength is one whole sentence. The English original was a bold
+        # fragment, a dash, and a trailing clause, which cannot be reassembled
+        # in that order in every language. %{label} is the bold part.
+        strengths:
+          strong:
+            label: "Strong pattern"
+            description: "Errors highly concentrated in specific hours"
+          moderate:
+            label: "Moderate pattern"
+            description: "Some concentration in specific hours"
+          weak:
+            label: "Weak pattern"
+            description: "Errors distributed fairly evenly"
+
+        heatmap_title: "Hourly Distribution Heatmap"
+        # %{multiplier} is the peak threshold relative to the average.
+        heatmap_legend: "Darker cells = more errors. Red borders indicate peak hours (>%{multiplier}x average)."
+        # %{hour} is a formatted hour, %{count} the error count in it.
+        heatmap_cell:
+          one: "%{hour} - %{count} error"
+          other: "%{hour} - %{count} errors"
+        peak_hours: "Peak Hours:"
+        peak_hours_hint: >-
+          These hours have more than 2x the average error rate. Consider monitoring
+          deployments or load during these times.
+
+        bursts_title: "Error Bursts"
+        # %{days} is the burst analysis window.
+        bursts_window: "(Last %{days} days)"
+        bursts_hint: >-
+          Error bursts are rapid sequences where multiple errors occur within minutes.
+          This may indicate cascading failures or load spikes.
+        column_start_time: "Start Time"
+        column_duration: "Duration"
+        column_error_count: "Error Count"
+        column_intensity: "Intensity"
+        # %{minutes} and %{seconds} are the burst's duration.
+        burst_duration: "%{minutes} min"
+        burst_duration_seconds: "(%{seconds}s)"
+        # %{count} errors in the burst. %{value} is the same number wrapped in
+        # its <strong>, hence _html; interpolating markup as %{count} would
+        # break plural-form selection.
+        burst_errors_html:
+          one: "%{value} error"
+          other: "%{value} errors"
+        intensity_high: "High (20+ errors)"
+        intensity_medium: "Medium (10-19 errors)"
+        intensity_low: "Low (5-9 errors)"
+        # %{shown} of %{total} bursts are listed.
+        bursts_truncated: "Showing %{shown} of %{total} detected bursts"
+
+        recommendation_label: "Recommendation:"
+        recommendation_intro: "Multiple error bursts detected. Investigate:"
+        recommendation_deploys: "Recent deployments or configuration changes around burst times"
+        recommendation_load: "Load spikes or traffic patterns"
+        recommendation_cascades: "Cascading failures from related errors"
+        recommendation_jobs: "Background job failures or retry storms"
+
+        empty: "No occurrence patterns or bursts detected. More data may be needed for pattern analysis."
+
+      providers:
+        github: "GitHub"
+        gitlab: "GitLab"
+        bitbucket: "Bitbucket"
+        jira: "Jira"
+        linear: "Linear"
+        # Used when no provider is configured. Unlike the names above this is a
+        # common noun and IS translated.
+        generic: "Platform"
+        generic_lowercase: "the platform"
+
+      discussion:
+        title: "Discussion"
+        activity_log: "Activity Log"
+        # %{provider} is a provider display name from red.errors.providers.
+        reply_on: "Reply on %{provider}"
+        start_on: "Start discussion on %{provider}"
+        empty: "No comments yet. Be the first to discuss this error on %{provider}."
+
+      issue_section:
+        title: "Issue Tracker"
+        view_issue: "View Issue"
+        # Shown instead of a provider name when the provider is unknown.
+        linked: "Linked"
+        # %{provider} is a display name, %{number} the issue number.
+        issue_reference: "%{provider} #%{number}"
+        # Issue states are machine values from the tracker's API. capitalize
+        # applied English morphology to them.
+        states:
+          open: "Open"
+          closed: "Closed"
+          merged: "Merged"
+        assignees: "Assignees"
+        unassigned: "Unassigned"
+        labels: "Labels"
+        no_labels: "No labels"
+        create_new: "Create New Issue"
+        # %{provider} is a provider display name. One key, not "Create " plus a
+        # name plus " Issue" — the object does not follow the verb everywhere.
+        create_issue: "Create %{provider} Issue"
+        # %{token} and %{url} are pre-formatted <code> elements naming config
+        # options, hence _html. The option names themselves stay English.
+        configure_html: "Configure %{token} and %{url} in your initializer to enable issue creation."
+        link_existing: "Link Existing Issue"
+        link: "Link"
+
+      cascades:
+        title: "Error Cascades"
+        hint: "Causal relationships between errors"
+        triggered_by: "Triggered By"
+        triggered_by_hint: "(errors that cause this one)"
+        triggers: "Triggers"
+        triggers_hint: "(errors caused by this one)"
+        # One key set: the parent and child tables render the same columns.
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_probability: "Probability"
+        column_frequency: "Frequency"
+        column_avg_delay: "Avg Delay"
+        view: "View"
+        # %{probability} and %{frequency} are the thresholds the footnote cites,
+        # so the sentence and the code that sets them cannot drift apart.
+        footnote: >-
+          Cascade patterns show causal relationships. High probability (≥%{probability}%)
+          and frequency (≥%{frequency}) indicate strong cascades.
+
+      llm_summary:
+        title: "LLM Calls"
+        hint: "Aggregated from request breadcrumbs"
+        calls: "Calls"
+        tokens: "Tokens"
+        cost: "Cost"
+        input: "Input"
+        output: "Output"
+        tool_calls: "Tool calls"
+        total_time: "Total time"
+        errors: "Errors"
+        by_model: "By model"
+        # One sentence, not a count plus a pluralized noun plus a trailing
+        # clause bolted on with an em dash.
+        failed_calls:
+          one: "%{count} failed call — see breadcrumbs trail for details."
+          other: "%{count} failed calls — see breadcrumbs trail for details."
+
+      timeline:
+        title: "Timeline"
+        hint: "Recent related errors"
+        current_error: "Current Error"
+        # %{id} is a user identifier — free-form data, not translated.
+        user: "User: %{id}"
+        resolved: "Resolved"
+        notes_label: "Resolution Notes:"
+        # %{notes} is the user's own resolution comment, interpolated verbatim.
+        notes_tooltip: "Resolution Notes: %{notes}"
+
+      user_errors_table:
+        column_rank: "Rank"
+        column_user: "User"
+        column_error_type_count: "Different Error Types"
+        column_error_count: "Error Count"
+        column_percentage: "Percentage"
+        column_error_types: "Error Types"
+        column_actions: "Actions"
+        # %{count} distinct error types affected this user.
+        types:
+          one: "%{count} type"
+          other: "%{count} types"
+        # %{count} further error types beyond the ones listed.
+        more:
+          one: "+%{count} more"
+          other: "+%{count} more"
+        view_errors: "View Errors"
+
+      co_occurring:
+        title: "Co-occurring Errors"
+        badge: "Time Patterns"
+        # %{minutes} is the correlation window.
+        hint: "Errors that occur within %{minutes} minutes of this error"
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_platform: "Platform"
+        column_frequency: "Frequency"
+        column_avg_delay: "Avg Delay"
+        # %{count} co-occurrences.
+        times:
+          one: "%{count} time"
+          other: "%{count} times"
+        # %{duration} is a formatted duration. Whole phrases rather than a
+        # duration with a direction word appended — word order differs.
+        before: "%{duration} before"
+        after: "%{duration} after"
+        simultaneous: "simultaneous"
+        view: "View"
+
       source_code:
         # %{host} is a repository host name (GitHub, GitLab, Bitbucket) — a
         # brand name, not translated.
