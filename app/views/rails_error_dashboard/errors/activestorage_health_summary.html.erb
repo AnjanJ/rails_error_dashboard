@@ -1,21 +1,21 @@
-<% content_for :page_title, "ActiveStorage Health" %>
+<% content_for :page_title, red_t("red.health.activestorage.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-cloud-arrow-up me-2"></i>
-      ActiveStorage Health
+      <%= red_t("red.health.activestorage.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to activestorage_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.health.days_filter.7") %>
       <% end %>
       <%= link_to activestorage_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.health.days_filter.30") %>
       <% end %>
       <%= link_to activestorage_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.health.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,18 @@
   <% if @unique_services == 0 %>
     <div class="red-empty-state">
       <i class="bi bi-cloud-arrow-up display-1 text-success mb-3"></i>
-      <div class="red-empty-state-title">No ActiveStorage Events Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.health.activestorage.empty.title") %></div>
       <p class="text-muted">
-        No ActiveStorage service operations were detected in error breadcrumbs over the last <%= @days %> days.
+        <%= red_t("red.health.activestorage.empty.message", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How ActiveStorage tracking works:</h6>
+          <h6><%= red_t("red.health.activestorage.empty.how_it_works") %></h6>
           <ul class="mb-0">
-            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
-            <li>ActiveStorage tracking must be enabled (<code>enable_activestorage_tracking = true</code>)</li>
-            <li>ActiveStorage must be configured in your app</li>
-            <li>Uploads, downloads, and deletes are captured as breadcrumbs during requests that produce errors</li>
+            <li><%= red_t("red.health.activestorage.empty.step_breadcrumbs_html") %></li>
+            <li><%= red_t("red.health.activestorage.empty.step_tracking_html") %></li>
+            <li><%= red_t("red.health.activestorage.empty.step_configured") %></li>
+            <li><%= red_t("red.health.activestorage.empty.step_capture") %></li>
           </ul>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-primary"><%= @unique_services %></div>
-            <small class="text-muted">Storage Services</small>
+            <small class="text-muted"><%= red_t("red.health.activestorage.stats.storage_services") %></small>
           </div>
         </div>
       </div>
@@ -53,7 +53,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @total_operations %></div>
-            <small class="text-muted">Total Operations</small>
+            <small class="text-muted"><%= red_t("red.health.activestorage.stats.total_operations") %></small>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= @errors_with_storage %></div>
-            <small class="text-muted">Errors with Storage Ops</small>
+            <small class="text-muted"><%= red_t("red.health.activestorage.stats.errors_with_storage") %></small>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-cloud-arrow-up text-primary me-2"></i>
-          Storage Operations by Service
+          <%= red_t("red.health.activestorage.table.title") %>
           <span class="badge bg-primary"><%= @unique_services %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -81,16 +81,16 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th>Service</th>
-                <th width="90">Uploads</th>
-                <th width="100">Downloads</th>
-                <th width="90">Deletes</th>
-                <th width="90">Exists</th>
-                <th width="80">Total</th>
-                <th width="100">Avg Duration</th>
-                <th width="100">Slowest</th>
-                <th width="80">Errors</th>
-                <th width="140">Last Seen</th>
+                <th><%= red_t("red.health.activestorage.table.column_service") %></th>
+                <th width="90"><%= red_t("red.health.activestorage.table.column_uploads") %></th>
+                <th width="100"><%= red_t("red.health.activestorage.table.column_downloads") %></th>
+                <th width="90"><%= red_t("red.health.activestorage.table.column_deletes") %></th>
+                <th width="90"><%= red_t("red.health.activestorage.table.column_exists") %></th>
+                <th width="80"><%= red_t("red.health.activestorage.table.column_total") %></th>
+                <th width="100"><%= red_t("red.health.activestorage.table.column_avg_duration") %></th>
+                <th width="100"><%= red_t("red.health.activestorage.table.column_slowest") %></th>
+                <th width="80"><%= red_t("red.health.activestorage.table.column_errors") %></th>
+                <th width="140"><%= red_t("red.health.activestorage.table.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -131,11 +131,11 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Slow storage operations may indicate network issues, large file sizes, or service provider throttling.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.health.activestorage.table.tip") %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/active_storage_overview.html" target="_blank" rel="noopener" class="text-decoration-none">
-              <i class="bi bi-book"></i> ActiveStorage Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.health.activestorage.table.guide_link") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>

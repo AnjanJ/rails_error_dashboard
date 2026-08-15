@@ -905,3 +905,294 @@ en:
         date_only: "%B %d, %Y"
         time_only: "%I:%M:%S %p"
         datetime: "%b %d, %Y %H:%M"
+
+    health:
+      # Shared across all six health-summary pages (database, LLM, cache, job,
+      # ActionCable, ActiveStorage): the 7/30/90-day range toggle in the page
+      # header. One key set so the wording can't drift page to page; P2-T9
+      # pages with the identical toggle should reuse these rather than adding
+      # their own.
+      days_filter:
+        "7": "7 Days"
+        "30": "30 Days"
+        "90": "90 Days"
+
+      # Table column headers repeated on more than one health page.
+      columns:
+        error: "Error"
+        last_seen: "Last Seen"
+
+      database:
+        title: "Database Health"
+
+        stats:
+          errors_with_pool: "Errors with Pool Data"
+          peak_utilization: "Peak Utilization"
+          total_dead: "Total Dead"
+          total_waiting: "Total Waiting"
+
+        live:
+          title: "Live Database Health"
+          # %{adapter} is the detected AR adapter name (e.g. "mysql2") — a
+          # machine identifier, not translated. NOT an _html key: the adapter
+          # name comes from ActiveRecord::Base.connection.adapter_name, and a
+          # custom/misbehaving adapter could return anything. Escaped via the
+          # normal red_t path; the <strong> wrapper is built in the view.
+          non_postgresql: "Non-PostgreSQL adapter detected (%{adapter})."
+          non_postgresql_hint: >-
+            Live table, index, and activity stats require PostgreSQL. Connection
+            pool and historical data are still available below.
+          pool_size: "Pool Size"
+          busy: "Busy"
+          idle: "Idle"
+          dead: "Dead"
+          waiting: "Waiting"
+
+        summary:
+          total_db_size: "Total DB Size"
+          tables: "Tables"
+          unused_indexes: "Unused Indexes"
+          active_connections: "Active Connections"
+
+        host_tables:
+          title: "Host App Tables"
+        gem_tables:
+          title: "Error Dashboard Tables"
+        unused_indexes:
+          title: "Unused Indexes"
+          column_index: "Index"
+          column_table: "Table"
+          column_size: "Size"
+        activity:
+          title: "Connection Activity"
+          # %{count} connections total, currently.
+          total_badge: "%{count} total"
+          # %{count} of them waiting.
+          waiting_badge: "%{count} waiting"
+          column_state: "State"
+          column_count: "Count"
+          column_waiting: "Waiting"
+
+        # Shared table columns for the host/gem table listings.
+        table_columns:
+          table: "Table"
+          est_rows: "Est. Rows"
+          size: "Size"
+          seq_scans: "Seq Scans"
+          idx_scans: "Idx Scans"
+          dead_tuples: "Dead Tuples"
+          last_vacuum: "Last Vacuum"
+        never_vacuumed: "Never"
+
+        pool_history:
+          title: "Connection Pool by Error"
+          empty_title: "No Connection Pool Data Found"
+          # %{days} is the analysis window.
+          empty_message_html: >-
+            No connection pool stats were detected in system health snapshots over
+            the last %{days} days. Enable <code>enable_system_health = true</code>
+            to capture pool stats at error time.
+          column_error: "Error"
+          column_error_type: "Error Type"
+          column_utilization: "Utilization"
+          column_busy: "Busy"
+          column_idle: "Idle"
+          column_dead: "Dead"
+          column_waiting: "Waiting"
+          column_pool_size: "Pool Size"
+          column_last_seen: "Last Seen"
+          tip: >-
+            High utilization during errors may indicate connection pool
+            exhaustion or long-running queries.
+          guide_link: "Database Guide"
+
+      llm:
+        title: "LLM Health"
+
+        disabled:
+          title: "LLM Observability Not Enabled"
+          message: "To see per-model LLM stats here, enable LLM observability and breadcrumbs."
+          enable_in_html: "Enable in <code>config/initializers/rails_error_dashboard.rb</code>:"
+
+        empty:
+          title: "No LLM Calls Detected"
+          # %{days} is the analysis window.
+          message: >-
+            No LLM API calls were captured in error breadcrumbs over the last
+            %{days} days. Instrument LLM calls in one of three ways:
+          tab_otel: "OpenTelemetry"
+          tab_faraday: "Faraday / RubyLLM"
+          tab_manual: "Manual"
+          otel_hint: "Already running an OTel collector? Drop in this gem and we'll subscribe automatically."
+          otel_requires_html: "Requires <code>enable_llm_observability = true</code>."
+          faraday_hint: "Using <code>ruby_llm</code>, <code>openai</code>, <code>anthropic</code>, or any Faraday-based SDK? Insert the middleware once."
+          faraday_note: "RED auto-detects provider/model and tokens from the request/response."
+          manual_hint: "Direct <code>Net::HTTP</code>, gRPC, local inference, or anything else — instrument by hand."
+          manual_note_html: "Cost is auto-estimated from tokens — payload can override with <code>cost_usd_estimate:</code>."
+
+        stats:
+          calls: "LLM Calls"
+          models: "Models"
+          # %{rate} is the error-rate percentage cited in the same stat tile.
+          errors_with_llm: "Errors with LLM (%{rate}%)"
+          total_cost: "Total Cost"
+
+        by_model:
+          title: "Performance by Model"
+          column_provider_model: "Provider · Model"
+          column_calls: "Calls"
+          column_tools: "Tools"
+          column_avg_tokens: "Avg tokens"
+          column_avg_latency: "Avg latency"
+          column_error_rate: "Error rate"
+          column_cost: "Cost"
+          column_top_error: "Top error"
+          column_last_seen: "Last seen"
+          avg_tokens_in: "in"
+          avg_tokens_out: "out"
+          # %{count} calls in this model failed.
+          failed_count: "%{count} failed"
+          # Contains a literal &gt; entity, hence _html.
+          tip_html: >-
+            High error rates on a model often signal quota or rate-limit issues.
+            Slow latency (&gt;5s) suggests provider degradation.
+          guide_link: "Instrumentation Guide"
+
+      cache:
+        title: "Cache Health"
+
+        empty:
+          title: "No Cache Activity Found"
+          # %{days} is the analysis window.
+          message: "No cache operations were detected in error breadcrumbs over the last %{days} days."
+          how_it_works: "How cache tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_capture: "Cache reads and writes are captured as breadcrumbs during requests that produce errors"
+          step_hit_status: "Hit/miss status is tracked for read operations"
+          step_sort: "This page shows cache performance per-error, sorted worst-first"
+
+        stats:
+          errors_with_cache: "Errors with Cache"
+          avg_hit_rate: "Avg Hit Rate"
+          total_ops: "Total Cache Ops"
+
+        table:
+          title: "Cache Performance by Error"
+          column_error: "Error"
+          column_reads: "Reads"
+          column_writes: "Writes"
+          column_hit_rate: "Hit Rate"
+          column_total_time: "Total Time"
+          column_slowest_op: "Slowest Op"
+          column_last_seen: "Last Seen"
+          tip: "Low hit rates may indicate cache keys that expire too quickly or aren't being set properly."
+          guide_link: "Rails Caching Guide"
+
+      job:
+        title: "Job Health"
+
+        empty:
+          title: "No Job Queue Data Found"
+          # %{days} is the analysis window.
+          message: "No job queue stats were detected in system health snapshots over the last %{days} days."
+          how_it_works: "How job health tracking works:"
+          step_enable_html: "System health must be enabled (<code>enable_system_health = true</code>)"
+          step_capture: "Job queue stats are captured automatically when Sidekiq, SolidQueue, or GoodJob is detected"
+          step_collected: "Stats are collected per-error at the time of capture"
+          step_sort: "This page shows job queue health per-error, sorted by failed count"
+
+        stats:
+          errors_with_jobs: "Errors with Job Data"
+          total_failed: "Total Failed Jobs"
+          adapters_detected: "Adapters Detected"
+
+        table:
+          title: "Job Queue Health by Error"
+          column_error: "Error"
+          column_adapter: "Adapter"
+          column_failed: "Failed"
+          column_queued: "Queued"
+          column_other_stats: "Other Stats"
+          column_last_seen: "Last Seen"
+          # Adapter-specific queue-depth labels. The adapter name itself
+          # (sidekiq, solid_queue, good_job) is a machine value and stays
+          # untranslated; only the noun after the count is a key.
+          enqueued: "enqueued"
+          ready: "ready"
+          queued: "queued"
+          # Adapter-specific "other stats" line, one whole phrase per adapter
+          # rather than assembled labels — the label:value order and the
+          # comma-separated layout are not universal.
+          # %{dead}, %{retry}, %{workers} are raw counts.
+          other_stats_sidekiq: "dead: %{dead}, retry: %{retry}, workers: %{workers}"
+          # %{claimed}, %{blocked}, %{scheduled} are raw counts.
+          other_stats_solid_queue: "claimed: %{claimed}, blocked: %{blocked}, scheduled: %{scheduled}"
+          # %{finished} is a raw count.
+          other_stats_good_job: "finished: %{finished}"
+          tip: "High failed job counts during errors may indicate job queue saturation or upstream service issues."
+          guide_link: "Active Job Guide"
+
+      actioncable:
+        title: "ActionCable Health"
+
+        empty:
+          title: "No ActionCable Events Found"
+          # %{days} is the analysis window.
+          message: >-
+            No ActionCable channel actions, transmissions, or subscription events
+            were detected in error breadcrumbs over the last %{days} days.
+          how_it_works: "How ActionCable tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_tracking_html: "ActionCable tracking must be enabled (<code>enable_actioncable_tracking = true</code>)"
+          step_configured: "ActionCable must be configured in your app"
+          step_capture: "Channel actions, transmissions, and subscription events are captured as breadcrumbs during requests that produce errors"
+
+        stats:
+          active_channels: "Active Channels"
+          total_events: "Total Events"
+          subscription_rejections: "Subscription Rejections"
+
+        table:
+          title: "ActionCable Events by Channel"
+          column_channel: "Channel"
+          column_actions: "Actions"
+          column_transmissions: "Transmissions"
+          column_subscriptions: "Subscriptions"
+          column_rejections: "Rejections"
+          column_errors: "Errors"
+          column_last_seen: "Last Seen"
+          tip: "ActionCable events are captured when they coincide with errors. High rejection counts may indicate authentication or authorization issues."
+          guide_link: "ActionCable Guide"
+
+      activestorage:
+        title: "ActiveStorage Health"
+
+        empty:
+          title: "No ActiveStorage Events Found"
+          # %{days} is the analysis window.
+          message: "No ActiveStorage service operations were detected in error breadcrumbs over the last %{days} days."
+          how_it_works: "How ActiveStorage tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_tracking_html: "ActiveStorage tracking must be enabled (<code>enable_activestorage_tracking = true</code>)"
+          step_configured: "ActiveStorage must be configured in your app"
+          step_capture: "Uploads, downloads, and deletes are captured as breadcrumbs during requests that produce errors"
+
+        stats:
+          storage_services: "Storage Services"
+          total_operations: "Total Operations"
+          errors_with_storage: "Errors with Storage Ops"
+
+        table:
+          title: "Storage Operations by Service"
+          column_service: "Service"
+          column_uploads: "Uploads"
+          column_downloads: "Downloads"
+          column_deletes: "Deletes"
+          column_exists: "Exists"
+          column_total: "Total"
+          column_avg_duration: "Avg Duration"
+          column_slowest: "Slowest"
+          column_errors: "Errors"
+          column_last_seen: "Last Seen"
+          tip: "Slow storage operations may indicate network issues, large file sizes, or service provider throttling."
+          guide_link: "ActiveStorage Guide"

@@ -1,21 +1,21 @@
-<% content_for :page_title, "Cache Health" %>
+<% content_for :page_title, red_t("red.health.cache.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-lightning-charge me-2"></i>
-      Cache Health
+      <%= red_t("red.health.cache.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to cache_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.health.days_filter.7") %>
       <% end %>
       <%= link_to cache_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.health.days_filter.30") %>
       <% end %>
       <%= link_to cache_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.health.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,18 @@
   <% if @errors_with_cache == 0 %>
     <div class="red-empty-state">
       <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-      <div class="red-empty-state-title">No Cache Activity Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.health.cache.empty.title") %></div>
       <p class="text-muted">
-        No cache operations were detected in error breadcrumbs over the last <%= @days %> days.
+        <%= red_t("red.health.cache.empty.message", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How cache tracking works:</h6>
+          <h6><%= red_t("red.health.cache.empty.how_it_works") %></h6>
           <ul class="mb-0">
-            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
-            <li>Cache reads and writes are captured as breadcrumbs during requests that produce errors</li>
-            <li>Hit/miss status is tracked for read operations</li>
-            <li>This page shows cache performance per-error, sorted worst-first</li>
+            <li><%= red_t("red.health.cache.empty.step_breadcrumbs_html") %></li>
+            <li><%= red_t("red.health.cache.empty.step_capture") %></li>
+            <li><%= red_t("red.health.cache.empty.step_hit_status") %></li>
+            <li><%= red_t("red.health.cache.empty.step_sort") %></li>
           </ul>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @errors_with_cache %></div>
-            <small class="text-muted">Errors with Cache</small>
+            <small class="text-muted"><%= red_t("red.health.cache.stats.errors_with_cache") %></small>
           </div>
         </div>
       </div>
@@ -53,12 +53,12 @@
         <div class="card text-center">
           <div class="card-body">
             <% if @avg_hit_rate.nil? %>
-              <div class="display-6 text-secondary">N/A</div>
+              <div class="display-6 text-secondary"><%= red_t("red.common.not_available") %></div>
             <% else %>
               <% hit_color = @avg_hit_rate >= 80 ? "success" : (@avg_hit_rate >= 50 ? "warning" : "danger") %>
               <div class="display-6 text-<%= hit_color %>"><%= @avg_hit_rate %>%</div>
             <% end %>
-            <small class="text-muted">Avg Hit Rate</small>
+            <small class="text-muted"><%= red_t("red.health.cache.stats.avg_hit_rate") %></small>
           </div>
         </div>
       </div>
@@ -66,7 +66,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-secondary"><%= @total_cache_ops %></div>
-            <small class="text-muted">Total Cache Ops</small>
+            <small class="text-muted"><%= red_t("red.health.cache.stats.total_ops") %></small>
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-lightning-charge text-info me-2"></i>
-          Cache Performance by Error
+          <%= red_t("red.health.cache.table.title") %>
           <span class="badge bg-info"><%= @errors_with_cache %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -86,13 +86,13 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th width="100">Error</th>
-                <th width="80">Reads</th>
-                <th width="80">Writes</th>
-                <th width="120">Hit Rate</th>
-                <th width="120">Total Time</th>
-                <th>Slowest Op</th>
-                <th width="140">Last Seen</th>
+                <th width="100"><%= red_t("red.health.cache.table.column_error") %></th>
+                <th width="80"><%= red_t("red.health.cache.table.column_reads") %></th>
+                <th width="80"><%= red_t("red.health.cache.table.column_writes") %></th>
+                <th width="120"><%= red_t("red.health.cache.table.column_hit_rate") %></th>
+                <th width="120"><%= red_t("red.health.cache.table.column_total_time") %></th>
+                <th><%= red_t("red.health.cache.table.column_slowest_op") %></th>
+                <th width="140"><%= red_t("red.health.cache.table.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -103,7 +103,7 @@
                   <td><%= entry[:writes] %></td>
                   <td>
                     <% if entry[:hit_rate].nil? %>
-                      <span class="badge bg-secondary">N/A</span>
+                      <span class="badge bg-secondary"><%= red_t("red.common.not_available") %></span>
                     <% else %>
                       <% rate_color = entry[:hit_rate] >= 80 ? "success" : (entry[:hit_rate] >= 50 ? "warning" : "danger") %>
                       <span class="badge bg-<%= rate_color %>"><%= entry[:hit_rate] %>%</span>
@@ -126,11 +126,11 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Low hit rates may indicate cache keys that expire too quickly or aren't being set properly.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.health.cache.table.tip") %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/caching_with_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
-              <i class="bi bi-book"></i> Rails Caching Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.health.cache.table.guide_link") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>
