@@ -42,6 +42,16 @@ en:
         medium: "Medium"
         low: "Low"
 
+      # The day-range toggle repeated verbatim across health summary pages
+      # (P2-T5) and several analytics pages (P2-T6). One key set so the
+      # wording can't drift page to page, and so P2-T9 pages with the same
+      # toggle can reuse it rather than adding their own.
+      days_filter:
+        "7": "7 Days"
+        "14": "14 Days"
+        "30": "30 Days"
+        "90": "90 Days"
+
     nav:
       # Section headings in the sidebar.
       sections:
@@ -907,16 +917,6 @@ en:
         datetime: "%b %d, %Y %H:%M"
 
     health:
-      # Shared across all six health-summary pages (database, LLM, cache, job,
-      # ActionCable, ActiveStorage): the 7/30/90-day range toggle in the page
-      # header. One key set so the wording can't drift page to page; P2-T9
-      # pages with the identical toggle should reuse these rather than adding
-      # their own.
-      days_filter:
-        "7": "7 Days"
-        "30": "30 Days"
-        "90": "90 Days"
-
       # Table column headers repeated on more than one health page.
       columns:
         error: "Error"
@@ -1196,3 +1196,392 @@ en:
           column_last_seen: "Last Seen"
           tip: "Slow storage operations may indicate network issues, large file sizes, or service provider throttling."
           guide_link: "ActiveStorage Guide"
+
+    analytics:
+      # Machine values shared across more than one analytics page. Stability
+      # (release health) and trend direction (correlation) are each their own
+      # small enum — not the same as red.common.severity — so they get their
+      # own lookup tables rather than being force-fit into an existing one.
+      stability:
+        green: "Green"
+        yellow: "Yellow"
+        red: "Red"
+
+      trend:
+        increasing_significantly: "increasing significantly"
+        increasing: "increasing"
+        stable: "stable"
+        decreasing: "decreasing"
+        decreasing_significantly: "decreasing significantly"
+
+      correlation_strength:
+        strong: "Strong"
+        moderate: "Moderate"
+        weak: "Weak"
+
+      # Shared "N days" pill labels for the analytics overview's compact
+      # time-range selector — visually distinct from red.common.days_filter's
+      # "7 Days" button labels, so kept separate rather than force-fit.
+      days_pill:
+        "7": "7d"
+        "14": "14d"
+        "30": "30d"
+        "60": "60d"
+        "90": "90d"
+
+      overview:
+        title: "Analytics"
+
+        stats:
+          total_errors: "Total Errors"
+          unresolved: "Unresolved"
+          resolution_rate: "Resolution Rate"
+
+        # %{days} is the analysis window, cited in both the chart heading and
+        # the query it drives.
+        trend_chart:
+          title: "Error Trend (Last %{days} Days)"
+
+        platform_chart:
+          title: "Errors by Platform"
+          quick_links: "Quick Links:"
+
+        type_chart:
+          title: "Top 10 Error Types"
+
+        hour_chart:
+          title: "Errors by Hour of Day"
+
+        top_users:
+          title: "Top 10 Affected Users"
+
+        type_breakdown:
+          title: "Error Type Breakdown"
+          # %{days} is the analysis window.
+          subtitle: "Last %{days} days"
+          column_rank: "Rank"
+          column_error_type: "Error Type"
+          column_count: "Count"
+          column_percentage: "Percentage"
+          column_actions: "Actions"
+          view_errors: "View Errors"
+
+        recurring:
+          title: "Recurring Issues"
+          high_frequency_title: "High Frequency Errors"
+          column_error_type: "Error Type"
+          column_total_occurrences: "Total Occurrences"
+          column_duration: "Duration"
+          column_first_seen: "First Seen"
+          column_last_seen: "Last Seen"
+          column_status: "Status"
+          # %{days} is the duration a high-frequency error has recurred over.
+          duration_days: "%{days} days"
+          active: "Active"
+          inactive: "Inactive"
+          # %{days} is the analysis window.
+          empty_high_frequency: "No high-frequency errors found in the last %{days} days."
+
+          persistent_title: "Persistent Unresolved Errors"
+          persistent_hint: "These errors have been unresolved for more than 7 days."
+          column_message: "Message"
+          column_platform: "Platform"
+          column_count: "Count"
+          column_age: "Age"
+          column_actions: "Actions"
+          # %{days} is how long the error has been open.
+          age_days: "%{days} days"
+          view: "View"
+
+        releases:
+          version_chart_title: "Errors by Release Version"
+          comparison_title: "Latest vs Previous"
+          latest_version: "Latest Version"
+          # %{count} errors in the latest release.
+          latest_errors:
+            one: "%{count} error"
+            other: "%{count} errors"
+          # %{count} critical errors in the latest release.
+          latest_critical:
+            one: "%{count} critical"
+            other: "%{count} critical"
+          previous_version: "Previous Version"
+          # %{count} errors in the previous release.
+          previous_errors:
+            one: "%{count} error"
+            other: "%{count} errors"
+          # %{count} critical errors in the previous release.
+          previous_critical:
+            one: "%{count} critical"
+            other: "%{count} critical"
+          change: "Change"
+          empty: "Not enough release data for comparison."
+
+          problematic_title: "Problematic Releases Detected"
+          # %{multiplier} is the deviation threshold (e.g. "2"), an integer
+          # from the view — not user data. Contains a literal &gt; entity,
+          # hence _html.
+          problematic_hint_html: "The following releases have significantly higher error rates (&gt;%{multiplier}x average):"
+          # %{count} errors, %{critical} of them critical, %{deviation}% above
+          # the average — one sentence rather than three fragments, since the
+          # clause order is not universal.
+          problematic_entry: >-
+            %{count} errors (%{critical} critical, +%{deviation}% from average)
+
+        mttr:
+          title: "Resolution Performance (MTTR)"
+          overall_title: "Overall MTTR"
+          overall_hint: "Average resolution time"
+          fastest_title: "Fastest"
+          fastest_hint: "Best resolution time"
+          slowest_title: "Slowest"
+          slowest_hint: "Longest resolution time"
+          total_resolved_title: "Total Resolved"
+          # %{days} is the analysis window.
+          total_resolved_hint: "In last %{days} days"
+
+          by_platform_title: "MTTR by Platform"
+
+          by_severity_title: "MTTR by Severity"
+          column_severity: "Severity"
+          column_avg_time: "Average Time to Resolution"
+          column_actions: "Actions"
+          # %{hours} is a formatted duration.
+          hours: "%{hours} hours"
+          view: "View"
+
+          trend_title: "MTTR Trend (Weekly)"
+
+      correlation:
+        title: "Error Correlation Analysis"
+
+        trend_analysis:
+          title: "Trend Analysis"
+          current_period: "Current Period"
+          previous_period: "Previous Period"
+          change: "Change"
+          # %{start} and %{end} are formatted dates.
+          period_range: "%{start} - %{end}"
+
+        problematic_releases:
+          title: "Problematic Releases"
+          hint: "Versions with more than 2x the average error rate"
+          column_version: "Version"
+          column_error_count: "Error Count"
+          column_deviation: "Deviation from Avg"
+          column_critical: "Critical Errors"
+          column_unique_types: "Unique Error Types"
+          column_platforms: "Platforms"
+          column_actions: "Actions"
+          view: "View"
+
+        by_version:
+          title: "Errors by App Version"
+          column_version: "Version"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_critical: "Critical"
+
+        by_git_sha:
+          title: "Errors by Git SHA"
+          column_sha: "SHA"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_versions: "Versions"
+
+        multi_error_users:
+          title: "Users Affected by Multiple Error Types"
+          hint: "Users experiencing 2+ different error types"
+          # %{shown} of %{total} users are listed.
+          truncated: "Showing %{shown} of %{total} users"
+
+        time_correlated:
+          title: "Time-Correlated Errors"
+          hint: "Error types that occur at similar times of day"
+          column_error_type_a: "Error Type A"
+          column_error_type_b: "Error Type B"
+          column_correlation: "Correlation"
+          column_strength: "Strength"
+          # %{shown} of %{total} correlated pairs are listed.
+          truncated: "Showing %{shown} of %{total} correlated error pairs"
+
+        platform_specific:
+          title: "Platform-Specific vs Cross-Platform Errors"
+          # %{count} occurrences of this error.
+          occurrences:
+            one: "%{count} occurrence"
+            other: "%{count} occurrences"
+          platform_specific: "Platform-Specific"
+          cross_platform: "Cross-Platform"
+          # %{platforms} is a comma-joined list of platform names.
+          also_on: "Also on: %{platforms}"
+
+        empty:
+          title: "Not Enough Data for Correlation Analysis"
+          message: "Correlation analysis requires more error data to identify patterns."
+          needed_title: "What's needed:"
+          needed_version: "App version tracking for release correlation"
+          needed_user: "User tracking for user correlation"
+          needed_types: "Multiple error types for time correlation"
+          hint: "Check back once more errors have been logged."
+
+      platform_comparison:
+        title: "Platform Health Comparison"
+
+        empty:
+          title: "No Platform Data Available"
+          # %{days} is the analysis window.
+          message: "No errors were logged for the selected time period (%{days} days)."
+          hint: "Try selecting a longer time period or check back later."
+
+        health_card:
+          healthy: "Healthy"
+          warning: "Warning"
+          critical: "Critical"
+          stability_score: "Stability Score"
+          total_errors: "Total Errors:"
+          critical_errors: "Critical:"
+          unresolved: "Unresolved:"
+          resolution_rate: "Resolution Rate:"
+          error_velocity: "Error Velocity:"
+          # %{platform} is a platform name (iOS, Android, Web) and is not
+          # translated.
+          view_errors: "View %{platform} Errors"
+
+        error_rate_chart:
+          title: "Error Rate by Platform"
+
+        daily_trend_chart:
+          title: "Daily Error Trends"
+
+        severity_distribution:
+          title: "Severity Distribution"
+          # %{label} is a translated red.common.severity label, %{count} a raw
+          # count — used both as the bar's title= tooltip and the number shown
+          # inside a wide-enough bar segment.
+          severity_count: "%{label}: %{count}"
+          # %{critical}, %{high}, %{medium}, %{low} are raw counts; the
+          # "Critical:"/"High:"/etc. labels come from red.common.severity, not
+          # from this key, so they translate along with everything else. One
+          # sentence rather than four fragments joined with "|", since the
+          # separator and ordering are not universal.
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: "No errors"
+
+        resolution_time_chart:
+          title: "Average Resolution Time"
+
+        cross_platform:
+          title: "Cross-Platform Errors"
+          column_error_type: "Error Type"
+          column_platforms: "Platforms"
+          column_total_occurrences: "Total Occurrences"
+          column_breakdown: "Breakdown"
+
+        top_errors:
+          # %{platform} is a platform name and is not translated.
+          title: "Top Errors - %{platform}"
+          empty: "No errors found"
+
+      releases:
+        title: "Releases"
+
+        empty:
+          title: "No Release Data Found"
+          # %{days} is the analysis window.
+          message: "No version data was detected in errors over the last %{days} days."
+          how_to_title: "How to enable release tracking:"
+          # %{option} is a pre-formatted <code> element naming the config
+          # option, hence _html.
+          step_config_html: "Set %{option} in your initializer"
+          # %{env_var} is a pre-formatted <code> element, hence _html.
+          step_env_html: "Or set the %{env_var} environment variable"
+          # %{git_sha}, %{heroku}, %{render} are pre-formatted <code>
+          # elements naming env vars, hence _html.
+          step_git_sha_html: "Git SHA is auto-detected from %{git_sha}, %{heroku}, or %{render}"
+          step_captured: "Version and SHA are captured automatically when errors occur"
+
+        summary:
+          releases: "Releases"
+          current_release: "Current Release"
+          avg_errors: "Avg Errors / Release"
+          problematic: "Problematic Releases"
+
+        current_card:
+          title: "Current Release:"
+          live_badge: "Live"
+          errors: "Errors"
+          error_types: "Error Types"
+          new_errors: "New Errors"
+          stability: "Stability"
+          git_sha: "Git SHA"
+          vs_previous: "vs Previous"
+
+        timeline:
+          title: "Release Timeline"
+          column_version: "Version"
+          column_git_sha: "Git SHA"
+          column_time_range: "Time Range"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_new_errors: "New Errors"
+          column_stability: "Stability"
+          column_vs_previous: "vs Previous"
+          current_badge: "Current"
+          problematic_badge: "Problematic"
+          # %{count} additional git SHAs beyond the first shown.
+          more_shas: "+%{count}"
+          # %{count} new error types first seen in this release.
+          new_count:
+            one: "%{count} new"
+            other: "%{count} new"
+
+          footer_html: >-
+            Stability: <span class="badge bg-success">Green</span> &le; avg errors,
+            <span class="badge bg-warning">Yellow</span> 1-2x avg,
+            <span class="badge bg-danger">Red</span> &gt; 2x avg.
+            "New" errors are error types first seen in that release.
+
+      user_impact:
+        title: "User Impact"
+
+        empty:
+          title: "No User Impact Data"
+          # %{days} is the analysis window.
+          message: "No errors with user attribution were found in the last %{days} days."
+          how_tracked_title: "How user impact is tracked:"
+          # %{attribute} is a pre-formatted <code> element naming the
+          # attribute, hence _html.
+          step_user_id_html: "Errors must have a %{attribute} associated"
+          # %{current_attributes} and %{current_user} are pre-formatted
+          # <code> elements, hence _html.
+          step_auto_html: "Auto-detected via %{current_attributes} or %{current_user}"
+          # %{option} is a pre-formatted <code> element, hence _html.
+          step_config_html: "Or set %{option} in your initializer"
+
+        summary:
+          error_types: "Error Types with Users"
+          total_users_affected: "Total Users Affected"
+          most_impactful: "Most Impactful Error"
+          total_users: "Total Users (for %)"
+
+        table:
+          title: "Errors Ranked by User Impact"
+          column_rank: "#"
+          column_error_type: "Error Type"
+          column_unique_users: "Unique Users"
+          column_occurrences: "Occurrences"
+          column_impact_percentage: "User Impact %"
+          column_severity: "Severity"
+          column_last_seen: "Last Seen"
+          # %{count} unique users affected.
+          users:
+            one: "%{count} user"
+            other: "%{count} users"
+          # %{count} total occurrences.
+          occurrences:
+            one: "%{count}x"
+            other: "%{count}x"
+          footer: >-
+            Ranked by unique users affected, not occurrence count. An error
+            hitting 1000 users once is worse than hitting 1 user 1000 times.

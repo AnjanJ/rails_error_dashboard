@@ -9,13 +9,13 @@
 
     <div class="btn-group" role="group">
       <%= link_to activestorage_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        <%= red_t("red.health.days_filter.7") %>
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to activestorage_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        <%= red_t("red.health.days_filter.30") %>
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to activestorage_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        <%= red_t("red.health.days_filter.90") %>
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>

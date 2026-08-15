@@ -8,9 +8,9 @@
     </h1>
 
     <div style="display: flex; gap: 4px;">
-      <%= link_to database_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.health.days_filter.7") %><% end %>
-      <%= link_to database_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.health.days_filter.30") %><% end %>
-      <%= link_to database_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.health.days_filter.90") %><% end %>
+      <%= link_to database_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.7") %><% end %>
+      <%= link_to database_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.30") %><% end %>
+      <%= link_to database_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.90") %><% end %>
     </div>
   </div>
 

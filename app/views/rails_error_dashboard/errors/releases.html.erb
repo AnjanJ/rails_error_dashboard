@@ -1,21 +1,21 @@
-<% content_for :page_title, "Releases" %>
+<% content_for :page_title, red_t("red.analytics.releases.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-rocket-takeoff me-2"></i>
-      Releases
+      <%= red_t("red.analytics.releases.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to releases_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to releases_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to releases_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,20 @@
   <% if @releases.empty? %>
     <div class="red-empty-state">
       <i class="bi bi-rocket-takeoff display-1 text-muted mb-3"></i>
-      <div class="red-empty-state-title">No Release Data Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.analytics.releases.empty.title") %></div>
       <p class="text-muted">
-        No version data was detected in errors over the last <%= @days %> days.
+        <%= red_t("red.analytics.releases.empty.message", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How to enable release tracking:</h6>
+          <h6><%= red_t("red.analytics.releases.empty.how_to_title") %></h6>
           <ul class="mb-0">
-            <li>Set <code>config.app_version</code> in your initializer</li>
-            <li>Or set the <code>APP_VERSION</code> environment variable</li>
-            <li>Git SHA is auto-detected from <code>GIT_SHA</code>, <code>HEROKU_SLUG_COMMIT</code>, or <code>RENDER_GIT_COMMIT</code></li>
-            <li>Version and SHA are captured automatically when errors occur</li>
+            <li><%= red_t("red.analytics.releases.empty.step_config_html", option: content_tag(:code, "config.app_version")) %></li>
+            <li><%= red_t("red.analytics.releases.empty.step_env_html", env_var: content_tag(:code, "APP_VERSION")) %></li>
+            <li><%= red_t("red.analytics.releases.empty.step_git_sha_html",
+                           git_sha: content_tag(:code, "GIT_SHA"), heroku: content_tag(:code, "HEROKU_SLUG_COMMIT"),
+                           render: content_tag(:code, "RENDER_GIT_COMMIT")) %></li>
+            <li><%= red_t("red.analytics.releases.empty.step_captured") %></li>
           </ul>
         </div>
       </div>
@@ -50,15 +52,15 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-primary"><%= @summary[:total_releases] %></div>
-            <small class="text-muted">Releases</small>
+            <small class="text-muted"><%= red_t("red.analytics.releases.summary.releases") %></small>
           </div>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card text-center">
           <div class="card-body">
-            <div class="display-6"><code><%= @summary[:current_version] || "N/A" %></code></div>
-            <small class="text-muted">Current Release</small>
+            <div class="display-6"><code><%= @summary[:current_version] || red_t("red.common.not_available") %></code></div>
+            <small class="text-muted"><%= red_t("red.analytics.releases.summary.current_release") %></small>
           </div>
         </div>
       </div>
@@ -66,7 +68,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= @summary[:avg_errors_per_release] %></div>
-            <small class="text-muted">Avg Errors / Release</small>
+            <small class="text-muted"><%= red_t("red.analytics.releases.summary.avg_errors") %></small>
           </div>
         </div>
       </div>
@@ -77,7 +79,7 @@
               problematic_count = @releases.count { |r| r[:problematic] }
             %>
             <div class="display-6 <%= problematic_count > 0 ? 'text-danger' : 'text-success' %>"><%= problematic_count %></div>
-            <small class="text-muted">Problematic Releases</small>
+            <small class="text-muted"><%= red_t("red.analytics.releases.summary.problematic") %></small>
           </div>
         </div>
       </div>
@@ -88,19 +90,19 @@
       <div class="card mb-4 border-primary">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0">
-            <i class="bi bi-broadcast"></i> Current Release: <strong><%= current_release[:version] %></strong>
+            <i class="bi bi-broadcast"></i> <%= red_t("red.analytics.releases.current_card.title") %> <strong><%= current_release[:version] %></strong>
           </h5>
-          <span class="badge bg-light text-primary">Live</span>
+          <span class="badge bg-light text-primary"><%= red_t("red.analytics.releases.current_card.live_badge") %></span>
         </div>
         <div class="card-body">
           <div class="row text-center">
             <div class="col-md-2">
               <div class="h4 mb-0"><%= current_release[:total_errors] %></div>
-              <small class="text-muted">Errors</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.errors") %></small>
             </div>
             <div class="col-md-2">
               <div class="h4 mb-0"><%= current_release[:unique_error_types] %></div>
-              <small class="text-muted">Error Types</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.error_types") %></small>
             </div>
             <div class="col-md-2">
               <div class="h4 mb-0">
@@ -110,7 +112,7 @@
                   <span class="text-success">0</span>
                 <% end %>
               </div>
-              <small class="text-muted">New Errors</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.new_errors") %></small>
             </div>
             <div class="col-md-2">
               <%
@@ -123,18 +125,18 @@
               %>
               <div class="h4 mb-0">
                 <span class="badge bg-<%= stability_color %>">
-                  <%= current_release[:stability].to_s.capitalize %>
+                  <%= red_t("red.analytics.stability.#{current_release[:stability]}", default: current_release[:stability].to_s) %>
                 </span>
               </div>
-              <small class="text-muted">Stability</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.stability") %></small>
             </div>
             <div class="col-md-2">
               <% if current_release[:git_shas].any? %>
                 <div class="h4 mb-0"><%= git_commit_link(current_release[:git_shas].first) %></div>
               <% else %>
-                <div class="h4 mb-0 text-muted">N/A</div>
+                <div class="h4 mb-0 text-muted"><%= red_t("red.common.not_available") %></div>
               <% end %>
-              <small class="text-muted">Git SHA</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.git_sha") %></small>
             </div>
             <div class="col-md-2">
               <% if current_release[:delta_from_previous] %>
@@ -149,7 +151,7 @@
               <% else %>
                 <div class="h4 mb-0 text-muted">&mdash;</div>
               <% end %>
-              <small class="text-muted">vs Previous</small>
+              <small class="text-muted"><%= red_t("red.analytics.releases.current_card.vs_previous") %></small>
             </div>
           </div>
         </div>
@@ -161,7 +163,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-clock-history text-primary me-2"></i>
-          Release Timeline
+          <%= red_t("red.analytics.releases.timeline.title") %>
           <span class="badge bg-primary"><%= @summary[:total_releases] %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -171,14 +173,14 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th>Version</th>
-                <th>Git SHA</th>
-                <th>Time Range</th>
-                <th width="100">Errors</th>
-                <th width="100">Types</th>
-                <th width="120">New Errors</th>
-                <th width="100">Stability</th>
-                <th width="120">vs Previous</th>
+                <th><%= red_t("red.analytics.releases.timeline.column_version") %></th>
+                <th><%= red_t("red.analytics.releases.timeline.column_git_sha") %></th>
+                <th><%= red_t("red.analytics.releases.timeline.column_time_range") %></th>
+                <th width="100"><%= red_t("red.analytics.releases.timeline.column_errors") %></th>
+                <th width="100"><%= red_t("red.analytics.releases.timeline.column_types") %></th>
+                <th width="120"><%= red_t("red.analytics.releases.timeline.column_new_errors") %></th>
+                <th width="100"><%= red_t("red.analytics.releases.timeline.column_stability") %></th>
+                <th width="120"><%= red_t("red.analytics.releases.timeline.column_vs_previous") %></th>
               </tr>
             </thead>
             <tbody>
@@ -189,20 +191,20 @@
                       <strong><%= release[:version] %></strong>
                     <% end %>
                     <% if release[:current] %>
-                      <span class="badge bg-primary ms-1">Current</span>
+                      <span class="badge bg-primary ms-1"><%= red_t("red.analytics.releases.timeline.current_badge") %></span>
                     <% end %>
                     <% if release[:problematic] %>
-                      <span class="badge bg-danger ms-1">Problematic</span>
+                      <span class="badge bg-danger ms-1"><%= red_t("red.analytics.releases.timeline.problematic_badge") %></span>
                     <% end %>
                   </td>
                   <td>
                     <% if release[:git_shas].any? %>
                       <%= git_commit_link(release[:git_shas].first) %>
                       <% if release[:git_shas].size > 1 %>
-                        <small class="text-muted">+<%= release[:git_shas].size - 1 %></small>
+                        <small class="text-muted"><%= red_t("red.analytics.releases.timeline.more_shas", count: release[:git_shas].size - 1) %></small>
                       <% end %>
                     <% else %>
-                      <span class="text-muted">N/A</span>
+                      <span class="text-muted"><%= red_t("red.common.not_available") %></span>
                     <% end %>
                   </td>
                   <td>
@@ -222,11 +224,11 @@
                   <td>
                     <% if release[:new_error_count] > 0 %>
                       <span class="badge bg-danger">
-                        <i class="bi bi-exclamation-circle"></i> <%= release[:new_error_count] %> new
+                        <i class="bi bi-exclamation-circle"></i> <%= red_tp("red.analytics.releases.timeline.new_count", count: release[:new_error_count]) %>
                       </span>
                     <% else %>
                       <span class="badge bg-success">
-                        <i class="bi bi-check-circle"></i> 0 new
+                        <i class="bi bi-check-circle"></i> <%= red_tp("red.analytics.releases.timeline.new_count", count: 0) %>
                       </span>
                     <% end %>
                   </td>
@@ -241,7 +243,7 @@
                     %>
                     <span class="badge bg-<%= stability_color %>">
                       <i class="bi bi-circle-fill" style="font-size: 0.5em; vertical-align: middle;"></i>
-                      <%= release[:stability].to_s.capitalize %>
+                      <%= red_t("red.analytics.stability.#{release[:stability]}", default: release[:stability].to_s) %>
                     </span>
                   </td>
                   <td>
@@ -272,10 +274,7 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <small class="text-muted">
           <i class="bi bi-info-circle"></i>
-          Stability: <span class="badge bg-success">Green</span> &le; avg errors,
-          <span class="badge bg-warning">Yellow</span> 1-2x avg,
-          <span class="badge bg-danger">Red</span> &gt; 2x avg.
-          "New" errors are error types first seen in that release.
+          <%= red_t("red.analytics.releases.timeline.footer_html") %>
         </small>
         <div>
           <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>

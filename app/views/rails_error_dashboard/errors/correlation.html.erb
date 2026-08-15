@@ -1,21 +1,21 @@
-<% content_for :page_title, "Error Correlation" %>
+<% content_for :page_title, red_t("red.analytics.correlation.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-diagram-3 me-2"></i>
-      Error Correlation Analysis
+      <%= red_t("red.analytics.correlation.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to correlation_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to correlation_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to correlation_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -26,27 +26,31 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-graph-up-arrow me-2"></i>
-          Trend Analysis
+          <%= red_t("red.analytics.correlation.trend_analysis.title") %>
         </h5>
       </div>
       <div class="card-body">
         <div class="row">
           <div class="col-md-4">
-            <h6 class="text-muted">Current Period</h6>
+            <h6 class="text-muted"><%= red_t("red.analytics.correlation.trend_analysis.current_period") %></h6>
             <div class="display-6"><%= @period_comparison[:current_period][:count] %></div>
             <small class="text-muted">
-              <%= @period_comparison[:current_period][:start].strftime("%b %d") %> - <%= @period_comparison[:current_period][:end].strftime("%b %d") %>
+              <%= red_t("red.analytics.correlation.trend_analysis.period_range",
+                         start: @period_comparison[:current_period][:start].strftime("%b %d"),
+                         end: @period_comparison[:current_period][:end].strftime("%b %d")) %>
             </small>
           </div>
           <div class="col-md-4">
-            <h6 class="text-muted">Previous Period</h6>
+            <h6 class="text-muted"><%= red_t("red.analytics.correlation.trend_analysis.previous_period") %></h6>
             <div class="display-6"><%= @period_comparison[:previous_period][:count] %></div>
             <small class="text-muted">
-              <%= @period_comparison[:previous_period][:start].strftime("%b %d") %> - <%= @period_comparison[:previous_period][:end].strftime("%b %d") %>
+              <%= red_t("red.analytics.correlation.trend_analysis.period_range",
+                         start: @period_comparison[:previous_period][:start].strftime("%b %d"),
+                         end: @period_comparison[:previous_period][:end].strftime("%b %d")) %>
             </small>
           </div>
           <div class="col-md-4">
-            <h6 class="text-muted">Change</h6>
+            <h6 class="text-muted"><%= red_t("red.analytics.correlation.trend_analysis.change") %></h6>
             <div class="display-6 <%= @period_comparison[:change] > 0 ? 'text-danger' : 'text-success' %>">
               <%= @period_comparison[:change] > 0 ? '+' : '' %><%= @period_comparison[:change] %>
             </div>
@@ -54,7 +58,7 @@
               <span class="badge bg-<%= @period_comparison[:change] > 0 ? 'danger' : 'success' %> fs-6">
                 <%= @period_comparison[:change_percentage] > 0 ? '+' : '' %><%= @period_comparison[:change_percentage] %>%
               </span>
-              <span class="ms-2 text-muted text-capitalize"><%= @period_comparison[:trend].to_s.gsub('_', ' ') %></span>
+              <span class="ms-2 text-muted"><%= red_t("red.analytics.trend.#{@period_comparison[:trend]}", default: @period_comparison[:trend].to_s) %></span>
             </div>
           </div>
         </div>
@@ -68,23 +72,23 @@
       <div class="card-header bg-danger text-white">
         <h5 class="mb-0">
           <i class="bi bi-exclamation-triangle-fill me-2"></i>
-          Problematic Releases
+          <%= red_t("red.analytics.correlation.problematic_releases.title") %>
           <span class="badge text-danger"><%= @problematic_releases.count %></span>
         </h5>
-        <small>Versions with more than 2x the average error rate</small>
+        <small><%= red_t("red.analytics.correlation.problematic_releases.hint") %></small>
       </div>
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-hover">
             <thead>
               <tr>
-                <th>Version</th>
-                <th>Error Count</th>
-                <th>Deviation from Avg</th>
-                <th>Critical Errors</th>
-                <th>Unique Error Types</th>
-                <th>Platforms</th>
-                <th>Actions</th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_version") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_error_count") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_deviation") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_critical") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_unique_types") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_platforms") %></th>
+                <th><%= red_t("red.analytics.correlation.problematic_releases.column_actions") %></th>
               </tr>
             </thead>
             <tbody>
@@ -109,7 +113,7 @@
                     <% end %>
                   </td>
                   <td>
-                    <%= link_to "View", errors_path(app_version: release[:version], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
+                    <%= link_to red_t("red.analytics.correlation.problematic_releases.view"), errors_path(app_version: release[:version], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>
@@ -128,7 +132,7 @@
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-tag me-2"></i>
-              Errors by App Version
+              <%= red_t("red.analytics.correlation.by_version.title") %>
             </h5>
           </div>
           <div class="card-body">
@@ -136,10 +140,10 @@
               <table class="table table-sm table-hover">
                 <thead>
                   <tr>
-                    <th>Version</th>
-                    <th>Errors</th>
-                    <th>Types</th>
-                    <th>Critical</th>
+                    <th><%= red_t("red.analytics.correlation.by_version.column_version") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_version.column_errors") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_version.column_types") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_version.column_critical") %></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -176,7 +180,7 @@
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-git me-2"></i>
-              Errors by Git SHA
+              <%= red_t("red.analytics.correlation.by_git_sha.title") %>
             </h5>
           </div>
           <div class="card-body">
@@ -184,10 +188,10 @@
               <table class="table table-sm table-hover">
                 <thead>
                   <tr>
-                    <th>SHA</th>
-                    <th>Errors</th>
-                    <th>Types</th>
-                    <th>Versions</th>
+                    <th><%= red_t("red.analytics.correlation.by_git_sha.column_sha") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_git_sha.column_errors") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_git_sha.column_types") %></th>
+                    <th><%= red_t("red.analytics.correlation.by_git_sha.column_versions") %></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -222,10 +226,10 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-people-fill me-2"></i>
-          Users Affected by Multiple Error Types
+          <%= red_t("red.analytics.correlation.multi_error_users.title") %>
           <span class="badge bg-info"><%= @multi_error_users.count %></span>
         </h5>
-        <small class="text-muted">Users experiencing 2+ different error types</small>
+        <small class="text-muted"><%= red_t("red.analytics.correlation.multi_error_users.hint") %></small>
       </div>
       <div class="card-body">
         <%= render partial: 'user_errors_table',
@@ -241,7 +245,7 @@
       <div class="card-body pt-0 border-top">
         <% if @multi_error_users.count > 20 %>
           <p class="text-muted small mb-0">
-            Showing 20 of <%= @multi_error_users.count %> users
+            <%= red_t("red.analytics.correlation.multi_error_users.truncated", shown: 20, total: @multi_error_users.count) %>
           </p>
         <% end %>
       </div>
@@ -254,21 +258,21 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-clock-history me-2"></i>
-          Time-Correlated Errors
+          <%= red_t("red.analytics.correlation.time_correlated.title") %>
           <span class="badge bg-info"><%= @time_correlated_errors.count %></span>
         </h5>
-        <small class="text-muted">Error types that occur at similar times of day</small>
+        <small class="text-muted"><%= red_t("red.analytics.correlation.time_correlated.hint") %></small>
       </div>
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-hover">
             <thead>
               <tr>
-                <th>Error Type A</th>
+                <th><%= red_t("red.analytics.correlation.time_correlated.column_error_type_a") %></th>
                 <th></th>
-                <th>Error Type B</th>
-                <th>Correlation</th>
-                <th>Strength</th>
+                <th><%= red_t("red.analytics.correlation.time_correlated.column_error_type_b") %></th>
+                <th><%= red_t("red.analytics.correlation.time_correlated.column_correlation") %></th>
+                <th><%= red_t("red.analytics.correlation.time_correlated.column_strength") %></th>
               </tr>
             </thead>
             <tbody>
@@ -288,11 +292,11 @@
                   <td>
                     <% case data[:strength] %>
                     <% when :strong %>
-                      <span class="badge bg-success">Strong</span>
+                      <span class="badge bg-success"><%= red_t("red.analytics.correlation_strength.strong") %></span>
                     <% when :moderate %>
-                      <span class="badge bg-info">Moderate</span>
+                      <span class="badge bg-info"><%= red_t("red.analytics.correlation_strength.moderate") %></span>
                     <% else %>
-                      <span class="badge bg-secondary">Weak</span>
+                      <span class="badge bg-secondary"><%= red_t("red.analytics.correlation_strength.weak") %></span>
                     <% end %>
                   </td>
                 </tr>
@@ -302,7 +306,7 @@
         </div>
         <% if @time_correlated_errors.count > 15 %>
           <p class="text-muted small mb-0">
-            Showing 15 of <%= @time_correlated_errors.count %> correlated error pairs
+            <%= red_t("red.analytics.correlation.time_correlated.truncated", shown: 15, total: @time_correlated_errors.count) %>
           </p>
         <% end %>
       </div>
@@ -315,7 +319,7 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-phone me-2"></i>
-          Platform-Specific vs Cross-Platform Errors
+          <%= red_t("red.analytics.correlation.platform_specific.title") %>
         </h5>
       </div>
       <div class="card-body">
@@ -330,16 +334,16 @@
                       <div>
                         <code class="small"><%= error_data[:error_type] %></code>
                         <div class="small text-muted mt-1">
-                          <%= error_data[:count] %> occurrences
+                          <%= red_tp("red.analytics.correlation.platform_specific.occurrences", count: error_data[:count]) %>
                         </div>
                       </div>
                       <div>
                         <% if error_data[:platform_specific] %>
-                          <span class="badge bg-primary">Platform-Specific</span>
+                          <span class="badge bg-primary"><%= red_t("red.analytics.correlation.platform_specific.platform_specific") %></span>
                         <% else %>
-                          <span class="badge bg-secondary">Cross-Platform</span>
+                          <span class="badge bg-secondary"><%= red_t("red.analytics.correlation.platform_specific.cross_platform") %></span>
                           <div class="small text-muted mt-1">
-                            Also on: <%= error_data[:also_on].join(', ') %>
+                            <%= red_t("red.analytics.correlation.platform_specific.also_on", platforms: error_data[:also_on].join(', ')) %>
                           </div>
                         <% end %>
                       </div>
@@ -358,22 +362,22 @@
   <% if @errors_by_version.blank? && @multi_error_users.blank? && @time_correlated_errors.blank? %>
     <div class="red-empty-state">
       <i class="bi bi-diagram-3 display-1 text-muted mb-3"></i>
-      <div class="red-empty-state-title">Not Enough Data for Correlation Analysis</div>
+      <div class="red-empty-state-title"><%= red_t("red.analytics.correlation.empty.title") %></div>
       <p class="text-muted">
-        Correlation analysis requires more error data to identify patterns.
+        <%= red_t("red.analytics.correlation.empty.message") %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>What's needed:</h6>
+          <h6><%= red_t("red.analytics.correlation.empty.needed_title") %></h6>
           <ul class="mb-0">
-            <li>App version tracking for release correlation</li>
-            <li>User tracking for user correlation</li>
-            <li>Multiple error types for time correlation</li>
+            <li><%= red_t("red.analytics.correlation.empty.needed_version") %></li>
+            <li><%= red_t("red.analytics.correlation.empty.needed_user") %></li>
+            <li><%= red_t("red.analytics.correlation.empty.needed_types") %></li>
           </ul>
         </div>
       </div>
       <small class="text-muted d-block mt-3">
-        <i class="bi bi-lightbulb"></i> Check back once more errors have been logged.
+        <i class="bi bi-lightbulb"></i> <%= red_t("red.analytics.correlation.empty.hint") %>
       </small>
     </div>
   <% end %>
