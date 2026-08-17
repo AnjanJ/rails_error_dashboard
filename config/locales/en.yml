@@ -52,6 +52,45 @@ en:
         "30": "30 Days"
         "90": "90 Days"
 
+      # Strings returned by the view helpers (P2-T10). They live in common
+      # because a helper has no page of its own — the same value renders on
+      # whichever page calls it.
+
+      # Backtrace frame categories. The frame's origin, not its content: the
+      # backtrace itself is diagnostic output and is never translated.
+      # "Gem", "Rails" and "Ruby" are product names inside these labels.
+      frame_category:
+        app: "Your Code"
+        gem: "Gem"
+        framework: "Rails Framework"
+        ruby_core: "Ruby Core"
+        unknown: "Unknown"
+
+      # Error-rate trend direction. The value is a machine symbol
+      # (:increasing); these are its display labels.
+      trend:
+        increasing: "Increasing"
+        decreasing: "Decreasing"
+        stable: "Stable"
+
+      # Platform health badge on the overview. The emoji is part of the English
+      # rendering and a locale may drop it. Deliberately separate from
+      # red.analytics.platform_comparison.health_card, which renders the same
+      # states without emoji on a different page.
+      health_status:
+        healthy: "✅ Healthy"
+        warning: "⚠️ Warning"
+        critical: "🔴 Critical"
+
+      # Device classes reported by the user-agent parser. Browser and OS names
+      # (Chrome, Safari, Windows, iOS) are brands and stay as written; these
+      # four are ordinary words and are translated.
+      device_type:
+        mobile: "Mobile"
+        tablet: "Tablet"
+        bot: "Bot"
+        desktop: "Desktop"
+
     nav:
       # Section headings in the sidebar.
       sections:

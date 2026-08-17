@@ -115,19 +115,23 @@ module RailsErrorDashboard
       end
     end
 
-    # Format category name
+    # Format category name.
+    #
+    # This labels where a frame came from, not what it says — the backtrace
+    # itself is diagnostic output and is never translated. "Gem", "Rails" and
+    # "Ruby" inside these labels are product names.
     def frame_category_name(category)
       case category
       when :app
-        "Your Code"
+        red_t("red.common.frame_category.app")
       when :gem
-        "Gem"
+        red_t("red.common.frame_category.gem")
       when :framework
-        "Rails Framework"
+        red_t("red.common.frame_category.framework")
       when :ruby_core
-        "Ruby Core"
+        red_t("red.common.frame_category.ruby_core")
       else
-        "Unknown"
+        red_t("red.common.frame_category.unknown")
       end
     end
 

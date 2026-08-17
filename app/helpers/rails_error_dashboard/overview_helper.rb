@@ -29,14 +29,17 @@ module RailsErrorDashboard
       value > 0 ? "text-danger" : "text-success"
     end
 
+    # The direction is a machine symbol; these are its display labels. An
+    # unrecognized value reads as stable, which is what the English original
+    # did with its else branch.
     def trend_text(direction)
       case direction
       when :increasing
-        "Increasing"
+        red_t("red.common.trend.increasing")
       when :decreasing
-        "Decreasing"
+        red_t("red.common.trend.decreasing")
       else
-        "Stable"
+        red_t("red.common.trend.stable")
       end
     end
 
@@ -64,14 +67,18 @@ module RailsErrorDashboard
       end
     end
 
+    # The emoji is part of the English rendering and lives in the key so a
+    # locale can drop it. These are deliberately not the
+    # red.analytics.platform_comparison.health_card keys — that page renders
+    # the same states without emoji.
     def health_status_text(status)
       case status
       when :healthy
-        "✅ Healthy"
+        red_t("red.common.health_status.healthy")
       when :warning
-        "⚠️ Warning"
+        red_t("red.common.health_status.warning")
       else
-        "🔴 Critical"
+        red_t("red.common.health_status.critical")
       end
     end
   end
