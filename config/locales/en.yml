@@ -1001,6 +1001,279 @@ en:
           snoozed: "snoozed"
           muted: "muted"
 
+      # Vocabulary shared by the diagnostic summary pages (deprecations, N+1,
+      # swallowed exceptions, rate limits, diagnostic dumps). These pages have
+      # one shape — title, day-range toggle, empty state with a "how it works"
+      # list, stat tiles, a table, a footer tip — so the repeated labels are
+      # named once rather than per page.
+      pages:
+        # Units rendered next to a number. They live in keys because both the
+        # symbol and its spacing vary — several locales put a space before "%".
+        # %{value} is the already-formatted number.
+        percent: "%{value}%"
+        column_errors: "Errors"
+        column_occurrences: "Occurrences"
+        column_last_seen: "Last Seen"
+        total_occurrences: "Total Occurrences"
+        affected_errors: "Affected Errors"
+        # %{count} is how many more error links exist beyond the five shown.
+        # English reads the same either way, but the form is selected properly
+        # so a locale that distinguishes them can.
+        more_errors:
+          one: "+%{count} more"
+          other: "+%{count} more"
+        # %{days} is the selected day range.
+        none_in_last_days: "No results were detected over the last %{days} days."
+        # Byte-identical on the deprecations and N+1 pages; %{option} is the
+        # config option name rendered as a <code> element.
+        how_breadcrumbs_html: "Breadcrumbs must be enabled (%{option})"
+
+      deprecations_page:
+        title: "Deprecation Warnings"
+        empty_title: "No Deprecation Warnings Found"
+        # %{days} is the selected day range.
+        empty_body: "No deprecation warnings were detected in error breadcrumbs over the last %{days} days."
+        how_title: "How deprecations are captured:"
+        how_captured: "Rails deprecation warnings are automatically captured as breadcrumbs"
+        how_appear: "Deprecations appear here when an error occurs during a request with deprecation warnings"
+        unique_warnings: "Unique Warnings"
+        all_title: "All Deprecation Warnings"
+        column_warning: "Warning"
+        column_source: "Source"
+
+      n_plus_one_page:
+        title: "N+1 Query Patterns"
+        empty_title: "No N+1 Query Patterns Found"
+        # %{days} is the selected day range.
+        empty_body: "No N+1 query patterns were detected in error breadcrumbs over the last %{days} days."
+        how_title: "How N+1 detection works:"
+        how_captured: "SQL queries are captured as breadcrumbs during requests that produce errors"
+        # %{threshold} is the configured option name as a <code> element.
+        how_threshold_html: "Queries with the same shape appearing >= %{threshold} times are flagged"
+        # %{count} is the configured default, read from the configuration so the
+        # prose cannot drift from the value actually applied.
+        how_default:
+          one: "Default threshold is %{count} repetition"
+          other: "Default threshold is %{count} repetitions"
+        unique_patterns: "Unique Patterns"
+        all_title: "All N+1 Query Patterns"
+        # column_query, column_total_time and eager_loading_guide are reused
+        # from red.errors.n_plus_one — the detail panel already names them and
+        # the strings are identical.
+        # %{value} is a duration in milliseconds.
+        duration_ms: "%{value} ms"
+        # The method names are Ruby API calls and stay as written.
+        footer_tip_html: "Use %{includes}, %{preload}, or %{eager_load} to fix N+1 queries."
+
+      swallowed_page:
+        title: "Swallowed Exceptions"
+        empty_title: "No Swallowed Exceptions Detected"
+        # %{threshold} is the configured rescue-ratio percentage and %{days} the
+        # selected day range.
+        empty_body: "No exceptions with a rescue ratio above %{threshold}% were detected in the last %{days} days."
+        how_title: "How swallowed exceptions are detected:"
+        # TracePoint(:raise) and TracePoint(:rescue) are Ruby APIs.
+        how_raise: "TracePoint(:raise) counts every exception raised"
+        how_rescue: "TracePoint(:rescue) counts every exception rescued"
+        how_ratio: "High rescue/raise ratio = likely swallowed (silently rescued)"
+        # %{option} is a config option name as a <code> element; the Ruby
+        # version is a literal.
+        how_requires_html: "Requires Ruby 3.3+ and %{option}"
+        swallowed_patterns: "Swallowed Patterns"
+        total_rescues: "Total Rescues"
+        total_raises: "Total Raises"
+        all_title: "Swallowed Exception Patterns"
+        column_exception_class: "Exception Class"
+        column_raise_location: "Raise Location"
+        column_rescue_location: "Rescue Location"
+        column_raises: "Raises"
+        column_rescues: "Rescues"
+        column_ratio: "Ratio"
+        # %{exception} is an exception class name and is never translated.
+        view_unrescued: "View any unrescued %{exception} errors that leaked into error_log"
+        footer_tip: "Swallowed exceptions are raised then silently rescued. They may hide real bugs."
+
+      rack_attack_page:
+        title: "Rate Limit Events"
+        missing_title: "Rack Attack Is Not Installed"
+        # %{gem} is the gem name as a <code> element — a package name, not prose.
+        missing_body_html: >-
+          Tracking is enabled, but the %{gem} gem is not loaded in this
+          application — so no events can be recorded. Add it to your Gemfile and
+          configure at least one rule, then events will appear here.
+        empty_title: "No Rate Limit Events Found"
+        # %{days} is the selected day range.
+        empty_body: "No Rack Attack throttle, blocklist, or track events were recorded over the last %{days} days."
+        how_title: "How Rack Attack tracking works:"
+        # %{option} is a config option name as a <code> element.
+        how_enabled_html: "Rack Attack tracking must be enabled (%{option})"
+        how_installed: "Rack Attack must be installed and configured in your app"
+        how_recorded: "Throttle, blocklist, and track events are recorded whenever a rule matches — no error required"
+        # %{seconds} is the configured flush interval.
+        how_buffered: "Events are buffered and written every %{seconds}s, so allow a short delay before they appear"
+        unique_rules: "Unique Rules"
+        total_events: "Total Events"
+        unique_ips: "Unique IPs"
+        all_title: "Rate Limit Events by Rule"
+        column_rule: "Rule"
+        column_type: "Type"
+        column_count: "Count"
+        column_ips: "IPs"
+        column_top_path: "Top Path"
+        # Rack Attack match types. These are machine values the view also
+        # compares by string equality, so the display is a lookup and the
+        # comparison keeps the English literal.
+        match_type:
+          blocklist: "blocklist"
+          throttle: "throttle"
+          track: "track"
+        footer_tip: "High counts may indicate abuse or misconfigured rules."
+        docs: "Rack Attack Docs"
+
+      diagnostic_dumps_page:
+        title: "Diagnostic Dumps"
+        capture: "Capture Dump"
+        empty_title: "No Diagnostic Dumps Yet"
+        empty_body: "Capture an on-demand snapshot of your system state for debugging."
+        how_title: "How diagnostic dumps work:"
+        # %{button} is the capture button's label and %{command} the rake task,
+        # both rendered as elements.
+        how_capture_html: "Click %{button} above or run %{command}"
+        how_captures: "Captures: environment, GC stats, threads, connection pool, memory, job queue"
+        how_saved: "Each dump is saved to the database for historical comparison"
+        how_use: "Use dumps to investigate production issues or verify system health"
+        total_dumps: "Total Dumps"
+        threads_latest: "Threads (Latest)"
+        memory_latest: "Memory (Latest)"
+        history_title: "Dump History"
+        details: "Details"
+        # PID is an acronym and stays as written. %{pid} is the process id.
+        pid: "PID: %{pid}"
+        # %{minutes} is the process uptime.
+        uptime: "Uptime: %{minutes}m"
+        section_environment: "Environment"
+        section_system_health: "System Health"
+        section_gc: "GC"
+        section_job_queue: "Job Queue"
+        # %{ruby} and %{rails} are version numbers; the language and framework
+        # names are products.
+        env_versions: "Ruby %{ruby} / Rails %{rails}"
+        # %{value} is a memory figure in megabytes. MB is a unit symbol.
+        memory_mb: "%{value} MB"
+        # %{count} is a thread count.
+        threads:
+          one: "%{count} thread"
+          other: "%{count} threads"
+        # %{busy} and %{size} are connection-pool counts.
+        pool: "Pool: %{busy}/%{size}"
+        # %{live} is a heap slot count and %{major} a GC run count.
+        gc_stats: "Live: %{live} / Major GC: %{major}"
+        # %{count} is a failed job count.
+        jobs_failed: "failed: %{count}"
+        # Both are literal rake invocations and are never translated.
+        footer_tip_html: "You can also capture dumps via: %{command}"
+        footer_note_html: "Add a note: %{command}"
+        unknown_short: "?"
+
+      storms_page:
+        title: "Storm History"
+        # storm_* is a config option prefix, rendered as a <code> element.
+        intro_html: >-
+          When the error rate spikes (a bad deploy, a dependency outage), storm
+          protection limits the gem's own database writes so it never amplifies
+          the incident. Occurrences are always counted exactly — only per-event
+          detail is sampled. Thresholds are configurable per process via
+          %{options} options.
+        # %{time} is a formatted timestamp and %{rate} a per-minute rate.
+        active_html: "%{label} since %{time} — peak rate %{rate}."
+        active_label: "Storm in progress"
+        empty_title: "No Storms Recorded"
+        empty_body: >-
+          Storm protection is standing by. If an error flood ever hits this app,
+          episodes will appear here with exact counts of what was shed.
+        column_started: "Started"
+        column_duration: "Duration"
+        column_peak_rate: "Peak Rate"
+        column_mode: "Mode"
+        column_counted: "Counted (exact)"
+        column_overflow: "Overflow"
+        column_top_errors: "Top Errors"
+        active_badge: "active"
+        # Storm modes. Machine states with their own keys rather than raw
+        # values, so a locale can name them.
+        mode_count_only: "count-only"
+        mode_shedding: "shedding"
+        # %{value} is a delimited number. "/min" is a rate unit.
+        rate_per_minute: "%{value}/min"
+        # %{count} is an occurrence count for one error class in a storm.
+        occurrence_multiplier: "×%{count}"
+
+      overview_page:
+        # The browser tab title and the page heading are deliberately different
+        # strings: the tab says what the app is, the heading says what the page
+        # is. One key for both would change the tab title.
+        page_title: "Dashboard"
+        title: "Overview"
+        # %{time} is a <span class="local-time"> element, hence _html.
+        last_updated_html: "Last updated: %{time}"
+        # %{count} critical or high severity errors in the last hour.
+        alert_banner:
+          one: "%{count} Critical/High Error in Last Hour"
+          other: "%{count} Critical/High Errors in Last Hour"
+        # %{count} is an occurrence count.
+        alert_occurrences:
+          one: "%{count} occurrence"
+          other: "%{count} occurrences"
+        alert_view: "View"
+        error_rate: "Error Rate"
+        error_rate_hint: "Errors per hour today"
+        unresolved: "Unresolved"
+        unresolved_hint: "Pending resolution"
+        resolution_rate: "Resolution Rate"
+        # %{resolved} of %{total} errors are resolved. One phrase, not three
+        # fragments — the order is not universal.
+        resolution_hint: "%{resolved} of %{total} resolved"
+        affected_users: "Affected Users (Today)"
+        # %{count} is the change in affected users since yesterday.
+        users_change: "%{count} from yesterday"
+        avg_resolution: "Avg Resolution"
+        avg_resolution_hint: "Mean time to resolution"
+        # %{value} is a duration in hours. The "h" suffix is a unit.
+        hours_short: "%{value}h"
+        error_trend: "Error Trend"
+        top_errors: "Top Errors by Impact"
+        view_all: "View all →"
+        # %{count} is a number of affected users.
+        users:
+          one: "%{count} user"
+          other: "%{count} users"
+        platform_health: "Platform Health"
+        full_comparison: "Full comparison →"
+        # %{score} is a stability score out of 100.
+        stability_score_html: "%{score}/100"
+        # One line summarising a platform's errors. Whole phrase rather than
+        # three fragments joined by separators.
+        platform_summary: "%{total} errors · %{critical} critical · %{unresolved} open"
+        correlation_title: "Correlation Insights"
+        full_analysis: "Full analysis →"
+        problematic_releases: "Problematic Releases"
+        # %{count} is an error count for one release.
+        release_errors:
+          one: "%{count} error"
+          other: "%{count} errors"
+        time_correlated: "Time-Correlated"
+        # %{percent} is the correlation percentage inside its <strong>, hence
+        # _html; %{strength} is a label from red.analytics.correlation_strength,
+        # reused rather than duplicated.
+        correlation_value_html: "%{percent} correlation (%{strength})"
+        multi_error_users: "Multi-Error Users"
+        # %{user} is a user identifier and %{count} how many distinct error
+        # types they hit.
+        user_types_html: "User %{user} · %{types}"
+        types:
+          one: "%{count} type"
+          other: "%{count} types"
+
     settings:
       title: "Settings"
       # %{version} is the gem version. The "v" prefix is a sigil, not a word.
