@@ -1001,6 +1001,224 @@ en:
           snoozed: "snoozed"
           muted: "muted"
 
+    settings:
+      title: "Settings"
+      # %{version} is the gem version. The "v" prefix is a sigil, not a word.
+      version: "v%{version}"
+      # %{file} is the initializer path, rendered as a <code> element. The path
+      # itself is never translated.
+      intro_html: "Read-only view of current configuration. Edit via %{file} or environment variables."
+      # %{count} is the number of options in a collapsed group.
+      option_count:
+        one: "%{count} option"
+        other: "%{count} options"
+
+      plugins:
+        title: "Active Plugins"
+        column_name: "Plugin Name"
+        column_version: "Version"
+        column_description: "Description"
+        column_status: "Status"
+        active: "Active"
+        inactive: "Inactive"
+        empty: "No plugins are currently registered. You can create custom plugins to extend functionality."
+
+      test_error:
+        title: "Test Notifications"
+        # %{error_class} is RailsErrorDashboard::TestError as a <code> element,
+        # so this key is _html. The channel names are products.
+        description_html: >-
+          Send a test error through the full capture and notification pipeline.
+          This creates a %{error_class} in the error log and dispatches
+          notifications to all configured channels (Slack, Discord, PagerDuty,
+          email, webhooks). The test error is clearly marked and safe to resolve
+          or delete.
+        confirm: "This will create a test error and send notifications to all configured channels. Continue?"
+        submit: "Send Test Error"
+
+      help:
+        title: "Need to change these settings?"
+        # Two whole sentences, rendered on separate lines. Each is one key with
+        # its element interpolated rather than prose fragments assembled around
+        # the markup — clause order is not universal.
+        # %{file} is the initializer path and %{docs} the documentation link,
+        # both pre-built elements, hence _html.
+        edit_html: "Edit your configuration in %{file} and restart your application."
+        docs_html: "See the %{docs} for more information."
+        docs_link: "documentation"
+
+      # Group headings, keyed by a stable slug so the display text can change
+      # without touching the view's structure.
+      groups:
+        core_features: "Core Features"
+        multi_app: "Multi-App Support"
+        user_integration: "User Integration"
+        performance: "Performance Settings"
+        notifications: "Notification Channels"
+        analytics: "Advanced Analytics Features"
+        source_code: "Source Code Integration"
+        breadcrumbs: "Breadcrumbs"
+        system_health: "System Health"
+        enhanced_metrics: "Enhanced Metrics"
+        issue_tracking: "Issue Tracking"
+        deep_debugging: "Deep Debugging"
+        event_tracking: "Event Tracking"
+        advanced: "Advanced Configuration"
+        internal_logging: "Internal Logging"
+
+      # Units appended to a numeric setting value. Plural forms because the
+      # value drives them; English happens to show the plural in every default
+      # but a locale cannot rely on that.
+      units:
+        lines:
+          one: "%{count} line"
+          other: "%{count} lines"
+        minutes:
+          one: "%{count} minute"
+          other: "%{count} minutes"
+        seconds:
+          one: "%{count} second"
+          other: "%{count} seconds"
+        events:
+          one: "%{count} event"
+          other: "%{count} events"
+        queries:
+          one: "%{count} query"
+          other: "%{count} queries"
+        # The standard-deviation symbol is a unit sign, not a word.
+        std_devs: "%{count}σ"
+
+      # Value badges rendered by settings/_value_badge. The five "absent"
+      # phrasings are deliberately distinct — they mean different things
+      # (unset vs. not found vs. unavailable vs. empty vs. undetectable) and
+      # collapsing them would lose that distinction in translation.
+      values:
+        enabled: "Enabled"
+        disabled: "Disabled"
+        not_set: "Not set"
+        not_found: "Not found"
+        not_available: "Not available"
+        empty: "Empty"
+        unknown: "Unknown"
+        set: "Set"
+        auto_detected: "Auto-detected"
+        # The parentheses are part of the English rendering; a locale may drop
+        # them.
+        configured: "(Configured)"
+        items:
+          one: "%{count} item"
+          other: "%{count} items"
+        rules:
+          one: "%{count} rule"
+          other: "%{count} rules"
+        # %{count} selects the form; %{formatted} is the same number with
+        # thousands delimiters, which is what should be displayed.
+        users:
+          one: "%{formatted} user"
+          other: "%{formatted} users"
+        days:
+          one: "%{count} day"
+          other: "%{count} days"
+        rails_app_name_unavailable: "Rails app name unavailable"
+        # %{name} is the database configuration's name — a config key, not
+        # prose.
+        separate_db: "Separate DB: %{name}"
+        configured_but_not_found: "Configured but not found"
+        # "primary" is the Rails database configuration key and stays literal.
+        shared_db_primary: "Shared DB (primary)"
+        shared_db: "Shared DB"
+        unable_to_detect: "Unable to detect"
+        no_user_model: "No User model detected"
+        unable_to_query_count: "Unable to query count"
+        manual_cleanup_required: "Manual cleanup required"
+        keep_forever: "Keep Forever"
+        no_automatic_deletion: "No automatic deletion"
+        # These label a rake command rendered beside them. The command is never
+        # translated.
+        run_command: "Run:"
+        to_cleanup: "To cleanup:"
+
+      # One description per config option, keyed by the option's own name so the
+      # key stays greppable from the initializer. The option names themselves,
+      # file paths, env vars, rake commands, Ruby APIs and product names inside
+      # these sentences are never translated.
+      options:
+        enable_middleware: "Catches unhandled exceptions"
+        enable_error_subscriber: "Subscribes to Rails error events"
+        retention_days: "Manual cleanup only (run: rails error_dashboard:cleanup_resolved DAYS=90)"
+        max_backtrace_lines: "Stack trace depth limit"
+        sampling_rate: "Percentage of errors captured"
+        application_name: "Name of this application (auto-detected if not set)"
+        database: "Active database for error logs"
+        use_separate_database: "Use dedicated DB for error logs"
+        user_model: "Model name for user associations (auto-detected if not set)"
+        total_users_for_impact: "For impact % calculation (auto-detected if not set)"
+        async_logging: "Background job processing"
+        async_adapter: "Job queue adapter"
+        enable_rate_limiting: "Throttle API requests"
+        rate_limit_per_minute: "Requests per minute per IP"
+        enable_slack_notifications: "Real-time notifications"
+        slack_webhook_url: "Slack webhook endpoint"
+        enable_email_notifications: "Email alerts"
+        notification_email_recipients: "Recipient addresses"
+        notification_email_from: "Sender address"
+        enable_discord_notifications: "Discord webhook notifications"
+        discord_webhook_url: "Discord webhook endpoint"
+        enable_pagerduty_notifications: "Critical error escalation"
+        pagerduty_integration_key: "PagerDuty API key"
+        enable_webhook_notifications: "Generic webhook endpoints"
+        webhook_urls: "Custom webhook endpoints"
+        enable_scheduled_digests: "Daily/weekly summary emails. Schedule via SolidQueue, Sidekiq, or cron"
+        digest_frequency: "How often to send digest emails"
+        digest_recipients: "Email addresses (falls back to notification recipients)"
+        enable_similar_errors: "Find related errors by similarity"
+        enable_co_occurring_errors: "Errors happening together"
+        enable_error_cascades: "Parent→child error chains"
+        enable_error_correlation: "Version/user/time analysis"
+        enable_platform_comparison: "iOS vs Android analytics"
+        enable_occurrence_patterns: "Cyclical/burst detection"
+        enable_baseline_alerts: "Anomaly detection"
+        baseline_alert_threshold_std_devs: "Standard deviations to trigger alert"
+        baseline_alert_severities: "Severities to alert on"
+        baseline_alert_cooldown_minutes: "Minutes between alerts for same error type"
+        enable_source_code_integration: "Show code in backtrace"
+        source_code_context_lines: "Lines before/after target line"
+        enable_git_blame: "Show git blame info"
+        source_code_cache_ttl: "Source code cache duration"
+        only_show_app_code_source: "Hide gems/stdlib for security"
+        git_branch_strategy: "Branch resolution strategy"
+        enable_breadcrumbs: "Capture request activity trail"
+        breadcrumb_buffer_size: "Max breadcrumbs per request"
+        enable_n_plus_one_detection: "Detect repeated query patterns in breadcrumbs"
+        n_plus_one_threshold: "Min repetitions to flag as N+1"
+        enable_system_health: "Capture GC, memory, threads, connection pool at error time"
+        app_version: "Current application version"
+        git_sha: "Deployed commit"
+        git_repository_url: "GitHub/GitLab repo URL"
+        dashboard_base_url: "Base URL for dashboard links"
+        enable_issue_tracking: >-
+          GitHub/GitLab/Codeberg integration — one switch enables all: issue
+          creation, auto-create, lifecycle sync, platform state mirroring,
+          comment display. Replaces workflow controls with platform state.
+        issue_tracker_token: "RED bot token (set RED_BOT_TOKEN env var)"
+        issue_tracker_provider: "Auto-detected from git_repository_url"
+        issue_tracker_repo: "Auto-detected from git_repository_url"
+        issue_tracker_labels: "Labels added to new issues"
+        issue_webhook_secret: "Set to enable two-way sync (HMAC verification)"
+        enable_local_variables: "TracePoint(:raise) — capture locals at exception time"
+        enable_instance_variables: "Capture self's ivars at exception time"
+        detect_swallowed_exceptions: "TracePoint(:raise) + (:rescue) — detect silently rescued exceptions (Ruby 3.3+)"
+        enable_diagnostic_dump: "On-demand system state snapshots"
+        enable_crash_capture: "at_exit hook for unhandled crashes"
+        enable_coverage_tracking: "Diagnostic mode — enable via dashboard to see executed lines in source view (Ruby 3.2+)"
+        enable_rack_attack_tracking: "Record throttle/blocklist events to their own table"
+        enable_actioncable_tracking: "Track WebSocket channel events as breadcrumbs"
+        enable_activestorage_tracking: "Track uploads/downloads/deletes as breadcrumbs"
+        custom_severity_rules: "Error type → severity mapping"
+        ignored_exceptions: "Exceptions to ignore"
+        enable_internal_logging: "Gem debugging output"
+        log_level: "Verbosity level"
+
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a
       # duration and the word "ago" — word order differs across languages, and
