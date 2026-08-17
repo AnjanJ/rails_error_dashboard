@@ -126,7 +126,7 @@ RSpec.describe "Detail partial translations", type: :request do
 
       # Assert on key structure rather than a substring of the inspected form:
       # the serialized ErrorLog carries a user_agent that can contain anything.
-      %w[error_details_v2 request_context_v4].each do |marker|
+      %w[error_details_v2 request_context_v5].each do |marker|
         key = written.find { |k| Array(k).flatten.any? { |part| part == marker } }
         expect(key).to be_present, "expected a cached fragment tagged #{marker}"
         expect(Array(key).flatten).to include("en"),

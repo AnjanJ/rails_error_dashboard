@@ -667,6 +667,112 @@ en:
         simultaneous: "simultaneous"
         view: "View"
 
+      modals:
+        # The five action modals on the error detail page. "Cancel" and the
+        # close button's aria-label are shared across all of them.
+        cancel: "Cancel"
+        # The placeholder is an example name. Translators should substitute a
+        # name that reads as a placeholder in their language.
+        name_placeholder: "e.g., John Doe"
+        # Marks a required field. The asterisk is separate markup, so this is
+        # only the label text.
+        resolve:
+          title: "Mark Error as Resolved"
+          name_label: "Your Name"
+          name_hint: "Who is resolving this error?"
+          reference_label: "Reference (Optional)"
+          # JIRA, PR and GitHub are product names and stay as written.
+          reference_placeholder: "e.g., JIRA-123, PR #456, GitHub Issue #789"
+          reference_hint: "Link to ticket, PR, or issue"
+          notes_label: "Resolution Notes (Optional)"
+          notes_placeholder: "Describe what was done to fix this error..."
+          notes_hint: "What was done to resolve this error?"
+          submit: "Mark as Resolved"
+        assign:
+          title: "Assign Error"
+          label: "Assign To"
+          hint: "Who should investigate this error?"
+          submit: "Assign"
+        priority:
+          title: "Update Priority"
+          label: "Priority Level"
+          # %{value} is the current priority's label.
+          current: "Current: %{value}"
+          submit: "Update Priority"
+        snooze:
+          title: "Snooze Error"
+          label: "Snooze Duration"
+          hint: "Hide this error from active views"
+          reason_label: "Reason (Optional)"
+          reason_placeholder: "Why are you snoozing this error?"
+          reason_hint: "Reason will be added as a comment"
+          submit: "Snooze"
+          # Duration options. English writes the longer spans twice — "24 hours
+          # (1 day)". The two halves pluralize on different counts (24 and 1),
+          # so each is its own plural key and %{equivalent} composes them. A
+          # locale that does not use the parenthetical can ignore it.
+          hours:
+            one: "%{count} hour"
+            other: "%{count} hours"
+          days:
+            one: "%{count} day"
+            other: "%{count} days"
+          weeks:
+            one: "%{count} week"
+            other: "%{count} weeks"
+          hours_with_equivalent: "%{hours} (%{equivalent})"
+        mute:
+          title: "Mute Notifications"
+          # The channel names are products and stay as written.
+          description: "Muted errors still appear in the dashboard but will not trigger any notifications (Slack, email, Discord, PagerDuty, webhooks)."
+          name_label: "Your Name (Optional)"
+          reason_label: "Reason (Optional)"
+          reason_placeholder: "Why are you muting this error?"
+          reason_hint: "Reason will be added as a comment"
+          submit: "Mute Notifications"
+
+      request_context:
+        title: "Request Context"
+        # Table row labels. The trailing colon is part of the label so a locale
+        # can drop it — several scripts do not use one.
+        url: "Request URL:"
+        hostname: "Hostname:"
+        content_type: "Content Type:"
+        duration: "Request Duration:"
+        params: "Request Params:"
+        user_agent: "User Agent:"
+        ip_address: "IP Address:"
+        replay: "Replay Request:"
+        raw_user_agent: "Raw User Agent"
+        # %{value} is a number. The unit is inside the key so a locale can put
+        # a space (or nothing) between number and unit as its typography wants.
+        duration_seconds: "%{value}s"
+        duration_ms: "%{value}ms"
+        # "curl" and "RSpec" are tool names and stay as written in every locale.
+        copy_curl: "Copy as curl"
+        copy_curl_title: "Copy curl command to clipboard"
+        copy_rspec: "Copy as RSpec"
+        copy_rspec_title: "Copy RSpec request spec to clipboard"
+
+      similar_errors:
+        title: "Similar Errors"
+        badge: "Fuzzy Matching"
+        # %{threshold} is the similarity cut-off as a percentage. It is passed
+        # from the same local that drives the query, so the prose cannot drift
+        # from the threshold actually applied.
+        hint: "Errors with similar backtraces and messages (%{threshold}%+ similarity)"
+        column_similarity: "Similarity"
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_platform: "Platform"
+        column_occurrences: "Occurrences"
+        # %{count} occurrences. English shortens "times" to a trailing "x";
+        # that abbreviation is not universal, so it is a full plural form here.
+        occurrences:
+          one: "%{count}x"
+          other: "%{count}x"
+        view: "View"
+
       source_code:
         # %{host} is a repository host name (GitHub, GitLab, Bitbucket) — a
         # brand name, not translated.
