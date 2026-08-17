@@ -1531,6 +1531,124 @@ en:
         enable_internal_logging: "Gem debugging output"
         log_level: "Verbosity level"
 
+    flash:
+      # Controller flash messages and the command result strings they wrap.
+      #
+      # The batch notice used to read "Successfully #{action_type}d N error(s)":
+      # it conjugated English past tense by bolting a "d" onto the raw action
+      # param and dodged pluralization with "(s)". No key can express that, so
+      # each outcome is its own key with real plural forms. Never interpolate a
+      # verb into a sentence — only data.
+      batch:
+        resolved:
+          one: "Successfully resolved %{count} error"
+          other: "Successfully resolved %{count} errors"
+        muted:
+          one: "Successfully muted %{count} error"
+          other: "Successfully muted %{count} errors"
+        unmuted:
+          one: "Successfully unmuted %{count} error"
+          other: "Successfully unmuted %{count} errors"
+        deleted:
+          one: "Successfully deleted %{count} error"
+          other: "Successfully deleted %{count} errors"
+        # %{reason} is a command's own error string.
+        failed: "Batch operation failed: %{reason}"
+
+      issue:
+        created: "Issue created successfully"
+        linked: "Issue linked successfully"
+        # %{reason} is a command's own error string.
+        create_failed: "Failed to create issue: %{reason}"
+        link_failed: "Failed to link issue: %{reason}"
+
+      # The "X is not enabled" notice was written out eleven times with only
+      # the feature name changing. Two keys rather than one because English
+      # agrees the verb and pronoun with the feature name: "Breadcrumbs are
+      # not enabled. Enable them" but "System health is not enabled. Enable
+      # it". A language with different agreement rules — or none — can give
+      # both keys the same text. The initializer path is a path, not prose,
+      # and is interpolated rather than translated.
+      not_enabled: "%{feature} is not enabled. Enable it in %{file}"
+      not_enabled_plural: "%{feature} are not enabled. Enable them in %{file}"
+      # A few features name the exact options instead. %{options} is a list of
+      # config option names — identifiers, never translated. "Set" is used when
+      # the option needs an explicit value, "Enable" when naming it is enough.
+      not_enabled_options: "%{feature} is not enabled. Enable %{options} in %{file}"
+      not_enabled_set_options: "%{feature} is not enabled. Set %{options} in %{file}"
+      # Feature names as they appear in those notices.
+      features:
+        platform_comparison: "Platform Comparison"
+        error_correlation: "Error Correlation"
+        breadcrumbs: "Breadcrumbs"
+        system_health: "System health"
+        swallowed_exceptions: "Swallowed exception detection"
+        rack_attack: "Rack Attack tracking"
+        actioncable: "ActionCable tracking"
+        activestorage: "ActiveStorage tracking"
+        diagnostic_dumps: "Diagnostic dumps"
+
+      diagnostic_dump:
+        disabled: "Diagnostic dumps are not enabled."
+        captured: "Diagnostic dump captured successfully."
+        # %{message} is an exception message — diagnostic output, never
+        # translated, only wrapped.
+        failed: "Failed to capture diagnostic dump: %{message}"
+
+      coverage:
+        not_enabled: "Coverage tracking is not enabled in configuration."
+        enabled: "Code path coverage enabled. Reproduce the error, then view source code to see executed lines."
+        disabled: "Code path coverage disabled."
+        # The Ruby version requirement is a literal.
+        unavailable: "Could not enable coverage. Requires Ruby 3.2+."
+
+      test_error:
+        # The channel names are products.
+        logged: "Test error logged successfully. Check your notification channels (Slack, Discord, email, etc.) to confirm delivery."
+        # %{message} is an exception message and stays verbatim.
+        failed: "Failed to log test error: %{message}"
+
+      # %{version} is the running Ruby version. "Ruby 3.3+" is a literal
+      # requirement, not prose.
+      swallowed_requires_ruby: "Swallowed exception detection requires Ruby 3.3+ (you have %{version}). Upgrade Ruby to use this feature."
+
+      # JSON error bodies for the AI help endpoint. The message is rendered in
+      # the help panel, so it is translated; the HTTP status carrying it is the
+      # machine-readable half and is untouched.
+      ai_help:
+        not_configured: "AI Help is not configured"
+        blank_question: "Question cannot be blank"
+        # %{limit} is the character cap, formatted with delimiters.
+        question_too_long: "Question is too long. Keep it under %{limit} characters."
+
+    commands:
+      # Strings returned by commands in their result hashes. They are not shown
+      # on their own — a controller wraps each one in a flash message — but they
+      # are the half of that sentence the command owns.
+      #
+      # Exception messages and class names returned alongside these are
+      # diagnostic output and are never translated.
+      no_error_ids: "No error IDs provided"
+      invalid_action: "Invalid action type"
+      issue:
+        not_configured: "Issue tracking is not configured"
+        # %{url} is the existing issue's URL.
+        already_linked: "Error already has a linked issue: %{url}"
+        url_required: "Issue URL is required"
+      # %{id} is the requested error's id.
+      error_not_found: "Error not found: %{id}"
+      # %{count} errors could not be updated in a batch operation.
+      batch_failed:
+        mute:
+          one: "Failed to mute %{count} error"
+          other: "Failed to mute %{count} errors"
+        unmute:
+          one: "Failed to unmute %{count} error"
+          other: "Failed to unmute %{count} errors"
+        resolve:
+          one: "Failed to resolve %{count} error"
+          other: "Failed to resolve %{count} errors"
+
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a
       # duration and the word "ago" — word order differs across languages, and

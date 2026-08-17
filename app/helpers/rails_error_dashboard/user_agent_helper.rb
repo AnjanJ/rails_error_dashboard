@@ -2,6 +2,11 @@
 
 module RailsErrorDashboard
   module UserAgentHelper
+    # These helpers translate, so they depend on red_t explicitly rather
+    # than on the controller happening to mix every engine helper into
+    # one view context.
+    include I18nHelper
+
     # Parse user agent string into browser, OS, and device info
     def parse_user_agent(user_agent_string)
       return default_user_agent_info if user_agent_string.blank?

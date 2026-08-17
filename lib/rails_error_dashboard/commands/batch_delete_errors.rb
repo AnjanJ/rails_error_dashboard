@@ -5,6 +5,8 @@ module RailsErrorDashboard
     # Command: Delete multiple errors at once
     # This is a write operation that destroys multiple ErrorLog records
     class BatchDeleteErrors
+      include RailsErrorDashboard::Translation
+
       def self.call(error_ids)
         new(error_ids).call
       end
@@ -14,7 +16,7 @@ module RailsErrorDashboard
       end
 
       def call
-        return { success: false, count: 0, errors: [ "No error IDs provided" ] } if @error_ids.empty?
+        return { success: false, count: 0, errors: [ red_t("red.commands.no_error_ids") ] } if @error_ids.empty?
 
         errors = ErrorLog.where(id: @error_ids)
         count = errors.count

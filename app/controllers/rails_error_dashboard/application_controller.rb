@@ -8,6 +8,10 @@ module RailsErrorDashboard
     include ActionController::Flash
     include ActionController::RequestForgeryProtection
 
+    # red_t for flash messages. Not the view helper — that html-escapes, and a
+    # flash string is escaped again when the layout renders it.
+    include Translation
+
     layout "rails_error_dashboard"
 
     protect_from_forgery with: :exception

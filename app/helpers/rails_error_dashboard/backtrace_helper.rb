@@ -2,6 +2,11 @@
 
 module RailsErrorDashboard
   module BacktraceHelper
+    # These helpers translate, so they depend on red_t explicitly rather
+    # than on the controller happening to mix every engine helper into
+    # one view context.
+    include I18nHelper
+
     # Language mapping for syntax highlighting
     LANGUAGE_MAP = {
       ".rb" => "ruby",

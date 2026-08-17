@@ -2,6 +2,11 @@
 
 module RailsErrorDashboard
   module OverviewHelper
+    # These helpers translate, so they depend on red_t explicitly rather
+    # than on the controller happening to mix every engine helper into
+    # one view context.
+    include I18nHelper
+
     # All helper methods return Bootstrap semantic classes (success, warning, danger)
     # These automatically map to Catppuccin Mocha colors in dark theme via CSS variables:
     # - success → --ctp-green

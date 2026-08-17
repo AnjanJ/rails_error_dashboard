@@ -122,6 +122,13 @@ both:
 - **Issue-tracker bodies** (GitHub/GitLab/Linear) — dev-facing, and the
   maintainer reading them may not share the dashboard's locale
 - **Config option names and file paths** (`config/initializers/...`)
+- **Audit-trail comment bodies** written by the mute, snooze and status
+  commands ("Muted notifications: …"). These are persisted at write time and
+  read back later by whoever opens the error — possibly in another locale.
+  Translating at write time would freeze one language into the row and leave a
+  discussion thread that is half one language and half another. Localizing
+  these properly means storing the action and its data as structured fields and
+  translating on render, which is a schema change, not an extraction.
 
 Error-domain jargon is a judgement call. Terms like "backtrace", "N+1", and
 "swallowed exception" are often left untranslated even in otherwise translated
