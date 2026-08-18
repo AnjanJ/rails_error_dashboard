@@ -192,18 +192,36 @@ module RailsErrorDashboard
 
           # THE HOST'S ALLOWLIST MUST NOT DECIDE WHICH LOCALES RED SHIPS.
           #
-          # I18n::Backend::Simple#load_translations filters every file it reads
-          # through the GLOBAL I18n.available_locales, silently discarding any
-          # locale not on that list. A host with
-          # `config.i18n.available_locales = [:en, :ja]` — a perfectly ordinary
-          # setting — would therefore strip RED's de/fr/es/pt-BR right out of
-          # RED's own private dictionary, and every page would render English
-          # with no error anywhere to explain why.
+          # load_translations hands each file to Backend::Simple#store_translations,
+          # which opens by discarding the data — silently, returning it unstored —
+          # when all three of these hold:
           #
-          # Loading with the allowlist temporarily cleared is the only way to
-          # get Simple to read the files as written. The global is restored
-          # immediately, in an ensure, so the host never observes the change:
-          # this is a read of RED's own files, not a reconfiguration.
+          #   1. I18n.enforce_available_locales           (the Rails DEFAULT)
+          #   2. I18n.available_locales_initialized?      (see below)
+          #   3. the locale is absent from the host's list
+          #
+          # Condition 2 is the fuse, and it is a ONE-WAY LATCH: it flips the
+          # first time anything ASSIGNS to I18n.available_locales, and I18n
+          # exposes no way to clear it. So a host that configures its locales
+          # at boot — or any library that touches the setting once — arms the
+          # filter for the life of the process.
+          #
+          # The effect is that a host with `config.i18n.available_locales =
+          # [:en, :ja]` strips RED's de/fr/es/pt-BR out of RED's OWN private
+          # dictionary, and every dashboard page renders English with nothing
+          # anywhere to explain why.
+          #
+          # Loading with the allowlist temporarily cleared is what gets Simple
+          # to store the files as written. The global is restored in an ensure,
+          # so the host never observes the change: this is a read of RED's own
+          # files, not a reconfiguration.
+          #
+          # KNOWN LIMITATION: the clear/restore window is global, so a
+          # concurrent thread could observe it. A Backend::Simple subclass that
+          # overrides store_translations would avoid touching the global at all
+          # and is the better long-term fix; it is not done here only because
+          # it copies an upstream method body and needs a spec pinning that
+          # behaviour so an i18n upgrade fails loudly rather than silently.
           #
           # Found in P4-T3 by a spec fixture that kept resolving to English.
           with_unrestricted_locales do
