@@ -315,7 +315,7 @@
       data: {
         labels: <%= raw @error_rate_by_platform.keys.map { |k| k.to_s.capitalize }.to_json %>,
         datasets: [{
-          label: 'Total Errors',
+          label: '<%= red_js_t("red.ui_js.charts.series_total_errors") %>',
           data: <%= raw @error_rate_by_platform.values.to_json %>,
           backgroundColor: 'rgba(37, 99, 235, 0.5)', // Blue with transparency
           borderColor: '#2563EB', // Blue
@@ -385,7 +385,7 @@
       data: {
         labels: platforms,
         datasets: [{
-          label: 'Hours to Resolve',
+          label: '<%= red_js_t("red.ui_js.charts.series_hours_to_resolve") %>',
           data: times,
           backgroundColor: 'rgba(245, 158, 11, 0.5)', // Amber with transparency
           borderColor: '#F59E0B', // Amber
@@ -400,7 +400,7 @@
           legend: { display: false }
         },
         scales: {
-          x: { beginAtZero: true, title: { display: true, text: 'Hours' } }
+          x: { beginAtZero: true, title: { display: true, text: '<%= red_js_t("red.ui_js.charts.axis_hours") %>' } }
         }
       }
     });

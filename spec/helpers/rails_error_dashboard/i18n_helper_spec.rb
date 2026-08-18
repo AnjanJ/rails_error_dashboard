@@ -141,6 +141,73 @@ RSpec.describe RailsErrorDashboard::I18nHelper, type: :helper do
     end
   end
 
+  # red_t html-escapes, which is right for page text and wrong inside a JS
+  # string literal. The two sinks in the layout's script blocks disagree about
+  # entities: showToast and innerHTML decode &#39; back to an apostrophe, but
+  # textContent renders it literally, so a French string would display
+  # "d&#39;accéder" on screen. red_js_t escapes for the literal instead.
+  describe "#red_js_t" do
+    let(:backslash) { 92.chr }
+
+    it "escapes an apostrophe for the literal rather than into an entity" do
+      RailsErrorDashboard::I18nStore.backend.store_translations(
+        :en, red: { js_escape_probe: "Copié dans l'presse-papiers" }
+      )
+
+      result = helper.red_js_t("red.js_escape_probe")
+
+      expect(result).to eq("Copié dans l#{backslash}'presse-papiers")
+      expect(result).not_to include("&#39;")
+    end
+
+    # The real job: an unescaped quote closes the literal and everything after
+    # it is parsed as code.
+    it "escapes quotes so a value cannot break out of the literal" do
+      RailsErrorDashboard::I18nStore.backend.store_translations(
+        :en, red: { js_escape_probe: "it's done'; alert(1); var x='" }
+      )
+
+      result = helper.red_js_t("red.js_escape_probe")
+
+      expect(result).to eq("it#{backslash}'s done#{backslash}'; alert(1); var x=#{backslash}'")
+      expect(result).not_to include("done'; alert(1)")
+    end
+
+    it "escapes a newline that would otherwise truncate the statement" do
+      RailsErrorDashboard::I18nStore.backend.store_translations(
+        :en, red: { js_escape_probe: "line one\nline two" }
+      )
+
+      result = helper.red_js_t("red.js_escape_probe")
+
+      expect(result).to eq("line one#{backslash}nline two")
+      expect(result).not_to include("\n")
+    end
+
+    it "returns readable text for a missing key rather than raising" do
+      expect(helper.red_js_t("red.nope.absent_js_key")).to eq("Absent js key")
+    end
+
+    # escape_javascript comes from ActionView. In a request the controller
+    # mixes every engine helper into one view context so it happens to be
+    # present, but that is incidental — this asserts the explicit include,
+    # without which every red_js_t site silently rendered an empty string.
+    it "has escape_javascript available without relying on the view context" do
+      bare = Class.new { include RailsErrorDashboard::I18nHelper }.new
+
+      expect(bare).to respond_to(:escape_javascript)
+    end
+
+    it "pluralizes through red_js_tp" do
+      RailsErrorDashboard::I18nStore.backend.store_translations(
+        :en, red: { js_plural_probe: { one: "1 thing", other: "%{count} things" } }
+      )
+
+      expect(helper.red_js_tp("red.js_plural_probe", count: 1)).to eq("1 thing")
+      expect(helper.red_js_tp("red.js_plural_probe", count: 5)).to eq("5 things")
+    end
+  end
+
   describe "#red_js_translations" do
     it "returns the JS subtree, the time formats, and the locale" do
       payload = helper.red_js_translations

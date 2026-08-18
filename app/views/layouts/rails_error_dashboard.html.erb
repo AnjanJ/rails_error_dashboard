@@ -67,6 +67,18 @@
         } catch (e) {
           return String(key);
         }
+        // A plural key resolves to a branch of forms, not a string. When the
+        // caller passes a count, select the form here rather than making every
+        // call site do it — a ternary on "s" at the call site is the exact
+        // anti-pattern this whole namespace exists to avoid.
+        if (value && typeof value === 'object' && params && typeof params.count === 'number') {
+          var form = (params.count === 1 && typeof value.one === 'string') ? value.one : value.other;
+          // A locale supplying only :other still renders; so does one that
+          // supplies only :one, rather than either becoming "undefined".
+          if (typeof form !== 'string') form = value.one;
+          if (typeof form !== 'string') return String(key);
+          value = form;
+        }
         if (typeof value !== 'string') return String(key);
         if (!params) return value;
         // Leaves an unknown %{name} in place rather than blanking it — a
@@ -1373,7 +1385,7 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
       this.submitButtonTargets.forEach(function(btn) {
         btn.disabled = true;
         if (!btn.dataset.loadingOriginalHtml) { btn.dataset.loadingOriginalHtml = btn.innerHTML; }
-        btn.innerHTML = '<span class="loading-spinner"></span> Loading...';
+        btn.innerHTML = '<span class="loading-spinner"></span> <%= red_js_t("red.ui_js.toast.loading") %>';
       });
     }
 
@@ -1545,18 +1557,18 @@ document.addEventListener('DOMContentLoaded', function() {
   window.copyToClipboard = function(text, button) {
     navigator.clipboard.writeText(text).then(function() {
       var originalHTML = button.innerHTML;
-      button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+      button.innerHTML = '<i class="bi bi-check"></i> <%= red_js_t("red.ui_js.toast.copied") %>';
       button.classList.remove('btn-outline-secondary');
       button.classList.add('btn-success');
-      showToast('Copied to clipboard!', 'success');
+      showToast('<%= red_js_t("red.ui_js.toast.copied_to_clipboard") %>', 'success');
       setTimeout(function() {
         button.innerHTML = originalHTML;
         button.classList.remove('btn-success');
         button.classList.add('btn-outline-secondary');
       }, 2000);
     }).catch(function() {
-      button.innerHTML = '<i class="bi bi-x"></i> Failed';
-      showToast('Failed to copy to clipboard', 'danger');
+      button.innerHTML = '<i class="bi bi-x"></i> <%= red_js_t("red.ui_js.toast.failed") %>';
+      showToast('<%= red_js_t("red.ui_js.toast.copy_failed") %>', 'danger');
     });
   };
 
@@ -1570,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', function() {
       '<div id="' + toastId + '" class="toast align-items-center text-white ' + bgClass + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
         '<div class="d-flex">' +
           '<div class="toast-body"><i class="bi ' + iconClass + ' me-2"></i>' + message + '</div>' +
-          '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+          '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="<%= red_js_t("red.common.close") %>"></button>' +
         '</div>' +
       '</div>';
     var container = document.querySelector('.toast-container');
@@ -1940,13 +1952,13 @@ document.addEventListener('DOMContentLoaded', function() {
     var button = form.querySelector('button[type="submit"]');
     var question = input ? input.value.trim() : '';
     if (!question) {
-      if (status) status.textContent = 'Enter a question first.';
+      if (status) status.textContent = '<%= red_js_t("red.ui_js.ai_help.question_required") %>';
       return;
     }
 
     appendAiHelpMessage('user', question);
     if (input) input.value = '';
-    if (status) status.textContent = 'Streaming...';
+    if (status) status.textContent = '<%= red_js_t("red.ui_js.ai_help.streaming") %>';
     if (button) button.disabled = true;
 
     var tokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -1965,7 +1977,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
       if (!response.body || !window.TextDecoder) {
-        throw new Error('Streaming is not supported by this browser.');
+        throw new Error('<%= red_js_t("red.ui_js.ai_help.streaming_unsupported") %>');
       }
 
       var assistantMessage = appendAiHelpMessage('assistant', '');
@@ -2033,7 +2045,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return readNext();
     }).catch(function(error) {
       appendAiHelpMessage('error', error.message);
-      if (status) status.textContent = 'Request failed.';
+      if (status) status.textContent = '<%= red_js_t("red.ui_js.ai_help.request_failed") %>';
     }).finally(function() {
       if (button) button.disabled = false;
       if (input) input.focus();

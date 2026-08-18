@@ -66,9 +66,31 @@ Filenames are the source of truth for which locales exist:
 - Keys are `snake_case` and **semantic**, not literal:
   `red.errors.index.empty_title`, not `red.errors.index.no_errors_found`.
 - Namespaces: `common`, `time`, `nav`, `errors`, `settings`, `analytics`,
-  `health`, `flash`, `mailers`, `notifications`, `js`.
+  `health`, `flash`, `mailers`, `notifications`, `js`, `ui_js`.
+- **`js` vs `ui_js`** — both end up in JavaScript, but they get there
+  differently, and the split is what keeps the payload small. `red.js.*` is
+  serialized into `window.RED_I18N` on **every** page load, so it holds only
+  what the browser resolves at runtime: month and day names, plural forms whose
+  count is not known until the user acts, the relative-time durations.
+  `red.ui_js.*` is written into the script body by ERB at render time via
+  `red_js_t`, so the browser never looks it up and it costs no payload.
+
+  The test is where the lookup happens, not what the string looks like: if JS
+  builds the text at runtime it belongs in `js`; if ERB writes it into the
+  script, it belongs in `ui_js`.
 - A key ending in `_html` is rendered unescaped. Everything else is escaped.
   Do not add `_html` unless the value genuinely contains markup.
+
+### Strings inside `<script>` blocks
+
+Use `red_js_t`, not `red_t`. `red_t` html-escapes, which is correct for page
+text and wrong inside a JavaScript string literal: an apostrophe becomes
+`&#39;`, and while `innerHTML` and `showToast` decode that back, `textContent`
+renders it verbatim — so a French string shows `d&#39;accéder` on screen.
+
+`red_js_t` runs the value through `escape_javascript` instead, which neutralizes
+the quotes, backslashes and line terminators that would break out of or truncate
+the literal, and leaves everything the sink will render alone.
 
 ### Pluralization
 

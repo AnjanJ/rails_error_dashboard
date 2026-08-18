@@ -22,7 +22,8 @@
 #   flash         controller flash and JSON messages
 #   mailers       digest and alert emails
 #   notifications Slack/Discord/PagerDuty/webhook payload labels
-#   js            strings handed to inline JavaScript
+#   js            data the browser reads at runtime from window.RED_I18N
+#   ui_js         strings the server renders into inline <script> blocks
 #
 # Phases 2-4 fill in the rest.
 en:
@@ -2430,6 +2431,14 @@ en:
           one: "1 year"
           other: "%{count} years"
 
+      # Batch-selection counter on the errors index. Lives here rather than in
+      # ui_js because the count is only known once the user ticks a box, so the
+      # browser selects the plural form — never count + " selected", which
+      # assumes both the word order and the agreement of English.
+      selected:
+        one: "1 selected"
+        other: "%{count} selected"
+
       # Timestamp tooltips and the UTC suffix on the toggled-to view.
       # "UTC" itself is a standard abbreviation and stays as-is.
       titles:
@@ -2437,3 +2446,63 @@ en:
         utc_time: "UTC time (click to see local time)"
         exact_time: "Click to see exact time"
         relative_time: "Click to see relative time"
+
+    # Strings the SERVER renders into inline <script> blocks (P3-T3).
+    #
+    # Separate from red.js on purpose. red.js ships to the browser in
+    # window.RED_I18N on every page load and must stay small; these are
+    # resolved by red_t at render time and the browser never looks them up,
+    # so shipping them would be pure payload with no reader.
+    #
+    # The test is where the lookup happens, not what the string looks like:
+    # if JS builds the text at runtime it belongs in red.js, and if ERB writes
+    # it into the script body it belongs here.
+    ui_js:
+      # Transient button and status text the JS writes (P3-T3). Rendered by
+      # the server into the script blocks, so these are red_t at render time,
+      # not redT lookups — the pages that use them are ERB, not static assets.
+      toast:
+        loading: "Loading..."
+        copied: "Copied!"
+        copied_to_clipboard: "Copied to clipboard!"
+        failed: "Failed"
+        copy_failed: "Failed to copy to clipboard"
+        downloaded: "Downloaded!"
+
+      # AI help panel status line.
+      ai_help:
+        question_required: "Enter a question first."
+        streaming: "Streaming..."
+        streaming_unsupported: "Streaming is not supported by this browser."
+        request_failed: "Request failed."
+
+      # Section pills on the error detail page. Short by design — they sit in a
+      # horizontally scrolling bar, so a translation that runs long will scroll
+      # rather than wrap. "N+1" is the standard name for the pattern and stays
+      # as-is, like the rest of the error-domain jargon in the glossary.
+      sections:
+        error: "Error"
+        request: "Request"
+        deprecations: "Deprecations"
+        n_plus_one: "N+1"
+        cache: "Cache"
+        breadcrumbs: "Breadcrumbs"
+        similar: "Similar"
+        co_occurring: "Co-occurring"
+        timeline: "Timeline"
+        issue: "Issue"
+        discussion: "Discussion"
+        cascades: "Cascades"
+        patterns: "Patterns"
+
+      # Chart.js axis titles and series labels. Chart.js renders these itself,
+      # so they are values in a JS config object rather than page text.
+      charts:
+        axis_date: "Date"
+        axis_hour: "Hour"
+        axis_error_type: "Error Type"
+        axis_count: "Count"
+        axis_number_of_errors: "Number of Errors"
+        axis_hours: "Hours"
+        series_total_errors: "Total Errors"
+        series_hours_to_resolve: "Hours to Resolve"

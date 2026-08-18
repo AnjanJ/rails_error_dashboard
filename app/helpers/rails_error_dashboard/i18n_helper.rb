@@ -9,6 +9,12 @@ module RailsErrorDashboard
   #   2. An explicit name makes every translated site greppable — worth a lot
   #      when the remaining ~1,600 strings get extracted a page at a time.
   module I18nHelper
+    # red_js_t needs escape_javascript. In a request the controller mixes every
+    # engine helper into one view context, so it happens to be there — but that
+    # is incidental, and it is absent in a type: :helper spec or anywhere this
+    # module is included on its own. Include it explicitly rather than depend on
+    # the ambient context; the same fix P2-T11 applied to the T10 helpers.
+    include ActionView::Helpers::JavaScriptHelper
     # Translate a key in the current request's locale.
     #
     # Output is HTML-escaped unless the key ends in _html, matching Rails'
@@ -47,6 +53,35 @@ module RailsErrorDashboard
       Current.locale_or_default
     rescue StandardError
       I18nStore::DEFAULT_LOCALE
+    end
+
+    # Translate for interpolation into a JavaScript string literal.
+    #
+    # red_t html-escapes, which is right for page text and wrong here. The two
+    # sinks in the layout's script blocks disagree about entities: showToast
+    # and innerHTML decode &#39; back to an apostrophe, but textContent renders
+    # it literally, so a French string would display "d&#39;accéder" on screen.
+    #
+    # escape_javascript is what the surrounding code already uses for flash
+    # messages (`<%= j flash[:notice] %>`), and it is the correct escaping for
+    # this position: it neutralizes quotes, backslashes and line terminators
+    # that would break out of or truncate the literal, without touching
+    # characters the sink will render.
+    #
+    # Values still pass through the same total lookup, so a missing key is
+    # readable text rather than a raise inside a <script> block.
+    #
+    # @param key [String, Symbol] e.g. "red.ui_js.toast.copied"
+    # @return [String] html_safe, escaped for a JS string literal
+    def red_js_t(key, **options)
+      escape_javascript(I18nStore.translate(key, locale: red_locale, **options)).html_safe
+    rescue StandardError
+      ""
+    end
+
+    # Pluralized variant of red_js_t, for counts written by JS.
+    def red_js_tp(key, count:, **options)
+      red_js_t(key, count: count, **options)
     end
 
     # The translation payload handed to the browser as window.RED_I18N.

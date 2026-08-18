@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (count > 0) {
       if (batchToolbar) batchToolbar.style.display = '';
-      if (selectedCountSpan) selectedCountSpan.textContent = count + ' selected';
+      if (selectedCountSpan) selectedCountSpan.textContent = window.redT('js.selected', { count: count });
       if (selectAllBatchCheckbox) {
         selectAllBatchCheckbox.checked = allChecked;
         selectAllBatchCheckbox.indeterminate = someChecked && !allChecked;

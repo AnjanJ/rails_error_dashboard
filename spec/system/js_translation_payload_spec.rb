@@ -43,6 +43,36 @@ RSpec.describe "JS translation payload in the browser", type: :system do
       .to eq("no-throw")
   end
 
+  # P3-T3 added plural support: the selected-count is only known once a box is
+  # ticked, so the browser picks the form. A ternary on "s" at the call site is
+  # the anti-pattern this exists to prevent.
+  it "selects a plural form when given a count" do
+    visit_dashboard("/errors")
+    wait_for_page_load
+
+    expect(page.evaluate_script("window.redT('js.selected', { count: 1 })")).to eq("1 selected")
+    expect(page.evaluate_script("window.redT('js.selected', { count: 4 })")).to eq("4 selected")
+  end
+
+  it "falls back to :other when a locale ships no :one form" do
+    visit_dashboard("/errors")
+    wait_for_page_load
+
+    page.execute_script("window.__saved = window.RED_I18N; window.RED_I18N = { js: { pick: { other: '%{count} x' } } };")
+
+    expect(page.evaluate_script("window.redT('js.pick', { count: 1 })")).to eq("1 x")
+  ensure
+    page.execute_script("window.RED_I18N = window.__saved;")
+  end
+
+  # A branch without a count is still a miss — redT returns strings only.
+  it "returns the key for a plural branch when no count is given" do
+    visit_dashboard("/errors")
+    wait_for_page_load
+
+    expect(page.evaluate_script("window.redT('js.selected')")).to eq("js.selected")
+  end
+
   # The payload is assigned at parse time in <head>, not on a load event, so it
   # must be defined by the time later scripts and Turbo-rendered pages run.
   it "is still defined after navigating between dashboard pages" do
