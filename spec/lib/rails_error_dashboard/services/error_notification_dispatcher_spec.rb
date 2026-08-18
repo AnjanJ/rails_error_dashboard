@@ -17,7 +17,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob).with(error_log.id)
+      }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob).with(error_log.id, "en")
     end
 
     it "does not enqueue Slack notification when disabled" do
@@ -38,7 +38,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::EmailErrorNotificationJob).with(error_log.id)
+      }.to have_enqueued_job(RailsErrorDashboard::EmailErrorNotificationJob).with(error_log.id, "en")
     end
 
     it "does not enqueue email notification when no recipients" do
@@ -60,7 +60,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::DiscordErrorNotificationJob).with(error_log.id)
+      }.to have_enqueued_job(RailsErrorDashboard::DiscordErrorNotificationJob).with(error_log.id, "en")
     end
 
     it "enqueues PagerDuty notification when enabled" do
@@ -71,7 +71,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::PagerdutyErrorNotificationJob).with(error_log.id)
+      }.to have_enqueued_job(RailsErrorDashboard::PagerdutyErrorNotificationJob).with(error_log.id, "en")
     end
 
     it "enqueues webhook notification when enabled" do
@@ -82,7 +82,7 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::WebhookErrorNotificationJob).with(error_log.id)
+      }.to have_enqueued_job(RailsErrorDashboard::WebhookErrorNotificationJob).with(error_log.id, "en")
     end
 
     it "enqueues nothing when all notifications disabled" do

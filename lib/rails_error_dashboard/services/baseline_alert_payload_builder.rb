@@ -30,7 +30,13 @@ module RailsErrorDashboard
       # @param error_log [ErrorLog] The error
       # @param anomaly_data [Hash] Anomaly information
       # @return [Hash] Slack payload
-      def self.slack_payload(error_log, anomaly_data)
+      # locale is accepted and carried from P4-T1 so the async path has an
+      # explicit locale end to end. The strings below become translation keys
+      # in P4-T3; until then every locale renders English, which is exactly
+      # what the pre-i18n payload contained.
+      def self.slack_payload(error_log, anomaly_data, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           text: "🚨 Baseline Anomaly Alert",
           blocks: [
@@ -101,7 +107,9 @@ module RailsErrorDashboard
       # @param error_log [ErrorLog] The error
       # @param anomaly_data [Hash] Anomaly information
       # @return [Hash] Discord payload
-      def self.discord_payload(error_log, anomaly_data)
+      def self.discord_payload(error_log, anomaly_data, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           embeds: [
             {
@@ -128,7 +136,9 @@ module RailsErrorDashboard
       # @param error_log [ErrorLog] The error
       # @param anomaly_data [Hash] Anomaly information
       # @return [Hash] Webhook payload
-      def self.webhook_payload(error_log, anomaly_data)
+      def self.webhook_payload(error_log, anomaly_data, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           event: "baseline_anomaly",
           timestamp: Time.current.iso8601,

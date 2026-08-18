@@ -2,9 +2,12 @@
 
 module RailsErrorDashboard
   class ErrorNotificationMailer < ApplicationMailer
-    def error_alert(error_log, recipients)
+    # @param locale [String] resolved at enqueue time, never read from
+    #   Current — a mailer renders outside the request that set it.
+    def error_alert(error_log, recipients, locale: I18nStore::DEFAULT_LOCALE)
       @error_log = error_log
       @dashboard_url = dashboard_url(error_log)
+      @red_locale = locale
 
       mail(
         to: recipients,

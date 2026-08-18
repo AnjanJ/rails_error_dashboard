@@ -12,7 +12,13 @@ module RailsErrorDashboard
     class WebhookPayloadBuilder
       # @param error_log [ErrorLog] The error to build a payload for
       # @return [Hash] Webhook payload
-      def self.call(error_log)
+      # locale is accepted and carried from P4-T1 so the async path has an
+      # explicit locale end to end. The strings below become translation keys
+      # in P4-T3; until then every locale renders English, which is exactly
+      # what the pre-i18n payload contained.
+      def self.call(error_log, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           event: "error.created",
           timestamp: Time.current.iso8601,

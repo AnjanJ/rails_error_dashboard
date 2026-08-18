@@ -505,7 +505,7 @@ module RailsErrorDashboard
         return unless config.baseline_alert_severities.include?(anomaly[:level])
 
         # Enqueue alert job (which will handle throttling)
-        BaselineAlertJob.perform_later(error_log.id, anomaly)
+        BaselineAlertJob.perform_later(error_log.id, anomaly, ApplicationJob.enqueue_locale)
 
         RailsErrorDashboard::Logger.info(
           "Baseline alert queued for #{error_log.error_type} on #{error_log.platform}: " \

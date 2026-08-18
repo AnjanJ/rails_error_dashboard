@@ -11,8 +11,15 @@ module RailsErrorDashboard
     #   # => { text: "...", blocks: [...] }
     class SlackPayloadBuilder
       # @param error_log [ErrorLog] The error to build a payload for
+      # @param locale [String] resolved by the enqueueing thread
       # @return [Hash] Slack Block Kit payload
-      def self.call(error_log)
+      # locale is accepted and carried from P4-T1 so the async path has an
+      # explicit locale end to end. The strings below become translation keys
+      # in P4-T3; until then every locale renders English, which is exactly
+      # what the pre-i18n payload contained.
+      def self.call(error_log, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           text: "🚨 New Error Alert",
           blocks: [

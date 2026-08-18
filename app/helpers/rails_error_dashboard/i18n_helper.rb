@@ -47,9 +47,24 @@ module RailsErrorDashboard
       red_t(key, count: count, **options)
     end
 
-    # The locale this request renders in.
+    # The locale this render should use.
+    #
+    # An explicit @red_locale wins over Current. Mailer and notification
+    # templates render outside the dashboard's around_action: there is no
+    # request, so Current.locale is nil at best and — on a reused Puma or
+    # job-runner thread — another request's leftover value at worst. That is
+    # the #143/#148 bug class. Those templates are handed a locale resolved at
+    # enqueue time (Concerns::LocalizedJob) and assigned to @red_locale, so
+    # reading it here is what makes the async path independent of thread state.
+    #
+    # Views rendered in a real dashboard request set no @red_locale and fall
+    # through to Current, which is correct there.
+    #
     # @return [String] a locale RED ships
     def red_locale
+      explicit = defined?(@red_locale) ? @red_locale : nil
+      return I18nStore.resolve(explicit) if explicit.present?
+
       Current.locale_or_default
     rescue StandardError
       I18nStore::DEFAULT_LOCALE

@@ -14,14 +14,18 @@ module RailsErrorDashboard
         weekly: { days: 7, label: "Last 7 days" }
       }.freeze
 
-      def self.call(period: :daily, application_id: nil)
-        new(period: period, application_id: application_id).call
+      def self.call(period: :daily, application_id: nil, locale: I18nStore::DEFAULT_LOCALE)
+        new(period: period, application_id: application_id, locale: locale).call
       end
 
-      def initialize(period: :daily, application_id: nil)
+      # locale is carried from P4-T1 so the digest has an explicit locale end
+      # to end. PERIODS[:label] becomes a translation key in P4-T2 (REQ-4) —
+      # it leaks into both the mail subject and the body.
+      def initialize(period: :daily, application_id: nil, locale: I18nStore::DEFAULT_LOCALE)
         @period = PERIODS.key?(period) ? period : :daily
         @days = PERIODS[@period][:days]
         @application_id = application_id
+        @locale = locale
         @start_date = @days.days.ago
       end
 

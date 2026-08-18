@@ -11,9 +11,11 @@ module RailsErrorDashboard
 
     # @param started_at [String] ISO8601 episode start
     # @param state [String] breaker state at notification time ("shedding"/"open")
-    def perform(started_at:, state: "shedding")
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(started_at:, state: "shedding", locale: nil)
       config = RailsErrorDashboard.configuration
-      message = build_message(started_at, state, config)
+      message = build_message(started_at, state, config, job_locale(locale))
 
       if config.enable_slack_notifications && config.slack_webhook_url.present?
         post_json(config.slack_webhook_url, { text: message })
@@ -38,7 +40,11 @@ module RailsErrorDashboard
 
     private
 
-    def build_message(started_at, state, config)
+    # locale is threaded through now (P4-T1) and consumed when these strings
+    # become keys in P4-T3. Marked _locale until then so the argument is not
+    # silently dropped in a later refactor.
+    def build_message(started_at, state, config, locale)
+      _locale = locale
       mode = state == "open" ? "count-only mode (occurrences tallied, detail paused)" : "shedding mode (context sampling active)"
       dashboard = (config.dashboard_base_url || "").chomp("/")
       link = dashboard.present? ? " Dashboard: #{dashboard}/errors/storms" : ""

@@ -13,7 +13,13 @@ module RailsErrorDashboard
       # @param error_log [ErrorLog] The error to build a payload for
       # @param routing_key [String] PagerDuty integration key
       # @return [Hash] PagerDuty Events API v2 payload
-      def self.call(error_log, routing_key:)
+      # locale is accepted and carried from P4-T1 so the async path has an
+      # explicit locale end to end. The strings below become translation keys
+      # in P4-T3; until then every locale renders English, which is exactly
+      # what the pre-i18n payload contained.
+      def self.call(error_log, routing_key:, locale: I18nStore::DEFAULT_LOCALE)
+        _locale = locale
+
         {
           routing_key: routing_key,
           event_action: "trigger",
