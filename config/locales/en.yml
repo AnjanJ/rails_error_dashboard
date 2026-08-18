@@ -2339,3 +2339,65 @@ en:
           footer: >-
             Ranked by unique users affected, not occurrence count. An error
             hitting 1000 users once is worse than hitting 1 user 1000 times.
+
+    # Strings handed to inline JavaScript via window.RED_I18N (P3-T1).
+    #
+    # This subtree is serialized into every dashboard page, so it is kept small
+    # on purpose — only what the browser actually re-renders belongs here.
+    # Server-rendered strings stay in their own namespaces and never ship twice.
+    js:
+      # Month and day names for formatDateTime()'s %B/%b/%A/%a directives.
+      # Arrays, not numbered keys, because the JS indexes them directly by
+      # Date#getMonth() and Date#getDay(). Order is fixed and must not be
+      # rearranged when translating: January first, Sunday first.
+      months:
+        - "January"
+        - "February"
+        - "March"
+        - "April"
+        - "May"
+        - "June"
+        - "July"
+        - "August"
+        - "September"
+        - "October"
+        - "November"
+        - "December"
+      months_short:
+        - "Jan"
+        - "Feb"
+        - "Mar"
+        - "Apr"
+        - "May"
+        - "Jun"
+        - "Jul"
+        - "Aug"
+        - "Sep"
+        - "Oct"
+        - "Nov"
+        - "Dec"
+      days:
+        - "Sunday"
+        - "Monday"
+        - "Tuesday"
+        - "Wednesday"
+        - "Thursday"
+        - "Friday"
+        - "Saturday"
+      days_short:
+        - "Sun"
+        - "Mon"
+        - "Tue"
+        - "Wed"
+        - "Thu"
+        - "Fri"
+        - "Sat"
+      # %p / %P. Many locales use a 24-hour clock and never render these; a
+      # translation may legitimately be an empty string.
+      meridian:
+        am: "AM"
+        pm: "PM"
+      # BCP 47 tag handed to Intl for the timezone abbreviation. Separate from
+      # the locale name because RED's locale set and the browser's need not
+      # agree — an unsupported tag falls back to en-US in the JS.
+      intl_locale: "en-US"

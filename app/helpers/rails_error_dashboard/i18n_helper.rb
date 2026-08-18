@@ -49,6 +49,32 @@ module RailsErrorDashboard
       I18nStore::DEFAULT_LOCALE
     end
 
+    # The translation payload handed to the browser as window.RED_I18N.
+    #
+    # Deliberately NOT the whole dictionary. This ships inside every dashboard
+    # page, so it carries only what JavaScript re-renders on the client: the
+    # red.js.* subtree and the strftime patterns that formatDateTime() is
+    # handed via data-format. Server-rendered strings already arrive as HTML
+    # and must never be sent twice.
+    #
+    # Values are raw, not html-escaped. They are serialized as JSON by
+    # js_safe_json — which neutralizes "</" against a </script> breakout — and
+    # then consumed as JS strings, so ERB escaping here would render literal
+    # &amp;amp; in the browser.
+    #
+    # @return [Hash] never nil, never raises. {} at worst.
+    def red_js_translations
+      locale = red_locale
+
+      {
+        "locale" => locale,
+        "js" => I18nStore.subtree("red.js", locale: locale),
+        "formats" => I18nStore.subtree("red.time.formats", locale: locale)
+      }
+    rescue StandardError
+      {}
+    end
+
     # A strftime pattern for one of ApplicationHelper#local_time's presets,
     # localized. Falls back to the English pattern for an unknown preset.
     #

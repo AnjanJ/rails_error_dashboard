@@ -60,6 +60,36 @@ module RailsErrorDashboard
       end
       alias_method :t, :translate
 
+      # Fetch a whole branch of the dictionary as a Hash, for callers that need
+      # the tree rather than one leaf — the JS payload is the only one today.
+      #
+      # #translate deliberately treats a Hash result as a miss: a key resolving
+      # to a subtree instead of a leaf is a caller bug when you asked for text.
+      # Here it is the point, so this is a separate method rather than a flag on
+      # #translate.
+      #
+      # Falls back to English as a whole branch, not key by key. A partially
+      # translated locale returning a half-English tree would be harder to
+      # debug than one that is cleanly English until it is finished.
+      #
+      # @param key [String, Symbol] dot-separated key, e.g. "red.js"
+      # @return [Hash] deep-frozen dup, or {} for a miss. Never nil, never raises.
+      def subtree(key, locale: DEFAULT_LOCALE)
+        return {} if key.nil? || key.to_s.empty?
+
+        resolved = lookup_subtree(key, locale)
+        return resolved unless resolved.equal?(MISSING)
+
+        unless locale.to_s == DEFAULT_LOCALE
+          fallback = lookup_subtree(key, DEFAULT_LOCALE)
+          return fallback unless fallback.equal?(MISSING)
+        end
+
+        {}
+      rescue StandardError
+        {}
+      end
+
       # Locales RED ships, derived from the files actually present.
       # @return [Array<Symbol>]
       def available_locales
@@ -139,6 +169,19 @@ module RailsErrorDashboard
         # has one/other, but not every language's forms line up. Fall through so
         # the caller gets English rather than a 500.
         MISSING
+      rescue StandardError
+        MISSING
+      end
+
+      # Returns a Hash for a subtree key, or MISSING. Never raises, never throws.
+      def lookup_subtree(key, locale)
+        result = catch(:exception) do
+          backend.translate(locale.to_s.to_sym, key.to_s)
+        end
+
+        return MISSING unless result.is_a?(Hash)
+
+        result
       rescue StandardError
         MISSING
       end

@@ -48,6 +48,36 @@
     })();
     </script>
 
+    <!-- Translation payload for client-rendered strings (P3-T1).
+         In <head> and before every other inline block so any script, in head
+         or body, can call redT() without ordering assumptions. -->
+    <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
+    window.RED_I18N = <%= js_safe_json(red_js_translations) %>;
+    (function(){
+      // Lookup + %{name} interpolation. Total by construction: a missing key
+      // returns the key itself, so a forgotten translation shows as
+      // "js.copied" on screen rather than "undefined" or a thrown error that
+      // would take the rest of the block down with it.
+      window.redT = function(key, params) {
+        var value;
+        try {
+          value = String(key).split('.').reduce(function(node, segment) {
+            return (node && typeof node === 'object') ? node[segment] : undefined;
+          }, window.RED_I18N);
+        } catch (e) {
+          return String(key);
+        }
+        if (typeof value !== 'string') return String(key);
+        if (!params) return value;
+        // Leaves an unknown %{name} in place rather than blanking it — a
+        // visible marker beats silently losing the interpolated value.
+        return value.replace(/%\{(\w+)\}/g, function(match, name) {
+          return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match;
+        });
+      };
+    })();
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

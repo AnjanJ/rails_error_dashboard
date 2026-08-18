@@ -140,4 +140,53 @@ RSpec.describe RailsErrorDashboard::I18nHelper, type: :helper do
       end
     end
   end
+
+  describe "#red_js_translations" do
+    it "returns the JS subtree, the time formats, and the locale" do
+      payload = helper.red_js_translations
+
+      expect(payload.keys).to match_array(%w[locale js formats])
+      expect(payload["locale"]).to eq("en")
+      expect(payload["js"][:months].first).to eq("January")
+      expect(payload["formats"][:full]).to eq("%B %d, %Y %I:%M:%S %p")
+    end
+
+    # REQ-1. This ships on every page load, so the guard is on what it does NOT
+    # contain — the dictionary is ~1,350 keys and growth here is silent.
+    it "does not ship the server-rendered namespaces" do
+      payload = helper.red_js_translations
+
+      expect(payload).not_to have_key("nav")
+      expect(payload).not_to have_key("errors")
+      expect(payload).not_to have_key("settings")
+      expect(payload).not_to have_key("flash")
+    end
+
+    it "reports the request's locale, not always English" do
+      RailsErrorDashboard::Current.locale = "en"
+
+      expect(helper.red_js_translations["locale"]).to eq("en")
+    end
+
+    # Built in the layout, so a raise here would take down every page rather
+    # than degrade one string.
+    it "returns a hash rather than raising when the store fails" do
+      allow(RailsErrorDashboard::I18nStore).to receive(:subtree).and_raise(StandardError, "boom")
+
+      expect { helper.red_js_translations }.not_to raise_error
+      expect(helper.red_js_translations).to eq({})
+    end
+
+    # Values are consumed as JS strings after JSON serialization. ERB escaping
+    # here would surface literal &amp;amp; in the browser.
+    it "returns raw values, not html-escaped ones" do
+      RailsErrorDashboard::I18nStore.backend.store_translations(
+        :en, red: { js: { amp_probe: "Search & filter" } }
+      )
+
+      expect(helper.red_js_translations["js"][:amp_probe]).to eq("Search & filter")
+    ensure
+      RailsErrorDashboard::I18nStore.reset!
+    end
+  end
 end

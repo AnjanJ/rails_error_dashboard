@@ -183,6 +183,48 @@ RSpec.describe RailsErrorDashboard::I18nStore do
     end
   end
 
+  # .subtree exists because #translate deliberately treats a Hash result as a
+  # miss. The JS payload needs the branch, so it gets its own total method
+  # rather than a flag that would weaken #translate's contract.
+  describe ".subtree" do
+    it "returns a branch of the dictionary as a Hash" do
+      result = described_class.subtree("red.time.formats")
+
+      expect(result).to be_a(Hash)
+      expect(result[:full]).to eq("%B %d, %Y %I:%M:%S %p")
+    end
+
+    it "returns an empty hash for a missing key rather than raising" do
+      expect(described_class.subtree("red.nope.not_a_branch")).to eq({})
+    end
+
+    # The mirror of #translate's Hash rule: asking for a branch and getting a
+    # leaf is a caller bug, and returning the string would break JSON shape.
+    it "returns an empty hash for a leaf key" do
+      expect(described_class.subtree("red.time.ago")).to eq({})
+    end
+
+    it "falls back to English for a locale it does not ship" do
+      result = described_class.subtree("red.time.formats", locale: :fr)
+
+      expect(result[:full]).to eq("%B %d, %Y %I:%M:%S %p")
+    end
+
+    it "is total for garbage input" do
+      [ nil, "", :"", 42, [], {} ].each do |bad_key|
+        expect { described_class.subtree(bad_key) }.not_to raise_error
+        expect(described_class.subtree(bad_key)).to be_a(Hash)
+      end
+    end
+
+    it "is total for a garbage locale" do
+      [ nil, "", "zz", 42, [] ].each do |bad_locale|
+        expect { described_class.subtree("red.js", locale: bad_locale) }.not_to raise_error
+        expect(described_class.subtree("red.js", locale: bad_locale)).to be_a(Hash)
+      end
+    end
+  end
+
   describe "translation loading" do
     it "loads translations once rather than on every lookup" do
       described_class.reset!
