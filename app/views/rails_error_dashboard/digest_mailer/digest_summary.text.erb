@@ -1,40 +1,51 @@
+<%# Stat labels are NOT padded to a column. The English version aligned values %>
+<%# at column 20 ("New Errors:        12"), which only works while every label %>
+<%# is shorter than that. "Gesamtvorkommen" and friends are not. Label, space, %>
+<%# value. (P4-T2 REQ-3) %>
 ==========================================
-RED — Error Digest (<%= @digest[:period_label] %>)
+<%= red_mail_t("red.mailers.digest.heading") %> (<%= @digest[:period_label] %>)
 ==========================================
-Generated: <%= @digest[:generated_at].strftime('%B %d, %Y at %I:%M %p %Z') %>
+<%= red_mail_t("red.mailers.digest.generated_at") %>: <%= red_mail_time(@digest[:generated_at]) %>
 
 ------------------------------------------
-SUMMARY
+<%= red_mail_t("red.mailers.digest.summary") %>
 ------------------------------------------
-New Errors:        <%= @digest[:stats][:new_errors] %>
-Total Occurrences: <%= @digest[:stats][:total_occurrences] %>
-Resolved:          <%= @digest[:stats][:resolved] %>
-Unresolved:        <%= @digest[:stats][:unresolved] %>
-Critical/High:     <%= @digest[:stats][:critical_high] %>
-Resolution Rate:   <%= @digest[:stats][:resolution_rate] %>%
+<%= red_mail_t("red.mailers.digest.stats.new_errors") %>: <%= @digest[:stats][:new_errors] %>
+<%= red_mail_t("red.mailers.digest.stats.total_occurrences_text") %>: <%= @digest[:stats][:total_occurrences] %>
+<%= red_mail_t("red.mailers.digest.stats.resolved") %>: <%= @digest[:stats][:resolved] %>
+<%= red_mail_t("red.mailers.digest.stats.unresolved") %>: <%= @digest[:stats][:unresolved] %>
+<%= red_mail_t("red.mailers.digest.stats.critical_high") %>: <%= @digest[:stats][:critical_high] %>
+<%= red_mail_t("red.mailers.digest.stats.resolution_rate") %>: <%= @digest[:stats][:resolution_rate] %>%
 
 <% if @digest[:comparison][:error_delta_percentage] %>
 ------------------------------------------
-VS PREVIOUS PERIOD
+<%= red_mail_t("red.mailers.digest.comparison.heading") %>
 ------------------------------------------
-Current:  <%= @digest[:comparison][:current_count] %> errors
-Previous: <%= @digest[:comparison][:previous_count] %> errors
-Change:   <%= @digest[:comparison][:error_delta] > 0 ? "+#{@digest[:comparison][:error_delta]}" : @digest[:comparison][:error_delta] %> (<%= @digest[:comparison][:error_delta_percentage] > 0 ? "+#{@digest[:comparison][:error_delta_percentage]}" : @digest[:comparison][:error_delta_percentage] %>%)
+<%
+  delta = @digest[:comparison][:error_delta]
+  pct = @digest[:comparison][:error_delta_percentage]
+  signed_delta = delta > 0 ? "+#{delta}" : delta.to_s
+  signed_pct = pct > 0 ? "+#{pct}" : pct.to_s
+%>
+<%= red_mail_t("red.mailers.digest.comparison.current") %>: <%= red_mail_tp("red.mailers.digest.comparison.delta", count: @digest[:comparison][:current_count], delta: @digest[:comparison][:current_count]) %>
+<%= red_mail_t("red.mailers.digest.comparison.previous") %>: <%= red_mail_tp("red.mailers.digest.comparison.delta", count: @digest[:comparison][:previous_count], delta: @digest[:comparison][:previous_count]) %>
+<%= red_mail_t("red.mailers.digest.comparison.change") %>: <%= signed_delta %> (<%= signed_pct %>%)
 <% end %>
 
 <% if @digest[:critical_unresolved].any? %>
 ------------------------------------------
-CRITICAL / HIGH UNRESOLVED
+<%= red_mail_t("red.mailers.digest.critical_unresolved") %>
 ------------------------------------------
 <% @digest[:critical_unresolved].each do |error| %>
-  [<%= error[:severity].to_s.upcase %>] <%= error[:error_type] %>: <%= error[:message] %>
+<%# Severity is a machine value; its display label comes from red.common. %>
+  [<%= red_mail_t("red.common.severity.#{error[:severity].to_s.downcase}") %>] <%= error[:error_type] %>: <%= error[:message] %>
   → <%= @dashboard_url %>/errors/<%= error[:id] %>
 <% end %>
 <% end %>
 
 <% if @digest[:top_errors].any? %>
 ------------------------------------------
-TOP ERRORS BY COUNT
+<%= red_mail_t("red.mailers.digest.top_errors") %>
 ------------------------------------------
 <% @digest[:top_errors].each_with_index do |error, i| %>
   <%= i + 1 %>. <%= error[:error_type] %> (<%= error[:count] %>x): <%= error[:message] %>
@@ -44,6 +55,6 @@ TOP ERRORS BY COUNT
 
 ------------------------------------------
 
-View the full dashboard:
+<%= red_mail_t("red.mailers.digest.view_dashboard_text") %>
 <%= @dashboard_url %>
-This is an automated digest from RED (Rails Error Dashboard).
+<%= red_mail_t("red.mailers.digest.footer", product: red_mail_t("red.mailers.shared.product_name")) %>

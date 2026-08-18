@@ -11,27 +11,23 @@ require "rails_helper"
 RSpec.describe "Locale propagation into jobs" do
   # A second SHIPPED locale. Without one, every assertion here would compare
   # "en" against "en" and pass even if propagation were completely broken.
-  # Written to config/locales so I18nStore picks it up the way it picks up a
-  # real locale, then removed. "xt" is deliberately not "zz" — four existing
-  # specs use "zz" as their example of an *unshipped* locale and would start
-  # failing if it became available. (See the P3 note in the sprint plan.)
+  # "xt" is deliberately not "zz" — four existing specs use "zz" as their
+  # example of an *unshipped* locale and would start failing if it became
+  # available. (See the P3 note in the sprint plan.)
+  #
+  # Installed per example via the shared helper rather than in before(:all):
+  # I18nStore.reset! is global, so a suite-level fixture here can be wiped by
+  # another spec's cleanup under random ordering — and because a missing
+  # locale silently falls back to English, that shows up as a passing spec
+  # asserting the wrong thing. See spec/support/locale_fixtures.rb.
   TEST_LOCALE = "xt"
 
-  before(:all) do
-    @locale_path = RailsErrorDashboard::Engine.root.join("config", "locales", "#{TEST_LOCALE}.yml")
-    @locale_path.write(<<~YAML)
-      #{TEST_LOCALE}:
-        red:
-          common:
-            loading: "XT-LOADING"
-    YAML
-    RailsErrorDashboard::I18nStore.reset!
-  end
-
-  after(:all) do
-    @locale_path.delete if @locale_path.exist?
-    RailsErrorDashboard::I18nStore.reset!
-  end
+  with_locale_fixture TEST_LOCALE, <<~YAML
+    xt:
+      red:
+        common:
+          loading: "XT-LOADING"
+  YAML
 
   let!(:application) { create(:application) }
   let!(:error_log) { create(:error_log, application: application) }

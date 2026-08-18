@@ -9,18 +9,21 @@ module RailsErrorDashboard
     #   DigestBuilder.call(period: :daily)
     #   # => { period: :daily, stats: { new_errors: 12, ... }, top_errors: [...], ... }
     class DigestBuilder
+      # Labels are keys, not literals: they leak into both the mail subject
+      # and the body, so a translated digest with an English "Last 24 hours"
+      # in its subject line would be obviously half-done (P4-T2 REQ-4).
       PERIODS = {
-        daily: { days: 1, label: "Last 24 hours" },
-        weekly: { days: 7, label: "Last 7 days" }
+        daily: { days: 1, label_key: "red.mailers.digest.periods.daily" },
+        weekly: { days: 7, label_key: "red.mailers.digest.periods.weekly" }
       }.freeze
 
       def self.call(period: :daily, application_id: nil, locale: I18nStore::DEFAULT_LOCALE)
         new(period: period, application_id: application_id, locale: locale).call
       end
 
-      # locale is carried from P4-T1 so the digest has an explicit locale end
-      # to end. PERIODS[:label] becomes a translation key in P4-T2 (REQ-4) —
-      # it leaks into both the mail subject and the body.
+      # locale is carried from the enqueue site (P4-T1) and is what
+      # #period_label resolves against. Never Current: a digest is built inside
+      # a job, where Current is nil or belongs to an unrelated request.
       def initialize(period: :daily, application_id: nil, locale: I18nStore::DEFAULT_LOCALE)
         @period = PERIODS.key?(period) ? period : :daily
         @days = PERIODS[@period][:days]
@@ -32,7 +35,7 @@ module RailsErrorDashboard
       def call
         {
           period: @period,
-          period_label: PERIODS[@period][:label],
+          period_label: period_label,
           generated_at: Time.current,
           stats: build_stats,
           top_errors: top_errors,
@@ -45,6 +48,13 @@ module RailsErrorDashboard
       end
 
       private
+
+      # Resolved with the locale carried from the enqueue site (P4-T1), not
+      # from Current — a digest is built inside a job, where Current is nil or
+      # belongs to an unrelated request.
+      def period_label
+        I18nStore.translate(PERIODS[@period][:label_key], locale: @locale)
+      end
 
       def base_scope
         scope = ErrorLog.where("occurred_at >= ?", @start_date)
@@ -149,7 +159,7 @@ module RailsErrorDashboard
       def empty_result
         {
           period: @period,
-          period_label: PERIODS.dig(@period, :label) || "Unknown",
+          period_label: period_label,
           generated_at: Time.current,
           stats: { new_errors: 0, total_occurrences: 0, resolved: 0, unresolved: 0, critical_high: 0, resolution_rate: 0 },
           top_errors: [],

@@ -1650,6 +1650,96 @@ en:
           one: "Failed to resolve %{count} error"
           other: "Failed to resolve %{count} errors"
 
+    mailers:
+      # Email is the one surface where a translation lands in someone else's
+      # mail client rather than in the dashboard. Three rules follow from that:
+      #
+      #   1. The .text.erb parts use red_mail_t, not red_t. red_t escapes for
+      #      HTML, so an apostrophe would arrive as "&#39;" in plain text.
+      #   2. Error content — class names, messages, backtraces — is diagnostic
+      #      output and is NEVER translated. Only the chrome around it is.
+      #   3. The fixed-width ASCII layout the text parts used to have has been
+      #      relaxed. Aligning labels to a column assumes every translation is
+      #      about as long as the English, which is false (German runs ~30%
+      #      longer). The templates now put label and value on the same line
+      #      with a single space, so nothing to break.
+      shared:
+        # Product name. Never translated — it is what the gem is called.
+        product_name: "Rails Error Dashboard"
+        unknown_application: "Unknown"
+
+      error_alert:
+        # Subject line. The emoji is part of the English rendering; a locale
+        # may drop it. %{application} is the host app's name, %{error_type} is
+        # an exception class name and %{message} is its message — both are
+        # verbatim error content and are not translated.
+        subject: "🚨 [%{application}] %{error_type}: %{message}"
+        heading: "🚨 Error Alert"
+        labels:
+          application: "Application"
+          error_type: "Error Type"
+          platform: "Platform"
+          occurred_at: "Occurred At"
+          user_id: "User ID"
+          ip_address: "IP Address"
+          request_url: "Request URL"
+          message: "Message"
+          error_id: "Error ID"
+        # %{count} is how many backtrace lines are shown, not how many exist.
+        stack_trace:
+          one: "Stack Trace (first %{count} line)"
+          other: "Stack Trace (first %{count} lines)"
+        view_details: "View Full Details in Dashboard"
+        view_details_text: "View full details in the dashboard:"
+        footer: "This is an automated error notification from %{product}."
+
+      digest:
+        # %{count} new errors in the period, %{period} is the period label
+        # below. Both interpolate into the subject, which is why the plural
+        # form lives here rather than being assembled in the mailer.
+        subject:
+          one: "RED Digest — %{count} new error (%{period})"
+          other: "RED Digest — %{count} new errors (%{period})"
+        heading: "RED Error Digest"
+        # Digest period labels. They appear in the subject AND the body, so
+        # they are keys rather than literals in DigestBuilder (P4-T2 REQ-4).
+        periods:
+          daily: "Last 24 hours"
+          weekly: "Last 7 days"
+        generated_at: "Generated"
+        summary: "Summary"
+        stats:
+          new_errors: "New Errors"
+          total_occurrences: "Occurrences"
+          total_occurrences_text: "Total Occurrences"
+          resolved: "Resolved"
+          unresolved: "Unresolved"
+          critical_high: "Critical/High"
+          resolution_rate: "Resolution Rate"
+        comparison:
+          heading: "vs Previous Period"
+          # %{period} is "daily"/"weekly" — the raw period, not its label.
+          versus: "vs previous %{period}:"
+          current: "Current"
+          previous: "Previous"
+          change: "Change"
+          # %{delta} carries its own sign, e.g. "+12" or "-3".
+          delta:
+            one: "%{delta} error"
+            other: "%{delta} errors"
+        critical_unresolved: "Critical & High Unresolved"
+        top_errors: "Top Errors by Count"
+        columns:
+          severity: "Severity"
+          error: "Error"
+          error_type: "Error Type"
+          count: "Count"
+        view: "View"
+        open_dashboard: "Open Dashboard"
+        view_dashboard_text: "View the full dashboard:"
+        manage_settings: "Manage digest settings"
+        footer: "Automated digest from RED (%{product})"
+
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a
       # duration and the word "ago" — word order differs across languages, and
