@@ -145,10 +145,14 @@ RSpec.describe RailsErrorDashboard::I18nHelper, type: :helper do
     it "returns the JS subtree, the time formats, and the locale" do
       payload = helper.red_js_translations
 
-      expect(payload.keys).to match_array(%w[locale js formats])
+      expect(payload.keys).to match_array(%w[locale js formats ago])
       expect(payload["locale"]).to eq("en")
       expect(payload["js"][:months].first).to eq("January")
       expect(payload["formats"][:full]).to eq("%B %d, %Y %I:%M:%S %p")
+
+      # Shared with the server's local_time_ago rather than duplicated, so both
+      # sides place "ago" wherever the language wants it.
+      expect(payload["ago"]).to eq("%{duration} ago")
     end
 
     # REQ-1. This ships on every page load, so the guard is on what it does NOT

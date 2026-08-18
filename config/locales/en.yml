@@ -2401,3 +2401,39 @@ en:
       # the locale name because RED's locale set and the browser's need not
       # agree — an unsupported tag falls back to en-US in the JS.
       intl_locale: "en-US"
+
+      # Durations for formatRelativeTime(). These are the duration ALONE —
+      # the JS wraps the result in red.time.ago, exactly as local_time_ago
+      # does on the server, so both sides put "ago" wherever the language
+      # wants it rather than assuming it trails.
+      #
+      # Plural forms, never a ternary on "s". A locale needing more categories
+      # than English adds them here; one supplying only :other still renders,
+      # because the JS selector falls back to :other for any missing category.
+      duration:
+        seconds:
+          one: "1 second"
+          other: "%{count} seconds"
+        minutes:
+          one: "1 minute"
+          other: "%{count} minutes"
+        hours:
+          one: "1 hour"
+          other: "%{count} hours"
+        days:
+          one: "1 day"
+          other: "%{count} days"
+        months:
+          one: "1 month"
+          other: "%{count} months"
+        years:
+          one: "1 year"
+          other: "%{count} years"
+
+      # Timestamp tooltips and the UTC suffix on the toggled-to view.
+      # "UTC" itself is a standard abbreviation and stays as-is.
+      titles:
+        local_time: "Your local time (click to see UTC)"
+        utc_time: "UTC time (click to see local time)"
+        exact_time: "Click to see exact time"
+        relative_time: "Click to see relative time"

@@ -69,7 +69,11 @@ module RailsErrorDashboard
       {
         "locale" => locale,
         "js" => I18nStore.subtree("red.js", locale: locale),
-        "formats" => I18nStore.subtree("red.time.formats", locale: locale)
+        "formats" => I18nStore.subtree("red.time.formats", locale: locale),
+        # Not under red.js because the server renders it too — local_time_ago
+        # wraps the same key. Sharing one key is the point: both sides then
+        # put "ago" wherever the language wants it, rather than each guessing.
+        "ago" => I18nStore.translate("red.time.ago", locale: locale)
       }
     rescue StandardError
       {}

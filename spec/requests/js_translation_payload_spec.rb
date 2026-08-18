@@ -73,7 +73,7 @@ RSpec.describe "JS translation payload", type: :request do
 
       payload = js_i18n_payload(response.body)
 
-      expect(payload.keys).to match_array(%w[locale js formats])
+      expect(payload.keys).to match_array(%w[locale js formats ago])
       expect(payload).not_to have_key("nav")
       expect(payload).not_to have_key("errors")
       expect(payload).not_to have_key("settings")

@@ -1595,7 +1595,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var formatted = formatDateTime(date, formatString);
         var timezone = getTimezoneAbbreviation(date);
         element.textContent = formatted + ' ' + timezone;
-        element.title = 'Your local time (click to see UTC)';
+        element.title = redDate('titles').local_time || RED_DATE_EN.titles.local_time;
         element.style.cursor = 'pointer';
         element.dataset.originalUtc = utcString;
         element.dataset.localFormatted = formatted + ' ' + timezone;
@@ -1604,11 +1604,11 @@ document.addEventListener('DOMContentLoaded', function() {
           if (this.dataset.showingLocal === 'true') {
             var utcDate = new Date(this.dataset.originalUtc);
             this.textContent = formatDateTime(utcDate, formatString) + ' UTC';
-            this.title = 'UTC time (click to see local time)';
+            this.title = redDate('titles').utc_time || RED_DATE_EN.titles.utc_time;
             this.dataset.showingLocal = 'false';
           } else {
             this.textContent = this.dataset.localFormatted;
-            this.title = 'Your local time (click to see UTC)';
+            this.title = redDate('titles').local_time || RED_DATE_EN.titles.local_time;
             this.dataset.showingLocal = 'true';
           }
         });
@@ -1622,19 +1622,20 @@ document.addEventListener('DOMContentLoaded', function() {
         var date = new Date(utcString);
         if (isNaN(date.getTime())) return;
         element.textContent = formatRelativeTime(new Date() - date);
-        element.title = 'Click to see exact time';
+        element.title = redDate('titles').exact_time || RED_DATE_EN.titles.exact_time;
         element.style.cursor = 'pointer';
         element.dataset.originalUtc = utcString;
         element.dataset.showingRelative = 'true';
         element.addEventListener('click', function() {
           if (this.dataset.showingRelative === 'true') {
             var d = new Date(this.dataset.originalUtc);
-            this.textContent = formatDateTime(d, '%B %d, %Y %I:%M:%S %p') + ' ' + getTimezoneAbbreviation(d);
-            this.title = 'Click to see relative time';
+            var fullFmt = (window.RED_I18N && window.RED_I18N.formats && typeof window.RED_I18N.formats.full === 'string') ? window.RED_I18N.formats.full : '%B %d, %Y %I:%M:%S %p';
+            this.textContent = formatDateTime(d, fullFmt) + ' ' + getTimezoneAbbreviation(d);
+            this.title = redDate('titles').relative_time || RED_DATE_EN.titles.relative_time;
             this.dataset.showingRelative = 'false';
           } else {
             this.textContent = formatRelativeTime(new Date() - new Date(this.dataset.originalUtc));
-            this.title = 'Click to see exact time';
+            this.title = redDate('titles').exact_time || RED_DATE_EN.titles.exact_time;
             this.dataset.showingRelative = 'true';
           }
         });
@@ -1642,14 +1643,62 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // English defaults for every localized value below. RED_I18N is written in
+  // <head> and should always be there, but a cached page or a JS error earlier
+  // in the document would leave these functions rendering "undefined" into
+  // every timestamp on the page. Falling back to English is the same choice
+  // I18nStore makes on the server.
+  var RED_DATE_EN = {
+    months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    months_short: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    days: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    days_short: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    meridian: { am: 'AM', pm: 'PM' },
+    intl_locale: 'en-US',
+    duration: {
+      seconds: { one: '1 second', other: '%{count} seconds' },
+      minutes: { one: '1 minute', other: '%{count} minutes' },
+      hours:   { one: '1 hour',   other: '%{count} hours' },
+      days:    { one: '1 day',    other: '%{count} days' },
+      months:  { one: '1 month',  other: '%{count} months' },
+      years:   { one: '1 year',   other: '%{count} years' }
+    },
+    titles: {
+      local_time: 'Your local time (click to see UTC)',
+      utc_time: 'UTC time (click to see local time)',
+      exact_time: 'Click to see exact time',
+      relative_time: 'Click to see relative time'
+    }
+  };
+
+  // Read one localized date value, falling back to the English default at the
+  // same path. Only accepts a value of the same shape as the default, so a
+  // half-written locale cannot substitute a string where an array is indexed.
+  function redDate(name) {
+    var fallback = RED_DATE_EN[name];
+    try {
+      var value = window.RED_I18N && window.RED_I18N.js ? window.RED_I18N.js[name] : undefined;
+      if (Array.isArray(fallback)) {
+        return (Array.isArray(value) && value.length === fallback.length) ? value : fallback;
+      }
+      if (value && typeof value === 'object') return value;
+      return fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
   function formatDateTime(date, fmt) {
-    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    var monthsShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    var daysShort = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var months = redDate('months'), monthsShort = redDate('months_short');
+    var days = redDate('days'), daysShort = redDate('days_short');
+    var meridian = redDate('meridian');
     var y = date.getFullYear(), mo = date.getMonth(), d = date.getDate();
     var h = date.getHours(), mi = date.getMinutes(), s = date.getSeconds(), dow = date.getDay();
-    var h12 = h % 12 || 12, ampm = h >= 12 ? 'PM' : 'AM';
+    // A 24-hour locale may translate these to empty strings, which is correct
+    // and must not become the string "undefined".
+    var pm = typeof meridian.pm === 'string' ? meridian.pm : RED_DATE_EN.meridian.pm;
+    var am = typeof meridian.am === 'string' ? meridian.am : RED_DATE_EN.meridian.am;
+    var h12 = h % 12 || 12, ampm = h >= 12 ? pm : am;
     var pad = function(n) { return n.toString().padStart(2, '0'); };
     return fmt.replace('%Y',y).replace('%y',y.toString().substr(2)).replace('%B',months[mo]).replace('%b',monthsShort[mo])
       .replace('%m',pad(mo+1)).replace('%d',pad(d)).replace('%e',d).replace('%A',days[dow]).replace('%a',daysShort[dow])
@@ -1657,18 +1706,52 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function getTimezoneAbbreviation(date) {
-    var parts = date.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ');
+    // RED's locale set and the browser's Intl data need not agree, so an
+    // unsupported tag throws RangeError here rather than degrading. Catch it
+    // and use en-US: an abbreviation in the wrong language beats no timestamp.
+    var tag = redDate('intl_locale');
+    if (typeof tag !== 'string' || !tag) tag = RED_DATE_EN.intl_locale;
+    var parts;
+    try {
+      parts = date.toLocaleTimeString(tag, { timeZoneName: 'short' }).split(' ');
+    } catch (e) {
+      parts = date.toLocaleTimeString(RED_DATE_EN.intl_locale, { timeZoneName: 'short' }).split(' ');
+    }
     return parts[parts.length - 1];
+  }
+
+  // Plural selection. English needs one/other; other languages need more, and
+  // some need only one form. Falling back to 'other' means a locale that ships
+  // a partial set still renders rather than showing "undefined".
+  function redPluralize(forms, count) {
+    if (!forms || typeof forms !== 'object') return String(count);
+    var form = (count === 1 && typeof forms.one === 'string') ? forms.one : forms.other;
+    if (typeof form !== 'string') form = forms.one;
+    if (typeof form !== 'string') return String(count);
+    return form.replace(/%\{count\}/g, String(count));
   }
 
   function formatRelativeTime(diffMs) {
     var sec = Math.floor(diffMs / 1000), min = Math.floor(sec / 60), hr = Math.floor(min / 60), d = Math.floor(hr / 24), mo = Math.floor(d / 30), yr = Math.floor(d / 365);
-    if (sec < 60) return sec <= 1 ? '1 second ago' : sec + ' seconds ago';
-    if (min < 60) return min === 1 ? '1 minute ago' : min + ' minutes ago';
-    if (hr < 24) return hr === 1 ? '1 hour ago' : hr + ' hours ago';
-    if (d < 30) return d === 1 ? '1 day ago' : d + ' days ago';
-    if (mo < 12) return mo === 1 ? '1 month ago' : mo + ' months ago';
-    return yr === 1 ? '1 year ago' : yr + ' years ago';
+    var units = redDate('duration'), duration;
+    var pick = function(name, n) {
+      var forms = units && units[name] ? units[name] : RED_DATE_EN.duration[name];
+      return redPluralize(forms, n);
+    };
+
+    // Thresholds unchanged from the pre-i18n version, including sec <= 1
+    // reading as "1 second" for a 0-second difference.
+    if (sec < 60) duration = pick('seconds', sec <= 1 ? 1 : sec);
+    else if (min < 60) duration = pick('minutes', min);
+    else if (hr < 24) duration = pick('hours', hr);
+    else if (d < 30) duration = pick('days', d);
+    else if (mo < 12) duration = pick('months', mo);
+    else duration = pick('years', yr);
+
+    // "%{duration} ago" as one key — never duration + ' ago'. Several
+    // languages put the equivalent of "ago" first. Same key the server uses.
+    var template = (window.RED_I18N && typeof window.RED_I18N.ago === 'string') ? window.RED_I18N.ago : '%{duration} ago';
+    return template.replace(/%\{duration\}/g, duration);
   }
 
   convertToLocalTime();
