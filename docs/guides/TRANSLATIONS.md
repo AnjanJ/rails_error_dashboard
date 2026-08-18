@@ -1,11 +1,13 @@
 # Translations
 
-RED's dashboard is English-only today. The machinery to translate it exists and
-is tested; the ~1,600 UI strings have not been extracted yet. This guide covers
-both how the system works and how to add a locale once extraction lands.
+RED's dashboard, its emails and its notification payloads are fully
+translatable. This guide covers how the system works and how to add or correct
+a locale.
 
-> **Status:** foundation shipped, extraction deferred to v1.1+. See
-> `tasks/i18n-sprint-plan.md` for the full plan and `ROADMAP.md` item AA for why.
+> **Status:** the dashboard, mailers and notifications are extracted and
+> translatable. **English is currently the only locale that ships** — the
+> machine-translated `de`/`fr`/`es`/`pt-BR` files land in a later release. See
+> `tasks/i18n-sprint-plan.md` for what remains.
 
 ## How it works
 
@@ -152,10 +154,84 @@ both:
   these properly means storing the action and its data as structured fields and
   translating on render, which is a schema change, not an extraction.
 
-Error-domain jargon is a judgement call. Terms like "backtrace", "N+1", and
-"swallowed exception" are often left untranslated even in otherwise translated
-docs, because that is what developers search for. Prefer the term your
-language's Rails community actually uses over a literal translation.
+### Error-domain terms
+
+The list above is identifiers — things that are obviously not words. This list
+is different: these are ordinary English words that developers nonetheless
+tend to keep in English, because that is what they search for and what their
+language's Rails community says out loud.
+
+Keep these verbatim unless your language's Rails community genuinely uses a
+translated form:
+
+| Term | Notes |
+|---|---|
+| `backtrace` | Not "stack trace" either — RED uses one term throughout |
+| `N+1` | Never translated, never spelled out |
+| `swallowed exception` | RED-specific; a translated form will not be recognised |
+| `deprecation` | |
+| `storm` | RED's term for a burst of errors; see the storms page |
+| `breadcrumb` | |
+| `webhook` | |
+| `payload` | |
+
+`bin/i18n-check` **warns** when an English value contains one of these terms
+and the translation does not. It warns rather than fails: some languages
+inflect or borrow these differently, and a false positive should not block a
+release. Treat a warning as a question, not a verdict.
+
+If your language's community does translate one of these, translate it — and
+please say so in the PR, so the term can be qualified here rather than
+re-flagged on every future locale.
+
+## Form of address
+
+Pick one register per language and hold it across every string. Machine
+translation drifts between formal and informal within a single file, and a
+dashboard that addresses you two different ways reads as unfinished.
+
+RED's locales use the formal register, because the audience is someone
+operating a production system, often at work:
+
+| Locale | Register |
+|---|---|
+| `de` | *Sie* |
+| `fr` | *vous* |
+| `es` | *usted* |
+| `pt-BR` | *você* |
+
+If you add a locale, record its choice here so the next contributor matches it
+instead of guessing.
+
+## Review status
+
+**English is the only locale that ships today.** When `de`, `fr`, `es` and
+`pt-BR` land they will be **machine-translated and not reviewed by a native
+speaker.** RED's maintainer reads only English, so this is stated plainly
+rather than described as "beta", which would imply a review process that has
+not happened.
+
+What this does and does not mean:
+
+- A wrong translation degrades to **English**, never to a broken page — every
+  lookup falls back, and nothing in the i18n path raises.
+- Key structure, interpolation variables and plural categories **are** verified
+  mechanically by `bin/i18n-check` in every locale.
+- Wording, register and idiom are **not** verified by anyone.
+
+| Locale | Status |
+|---|---|
+| `en` | Source language |
+| `de` | Not yet shipped — will land unreviewed |
+| `es` | Not yet shipped — will land unreviewed |
+| `fr` | Not yet shipped — will land unreviewed |
+| `pt-BR` | Not yet shipped — will land unreviewed |
+
+**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
+string reads wrong to you, change that string — you are not expected to review
+the whole file. Run `bin/i18n-check` before opening the PR and it will catch
+the structural mistakes for you. As locales get real attention, this table is
+updated and the "unreviewed" qualifier drops from the README.
 
 ## Testing a locale
 
