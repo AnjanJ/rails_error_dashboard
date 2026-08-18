@@ -22,11 +22,11 @@ RSpec.describe "Locale propagation into jobs" do
   # asserting the wrong thing. See spec/support/locale_fixtures.rb.
   TEST_LOCALE = "xt"
 
-  with_locale_fixture TEST_LOCALE, <<~YAML
+  with_locale_fixture TEST_LOCALE, probe: "red.common.close", yaml: <<~YAML
     xt:
       red:
         common:
-          loading: "XT-LOADING"
+          close: "XT-CLOSE"
   YAML
 
   let!(:application) { create(:application) }

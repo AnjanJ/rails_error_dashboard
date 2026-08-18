@@ -49,6 +49,70 @@ RSpec.describe RailsErrorDashboard::I18nStore do
       end
     end
 
+    # Both of these are about the backend's CONTENTS, not about a lookup
+    # degrading gracefully. A host setting that quietly strips locales out of
+    # RED's dictionary is worse than one that raises: every page renders
+    # English and nothing anywhere says why.
+    it "loads its own locale files even when the host allowlists other locales" do
+      original = I18n.available_locales
+      path = RailsErrorDashboard::Engine.root.join("config", "locales", "xh.yml")
+
+      begin
+        path.write("xh:\n  red:\n    common:\n      close: \"XH-CLOSE\"\n")
+        # I18n::Backend::Simple#load_translations filters what it reads through
+        # this global and silently drops the rest.
+        I18n.available_locales = [ :en, :ja ]
+        described_class.reset!
+
+        expect(described_class.translate("red.common.close", locale: "xh")).to eq("XH-CLOSE")
+      ensure
+        path.delete if path.exist?
+        I18n.available_locales = original
+        described_class.reset!
+      end
+    end
+
+    it "leaves the host's available_locales exactly as it found them" do
+      original_explicit = I18n.config.instance_variable_get(:@available_locales)
+
+      begin
+        I18n.available_locales = [ :en, :ja ]
+        # What the host observes before RED touches anything.
+        expected = I18n.available_locales.dup
+
+        described_class.reset!
+        described_class.backend
+
+        expect(I18n.available_locales).to eq(expected)
+      ensure
+        I18n.available_locales = original_explicit
+        described_class.reset!
+      end
+    end
+
+    it "never leaves the host with an empty allowlist" do
+      # The failure mode being guarded: restoring a saved value that was really
+      # "unset" as [] would give the host an allowlist excluding every locale,
+      # breaking the HOST's own translations rather than RED's.
+      before = I18n.available_locales.dup
+
+      described_class.reset!
+      described_class.backend
+
+      expect(I18n.available_locales).not_to be_empty
+      expect(I18n.available_locales).to eq(before)
+    end
+
+    it "does not absorb the host's load path into its own dictionary" do
+      # load_translations does not mark the backend initialized, so the first
+      # lookup would otherwise call init_translations and pull in every locale
+      # file the host app and its gems have registered.
+      described_class.reset!
+      described_class.translate("red.common.close")
+
+      expect(described_class.backend.send(:translations).keys).to eq(described_class.available_locales)
+    end
+
     it "renders when the host raises on missing translations" do
       original_handler = I18n.exception_handler
 

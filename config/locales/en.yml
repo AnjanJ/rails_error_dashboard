@@ -1740,6 +1740,103 @@ en:
         manage_settings: "Manage digest settings"
         footer: "Automated digest from RED (%{product})"
 
+    notifications:
+      # Slack / Discord / PagerDuty field labels and button text.
+      #
+      # THE RULE HERE IS NARROWER THAN ELSEWHERE. Only values a human reads get
+      # keys. Anything a receiving system parses stays English, because
+      # translating it breaks the integration rather than localizing it:
+      #
+      #   * Slack block "type" values (header, section, mrkdwn, actions,
+      #     button, plain_text) and "style"
+      #   * PagerDuty "event_action" ("trigger") and "severity" ("critical") —
+      #     these are API enums, not adjectives
+      #   * Every webhook JSON key AND its values. The whole webhook payload is
+      #     machine-readable by definition; it has no keys here at all.
+      #   * Discord "inline", "color", "timestamp"
+      #
+      # GitHub/GitLab/Linear issue bodies are also deliberately absent: they
+      # are dev-facing, and the maintainer reading an issue may not share the
+      # dashboard's locale.
+      shared:
+        # Product name, and the name RED gives itself as a PagerDuty client.
+        # Never translated.
+        product_name: "Rails Error Dashboard"
+        unknown: "Unknown"
+        not_available: "N/A"
+
+      error_alert:
+        # Slack's fallback text, shown in notification previews.
+        fallback: "🚨 New Error Alert"
+        heading: "🚨 Error Alert"
+        # %{error_type} is an exception class name — verbatim, not translated.
+        discord_title: "🚨 New Error: %{error_type}"
+        # PagerDuty incident summary. %{application}, %{error_type} and
+        # %{platform} are all verbatim values.
+        pagerduty_summary: "[%{application}] Critical Error: %{error_type} in %{platform}"
+        labels:
+          application: "Application"
+          error_type: "Error Type"
+          platform: "Platform"
+          occurred: "Occurred"
+          message: "Message"
+          user: "User"
+          ip_address: "IP Address"
+          request_url: "Request URL"
+          occurrences: "Occurrences"
+          controller: "Controller"
+          action: "Action"
+          first_seen: "First Seen"
+          location: "Location"
+        # %{id} is the user's database id, shown when no email is available.
+        user_fallback: "User #%{id}"
+        view_details: "View Details"
+        view_in_dashboard: "View in Error Dashboard"
+        # %{id} is the error's database id.
+        error_id: "Error ID: %{id}"
+
+      baseline_alert:
+        fallback: "🚨 Baseline Anomaly Alert"
+        heading: "🚨 Baseline Anomaly Detected"
+        labels:
+          severity: "Severity"
+          std_devs: "Standard Deviations"
+          threshold: "Threshold"
+          baseline_type: "Baseline Type"
+          baseline_info: "Baseline Info"
+        # Anomaly levels. NOT the same vocabulary as red.common.severity —
+        # an anomaly can be "elevated", an error cannot. Previously rendered
+        # by .upcase on the raw symbol, which is English morphology applied to
+        # a machine value.
+        level:
+          critical: "CRITICAL"
+          high: "HIGH"
+          elevated: "ELEVATED"
+          unknown: "UNKNOWN"
+        # %{value} is a rounded number of standard deviations.
+        std_devs_above: "%{value}σ above baseline"
+        # The alert threshold, in errors. %{value} is the displayed number
+        # (a rounded float); %{count} is its integer form and only drives
+        # plural selection, so it must not appear in the text.
+        threshold_errors:
+          one: "%{value} error"
+          other: "%{value} errors"
+        view_in_dashboard: "View in Dashboard"
+
+      storm:
+        # The single "error storm in progress" message. %{application} is the
+        # host app's name and %{started_at} an ISO8601 timestamp.
+        detected: "Error storm detected in %{application} at %{started_at}."
+        # Breaker state at notification time.
+        mode:
+          open: "count-only mode (occurrences tallied, detail paused)"
+          shedding: "shedding mode (context sampling active)"
+        # %{mode} is one of the two above.
+        engaged: "Storm protection engaged — %{mode}."
+        suppressed: "Per-error notifications are suppressed until the storm subsides; exact counts are preserved."
+        # %{url} links to the storms page.
+        dashboard: "Dashboard: %{url}"
+
     time:
       # "%{duration} ago" as a single key. Never build this by concatenating a
       # duration and the word "ago" — word order differs across languages, and

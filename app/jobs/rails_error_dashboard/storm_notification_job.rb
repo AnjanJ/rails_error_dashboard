@@ -40,18 +40,30 @@ module RailsErrorDashboard
 
     private
 
-    # locale is threaded through now (P4-T1) and consumed when these strings
-    # become keys in P4-T3. Marked _locale until then so the argument is not
-    # silently dropped in a later refactor.
+    # Assembled from four keys rather than one, because the dashboard link is
+    # conditional. Each key is a whole sentence — never a fragment joined to
+    # another, which would bake English word order into every translation.
+    #
+    # ":warning:" is Slack/Discord emoji shortcode, not text.
     def build_message(started_at, state, config, locale)
-      _locale = locale
-      mode = state == "open" ? "count-only mode (occurrences tallied, detail paused)" : "shedding mode (context sampling active)"
-      dashboard = (config.dashboard_base_url || "").chomp("/")
-      link = dashboard.present? ? " Dashboard: #{dashboard}/errors/storms" : ""
+      mode_key = state == "open" ? "open" : "shedding"
+      mode = t("red.notifications.storm.mode.#{mode_key}", locale)
 
-      ":warning: Error storm detected in #{app_name(config)} at #{started_at}. " \
-        "Storm protection engaged — #{mode}. Per-error notifications are " \
-        "suppressed until the storm subsides; exact counts are preserved.#{link}"
+      dashboard = (config.dashboard_base_url || "").chomp("/")
+      link = if dashboard.present?
+        " " + t("red.notifications.storm.dashboard", locale, url: "#{dashboard}/errors/storms")
+      else
+        ""
+      end
+
+      ":warning: " \
+        "#{t("red.notifications.storm.detected", locale, application: app_name(config), started_at: started_at)} " \
+        "#{t("red.notifications.storm.engaged", locale, mode: mode)} " \
+        "#{t("red.notifications.storm.suppressed", locale)}#{link}"
+    end
+
+    def t(key, locale, **options)
+      RailsErrorDashboard::I18nStore.translate(key, locale: locale, **options)
     end
 
     def app_name(config)

@@ -189,8 +189,67 @@ module RailsErrorDashboard
       def build_backend
         ::I18n::Backend::Simple.new.tap do |backend|
           files = locale_files
-          backend.load_translations(*files) if files.any?
+
+          # THE HOST'S ALLOWLIST MUST NOT DECIDE WHICH LOCALES RED SHIPS.
+          #
+          # I18n::Backend::Simple#load_translations filters every file it reads
+          # through the GLOBAL I18n.available_locales, silently discarding any
+          # locale not on that list. A host with
+          # `config.i18n.available_locales = [:en, :ja]` — a perfectly ordinary
+          # setting — would therefore strip RED's de/fr/es/pt-BR right out of
+          # RED's own private dictionary, and every page would render English
+          # with no error anywhere to explain why.
+          #
+          # Loading with the allowlist temporarily cleared is the only way to
+          # get Simple to read the files as written. The global is restored
+          # immediately, in an ensure, so the host never observes the change:
+          # this is a read of RED's own files, not a reconfiguration.
+          #
+          # Found in P4-T3 by a spec fixture that kept resolving to English.
+          with_unrestricted_locales do
+            backend.load_translations(*files) if files.any?
+          end
+
+          # THE BACKEND MUST BE MARKED INITIALIZED, OR IT IS NOT PRIVATE.
+          #
+          # load_translations does not set @initialized. The first #translate
+          # therefore calls init_translations, which loads the HOST's
+          # I18n.load_path into this backend — the exact coupling this class
+          # exists to prevent. In a Rails app that silently merges every gem's
+          # locale files into RED's dictionary (in RED's own test suite, all of
+          # Faker's), and a host key that happens to collide with one of ours
+          # would win or lose depending on load order.
+          #
+          # Setting the flag makes load_translations above the only thing that
+          # ever populates this backend. Found in P4-T3, when a fixture locale
+          # written to config/locales kept resolving to English: the backend
+          # held Faker's locales and not RED's.
+          backend.instance_variable_set(:@initialized, true)
         end
+      end
+
+      # Clear I18n.available_locales for the duration of the block, then put it
+      # back exactly as found.
+      #
+      # Save and restore go through the PUBLIC accessor only. Reaching for
+      # @available_locales does not work: under Rails, I18n.config is a
+      # delegating object that holds no such ivar (its only instance variable
+      # is @owner), so the ivar reads nil whether or not the host set a list.
+      # Restoring from it would hand the host an empty allowlist and break the
+      # host's own translations — the precise damage this class exists to
+      # avoid.
+      #
+      # Restoring the reader's value is faithful for both cases: a host with an
+      # explicit list gets that list back, and a host without one gets back the
+      # set derived from its loaded backend, which is what it would compute
+      # anyway.
+      def with_unrestricted_locales
+        previous = ::I18n.available_locales
+
+        ::I18n.available_locales = nil
+        yield
+      ensure
+        ::I18n.available_locales = previous
       end
 
       def locale_files

@@ -12,22 +12,32 @@ module RailsErrorDashboard
     class PagerdutyPayloadBuilder
       # @param error_log [ErrorLog] The error to build a payload for
       # @param routing_key [String] PagerDuty integration key
+      # @param locale [String] resolved by the enqueueing thread (P4-T1)
       # @return [Hash] PagerDuty Events API v2 payload
-      # locale is accepted and carried from P4-T1 so the async path has an
-      # explicit locale end to end. The strings below become translation keys
-      # in P4-T3; until then every locale renders English, which is exactly
-      # what the pre-i18n payload contained.
+      #
+      # ONLY "summary" AND THE LINK TEXT ARE LOCALIZED.
+      #
+      # event_action ("trigger") and severity ("critical") are PagerDuty API
+      # enums, not adjectives — PagerDuty rejects any other value, so a
+      # translated "critical" would drop the incident rather than localize it.
+      # The custom_details keys are consumed by whatever the operator has wired
+      # downstream, and "client" is RED's product name.
       def self.call(error_log, routing_key:, locale: I18nStore::DEFAULT_LOCALE)
-        _locale = locale
-
         {
           routing_key: routing_key,
           event_action: "trigger",
           payload: {
-            summary: "[#{NotificationHelpers.app_name(error_log)}] Critical Error: #{error_log.error_type} in #{error_log.platform}",
+            summary: NotificationHelpers.t(
+              "red.notifications.error_alert.pagerduty_summary",
+              locale,
+              application: NotificationHelpers.app_name(error_log),
+              error_type: error_log.error_type,
+              platform: error_log.platform
+            ),
+            # API enum, not an adjective. Never translated.
             severity: "critical",
             source: NotificationHelpers.error_source(error_log),
-            component: error_log.controller_name || "Unknown",
+            component: error_log.controller_name || NotificationHelpers.unknown(locale),
             group: error_log.error_type,
             class: error_log.error_type,
             custom_details: {
@@ -47,10 +57,11 @@ module RailsErrorDashboard
           links: [
             {
               href: NotificationHelpers.dashboard_url(error_log),
-              text: "View in Error Dashboard"
+              text: NotificationHelpers.t("red.notifications.error_alert.view_in_dashboard", locale)
             }
           ],
-          client: "Rails Error Dashboard",
+          # Product name — not translated.
+          client: NotificationHelpers.t("red.notifications.shared.product_name", locale),
           client_url: NotificationHelpers.dashboard_url(error_log)
         }
       end

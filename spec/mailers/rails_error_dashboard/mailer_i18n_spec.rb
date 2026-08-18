@@ -14,7 +14,7 @@ RSpec.describe "Mailer i18n" do
   # that as their example of an unshipped locale.
   TEST_MAIL_LOCALE = "xm"
 
-  with_locale_fixture TEST_MAIL_LOCALE, <<~YAML
+  with_locale_fixture TEST_MAIL_LOCALE, probe: "red.mailers.error_alert.heading", yaml: <<~YAML
     xm:
       red:
         common:

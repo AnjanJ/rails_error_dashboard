@@ -18,58 +18,64 @@ module RailsErrorDashboard
       DEFAULT_COLOR = 8421504 # Gray
 
       # @param error_log [ErrorLog] The error to build a payload for
+      # @param locale [String] resolved by the enqueueing thread (P4-T1)
       # @return [Hash] Discord embed payload
-      # locale is accepted and carried from P4-T1 so the async path has an
-      # explicit locale end to end. The strings below become translation keys
-      # in P4-T3; until then every locale renders English, which is exactly
-      # what the pre-i18n payload contained.
+      #
+      # Field *names* are human-readable and localized; "inline", "color" and
+      # "timestamp" are Discord embed schema and stay as they are. The footer
+      # is the product name, which is not translated.
       def self.call(error_log, locale: I18nStore::DEFAULT_LOCALE)
-        _locale = locale
+        unknown = NotificationHelpers.unknown(locale)
+        not_available = NotificationHelpers.not_available(locale)
 
         {
           embeds: [ {
-            title: "🚨 New Error: #{error_log.error_type}",
+            # error_type is an exception class name — verbatim.
+            title: NotificationHelpers.t(
+              "red.notifications.error_alert.discord_title", locale, error_type: error_log.error_type
+            ),
             description: NotificationHelpers.truncate_message(error_log.message, 200),
             color: severity_color(error_log),
             fields: [
               {
-                name: "Application",
+                name: NotificationHelpers.label(:application, locale),
                 value: NotificationHelpers.app_name(error_log),
                 inline: true
               },
               {
-                name: "Platform",
-                value: error_log.platform || "Unknown",
+                name: NotificationHelpers.label(:platform, locale),
+                value: error_log.platform || unknown,
                 inline: true
               },
               {
-                name: "Occurrences",
+                name: NotificationHelpers.label(:occurrences, locale),
                 value: error_log.occurrence_count.to_s,
                 inline: true
               },
               {
-                name: "Controller",
-                value: error_log.controller_name || "N/A",
+                name: NotificationHelpers.label(:controller, locale),
+                value: error_log.controller_name || not_available,
                 inline: true
               },
               {
-                name: "Action",
-                value: error_log.action_name || "N/A",
+                name: NotificationHelpers.label(:action, locale),
+                value: error_log.action_name || not_available,
                 inline: true
               },
               {
-                name: "First Seen",
-                value: NotificationHelpers.format_time(error_log.first_seen_at),
+                name: NotificationHelpers.label(:first_seen, locale),
+                value: NotificationHelpers.format_datetime_or_na(error_log.first_seen_at, locale),
                 inline: true
               },
               {
-                name: "Location",
-                value: NotificationHelpers.extract_first_backtrace_line(error_log.backtrace),
+                # Backtrace content is diagnostic output — never translated.
+                name: NotificationHelpers.label(:location, locale),
+                value: NotificationHelpers.extract_first_backtrace_line(error_log.backtrace, locale: locale),
                 inline: false
               }
             ],
             footer: {
-              text: "Rails Error Dashboard"
+              text: NotificationHelpers.t("red.notifications.shared.product_name", locale)
             },
             timestamp: error_log.occurred_at.iso8601
           } ]
