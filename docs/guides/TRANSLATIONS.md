@@ -5,8 +5,8 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **All five launch locales ship: `en`, `de`, `es`, `fr` and
-> `pt-BR`.** Everything but English is machine-translated and unreviewed — see
+> translatable. **Six locales ship: `en`, `de`, `es`, `fr`, `pt-BR` and `ja`.**
+> Everything but English is machine-translated and unreviewed — see
 > [Review status](#review-status).
 
 ## How it works
@@ -204,6 +204,19 @@ If your language's community does translate one of these, translate it — and
 please say so in the PR, so the term can be qualified here rather than
 re-flagged on every future locale.
 
+### Recorded departures
+
+| Locale | Term | Rendered as | Why |
+|---|---|---|---|
+| `ja` | `storm` | ストーム | The ordinary katakana borrowing. RED's sense carries over. |
+| `ja` | `swallowed exception` | 握りつぶされた例外 | What Japanese Rails developers actually say. `red.errors.swallowed_page.title` keeps "(swallowed exception)" in parentheses so the English stays searchable. |
+| `ja` | `deprecation` | 非推奨 | Only in the nav label and section tab, where space is tight. The page bodies keep "deprecation" alongside the kanji. |
+
+These raise `bin/i18n-check` warnings and always will: the check matches ASCII
+substrings, so it cannot see a term rendered in kana or kanji. **A glossary
+warning on a non-Latin locale is expected, not a defect** — check the value, then
+leave it. Only a term genuinely dropped needs fixing.
+
 ## Form of address
 
 Pick one register per language and hold it across every string. Machine
@@ -219,6 +232,15 @@ operating a production system, often at work:
 | `fr` | *vous* |
 | `es` | *usted* |
 | `pt-BR` | *você* |
+| `ja` | **です・ます体** (polite form) |
+
+Japanese has no pronoun to choose here — the register lives in the verb endings,
+so the rule is です・ます体 throughout rather than plain form (だ・である体).
+Plain form is not rude, but it reads as terse system output; a dashboard telling
+an operator what has broken should sound like it is addressing a person. UI
+labels and headings stay noun phrases (体言止め) as they do in English —
+"設定", not "設定します" — and the polite form applies to sentences: messages,
+descriptions, tooltips, confirmations.
 
 If you add a locale, record its choice here so the next contributor matches it
 instead of guessing.
@@ -245,6 +267,7 @@ What this does and does not mean:
 | `es` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `fr` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `pt-BR` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
+| `ja` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
 string reads wrong to you, change that string — you are not expected to review

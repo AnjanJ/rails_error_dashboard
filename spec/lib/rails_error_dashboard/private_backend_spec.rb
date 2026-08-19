@@ -143,4 +143,82 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
       expect(described_class.protected_instance_methods).to include(:init_translations)
     end
   end
+
+  # Upstream's plural rule is English: `count == 1 ? :one : :other`. That is
+  # wrong in BOTH directions for the locales RED ships, and the ja direction is
+  # silent — I18nStore rescues InvalidPluralizationData into the English
+  # fallback, so a fully translated Japanese string renders in English at every
+  # count of 1 rather than raising anywhere a spec would notice.
+  describe "#pluralization_key" do
+    def backend_with(locale, entry)
+      described_class.new.tap do |backend|
+        backend.store_translations(locale, red: { items: entry })
+      end
+    end
+
+    # The pin: this is what a STOCK backend does, and why the override exists.
+    it "pins that upstream raises for an other-only locale at count 1" do
+      stock = I18n::Backend::Simple.new
+      stock.store_translations(:ja, red: { items: { other: "%{count}件" } })
+
+      expect { stock.translate(:ja, "red.items", count: 1) }
+        .to raise_error(I18n::InvalidPluralizationData)
+    end
+
+    context "a locale whose CLDR rules give it `other` alone" do
+      it "renders at count 1 rather than falling back to English" do
+        backend = backend_with(:ja, { other: "%{count}件" })
+
+        expect(backend.translate(:ja, "red.items", count: 1)).to eq("1件")
+      end
+
+      it "renders at every other count too" do
+        backend = backend_with(:ja, { other: "%{count}件" })
+
+        expect([ 0, 2, 11 ].map { |n| backend.translate(:ja, "red.items", count: n) })
+          .to eq([ "0件", "2件", "11件" ])
+      end
+    end
+
+    context "a locale shaped like English" do
+      it "still selects one and other, unchanged" do
+        backend = backend_with(:de, { one: "1 Fehler", other: "%{count} Fehler" })
+
+        expect([ 1, 2 ].map { |n| backend.translate(:de, "red.items", count: n) })
+          .to eq([ "1 Fehler", "2 Fehler" ])
+      end
+
+      it "leaves a locale absent from the table on upstream behaviour" do
+        backend = backend_with(:xx, { one: "1", other: "many" })
+
+        expect([ 1, 2 ].map { |n| backend.translate(:xx, "red.items", count: n) })
+          .to eq([ "1", "many" ])
+      end
+    end
+
+    it "honours an explicit zero form, as upstream does" do
+      backend = backend_with(:ja, { zero: "なし", other: "%{count}件" })
+
+      expect(backend.translate(:ja, "red.items", count: 0)).to eq("なし")
+    end
+
+    # The rule is chosen per LOOKUP locale, not from I18n.locale. A job renders
+    # several locales under one host I18n.locale, so reading the global would
+    # apply Japanese's rule to a German string.
+    it "uses the locale being looked up, not the host's I18n.locale" do
+      backend = described_class.new
+      backend.store_translations(:ja, red: { items: { other: "%{count}件" } })
+      backend.store_translations(:de, red: { items: { one: "1 Fehler", other: "%{count} Fehler" } })
+
+      I18n.with_locale(:ja) do
+        expect(backend.translate(:de, "red.items", count: 1)).to eq("1 Fehler")
+      end
+    end
+
+    it "falls back to other when the rule asks for a category the entry lacks" do
+      backend = backend_with(:fr, { other: "%{count} erreurs" })
+
+      expect(backend.translate(:fr, "red.items", count: 1)).to eq("1 erreurs")
+    end
+  end
 end

@@ -225,7 +225,7 @@ module RailsErrorDashboard
     # Locale the dashboard renders in, independent of the host app's locale.
     #
     # Drives both Pagy's pagination labels and RED's own translation lookups.
-    # Ships "en", "de", "fr", "es" and "pt-BR". Everything but English is
+    # Ships "en", "de", "fr", "es", "pt-BR" and "ja". Everything but English is
     # machine-translated and has NOT been reviewed by a native speaker — see
     # docs/guides/TRANSLATIONS.md. A missing or wrong translation falls back to
     # English rather than breaking the page.
@@ -445,7 +445,7 @@ module RailsErrorDashboard
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
-      @dashboard_locale = "en"  # en, de, fr, es, pt-BR (non-English machine-translated)
+      @dashboard_locale = "en"  # en, de, fr, es, pt-BR, ja (non-English machine-translated)
 
       # LLM-powered AI help defaults - OFF until provider and API key are configured
       @llm_provider = ENV["RED_LLM_PROVIDER"]&.to_sym

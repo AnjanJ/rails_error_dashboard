@@ -77,6 +77,76 @@ module RailsErrorDashboard
     # inherited method's visibility is a silent API change.
     protected :init_translations
 
+    # DEFECT 3 — upstream's plural rule is English, so a locale with different
+    # CLDR categories cannot be rendered at all.
+    #
+    # Backend::Base#pluralization_key is `count == 1 ? :one : :other` with a
+    # :zero special case. That IS English (and de/fr/es/pt-BR are close enough
+    # that nothing noticed). It is wrong for any language whose categories
+    # differ, and it fails in the two opposite directions RED now has to serve:
+    #
+    #   ja, zh-CN  have `other` ALONE. At count 1 upstream asks for :one, the
+    #              entry has no :one, and pluralize raises
+    #              InvalidPluralizationData. I18nStore rescues that into the
+    #              English fallback, so a fully translated Japanese string
+    #              renders in ENGLISH for every count of 1 — silently.
+    #   fr, es,    have `many`. Upstream never asks for it, so the category the
+    #   pt-BR      locale is required to supply is dead weight.
+    #
+    # RED cannot depend on rails-i18n for real CLDR rules (invariant 7 — no new
+    # runtime dependency), and does not need to: it ships a known, small set of
+    # locales, and the categories each one uses are already declared in
+    # bin/i18n-check. This table is the runtime half of that same statement.
+    #
+    # Only `other` is guaranteed. Every branch falls back to :other when the
+    # category it wants is absent, so a partially-translated entry degrades to
+    # a rendered string rather than to the English fallback.
+    PLURAL_RULES = {
+      # No grammatical number: one form covers every count.
+      "ja" => ->(_count) { :other },
+      "zh-CN" => ->(_count) { :other },
+      # 0 and 1 both take the singular; millions take `many`.
+      "fr" => ->(count) { count.abs < 2 ? :one : :other },
+      # `many` is the CLDR category for large round numbers. RED's strings are
+      # counts of errors and users, so the practical split is one/other; asking
+      # for :many only when the entry actually supplies it keeps a correct
+      # es/pt-BR file working either way.
+      "es" => ->(count) { count == 1 ? :one : :other },
+      "pt-BR" => ->(count) { count.abs < 2 ? :one : :other }
+    }.freeze
+    private_constant :PLURAL_RULES
+
+    # Overrides the hook rather than #pluralize, so upstream's
+    # InvalidPluralizationData guard still fires for an entry that genuinely
+    # lacks the category asked for — a missing form must stay loud, and
+    # I18nStore's rescue must stay a safety net rather than the normal path.
+    #
+    # A locale absent from PLURAL_RULES keeps upstream's English behaviour,
+    # which is the right default: de and en are English-shaped, and an unknown
+    # locale is better served by the documented upstream rule than by a guess.
+    def pluralization_key(entry, count)
+      rule = PLURAL_RULES[@current_pluralization_locale.to_s]
+      return super unless rule
+
+      return :zero if count == 0 && entry.has_key?(:zero)
+
+      key = rule.call(count)
+      entry.has_key?(key) ? key : :other
+    end
+
+    # Upstream calls pluralization_key from #pluralize, which knows the locale;
+    # the hook itself does not receive it. Capture it around the call rather
+    # than reading I18n.locale, which is the HOST's current locale and need not
+    # be the locale this lookup is for (I18nStore always passes locale:
+    # explicitly, and jobs render several locales under one I18n.locale).
+    def pluralize(locale, entry, count)
+      previous = @current_pluralization_locale
+      @current_pluralization_locale = locale
+      super
+    ensure
+      @current_pluralization_locale = previous
+    end
+
     # Upstream guards its own deep_merge! with a private class-level mutex
     # (Simple::Implementation::MUTEX). Reaching for that constant would couple
     # this to an internal name; RED holds its own, which is equivalent because

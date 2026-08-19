@@ -59,7 +59,7 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `accent_color` | Symbol | `:crimson` | Dashboard accent colour — `:crimson`, `:ruby`, `:ember`, `:violet` |
-| `dashboard_locale` | String | `"en"` | Locale the dashboard renders in, independent of the host app's locale. Ships `en`, `de`, `fr`, `es`, `pt-BR` — everything but English is **machine-translated and unreviewed by a native speaker**, falling back to English per missing key. Users can override it per-session with the language picker. Unknown or wrong-cased values fall back to `"en"`. See [Translations](TRANSLATIONS.md) |
+| `dashboard_locale` | String | `"en"` | Locale the dashboard renders in, independent of the host app's locale. Ships `en`, `de`, `fr`, `es`, `pt-BR`, `ja` — everything but English is **machine-translated and unreviewed by a native speaker**, falling back to English per missing key. Users can override it per-session with the language picker. Unknown or wrong-cased values fall back to `"en"`. See [Translations](TRANSLATIONS.md) |
 
 The dashboard sets its own locale for the duration of each request and restores
 the previous value afterwards, so it neither inherits the host app's locale nor
