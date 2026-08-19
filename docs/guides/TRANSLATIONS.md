@@ -5,9 +5,9 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **English is currently the only locale that ships** — the
-> machine-translated `de`/`fr`/`es`/`pt-BR` files land in a later release. See
-> `tasks/i18n-sprint-plan.md` for what remains.
+> translatable. **English and German ship today**; German is
+> machine-translated and unreviewed (see [Review status](#review-status)).
+> `fr`, `es` and `pt-BR` land in a later release.
 
 ## How it works
 
@@ -217,11 +217,11 @@ instead of guessing.
 
 ## Review status
 
-**English is the only locale that ships today.** When `de`, `fr`, `es` and
-`pt-BR` land they will be **machine-translated and not reviewed by a native
-speaker.** RED's maintainer reads only English, so this is stated plainly
-rather than described as "beta", which would imply a review process that has
-not happened.
+**German ships alongside English. It is machine-translated and has not been
+reviewed by a native speaker.** RED's maintainer reads only English, so this is
+stated plainly rather than described as "beta", which would imply a review
+process that has not happened. `fr`, `es` and `pt-BR` will land on the same
+terms.
 
 What this does and does not mean:
 
@@ -234,7 +234,7 @@ What this does and does not mean:
 | Locale | Status |
 |---|---|
 | `en` | Source language |
-| `de` | Not yet shipped — will land unreviewed |
+| `de` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `es` | Not yet shipped — will land unreviewed |
 | `fr` | Not yet shipped — will land unreviewed |
 | `pt-BR` | Not yet shipped — will land unreviewed |

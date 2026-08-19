@@ -219,6 +219,10 @@ if stdout_only
   puts output
 else
   File.write(existing_path, output)
+  # Count against the merged file, not this batch: with --partial the batch is
+  # only a slice, and reporting its shortfall made a finished locale look
+  # incomplete.
+  outstanding = expected_keys - merged.keys
   puts "i18n-merge: wrote #{existing_path.sub("#{ROOT}/", "")} " \
-       "(#{merged.size} keys#{", #{missing_keys.size} still missing" unless missing_keys.empty?})"
+       "(#{merged.size} keys#{", #{outstanding.size} still missing" unless outstanding.empty?})"
 end
