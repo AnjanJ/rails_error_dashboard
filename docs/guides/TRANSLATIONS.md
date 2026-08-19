@@ -5,9 +5,9 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **English, German and French ship today**; `de` and `fr` are
-> machine-translated and unreviewed (see [Review status](#review-status)).
-> `es` and `pt-BR` land in a later release.
+> translatable. **English, German, Spanish and French ship today**; `de`, `es`
+> and `fr` are machine-translated and unreviewed (see
+> [Review status](#review-status)). `pt-BR` lands in a later release.
 
 ## How it works
 
@@ -217,11 +217,11 @@ instead of guessing.
 
 ## Review status
 
-**German and French ship alongside English. Both are machine-translated and
-have not been reviewed by a native speaker.** RED's maintainer reads only
-English, so this is stated plainly rather than described as "beta", which would
-imply a review process that has not happened. `es` and `pt-BR` will land on the
-same terms.
+**German, Spanish and French ship alongside English. All three are
+machine-translated and have not been reviewed by a native speaker.** RED's
+maintainer reads only English, so this is stated plainly rather than described
+as "beta", which would imply a review process that has not happened. `pt-BR`
+will land on the same terms.
 
 What this does and does not mean:
 
@@ -235,7 +235,7 @@ What this does and does not mean:
 |---|---|
 | `en` | Source language |
 | `de` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `es` | Not yet shipped — will land unreviewed |
+| `es` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `fr` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `pt-BR` | Not yet shipped — will land unreviewed |
 
