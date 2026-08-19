@@ -30,7 +30,7 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
     it "pins that Backend::Simple drops translations for a locale off the host's allowlist" do
       stock = I18n::Backend::Simple.new
 
-      with_host_allowlist([ :ja ]) do
+      with_host_allowlist([ :zu ]) do
         expect(I18n.available_locales_initialized?).to be(true),
           "the availability latch must be tripped for this pin to mean anything"
 
@@ -74,7 +74,7 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
     it "stores a locale the host's allowlist excludes" do
       backend = described_class.new
 
-      with_host_allowlist([ :ja ]) do
+      with_host_allowlist([ :zu ]) do
         backend.store_translations(:xh, red: { common: { close: "XH-CLOSE" } })
 
         expect(backend.translate(:xh, "red.common.close")).to eq("XH-CLOSE")
@@ -84,7 +84,7 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
     it "leaves the host's I18n configuration untouched while storing" do
       backend = described_class.new
 
-      with_host_allowlist([ :ja ]) do
+      with_host_allowlist([ :zu ]) do
         before = [ I18n.available_locales.dup, I18n.enforce_available_locales, I18n.load_path.dup ]
 
         backend.store_translations(:xh, red: { common: { close: "XH-CLOSE" } })

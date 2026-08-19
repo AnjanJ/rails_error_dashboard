@@ -70,6 +70,13 @@ correct, and `bin/i18n-check` expects it: plural forms are checked against your
 locale's CLDR rules rather than against `en.yml`, so a required `many` is not
 reported as an orphan — while a *missing* one is a failure.
 
+This works in both directions. Japanese and Chinese make no grammatical number
+distinction and take **`other` alone** — supplying a `one` form for them is the
+error, and the checker says so. Because such a group has a single child, the
+checker decides what is a plural group by looking at `en.yml`, not by counting
+what your file happens to contain: English is authoritative for *which* nodes
+are plural, your locale's CLDR rules for *which categories* those nodes need.
+
 Every other key must match `en.yml` exactly.
 
 Filenames are the source of truth for which locales exist:
@@ -119,9 +126,10 @@ en:
         other: "%{count} errors"
 ```
 
-Supply every plural category your language needs. A locale that provides only
-`other` while a count requires `one` degrades to English rather than raising,
-but that is a safety net, not a plan.
+Supply every plural category your language needs — no more, no fewer. A locale
+that omits a category its rules require degrades to English rather than raising,
+but that is a safety net, not a plan. For a language whose rules need only
+`other`, `other` alone is complete and correct.
 
 ### Dates and times
 

@@ -42,7 +42,12 @@ CLDR_CATEGORIES = {
   "de" => %w[one other],
   "fr" => %w[one many other],
   "es" => %w[one many other],
-  "pt-BR" => %w[one many other]
+  "pt-BR" => %w[one many other],
+  # Japanese and Chinese make no grammatical number distinction: CLDR gives
+  # them `other` alone. A locale with FEWER categories than English is the
+  # case plural_groups_for_target exists to handle.
+  "ja" => %w[other],
+  "zh-CN" => %w[other]
 }.freeze
 
 ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
@@ -145,6 +150,12 @@ end
 # The "all" is load-bearing. red.errors.index.filters.frequencies has a child
 # named `few` — a filter label, not a plural form — and an "any child looks
 # plural" rule would misclassify it and then report bogus CLDR failures.
+#
+# The `size >= 2` rule is the other half of that guard, and it is only sound
+# for en.yml. English has two categories, so a real English plural group always
+# has two children and a lone `other:` child is far more likely to be an
+# ordinary key that happens to be named "other". Do NOT apply this function to
+# a target locale — see plural_groups_for_target.
 def plural_groups(flat)
   children = Hash.new { |hash, key| hash[key] = [] }
   flat.each_key do |key|
@@ -157,6 +168,34 @@ def plural_groups(flat)
   children.select do |_, kids|
     kids.size >= 2 && kids.all? { |kid| ALL_PLURAL_CATEGORIES.include?(kid) }
   end
+end
+
+# The same grouping for a TARGET locale, anchored to the source.
+#
+# Counting the target's own children breaks for any locale with FEWER plural
+# categories than English. Japanese and Chinese have `other` ALONE, so a
+# correct ja.yml leaves one child per group, `size >= 2` stops recognising the
+# group, and parity then reports all 67 plural parents missing AND all 67
+# `.other` leaves orphaned. That is the mirror image of the French `many`
+# problem: the exemption has to be symmetric in both directions.
+#
+# The division of authority: the SOURCE decides what is a plural group (it is
+# authoritative for structure), the target's CLDR rules decide which categories
+# that group must contain (check_plurals enforces that separately). So a target
+# node is a plural group iff en.yml has one at the same path.
+def plural_groups_for_target(flat, source_parents)
+  children = Hash.new { |hash, key| hash[key] = [] }
+  flat.each_key do |key|
+    parts = key.split(".")
+    next if parts.size < 2
+
+    parent = parts[0..-2].join(".")
+    next unless source_parents.include?(parent)
+
+    children[parent] << parts[-1]
+  end
+
+  children
 end
 
 def load_locale_file(path)
@@ -187,7 +226,7 @@ def check_parity(locale, source, target, reporter)
   # Parity still applies to the plural PARENT, so a group dropped wholesale is
   # still caught.
   source_plural_parents = plural_groups(source).keys.to_set
-  target_plural_parents = plural_groups(target).keys.to_set
+  target_plural_parents = plural_groups_for_target(target, source_plural_parents).keys.to_set
 
   plural_leaf = lambda do |key, parents|
     parts = key.split(".")
@@ -247,7 +286,12 @@ def check_parity(locale, source, target, reporter)
 end
 
 # REQ-4 — plural categories valid for the locale's CLDR rules.
-def check_plurals(locale, target, reporter)
+#
+# `source_parents` anchors group detection to en.yml for the same reason
+# check_parity does: an `other`-only locale has no self-evident plural groups,
+# and inferring them from the target would silently skip every CLDR check for
+# exactly the locales whose categories differ most from English.
+def check_plurals(locale, target, reporter, source_parents)
   scope = "#{locale}.yml"
   expected = CLDR_CATEGORIES[locale]
 
@@ -257,7 +301,7 @@ def check_plurals(locale, target, reporter)
     return
   end
 
-  plural_groups(target).each do |group, categories|
+  plural_groups_for_target(target, source_parents).each do |group, categories|
     unexpected = categories - expected
     unless unexpected.empty?
       reporter.failure(scope, "#{group}: category #{unexpected.sort.join(", ")} is not valid for '#{locale}' " \
@@ -484,9 +528,13 @@ def main(argv)
   puts "i18n-check: #{source.size} keys in #{SOURCE_LOCALE}.yml, " \
        "#{targets.size} other locale#{"s" unless targets.size == 1}"
 
+  # en.yml is authoritative for WHICH nodes are plural groups; every target is
+  # then measured against this set rather than against its own shape.
+  source_plural_parents = plural_groups(source).keys.to_set
+
   # en.yml is checked against itself for plural validity: a bad category in the
   # source language propagates into every translation derived from it.
-  check_plurals(SOURCE_LOCALE, source, reporter)
+  check_plurals(SOURCE_LOCALE, source, reporter, source_plural_parents)
 
   targets.each do |path|
     locale = locale_from_filename(path)
@@ -504,7 +552,7 @@ def main(argv)
     end
 
     check_parity(locale, source, target, reporter)
-    check_plurals(locale, target, reporter)
+    check_plurals(locale, target, reporter, source_plural_parents)
     check_glossary(locale, source, target, reporter)
   end
 

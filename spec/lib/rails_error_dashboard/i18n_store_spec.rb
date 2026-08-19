@@ -41,7 +41,7 @@ RSpec.describe RailsErrorDashboard::I18nStore do
       original_available = I18n.available_locales
 
       begin
-        I18n.available_locales = [ :ja ]
+        I18n.available_locales = [ :zu ]
         I18n.enforce_available_locales = true
 
         expect(described_class.translate("red.common.not_available")).to eq("N/A")
@@ -63,7 +63,7 @@ RSpec.describe RailsErrorDashboard::I18nStore do
         path.write("xh:\n  red:\n    common:\n      close: \"XH-CLOSE\"\n")
         # I18n::Backend::Simple#load_translations filters what it reads through
         # this global and silently drops the rest.
-        I18n.available_locales = [ :en, :ja ]
+        I18n.available_locales = [ :en, :zu ]
         described_class.reset!
 
         expect(described_class.translate("red.common.close", locale: "xh")).to eq("XH-CLOSE")
@@ -78,7 +78,7 @@ RSpec.describe RailsErrorDashboard::I18nStore do
       original_explicit = I18n.config.instance_variable_get(:@available_locales)
 
       begin
-        I18n.available_locales = [ :en, :ja ]
+        I18n.available_locales = [ :en, :zu ]
         # What the host observes before RED touches anything.
         expected = I18n.available_locales.dup
 

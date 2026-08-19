@@ -37,7 +37,12 @@ CLDR_CATEGORIES = {
   "de" => %w[one other],
   "fr" => %w[one many other],
   "es" => %w[one many other],
-  "pt-BR" => %w[one many other]
+  "pt-BR" => %w[one many other],
+  # `other` alone — see the same note in bin/i18n-check. plural_parents() is
+  # only ever called on en.yml here, so its `size >= 2` rule stays correct;
+  # this table governs what a batch may supply for the target.
+  "ja" => %w[other],
+  "zh-CN" => %w[other]
 }.freeze
 
 ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
