@@ -138,8 +138,11 @@ RSpec.describe RailsErrorDashboard::I18nStore do
       expect(described_class.translate("red.time.ago", duration: "3 hours")).to eq("3 hours ago")
     end
 
+    # Uses a locale RED does not ship. Naming a real one here would make the
+    # spec fail the moment that language lands — which is exactly what happened
+    # to :fr.
     it "falls back to English for a locale that lacks the key" do
-      expect(described_class.translate("red.common.not_available", locale: :fr)).to eq("N/A")
+      expect(described_class.translate("red.common.not_available", locale: :xx)).to eq("N/A")
     end
 
     it "returns readable text rather than a missing-translation marker" do
@@ -365,7 +368,7 @@ RSpec.describe RailsErrorDashboard::I18nStore do
     end
 
     it "falls back to English for a locale it does not ship" do
-      result = described_class.subtree("red.time.formats", locale: :fr)
+      result = described_class.subtree("red.time.formats", locale: :xx)
 
       expect(result[:full]).to eq("%B %d, %Y %I:%M:%S %p")
     end

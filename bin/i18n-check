@@ -29,7 +29,7 @@ require "set"
 ROOT = File.expand_path("..", __dir__)
 LOCALES_DIR = File.join(ROOT, "config", "locales")
 SOURCE_LOCALE = "en"
-PSEUDO_LOCALE = "zz"
+PSEUDO_LOCALE = "qps"
 
 # CLDR plural categories, by locale. Only the locales RED ships are listed:
 # the i18n gem carries no CLDR table (that is rails-i18n, which RED does not

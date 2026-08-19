@@ -5,9 +5,9 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **English and German ship today**; German is
+> translatable. **English, German and French ship today**; `de` and `fr` are
 > machine-translated and unreviewed (see [Review status](#review-status)).
-> `fr`, `es` and `pt-BR` land in a later release.
+> `es` and `pt-BR` land in a later release.
 
 ## How it works
 
@@ -217,11 +217,11 @@ instead of guessing.
 
 ## Review status
 
-**German ships alongside English. It is machine-translated and has not been
-reviewed by a native speaker.** RED's maintainer reads only English, so this is
-stated plainly rather than described as "beta", which would imply a review
-process that has not happened. `fr`, `es` and `pt-BR` will land on the same
-terms.
+**German and French ship alongside English. Both are machine-translated and
+have not been reviewed by a native speaker.** RED's maintainer reads only
+English, so this is stated plainly rather than described as "beta", which would
+imply a review process that has not happened. `es` and `pt-BR` will land on the
+same terms.
 
 What this does and does not mean:
 
@@ -236,7 +236,7 @@ What this does and does not mean:
 | `en` | Source language |
 | `de` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `es` | Not yet shipped — will land unreviewed |
-| `fr` | Not yet shipped — will land unreviewed |
+| `fr` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `pt-BR` | Not yet shipped — will land unreviewed |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
@@ -275,10 +275,10 @@ bundle exec rspec spec/requests/dashboard_locale_spec.rb
 ### Layout testing without a translation
 
 ```bash
-bin/i18n-check --pseudo   # writes config/locales/zz.yml
+bin/i18n-check --pseudo   # writes config/locales/qps.yml
 ```
 
-`zz` accents every letter and pads each string ~30%, which is roughly how much
+`qps` accents every letter and pads each string ~30%, which is roughly how much
 German runs over English. Anything still rendering in plain English is a string
 that was never extracted, and a missing `]` means the text is being clipped.
 Interpolation variables are preserved, so the page renders for real.
