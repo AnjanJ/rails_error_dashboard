@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "tmpdir"
+require "fileutils"
 
 # RED translates through its own I18n backend rather than the host app's.
 #
@@ -203,6 +205,100 @@ RSpec.describe RailsErrorDashboard::I18nStore do
 
     it "returns symbols" do
       expect(described_class.available_locales).to all(be_a(Symbol))
+    end
+  end
+
+  # The picker renders these, and it is the one screen a user reaches BECAUSE
+  # they cannot read the current language. Endonyms are therefore constants,
+  # not translation keys: "German" shown to someone stuck in German is useless.
+  # NOTHING IN THE I18N PATH MAY RAISE. Loading is the easiest place to forget
+  # that, because it happens once and off the request path — but the raise
+  # surfaces inside whatever was rendering, which is the error dashboard.
+  describe "loading a file it cannot read" do
+    # Written to a temp directory, never the engine tree: a file appearing
+    # under config/locales trips Rails' file watcher, and the reload that
+    # follows swaps model class objects mid-run, which breaks unrelated specs.
+    let(:locales_dir) { Pathname.new(Dir.mktmpdir("red-locales")) }
+    let(:broken) { locales_dir.join("zz.yml") }
+
+    before do
+      @host_load_path = I18n.load_path.dup
+      FileUtils.cp(
+        RailsErrorDashboard::Engine.root.join("config", "locales", "en.yml"),
+        locales_dir.join("en.yml")
+      )
+      allow(described_class).to receive(:locales_path).and_return(locales_dir.to_s)
+      described_class.reset!
+    end
+
+    after do
+      FileUtils.remove_entry(locales_dir) if locales_dir.exist?
+      described_class.reset!
+      I18n.load_path = @host_load_path
+    end
+
+    it "does not raise when a locale file vanishes after the file list is built" do
+      broken.write("zz:\n  red:\n    common:\n      close: \"ZZ\"\n")
+      described_class.reset!
+      described_class.available_locales # memoize the list, including zz
+      broken.delete
+
+      expect { described_class.reset!; described_class.translate("red.common.close") }.not_to raise_error
+    end
+
+    it "still loads every other locale when one file is unreadable" do
+      broken.write("this: is: not: valid: yaml: {[\n")
+      described_class.reset!
+
+      expect(described_class.translate("red.common.close")).to eq("Close")
+    end
+
+    it "renders English rather than a raise for a key the bad file would have held" do
+      broken.write("\x00\x01 not yaml at all\n")
+      described_class.reset!
+
+      expect { described_class.translate("red.common.close", locale: "zz") }.not_to raise_error
+      expect(described_class.translate("red.common.close", locale: "zz")).to eq("Close")
+    end
+  end
+
+  describe ".locale_options" do
+    it "pairs each shipped locale with its endonym" do
+      expect(described_class.locale_options).to include([ "en", "English" ])
+    end
+
+    it "covers every locale RED ships" do
+      expect(described_class.locale_options.map(&:first))
+        .to match_array(described_class.available_locales.map(&:to_s))
+    end
+
+    it "falls back to the locale tag for a locale with no endonym" do
+      # Temp dir, not the engine tree: a file appearing under config/locales
+      # trips Rails' file watcher mid-suite (see "loading a file it cannot
+      # read" above for what that breaks).
+      dir = Pathname.new(Dir.mktmpdir("red-locales"))
+
+      begin
+        FileUtils.cp(
+          RailsErrorDashboard::Engine.root.join("config", "locales", "en.yml"),
+          dir.join("en.yml")
+        )
+        dir.join("xh.yml").write("xh:\n  red:\n    common:\n      close: \"XH\"\n")
+        allow(described_class).to receive(:locales_path).and_return(dir.to_s)
+        described_class.reset!
+
+        expect(described_class.locale_options).to include([ "xh", "xh" ])
+      ensure
+        FileUtils.remove_entry(dir) if dir.exist?
+        described_class.reset!
+      end
+    end
+
+    it "reads identically regardless of the locale being viewed from" do
+      # An endonym is a property of the language, not of the viewer.
+      expect(described_class.locale_options).to eq(described_class.locale_options)
+      expect(described_class::ENDONYMS.fetch("de")).to eq("Deutsch")
+      expect(described_class::ENDONYMS.fetch("fr")).to eq("Français")
     end
   end
 

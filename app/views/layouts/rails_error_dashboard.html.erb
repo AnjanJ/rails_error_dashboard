@@ -1198,6 +1198,40 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
                 </ul>
               </div>
             <% end %>
+            <%# Language picker (P5-T1). Only rendered when there is a choice
+                to make: with a single shipped locale a dropdown listing it is
+                noise. Each option is its own button_to, so switching is a real
+                CSRF-protected POST and works without JavaScript. %>
+            <% red_locale_options = RailsErrorDashboard::I18nStore.locale_options %>
+            <% if red_locale_options.size > 1 %>
+              <div class="dropdown">
+                <button class="red-app-switcher dropdown-toggle" type="button" id="localePicker"
+                        data-bs-toggle="dropdown" aria-expanded="false"
+                        aria-label="<%= red_t("red.navbar.choose_language") %>"
+                        title="<%= red_t("red.navbar.choose_language") %>">
+                  <i class="bi bi-translate"></i>
+                  <span class="d-none d-md-inline"><%= RailsErrorDashboard::I18nStore::ENDONYMS.fetch(red_locale, red_locale) %></span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="localePicker">
+                  <% red_locale_options.each do |locale_code, endonym| %>
+                    <li>
+                      <%# The endonym is deliberately NOT translated — see
+                          I18nStore::ENDONYMS. lang= tells a screen reader to
+                          pronounce each entry in its own language. %>
+                      <%= button_to locale_path,
+                            method: :post,
+                            params: { locale: locale_code },
+                            class: "dropdown-item #{'active' if locale_code == red_locale}",
+                            form: { style: "display: contents;" },
+                            lang: locale_code,
+                            "aria-current": (locale_code == red_locale ? "true" : nil) do %>
+                        <%= endonym %>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
             <button type="button" title="<%= red_t("red.navbar.keyboard_shortcuts_title") %>" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal" style="background: none; border: none; padding: 0; cursor: pointer; line-height: 1;"><kbd>?</kbd></button>
             <button class="red-theme-toggle" id="themeToggle" title="<%= red_t("red.navbar.toggle_theme") %>">
               <i class="bi bi-moon" id="themeIcon"></i>

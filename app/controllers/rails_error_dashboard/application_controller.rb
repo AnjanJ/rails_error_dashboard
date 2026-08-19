@@ -107,10 +107,38 @@ module RailsErrorDashboard
 
     # The locale RED renders its own strings in. Resolved against the locales
     # RED ships (not Pagy's), and never raises.
+    #
+    # Precedence (P5-T1 REQ-3): session -> config.dashboard_locale -> "en".
+    # The session half is applied here and the rest by locale_or_default, which
+    # validates whatever it is given against the locales RED actually ships.
+    # Assigning Current.locale only when the session holds a usable value keeps
+    # an empty session from overriding the configured default.
     def dashboard_locale
+      Current.locale = session_locale
       Current.locale_or_default
     rescue StandardError
       I18nStore::DEFAULT_LOCALE
+    end
+
+    # The user's picked locale, or nil.
+    #
+    # Returns nil rather than raising for every way this can go wrong: no
+    # session at all (an API-only host where the engine's session middleware
+    # did not take effect — REQ-7), or a tampered value (REQ-6). A garbage
+    # value is not merely ignored but CLEARED, so a session poisoned once does
+    # not cost a lookup on every subsequent request.
+    #
+    # #available? is total for any input, including an Array or a Hash, so no
+    # type check is needed before it.
+    def session_locale
+      stored = session[:red_locale]
+      return nil if stored.nil?
+      return I18nStore.resolve(stored) if I18nStore.available?(stored)
+
+      session.delete(:red_locale)
+      nil
+    rescue StandardError
+      nil
     end
 
     def dashboard_pagy_locale

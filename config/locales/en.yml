@@ -135,6 +135,11 @@ en:
       toggle_theme: "Toggle theme"
       keyboard_shortcuts_title: "Keyboard shortcuts (?)"
       all_applications: "All Applications"
+      # The language picker. The languages themselves are NOT keys — a
+      # language's own name does not change with the locale you view it from.
+      # See I18nStore::ENDONYMS.
+      language: "Language"
+      choose_language: "Choose dashboard language"
       # %{count} is the number of applications being aggregated.
       all_apps: "All Apps (%{count})"
 
@@ -1533,6 +1538,12 @@ en:
         log_level: "Verbosity level"
 
     flash:
+      locale:
+        # Shown when a submitted language is one RED does not ship. The stored
+        # value is cleared and the dashboard falls back to its configured
+        # locale, so this is informational rather than an error.
+        unavailable: "That language is not available. Using the default instead."
+
       # Controller flash messages and the command result strings they wrap.
       #
       # The batch notice used to read "Successfully #{action_type}d N error(s)":

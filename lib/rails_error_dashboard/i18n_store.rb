@@ -30,6 +30,16 @@ module RailsErrorDashboard
   module I18nStore
     DEFAULT_LOCALE = "en".freeze
 
+    # The language's own name for itself. See .locale_options for why these are
+    # constants rather than translation keys.
+    ENDONYMS = {
+      "en" => "English",
+      "de" => "Deutsch",
+      "fr" => "Français",
+      "es" => "Español",
+      "pt-BR" => "Português (Brasil)"
+    }.freeze
+
     # Raw backend lookups signal a miss by throwing :exception rather than
     # returning — I18n.translate is what normally catches it. We call the
     # backend directly, so we catch it ourselves.
@@ -96,6 +106,26 @@ module RailsErrorDashboard
       # @return [Array<Symbol>]
       def available_locales
         @available_locales ||= locale_files.map { |path| File.basename(path, ".yml").to_sym }.sort
+      end
+
+      # Each shipped locale paired with its ENDONYM — the language's own name
+      # for itself (Deutsch, not German).
+      #
+      # Deliberately NOT translation keys. An endonym is a property of the
+      # language, not of the locale you are viewing from: a picker that renders
+      # "German" when viewed from English and "Deutsch" when viewed from German
+      # is unusable precisely when you need it, which is when you are stuck in a
+      # language you cannot read. Every entry reads the same in every locale.
+      #
+      # A locale with a file but no entry here falls back to its own tag ("xh"),
+      # which is honest and still selectable, rather than being hidden.
+      #
+      # @return [Array<Array(String, String)>] [locale, endonym] pairs, sorted
+      #   by locale so the picker's order is stable.
+      def locale_options
+        available_locales.map { |locale| [ locale.to_s, ENDONYMS.fetch(locale.to_s, locale.to_s) ] }
+      rescue StandardError
+        [ [ DEFAULT_LOCALE, ENDONYMS.fetch(DEFAULT_LOCALE) ] ]
       end
 
       # Resolve an arbitrary value to a locale RED can actually serve.
@@ -199,9 +229,37 @@ module RailsErrorDashboard
       # Found in P4-T3 by a spec fixture that kept resolving to English.
       def build_backend
         PrivateBackend.new.tap do |backend|
-          files = locale_files
-          backend.load_translations(*files) if files.any?
+          # Load each file individually rather than in one call, and never let
+          # one bad file take the dictionary down with it.
+          #
+          # load_translations raises for anything it cannot read: a file
+          # deleted between Dir[] and the open (locale_files is memoized, so
+          # the gap is real), a YAML syntax error, a permissions problem. A
+          # single call loses every locale to the first failure, and the raise
+          # escapes into whatever was rendering — which for RED is the error
+          # dashboard, the one page that must not break. NOTHING IN THIS FILE
+          # MAY RAISE (see the class comment); this was the last unguarded call.
+          #
+          # A file that fails is skipped and logged. The remaining locales load,
+          # and any key the skipped file would have supplied falls back to
+          # English through the normal path.
+          locale_files.each do |file|
+            backend.load_translations(file)
+          rescue StandardError => e
+            warn_unloadable_locale(file, e)
+          end
         end
+      end
+
+      # A locale file that cannot be read is a real problem, but not one worth
+      # breaking the dashboard over. Logged rather than raised, and guarded
+      # because the logger itself must not be the thing that raises.
+      def warn_unloadable_locale(file, error)
+        ::Rails.logger&.warn(
+          "[RailsErrorDashboard] Skipped unreadable locale file #{file}: #{error.class} - #{error.message}"
+        )
+      rescue StandardError
+        nil
       end
 
       def locale_files
