@@ -58,7 +58,19 @@ never be the reason a dashboard page fails to render.
 3. Translate the values. Leave the keys alone.
 4. Keep every `%{interpolation}` variable exactly as it appears in English —
    a renamed variable is a runtime bug, not a typo.
-5. Run the test suite.
+5. Adjust plural forms to your language's rules — see below. This is the one
+   place where your file is *expected* to differ in structure from `en.yml`.
+6. Run `bin/i18n-check`, then the test suite.
+
+### Plural forms differ from English on purpose
+
+English has two plural categories (`one`, `other`). French, Spanish and
+Portuguese also need `many`. Adding a category English does not have is
+correct, and `bin/i18n-check` expects it: plural forms are checked against your
+locale's CLDR rules rather than against `en.yml`, so a required `many` is not
+reported as an orphan — while a *missing* one is a failure.
+
+Every other key must match `en.yml` exactly.
 
 Filenames are the source of truth for which locales exist:
 `I18nStore.available_locales` reads the directory.
@@ -235,11 +247,43 @@ updated and the "unreviewed" qualifier drops from the README.
 
 ## Testing a locale
 
+Start with the structural check. It runs in under a second and catches the
+errors that are hardest to see by eye in a language you do not read:
+
+```bash
+bin/i18n-check           # every locale, against en.yml
+bin/i18n-check --quiet   # failures only, no advisory warnings
+```
+
+It **fails** on a missing key, an orphaned key, an interpolation variable that
+does not match English, a plural category your locale's CLDR rules do not
+allow (or requires and you omitted), and unparseable YAML.
+
+It **warns**, without failing, on keys nothing appears to reference, a glossary
+term that vanished in translation, and English-looking text left in a view.
+Warnings are leads, not verdicts — many keys are looked up dynamically and are
+invisible to a static scan.
+
+Then the specs:
+
 ```bash
 bundle exec rspec spec/lib/rails_error_dashboard/i18n_store_spec.rb
 bundle exec rspec spec/helpers/rails_error_dashboard/i18n_helper_spec.rb
 bundle exec rspec spec/requests/dashboard_locale_spec.rb
 ```
+
+### Layout testing without a translation
+
+```bash
+bin/i18n-check --pseudo   # writes config/locales/zz.yml
+```
+
+`zz` accents every letter and pads each string ~30%, which is roughly how much
+German runs over English. Anything still rendering in plain English is a string
+that was never extracted, and a missing `]` means the text is being clipped.
+Interpolation variables are preserved, so the page renders for real.
+
+It is a generated file: do not edit it, and delete it before committing.
 
 Set `config.dashboard_locale` in a host app and load the dashboard. Watch for
 layout breakage: translated strings run roughly 30% longer than English in

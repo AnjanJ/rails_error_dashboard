@@ -55,7 +55,16 @@ pre-commit:
           exit 1
         fi
 
-    # 5. Check for trailing whitespace in staged files
+    # 5. Locale files - structure, interpolation vars, plural categories.
+    # Only fires when a locale file or the checker itself is staged; the whole
+    # tree is checked, because a key added to en.yml breaks every other locale
+    # rather than the file that was edited.
+    i18n-check:
+      priority: 1
+      glob: "{config/locales/*.yml,bin/i18n-check}"
+      run: bin/i18n-check --quiet
+
+    # 6. Check for trailing whitespace in staged files
     trailing-whitespace:
       priority: 1
       glob: "*.{rb,yml,js,md}"

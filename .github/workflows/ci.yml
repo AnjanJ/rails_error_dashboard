@@ -34,6 +34,12 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+      # Locale structure: key parity with en.yml, interpolation variables, and
+      # plural categories. Runs in ~1s and needs no database. Warnings (unused
+      # keys, glossary, stray English) do not fail the build.
+      - name: Check locale files
+        run: bin/i18n-check
+
   integration:
     runs-on: ubuntu-latest
     name: Integration Tests (shared + separate DB)

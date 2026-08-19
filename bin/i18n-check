@@ -1,0 +1,519 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# RED locale checker.
+#
+# en.yml is authoritative: every other locale is a translation of it. This
+# script verifies the properties a monolingual maintainer can still enforce —
+# structure, interpolation variables, plural categories — because nobody here
+# reads de, fr, es or pt-BR well enough to catch a dropped %{count} by eye.
+#
+# It deliberately does NOT check whether a translation is *good*. See
+# docs/guides/TRANSLATIONS.md; that limitation is stated plainly rather than
+# papered over.
+#
+# Usage:
+#   bin/i18n-check              # check every locale, exit non-zero on failure
+#   bin/i18n-check --pseudo     # write config/locales/zz.yml for layout testing
+#   bin/i18n-check --quiet      # failures only; suppress warnings
+#   bin/i18n-check --help
+#
+# Exit codes:
+#   0 - no failures (warnings may still be printed)
+#   1 - at least one failure
+#   2 - the script could not run (unreadable or malformed en.yml)
+
+require "yaml"
+require "set"
+
+ROOT = File.expand_path("..", __dir__)
+LOCALES_DIR = File.join(ROOT, "config", "locales")
+SOURCE_LOCALE = "en"
+PSEUDO_LOCALE = "zz"
+
+# CLDR plural categories, by locale. Only the locales RED ships are listed:
+# the i18n gem carries no CLDR table (that is rails-i18n, which RED does not
+# depend on — invariant 7 forbids a new runtime dependency for a build script).
+#
+# A locale absent from this table is not an error; its plural categories are
+# simply not checked, and REQ-4 reports that rather than guessing.
+CLDR_CATEGORIES = {
+  "en" => %w[one other],
+  "de" => %w[one other],
+  "fr" => %w[one many other],
+  "es" => %w[one many other],
+  "pt-BR" => %w[one many other]
+}.freeze
+
+ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
+
+# Terms that must survive translation verbatim. Mirrors the "Error-domain
+# terms" table in docs/guides/TRANSLATIONS.md — keep the two in step.
+#
+# This warns rather than fails: languages inflect and borrow differently, and a
+# false positive that blocks a release is worse than a note.
+GLOSSARY = [
+  "backtrace",
+  "N+1",
+  "swallowed exception",
+  "deprecation",
+  "storm",
+  "breadcrumb",
+  "webhook",
+  "payload"
+].freeze
+
+# Directories scanned for key references (REQ-5) and stray English (REQ-6).
+SOURCE_GLOBS = [
+  "app/**/*.rb",
+  "app/**/*.erb",
+  "lib/**/*.rb"
+].freeze
+
+class Reporter
+  attr_reader :failures, :warnings
+
+  def initialize(quiet: false)
+    @quiet = quiet
+    @failures = []
+    @warnings = []
+  end
+
+  def failure(scope, message)
+    @failures << [ scope, message ]
+  end
+
+  def warn(scope, message)
+    @warnings << [ scope, message ]
+  end
+
+  def report
+    print_group("FAIL", @failures, red: true)
+    print_group("WARN", @warnings, red: false) unless @quiet
+    summary
+    @failures.empty?
+  end
+
+  private
+
+  def print_group(label, entries, red:)
+    return if entries.empty?
+
+    colour = red ? "\e[31m" : "\e[33m"
+    entries.group_by(&:first).each do |scope, rows|
+      puts "\n#{colour}#{label}\e[0m #{scope}"
+      rows.each { |(_, message)| puts "  #{message}" }
+    end
+  end
+
+  def summary
+    puts
+    if @failures.empty? && @warnings.empty?
+      puts "\e[32mi18n-check: clean\e[0m"
+    elsif @failures.empty?
+      puts "\e[32mi18n-check: no failures\e[0m (#{@warnings.size} warning#{"s" unless @warnings.size == 1})"
+    else
+      counts = "#{@failures.size} failure#{"s" unless @failures.size == 1}"
+      counts += ", #{@warnings.size} warning#{"s" unless @warnings.size == 1}" unless @warnings.empty?
+      puts "\e[31mi18n-check: #{counts}\e[0m"
+    end
+  end
+end
+
+# Flattens a locale YAML into "red.errors.index.title" => "Errors", dropping the
+# leading locale segment so two locales are directly comparable.
+def flatten_locale(data, locale)
+  root = data[locale] || data[locale.to_s] || {}
+  out = {}
+  walk = lambda do |node, path|
+    if node.is_a?(Hash)
+      node.each { |key, value| walk.call(value, path + [ key.to_s ]) }
+    else
+      out[path.join(".")] = node
+    end
+  end
+  walk.call(root, [])
+  out
+end
+
+def interpolation_vars(value)
+  value.to_s.scan(/%\{(\w+)\}/).flatten.sort
+end
+
+# A plural group is a node whose children are ALL plural categories.
+#
+# The "all" is load-bearing. red.errors.index.filters.frequencies has a child
+# named `few` — a filter label, not a plural form — and an "any child looks
+# plural" rule would misclassify it and then report bogus CLDR failures.
+def plural_groups(flat)
+  children = Hash.new { |hash, key| hash[key] = [] }
+  flat.each_key do |key|
+    parts = key.split(".")
+    next if parts.size < 2
+
+    children[parts[0..-2].join(".")] << parts[-1]
+  end
+
+  children.select do |_, kids|
+    kids.size >= 2 && kids.all? { |kid| ALL_PLURAL_CATEGORIES.include?(kid) }
+  end
+end
+
+def load_locale_file(path)
+  data = YAML.load_file(path)
+  return [ nil, "not a YAML mapping" ] unless data.is_a?(Hash)
+
+  [ data, nil ]
+rescue Psych::SyntaxError => e
+  [ nil, "invalid YAML: #{e.message}" ]
+rescue StandardError => e
+  [ nil, "unreadable: #{e.message}" ]
+end
+
+def locale_from_filename(path)
+  File.basename(path, ".yml")
+end
+
+# REQ-1/REQ-2/REQ-3 — structure and interpolation parity against en.yml.
+def check_parity(locale, source, target, reporter)
+  scope = "#{locale}.yml"
+
+  # Plural leaves are exempt from parity and governed by CLDR (check_plurals)
+  # instead. The two rules genuinely conflict: French requires a `many` form
+  # that English has no equivalent of, so a CORRECT fr.yml necessarily holds
+  # keys en.yml lacks. Comparing leaves would report every required French
+  # plural as an orphan and make a well-formed locale unshippable.
+  #
+  # Parity still applies to the plural PARENT, so a group dropped wholesale is
+  # still caught.
+  source_plural_parents = plural_groups(source).keys.to_set
+  target_plural_parents = plural_groups(target).keys.to_set
+
+  plural_leaf = lambda do |key, parents|
+    parts = key.split(".")
+    parts.size >= 2 && parents.include?(parts[0..-2].join("."))
+  end
+
+  comparable_source = source.keys.reject { |key| plural_leaf.call(key, source_plural_parents) }
+  comparable_target = target.keys.reject { |key| plural_leaf.call(key, target_plural_parents) }
+
+  missing = (comparable_source - comparable_target) +
+            (source_plural_parents - target_plural_parents).to_a.sort
+  orphans = (comparable_target - comparable_source) +
+            (target_plural_parents - source_plural_parents).to_a.sort
+
+  unless missing.empty?
+    reporter.failure(scope, "#{missing.size} key(s) missing (present in #{SOURCE_LOCALE}.yml):")
+    missing.sort.first(20).each { |key| reporter.failure(scope, "  - #{key}") }
+    reporter.failure(scope, "  … and #{missing.size - 20} more") if missing.size > 20
+  end
+
+  unless orphans.empty?
+    reporter.failure(scope, "#{orphans.size} orphaned key(s) (absent from #{SOURCE_LOCALE}.yml):")
+    orphans.sort.first(20).each { |key| reporter.failure(scope, "  + #{key}") }
+    reporter.failure(scope, "  … and #{orphans.size - 20} more") if orphans.size > 20
+  end
+
+  # Interpolation variables are compared per key ACROSS locales, never between
+  # the plural forms of one key. `one: "1 second"` beside
+  # `other: "%{count} seconds"` is correct English, not a defect — but a de
+  # `other` that says %{cont} where en says %{count} is a runtime bug.
+  # A plural form the source lacks (French `many`) is compared against the
+  # source's `other`, which is the form it stands in for.
+  reference_for = lambda do |key|
+    return source[key] if source.key?(key)
+
+    parts = key.split(".")
+    return nil unless plural_leaf.call(key, target_plural_parents)
+
+    source["#{parts[0..-2].join(".")}.other"]
+  end
+
+  target.keys.sort.each do |key|
+    reference = reference_for.call(key)
+    next if reference.nil?
+
+    expected = interpolation_vars(reference)
+    actual = interpolation_vars(target[key])
+    next if expected == actual
+
+    dropped = expected - actual
+    added = actual - expected
+    detail = []
+    detail << "missing #{dropped.map { |v| "%{#{v}}" }.join(", ")}" unless dropped.empty?
+    detail << "unexpected #{added.map { |v| "%{#{v}}" }.join(", ")}" unless added.empty?
+    reporter.failure(scope, "#{key}: interpolation mismatch — #{detail.join("; ")}")
+  end
+end
+
+# REQ-4 — plural categories valid for the locale's CLDR rules.
+def check_plurals(locale, target, reporter)
+  scope = "#{locale}.yml"
+  expected = CLDR_CATEGORIES[locale]
+
+  unless expected
+    reporter.warn(scope, "no CLDR category list for '#{locale}' — plural categories not checked. " \
+                         "Add it to CLDR_CATEGORIES in bin/i18n-check.")
+    return
+  end
+
+  plural_groups(target).each do |group, categories|
+    unexpected = categories - expected
+    unless unexpected.empty?
+      reporter.failure(scope, "#{group}: category #{unexpected.sort.join(", ")} is not valid for '#{locale}' " \
+                              "(CLDR allows #{expected.join(", ")})")
+    end
+
+    missing = expected - categories
+    next if missing.empty?
+
+    # A locale missing a category its rules require means a count landing in
+    # that bucket finds nothing. RED degrades to English rather than raising
+    # (I18nStore rescues InvalidPluralizationData), so this is a failure of
+    # translation completeness, not a crash.
+    reporter.failure(scope, "#{group}: missing category #{missing.join(", ")} required by '#{locale}'")
+  end
+end
+
+# REQ-10 — glossary terms should survive translation.
+def check_glossary(locale, source, target, reporter)
+  return if locale == SOURCE_LOCALE
+
+  scope = "#{locale}.yml"
+  (source.keys & target.keys).each do |key|
+    english = source[key].to_s
+    translated = target[key].to_s
+    next if english.empty? || translated.empty?
+
+    GLOSSARY.each do |term|
+      next unless english.downcase.include?(term.downcase)
+      next if translated.downcase.include?(term.downcase)
+
+      reporter.warn(scope, "#{key}: English contains '#{term}' but the translation does not — " \
+                           "intended, or lost in translation?")
+    end
+  end
+end
+
+def source_files
+  SOURCE_GLOBS.flat_map { |glob| Dir.glob(File.join(ROOT, glob)) }
+end
+
+# REQ-5 — keys defined in en.yml that nothing appears to reference.
+#
+# Warns only. Keys are reached three ways this scan cannot follow: a variable
+# (`red_t(key)`), a whole subtree serialised to JS (`I18nStore.subtree("red.js")`),
+# and `window.redT('js.selected')`, which drops the `red.` prefix. Treat output
+# as a lead, not a verdict.
+def check_unused(source, reporter)
+  blob = source_files.map { |path| File.read(path) }.join("\n")
+rescue StandardError => e
+  reporter.warn("unused-keys", "could not scan sources: #{e.message}")
+else
+  # A plural leaf is never referenced directly: red_tp("…index.spike.today")
+  # names the parent and the backend picks the form. Checking the leaf would
+  # report all 67 plural groups as unused on a perfectly clean tree.
+  plural_parents = plural_groups(source).keys.to_set
+
+  unused = source.keys.reject do |key|
+    parts = key.split(".")
+    lookup = plural_parents.include?(parts[0..-2].join(".")) ? parts[0..-2].join(".") : key
+    short = lookup.sub(/\A red\. /x, "")
+    blob.include?(lookup) || blob.include?(short) || referenced_as_subtree?(blob, lookup)
+  end
+
+  return if unused.empty?
+
+  reporter.warn("unused-keys", "#{unused.size} key(s) in #{SOURCE_LOCALE}.yml matched no literal reference. " \
+                               "Dynamic lookups are invisible to this scan — verify before deleting:")
+  unused.sort.first(25).each { |key| reporter.warn("unused-keys", "  ? #{key}") }
+  reporter.warn("unused-keys", "  … and #{unused.size - 25} more") if unused.size > 25
+end
+
+# A key is covered if any ancestor namespace is pulled wholesale, which is how
+# red.js.* and red.time.formats.* reach the browser.
+def referenced_as_subtree?(blob, key)
+  parts = key.split(".")
+  (1...parts.size).any? do |depth|
+    prefix = parts[0, depth].join(".")
+    blob.include?(%{subtree("#{prefix}"}) || blob.include?(%{subtree('#{prefix}'})
+  end
+end
+
+# REQ-6 — hardcoded English still sitting in a view.
+#
+# A heuristic, and warn-only by design: it cannot tell a user-facing sentence
+# from a CSS class or an exception class name.
+def check_hardcoded(reporter)
+  views = Dir.glob(File.join(ROOT, "app", "views", "**", "*.erb"))
+  suspects = Hash.new { |hash, key| hash[key] = [] }
+
+  views.each do |path|
+    File.readlines(path).each_with_index do |line, index|
+      next if line.include?("red_t") || line.include?("red_js_t") || line.include?("redT")
+      next unless (text = between_tags(line))
+
+      suspects[path] << [ index + 1, text ]
+    end
+  end
+
+  return if suspects.empty?
+
+  total = suspects.values.sum(&:size)
+  reporter.warn("hardcoded-english", "#{total} line(s) look like untranslated text in app/views. " \
+                                     "Heuristic — expect false positives:")
+  suspects.sort.first(15).each do |path, rows|
+    relative = path.sub("#{ROOT}/", "")
+    rows.first(3).each { |(line, text)| reporter.warn("hardcoded-english", "  #{relative}:#{line}: #{text}") }
+  end
+end
+
+# Pulls the text between two ERB/HTML tags, and only returns it when it looks
+# like a human sentence: two or more words, starting with a capital.
+def between_tags(line)
+  match = line.match(/>([A-Z][a-zA-Z]+(?: [a-zA-Z]+)+)</)
+  return nil unless match
+
+  text = match[1].strip
+  return nil if text.length < 4
+
+  text
+end
+
+# REQ-8 — a pseudo-locale for layout testing.
+#
+# Accents every letter so untranslated strings stand out on screen, and pads to
+# ~30% longer, which is roughly how much German runs over English. The brackets
+# make truncation obvious: a clipped string loses its closing bracket.
+def build_pseudo(source)
+  map = {
+    "a" => "ã", "b" => "b", "c" => "ç", "d" => "d", "e" => "ẽ", "f" => "f",
+    "g" => "g", "h" => "h", "i" => "ĩ", "j" => "j", "k" => "k", "l" => "l",
+    "m" => "m", "n" => "ñ", "o" => "õ", "p" => "p", "q" => "q", "r" => "r",
+    "s" => "š", "t" => "ţ", "u" => "ũ", "v" => "v", "w" => "w", "x" => "x",
+    "y" => "ý", "z" => "ž",
+    "A" => "Ã", "E" => "Ẽ", "I" => "Ĩ", "O" => "Õ", "U" => "Ũ"
+  }.freeze
+
+  nested = {}
+  source.each do |key, value|
+    accented = value.to_s.gsub(/%\{\w+\}|%[-\w]*[a-zA-Z]/) { |token| " #{token} " }
+                    .split(" ")
+                    .map { |chunk| chunk.start_with?("%") ? chunk : chunk.chars.map { |c| map.fetch(c, c) }.join }
+                    .join
+
+    padding = "…" * [ (accented.length * 0.3).round, 1 ].max
+    decorated = "[#{accented}#{padding}]"
+
+    parts = key.split(".")
+    cursor = nested
+    parts[0..-2].each { |part| cursor = (cursor[part] ||= {}) }
+    cursor[parts[-1]] = decorated
+  end
+
+  { PSEUDO_LOCALE => nested }
+end
+
+def write_pseudo(source)
+  payload = build_pseudo(source)
+  path = File.join(LOCALES_DIR, "#{PSEUDO_LOCALE}.yml")
+  header = <<~HEADER
+    # GENERATED by bin/i18n-check --pseudo. Do not edit, and do not ship.
+    #
+    # A pseudo-locale for layout testing: every string is accented (so anything
+    # rendering in plain English is untranslated) and padded ~30% (so a layout
+    # that survives German survives this). Truncation eats the closing bracket.
+    #
+    # Regenerate after changing en.yml. Delete before committing.
+  HEADER
+
+  File.write(path, header + payload.to_yaml.sub(/\A---\n/, ""))
+  puts "\e[32mwrote\e[0m #{path.sub("#{ROOT}/", "")} (#{source.size} keys)"
+  puts "View it with:  RED_LOCALE=#{PSEUDO_LOCALE}  (or set config.dashboard_locale = \"#{PSEUDO_LOCALE}\")"
+end
+
+def usage
+  puts <<~TEXT
+    bin/i18n-check — verify RED's locale files against en.yml
+
+      --pseudo    generate config/locales/#{PSEUDO_LOCALE}.yml for layout testing
+      --quiet     print failures only, suppressing warnings
+      --help      this message
+
+    Exit 0 when there are no failures, 1 when there are, 2 when en.yml itself
+    cannot be read. Warnings never affect the exit code.
+  TEXT
+end
+
+def main(argv)
+  if argv.include?("--help") || argv.include?("-h")
+    usage
+    return 0
+  end
+
+  quiet = argv.include?("--quiet")
+  reporter = Reporter.new(quiet: quiet)
+
+  source_path = File.join(LOCALES_DIR, "#{SOURCE_LOCALE}.yml")
+  unless File.exist?(source_path)
+    warn "i18n-check: #{source_path} not found"
+    return 2
+  end
+
+  source_data, error = load_locale_file(source_path)
+  if error
+    warn "i18n-check: #{SOURCE_LOCALE}.yml #{error}"
+    return 2
+  end
+
+  source = flatten_locale(source_data, SOURCE_LOCALE)
+  if source.empty?
+    warn "i18n-check: #{SOURCE_LOCALE}.yml has no keys under '#{SOURCE_LOCALE}:'"
+    return 2
+  end
+
+  if argv.include?("--pseudo")
+    write_pseudo(source)
+    return 0
+  end
+
+  paths = Dir.glob(File.join(LOCALES_DIR, "*.yml")).sort
+  targets = paths.reject { |path| locale_from_filename(path) == SOURCE_LOCALE }
+                 .reject { |path| locale_from_filename(path) == PSEUDO_LOCALE }
+
+  puts "i18n-check: #{source.size} keys in #{SOURCE_LOCALE}.yml, " \
+       "#{targets.size} other locale#{"s" unless targets.size == 1}"
+
+  # en.yml is checked against itself for plural validity: a bad category in the
+  # source language propagates into every translation derived from it.
+  check_plurals(SOURCE_LOCALE, source, reporter)
+
+  targets.each do |path|
+    locale = locale_from_filename(path)
+    data, load_error = load_locale_file(path)
+
+    if load_error
+      reporter.failure("#{locale}.yml", load_error)
+      next
+    end
+
+    target = flatten_locale(data, locale)
+    if target.empty?
+      reporter.failure("#{locale}.yml", "no keys found under '#{locale}:' — is the root key mistyped?")
+      next
+    end
+
+    check_parity(locale, source, target, reporter)
+    check_plurals(locale, target, reporter)
+    check_glossary(locale, source, target, reporter)
+  end
+
+  unless quiet
+    check_unused(source, reporter)
+    check_hardcoded(reporter)
+  end
+
+  reporter.report ? 0 : 1
+end
+
+exit main(ARGV) if $PROGRAM_NAME == __FILE__
