@@ -764,6 +764,12 @@ fr:
           assigned: assignée
           snoozed: en veille
           muted: en sourdine
+      stats:
+        today: Aujourd'hui
+        this_week: Cette semaine
+        unresolved: Non résolues
+        resolved: Résolues
+        reopened: Rouvertes
       pages:
         percent: "%{value} %"
         column_errors: Erreurs

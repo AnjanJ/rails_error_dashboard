@@ -1046,6 +1046,19 @@ en:
           snoozed: "snoozed"
           muted: "muted"
 
+      # The five stat cards above the error list. Rendered on the index and
+      # re-rendered by ErrorBroadcaster#broadcast_stats over ActionCable, so
+      # these labels must be translated in both paths, not just the request one.
+      #
+      # Each is a bare noun phrase standing over a number, not a sentence
+      # fragment to be joined to one.
+      stats:
+        today: "Today"
+        this_week: "This Week"
+        unresolved: "Unresolved"
+        resolved: "Resolved"
+        reopened: "Reopened"
+
       # Vocabulary shared by the diagnostic summary pages (deprecations, N+1,
       # swallowed exceptions, rate limits, diagnostic dumps). These pages have
       # one shape — title, day-range toggle, empty state with a "how it works"

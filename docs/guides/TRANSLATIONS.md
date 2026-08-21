@@ -247,8 +247,9 @@ instead of guessing.
 
 ## Review status
 
-**German, Spanish, French and Brazilian Portuguese ship alongside English. All
-four are machine-translated and have not been reviewed by a native speaker.**
+**German, Spanish, French, Brazilian Portuguese and Japanese ship alongside
+English. All five are machine-translated and have not been reviewed by a native
+speaker.**
 RED's maintainer reads only English, so this is stated plainly rather than
 described as "beta", which would imply a review process that has not happened.
 

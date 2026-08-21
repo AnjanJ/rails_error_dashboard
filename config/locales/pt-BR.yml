@@ -763,6 +763,12 @@ pt-BR:
           assigned: atribuído
           snoozed: adiado
           muted: silenciado
+      stats:
+        today: Hoje
+        this_week: Esta semana
+        unresolved: Não resolvidos
+        resolved: Resolvidos
+        reopened: Reabertos
       pages:
         percent: "%{value} %"
         column_errors: Erros

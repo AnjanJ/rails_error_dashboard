@@ -737,6 +737,12 @@ de:
           assigned: zugewiesen
           snoozed: zurückgestellt
           muted: stummgeschaltet
+      stats:
+        today: Heute
+        this_week: Diese Woche
+        unresolved: Offen
+        resolved: Behoben
+        reopened: Wieder geöffnet
       pages:
         percent: "%{value} %"
         column_errors: Fehler
