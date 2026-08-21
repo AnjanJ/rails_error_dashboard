@@ -47,7 +47,11 @@ CLDR_CATEGORIES = {
   # them `other` alone. A locale with FEWER categories than English is the
   # case plural_groups_for_target exists to handle.
   "ja" => %w[other],
-  "zh-CN" => %w[other]
+  "zh-CN" => %w[other],
+  # Slavic four-category shape. `other` here is not a catch-all: CLDR reserves
+  # it for fractional counts, so a Russian plural group needs all four forms
+  # even though RED only ever counts whole errors.
+  "ru" => %w[one few many other]
 }.freeze
 
 ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
@@ -268,6 +272,29 @@ def check_parity(locale, source, target, reporter)
     source["#{parts[0..-2].join(".")}.other"]
   end
 
+  # Inside a plural group the source may legitimately spell one form without a
+  # variable it uses in another: English `one: "1 second"` hardcodes the 1
+  # because `one` there means exactly 1. That is NOT true everywhere. Russian
+  # `one` also covers 21, 31, 101 …, so a correct ru.yml must interpolate
+  # %{count} in a form where en.yml hardcoded it — and comparing leaf-to-leaf
+  # would reject the correct file, the same shape of conflict as the French
+  # `many` parity problem.
+  #
+  # So a plural leaf may use any variable the source's GROUP uses. Dropping one
+  # the group needs is still a failure, and non-plural keys are unaffected.
+  group_vars_for = lambda do |key|
+    return nil unless plural_leaf.call(key, target_plural_parents)
+
+    parent = key.split(".")[0..-2].join(".")
+    vars = source.each_with_object([]) do |(source_key, value), acc|
+      next unless source_key.start_with?("#{parent}.")
+      next if source_key[(parent.size + 1)..].include?(".")
+
+      acc.concat(interpolation_vars(value))
+    end
+    vars.uniq.sort
+  end
+
   target.keys.sort.each do |key|
     reference = reference_for.call(key)
     next if reference.nil?
@@ -275,6 +302,12 @@ def check_parity(locale, source, target, reporter)
     expected = interpolation_vars(reference)
     actual = interpolation_vars(target[key])
     next if expected == actual
+
+    # Allowed to add a variable the group uses elsewhere; not to drop one.
+    group_vars = group_vars_for.call(key)
+    if group_vars && (actual - expected - group_vars).empty? && (expected - actual).empty?
+      next
+    end
 
     dropped = expected - actual
     added = actual - expected

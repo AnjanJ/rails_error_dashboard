@@ -180,6 +180,50 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
       end
     end
 
+    # Russian: one/few/many/other, the first four-category locale RED ships.
+    # `other` here is NOT the catch-all it is in English — CLDR reserves it for
+    # fractions, and every whole number lands in one/few/many.
+    context "a locale whose CLDR rules give it four categories" do
+      def russian_backend
+        backend_with(:ru, {
+          one: "%{count} час",
+          few: "%{count} часа",
+          many: "%{count} часов",
+          other: "%{count} часа"
+        })
+      end
+
+      it "selects `one` for counts ending in 1, except 11" do
+        backend = russian_backend
+
+        expect([ 1, 21, 101 ].map { |n| backend.translate(:ru, "red.items", count: n) })
+          .to eq([ "1 час", "21 час", "101 час" ])
+      end
+
+      it "selects `few` for counts ending in 2-4, except 12-14" do
+        backend = russian_backend
+
+        expect([ 2, 4, 22 ].map { |n| backend.translate(:ru, "red.items", count: n) })
+          .to eq([ "2 часа", "4 часа", "22 часа" ])
+      end
+
+      it "selects `many` for 0, 5-9 and the 11-14 band" do
+        backend = russian_backend
+
+        expect([ 0, 5, 11, 12, 14, 25 ].map { |n| backend.translate(:ru, "red.items", count: n) })
+          .to eq([ "0 часов", "5 часов", "11 часов", "12 часов", "14 часов", "25 часов" ])
+      end
+
+      # The single most likely mistake when adding a Slavic locale: writing the
+      # rule on %10 alone. 11 and 111 both end in 1 but take `many`.
+      it "does not mistake 11 or 111 for the singular" do
+        backend = russian_backend
+
+        expect(backend.translate(:ru, "red.items", count: 11)).to eq("11 часов")
+        expect(backend.translate(:ru, "red.items", count: 111)).to eq("111 часов")
+      end
+    end
+
     context "a locale shaped like English" do
       it "still selects one and other, unchanged" do
         backend = backend_with(:de, { one: "1 Fehler", other: "%{count} Fehler" })

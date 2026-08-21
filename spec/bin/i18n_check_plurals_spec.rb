@@ -140,4 +140,112 @@ RSpec.describe "bin/i18n-check plural detection" do
       expect(status).to eq(0), output
     end
   end
+
+  # Russian is the first FOUR-category locale (one/few/many/other). The
+  # `other`-only case above proved the exemption works for FEWER categories
+  # than English; this proves it for MORE, in a shape no shipped locale had.
+  describe "a locale whose CLDR rules give it four categories" do
+    it "accepts a correct four-category locale" do
+      status, output = run_check(
+        "en" => SOURCE_YAML,
+        "ru" => <<~YAML
+          ru:
+            red:
+              items:
+                one: "%{count} элемент"
+                few: "%{count} элемента"
+                many: "%{count} элементов"
+                other: "%{count} элемента"
+              title: "Привет"
+        YAML
+      )
+
+      expect(status).to eq(0), output
+    end
+
+    it "still fails when a required category is missing" do
+      status, output = run_check(
+        "en" => SOURCE_YAML,
+        "ru" => <<~YAML
+          ru:
+            red:
+              items:
+                one: "%{count} элемент"
+                other: "%{count} элемента"
+              title: "Привет"
+        YAML
+      )
+
+      expect(output).to include("missing category few, many required by 'ru'")
+      expect(status).not_to eq(0)
+    end
+  end
+
+  # en.yml spells `one: "1 item"` with the numeral hardcoded, which is correct
+  # English: `one` there means exactly 1. Russian `one` also covers 21 and 101,
+  # so a CORRECT ru.yml must interpolate %{count} in a form where English did
+  # not. Comparing leaf-to-leaf rejected that file — the same shape of conflict
+  # as the French `many` parity problem, and it made a correct Russian locale
+  # unshippable. A plural leaf may now use any variable its SOURCE GROUP uses.
+  describe "a plural form that interpolates where the source hardcoded" do
+    it "accepts %{count} in `one` when the group's `other` uses it" do
+      status, output = run_check(
+        "en" => SOURCE_YAML,
+        "ru" => <<~YAML
+          ru:
+            red:
+              items:
+                one: "%{count} элемент"
+                few: "%{count} элемента"
+                many: "%{count} элементов"
+                other: "%{count} элемента"
+              title: "Привет"
+        YAML
+      )
+
+      expect(output).not_to include("interpolation mismatch")
+      expect(status).to eq(0), output
+    end
+
+    # The allowance is scoped to plural groups and to variables the group
+    # actually uses. Dropping one the group needs is still a failure, or the
+    # loosened rule would be blind to the bug it was loosened around.
+    it "still fails when a plural form drops a variable the group needs" do
+      status, output = run_check(
+        "en" => SOURCE_YAML,
+        "ru" => <<~YAML
+          ru:
+            red:
+              items:
+                one: "%{count} элемент"
+                few: "%{count} элемента"
+                many: "много элементов"
+                other: "%{count} элемента"
+              title: "Привет"
+        YAML
+      )
+
+      expect(output).to include("interpolation mismatch")
+      expect(status).not_to eq(0)
+    end
+
+    it "still fails when a NON-plural key invents a variable" do
+      status, output = run_check(
+        "en" => SOURCE_YAML,
+        "ru" => <<~YAML
+          ru:
+            red:
+              items:
+                one: "%{count} элемент"
+                few: "%{count} элемента"
+                many: "%{count} элементов"
+                other: "%{count} элемента"
+              title: "Привет %{name}"
+        YAML
+      )
+
+      expect(output).to include("interpolation mismatch")
+      expect(status).not_to eq(0)
+    end
+  end
 end

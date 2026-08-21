@@ -604,7 +604,7 @@ end
 
 ## Languages
 
-The dashboard, its emails and its notification payloads are translated. Six locales ship:
+The dashboard, its emails and its notification payloads are translated. Seven locales ship:
 
 | Locale | Language | Status |
 |---|---|---|
@@ -614,9 +614,10 @@ The dashboard, its emails and its notification payloads are translated. Six loca
 | `fr` | Français | Machine-translated, unreviewed |
 | `pt-BR` | Português (Brasil) | Machine-translated, unreviewed |
 | `ja` | 日本語 | Machine-translated, unreviewed |
+| `ru` | Русский | Machine-translated, unreviewed |
 
 ```ruby
-config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja — default "en"
+config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru — default "en"
 ```
 
 Users can also switch language per-session from the picker in the dashboard navbar, which overrides the configured default for them alone.
@@ -674,7 +675,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Batch Operations](docs/guides/BATCH_OPERATIONS.md)** — Bulk resolve/delete
 - **[Real-Time Updates](docs/guides/REAL_TIME_UPDATES.md)** — Live dashboard
 - **[Error Trends](docs/guides/ERROR_TREND_VISUALIZATIONS.md)** — Charts and analytics
-- **[Translations](docs/guides/TRANSLATIONS.md)** — Six shipped locales, correcting a string, adding a language
+- **[Translations](docs/guides/TRANSLATIONS.md)** — Seven shipped locales, correcting a string, adding a language
 
 ### Advanced
 - **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** — Track multiple applications

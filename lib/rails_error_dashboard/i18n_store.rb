@@ -38,7 +38,8 @@ module RailsErrorDashboard
       "fr" => "Français",
       "es" => "Español",
       "pt-BR" => "Português (Brasil)",
-      "ja" => "日本語"
+      "ja" => "日本語",
+      "ru" => "Русский"
     }.freeze
 
     # Raw backend lookups signal a miss by throwing :exception rather than

@@ -112,7 +112,26 @@ module RailsErrorDashboard
       # for :many only when the entry actually supplies it keeps a correct
       # es/pt-BR file working either way.
       "es" => ->(count) { count == 1 ? :one : :other },
-      "pt-BR" => ->(count) { count.abs < 2 ? :one : :other }
+      "pt-BR" => ->(count) { count.abs < 2 ? :one : :other },
+      # Russian, the first four-category locale. Unlike the Romance rules
+      # above, `other` is NOT the fallback bucket here — CLDR assigns it to
+      # fractional counts only, and every whole number lands in one/few/many.
+      #
+      # The %100 guards are the part that is easy to get wrong: 11 is `many`,
+      # not `one`, and 12-14 are `many`, not `few`, even though 1 and 2-4 are.
+      # A rule written only on %10 renders "11 ошибка" instead of "11 ошибок".
+      "ru" => lambda { |count|
+        return :other unless count.is_a?(Integer)
+
+        i = count.abs
+        mod10 = i % 10
+        mod100 = i % 100
+
+        return :one if mod10 == 1 && mod100 != 11
+        return :few if (2..4).cover?(mod10) && !(12..14).cover?(mod100)
+
+        :many
+      }
     }.freeze
     private_constant :PLURAL_RULES
 
