@@ -25,7 +25,7 @@ pre-commit:
       glob: "*.rb"
       exclude:
         - "lib/generators/**/templates/*"
-      run: bundle exec rubocop {staged_files}
+      run: bin/with-ruby bundle exec rubocop {staged_files}
 
     # 2. RSpec - Only changed spec files
     rspec-changed:
@@ -34,7 +34,7 @@ pre-commit:
       run: |
         if [ -n "{staged_files}" ]; then
           echo "Running tests for changed specs..."
-          COVERAGE=false bundle exec rspec {staged_files}
+          COVERAGE=false bin/with-ruby bundle exec rspec {staged_files}
         fi
 
     # 3. Bundle audit - Check for vulnerable dependencies
@@ -43,7 +43,7 @@ pre-commit:
       run: |
         echo "Checking for vulnerable dependencies..."
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bundle audit check --update
+        bin/with-ruby bundle audit check --update
 
     # 4. Check for debugger statements in staged Ruby files
     no-debuggers:
@@ -62,7 +62,7 @@ pre-commit:
     i18n-check:
       priority: 1
       glob: "{config/locales/*.yml,bin/i18n-check}"
-      run: bin/i18n-check --quiet
+      run: bin/with-ruby bin/i18n-check --quiet
 
     # 6. Check for trailing whitespace in staged files
     trailing-whitespace:
@@ -82,7 +82,7 @@ pre-commit:
       run: |
         echo "Running pre-release chaos tests (4 apps, 1000+ assertions)..."
         echo "Skip with: LEFTHOOK_EXCLUDE=chaos-tests git commit -m \"msg\""
-        bin/pre-release-test all
+        bin/with-ruby bin/pre-release-test all
 
 # ============================================================================
 # PRE-PUSH (Disabled - too slow and problematic)
@@ -111,13 +111,13 @@ qa:
   parallel: false
   commands:
     rubocop:
-      run: bundle exec rubocop
+      run: bin/with-ruby bundle exec rubocop
     rspec:
-      run: bundle exec rspec
+      run: bin/with-ruby bundle exec rspec
     bundle-audit:
       run: |
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bundle audit check --update
+        bin/with-ruby bundle audit check --update
 
 # Quick check on changed files only (fast)
 quick:
@@ -127,7 +127,7 @@ quick:
       run: |
         changed_files=$(git diff --name-only --diff-filter=AM HEAD | grep "\.rb$" || true)
         if [ -n "$changed_files" ]; then
-          echo "$changed_files" | xargs bundle exec rubocop
+          echo "$changed_files" | xargs bin/with-ruby bundle exec rubocop
         else
           echo "No Ruby files changed"
         fi
@@ -136,7 +136,7 @@ quick:
         changed_specs=$(git diff --name-only --diff-filter=AM HEAD | grep "_spec\.rb$" || true)
         if [ -n "$changed_specs" ]; then
           echo "🧪 Running changed specs..."
-          COVERAGE=false bundle exec rspec $changed_specs
+          COVERAGE=false bin/with-ruby bundle exec rspec $changed_specs
         else
           echo "No spec files changed"
         fi
@@ -145,20 +145,20 @@ quick:
 fix:
   commands:
     rubocop-autofix:
-      run: bundle exec rubocop -A
+      run: bin/with-ruby bundle exec rubocop -A
 
 # Run full test suite (like CI)
 full:
   parallel: false
   commands:
     rubocop:
-      run: bundle exec rubocop
+      run: bin/with-ruby bundle exec rubocop
     rspec:
-      run: bundle exec rspec
+      run: bin/with-ruby bundle exec rspec
     audit:
       run: |
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bundle audit check --update
+        bin/with-ruby bundle audit check --update
 
 # ============================================================================
 # USAGE EXAMPLES

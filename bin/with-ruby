@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+# ============================================================================
+# Run a command under the Ruby this repo pins in .ruby-version.
+#
+# Why this exists: version managers activate from the INTERACTIVE shell rc
+# (mise via `mise activate` in .zshrc, and asdf/rbenv the same way). Git hooks
+# run NON-interactively, so that rc is never sourced and the hook inherits
+# whatever Ruby happens to sit on PATH — which on a machine with several
+# installed is usually the newest, not the pinned one. The failure is loud but
+# misleading: `bundle exec` dies with
+#
+#   Bundler::GemNotFound: Could not find rspec-rails-..., rails-... in
+#   locally installed gems
+#
+# which reads like a broken lockfile rather than a wrong interpreter. The gems
+# are fine; they are simply installed for a different Ruby.
+#
+# Every lefthook command routes through here so hooks agree with the terminal.
+#
+# Deliberately a no-op when no version manager is present: CI pins Ruby itself
+# via setup-ruby, and a contributor using system Ruby or chruby should not be
+# forced onto mise. In both cases we exec the command unchanged.
+#
+# Usage:
+#   bin/with-ruby bundle exec rspec
+# ============================================================================
+
+if [ "$#" -eq 0 ]; then
+  echo "usage: bin/with-ruby <command> [args...]" >&2
+  exit 2
+fi
+
+# Already the pinned version? Nothing to do. This also covers CI, where Ruby is
+# installed directly rather than through a manager.
+if [ -f .ruby-version ] && command -v ruby >/dev/null 2>&1; then
+  pinned=$(tr -d '[:space:]' < .ruby-version)
+  current=$(ruby -e 'print RUBY_VERSION' 2>/dev/null || true)
+  if [ -n "$pinned" ] && [ "$pinned" = "$current" ]; then
+    exec "$@"
+  fi
+fi
+
+# `mise exec` resolves .ruby-version without needing shell activation.
+if command -v mise >/dev/null 2>&1; then
+  exec mise exec -- "$@"
+fi
+
+# rbenv and asdf both expose a shim directory that respects .ruby-version.
+if command -v rbenv >/dev/null 2>&1; then
+  exec rbenv exec "$@"
+fi
+
+exec "$@"
