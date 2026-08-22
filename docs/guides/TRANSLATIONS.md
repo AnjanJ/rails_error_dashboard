@@ -5,8 +5,8 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **Nine locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
-> `ru`, `uk` and `pl`.**
+> translatable. **Ten locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
+> `ru`, `uk`, `pl` and `it`.**
 > Everything but English is machine-translated and unreviewed — see
 > [Review status](#review-status).
 
@@ -246,6 +246,7 @@ operating a production system, often at work:
 | `ru` | **вы** (lowercase, formal) |
 | `uk` | **ви** (lowercase, formal) |
 | `pl` | **Ty** (capitalised, the Polish formal-written convention) |
+| `it` | **tu** (the Italian convention for developer tools; *Lei* reads commercial) |
 
 Japanese has no pronoun to choose here — the register lives in the verb endings,
 so the rule is です・ます体 throughout rather than plain form (だ・である体).
@@ -260,9 +261,9 @@ instead of guessing.
 
 ## Review status
 
-**German, Spanish, French, Brazilian Portuguese, Japanese, Russian, Ukrainian
-and Polish ship alongside English. All eight are machine-translated and have not
-been reviewed by a native speaker.**
+**German, Spanish, French, Brazilian Portuguese, Japanese, Russian, Ukrainian,
+Polish and Italian ship alongside English. All nine are machine-translated and
+have not been reviewed by a native speaker.**
 RED's maintainer reads only English, so this is stated plainly rather than
 described as "beta", which would imply a review process that has not happened.
 
@@ -285,6 +286,7 @@ What this does and does not mean:
 | `ru` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `uk` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `pl` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
+| `it` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
 string reads wrong to you, change that string — you are not expected to review

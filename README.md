@@ -604,7 +604,7 @@ end
 
 ## Languages
 
-The dashboard, its emails and its notification payloads are translated. Nine locales ship:
+The dashboard, its emails and its notification payloads are translated. Ten locales ship:
 
 | Locale | Language | Status |
 |---|---|---|
@@ -617,9 +617,10 @@ The dashboard, its emails and its notification payloads are translated. Nine loc
 | `ru` | Русский | Machine-translated, unreviewed |
 | `uk` | Українська | Machine-translated, unreviewed |
 | `pl` | Polski | Machine-translated, unreviewed |
+| `it` | Italiano | Machine-translated, unreviewed |
 
 ```ruby
-config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl — default "en"
+config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it — default "en"
 ```
 
 Users can also switch language per-session from the picker in the dashboard navbar, which overrides the configured default for them alone.
