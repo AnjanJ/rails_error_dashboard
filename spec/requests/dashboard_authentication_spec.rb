@@ -12,14 +12,28 @@ require "rails_helper"
 RSpec.describe "Dashboard authentication", type: :request do
   let!(:application) { create(:application) }
 
-  before do
-    RailsErrorDashboard.configuration.authenticate_with = nil
-    RailsErrorDashboard.configuration.dashboard_username = "admin"
-    RailsErrorDashboard.configuration.dashboard_password = "secret123"
-  end
+  # These write to the global configuration singleton, so every one of them has
+  # to be put back. Restoring only authenticate_with left "admin"/"secret123"
+  # set for whatever ran next, and spec/requests/authentication_spec.rb logs in
+  # as the default gandalf — it got a 401 and failed, but only on the seeds that
+  # happened to order it after this file.
+  around do |example|
+    config = RailsErrorDashboard.configuration
+    original = {
+      authenticate_with: config.authenticate_with,
+      dashboard_username: config.dashboard_username,
+      dashboard_password: config.dashboard_password
+    }
 
-  after do
-    RailsErrorDashboard.configuration.authenticate_with = nil
+    config.authenticate_with = nil
+    config.dashboard_username = "admin"
+    config.dashboard_password = "secret123"
+
+    begin
+      example.run
+    ensure
+      original.each { |setting, value| config.public_send("#{setting}=", value) }
+    end
   end
 
   def auth_header(user = "admin", pass = "secret123")
