@@ -224,6 +224,79 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
       end
     end
 
+    # uk and pl are also four-category, and this is the trap: they are NOT the
+    # same rule as ru or as each other. Ukrainian matches Russian's integer
+    # rule; POLISH DOES NOT — Polish `one` is exactly 1, so 21 and 101 take
+    # `many` where uk/ru take `one`. Nothing structural catches a rule copied
+    # from the wrong Slavic language: bin/i18n-check validates the FILE, and
+    # both files have the identical four categories. Only selection shows it.
+    context "two four-category locales whose rules differ from each other" do
+      def ukrainian_backend
+        backend_with(:uk, {
+          one: "%{count} година",
+          few: "%{count} години",
+          many: "%{count} годин",
+          other: "%{count} години"
+        })
+      end
+
+      def polish_backend
+        backend_with(:pl, {
+          one: "%{count} godzina",
+          few: "%{count} godziny",
+          many: "%{count} godzin",
+          other: "%{count} godziny"
+        })
+      end
+
+      it "gives Ukrainian `one` for 1, 21 and 101, like Russian" do
+        backend = ukrainian_backend
+
+        expect([ 1, 21, 101 ].map { |n| backend.translate(:uk, "red.items", count: n) })
+          .to eq([ "1 година", "21 година", "101 година" ])
+      end
+
+      it "gives Ukrainian `few` for 2-4 and `many` for the 11-14 band" do
+        backend = ukrainian_backend
+
+        expect([ 2, 4, 22 ].map { |n| backend.translate(:uk, "red.items", count: n) })
+          .to eq([ "2 години", "4 години", "22 години" ])
+        expect([ 0, 5, 11, 12, 14, 111 ].map { |n| backend.translate(:uk, "red.items", count: n) })
+          .to eq([ "0 годин", "5 годин", "11 годин", "12 годин", "14 годин", "111 годин" ])
+      end
+
+      # The divergence, pinned on its own. Polish reserves `one` for exactly 1.
+      it "gives Polish `one` for 1 ALONE — 21 and 101 are `many`" do
+        backend = polish_backend
+
+        expect(backend.translate(:pl, "red.items", count: 1)).to eq("1 godzina")
+        expect(backend.translate(:pl, "red.items", count: 21)).to eq("21 godzin")
+        expect(backend.translate(:pl, "red.items", count: 101)).to eq("101 godzin")
+      end
+
+      it "still gives Polish `few` for 2-4 outside the 12-14 band" do
+        backend = polish_backend
+
+        expect([ 2, 4, 22 ].map { |n| backend.translate(:pl, "red.items", count: n) })
+          .to eq([ "2 godziny", "4 godziny", "22 godziny" ])
+        expect([ 12, 14 ].map { |n| backend.translate(:pl, "red.items", count: n) })
+          .to eq([ "12 godzin", "14 godzin" ])
+      end
+
+      # Stated as a direct comparison so a future edit that aliases one rule to
+      # the other fails here rather than in a translator's bug report.
+      it "disagrees between uk and pl at exactly the counts CLDR says it should" do
+        uk = ukrainian_backend
+        pl = polish_backend
+
+        [ 21, 101 ].each do |n|
+          expect(uk.translate(:uk, "red.items", count: n)).to include("година")
+          expect(pl.translate(:pl, "red.items", count: n)).to include("godzin")
+          expect(pl.translate(:pl, "red.items", count: n)).not_to include("godzina")
+        end
+      end
+    end
+
     context "a locale shaped like English" do
       it "still selects one and other, unchanged" do
         backend = backend_with(:de, { one: "1 Fehler", other: "%{count} Fehler" })

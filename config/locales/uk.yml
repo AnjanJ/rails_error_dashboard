@@ -1,0 +1,2106 @@
+# RED dashboard translations — uk
+#
+# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+# pull request is a perfectly good pull request.
+#
+# Structure is derived from en.yml, which is authoritative. Do not add keys
+# here that do not exist there — run bin/i18n-check after editing.
+uk:
+  red:
+    common:
+      not_available: Н/Д
+      close: Закрити
+      unknown: Невідомо
+      severity:
+        critical: Критична
+        high: Висока
+        medium: Середня
+        low: Низька
+      days_filter:
+        '7': 7 днів
+        '14': 14 днів
+        '30': 30 днів
+        '90': 90 днів
+      frame_category:
+        app: Ваш код
+        gem: Gem
+        framework: Фреймворк Rails
+        ruby_core: Ядро Ruby
+        unknown: Невідомо
+      trend:
+        increasing: Зростає
+        decreasing: Спадає
+        stable: Стабільно
+      health_status:
+        healthy: "✅ Справний"
+        warning: "⚠️ Попередження"
+        critical: "\U0001F534 Критичний"
+      device_type:
+        mobile: Mobile
+        tablet: Tablet
+        bot: Bot
+        desktop: Desktop
+    nav:
+      sections:
+        core: Основне
+        health: Стан системи
+        diagnostics: Діагностика
+        insights: Аналітика
+      overview: Огляд
+      errors: Помилки
+      analytics: Аналітика
+      platform: Платформа
+      cache: Cache
+      jobs: Jobs
+      database: База даних
+      rate_limits: Обмеження запитів
+      actioncable: ActionCable
+      activestorage: ActiveStorage
+      llm: LLM
+      n_plus_one: Запити N+1
+      deprecations: Deprecations
+      swallowed: Придушені
+      diagnostic_dumps: Діагностика
+      storms: Шторми
+      correlation: Кореляція
+      releases: Releases
+      user_impact: Вплив на користувачів
+      settings: Налаштування
+    sidebar:
+      back_to_app: Назад до %{app}
+      back_to_app_home: Назад на головну застосунку
+    navbar:
+      search_placeholder: Пошук помилок... /
+      toggle_sidebar: Перемкнути бічну панель (S)
+      toggle_theme: Перемкнути тему
+      keyboard_shortcuts_title: Клавіатурні скорочення (?)
+      all_applications: Усі застосунки
+      language: Мова
+      choose_language: Оберіть мову панелі
+      all_apps: Усі застосунки (%{count})
+    banners:
+      credentials:
+        label: 'Попередження безпеки:'
+        body_html: Ви використовуєте типові облікові дані (gandalf/youshallnotpass).
+          Встановіть змінні середовища <code>ERROR_DASHBOARD_USER</code> і <code>ERROR_DASHBOARD_PASSWORD</code>
+          або налаштуйте <code>authenticate_with</code> у своєму ініціалізаторі.
+        dismiss: Приховати для цієї сесії
+      storm:
+        active_title: Триває шторм помилок
+        recent_title: Нещодавно спрацював захист від штормів
+        active_paused: "(від %{time}) — спрацював захист від штормів. Випадки підраховуються
+          точно; збереження деталей призупинено (режим лише підрахунку)."
+        active_sampled: "(від %{time}) — спрацював захист від штормів. Випадки підраховуються
+          точно; збереження контексту вибіркове."
+        recent_body: "(завершився %{time}) — %{count} випадків записано точним підрахунком
+          із вибірковими деталями."
+        view_history: Переглянути історію штормів
+    footer:
+      built_with: Створено з
+      credit_html: Створено з ❤️ автором %{author}
+    shortcuts:
+      title: Клавіатурні скорочення
+      refresh: Оновити сторінку
+      focus_search: Перейти до пошуку
+      analytics: Аналітика
+      toggle_sidebar: Перемкнути бічну панель
+      show_shortcuts: Показати скорочення
+    errors:
+      index:
+        title: Помилки
+        last_updated_html: 'Останнє оновлення: %{time}'
+        live: Наживо
+        summary:
+          errors_html:
+            one: "%{value} помилка"
+            other: "%{value} помилки"
+            few: "%{value} помилки"
+            many: "%{value} помилок"
+          unresolved_html: "%{value} не вирішено"
+          all_time: За весь час
+        spike:
+          critical: Виявлено критичний сплеск помилок!
+          high: Виявлено значний сплеск помилок
+          elevated: Підвищена активність помилок
+          today:
+            one: 'Сьогодні: %{count} помилка'
+            other: 'Сьогодні: %{count} помилки'
+            few: 'Сьогодні: %{count} помилки'
+            many: 'Сьогодні: %{count} помилок'
+          average: "(середнє за 7 днів: %{avg})"
+          multiplier: "%{multiplier}x від звичайного рівня"
+        filters:
+          search_placeholder: Пошук помилок...
+          more: Більше фільтрів
+          apply: Застосувати фільтри
+          clear: Очистити
+          clear_all: Очистити все
+          active_label: 'Фільтри:'
+          status:
+            all: Усі
+            unresolved: Не вирішені
+            resolved: Вирішені
+            assigned: Призначені
+            reopened: Відкриті знову
+          severity:
+            any: Будь-яка критичність
+          all_apps: Усі застосунки
+          all_platforms: Усі платформи
+          all_types: Усі типи
+          all_timeframes: За весь час
+          all_frequencies: Усі частоти
+          all_priorities: Усі пріоритети
+          all_assignments: Усі призначення
+          all_assignees: Усі виконавці
+          unassigned: Без призначення
+          assigned: Призначені
+          unresolved_only: Лише не вирішені
+          hide_snoozed: Приховати відкладені
+          hide_muted: Приховати з вимкненими сповіщеннями
+          timeframes:
+            last_hour: Остання година
+            today: Сьогодні
+            yesterday: Учора
+            last_7_days: Останні 7 днів
+            last_30_days: Останні 30 днів
+            last_90_days: Останні 90 днів
+          frequencies:
+            once: Один раз
+            few: 2–9 разів
+            frequent: 10–99 разів
+            very_frequent: 100+ разів
+            recurring: Повторювані
+          chips:
+            search: 'Пошук: %{value}'
+            application: 'Застосунок: %{value}'
+            platform: 'Платформа: %{value}'
+            error_type: 'Тип: %{value}'
+            severity: 'Критичність: %{value}'
+            timeframe: 'Період: %{value}'
+            frequency: 'Частота: %{value}'
+            status: 'Статус: %{value}'
+            priority: 'Пріоритет: %{value}'
+            remove: Прибрати фільтр
+        columns:
+          error: Помилка
+          status: Статус
+          events: Події
+          users: Користувачі
+          last_seen: Востаннє помічено
+          application: Застосунок
+          platform: Платформа
+          select_all: Вибрати всі помилки
+        batch:
+          selected:
+            one: Вибрано %{count}
+            other: Вибрано %{count}
+            few: Вибрано %{count}
+            many: Вибрано %{count}
+          resolve: Вирішити
+          delete: Видалити
+          confirm_delete: Ви впевнені, що хочете видалити вибрані помилки?
+        pagination: Показано %{from}–%{to} з %{count} помилок
+        empty:
+          filtered_title: Жодна помилка не відповідає фільтрам
+          filtered_message: Спробуйте змінити пошуковий запит або критерії фільтрування.
+          filtered_cta: Очистити всі фільтри
+          clear_title: Усе чисто!
+          clear_message: Помилок ще не зафіксовано. Ваш застосунок працює справно.
+            Помилки зʼявлятимуться тут автоматично.
+      show:
+        page_title: 'Помилка #%{id}'
+        breadcrumb_errors: Помилки
+        hero:
+          reopened: Відкрито знову
+          occurrences_html:
+            one: "%{value} випадок"
+            other: "%{value} випадку"
+            few: "%{value} випадки"
+            many: "%{value} випадків"
+          user_html: Користувач %{value}
+          first_seen_html: Вперше помічено %{time}
+          last_seen_html: Востаннє помічено %{time}
+        actions:
+          resolve: Вирішити
+          assign: Призначити
+          copy_for_llm: Скопіювати для LLM
+          ai_help: Довідка ШІ
+          export_json: Експорт JSON
+        tabs:
+          details: Деталі
+          context: Контекст
+          history: Історія
+          issues: Задачі
+        coverage:
+          active_label: Покриття активне
+          active_body: розгорніть вихідний код, щоб побачити виконані рядки
+          inactive_label: Покриття шляхів коду
+          inactive_body: увімкніть, щоб бачити виконані рядки
+          enable: Увімкнути
+          disable: Вимкнути
+        baselines:
+          title: Статистика базового рівня
+          anomaly_label: 'Аномалія:'
+          anomaly_body: "%{sigma}σ вище базового рівня (%{level})"
+          levels:
+            elevated: ПІДВИЩЕНИЙ
+            high: ВИСОКИЙ
+            critical: КРИТИЧНИЙ
+          hourly: Погодинно
+          daily: Щодня
+          weekly: Щотижня
+          mean: 'Середнє:'
+          std_dev: 'σ:'
+          percentile_95: 'P95:'
+        quick_actions:
+          title: Швидкі дії
+          view_similar: Переглянути схожі помилки
+          view_user_errors: Переглянути помилки користувача
+          view_platform_errors: Переглянути помилки %{platform}
+          analytics: Аналітика
+      variables:
+        local_title: Локальні змінні
+        local_hint: Змінні зі стекового кадру, де було піднято виняток
+        instance_title: Змінні екземпляра
+        instance_hint_html: Змінні екземпляра з %{klass}, де було піднято виняток
+        instance_hint_generic: Змінні екземпляра з обʼєкта, де було піднято виняток
+        captured:
+          one: "%{count} захоплено"
+          other: "%{count} захоплено"
+          few: "%{count} захоплено"
+          many: "%{count} захоплено"
+        column_variable: Змінна
+        column_type: Тип
+        column_value: Значення
+        filtered: "[ВІДФІЛЬТРОВАНО]"
+        truncated: скорочено
+      deprecations:
+        title: Попередження про застарілий код
+        hint: Попередження Rails про застарілий код, виявлені під час цього запиту
+        column_warning: Попередження
+        column_source: Джерело
+        footer_tip: Виправте застарілий код перед оновленням Rails, щоб уникнути несумісних
+          змін.
+        upgrade_guide: Посібник з оновлення Rails
+      n_plus_one:
+        title: Виявлення запитів N+1
+        hint: Повторювані шаблони запитів, виявлені у breadcrumbs SQL цього запиту
+        patterns:
+          one: "%{count} шаблон"
+          other: "%{count} шаблону"
+          few: "%{count} шаблони"
+          many: "%{count} шаблонів"
+        column_repeats: Повтори
+        column_query: Шаблон запиту
+        column_total_time: Загальний час
+        fingerprint: 'Відбиток: %{fingerprint}'
+        tip_preload_html: 'Порада: попередньо завантажте %{table} через %{includes}
+          або %{preload}'
+        tip_generic_html: 'Порада: використовуйте %{includes} або %{preload} для жадібного
+          завантаження звʼязків'
+        eager_loading_guide: Посібник з жадібного завантаження Rails
+      cache_health:
+        title: Стан кешу
+        operations:
+          one: "%{count} операція"
+          other: "%{count} операції"
+          few: "%{count} операції"
+          many: "%{count} операцій"
+        hint: Аналіз активності кешу за breadcrumbs цього запиту
+        reads: Читання
+        writes: Записи
+        hit_rate: Частка влучань
+        hits:
+          one: "%{count} влучання"
+          other: "%{count} влучання"
+          few: "%{count} влучання"
+          many: "%{count} влучань"
+        misses:
+          one: "%{count} промах"
+          other: "%{count} промаху"
+          few: "%{count} промахи"
+          many: "%{count} промахів"
+        unknown_status:
+          one: "%{count} читання з невідомим статусом влучання (старіші breadcrumbs)"
+          other: "%{count} читання з невідомим статусом влучання (старіші breadcrumbs)"
+          few: "%{count} читання з невідомим статусом влучання (старіші breadcrumbs)"
+          many: "%{count} читань з невідомим статусом влучання (старіші breadcrumbs)"
+        total_time_html: 'Загальний час кешу: %{duration}'
+        slowest_html: 'Найповільніша: %{duration}'
+        low_hit_rate: Низька частка влучань — перегляньте структуру ключів кешу та
+          налаштування TTL.
+        moderate_hit_rate: Помірна частка влучань — розгляньте прогрівання кешу або
+          зміну часу застарівання.
+        caching_guide: Посібник з кешування Rails
+      breadcrumbs:
+        title: Breadcrumbs
+        events:
+          one: "%{count} подія"
+          other: "%{count} події"
+          few: "%{count} події"
+          many: "%{count} подій"
+        hint: Послідовність дій, що передували цій помилці
+        column_category: Категорія
+        column_message: Повідомлення
+        column_duration: Тривалість
+      patterns:
+        title: Закономірності виникнення
+        window: "(останні %{days} днів)"
+        pattern_type: Тип закономірності
+        types:
+          business_hours:
+            label: Закономірність робочих годин
+            description: Пік помилок припадає на робочі години (9:00–17:00), що вказує
+              на звʼязок з активністю користувачів
+          night:
+            label: Нічна закономірність
+            description: Пік помилок припадає на нічні години (00:00–06:00), можливо
+              через фонові завдання або автоматизовані процеси
+          weekend:
+            label: Закономірність вихідних
+            description: Більшість помилок виникає у вихідні, що вказує на особливості
+              використання саме в ці дні
+          uniform:
+            label: Рівномірний розподіл
+            description: Помилки розподілені рівномірно протягом доби без чіткої закономірності
+          none:
+            label: Закономірностей не виявлено
+            description: Недостатньо даних для визначення чіткої закономірності виникнення
+        strength: Виразність закономірності
+        strengths:
+          strong:
+            label: Виразна закономірність
+            description: Помилки сильно зосереджені в певних годинах
+          moderate:
+            label: Помірна закономірність
+            description: Певна зосередженість у окремих годинах
+          weak:
+            label: Слабка закономірність
+            description: Помилки розподілені досить рівномірно
+        heatmap_title: Теплова карта погодинного розподілу
+        heatmap_legend: Темніші клітинки = більше помилок. Червона рамка позначає
+          пікові години (>%{multiplier}x від середнього).
+        heatmap_cell:
+          one: "%{hour} — %{count} помилка"
+          other: "%{hour} — %{count} помилки"
+          few: "%{hour} — %{count} помилки"
+          many: "%{hour} — %{count} помилок"
+        peak_hours: 'Пікові години:'
+        peak_hours_hint: У ці години частота помилок понад удвічі перевищує середню.
+          Варто стежити за розгортаннями та навантаженням у цей час.
+        bursts_title: Сплески помилок
+        bursts_window: "(останні %{days} днів)"
+        bursts_hint: Сплески помилок — це швидкі послідовності, коли кілька помилок
+          виникають протягом хвилин. Це може вказувати на каскадні збої або стрибки
+          навантаження.
+        column_start_time: Час початку
+        column_duration: Тривалість
+        column_error_count: Кількість помилок
+        column_intensity: Інтенсивність
+        burst_duration: "%{minutes} хв"
+        burst_duration_seconds: "(%{seconds} с)"
+        burst_errors_html:
+          one: "%{value} помилка"
+          other: "%{value} помилки"
+          few: "%{value} помилки"
+          many: "%{value} помилок"
+        intensity_high: Висока (20+ помилок)
+        intensity_medium: Середня (10–19 помилок)
+        intensity_low: Низька (5–9 помилок)
+        bursts_truncated: Показано %{shown} з %{total} виявлених сплесків
+        recommendation_label: 'Рекомендація:'
+        recommendation_intro: 'Виявлено кілька сплесків помилок. Перевірте:'
+        recommendation_deploys: Нещодавні розгортання або зміни конфігурації під час
+          сплесків
+        recommendation_load: Стрибки навантаження або характер трафіку
+        recommendation_cascades: Каскадні збої від повʼязаних помилок
+        recommendation_jobs: Збої фонових завдань або шторми повторних спроб
+        empty: Закономірностей чи сплесків не виявлено. Для аналізу може знадобитися
+          більше даних.
+      providers:
+        github: GitHub
+        gitlab: GitLab
+        bitbucket: Bitbucket
+        jira: Jira
+        linear: Linear
+        generic: Платформа
+        generic_lowercase: платформі
+      discussion:
+        title: Обговорення
+        activity_log: Журнал активності
+        reply_on: Відповісти на %{provider}
+        start_on: Почати обговорення на %{provider}
+        empty: Коментарів ще немає. Станьте першим, хто обговорить цю помилку на %{provider}.
+      issue_section:
+        title: Трекер задач
+        view_issue: Переглянути задачу
+        linked: Приєднано
+        issue_reference: "%{provider} #%{number}"
+        states:
+          open: Відкрита
+          closed: Закрита
+          merged: Злита
+        assignees: Виконавці
+        unassigned: Без призначення
+        labels: Мітки
+        no_labels: Міток немає
+        create_new: Створити нову задачу
+        create_issue: Створити задачу в %{provider}
+        configure_html: Налаштуйте %{token} і %{url} у своєму ініціалізаторі, щоб
+          увімкнути створення задач.
+        link_existing: Приєднати наявну задачу
+        link: Приєднати
+      cascades:
+        title: Каскади помилок
+        hint: Причинно-наслідкові звʼязки між помилками
+        triggered_by: Спричинена
+        triggered_by_hint: "(помилки, що спричиняють цю)"
+        triggers: Спричиняє
+        triggers_hint: "(помилки, спричинені цією)"
+        column_error_type: Тип помилки
+        column_message: Повідомлення
+        column_probability: Імовірність
+        column_frequency: Частота
+        column_avg_delay: Сер. затримка
+        view: Переглянути
+        footnote: Каскадні шаблони показують причинно-наслідкові звʼязки. Висока імовірність
+          (≥%{probability}%) і частота (≥%{frequency}) вказують на сильні каскади.
+      llm_summary:
+        title: Виклики LLM
+        hint: Зведено з breadcrumbs запиту
+        calls: Виклики
+        tokens: Токени
+        cost: Вартість
+        input: Вхід
+        output: Вихід
+        tool_calls: Виклики інструментів
+        total_time: Загальний час
+        errors: Помилки
+        by_model: За моделями
+        failed_calls:
+          one: "%{count} невдалий виклик — деталі див. у ланцюжку breadcrumbs."
+          other: "%{count} невдалого виклику — деталі див. у ланцюжку breadcrumbs."
+          few: "%{count} невдалі виклики — деталі див. у ланцюжку breadcrumbs."
+          many: "%{count} невдалих викликів — деталі див. у ланцюжку breadcrumbs."
+      timeline:
+        title: Хронологія
+        hint: Нещодавні повʼязані помилки
+        current_error: Поточна помилка
+        user: 'Користувач: %{id}'
+        resolved: Вирішено
+        notes_label: 'Нотатки щодо вирішення:'
+        notes_tooltip: 'Нотатки щодо вирішення: %{notes}'
+      user_errors_table:
+        column_rank: Місце
+        column_user: Користувач
+        column_error_type_count: Різних типів помилок
+        column_error_count: Кількість помилок
+        column_percentage: Відсоток
+        column_error_types: Типи помилок
+        column_actions: Дії
+        types:
+          one: "%{count} тип"
+          other: "%{count} типу"
+          few: "%{count} типи"
+          many: "%{count} типів"
+        more:
+          one: "+%{count} ще"
+          other: "+%{count} ще"
+          few: "+%{count} ще"
+          many: "+%{count} ще"
+        view_errors: Переглянути помилки
+      co_occurring:
+        title: Супутні помилки
+        badge: Часові закономірності
+        hint: Помилки, що виникають протягом %{minutes} хвилин від цієї помилки
+        column_error_type: Тип помилки
+        column_message: Повідомлення
+        column_platform: Платформа
+        column_frequency: Частота
+        column_avg_delay: Сер. затримка
+        times:
+          one: "%{count} раз"
+          other: "%{count} раза"
+          few: "%{count} рази"
+          many: "%{count} разів"
+        before: "%{duration} до"
+        after: "%{duration} після"
+        simultaneous: одночасно
+        view: Переглянути
+      modals:
+        cancel: Скасувати
+        name_placeholder: напр., Іван Ковальчук
+        resolve:
+          title: Позначити помилку як вирішену
+          name_label: Ваше імʼя
+          name_hint: Хто вирішує цю помилку?
+          reference_label: Посилання (необовʼязково)
+          reference_placeholder: 'напр., JIRA-123, PR #456, GitHub Issue #789'
+          reference_hint: Посилання на тікет, PR або задачу
+          notes_label: Нотатки щодо вирішення (необовʼязково)
+          notes_placeholder: Опишіть, що було зроблено для виправлення цієї помилки...
+          notes_hint: Що було зроблено для вирішення цієї помилки?
+          submit: Позначити як вирішену
+        assign:
+          title: Призначити помилку
+          label: Призначити
+          hint: Хто має дослідити цю помилку?
+          submit: Призначити
+        priority:
+          title: Оновити пріоритет
+          label: Рівень пріоритету
+          current: 'Поточний: %{value}'
+          submit: Оновити пріоритет
+        snooze:
+          title: Відкласти помилку
+          label: Тривалість відкладення
+          hint: Приховати цю помилку з активних переглядів
+          reason_label: Причина (необовʼязково)
+          reason_placeholder: Чому ви відкладаєте цю помилку?
+          reason_hint: Причину буде додано як коментар
+          submit: Відкласти
+          hours:
+            one: "%{count} година"
+            other: "%{count} години"
+            few: "%{count} години"
+            many: "%{count} годин"
+          days:
+            one: "%{count} день"
+            other: "%{count} дня"
+            few: "%{count} дні"
+            many: "%{count} днів"
+          weeks:
+            one: "%{count} тиждень"
+            other: "%{count} тижня"
+            few: "%{count} тижні"
+            many: "%{count} тижнів"
+          hours_with_equivalent: "%{hours} (%{equivalent})"
+        mute:
+          title: Вимкнути сповіщення
+          description: Помилки з вимкненими сповіщеннями далі показуються в панелі,
+            але не надсилають жодних сповіщень (Slack, електронна пошта, Discord,
+            PagerDuty, webhooks).
+          name_label: Ваше імʼя (необовʼязково)
+          reason_label: Причина (необовʼязково)
+          reason_placeholder: Чому ви вимикаєте сповіщення для цієї помилки?
+          reason_hint: Причину буде додано як коментар
+          submit: Вимкнути сповіщення
+      request_context:
+        title: Контекст запиту
+        url: 'URL запиту:'
+        hostname: 'Імʼя хоста:'
+        content_type: 'Тип вмісту:'
+        duration: 'Тривалість запиту:'
+        params: 'Параметри запиту:'
+        user_agent: 'User Agent:'
+        ip_address: 'IP-адреса:'
+        replay: 'Відтворити запит:'
+        raw_user_agent: Необроблений User Agent
+        duration_seconds: "%{value} с"
+        duration_ms: "%{value} мс"
+        copy_curl: Скопіювати як curl
+        copy_curl_title: Скопіювати команду curl у буфер обміну
+        copy_rspec: Скопіювати як RSpec
+        copy_rspec_title: Скопіювати request spec RSpec у буфер обміну
+      similar_errors:
+        title: Схожі помилки
+        badge: Нечітке зіставлення
+        hint: Помилки зі схожими backtrace та повідомленнями (схожість %{threshold}%+)
+        column_similarity: Схожість
+        column_error_type: Тип помилки
+        column_message: Повідомлення
+        column_platform: Платформа
+        column_occurrences: Випадки
+        occurrences:
+          one: "%{count}x"
+          other: "%{count}x"
+          few: "%{count}x"
+          many: "%{count}x"
+        view: Переглянути
+      source_code:
+        view_on: Переглянути на %{host}
+        view_source: Переглянути код
+        coverage_legend_html: Покриття активне — %{executed} = виконано, %{not_executed}
+          = не виконано
+        coverage_green: зелений
+        coverage_gray: сірий
+        read_failed: 'Не вдалося прочитати код: %{message}'
+      ai_help:
+        title: Довідка ШІ
+        providers:
+          openai: OpenAI
+          anthropic: Anthropic
+        close: Закрити довідку ШІ
+        empty: Запитайте про першопричину, кроки відтворення, ймовірні виправлення
+          або що перевірити далі.
+        question_label: Питання
+        question_placeholder: Яка ймовірна першопричина?
+        ask: Запитати
+      sidebar:
+        title: Метадані
+        occurrence_count: Кількість випадків
+        occurred_times:
+          one: Ця помилка сталася %{count} раз
+          other: Ця помилка сталася %{count} раза
+          few: Ця помилка сталася %{count} рази
+          many: Ця помилка сталася %{count} разів
+        first_seen: Вперше помічено
+        last_seen: Востаннє помічено
+        jump_to_timeline: Перейти до хронології
+        severity_level: Рівень критичності
+        view_all_severity: Переглянути всі помилки рівня %{severity}
+        severity_badges:
+          critical: КРИТИЧНА
+          high: ВИСОКА
+          medium: СЕРЕДНЯ
+          low: НИЗЬКА
+        platform: Платформа
+        view_all_platform: Переглянути всі помилки %{platform}
+        user: Користувач
+        view_user_errors: Переглянути всі помилки цього користувача
+        user_id: 'ID: %{id}'
+        user_id_label: 'ID користувача: %{id}'
+        guest: Гість / без автентифікації
+        issue_tracking_linked_html: Статус, призначення та пріоритет керуються через
+          %{link}.
+        issue_tracking_link_text: приєднану задачу
+        issue_tracking_unlinked: Статус, призначення та пріоритет керуються через
+          ваш трекер задач. Приєднайте задачу, щоб побачити деталі.
+        workflow_status: Статус у процесі
+        resolved: Вирішено
+        unresolved: Не вирішено
+        reopened: Відкрито знову
+        assigned_to: Призначено
+        assign: Призначити
+        remove_assignment: Скасувати призначення?
+        priority: Пріоритет
+        snooze: Відкласти
+        snoozed: Відкладено
+        snoozed_until_html: До %{time}
+        unsnooze: Скасувати відкладення
+        notifications: Сповіщення
+        muted: Вимкнено
+        muted_by: 'Ким: %{name}'
+        muted_since_html: Від %{time}
+        mute: Вимкнути сповіщення
+        unmute: Увімкнути сповіщення
+        resolved_by: Хто вирішив
+        reference: Посилання
+        resolution_notes: Нотатки щодо вирішення
+        error_id: ID помилки
+        copy_error_id: Скопіювати ID помилки
+        environment:
+          title: Середовище
+          hint: Контекст виконання в момент помилки
+          app_version: 'Версія застосунку:'
+          view_all_version: Переглянути всі помилки у %{version}
+          git_sha: 'Git SHA:'
+          rails: 'Rails:'
+          ruby: 'Ruby:'
+          environment: 'Середовище:'
+          server: 'Сервер:'
+          database: 'База даних:'
+          key_gems: 'Ключові gems:'
+        health:
+          title: Стан системи
+          hint: Стан виконання в момент помилки
+          memory_rss: 'Памʼять (RSS):'
+          process_swap: 'Swap процесу:'
+          peak_rss: 'Піковий RSS:'
+          os_threads: 'Потоки ОС:'
+          threads: 'Потоки:'
+          file_descriptors: 'Дескриптори файлів:'
+          load_average: 'Середнє навантаження:'
+          system_memory: 'Памʼять системи:'
+          system_swap: 'Swap системи:'
+          tcp_connections: 'Зʼєднання TCP:'
+          gc_live_objects: 'Живі обʼєкти GC:'
+          major_gc_runs: 'Основних запусків GC:'
+          last_gc: 'Останній GC:'
+          connection_pool: 'Пул зʼєднань:'
+          puma_threads: 'Потоки Puma:'
+          job_queue: 'Черга завдань (%{adapter}):'
+          vm_cache_invalidations: 'Інвалідації кешу VM:'
+          vm_cache_misses: 'Промахи кешу VM:'
+          shape_cache_size: 'Розмір кешу shape:'
+          yjit_compiled: 'Скомпільовано YJIT:'
+          yjit_invalidations: 'Інвалідації YJIT:'
+          yjit_code_size: 'Розмір коду YJIT:'
+          yjit_compile_time: 'Час компіляції YJIT:'
+          ruby_threads: "(Ruby: %{count})"
+      info:
+        new_badge: НОВА
+        new_tooltip: Помилка сталася протягом останньої години
+        reopened: Відкрито знову
+        reopened_tooltip: Раніше вирішено, повторилася %{time}
+        copy_error_type: Скопіювати тип помилки
+        message_label: 'Повідомлення помилки:'
+        copy_message: Скопіювати повідомлення помилки
+        copy: Копіювати
+        cause_chain:
+          title: Ланцюг причин винятку
+          caused_by: 'Спричинено:'
+          caused_by_indexed: 'Спричинено (#%{index}):'
+          backtrace: Backtrace
+        backtrace:
+          label: 'Backtrace:'
+          frame_counts: "(%{app} ваш код, %{framework} фреймворк/gems)"
+          copy_full: Скопіювати повний backtrace
+          copy_full_title: Скопіювати повний backtrace
+          your_code: Ваш код
+          framework_code: Код фреймворку та gems
+          frames:
+            one: "%{count} кадр"
+            other: "%{count} кадру"
+            few: "%{count} кадри"
+            many: "%{count} кадрів"
+          click_to_expand: "(натисніть, щоб розгорнути)"
+          view_source: Переглянути код
+          none: Backtrace недоступний
+      row:
+        new_badge: НОВА
+        reopened: Відкрито знову
+        view_user_errors: Переглянути всі помилки користувача %{user}
+        status:
+          unresolved: не вирішено
+          resolved: вирішено
+          in_progress: у роботі
+          investigating: досліджується
+          wont_fix: не виправлятиметься
+          assigned: призначено
+          snoozed: відкладено
+          muted: сповіщення вимкнено
+      stats:
+        today: Сьогодні
+        this_week: Цього тижня
+        unresolved: Не вирішено
+        resolved: Вирішено
+        reopened: Відкрито знову
+      pages:
+        percent: "%{value}%"
+        column_errors: Помилки
+        column_occurrences: Випадки
+        column_last_seen: Востаннє помічено
+        total_occurrences: Усього випадків
+        affected_errors: Уражені помилки
+        more_errors:
+          one: "+%{count} ще"
+          other: "+%{count} ще"
+          few: "+%{count} ще"
+          many: "+%{count} ще"
+        none_in_last_days: За останні %{days} днів результатів не виявлено.
+        how_breadcrumbs_html: Breadcrumbs мають бути увімкнені (%{option})
+      deprecations_page:
+        title: Попередження про застарілий код
+        empty_title: Попереджень про застарілий код не знайдено
+        empty_body: За останні %{days} днів у breadcrumbs помилок не виявлено попереджень
+          про застарілий код.
+        how_title: 'Як захоплюються попередження про застарілий код:'
+        how_captured: Попередження Rails про застарілий код автоматично захоплюються
+          як breadcrumbs
+        how_appear: Попередження зʼявляються тут, коли помилка виникає під час запиту
+          з попередженнями про застарілий код
+        unique_warnings: Унікальні попередження
+        all_title: Усі попередження про застарілий код
+        column_warning: Попередження
+        column_source: Джерело
+      n_plus_one_page:
+        title: Шаблони запитів N+1
+        empty_title: Шаблонів запитів N+1 не знайдено
+        empty_body: За останні %{days} днів у breadcrumbs помилок не виявлено шаблонів
+          запитів N+1.
+        how_title: 'Як працює виявлення N+1:'
+        how_captured: Запити SQL захоплюються як breadcrumbs під час запитів, що спричиняють
+          помилки
+        how_threshold_html: Запити однакової форми, що трапляються >= %{threshold}
+          разів, позначаються
+        how_default:
+          one: Типовий поріг — %{count} повтор
+          other: Типовий поріг — %{count} повтору
+          few: Типовий поріг — %{count} повтори
+          many: Типовий поріг — %{count} повторів
+        unique_patterns: Унікальні шаблони
+        all_title: Усі шаблони запитів N+1
+        duration_ms: "%{value} мс"
+        footer_tip_html: Використовуйте %{includes}, %{preload} або %{eager_load},
+          щоб виправити запити N+1.
+      swallowed_page:
+        title: Придушені винятки
+        empty_title: Придушених винятків не виявлено
+        empty_body: За останні %{days} днів не виявлено винятків із часткою перехоплень
+          понад %{threshold}%.
+        how_title: 'Як виявляються придушені винятки:'
+        how_raise: TracePoint(:raise) підраховує кожен піднятий виняток
+        how_rescue: TracePoint(:rescue) підраховує кожен перехоплений виняток
+        how_ratio: Високе співвідношення перехоплень до піднять = ймовірно придушений
+          (мовчки перехоплений)
+        how_requires_html: Потребує Ruby 3.3+ і %{option}
+        swallowed_patterns: Придушені шаблони
+        total_rescues: Усього перехоплень
+        total_raises: Усього піднять
+        all_title: Шаблони придушених винятків
+        column_exception_class: Клас винятку
+        column_raise_location: Місце підняття
+        column_rescue_location: Місце перехоплення
+        column_raises: Підняття
+        column_rescues: Перехоплення
+        column_ratio: Співвідношення
+        view_unrescued: Переглянути неперехоплені помилки %{exception}, що потрапили
+          до error_log
+        footer_tip: Придушені винятки піднімаються, а потім мовчки перехоплюються.
+          Вони можуть приховувати справжні помилки.
+      rack_attack_page:
+        title: Події обмеження запитів
+        missing_title: Rack Attack не встановлено
+        missing_body_html: Відстеження увімкнено, але gem %{gem} не завантажено в
+          цьому застосунку — тож події не записуються. Додайте його до Gemfile і налаштуйте
+          хоча б одне правило, і події зʼявляться тут.
+        empty_title: Подій обмеження запитів не знайдено
+        empty_body: За останні %{days} днів не записано жодної події throttle, blocklist
+          чи track від Rack Attack.
+        how_title: 'Як працює відстеження Rack Attack:'
+        how_enabled_html: Відстеження Rack Attack має бути увімкнено (%{option})
+        how_installed: Rack Attack має бути встановлено та налаштовано у вашому застосунку
+        how_recorded: Події throttle, blocklist і track записуються щоразу, коли спрацьовує
+          правило — помилка не потрібна
+        how_buffered: Події буферизуються й записуються кожні %{seconds} с, тож зачекайте
+          трохи перед їх появою
+        unique_rules: Унікальні правила
+        total_events: Усього подій
+        unique_ips: Унікальні IP
+        all_title: Події обмеження запитів за правилами
+        column_rule: Правило
+        column_type: Тип
+        column_count: Кількість
+        column_ips: IP-адреси
+        column_top_path: Найчастіший шлях
+        match_type:
+          blocklist: blocklist
+          throttle: throttle
+          track: track
+        footer_tip: Велика кількість може вказувати на зловживання або неправильно
+          налаштовані правила.
+        docs: Документація Rack Attack
+      diagnostic_dumps_page:
+        title: Діагностичні дампи
+        capture: Створити дамп
+        empty_title: Діагностичних дампів ще немає
+        empty_body: Створіть знімок стану системи на вимогу для налагодження.
+        how_title: 'Як працюють діагностичні дампи:'
+        how_capture_html: Натисніть %{button} вгорі або виконайте %{command}
+        how_captures: 'Захоплює: середовище, статистику GC, потоки, пул зʼєднань,
+          памʼять, чергу завдань'
+        how_saved: Кожен дамп зберігається в базі даних для історичного порівняння
+        how_use: Використовуйте дампи для дослідження проблем у продакшені або перевірки
+          стану системи
+        total_dumps: Усього дампів
+        threads_latest: Потоки (останній)
+        memory_latest: Памʼять (останній)
+        history_title: Історія дампів
+        details: Деталі
+        pid: 'PID: %{pid}'
+        uptime: 'Час роботи: %{minutes} хв'
+        section_environment: Середовище
+        section_system_health: Стан системи
+        section_gc: GC
+        section_job_queue: Черга завдань
+        env_versions: Ruby %{ruby} / Rails %{rails}
+        memory_mb: "%{value} МБ"
+        threads:
+          one: "%{count} потік"
+          other: "%{count} потоку"
+          few: "%{count} потоки"
+          many: "%{count} потоків"
+        pool: 'Пул: %{busy}/%{size}'
+        gc_stats: 'Живих: %{live} / Основних GC: %{major}'
+        jobs_failed: 'невдалих: %{count}'
+        footer_tip_html: 'Дампи також можна створювати через: %{command}'
+        footer_note_html: 'Додати нотатку: %{command}'
+        unknown_short: "?"
+      storms_page:
+        title: Історія штормів
+        intro_html: Коли частота помилок різко зростає (невдале розгортання, збій
+          залежності), захист від штормів обмежує власні записи gem до бази даних,
+          щоб не посилювати інцидент. Випадки завжди підраховуються точно — вибірково
+          зберігаються лише деталі окремих подій. Пороги налаштовуються для кожного
+          процесу через параметри %{options}.
+        active_html: "%{label} від %{time} — пікова частота %{rate}."
+        active_label: Триває шторм
+        empty_title: Штормів не зафіксовано
+        empty_body: Захист від штормів напоготові. Якщо цей застосунок колись накриє
+          потік помилок, епізоди зʼявляться тут із точними підрахунками відкинутого.
+        column_started: Початок
+        column_duration: Тривалість
+        column_peak_rate: Пікова частота
+        column_mode: Режим
+        column_counted: Підраховано (точно)
+        column_overflow: Переповнення
+        column_top_errors: Найчастіші помилки
+        active_badge: активний
+        mode_count_only: лише підрахунок
+        mode_shedding: відкидання
+        rate_per_minute: "%{value}/хв"
+        occurrence_multiplier: "×%{count}"
+      overview_page:
+        page_title: Панель
+        title: Огляд
+        last_updated_html: 'Останнє оновлення: %{time}'
+        alert_banner:
+          one: "%{count} критична/висока помилка за останню годину"
+          other: "%{count} критичної/високої помилки за останню годину"
+          few: "%{count} критичні/високі помилки за останню годину"
+          many: "%{count} критичних/високих помилок за останню годину"
+        alert_occurrences:
+          one: "%{count} випадок"
+          other: "%{count} випадку"
+          few: "%{count} випадки"
+          many: "%{count} випадків"
+        alert_view: Переглянути
+        error_rate: Частота помилок
+        error_rate_hint: Помилок за годину сьогодні
+        unresolved: Не вирішено
+        unresolved_hint: Очікують вирішення
+        resolution_rate: Частка вирішених
+        resolution_hint: Вирішено %{resolved} з %{total}
+        affected_users: Постраждалі користувачі (сьогодні)
+        users_change: "%{count} порівняно з учора"
+        avg_resolution: Сер. час вирішення
+        avg_resolution_hint: Середній час до вирішення
+        hours_short: "%{value} год"
+        error_trend: Динаміка помилок
+        top_errors: Найвпливовіші помилки
+        view_all: Переглянути всі →
+        users:
+          one: "%{count} користувач"
+          other: "%{count} користувача"
+          few: "%{count} користувачі"
+          many: "%{count} користувачів"
+        platform_health: Стан платформ
+        full_comparison: Повне порівняння →
+        stability_score_html: "%{score}/100"
+        platform_summary: "%{total} помилок · %{critical} критичних · %{unresolved}
+          відкритих"
+        correlation_title: Висновки кореляції
+        full_analysis: Повний аналіз →
+        problematic_releases: Проблемні випуски
+        release_errors:
+          one: "%{count} помилка"
+          other: "%{count} помилки"
+          few: "%{count} помилки"
+          many: "%{count} помилок"
+        time_correlated: Корельовані в часі
+        correlation_value_html: "%{percent} кореляції (%{strength})"
+        multi_error_users: Користувачі з кількома помилками
+        user_types_html: Користувач %{user} · %{types}
+        types:
+          one: "%{count} тип"
+          other: "%{count} типу"
+          few: "%{count} типи"
+          many: "%{count} типів"
+    settings:
+      title: Налаштування
+      version: v%{version}
+      intro_html: Перегляд поточної конфігурації лише для читання. Змінюйте через
+        %{file} або змінні середовища.
+      option_count:
+        one: "%{count} параметр"
+        other: "%{count} параметра"
+        few: "%{count} параметри"
+        many: "%{count} параметрів"
+      plugins:
+        title: Активні плагіни
+        column_name: Назва плагіна
+        column_version: Версія
+        column_description: Опис
+        column_status: Статус
+        active: Активний
+        inactive: Неактивний
+        empty: Наразі не зареєстровано жодного плагіна. Ви можете створювати власні
+          плагіни для розширення можливостей.
+      test_error:
+        title: Перевірка сповіщень
+        description_html: Надіслати тестову помилку через повний конвеєр захоплення
+          та сповіщень. Це створює %{error_class} у журналі помилок і надсилає сповіщення
+          в усі налаштовані канали (Slack, Discord, PagerDuty, електронна пошта, webhooks).
+          Тестова помилка чітко позначена, її безпечно вирішити або видалити.
+        confirm: Це створить тестову помилку та надішле сповіщення в усі налаштовані
+          канали. Продовжити?
+        submit: Надіслати тестову помилку
+      help:
+        title: Потрібно змінити ці налаштування?
+        edit_html: Змініть конфігурацію у %{file} і перезапустіть застосунок.
+        docs_html: Докладніше див. %{docs}.
+        docs_link: документацію
+      groups:
+        core_features: Основні можливості
+        multi_app: Підтримка кількох застосунків
+        user_integration: Інтеграція з користувачами
+        performance: Налаштування продуктивності
+        notifications: Канали сповіщень
+        analytics: Розширена аналітика
+        source_code: Інтеграція з вихідним кодом
+        breadcrumbs: Breadcrumbs
+        system_health: Стан системи
+        enhanced_metrics: Розширені метрики
+        issue_tracking: Відстеження задач
+        deep_debugging: Глибоке налагодження
+        event_tracking: Відстеження подій
+        advanced: Розширена конфігурація
+        internal_logging: Внутрішнє журналювання
+      units:
+        lines:
+          one: "%{count} рядок"
+          other: "%{count} рядка"
+          few: "%{count} рядки"
+          many: "%{count} рядків"
+        minutes:
+          one: "%{count} хвилина"
+          other: "%{count} хвилини"
+          few: "%{count} хвилини"
+          many: "%{count} хвилин"
+        seconds:
+          one: "%{count} секунда"
+          other: "%{count} секунди"
+          few: "%{count} секунди"
+          many: "%{count} секунд"
+        events:
+          one: "%{count} подія"
+          other: "%{count} події"
+          few: "%{count} події"
+          many: "%{count} подій"
+        queries:
+          one: "%{count} запит"
+          other: "%{count} запита"
+          few: "%{count} запити"
+          many: "%{count} запитів"
+        std_devs: "%{count}σ"
+      values:
+        enabled: Увімкнено
+        disabled: Вимкнено
+        not_set: Не встановлено
+        not_found: Не знайдено
+        not_available: Недоступно
+        empty: Порожньо
+        unknown: Невідомо
+        set: Встановлено
+        auto_detected: Визначено автоматично
+        configured: "(Налаштовано)"
+        items:
+          one: "%{count} елемент"
+          other: "%{count} елемента"
+          few: "%{count} елементи"
+          many: "%{count} елементів"
+        rules:
+          one: "%{count} правило"
+          other: "%{count} правила"
+          few: "%{count} правила"
+          many: "%{count} правил"
+        users:
+          one: "%{formatted} користувач"
+          other: "%{formatted} користувача"
+          few: "%{formatted} користувачі"
+          many: "%{formatted} користувачів"
+        days:
+          one: "%{count} день"
+          other: "%{count} дня"
+          few: "%{count} дні"
+          many: "%{count} днів"
+        rails_app_name_unavailable: Назва застосунку Rails недоступна
+        separate_db: 'Окрема БД: %{name}'
+        configured_but_not_found: Налаштовано, але не знайдено
+        shared_db_primary: Спільна БД (основна)
+        shared_db: Спільна БД
+        unable_to_detect: Не вдалося визначити
+        no_user_model: Модель User не виявлено
+        unable_to_query_count: Не вдалося отримати кількість
+        manual_cleanup_required: Потрібне ручне очищення
+        keep_forever: Зберігати назавжди
+        no_automatic_deletion: Без автоматичного видалення
+        run_command: 'Виконайте:'
+        to_cleanup: 'Для очищення:'
+      options:
+        enable_middleware: Перехоплює необроблені винятки
+        enable_error_subscriber: Підписується на події помилок Rails
+        retention_days: 'Лише ручне очищення (виконайте: rails error_dashboard:cleanup_resolved
+          DAYS=90)'
+        max_backtrace_lines: Обмеження глибини стеку викликів
+        sampling_rate: Відсоток захоплених помилок
+        application_name: Назва цього застосунку (визначається автоматично, якщо не
+          задано)
+        database: Активна база даних для журналів помилок
+        use_separate_database: Використовувати окрему БД для журналів помилок
+        user_model: Назва моделі для звʼязків із користувачами (визначається автоматично,
+          якщо не задано)
+        total_users_for_impact: Для розрахунку % впливу (визначається автоматично,
+          якщо не задано)
+        async_logging: Обробка у фонових завданнях
+        async_adapter: Адаптер черги завдань
+        enable_rate_limiting: Обмежувати запити до API
+        rate_limit_per_minute: Запитів за хвилину з однієї IP-адреси
+        enable_slack_notifications: Сповіщення в реальному часі
+        slack_webhook_url: Кінцева точка webhook у Slack
+        enable_email_notifications: Сповіщення електронною поштою
+        notification_email_recipients: Адреси одержувачів
+        notification_email_from: Адреса відправника
+        enable_discord_notifications: Сповіщення через webhook у Discord
+        discord_webhook_url: Кінцева точка webhook у Discord
+        enable_pagerduty_notifications: Ескалація критичних помилок
+        pagerduty_integration_key: Ключ API PagerDuty
+        enable_webhook_notifications: Довільні кінцеві точки webhook
+        webhook_urls: Власні кінцеві точки webhook
+        enable_scheduled_digests: Щоденні/щотижневі підсумкові листи. Плануйте через
+          SolidQueue, Sidekiq або cron
+        digest_frequency: Як часто надсилати підсумкові листи
+        digest_recipients: Адреси електронної пошти (типово беруться з одержувачів
+          сповіщень)
+        enable_similar_errors: Знаходити повʼязані помилки за схожістю
+        enable_co_occurring_errors: Помилки, що трапляються разом
+        enable_error_cascades: Ланцюги помилок «батьківська→дочірня»
+        enable_error_correlation: Аналіз за версією/користувачем/часом
+        enable_platform_comparison: Аналітика iOS проти Android
+        enable_occurrence_patterns: Виявлення циклічності та сплесків
+        enable_baseline_alerts: Виявлення аномалій
+        baseline_alert_threshold_std_devs: Стандартних відхилень для спрацювання сповіщення
+        baseline_alert_severities: Рівні критичності для сповіщень
+        baseline_alert_cooldown_minutes: Хвилин між сповіщеннями для того самого типу
+          помилки
+        enable_source_code_integration: Показувати код у стеку викликів
+        source_code_context_lines: Рядків до та після цільового рядка
+        enable_git_blame: Показувати дані git blame
+        source_code_cache_ttl: Тривалість кешування вихідного коду
+        only_show_app_code_source: Приховати gems/stdlib з міркувань безпеки
+        git_branch_strategy: Стратегія визначення гілки
+        enable_breadcrumbs: Захоплювати послідовність дій у запиті
+        breadcrumb_buffer_size: Максимум breadcrumbs на запит
+        enable_n_plus_one_detection: Виявляти повторювані запити у breadcrumbs
+        n_plus_one_threshold: Мінімум повторів для позначки N+1
+        enable_system_health: Захоплювати GC, памʼять, потоки, пул зʼєднань у момент
+          помилки
+        app_version: Поточна версія застосунку
+        git_sha: Розгорнутий коміт
+        git_repository_url: URL репозиторію GitHub/GitLab
+        dashboard_base_url: Базова URL-адреса для посилань панелі
+        enable_issue_tracking: 'Інтеграція з GitHub/GitLab/Codeberg — один перемикач
+          вмикає все: створення задач, автостворення, синхронізацію життєвого циклу,
+          дзеркалювання стану платформи, показ коментарів. Замінює керування процесом
+          станом платформи.'
+        issue_tracker_token: Токен бота RED (встановіть змінну середовища RED_BOT_TOKEN)
+        issue_tracker_provider: Визначається автоматично з git_repository_url
+        issue_tracker_repo: Визначається автоматично з git_repository_url
+        issue_tracker_labels: Мітки, що додаються до нових задач
+        issue_webhook_secret: Встановіть, щоб увімкнути двосторонню синхронізацію
+          (перевірка HMAC)
+        enable_local_variables: TracePoint(:raise) — захоплення локальних змінних
+          у момент винятку
+        enable_instance_variables: Захоплення змінних екземпляра self у момент винятку
+        detect_swallowed_exceptions: TracePoint(:raise) + (:rescue) — виявлення мовчки
+          перехоплених винятків (Ruby 3.3+)
+        enable_diagnostic_dump: Знімки стану системи на вимогу
+        enable_crash_capture: Хук at_exit для необроблених аварійних завершень
+        enable_coverage_tracking: Діагностичний режим — увімкніть через панель, щоб
+          бачити виконані рядки у перегляді коду (Ruby 3.2+)
+        enable_rack_attack_tracking: Записувати події throttle/blocklist в окрему
+          таблицю
+        enable_actioncable_tracking: Відстежувати події каналів WebSocket як breadcrumbs
+        enable_activestorage_tracking: Відстежувати завантаження/вивантаження/видалення
+          як breadcrumbs
+        custom_severity_rules: Зіставлення типу помилки з критичністю
+        ignored_exceptions: Винятки, які слід ігнорувати
+        enable_internal_logging: Налагоджувальний вивід gem
+        log_level: Рівень докладності
+    flash:
+      locale:
+        unavailable: Ця мова недоступна. Використовується типова.
+      batch:
+        resolved:
+          one: Успішно вирішено %{count} помилку
+          other: Успішно вирішено %{count} помилки
+          few: Успішно вирішено %{count} помилки
+          many: Успішно вирішено %{count} помилок
+        muted:
+          one: Успішно вимкнено сповіщення для %{count} помилки
+          other: Успішно вимкнено сповіщення для %{count} помилки
+          few: Успішно вимкнено сповіщення для %{count} помилок
+          many: Успішно вимкнено сповіщення для %{count} помилок
+        unmuted:
+          one: Успішно увімкнено сповіщення для %{count} помилки
+          other: Успішно увімкнено сповіщення для %{count} помилки
+          few: Успішно увімкнено сповіщення для %{count} помилок
+          many: Успішно увімкнено сповіщення для %{count} помилок
+        deleted:
+          one: Успішно видалено %{count} помилку
+          other: Успішно видалено %{count} помилки
+          few: Успішно видалено %{count} помилки
+          many: Успішно видалено %{count} помилок
+        failed: 'Групову операцію не виконано: %{reason}'
+      issue:
+        created: Задачу успішно створено
+        linked: Задачу успішно приєднано
+        create_failed: 'Не вдалося створити задачу: %{reason}'
+        link_failed: 'Не вдалося приєднати задачу: %{reason}'
+      not_enabled: "%{feature} не увімкнено. Увімкніть у %{file}"
+      not_enabled_plural: "%{feature} не увімкнено. Увімкніть їх у %{file}"
+      not_enabled_options: "%{feature} не увімкнено. Увімкніть %{options} у %{file}"
+      not_enabled_set_options: "%{feature} не увімкнено. Встановіть %{options} у %{file}"
+      features:
+        platform_comparison: Порівняння платформ
+        error_correlation: Кореляція помилок
+        breadcrumbs: Breadcrumbs
+        system_health: Стан системи
+        swallowed_exceptions: Виявлення придушених винятків
+        rack_attack: Відстеження Rack Attack
+        actioncable: Відстеження ActionCable
+        activestorage: Відстеження ActiveStorage
+        diagnostic_dumps: Діагностичні дампи
+      diagnostic_dump:
+        disabled: Діагностичні дампи не увімкнено.
+        captured: Діагностичний дамп успішно створено.
+        failed: 'Не вдалося створити діагностичний дамп: %{message}'
+      coverage:
+        not_enabled: Відстеження покриття не увімкнено в конфігурації.
+        enabled: Покриття шляхів коду увімкнено. Відтворіть помилку, потім перегляньте
+          вихідний код, щоб побачити виконані рядки.
+        disabled: Покриття шляхів коду вимкнено.
+        unavailable: Не вдалося увімкнути покриття. Потрібен Ruby 3.2+.
+      test_error:
+        logged: Тестову помилку успішно записано. Перевірте свої канали сповіщень
+          (Slack, Discord, електронна пошта тощо), щоб підтвердити доставку.
+        failed: 'Не вдалося записати тестову помилку: %{message}'
+      swallowed_requires_ruby: Виявлення придушених винятків потребує Ruby 3.3+ (у
+        вас %{version}). Оновіть Ruby, щоб скористатися цією можливістю.
+      ai_help:
+        not_configured: Довідку ШІ не налаштовано
+        blank_question: Питання не може бути порожнім
+        question_too_long: Питання задовге. Не перевищуйте %{limit} символів.
+    commands:
+      no_error_ids: Не вказано ідентифікаторів помилок
+      invalid_action: Недопустимий тип дії
+      issue:
+        not_configured: Відстеження задач не налаштовано
+        already_linked: 'До помилки вже приєднано задачу: %{url}'
+        url_required: Потрібна URL-адреса задачі
+      error_not_found: 'Помилку не знайдено: %{id}'
+      batch_failed:
+        mute:
+          one: Не вдалося вимкнути сповіщення для %{count} помилки
+          other: Не вдалося вимкнути сповіщення для %{count} помилки
+          few: Не вдалося вимкнути сповіщення для %{count} помилок
+          many: Не вдалося вимкнути сповіщення для %{count} помилок
+        unmute:
+          one: Не вдалося увімкнути сповіщення для %{count} помилки
+          other: Не вдалося увімкнути сповіщення для %{count} помилки
+          few: Не вдалося увімкнути сповіщення для %{count} помилок
+          many: Не вдалося увімкнути сповіщення для %{count} помилок
+        resolve:
+          one: Не вдалося вирішити %{count} помилку
+          other: Не вдалося вирішити %{count} помилки
+          few: Не вдалося вирішити %{count} помилки
+          many: Не вдалося вирішити %{count} помилок
+    mailers:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown_application: Невідомо
+      error_alert:
+        subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        heading: "\U0001F6A8 Сповіщення про помилку"
+        labels:
+          application: Застосунок
+          error_type: Тип помилки
+          platform: Платформа
+          occurred_at: Час виникнення
+          user_id: ID користувача
+          ip_address: IP-адреса
+          request_url: URL запиту
+          message: Повідомлення
+          error_id: ID помилки
+        stack_trace:
+          one: Стек викликів (перший %{count} рядок)
+          other: Стек викликів (перші %{count} рядка)
+          few: Стек викликів (перші %{count} рядки)
+          many: Стек викликів (перші %{count} рядків)
+        view_details: Переглянути всі деталі в панелі
+        view_details_text: 'Переглянути всі деталі в панелі:'
+        footer: Це автоматичне сповіщення про помилку від %{product}.
+      digest:
+        subject:
+          one: Зведення RED — %{count} нова помилка (%{period})
+          other: Зведення RED — %{count} нової помилки (%{period})
+          few: Зведення RED — %{count} нові помилки (%{period})
+          many: Зведення RED — %{count} нових помилок (%{period})
+        heading: Зведення помилок RED
+        periods:
+          daily: Останні 24 години
+          weekly: Останні 7 днів
+        generated_at: Створено
+        summary: Підсумок
+        stats:
+          new_errors: Нові помилки
+          total_occurrences: Випадки
+          total_occurrences_text: Усього випадків
+          resolved: Вирішено
+          unresolved: Не вирішено
+          critical_high: Критичні/високі
+          resolution_rate: Частка вирішених
+        comparison:
+          heading: Порівняно з попереднім періодом
+          versus: 'порівняно з попереднім періодом (%{period}):'
+          current: Поточний
+          previous: Попередній
+          change: Зміна
+          delta:
+            one: "%{delta} помилка"
+            other: "%{delta} помилки"
+            few: "%{delta} помилки"
+            many: "%{delta} помилок"
+        critical_unresolved: Критичні та високі невирішені
+        top_errors: Найчастіші помилки
+        columns:
+          severity: Критичність
+          error: Помилка
+          error_type: Тип помилки
+          count: Кількість
+        view: Переглянути
+        open_dashboard: Відкрити панель
+        view_dashboard_text: 'Переглянути повну панель:'
+        manage_settings: Керувати налаштуваннями зведення
+        footer: Автоматичне зведення від RED (%{product})
+    notifications:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown: Невідомо
+        not_available: Н/Д
+      error_alert:
+        fallback: "\U0001F6A8 Сповіщення про нову помилку"
+        heading: "\U0001F6A8 Сповіщення про помилку"
+        discord_title: "\U0001F6A8 Нова помилка: %{error_type}"
+        pagerduty_summary: "[%{application}] Критична помилка: %{error_type} у %{platform}"
+        labels:
+          application: Застосунок
+          error_type: Тип помилки
+          platform: Платформа
+          occurred: Сталася
+          message: Повідомлення
+          user: Користувач
+          ip_address: IP-адреса
+          request_url: URL запиту
+          occurrences: Випадки
+          controller: Контролер
+          action: Дія
+          first_seen: Вперше помічено
+          location: Розташування
+        user_fallback: 'Користувач #%{id}'
+        view_details: Переглянути деталі
+        view_in_dashboard: Переглянути в Error Dashboard
+        error_id: 'ID помилки: %{id}'
+      baseline_alert:
+        fallback: "\U0001F6A8 Сповіщення про відхилення від базового рівня"
+        heading: "\U0001F6A8 Виявлено відхилення від базового рівня"
+        labels:
+          severity: Критичність
+          std_devs: Стандартні відхилення
+          threshold: Поріг
+          baseline_type: Тип базового рівня
+          baseline_info: Дані базового рівня
+        level:
+          critical: КРИТИЧНИЙ
+          high: ВИСОКИЙ
+          elevated: ПІДВИЩЕНИЙ
+          unknown: НЕВІДОМИЙ
+        std_devs_above: "%{value}σ вище базового рівня"
+        threshold_errors:
+          one: "%{value} помилка"
+          other: "%{value} помилки"
+          few: "%{value} помилки"
+          many: "%{value} помилок"
+        view_in_dashboard: Переглянути в панелі
+      storm:
+        detected: Виявлено шторм помилок у %{application} о %{started_at}.
+        mode:
+          open: режим лише підрахунку (випадки підраховуються, деталі призупинено)
+          shedding: режим відкидання (активна вибірка контексту)
+        engaged: Спрацював захист від штормів — %{mode}.
+        suppressed: Сповіщення про окремі помилки придушено до завершення шторму;
+          точні підрахунки зберігаються.
+        dashboard: 'Панель: %{url}'
+    time:
+      ago: "%{duration} тому"
+      formats:
+        full: "%d %B %Y %H:%M:%S"
+        short: "%d.%m %H:%M"
+        date_only: "%d %B %Y"
+        time_only: "%H:%M:%S"
+        datetime: "%d %b %Y %H:%M"
+    health:
+      columns:
+        error: Помилка
+        last_seen: Востаннє помічено
+      database:
+        title: Стан бази даних
+        stats:
+          errors_with_pool: Помилки з даними пулу
+          peak_utilization: Пікове використання
+          total_dead: Усього мертвих
+          total_waiting: Усього в очікуванні
+        live:
+          title: Стан бази даних у реальному часі
+          non_postgresql: Виявлено адаптер, відмінний від PostgreSQL (%{adapter}).
+          non_postgresql_hint: Статистика таблиць, індексів та активності в реальному
+            часі потребує PostgreSQL. Пул зʼєднань та історичні дані доступні нижче.
+          pool_size: Розмір пулу
+          busy: Зайняті
+          idle: Вільні
+          dead: Мертві
+          waiting: В очікуванні
+        summary:
+          total_db_size: Загальний розмір БД
+          tables: Таблиці
+          unused_indexes: Невикористані індекси
+          active_connections: Активні зʼєднання
+        host_tables:
+          title: Таблиці застосунку
+        gem_tables:
+          title: Таблиці Error Dashboard
+        unused_indexes:
+          title: Невикористані індекси
+          column_index: Індекс
+          column_table: Таблиця
+          column_size: Розмір
+        activity:
+          title: Активність зʼєднань
+          total_badge: усього %{count}
+          waiting_badge: "%{count} в очікуванні"
+          column_state: Стан
+          column_count: Кількість
+          column_waiting: В очікуванні
+        table_columns:
+          table: Таблиця
+          est_rows: Приблизно рядків
+          size: Розмір
+          seq_scans: Послідовні сканування
+          idx_scans: Сканування за індексом
+          dead_tuples: Мертві кортежі
+          last_vacuum: Останній vacuum
+        never_vacuumed: Ніколи
+        pool_history:
+          title: Пул зʼєднань за помилками
+          empty_title: Даних про пул зʼєднань не знайдено
+          empty_message_html: У знімках стану системи за останні %{days} днів не виявлено
+            статистики пулу зʼєднань. Увімкніть <code>enable_system_health = true</code>,
+            щоб захоплювати статистику пулу в момент помилки.
+          column_error: Помилка
+          column_error_type: Тип помилки
+          column_utilization: Використання
+          column_busy: Зайняті
+          column_idle: Вільні
+          column_dead: Мертві
+          column_waiting: В очікуванні
+          column_pool_size: Розмір пулу
+          column_last_seen: Востаннє помічено
+          tip: Високе використання під час помилок може вказувати на вичерпання пулу
+            зʼєднань або тривалі запити.
+          guide_link: Посібник з бази даних
+      llm:
+        title: Стан LLM
+        disabled:
+          title: Спостережуваність LLM не увімкнено
+          message: Щоб бачити тут статистику LLM за моделями, увімкніть спостережуваність
+            LLM і breadcrumbs.
+          enable_in_html: 'Увімкніть у <code>config/initializers/rails_error_dashboard.rb</code>:'
+        empty:
+          title: Викликів LLM не виявлено
+          message: 'За останні %{days} днів у breadcrumbs помилок не захоплено жодного
+            виклику API LLM. Інструментуйте виклики LLM одним із трьох способів:'
+          tab_otel: OpenTelemetry
+          tab_faraday: Faraday / RubyLLM
+          tab_manual: Вручну
+          otel_hint: Уже використовуєте колектор OTel? Додайте цей gem, і ми підпишемося
+            автоматично.
+          otel_requires_html: Потребує <code>enable_llm_observability = true</code>.
+          faraday_hint: Використовуєте <code>ruby_llm</code>, <code>openai</code>,
+            <code>anthropic</code> чи будь-який SDK на основі Faraday? Додайте middleware
+            один раз.
+          faraday_note: RED автоматично визначає провайдера/модель і токени із запиту
+            та відповіді.
+          manual_hint: Прямі виклики <code>Net::HTTP</code>, gRPC, локальний інференс
+            чи будь-що інше — інструментуйте вручну.
+          manual_note_html: Вартість оцінюється автоматично за токенами — payload
+            може перевизначити її через <code>cost_usd_estimate:</code>.
+        stats:
+          calls: Виклики LLM
+          models: Моделі
+          errors_with_llm: Помилки з LLM (%{rate}%)
+          total_cost: Загальна вартість
+        by_model:
+          title: Продуктивність за моделями
+          column_provider_model: Провайдер · Модель
+          column_calls: Виклики
+          column_tools: Інструменти
+          column_avg_tokens: Сер. токенів
+          column_avg_latency: Сер. затримка
+          column_error_rate: Частка помилок
+          column_cost: Вартість
+          column_top_error: Найчастіша помилка
+          column_last_seen: Востаннє помічено
+          avg_tokens_in: вхід
+          avg_tokens_out: вихід
+          failed_count: "%{count} невдалих"
+          tip_html: Висока частка помилок для моделі часто свідчить про проблеми з
+            квотою або обмеженням запитів. Повільна відповідь (&gt;5 с) вказує на
+            деградацію провайдера.
+          guide_link: Посібник з інструментування
+      cache:
+        title: Стан кешу
+        empty:
+          title: Активності кешу не знайдено
+          message: За останні %{days} днів у breadcrumbs помилок не виявлено операцій
+            з кешем.
+          how_it_works: 'Як працює відстеження кешу:'
+          step_breadcrumbs_html: Breadcrumbs мають бути увімкнені (<code>enable_breadcrumbs
+            = true</code>)
+          step_capture: Читання та записи кешу захоплюються як breadcrumbs під час
+            запитів, що спричиняють помилки
+          step_hit_status: Для операцій читання відстежується статус влучань і промахів
+          step_sort: Ця сторінка показує продуктивність кешу за помилками, найгірші
+            — першими
+        stats:
+          errors_with_cache: Помилки з кешем
+          avg_hit_rate: Сер. частка влучань
+          total_ops: Усього операцій кешу
+        table:
+          title: Продуктивність кешу за помилками
+          column_error: Помилка
+          column_reads: Читання
+          column_writes: Записи
+          column_hit_rate: Частка влучань
+          column_total_time: Загальний час
+          column_slowest_op: Найповільніша операція
+          column_last_seen: Востаннє помічено
+          tip: Низька частка влучань може вказувати на ключі кешу, які застарівають
+            надто швидко або встановлюються неправильно.
+          guide_link: Посібник з кешування Rails
+      job:
+        title: Стан завдань
+        empty:
+          title: Даних про черги завдань не знайдено
+          message: За останні %{days} днів у знімках стану системи не виявлено статистики
+            черг завдань.
+          how_it_works: 'Як працює відстеження стану завдань:'
+          step_enable_html: Стан системи має бути увімкнено (<code>enable_system_health
+            = true</code>)
+          step_capture: Статистика черг завдань захоплюється автоматично, коли виявлено
+            Sidekiq, SolidQueue або GoodJob
+          step_collected: Статистика збирається за кожною помилкою в момент захоплення
+          step_sort: Ця сторінка показує стан черг завдань за помилками, відсортований
+            за кількістю невдалих
+        stats:
+          errors_with_jobs: Помилки з даними завдань
+          total_failed: Усього невдалих завдань
+          adapters_detected: Виявлені адаптери
+        table:
+          title: Стан черг завдань за помилками
+          column_error: Помилка
+          column_adapter: Адаптер
+          column_failed: Невдалі
+          column_queued: У черзі
+          column_other_stats: Інша статистика
+          column_last_seen: Востаннє помічено
+          enqueued: поставлено в чергу
+          ready: готові
+          queued: у черзі
+          other_stats_sidekiq: 'мертві: %{dead}, повтори: %{retry}, воркери: %{workers}'
+          other_stats_solid_queue: 'захоплені: %{claimed}, заблоковані: %{blocked},
+            заплановані: %{scheduled}'
+          other_stats_good_job: 'завершені: %{finished}'
+          tip: Велика кількість невдалих завдань під час помилок може вказувати на
+            перевантаження черги або проблеми зовнішніх сервісів.
+          guide_link: Посібник з Active Job
+      actioncable:
+        title: Стан ActionCable
+        empty:
+          title: Подій ActionCable не знайдено
+          message: За останні %{days} днів у breadcrumbs помилок не виявлено дій каналів,
+            передач або подій підписки ActionCable.
+          how_it_works: 'Як працює відстеження ActionCable:'
+          step_breadcrumbs_html: Breadcrumbs мають бути увімкнені (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: Відстеження ActionCable має бути увімкнено (<code>enable_actioncable_tracking
+            = true</code>)
+          step_configured: ActionCable має бути налаштовано у вашому застосунку
+          step_capture: Дії каналів, передачі та події підписки захоплюються як breadcrumbs
+            під час запитів, що спричиняють помилки
+        stats:
+          active_channels: Активні канали
+          total_events: Усього подій
+          subscription_rejections: Відхилення підписок
+        table:
+          title: Події ActionCable за каналами
+          column_channel: Канал
+          column_actions: Дії
+          column_transmissions: Передачі
+          column_subscriptions: Підписки
+          column_rejections: Відхилення
+          column_errors: Помилки
+          column_last_seen: Востаннє помічено
+          tip: Події ActionCable захоплюються, коли збігаються з помилками. Велика
+            кількість відхилень може вказувати на проблеми автентифікації або авторизації.
+          guide_link: Посібник з ActionCable
+      activestorage:
+        title: Стан ActiveStorage
+        empty:
+          title: Подій ActiveStorage не знайдено
+          message: За останні %{days} днів у breadcrumbs помилок не виявлено операцій
+            сервісів ActiveStorage.
+          how_it_works: 'Як працює відстеження ActiveStorage:'
+          step_breadcrumbs_html: Breadcrumbs мають бути увімкнені (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: Відстеження ActiveStorage має бути увімкнено (<code>enable_activestorage_tracking
+            = true</code>)
+          step_configured: ActiveStorage має бути налаштовано у вашому застосунку
+          step_capture: Завантаження, вивантаження та видалення захоплюються як breadcrumbs
+            під час запитів, що спричиняють помилки
+        stats:
+          storage_services: Сервіси зберігання
+          total_operations: Усього операцій
+          errors_with_storage: Помилки з операціями зберігання
+        table:
+          title: Операції зберігання за сервісами
+          column_service: Сервіс
+          column_uploads: Завантаження
+          column_downloads: Вивантаження
+          column_deletes: Видалення
+          column_exists: Перевірки наявності
+          column_total: Усього
+          column_avg_duration: Сер. тривалість
+          column_slowest: Найповільніша
+          column_errors: Помилки
+          column_last_seen: Востаннє помічено
+          tip: Повільні операції зберігання можуть вказувати на проблеми з мережею,
+            великі розміри файлів або обмеження з боку провайдера.
+          guide_link: Посібник з ActiveStorage
+    analytics:
+      stability:
+        green: Зелений
+        yellow: Жовтий
+        red: Червоний
+      trend:
+        increasing_significantly: суттєво зростає
+        increasing: зростає
+        stable: стабільно
+        decreasing: спадає
+        decreasing_significantly: суттєво спадає
+      correlation_strength:
+        strong: Сильна
+        moderate: Помірна
+        weak: Слабка
+      days_pill:
+        '7': 7 дн
+        '14': 14 дн
+        '30': 30 дн
+        '60': 60 дн
+        '90': 90 дн
+      overview:
+        title: Аналітика
+        stats:
+          total_errors: Усього помилок
+          unresolved: Не вирішено
+          resolution_rate: Частка вирішених
+        trend_chart:
+          title: Динаміка помилок (останні %{days} днів)
+        platform_chart:
+          title: Помилки за платформами
+          quick_links: 'Швидкі посилання:'
+        type_chart:
+          title: 10 найчастіших типів помилок
+        hour_chart:
+          title: Помилки за годинами доби
+        top_users:
+          title: 10 найбільш постраждалих користувачів
+        type_breakdown:
+          title: Розподіл за типами помилок
+          subtitle: Останні %{days} днів
+          column_rank: Місце
+          column_error_type: Тип помилки
+          column_count: Кількість
+          column_percentage: Відсоток
+          column_actions: Дії
+          view_errors: Переглянути помилки
+        recurring:
+          title: Повторювані проблеми
+          high_frequency_title: Часті помилки
+          column_error_type: Тип помилки
+          column_total_occurrences: Усього випадків
+          column_duration: Тривалість
+          column_first_seen: Вперше помічено
+          column_last_seen: Востаннє помічено
+          column_status: Статус
+          duration_days: "%{days} днів"
+          active: Активна
+          inactive: Неактивна
+          empty_high_frequency: За останні %{days} днів частих помилок не знайдено.
+          persistent_title: Стійкі невирішені помилки
+          persistent_hint: Ці помилки залишаються невирішеними понад 7 днів.
+          column_message: Повідомлення
+          column_platform: Платформа
+          column_count: Кількість
+          column_age: Вік
+          column_actions: Дії
+          age_days: "%{days} днів"
+          view: Переглянути
+        releases:
+          version_chart_title: Помилки за версіями випусків
+          comparison_title: Останній проти попереднього
+          latest_version: Остання версія
+          latest_errors:
+            one: "%{count} помилка"
+            other: "%{count} помилки"
+            few: "%{count} помилки"
+            many: "%{count} помилок"
+          latest_critical:
+            one: "%{count} критична"
+            other: "%{count} критичної"
+            few: "%{count} критичні"
+            many: "%{count} критичних"
+          previous_version: Попередня версія
+          previous_errors:
+            one: "%{count} помилка"
+            other: "%{count} помилки"
+            few: "%{count} помилки"
+            many: "%{count} помилок"
+          previous_critical:
+            one: "%{count} критична"
+            other: "%{count} критичної"
+            few: "%{count} критичні"
+            many: "%{count} критичних"
+          change: Зміна
+          empty: Недостатньо даних про випуски для порівняння.
+          problematic_title: Виявлено проблемні випуски
+          problematic_hint_html: 'Наведені випуски мають суттєво вищу частоту помилок
+            (&gt;%{multiplier}x від середньої):'
+          problematic_entry: "%{count} помилок (%{critical} критичних, +%{deviation}%
+            від середнього)"
+        mttr:
+          title: Ефективність вирішення (MTTR)
+          overall_title: Загальний MTTR
+          overall_hint: Середній час вирішення
+          fastest_title: Найшвидше
+          fastest_hint: Найкращий час вирішення
+          slowest_title: Найповільніше
+          slowest_hint: Найдовший час вирішення
+          total_resolved_title: Усього вирішено
+          total_resolved_hint: За останні %{days} днів
+          by_platform_title: MTTR за платформами
+          by_severity_title: MTTR за критичністю
+          column_severity: Критичність
+          column_avg_time: Середній час до вирішення
+          column_actions: Дії
+          hours: "%{hours} годин"
+          view: Переглянути
+          trend_title: Динаміка MTTR (щотижня)
+      correlation:
+        title: Аналіз кореляції помилок
+        trend_analysis:
+          title: Аналіз динаміки
+          current_period: Поточний період
+          previous_period: Попередній період
+          change: Зміна
+          period_range: "%{start} — %{end}"
+        problematic_releases:
+          title: Проблемні випуски
+          hint: Версії з частотою помилок понад удвічі вищою за середню
+          column_version: Версія
+          column_error_count: Кількість помилок
+          column_deviation: Відхилення від середнього
+          column_critical: Критичні помилки
+          column_unique_types: Унікальні типи помилок
+          column_platforms: Платформи
+          column_actions: Дії
+          view: Переглянути
+        by_version:
+          title: Помилки за версіями застосунку
+          column_version: Версія
+          column_errors: Помилки
+          column_types: Типи
+          column_critical: Критичні
+        by_git_sha:
+          title: Помилки за Git SHA
+          column_sha: SHA
+          column_errors: Помилки
+          column_types: Типи
+          column_versions: Версії
+        multi_error_users:
+          title: Користувачі, що зазнали кількох типів помилок
+          hint: Користувачі, що стикалися з 2+ різними типами помилок
+          truncated: Показано %{shown} з %{total} користувачів
+        time_correlated:
+          title: Помилки, корельовані в часі
+          hint: Типи помилок, що виникають у схожий час доби
+          column_error_type_a: Тип помилки A
+          column_error_type_b: Тип помилки B
+          column_correlation: Кореляція
+          column_strength: Сила
+          truncated: Показано %{shown} з %{total} корельованих пар помилок
+        platform_specific:
+          title: Помилки, специфічні для платформи, проти кросплатформних
+          occurrences:
+            one: "%{count} випадок"
+            other: "%{count} випадку"
+            few: "%{count} випадки"
+            many: "%{count} випадків"
+          platform_specific: Специфічні для платформи
+          cross_platform: Кросплатформні
+          also_on: 'Також на: %{platforms}'
+        empty:
+          title: Недостатньо даних для аналізу кореляції
+          message: Аналіз кореляції потребує більше даних про помилки для виявлення
+            закономірностей.
+          needed_title: 'Що потрібно:'
+          needed_version: Відстеження версії застосунку для кореляції з випусками
+          needed_user: Відстеження користувачів для кореляції за користувачами
+          needed_types: Кілька типів помилок для кореляції в часі
+          hint: Поверніться, коли буде записано більше помилок.
+      platform_comparison:
+        title: Порівняння стану платформ
+        empty:
+          title: Даних про платформи немає
+          message: За обраний період (%{days} днів) не записано жодної помилки.
+          hint: Спробуйте обрати довший період або поверніться пізніше.
+        health_card:
+          healthy: Справна
+          warning: Попередження
+          critical: Критична
+          stability_score: Оцінка стабільності
+          total_errors: 'Усього помилок:'
+          critical_errors: 'Критичні:'
+          unresolved: 'Не вирішено:'
+          resolution_rate: 'Частка вирішених:'
+          error_velocity: 'Швидкість появи помилок:'
+          view_errors: Переглянути помилки %{platform}
+        error_rate_chart:
+          title: Частота помилок за платформами
+        daily_trend_chart:
+          title: Щоденна динаміка помилок
+        severity_distribution:
+          title: Розподіл за критичністю
+          severity_count: "%{label}: %{count}"
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: Помилок немає
+        resolution_time_chart:
+          title: Середній час вирішення
+        cross_platform:
+          title: Кросплатформні помилки
+          column_error_type: Тип помилки
+          column_platforms: Платформи
+          column_total_occurrences: Усього випадків
+          column_breakdown: Розподіл
+        top_errors:
+          title: Найчастіші помилки — %{platform}
+          empty: Помилок не знайдено
+      releases:
+        title: Releases
+        empty:
+          title: Даних про випуски не знайдено
+          message: За останні %{days} днів у помилках не виявлено даних про версії.
+          how_to_title: 'Як увімкнути відстеження випусків:'
+          step_config_html: Встановіть %{option} у своєму ініціалізаторі
+          step_env_html: Або встановіть змінну середовища %{env_var}
+          step_git_sha_html: Git SHA визначається автоматично з %{git_sha}, %{heroku}
+            або %{render}
+          step_captured: Версія та SHA захоплюються автоматично при виникненні помилок
+        summary:
+          releases: Випуски
+          current_release: Поточний випуск
+          avg_errors: Сер. помилок на випуск
+          problematic: Проблемні випуски
+        current_card:
+          title: 'Поточний випуск:'
+          live_badge: Наживо
+          errors: Помилки
+          error_types: Типи помилок
+          new_errors: Нові помилки
+          stability: Стабільність
+          git_sha: Git SHA
+          vs_previous: Проти попереднього
+        timeline:
+          title: Хронологія випусків
+          column_version: Версія
+          column_git_sha: Git SHA
+          column_time_range: Проміжок часу
+          column_errors: Помилки
+          column_types: Типи
+          column_new_errors: Нові помилки
+          column_stability: Стабільність
+          column_vs_previous: Проти попереднього
+          current_badge: Поточний
+          problematic_badge: Проблемний
+          more_shas: "+%{count}"
+          new_count:
+            one: "%{count} нова"
+            other: "%{count} нової"
+            few: "%{count} нові"
+            many: "%{count} нових"
+          footer_html: 'Стабільність: <span class="badge bg-success">Зелений</span>
+            &le; середньої кількості помилок, <span class="badge bg-warning">Жовтий</span>
+            1–2x середньої, <span class="badge bg-danger">Червоний</span> &gt; 2x
+            середньої. «Нові» помилки — це типи помилок, вперше помічені в цьому випуску.'
+      user_impact:
+        title: Вплив на користувачів
+        empty:
+          title: Даних про вплив на користувачів немає
+          message: За останні %{days} днів не знайдено помилок із привʼязкою до користувачів.
+          how_tracked_title: 'Як відстежується вплив на користувачів:'
+          step_user_id_html: Помилки повинні мати повʼязаний %{attribute}
+          step_auto_html: Визначається автоматично через %{current_attributes} або
+            %{current_user}
+          step_config_html: Або встановіть %{option} у своєму ініціалізаторі
+        summary:
+          error_types: Типи помилок із користувачами
+          total_users_affected: Усього постраждалих користувачів
+          most_impactful: Найвпливовіша помилка
+          total_users: Усього користувачів (для %)
+        table:
+          title: Помилки за впливом на користувачів
+          column_rank: "#"
+          column_error_type: Тип помилки
+          column_unique_users: Унікальні користувачі
+          column_occurrences: Випадки
+          column_impact_percentage: "% впливу на користувачів"
+          column_severity: Критичність
+          column_last_seen: Востаннє помічено
+          users:
+            one: "%{count} користувач"
+            other: "%{count} користувача"
+            few: "%{count} користувачі"
+            many: "%{count} користувачів"
+          occurrences:
+            one: "%{count}x"
+            other: "%{count}x"
+            few: "%{count}x"
+            many: "%{count}x"
+          footer: Ранжовано за кількістю унікальних постраждалих користувачів, а не
+            за кількістю випадків. Помилка, що вразила 1000 користувачів один раз,
+            гірша за ту, що вразила 1 користувача 1000 разів.
+    js:
+      months:
+      - січня
+      - лютого
+      - березня
+      - квітня
+      - травня
+      - червня
+      - липня
+      - серпня
+      - вересня
+      - жовтня
+      - листопада
+      - грудня
+      months_short:
+      - січ.
+      - лют.
+      - бер.
+      - квіт.
+      - трав.
+      - черв.
+      - лип.
+      - серп.
+      - вер.
+      - жовт.
+      - лист.
+      - груд.
+      days:
+      - неділя
+      - понеділок
+      - вівторок
+      - середа
+      - четвер
+      - пʼятниця
+      - субота
+      days_short:
+      - нд
+      - пн
+      - вт
+      - ср
+      - чт
+      - пт
+      - сб
+      meridian:
+        am: дп
+        pm: пп
+      intl_locale: uk-UA
+      duration:
+        seconds:
+          one: "%{count} секунда"
+          other: "%{count} секунди"
+          few: "%{count} секунди"
+          many: "%{count} секунд"
+        minutes:
+          one: "%{count} хвилина"
+          other: "%{count} хвилини"
+          few: "%{count} хвилини"
+          many: "%{count} хвилин"
+        hours:
+          one: "%{count} година"
+          other: "%{count} години"
+          few: "%{count} години"
+          many: "%{count} годин"
+        days:
+          one: "%{count} день"
+          other: "%{count} дня"
+          few: "%{count} дні"
+          many: "%{count} днів"
+        months:
+          one: "%{count} місяць"
+          other: "%{count} місяця"
+          few: "%{count} місяці"
+          many: "%{count} місяців"
+        years:
+          one: "%{count} рік"
+          other: "%{count} року"
+          few: "%{count} роки"
+          many: "%{count} років"
+      selected:
+        one: Вибрано %{count}
+        other: Вибрано %{count}
+        few: Вибрано %{count}
+        many: Вибрано %{count}
+      titles:
+        local_time: Ваш місцевий час (натисніть, щоб побачити UTC)
+        utc_time: Час UTC (натисніть, щоб побачити місцевий)
+        exact_time: Натисніть, щоб побачити точний час
+        relative_time: Натисніть, щоб побачити відносний час
+    ui_js:
+      toast:
+        loading: Завантаження...
+        copied: Скопійовано!
+        copied_to_clipboard: Скопійовано в буфер обміну!
+        failed: Не вдалося
+        copy_failed: Не вдалося скопіювати в буфер обміну
+        downloaded: Завантажено!
+      ai_help:
+        question_required: Спершу введіть питання.
+        streaming: Потокова передача...
+        streaming_unsupported: Цей браузер не підтримує потокову передачу.
+        request_failed: Запит не виконано.
+      sections:
+        error: Помилка
+        request: Запит
+        deprecations: Deprecations
+        n_plus_one: N+1
+        cache: Cache
+        breadcrumbs: Breadcrumbs
+        similar: Схожі
+        co_occurring: Супутні
+        timeline: Хронологія
+        issue: Задача
+        discussion: Обговорення
+        cascades: Каскади
+        patterns: Шаблони
+      charts:
+        axis_date: Дата
+        axis_hour: Година
+        axis_error_type: Тип помилки
+        axis_count: Кількість
+        axis_number_of_errors: Кількість помилок
+        axis_hours: Години
+        series_total_errors: Усього помилок
+        series_hours_to_resolve: Годин до вирішення

@@ -51,7 +51,16 @@ CLDR_CATEGORIES = {
   # Slavic four-category shape. `other` here is not a catch-all: CLDR reserves
   # it for fractional counts, so a Russian plural group needs all four forms
   # even though RED only ever counts whole errors.
-  "ru" => %w[one few many other]
+  #
+  # uk and pl share ru's CATEGORY LIST but not its RULE — pl assigns `one` to
+  # exactly 1, where ru/uk also give it to 21 and 101. This table governs which
+  # forms a FILE must contain; PrivateBackend::PLURAL_RULES decides which one is
+  # SELECTED, and the two must be kept in step per locale.
+  "ru" => %w[one few many other],
+  "uk" => %w[one few many other],
+  "pl" => %w[one few many other],
+  # Romance three-category shape, identical to fr/es/pt-BR.
+  "it" => %w[one many other]
 }.freeze
 
 ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze

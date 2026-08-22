@@ -131,7 +131,44 @@ module RailsErrorDashboard
         return :few if (2..4).cover?(mod10) && !(12..14).cover?(mod100)
 
         :many
-      }
+      },
+      # Ukrainian takes the SAME integer rule as Russian. That is a fact about
+      # CLDR, not an assumption worth reusing by reference: keeping the lambda
+      # written out means correcting one language never silently moves the
+      # other, and the boundary specs pin both independently.
+      "uk" => lambda { |count|
+        return :other unless count.is_a?(Integer)
+
+        i = count.abs
+        mod10 = i % 10
+        mod100 = i % 100
+
+        return :one if mod10 == 1 && mod100 != 11
+        return :few if (2..4).cover?(mod10) && !(12..14).cover?(mod100)
+
+        :many
+      },
+      # Polish is four-category like ru/uk and DIFFERS from both, which is the
+      # trap this table exists to prevent. Polish `one` is exactly 1 — 21 and
+      # 101 take `many` ("21 bledow"), where ru/uk take `one` ("21 помилка").
+      # Copying the Russian lambda here renders every count ending in 1 above 1
+      # in the wrong form, and no structural check would catch it.
+      "pl" => lambda { |count|
+        return :other unless count.is_a?(Integer)
+
+        i = count.abs
+        mod10 = i % 10
+        mod100 = i % 100
+
+        return :one if i == 1
+        return :few if (2..4).cover?(mod10) && !(12..14).cover?(mod100)
+
+        :many
+      },
+      # Italian matches the other Romance locales: `many` is CLDR's large-round
+      # -number category, so the practical split for counts of errors is
+      # one/other, and :many is asked for only when the entry supplies it.
+      "it" => ->(count) { count == 1 ? :one : :other }
     }.freeze
     private_constant :PLURAL_RULES
 

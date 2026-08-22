@@ -44,7 +44,14 @@ CLDR_CATEGORIES = {
   "ja" => %w[other],
   "zh-CN" => %w[other],
   # See the same note in bin/i18n-check: four forms, `other` for fractions.
-  "ru" => %w[one few many other]
+  # uk and pl share this category list but NOT ru's selection rule (pl gives
+  # `one` to exactly 1, ru/uk also to 21 and 101). This table only governs which
+  # forms a batch may supply; the rule lives in PrivateBackend::PLURAL_RULES.
+  "ru" => %w[one few many other],
+  "uk" => %w[one few many other],
+  "pl" => %w[one few many other],
+  # Romance three-category shape, identical to fr/es/pt-BR.
+  "it" => %w[one many other]
 }.freeze
 
 ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
