@@ -17,11 +17,25 @@ If you're using an older version and discover a security issue, please upgrade t
 
 ### How to Report
 
-We use GitHub's built-in Security Advisories for private vulnerability reporting:
+**Either of these works. Both are private — pick whichever is easier for you.**
 
-1. Go to the [Security tab](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/new)
-2. Click "Report a vulnerability"
-3. Fill out the form with as much detail as possible
+**1. GitHub private vulnerability reporting (preferred)**
+
+1. Go to [Report a vulnerability](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/new)
+2. Fill out the form with as much detail as possible
+
+The report is visible only to you and the maintainer. It also gives us a place
+to work through the fix together and to publish an advisory crediting you.
+
+**2. Email — [security@anjan.dev](mailto:security@anjan.dev)**
+
+If you would rather not use GitHub, or the link above is not working for you
+for any reason, email us directly. A plain description is fine; do not let
+formatting slow you down.
+
+**If one channel does not work, use the other rather than filing a public
+issue.** If neither works, that is a bug in this policy — say so in an email
+and we will fix it.
 
 ### What to Include in Your Report
 
