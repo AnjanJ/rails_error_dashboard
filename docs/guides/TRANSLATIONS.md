@@ -282,22 +282,124 @@ What this does and does not mean:
 | Locale | Status |
 |---|---|
 | `en` | Source language |
-| `de` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `es` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `fr` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `pt-BR` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `ja` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `ru` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `uk` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `pl` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `it` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
-| `zh-CN` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
+| `de` | **Shipped — machine-translated, unreviewed.** [Review wanted →][de-issue] |
+| `es` | **Shipped — machine-translated, unreviewed.** [Review wanted →][es-issue] |
+| `fr` | **Shipped — machine-translated, unreviewed.** [Review wanted →][fr-issue] |
+| `pt-BR` | **Shipped — machine-translated, unreviewed.** [Review wanted →][pt-BR-issue] |
+| `ja` | **Shipped — machine-translated, unreviewed.** [Review wanted →][ja-issue] |
+| `ru` | **Shipped — machine-translated, unreviewed.** [Review wanted →][ru-issue] |
+| `uk` | **Shipped — machine-translated, unreviewed.** [Review wanted →][uk-issue] |
+| `pl` | **Shipped — machine-translated, unreviewed.** [Review wanted →][pl-issue] |
+| `it` | **Shipped — machine-translated, unreviewed.** [Review wanted →][it-issue] |
+| `zh-CN` | **Shipped — machine-translated, unreviewed.** [Review wanted →][zh-CN-issue] |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
 string reads wrong to you, change that string — you are not expected to review
 the whole file. Run `bin/i18n-check` before opening the PR and it will catch
 the structural mistakes for you. As locales get real attention, this table is
 updated and the "unreviewed" qualifier drops from the README.
+
+Each language has an open issue tracking its review — that is where to comment
+if you can read it, and they are labelled `good first issue` because they are.
+See [Contributing a translation fix](#contributing-a-translation-fix).
+
+[de-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/156
+[es-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/157
+[fr-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/158
+[pt-BR-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/159
+[ja-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/160
+[ru-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/161
+[uk-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/162
+[pl-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/163
+[it-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/164
+[zh-CN-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/165
+
+## Contributing a translation fix
+
+**You do not need to know Ruby, and you do not need to fix more than one
+string.** The most useful contribution to this project's translations is
+someone who reads the language noticing that one word is wrong.
+
+There are two ways in, and the first one is genuinely fine:
+
+### 1. Just tell us
+
+Open a [translation correction issue][new-issue]. It asks for the language,
+what it currently says, and what is wrong with it. That is enough — you do not
+have to find the key or open a PR.
+
+### 2. Fix it yourself
+
+Every string lives in one YAML file per language under `config/locales/`. To
+change what the German dashboard says, edit `config/locales/de.yml` — that is
+the whole mechanism.
+
+```bash
+git clone https://github.com/AnjanJ/rails_error_dashboard.git
+cd rails_error_dashboard
+bin/setup
+```
+
+Find the string. If you can see the English, search for it:
+
+```bash
+grep -rn "Unresolved" config/locales/en.yml
+#   red: errors: index: filters: status: unresolved: "Unresolved"
+```
+
+That dotted path — `red.errors.index.filters.status.unresolved` — is the key.
+The same key exists in every locale file, so open `config/locales/de.yml`,
+find it, and change the value. **Change only the value, never the key**: the
+key is what the code looks up, and renaming it removes the string from every
+other language.
+
+Then run the checker:
+
+```bash
+bin/i18n-check
+```
+
+It takes under a second and catches the structural mistakes that are hard to
+see by eye — a broken interpolation variable, a plural category your language
+does not allow, malformed YAML. If it exits 0, open the PR.
+
+**A one-key PR is a perfectly good PR.** No wider change is expected of you,
+and you do not need to review the rest of the file.
+
+### What makes a good correction
+
+The mechanical properties are already verified by `bin/i18n-check`, so what we
+cannot check ourselves — and what we are actually asking you for — is judgement:
+
+- **Meaning.** Does it say what the English says?
+- **Register.** RED is formal in every language (see [Form of address](#form-of-address)).
+- **Idiom.** Would a developer in your language actually say this? Ops tooling
+  has its own vocabulary, and a technically correct translation can still read
+  as though nobody in the field wrote it.
+- **Terms of art.** Many English words are simply used untranslated by
+  developers in other languages. `frame`, `thread` and `query` stay English in
+  Italian for exactly that reason — if the loanword is what people say, keep it.
+
+Things that are **not** bugs, so you can skip them:
+
+- A value identical to the English. Roughly a hundred per locale legitimately
+  are — brand names, Ruby and Rails identifiers, format strings and cognates.
+- Anything on the [do not translate](#do-not-translate) list.
+- `bin/i18n-check` glossary warnings on a non-Latin locale. The check matches
+  ASCII substrings and cannot see Cyrillic, Chinese or Japanese renderings, so
+  those warnings are false positives by construction.
+
+### Adding a language RED does not ship yet
+
+That is a bigger job — around 1,515 keys — and worth
+[opening an issue][new-issue] first so we can tell you what the plural rules
+for your language will require. See [Adding a locale](#adding-a-locale) for the
+mechanics. Two things need adding in Ruby beyond the YAML file: an entry in
+`CLDR_CATEGORIES` (in both `bin/i18n-check` and `bin/i18n-merge`) and a
+pluralization rule in `PLURAL_RULES` in `lib/rails_error_dashboard/private_backend.rb`.
+Ask and we will do that part.
+
+[new-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml
 
 ## Testing a locale
 

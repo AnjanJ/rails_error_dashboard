@@ -10,6 +10,7 @@ Following these guidelines helps communicate that you respect the time of the de
 - [How Can I Contribute?](#how-can-i-contribute)
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Features](#suggesting-features)
+  - [Improving a Translation](#improving-a-translation)
   - [Pull Requests](#pull-requests)
 - [Development Setup](#development-setup)
 - [Testing](#testing)
@@ -55,6 +56,31 @@ When suggesting a feature, please use our [feature request template](.github/ISS
 - **Use case** - Real-world example of when this would be useful
 
 **Tip:** Opening an issue to discuss the feature BEFORE starting work saves time and ensures alignment with the project's direction.
+
+### Improving a Translation
+
+**This is the easiest way to help, and the one we most need.**
+
+RED's dashboard ships in eleven languages. Every one except English is
+machine-translated and **has not been reviewed by a native speaker** — the
+maintainer reads only English. Structure and plural rules are verified
+mechanically; wording, register and idiom are verified by nobody.
+
+If you read any of German, Spanish, French, Brazilian Portuguese, Japanese,
+Russian, Ukrainian, Polish, Italian or Simplified Chinese, you can fix that:
+
+- **Just report it** — [open a translation correction issue](.github/ISSUE_TEMPLATE/translation_report.yml).
+  No Ruby, no PR, no need to find the key.
+- **Or fix it yourself** — every string is one value in one YAML file under
+  `config/locales/`. Change the value, run `bin/i18n-check`, open the PR.
+- **Or take a whole language** — [each locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review)
+  tracking its review, labelled `good first issue`.
+
+**A one-key PR is a perfectly good PR.** You are not expected to review a whole
+file, and correcting a single wrong word is a real contribution.
+
+Full details, including what is deliberately left in English and why:
+[docs/guides/TRANSLATIONS.md](docs/guides/TRANSLATIONS.md#contributing-a-translation-fix)
 
 ### Pull Requests
 

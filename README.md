@@ -628,7 +628,9 @@ Users can also switch language per-session from the picker in the dashboard navb
 
 **Everything but English is machine-translated and has not been reviewed by a native speaker.** That is stated plainly rather than as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
 
-**Corrections are very welcome, and a one-key PR is a perfectly good PR.** RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
+**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
+
+RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
 
 [Translations guide →](docs/guides/TRANSLATIONS.md) — how the system works, how to correct a string, and how to add a locale.
 
