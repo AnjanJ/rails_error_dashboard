@@ -30,7 +30,14 @@
   end
 %>
 <div data-controller="loading">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
+  <%# flex-wrap is load-bearing, not cosmetic: this row pairs the page title
+      with a fully-formatted timestamp, and every locale but English spells the
+      month out in full ("22 августа 2026, 14:05:03" against "August 22, 2026").
+      Without wrapping, the row is forced onto one line and overflows a 375px
+      viewport in de/fr/ru while fitting in English — measured at 406-469px in
+      spec/system/p7_layout_qa_spec.rb. Wrapping lets the timestamp drop below
+      the title instead of pushing the page wider. %>
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4);">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;"><%= red_t("red.errors.index.title") %></h1>
     <span style="font-size: 12px; color: var(--text-tertiary);">
       <%= red_t("red.errors.index.last_updated_html", time: local_time(Time.current, format: :full)) %>
@@ -122,7 +129,12 @@
       <div style="width: 1px; height: 24px; background: var(--border-primary);"></div>
 
       <!-- Severity pills -->
-      <div style="display: flex; gap: 4px;">
+      <%# flex-wrap matches the status-chip row above it. Five severity chips
+          fit one line in English ("Any Critical High Medium Low") but not in a
+          locale that expands: Russian renders "Любая важность Критическая
+          Высокая Средняя Низкая" and pushed this row to 426px inside a 375px
+          viewport. Pinned by spec/system/p7_layout_qa_spec.rb. %>
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
         <% current_severity = params[:severity] %>
         <%= link_to errors_path(permitted_filter_params.except(:severity)), class: "filter-pill #{current_severity.blank? ? 'active' : ''}", style: "text-decoration: none;" do %><%= red_t("red.errors.index.filters.severity.any") %><% end %>
         <% %w[critical high medium low].each do |sev| %>

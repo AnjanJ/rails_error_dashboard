@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "rails_helper"
 
 # P7-T1 REQ-5 / REQ-6: RED must render under a host whose I18n is configured
