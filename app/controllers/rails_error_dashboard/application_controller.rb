@@ -1,5 +1,17 @@
 module RailsErrorDashboard
   class ApplicationController < ActionController::Base
+    # Authenticate EVERY dashboard controller, not just the ones that remember
+    # to ask. This filter used to live on ErrorsController, which meant a new
+    # controller inherited no protection at all — LocalesController (the P5-T1
+    # language picker) shipped unauthenticated for exactly that reason, and an
+    # unauthenticated POST reached controller code and 500'd instead of being
+    # refused with a 401.
+    #
+    # Declaring it here inverts the default: a controller is protected unless
+    # it explicitly opts out with skip_before_action, which is a visible,
+    # reviewable act rather than an omission nobody notices.
+    before_action :authenticate_dashboard_user!
+
     include Pagy::Method
 
     # Enable features that are disabled in API-only mode
@@ -186,6 +198,46 @@ module RailsErrorDashboard
       # those callbacks, so reuse their result instead of querying a second time.
       # Tracked by a flag rather than the value, since the common case is nil.
       @storm_banner_event = Queries::StormHistory.banner_event unless @storm_banner_loaded
+    end
+
+    def authenticate_dashboard_user!
+      auth_lambda = RailsErrorDashboard.configuration.authenticate_with
+
+      if auth_lambda
+        authenticate_with_lambda(auth_lambda)
+      else
+        authenticate_with_basic_auth
+      end
+    end
+
+    def authenticate_with_lambda(auth_lambda)
+      authorized = begin
+        instance_exec(&auth_lambda)
+      rescue => e
+        Rails.logger.error(
+          "[RailsErrorDashboard] authenticate_with lambda raised #{e.class}: #{e.message}"
+        )
+        false
+      end
+
+      return if performed?
+
+      unless authorized
+        render plain: "Access Denied", status: :forbidden
+      end
+    end
+
+    def authenticate_with_basic_auth
+      authenticate_or_request_with_http_basic do |username, password|
+        ActiveSupport::SecurityUtils.secure_compare(
+          username,
+          RailsErrorDashboard.configuration.dashboard_username
+        ) &
+        ActiveSupport::SecurityUtils.secure_compare(
+          password,
+          RailsErrorDashboard.configuration.dashboard_password
+        )
+      end
     end
   end
 end
