@@ -5,8 +5,8 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **Ten locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
-> `ru`, `uk`, `pl` and `it`.**
+> translatable. **Eleven locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
+> `ru`, `uk`, `pl`, `it` and `zh-CN`.**
 > Everything but English is machine-translated and unreviewed — see
 > [Review status](#review-status).
 
@@ -221,6 +221,9 @@ re-flagged on every future locale.
 | `pl` | `storm` | sztorm | The ordinary Polish rendering; RED's sense carries over. |
 | `pl` | `swallowed exception` | wyciszony wyjątek | What Polish Rails developers say for an exception rescued and dropped. |
 | `pl` | `deprecation` | przestarzały kod | Polish has a settled term; the English adds nothing a Polish reader needs. |
+| `zh-CN` | `storm` | 风暴 | The ordinary Chinese rendering; RED's sense carries over. |
+| `zh-CN` | `swallowed exception` | 被吞异常 | What Chinese Rails developers say for an exception rescued and dropped. |
+| `zh-CN` | `deprecation` | 废弃警告 | The settled Chinese term for the Rails concept. |
 
 These raise `bin/i18n-check` warnings and always will: the check matches ASCII
 substrings, so it cannot see a term rendered in kana or kanji. **A glossary
@@ -247,6 +250,7 @@ operating a production system, often at work:
 | `uk` | **ви** (lowercase, formal) |
 | `pl` | **Ty** (capitalised, the Polish formal-written convention) |
 | `it` | **tu** (the Italian convention for developer tools; *Lei* reads commercial) |
+| `zh-CN` | **你** (plain form; 您 reads commercial in developer tooling) |
 
 Japanese has no pronoun to choose here — the register lives in the verb endings,
 so the rule is です・ます体 throughout rather than plain form (だ・である体).
@@ -262,8 +266,8 @@ instead of guessing.
 ## Review status
 
 **German, Spanish, French, Brazilian Portuguese, Japanese, Russian, Ukrainian,
-Polish and Italian ship alongside English. All nine are machine-translated and
-have not been reviewed by a native speaker.**
+Polish, Italian and Simplified Chinese ship alongside English. All ten are
+machine-translated and have not been reviewed by a native speaker.**
 RED's maintainer reads only English, so this is stated plainly rather than
 described as "beta", which would imply a review process that has not happened.
 
@@ -287,6 +291,7 @@ What this does and does not mean:
 | `uk` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `pl` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `it` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
+| `zh-CN` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
 string reads wrong to you, change that string — you are not expected to review
