@@ -445,7 +445,7 @@ module RailsErrorDashboard
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
-      @dashboard_locale = "en"  # en, de, fr, es, pt-BR, ja, ru (non-English machine-translated)
+      @dashboard_locale = "en"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it, zh-CN (non-English machine-translated)
 
       # LLM-powered AI help defaults - OFF until provider and API key are configured
       @llm_provider = ENV["RED_LLM_PROVIDER"]&.to_sym
