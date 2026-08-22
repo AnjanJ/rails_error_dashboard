@@ -20,10 +20,18 @@
           </div>
 
           <% if repo_link %>
+            <%
+              # Repository host names are brands and stay English; only the
+              # sentence around the name is translated.
+              repo_host = if repo_link.include?("github") then "GitHub"
+              elsif repo_link.include?("gitlab") then "GitLab"
+              else "Bitbucket"
+              end
+            %>
             <%= link_to repo_link, target: "_blank", rel: "noopener",
                 class: "btn btn-sm btn-primary",
-                title: "View on #{repo_link.include?('github') ? 'GitHub' : repo_link.include?('gitlab') ? 'GitLab' : 'Bitbucket'}" do %>
-              <i class="bi bi-box-arrow-up-right"></i> View Source
+                title: red_t("red.errors.source_code.view_on", host: repo_host) do %>
+              <i class="bi bi-box-arrow-up-right"></i> <%= red_t("red.errors.source_code.view_source") %>
             <% end %>
           <% end %>
         </div>
@@ -38,7 +46,9 @@
               </div>
               <div class="d-flex align-items-center gap-1">
                 <i class="bi bi-clock"></i>
-                <span><%= time_ago_in_words(blame_data[:date]) %> ago</span>
+                <%# One key, not a duration concatenated with " ago": several
+                    languages put the equivalent of "ago" before the duration. %>
+                <span><%= red_t("red.time.ago", duration: time_ago_in_words(blame_data[:date])) %></span>
               </div>
               <% if blame_data[:commit_message] %>
                 <div class="d-flex align-items-center gap-1 flex-grow-1">
@@ -66,7 +76,12 @@
         <% if coverage_data %>
           <div class="px-3 py-1 bg-info bg-opacity-10 border-bottom">
             <small class="text-info">
-              <i class="bi bi-broadcast"></i> Coverage active — <span class="text-success">green</span> = executed, <span class="text-secondary">gray</span> = not executed
+              <%# One sentence with the colours interpolated, not a sentence cut
+                  into pieces by two <span>s — the clause order is not the same
+                  in every language. %>
+              <i class="bi bi-broadcast"></i> <%= red_t("red.errors.source_code.coverage_legend_html",
+                    executed: tag.span(red_t("red.errors.source_code.coverage_green"), class: "text-success"),
+                    not_executed: tag.span(red_t("red.errors.source_code.coverage_gray"), class: "text-secondary")) %>
             </small>
           </div>
         <% end %>
@@ -83,7 +98,7 @@
     <!-- Error message if source couldn't be read -->
     <div class="alert alert-warning mt-2 mb-2 py-2">
       <i class="bi bi-exclamation-triangle"></i>
-      <small>Could not read source: <%= source_data[:error] %></small>
+      <small><%= red_t("red.errors.source_code.read_failed", message: source_data[:error]) %></small>
     </div>
   <% end %>
 <% end %>

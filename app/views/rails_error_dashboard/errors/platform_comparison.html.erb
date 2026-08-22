@@ -1,21 +1,21 @@
-<% content_for :page_title, "Platform Comparison" %>
+<% content_for :page_title, red_t("red.analytics.platform_comparison.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-phone me-2"></i>
-      Platform Health Comparison
+      <%= red_t("red.analytics.platform_comparison.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to platform_comparison_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to platform_comparison_errors_path(days: 14), class: "btn btn-sm #{@days == 14 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        14 Days
+        <%= red_t("red.common.days_filter.14") %>
       <% end %>
       <%= link_to platform_comparison_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
     </div>
   </div>
@@ -23,12 +23,12 @@
   <% if @platform_health.empty? %>
     <div class="red-empty-state">
       <i class="bi bi-phone display-1 text-muted mb-3"></i>
-      <div class="red-empty-state-title">No Platform Data Available</div>
+      <div class="red-empty-state-title"><%= red_t("red.analytics.platform_comparison.empty.title") %></div>
       <p class="text-muted">
-        No errors were logged for the selected time period (<%= @days %> days).
+        <%= red_t("red.analytics.platform_comparison.empty.message", days: @days) %>
       </p>
       <small class="text-muted d-block mt-3">
-        <i class="bi bi-lightbulb"></i> Try selecting a longer time period or check back later.
+        <i class="bi bi-lightbulb"></i> <%= red_t("red.analytics.platform_comparison.empty.hint") %>
       </small>
     </div>
   <% else %>
@@ -39,19 +39,19 @@
           <div class="card h-100 <%= health[:health_status] == :healthy ? 'border-success' : health[:health_status] == :warning ? 'border-warning' : 'border-danger' %>">
             <div class="card-body">
               <h5 class="card-title text-capitalize">
-                <%= platform || 'Unknown' %>
+                <%= platform || red_t("red.common.unknown") %>
                 <% if health[:health_status] == :healthy %>
-                  <span class="badge bg-success float-end">Healthy</span>
+                  <span class="badge bg-success float-end"><%= red_t("red.analytics.platform_comparison.health_card.healthy") %></span>
                 <% elsif health[:health_status] == :warning %>
-                  <span class="badge bg-warning float-end">Warning</span>
+                  <span class="badge bg-warning float-end"><%= red_t("red.analytics.platform_comparison.health_card.warning") %></span>
                 <% else %>
-                  <span class="badge bg-danger float-end">Critical</span>
+                  <span class="badge bg-danger float-end"><%= red_t("red.analytics.platform_comparison.health_card.critical") %></span>
                 <% end %>
               </h5>
 
               <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                  <small class="text-muted">Stability Score</small>
+                  <small class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.stability_score") %></small>
                   <strong><%= health[:stability_score] %>/100</strong>
                 </div>
                 <div class="progress" style="height: 8px;">
@@ -64,23 +64,23 @@
 
               <div class="small">
                 <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Total Errors:</span>
+                  <span class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.total_errors") %></span>
                   <strong><%= health[:total_errors] %></strong>
                 </div>
                 <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Critical:</span>
+                  <span class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.critical_errors") %></span>
                   <strong class="text-danger"><%= health[:critical_errors] %></strong>
                 </div>
                 <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Unresolved:</span>
+                  <span class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.unresolved") %></span>
                   <strong><%= health[:unresolved_errors] %></strong>
                 </div>
                 <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Resolution Rate:</span>
+                  <span class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.resolution_rate") %></span>
                   <strong><%= health[:resolution_rate] %>%</strong>
                 </div>
                 <div class="d-flex justify-content-between">
-                  <span class="text-muted">Error Velocity:</span>
+                  <span class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.error_velocity") %></span>
                   <strong class="<%= health[:error_velocity] > 0 ? 'text-danger' : 'text-success' %>">
                     <%= health[:error_velocity] > 0 ? '+' : '' %><%= health[:error_velocity] %>%
                   </strong>
@@ -88,7 +88,7 @@
               </div>
             </div>
             <div class="card-footer border-top">
-              <%= link_to "View #{platform} Errors", errors_path(platform: platform, unresolved: '0'), class: "btn btn-sm btn-outline-primary w-100" %>
+              <%= link_to red_t("red.analytics.platform_comparison.health_card.view_errors", platform: platform), errors_path(platform: platform, unresolved: '0'), class: "btn btn-sm btn-outline-primary w-100" %>
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-bar-chart me-2"></i>
-          Error Rate by Platform
+          <%= red_t("red.analytics.platform_comparison.error_rate_chart.title") %>
         </h5>
       </div>
       <div class="card-body">
@@ -113,7 +113,7 @@
       <div class="card-header">
         <h5 class="mb-0">
           <i class="bi bi-graph-up me-2"></i>
-          Daily Error Trends
+          <%= red_t("red.analytics.platform_comparison.daily_trend_chart.title") %>
         </h5>
       </div>
       <div class="card-body">
@@ -128,13 +128,13 @@
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-exclamation-triangle me-2"></i>
-              Severity Distribution
+              <%= red_t("red.analytics.platform_comparison.severity_distribution.title") %>
             </h5>
           </div>
           <div class="card-body">
             <% @severity_distribution.each do |platform, severities| %>
               <div class="mb-3">
-                <h6 class="text-capitalize"><%= platform || 'Unknown' %></h6>
+                <h6 class="text-capitalize"><%= platform || red_t("red.common.unknown") %></h6>
                 <% total = severities.values.sum %>
                 <% if total > 0 %>
                   <div class="progress" style="height: 25px;">
@@ -142,7 +142,7 @@
                       <div class="progress-bar bg-danger"
                            role="progressbar"
                            style="width: <%= (severities[:critical].to_f / total * 100).round(1) %>%"
-                           title="Critical: <%= severities[:critical] %>">
+                           title="<%= red_t('red.analytics.platform_comparison.severity_distribution.severity_count', label: red_t('red.common.severity.critical'), count: severities[:critical]) %>">
                         <%= severities[:critical] if (severities[:critical].to_f / total) > 0.1 %>
                       </div>
                     <% end %>
@@ -150,7 +150,7 @@
                       <div class="progress-bar bg-warning"
                            role="progressbar"
                            style="width: <%= (severities[:high].to_f / total * 100).round(1) %>%"
-                           title="High: <%= severities[:high] %>">
+                           title="<%= red_t('red.analytics.platform_comparison.severity_distribution.severity_count', label: red_t('red.common.severity.high'), count: severities[:high]) %>">
                         <%= severities[:high] if (severities[:high].to_f / total) > 0.1 %>
                       </div>
                     <% end %>
@@ -158,7 +158,7 @@
                       <div class="progress-bar bg-info"
                            role="progressbar"
                            style="width: <%= (severities[:medium].to_f / total * 100).round(1) %>%"
-                           title="Medium: <%= severities[:medium] %>">
+                           title="<%= red_t('red.analytics.platform_comparison.severity_distribution.severity_count', label: red_t('red.common.severity.medium'), count: severities[:medium]) %>">
                         <%= severities[:medium] if (severities[:medium].to_f / total) > 0.1 %>
                       </div>
                     <% end %>
@@ -166,19 +166,20 @@
                       <div class="progress-bar bg-secondary"
                            role="progressbar"
                            style="width: <%= (severities[:low].to_f / total * 100).round(1) %>%"
-                           title="Low: <%= severities[:low] %>">
+                           title="<%= red_t('red.analytics.platform_comparison.severity_distribution.severity_count', label: red_t('red.common.severity.low'), count: severities[:low]) %>">
                         <%= severities[:low] if (severities[:low].to_f / total) > 0.1 %>
                       </div>
                     <% end %>
                   </div>
                   <div class="small text-muted mt-1">
-                    Critical: <%= severities[:critical] || 0 %> |
-                    High: <%= severities[:high] || 0 %> |
-                    Medium: <%= severities[:medium] || 0 %> |
-                    Low: <%= severities[:low] || 0 %>
+                    <%= red_t("red.analytics.platform_comparison.severity_distribution.breakdown_html",
+                               critical: red_t("red.analytics.platform_comparison.severity_distribution.severity_count", label: red_t("red.common.severity.critical"), count: severities[:critical] || 0),
+                               high: red_t("red.analytics.platform_comparison.severity_distribution.severity_count", label: red_t("red.common.severity.high"), count: severities[:high] || 0),
+                               medium: red_t("red.analytics.platform_comparison.severity_distribution.severity_count", label: red_t("red.common.severity.medium"), count: severities[:medium] || 0),
+                               low: red_t("red.analytics.platform_comparison.severity_distribution.severity_count", label: red_t("red.common.severity.low"), count: severities[:low] || 0)) %>
                   </div>
                 <% else %>
-                  <p class="text-muted small mb-0">No errors</p>
+                  <p class="text-muted small mb-0"><%= red_t("red.analytics.platform_comparison.severity_distribution.empty") %></p>
                 <% end %>
               </div>
             <% end %>
@@ -192,7 +193,7 @@
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-clock-history me-2"></i>
-              Average Resolution Time
+              <%= red_t("red.analytics.platform_comparison.resolution_time_chart.title") %>
             </h5>
           </div>
           <div class="card-body">
@@ -208,7 +209,7 @@
         <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-layers me-2"></i>
-            Cross-Platform Errors
+            <%= red_t("red.analytics.platform_comparison.cross_platform.title") %>
             <span class="badge bg-secondary ms-2"><%= @cross_platform_errors.count %></span>
           </h5>
         </div>
@@ -217,10 +218,10 @@
             <table class="table table-hover">
               <thead>
                 <tr>
-                  <th>Error Type</th>
-                  <th>Platforms</th>
-                  <th>Total Occurrences</th>
-                  <th>Breakdown</th>
+                  <th><%= red_t("red.analytics.platform_comparison.cross_platform.column_error_type") %></th>
+                  <th><%= red_t("red.analytics.platform_comparison.cross_platform.column_platforms") %></th>
+                  <th><%= red_t("red.analytics.platform_comparison.cross_platform.column_total_occurrences") %></th>
+                  <th><%= red_t("red.analytics.platform_comparison.cross_platform.column_breakdown") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -259,9 +260,9 @@
         <div class="col-lg-6 mb-4">
           <div class="card h-100">
             <div class="card-header">
-              <h5 class="mb-0 text-capitalize">
+              <h5 class="mb-0">
                 <i class="bi bi-bug me-2"></i>
-                Top Errors - <%= platform || 'Unknown' %>
+                <%= red_t("red.analytics.platform_comparison.top_errors.title", platform: platform || red_t("red.common.unknown")) %>
               </h5>
             </div>
             <div class="card-body">
@@ -282,7 +283,7 @@
                   <% end %>
                 </div>
               <% else %>
-                <p class="text-muted mb-0">No errors found</p>
+                <p class="text-muted mb-0"><%= red_t("red.analytics.platform_comparison.top_errors.empty") %></p>
               <% end %>
             </div>
           </div>
@@ -314,7 +315,7 @@
       data: {
         labels: <%= raw @error_rate_by_platform.keys.map { |k| k.to_s.capitalize }.to_json %>,
         datasets: [{
-          label: 'Total Errors',
+          label: '<%= red_js_t("red.ui_js.charts.series_total_errors") %>',
           data: <%= raw @error_rate_by_platform.values.to_json %>,
           backgroundColor: 'rgba(37, 99, 235, 0.5)', // Blue with transparency
           borderColor: '#2563EB', // Blue
@@ -384,7 +385,7 @@
       data: {
         labels: platforms,
         datasets: [{
-          label: 'Hours to Resolve',
+          label: '<%= red_js_t("red.ui_js.charts.series_hours_to_resolve") %>',
           data: times,
           backgroundColor: 'rgba(245, 158, 11, 0.5)', // Amber with transparency
           borderColor: '#F59E0B', // Amber
@@ -399,7 +400,7 @@
           legend: { display: false }
         },
         scales: {
-          x: { beginAtZero: true, title: { display: true, text: 'Hours' } }
+          x: { beginAtZero: true, title: { display: true, text: '<%= red_js_t("red.ui_js.charts.axis_hours") %>' } }
         }
       }
     });

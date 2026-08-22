@@ -9,6 +9,81 @@ module RailsErrorDashboard
     module NotificationHelpers
       module_function
 
+      # Translate for a notification payload.
+      #
+      # Positional locale rather than the ambient one: a payload is built
+      # inside a job, where Current.locale is nil at best and an unrelated
+      # request's value at worst (P4-T1). Every builder threads the locale it
+      # was handed.
+      #
+      # No escaping — these values go into JSON, not HTML.
+      #
+      # @return [String] never nil, never raises
+      def t(key, locale, **options)
+        I18nStore.translate(key, locale: locale, **options)
+      end
+
+      # A "*Label:*\nvalue" Slack mrkdwn field.
+      #
+      # The bold-label-newline-value shape is Slack markup, not language, so it
+      # stays here rather than being baked into each translation — a translator
+      # editing "*%{label}:*" could break the formatting for every field at
+      # once. Only the label itself is translated.
+      #
+      # @param label [Symbol] a key under red.notifications.error_alert.labels
+      def field(label, value, locale)
+        "*#{t("red.notifications.error_alert.labels.#{label}", locale)}:*\n#{value}"
+      end
+
+      # One label from red.notifications.error_alert.labels.
+      #
+      # Discord wants a bare field name, Slack wants it wrapped in its mrkdwn
+      # bold-and-newline shape — hence this and #field rather than one method.
+      #
+      # @param label [Symbol]
+      def label(label, locale)
+        t("red.notifications.error_alert.labels.#{label}", locale)
+      end
+
+      # @return [String] the localized "Unknown" placeholder
+      def unknown(locale)
+        t("red.notifications.shared.unknown", locale)
+      end
+
+      # @return [String] the localized "N/A" placeholder
+      def not_available(locale)
+        t("red.notifications.shared.not_available", locale)
+      end
+
+      # A human-readable timestamp for a notification body.
+      #
+      # Uses the locale's date format and month names rather than strftime's,
+      # which are always English (see MailerI18nHelper for the same problem).
+      # Falls back to the machine format if anything goes wrong — a wrong-looking
+      # timestamp is better than a lost notification.
+      #
+      # @return [String] "" for nil
+      def format_datetime(time, locale)
+        return "" if time.nil?
+
+        utc = time.respond_to?(:utc) ? time.utc : time
+        pattern = I18nStore.translate("red.time.formats.full", locale: locale)
+        # A miss returns humanized key text, which would be a nonsense strftime
+        # pattern. Detect it the same way red_time_format does.
+        pattern = I18nStore.translate("red.time.formats.full", locale: I18nStore::DEFAULT_LOCALE) unless pattern.include?("%")
+
+        LocalizedTimeFormatter.call(utc, pattern: pattern, locale: locale)
+      rescue StandardError
+        format_time(time)
+      end
+
+      # A localized timestamp, or the localized "N/A" for nil.
+      def format_datetime_or_na(time, locale)
+        return not_available(locale) if time.nil?
+
+        format_datetime(time, locale)
+      end
+
       # Generate dashboard URL for an error
       # @param error_log [ErrorLog] The error
       # @return [String] Full URL to the error detail page
@@ -46,16 +121,24 @@ module RailsErrorDashboard
       end
 
       # Extract first backtrace line (truncated)
+      #
+      # The line itself is diagnostic output and is never translated — only the
+      # "N/A" shown in its absence is, and only when a locale is supplied.
+      # Callers that pass no locale keep the literal, so existing non-i18n
+      # callers are unaffected.
+      #
       # @param backtrace [String, Array, nil] Raw backtrace
       # @param length [Integer] Maximum length (default 100)
-      # @return [String] First line or "N/A"
-      def extract_first_backtrace_line(backtrace, length = 100)
-        return "N/A" if backtrace.nil?
+      # @param locale [String, nil] locale for the placeholder
+      # @return [String] First line, or the "N/A" placeholder
+      def extract_first_backtrace_line(backtrace, length = 100, locale: nil)
+        placeholder = locale ? not_available(locale) : "N/A"
+        return placeholder if backtrace.nil?
 
         lines = backtrace.is_a?(String) ? backtrace.lines : backtrace
         first_line = lines.first&.strip
 
-        return "N/A" if first_line.nil?
+        return placeholder if first_line.nil?
         first_line.length > length ? "#{first_line[0...length]}..." : first_line
       end
 

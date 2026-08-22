@@ -602,6 +602,40 @@ end
 
 ---
 
+## Languages
+
+The dashboard, its emails and its notification payloads are translated. Eleven locales ship:
+
+| Locale | Language | Status |
+|---|---|---|
+| `en` | English | Source language |
+| `de` | Deutsch | Machine-translated, unreviewed |
+| `es` | Español | Machine-translated, unreviewed |
+| `fr` | Français | Machine-translated, unreviewed |
+| `pt-BR` | Português (Brasil) | Machine-translated, unreviewed |
+| `ja` | 日本語 | Machine-translated, unreviewed |
+| `ru` | Русский | Machine-translated, unreviewed |
+| `uk` | Українська | Machine-translated, unreviewed |
+| `pl` | Polski | Machine-translated, unreviewed |
+| `it` | Italiano | Machine-translated, unreviewed |
+| `zh-CN` | 简体中文 | Machine-translated, unreviewed |
+
+```ruby
+config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it, zh-CN — default "en"
+```
+
+Users can also switch language per-session from the picker in the dashboard navbar, which overrides the configured default for them alone.
+
+**Everything but English is machine-translated and has not been reviewed by a native speaker.** That is stated plainly rather than as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
+
+**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
+
+RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
+
+[Translations guide →](docs/guides/TRANSLATIONS.md) — how the system works, how to correct a string, and how to add a locale.
+
+---
+
 ## FAQ
 
 **Does Rails Error Dashboard support a separate database for errors?**
@@ -647,6 +681,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Batch Operations](docs/guides/BATCH_OPERATIONS.md)** — Bulk resolve/delete
 - **[Real-Time Updates](docs/guides/REAL_TIME_UPDATES.md)** — Live dashboard
 - **[Error Trends](docs/guides/ERROR_TREND_VISUALIZATIONS.md)** — Charts and analytics
+- **[Translations](docs/guides/TRANSLATIONS.md)** — Seven shipped locales, correcting a string, adding a language
 
 ### Advanced
 - **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** — Track multiple applications

@@ -5,13 +5,15 @@ module RailsErrorDashboard
   class DiscordErrorNotificationJob < ApplicationJob
     queue_as :default
 
-    def perform(error_log_id)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(error_log_id, locale = nil)
       error_log = ErrorLog.find(error_log_id)
       webhook_url = RailsErrorDashboard.configuration.discord_webhook_url
 
       return unless webhook_url.present?
 
-      payload = Services::DiscordPayloadBuilder.call(error_log)
+      payload = Services::DiscordPayloadBuilder.call(error_log, locale: job_locale(locale))
       post_json(webhook_url, payload)
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Failed to send Discord notification: #{e.message}")

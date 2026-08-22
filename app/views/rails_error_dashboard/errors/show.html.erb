@@ -1,4 +1,4 @@
-<% content_for :page_title, "Error ##{@error.id}" %>
+<% content_for :page_title, red_t("red.errors.show.page_title", id: @error.id) %>
 
 <%= render "show_scripts", error: @error %>
 
@@ -6,7 +6,7 @@
   <!-- Back + breadcrumb -->
   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-4); font-size: 13px; color: var(--text-tertiary);">
     <%= link_to errors_path(app_context), style: "background: none; border: none; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; text-decoration: none; font-size: 13px;" do %>
-      <i class="bi bi-arrow-left"></i> Errors
+      <i class="bi bi-arrow-left"></i> <%= red_t("red.errors.show.breadcrumb_errors") %>
     <% end %>
     <span>/</span>
     <span style="color: var(--text-secondary);"><%= @error.error_type %></span>
@@ -18,74 +18,81 @@
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
         <span class="badge bg-<%= severity_color(@error.severity) %>" style="display: inline-flex; align-items: center; gap: 4px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-          <%= @error.severity %>
+          <%= red_t("red.common.severity.#{@error.severity}", default: @error.severity.to_s) %>
         </span>
         <%
+          # Same treatment as _error_row: status_key stays the machine value and
+          # drives both the colour lookup and the translation key; only the
+          # label is translated. The two views read the same red.errors.row.status.*
+          # keys rather than keeping parallel copies that would drift.
           raw_status = @error.respond_to?(:status) ? @error.status : nil
-          status_text = if @error.respond_to?(:muted?) && @error.muted?
+          status_key = if @error.respond_to?(:muted?) && @error.muted?
             'muted'
           elsif @error.respond_to?(:snoozed?) && @error.snoozed?
             'snoozed'
           elsif raw_status.present? && raw_status != 'new'
-            raw_status.tr('_', ' ')
+            raw_status
           elsif @error.resolved?
             'resolved'
           else
             'unresolved'
           end
+          status_text = red_t("red.errors.row.status.#{status_key}", default: status_key.tr('_', ' '))
           status_colors = {
             'unresolved' => { bg: 'var(--status-critical-bg)', color: 'var(--status-critical)' },
             'resolved' => { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
-            'in progress' => { bg: 'var(--status-info-bg)', color: 'var(--status-info)' },
+            'in_progress' => { bg: 'var(--status-info-bg)', color: 'var(--status-info)' },
             'investigating' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
-            'wont fix' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
+            'wont_fix' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
             'assigned' => { bg: 'var(--accent-subtle)', color: 'var(--accent)' },
             'snoozed' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
             'muted' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
           }
-          sc = status_colors[status_text] || status_colors['unresolved']
+          sc = status_colors[status_key] || status_colors['unresolved']
         %>
         <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: var(--radius-full); background: <%= sc[:bg] %>; color: <%= sc[:color] %>; text-transform: capitalize;">
           <%= status_text %>
         </span>
         <% if @error.reopened? %>
           <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-warning-bg); color: var(--status-warning);">
-            <i class="bi bi-arrow-counterclockwise" style="font-size: 10px;"></i> Reopened
+            <i class="bi bi-arrow-counterclockwise" style="font-size: 10px;"></i> <%= red_t("red.errors.show.hero.reopened") %>
           </span>
         <% end %>
       </div>
       <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); margin: 0 0 4px; word-break: break-word;"><%= @error.error_type %></h2>
       <p style="font-size: 14px; color: var(--text-secondary); margin: 0; font-family: var(--font-mono);"><%= @error.message&.truncate(200) %></p>
       <div style="display: flex; gap: var(--space-6); margin-top: var(--space-4); font-size: 12px; color: var(--text-tertiary); flex-wrap: wrap;">
-        <span><strong style="color: var(--text-primary);"><%= @error.occurrence_count %></strong> occurrences</span>
+        <span><%= red_tp("red.errors.show.hero.occurrences_html", count: @error.occurrence_count,
+              value: tag.strong(@error.occurrence_count, style: "color: var(--text-primary);")) %></span>
         <% if @error.application&.name.present? %>
           <span><i class="bi bi-layers" style="font-size: 10px;"></i> <strong style="color: var(--text-primary);"><%= @error.application.name %></strong></span>
         <% end %>
         <% if @error.user_id %>
-          <span>User <strong style="color: var(--text-primary);">#<%= @error.user_id %></strong></span>
+          <span><%= red_t("red.errors.show.hero.user_html",
+                value: tag.strong("##{@error.user_id}", style: "color: var(--text-primary);")) %></span>
         <% end %>
-        <span>First seen <%= local_time_ago(@error.first_seen_at) %></span>
-        <span>Last seen <%= local_time_ago(@error.last_seen_at) %></span>
+        <span><%= red_t("red.errors.show.hero.first_seen_html", time: local_time_ago(@error.first_seen_at)) %></span>
+        <span><%= red_t("red.errors.show.hero.last_seen_html", time: local_time_ago(@error.last_seen_at)) %></span>
       </div>
     </div>
     <div style="display: flex; gap: 6px; flex-shrink: 0;">
       <% unless @error.resolved? %>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#resolveModal" style="font-weight: 600;">
-          Resolve
+          <%= red_t("red.errors.show.actions.resolve") %>
         </button>
       <% end %>
       <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#assignModal" id="hero-assign-btn">
-        Assign
+        <%= red_t("red.errors.show.actions.assign") %>
       </button>
       <button type="button" class="btn" data-red-action="copy-markdown" data-markdown="<%= j @error_markdown %>">
-        <i class="bi bi-clipboard" style="margin-right: 4px;"></i>Copy for LLM
+        <i class="bi bi-clipboard" style="margin-right: 4px;"></i><%= red_t("red.errors.show.actions.copy_for_llm") %>
       </button>
       <% if RailsErrorDashboard.configuration.llm_configured? %>
         <button type="button" class="btn" data-red-action="open-ai-help">
-          <i class="bi bi-stars" style="margin-right: 4px;"></i>AI Help
+          <i class="bi bi-stars" style="margin-right: 4px;"></i><%= red_t("red.errors.show.actions.ai_help") %>
         </button>
       <% end %>
-      <button type="button" class="btn" data-red-action="download-json" title="Export JSON">
+      <button type="button" class="btn" data-red-action="download-json" title="<%= red_t("red.errors.show.actions.export_json") %>">
         <i class="bi bi-download"></i>
       </button>
     </div>
@@ -98,17 +105,17 @@
       <!-- Tab bar -->
       <div style="display: flex; gap: 0; border-bottom: 1px solid var(--border-primary); margin-bottom: var(--space-4);">
         <button type="button" data-red-action="switch-tab" data-red-tab="details" class="red-tab active" id="tab-details" style="padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: none; border-bottom: 2px solid var(--accent); margin-bottom: -1px; cursor: pointer;">
-          <i class="bi bi-code-slash" style="margin-right: 6px;"></i>Details
+          <i class="bi bi-code-slash" style="margin-right: 6px;"></i><%= red_t("red.errors.show.tabs.details") %>
         </button>
         <button type="button" data-red-action="switch-tab" data-red-tab="context" class="red-tab" id="tab-context" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
-          <i class="bi bi-layers" style="margin-right: 6px;"></i>Context
+          <i class="bi bi-layers" style="margin-right: 6px;"></i><%= red_t("red.errors.show.tabs.context") %>
         </button>
         <button type="button" data-red-action="switch-tab" data-red-tab="history" class="red-tab" id="tab-history" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
-          <i class="bi bi-clock-history" style="margin-right: 6px;"></i>History
+          <i class="bi bi-clock-history" style="margin-right: 6px;"></i><%= red_t("red.errors.show.tabs.history") %>
         </button>
         <% if RailsErrorDashboard.configuration.enable_issue_tracking %>
           <button type="button" data-red-action="switch-tab" data-red-tab="issues" class="red-tab" id="tab-issues" style="padding: 10px 16px; font-size: 13px; font-weight: 400; color: var(--text-secondary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;">
-            <i class="bi bi-github" style="margin-right: 6px;"></i>Issues
+            <i class="bi bi-github" style="margin-right: 6px;"></i><%= red_t("red.errors.show.tabs.issues") %>
           </button>
         <% end %>
       </div>
@@ -119,16 +126,16 @@
           <div class="alert alert-info mb-3" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4);">
             <div style="font-size: 12px;">
               <% if RailsErrorDashboard::Services::CoverageTracker.active? %>
-                <i class="bi bi-broadcast"></i> <strong>Coverage Active</strong> — expand source code to see executed lines
+                <i class="bi bi-broadcast"></i> <strong><%= red_t("red.errors.show.coverage.active_label") %></strong> — <%= red_t("red.errors.show.coverage.active_body") %>
               <% else %>
-                <i class="bi bi-code-square"></i> <strong>Code Path Coverage</strong> — enable to see executed lines
+                <i class="bi bi-code-square"></i> <strong><%= red_t("red.errors.show.coverage.inactive_label") %></strong> — <%= red_t("red.errors.show.coverage.inactive_body") %>
               <% end %>
             </div>
             <div>
               <% if RailsErrorDashboard::Services::CoverageTracker.active? %>
-                <%= button_to "Disable", disable_coverage_errors_path, method: :post, class: "btn btn-sm" %>
+                <%= button_to red_t("red.errors.show.coverage.disable"), disable_coverage_errors_path, method: :post, class: "btn btn-sm" %>
               <% else %>
-                <%= button_to "Enable", enable_coverage_errors_path, method: :post, class: "btn btn-sm btn-primary" %>
+                <%= button_to red_t("red.errors.show.coverage.enable"), enable_coverage_errors_path, method: :post, class: "btn btn-sm btn-primary" %>
               <% end %>
             </div>
           </div>
@@ -178,24 +185,24 @@
         <% if baselines[:hourly].present? || baselines[:daily].present? || baselines[:weekly].present? %>
           <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-primary);">
-              <span style="font-size: 13px; font-weight: 600;">Baseline Statistics</span>
+              <span style="font-size: 13px; font-weight: 600;"><%= red_t("red.errors.show.baselines.title") %></span>
             </div>
             <div style="padding: var(--space-3) var(--space-5);">
               <% anomaly = @error.baseline_anomaly %>
               <% if anomaly[:anomaly] %>
                 <div class="alert alert-<%= anomaly[:level] == :critical ? 'danger' : anomaly[:level] == :high ? 'warning' : 'info' %>" style="padding: var(--space-2) var(--space-3); font-size: 12px; margin-bottom: var(--space-3);">
-                  <strong>Anomaly:</strong> <%= anomaly[:std_devs_above]&.round(1) %>σ above baseline (<%= anomaly[:level].to_s.upcase %>)
+                  <strong><%= red_t("red.errors.show.baselines.anomaly_label") %></strong> <%= red_t("red.errors.show.baselines.anomaly_body", sigma: anomaly[:std_devs_above]&.round(1), level: red_t("red.errors.show.baselines.levels.#{anomaly[:level]}", default: anomaly[:level].to_s.upcase)) %>
                 </div>
               <% end %>
               <% [:hourly, :daily, :weekly].each do |type| %>
                 <% baseline = baselines[type] %>
                 <% next unless baseline %>
                 <div style="padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
-                  <div style="color: var(--text-tertiary); font-weight: 500; text-transform: capitalize; margin-bottom: 4px;"><%= type %></div>
+                  <div style="color: var(--text-tertiary); font-weight: 500; text-transform: capitalize; margin-bottom: 4px;"><%= red_t("red.errors.show.baselines.#{type}", default: type.to_s) %></div>
                   <div style="display: flex; gap: var(--space-4);">
-                    <span>Mean: <strong><%= baseline.mean&.round(1) || 'N/A' %></strong></span>
-                    <span>σ: <strong><%= baseline.std_dev&.round(1) || 'N/A' %></strong></span>
-                    <span>P95: <strong><%= baseline.percentile_95&.round(1) || 'N/A' %></strong></span>
+                    <span><%= red_t("red.errors.show.baselines.mean") %> <strong><%= baseline.mean&.round(1) || red_t("red.common.not_available") %></strong></span>
+                    <span><%= red_t("red.errors.show.baselines.std_dev") %> <strong><%= baseline.std_dev&.round(1) || red_t("red.common.not_available") %></strong></span>
+                    <span><%= red_t("red.errors.show.baselines.percentile_95") %> <strong><%= baseline.percentile_95&.round(1) || red_t("red.common.not_available") %></strong></span>
                   </div>
                 </div>
               <% end %>
@@ -207,24 +214,24 @@
       <!-- Quick Actions -->
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-primary);">
-          <span style="font-size: 13px; font-weight: 600;">Quick Actions</span>
+          <span style="font-size: 13px; font-weight: 600;"><%= red_t("red.errors.show.quick_actions.title") %></span>
         </div>
         <div style="padding: var(--space-3) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2);">
           <%= link_to errors_path(app_context.merge(error_type: @error.error_type, unresolved: '0')), class: "btn btn-sm" do %>
-            <i class="bi bi-filter"></i> View Similar Errors
+            <i class="bi bi-filter"></i> <%= red_t("red.errors.show.quick_actions.view_similar") %>
           <% end %>
           <% if @error.user_id %>
             <%= link_to errors_path(app_context.merge(user_id: @error.user_id, unresolved: '0')), class: "btn btn-sm" do %>
-              <i class="bi bi-person"></i> View User's Errors
+              <i class="bi bi-person"></i> <%= red_t("red.errors.show.quick_actions.view_user_errors") %>
             <% end %>
           <% end %>
           <% if @error.platform.present? %>
             <%= link_to errors_path(app_context.merge(platform: @error.platform, unresolved: '0')), class: "btn btn-sm" do %>
-              <i class="bi bi-phone"></i> View <%= @error.platform %> Errors
+              <i class="bi bi-phone"></i> <%= red_t("red.errors.show.quick_actions.view_platform_errors", platform: @error.platform) %>
             <% end %>
           <% end %>
           <%= link_to analytics_errors_path(app_context), class: "btn btn-sm" do %>
-            <i class="bi bi-bar-chart-line"></i> Analytics
+            <i class="bi bi-bar-chart-line"></i> <%= red_t("red.errors.show.quick_actions.analytics") %>
           <% end %>
         </div>
       </div>

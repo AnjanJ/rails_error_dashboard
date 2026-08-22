@@ -183,7 +183,8 @@ module RailsErrorDashboard
     # @param format [Symbol] Format preset (:full, :short, :date_only, :time_only, :datetime)
     # @param fallback [String] Text to show if time is nil
     # @return [String] HTML safe span with data attributes for JS conversion
-    def local_time(time, format: :full, fallback: "N/A")
+    def local_time(time, format: :full, fallback: nil)
+      fallback ||= red_t("red.common.not_available")
       return fallback if time.nil?
 
       # Convert to UTC if not already
@@ -192,18 +193,13 @@ module RailsErrorDashboard
       # ISO 8601 format for JavaScript parsing
       iso_time = utc_time.iso8601
 
-      # Format presets for data-format attribute
+      # Format presets come from the locale, not from literals here: "%B %d, %Y"
+      # is a US ordering as much as it is English words, and other locales want
+      # a different one (German: "%d. %B %Y"). An unrecognised format is still
+      # treated as a caller-supplied strftime pattern, as before.
       format_string = case format
-      when :full
-        "%B %d, %Y %I:%M:%S %p"  # December 31, 2024 11:59:59 PM
-      when :short
-        "%m/%d %I:%M%p"          # 12/31 11:59PM
-      when :date_only
-        "%B %d, %Y"              # December 31, 2024
-      when :time_only
-        "%I:%M:%S %p"            # 11:59:59 PM
-      when :datetime
-        "%b %d, %Y %H:%M"        # Dec 31, 2024 23:59
+      when :full, :short, :date_only, :time_only, :datetime
+        red_time_format(format)
       else
         format.to_s
       end
@@ -234,7 +230,8 @@ module RailsErrorDashboard
     # @param time [Time, DateTime, nil] The timestamp to display
     # @param fallback [String] Text to show if time is nil
     # @return [String] HTML safe span with data attributes for JS conversion
-    def local_time_ago(time, fallback: "N/A")
+    def local_time_ago(time, fallback: nil)
+      fallback ||= red_t("red.common.not_available")
       return fallback if time.nil?
 
       # Convert to UTC if not already
@@ -243,7 +240,16 @@ module RailsErrorDashboard
 
       content_tag(
         :span,
-        time_ago_in_words(time) + " ago",  # Fallback for non-JS browsers
+        # Interpolated, not concatenated: several languages put the equivalent
+        # of "ago" before the duration, and some inflect it.
+        #
+        # NOTE: time_ago_in_words is Rails' own helper and translates through
+        # the HOST app's I18n, not RED's. In practice the browser replaces this
+        # text immediately (see formatRelativeTime in the layout) and it only
+        # shows for non-JS clients, so a host/dashboard locale mismatch here is
+        # cosmetic and brief. Phase 3 localizes the JS side, which is what
+        # users actually see.
+        red_t("red.time.ago", duration: time_ago_in_words(time)),  # Fallback for non-JS browsers
         class: "local-time-ago",
         data: {
           utc: iso_time

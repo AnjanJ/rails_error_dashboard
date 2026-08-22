@@ -8,6 +8,10 @@ module RailsErrorDashboard
     include ActionController::Flash
     include ActionController::RequestForgeryProtection
 
+    # red_t for flash messages. Not the view helper — that html-escapes, and a
+    # flash string is escaped again when the layout renders it.
+    include Translation
+
     layout "rails_error_dashboard"
 
     protect_from_forgery with: :exception
@@ -70,9 +74,10 @@ module RailsErrorDashboard
 
     private
 
-    # Set Pagy's locale for this request and restore whatever was there before.
+    # Set the dashboard's locale for this request and restore whatever was
+    # there before.
     #
-    # Two details are load-bearing:
+    # Three details are load-bearing:
     #
     # 1. The previous value is read from Thread.current directly, NOT from
     #    Pagy::I18n.locale. The getter coerces nil to "en", so restoring through
@@ -82,12 +87,58 @@ module RailsErrorDashboard
     #    the dashboard's locale on the thread for the host app's next request.
     #    The ensure also covers the rescue_from handlers above, which still
     #    render through the view layer.
+    # 3. RED's own locale is set on RailsErrorDashboard::Current, NOT via
+    #    I18n.with_locale. RED translates through a private backend
+    #    (I18nStore); touching the host's I18n.locale would mutate host global
+    #    state for no benefit and re-introduce exactly the coupling #148 removed.
+    #
+    # Pagy's locale and RED's are resolved independently: they ship different
+    # dictionaries, so a locale RED can serve but Pagy cannot must still render
+    # the UI translated, with English pagination, rather than raising.
     def with_dashboard_locale
-      previous = Thread.current[:pagy_locale]
+      previous_pagy = Thread.current[:pagy_locale]
       Pagy::I18n.locale = dashboard_pagy_locale
+      Current.locale = dashboard_locale
       yield
     ensure
-      Thread.current[:pagy_locale] = previous
+      Thread.current[:pagy_locale] = previous_pagy
+      Current.locale = nil
+    end
+
+    # The locale RED renders its own strings in. Resolved against the locales
+    # RED ships (not Pagy's), and never raises.
+    #
+    # Precedence (P5-T1 REQ-3): session -> config.dashboard_locale -> "en".
+    # The session half is applied here and the rest by locale_or_default, which
+    # validates whatever it is given against the locales RED actually ships.
+    # Assigning Current.locale only when the session holds a usable value keeps
+    # an empty session from overriding the configured default.
+    def dashboard_locale
+      Current.locale = session_locale
+      Current.locale_or_default
+    rescue StandardError
+      I18nStore::DEFAULT_LOCALE
+    end
+
+    # The user's picked locale, or nil.
+    #
+    # Returns nil rather than raising for every way this can go wrong: no
+    # session at all (an API-only host where the engine's session middleware
+    # did not take effect — REQ-7), or a tampered value (REQ-6). A garbage
+    # value is not merely ignored but CLEARED, so a session poisoned once does
+    # not cost a lookup on every subsequent request.
+    #
+    # #available? is total for any input, including an Array or a Hash, so no
+    # type check is needed before it.
+    def session_locale
+      stored = session[:red_locale]
+      return nil if stored.nil?
+      return I18nStore.resolve(stored) if I18nStore.available?(stored)
+
+      session.delete(:red_locale)
+      nil
+    rescue StandardError
+      nil
     end
 
     def dashboard_pagy_locale

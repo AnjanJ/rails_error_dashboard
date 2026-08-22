@@ -6,7 +6,9 @@ module RailsErrorDashboard
   class WebhookErrorNotificationJob < ApplicationJob
     queue_as :default
 
-    def perform(error_log_id)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(error_log_id, locale = nil)
       error_log = ErrorLog.find(error_log_id)
       webhook_urls = RailsErrorDashboard.configuration.webhook_urls
 
@@ -15,7 +17,7 @@ module RailsErrorDashboard
       # Ensure webhook_urls is an array
       urls = Array(webhook_urls)
 
-      payload = Services::WebhookPayloadBuilder.call(error_log)
+      payload = Services::WebhookPayloadBuilder.call(error_log, locale: job_locale(locale))
 
       urls.each do |url|
         send_webhook(url, payload, error_log)

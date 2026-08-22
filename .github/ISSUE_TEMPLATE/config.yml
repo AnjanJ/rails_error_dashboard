@@ -3,6 +3,9 @@ contact_links:
   - name: 💬 GitHub Discussions
     url: https://github.com/AnjanJ/rails_error_dashboard/discussions
     about: Ask questions, share ideas, and discuss with the community
+  - name: 🌍 Help translate RED
+    url: https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review
+    about: Every language but English is machine-translated and unreviewed — correcting one string is a real contribution
   - name: 📚 Documentation
     url: https://github.com/AnjanJ/rails_error_dashboard#readme
     about: Read the documentation for setup, configuration, and usage guides

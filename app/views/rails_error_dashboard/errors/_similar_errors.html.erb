@@ -1,26 +1,32 @@
       <!-- Similar Errors (Fuzzy Matching) -->
       <% if RailsErrorDashboard.configuration.enable_similar_errors && error.respond_to?(:similar_errors) %>
-        <% similar = error.similar_errors(threshold: 0.6, limit: 5) %>
+        <%# The threshold drives both the query and the hint below, so it is
+            named once rather than written as a literal in the prose too. %>
+        <% similarity_threshold = 0.6 %>
+        <% similar = error.similar_errors(threshold: similarity_threshold, limit: 5) %>
         <% if similar.any? %>
-          <% cache [error, 'similar_errors_v1', similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
+          <%# The locale is part of the cache key: this fragment contains
+              translated text, and without it the first locale to render an
+              error would be served to every other one. %>
+          <% cache [error, 'similar_errors_v3', red_locale, similar.map { |s| s[:error]&.updated_at }.compact.max] do %>
           <div class="card mb-4" id="section-similar-errors">
             <div class="card-header">
               <h5 class="mb-0">
-                <i class="bi bi-diagram-3"></i> Similar Errors
-                <span class="badge bg-info text-dark">Fuzzy Matching</span>
+                <i class="bi bi-diagram-3"></i> <%= red_t("red.errors.similar_errors.title") %>
+                <span class="badge bg-info text-dark"><%= red_t("red.errors.similar_errors.badge") %></span>
               </h5>
-              <small class="text-muted">Errors with similar backtraces and messages (60%+ similarity)</small>
+              <small class="text-muted"><%= red_t("red.errors.similar_errors.hint", threshold: (similarity_threshold * 100).round) %></small>
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th>Similarity</th>
-                      <th>Error Type</th>
-                      <th>Message</th>
-                      <th>Platform</th>
-                      <th>Occurrences</th>
+                      <th><%= red_t("red.errors.similar_errors.column_similarity") %></th>
+                      <th><%= red_t("red.errors.similar_errors.column_error_type") %></th>
+                      <th><%= red_t("red.errors.similar_errors.column_message") %></th>
+                      <th><%= red_t("red.errors.similar_errors.column_platform") %></th>
+                      <th><%= red_t("red.errors.similar_errors.column_occurrences") %></th>
                       <th></th>
                     </tr>
                   </thead>
@@ -59,9 +65,9 @@
                             <span class="badge badge-api"><i class="bi bi-server"></i> <%= similar_error.platform || 'API' %></span>
                           <% end %>
                         </td>
-                        <td><span class="badge bg-primary"><%= similar_error.occurrence_count %>x</span></td>
+                        <td><span class="badge bg-primary"><%= red_tp("red.errors.similar_errors.occurrences", count: similar_error.occurrence_count) %></span></td>
                         <td>
-                          <%= link_to "View", error_path(similar_error), class: "btn btn-sm btn-outline-primary" %>
+                          <%= link_to red_t("red.errors.similar_errors.view"), error_path(similar_error), class: "btn btn-sm btn-outline-primary" %>
                         </td>
                       </tr>
                     <% end %>

@@ -1,64 +1,73 @@
 <% if RailsErrorDashboard.configuration.enable_occurrence_patterns %>
   <%
-    # Display occurrence patterns and bursts for an error
-    pattern_data = @error.occurrence_pattern(days: 30)
-    bursts = @error.error_bursts(days: 7)
+    # Display occurrence patterns and bursts for an error.
+    #
+    # The windows and the peak threshold are named because each is cited in
+    # prose as well as passed to a query. Written twice they drift, and the
+    # copy that drifts is the one the user reads.
+    pattern_window_days = 30
+    burst_window_days = 7
+    peak_hour_multiplier = 2
+    shown_bursts = 10
+
+    pattern_data = @error.occurrence_pattern(days: pattern_window_days)
+    bursts = @error.error_bursts(days: burst_window_days)
   %>
 
   <% if pattern_data.present? && pattern_data[:total_errors] > 0 %>
   <div class="card mb-4" id="section-occurrence-patterns">
     <div class="card-header">
       <h5 class="mb-0">
-        <i class="bi bi-graph-up"></i> Occurrence Patterns
-        <small class="text-muted">(Last 30 days)</small>
+        <i class="bi bi-graph-up"></i> <%= red_t("red.errors.patterns.title") %>
+        <small class="text-muted"><%= red_t("red.errors.patterns.window", days: pattern_window_days) %></small>
       </h5>
     </div>
     <div class="card-body">
       <!-- Pattern Type Summary -->
       <div class="row mb-4">
         <div class="col-md-6">
-          <h6 class="text-muted mb-2">Pattern Type</h6>
+          <h6 class="text-muted mb-2"><%= red_t("red.errors.patterns.pattern_type") %></h6>
           <% case pattern_data[:pattern_type] %>
           <% when :business_hours %>
             <span class="badge bg-info fs-6">
-              <i class="bi bi-clock"></i> Business Hours Pattern
+              <i class="bi bi-clock"></i> <%= red_t("red.errors.patterns.types.business_hours.label") %>
             </span>
             <p class="small text-muted mt-2">
-              Errors peak during business hours (9am-5pm), suggesting user activity correlation
+              <%= red_t("red.errors.patterns.types.business_hours.description") %>
             </p>
           <% when :night %>
             <span class="badge bg-dark fs-6">
-              <i class="bi bi-moon-fill"></i> Night Pattern
+              <i class="bi bi-moon-fill"></i> <%= red_t("red.errors.patterns.types.night.label") %>
             </span>
             <p class="small text-muted mt-2">
-              Errors peak during night hours (midnight-6am), possibly from background jobs or automated tasks
+              <%= red_t("red.errors.patterns.types.night.description") %>
             </p>
           <% when :weekend %>
             <span class="badge bg-primary fs-6">
-              <i class="bi bi-calendar-week"></i> Weekend Pattern
+              <i class="bi bi-calendar-week"></i> <%= red_t("red.errors.patterns.types.weekend.label") %>
             </span>
             <p class="small text-muted mt-2">
-              Most errors occur on weekends, suggesting weekend-specific usage patterns
+              <%= red_t("red.errors.patterns.types.weekend.description") %>
             </p>
           <% when :uniform %>
             <span class="badge bg-secondary fs-6">
-              <i class="bi bi-distribute-horizontal"></i> Uniform Pattern
+              <i class="bi bi-distribute-horizontal"></i> <%= red_t("red.errors.patterns.types.uniform.label") %>
             </span>
             <p class="small text-muted mt-2">
-              Errors distributed evenly throughout the day with no clear pattern
+              <%= red_t("red.errors.patterns.types.uniform.description") %>
             </p>
           <% else %>
             <span class="badge bg-light text-dark fs-6">
-              <i class="bi bi-question-circle"></i> No Pattern Detected
+              <i class="bi bi-question-circle"></i> <%= red_t("red.errors.patterns.types.none.label") %>
             </span>
             <p class="small text-muted mt-2">
-              Not enough data to identify a clear occurrence pattern
+              <%= red_t("red.errors.patterns.types.none.description") %>
             </p>
           <% end %>
         </div>
 
         <div class="col-md-6">
-          <h6 class="text-muted mb-2">Pattern Strength</h6>
+          <h6 class="text-muted mb-2"><%= red_t("red.errors.patterns.strength") %></h6>
           <div class="d-flex align-items-center">
             <div class="progress flex-grow-1" style="height: 25px;">
               <div class="progress-bar <%= pattern_data[:pattern_strength] >= 0.7 ? 'bg-success' : pattern_data[:pattern_strength] >= 0.4 ? 'bg-warning' : 'bg-secondary' %>"
@@ -71,11 +80,11 @@
           </div>
           <p class="small text-muted mt-2">
             <% if pattern_data[:pattern_strength] >= 0.7 %>
-              <strong>Strong pattern</strong> - Errors highly concentrated in specific hours
+              <strong><%= red_t("red.errors.patterns.strengths.strong.label") %></strong> - <%= red_t("red.errors.patterns.strengths.strong.description") %>
             <% elsif pattern_data[:pattern_strength] >= 0.4 %>
-              <strong>Moderate pattern</strong> - Some concentration in specific hours
+              <strong><%= red_t("red.errors.patterns.strengths.moderate.label") %></strong> - <%= red_t("red.errors.patterns.strengths.moderate.description") %>
             <% else %>
-              <strong>Weak pattern</strong> - Errors distributed fairly evenly
+              <strong><%= red_t("red.errors.patterns.strengths.weak.label") %></strong> - <%= red_t("red.errors.patterns.strengths.weak.description") %>
             <% end %>
           </p>
         </div>
@@ -83,7 +92,7 @@
 
       <!-- Hourly Distribution Heatmap -->
       <% if pattern_data[:hourly_distribution].present? %>
-        <h6 class="text-muted mb-3">Hourly Distribution Heatmap</h6>
+        <h6 class="text-muted mb-3"><%= red_t("red.errors.patterns.heatmap_title") %></h6>
         <div class="mb-4">
           <div class="d-flex flex-wrap">
             <% (0..23).each do |hour| %>
@@ -94,7 +103,7 @@
               <div class="text-center m-1 heatmap-cell-wrapper" style="width: 45px;">
                 <div class="rounded p-2 heatmap-cell <%= is_peak ? 'border border-danger border-2' : '' %>"
                      style="background-color: rgba(220, 53, 69, <%= intensity / 100.0 %>); min-height: 50px; display: flex; align-items: center; justify-content: center;"
-                     title="<%= hour %>:00 - <%= count %> errors">
+                     title="<%= red_tp("red.errors.patterns.heatmap_cell", count: count, hour: "#{hour}:00") %>">
                   <small class="fw-bold heatmap-count <%= intensity > 50 ? 'text-white' : 'text-dark' %>">
                     <%= count %>
                   </small>
@@ -105,7 +114,7 @@
           </div>
           <div class="mt-2 small text-muted">
             <i class="bi bi-info-circle"></i>
-            Darker cells = more errors. Red borders indicate peak hours (>2x average).
+            <%= red_t("red.errors.patterns.heatmap_legend", multiplier: peak_hour_multiplier) %>
           </div>
         </div>
       <% end %>
@@ -113,11 +122,11 @@
       <!-- Peak Hours -->
       <% if pattern_data[:peak_hours].present? %>
         <div class="alert alert-info">
-          <strong><i class="bi bi-clock-fill"></i> Peak Hours:</strong>
+          <strong><i class="bi bi-clock-fill"></i> <%= red_t("red.errors.patterns.peak_hours") %></strong>
           <%= pattern_data[:peak_hours].map { |h| "#{h}:00" }.join(", ") %>
           <br>
           <small>
-            These hours have more than 2x the average error rate. Consider monitoring deployments or load during these times.
+            <%= red_t("red.errors.patterns.peak_hours_hint") %>
           </small>
         </div>
       <% end %>
@@ -130,48 +139,49 @@
   <div class="card mb-4">
     <div class="card-header">
       <h5 class="mb-0">
-        <i class="bi bi-lightning-charge-fill text-warning"></i> Error Bursts
+        <i class="bi bi-lightning-charge-fill text-warning"></i> <%= red_t("red.errors.patterns.bursts_title") %>
         <span class="badge bg-warning text-dark"><%= bursts.count %></span>
-        <small class="text-muted">(Last 7 days)</small>
+        <small class="text-muted"><%= red_t("red.errors.patterns.bursts_window", days: burst_window_days) %></small>
       </h5>
     </div>
     <div class="card-body">
       <p class="text-muted">
-        Error bursts are rapid sequences where multiple errors occur within minutes. This may indicate cascading failures or load spikes.
+        <%= red_t("red.errors.patterns.bursts_hint") %>
       </p>
 
       <div class="table-responsive">
         <table class="table table-hover">
           <thead>
             <tr>
-              <th>Start Time</th>
-              <th>Duration</th>
-              <th>Error Count</th>
-              <th>Intensity</th>
+              <th><%= red_t("red.errors.patterns.column_start_time") %></th>
+              <th><%= red_t("red.errors.patterns.column_duration") %></th>
+              <th><%= red_t("red.errors.patterns.column_error_count") %></th>
+              <th><%= red_t("red.errors.patterns.column_intensity") %></th>
             </tr>
           </thead>
           <tbody>
-            <% bursts.first(10).each do |burst| %>
+            <% bursts.first(shown_bursts).each do |burst| %>
               <tr>
                 <td>
-                  <%= burst[:start_time].strftime("%b %d, %Y %I:%M %p") %>
+                  <%= burst[:start_time].strftime(red_time_format(:full)) %>
                 </td>
                 <td>
                   <% duration_minutes = (burst[:duration_seconds] / 60.0).round(1) %>
-                  <%= duration_minutes %> min
-                  <small class="text-muted">(<%= burst[:duration_seconds].round %>s)</small>
+                  <%= red_t("red.errors.patterns.burst_duration", minutes: duration_minutes) %>
+                  <small class="text-muted"><%= red_t("red.errors.patterns.burst_duration_seconds", seconds: burst[:duration_seconds].round) %></small>
                 </td>
                 <td>
-                  <strong><%= burst[:error_count] %></strong> errors
+                  <%= red_tp("red.errors.patterns.burst_errors_html", count: burst[:error_count],
+                        value: tag.strong(burst[:error_count])) %>
                 </td>
                 <td>
                   <% case burst[:burst_intensity] %>
                   <% when :high %>
-                    <span class="badge bg-danger">High (20+ errors)</span>
+                    <span class="badge bg-danger"><%= red_t("red.errors.patterns.intensity_high") %></span>
                   <% when :medium %>
-                    <span class="badge bg-warning text-dark">Medium (10-19 errors)</span>
+                    <span class="badge bg-warning text-dark"><%= red_t("red.errors.patterns.intensity_medium") %></span>
                   <% when :low %>
-                    <span class="badge bg-info">Low (5-9 errors)</span>
+                    <span class="badge bg-info"><%= red_t("red.errors.patterns.intensity_low") %></span>
                   <% end %>
                 </td>
               </tr>
@@ -180,20 +190,20 @@
         </table>
       </div>
 
-      <% if bursts.count > 10 %>
+      <% if bursts.count > shown_bursts %>
         <p class="text-muted small mb-0">
-          Showing 10 of <%= bursts.count %> detected bursts
+          <%= red_t("red.errors.patterns.bursts_truncated", shown: shown_bursts, total: bursts.count) %>
         </p>
       <% end %>
 
       <div class="alert alert-warning mt-3">
-        <strong><i class="bi bi-exclamation-triangle"></i> Recommendation:</strong>
-        Multiple error bursts detected. Investigate:
+        <strong><i class="bi bi-exclamation-triangle"></i> <%= red_t("red.errors.patterns.recommendation_label") %></strong>
+        <%= red_t("red.errors.patterns.recommendation_intro") %>
         <ul class="mb-0 mt-2">
-          <li>Recent deployments or configuration changes around burst times</li>
-          <li>Load spikes or traffic patterns</li>
-          <li>Cascading failures from related errors</li>
-          <li>Background job failures or retry storms</li>
+          <li><%= red_t("red.errors.patterns.recommendation_deploys") %></li>
+          <li><%= red_t("red.errors.patterns.recommendation_load") %></li>
+          <li><%= red_t("red.errors.patterns.recommendation_cascades") %></li>
+          <li><%= red_t("red.errors.patterns.recommendation_jobs") %></li>
         </ul>
       </div>
     </div>
@@ -203,7 +213,7 @@
   <% if (pattern_data.blank? || pattern_data[:total_errors] == 0) && bursts.blank? %>
     <div class="alert alert-info">
       <i class="bi bi-info-circle"></i>
-      No occurrence patterns or bursts detected. More data may be needed for pattern analysis.
+      <%= red_t("red.errors.patterns.empty") %>
     </div>
   <% end %>
 <% end %>

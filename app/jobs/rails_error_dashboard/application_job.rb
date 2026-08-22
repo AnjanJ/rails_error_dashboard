@@ -1,5 +1,10 @@
 module RailsErrorDashboard
   class ApplicationJob < ActiveJob::Base
+    # Explicit, serialized locale for any job that renders user-facing text.
+    # Jobs run outside the dashboard's around_action, so they must never read
+    # the request-scoped locale directly — see Concerns::LocalizedJob for why.
+    include Concerns::LocalizedJob
+
     # CRITICAL: Ensure job failures don't break the app or spam error logs
     # Retry failed jobs with exponential backoff, but limit attempts
     retry_on StandardError, wait: :exponentially_longer, attempts: 3

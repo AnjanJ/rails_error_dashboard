@@ -1,4 +1,4 @@
-<% content_for :page_title, "Analytics" %>
+<% content_for :page_title, red_t("red.analytics.overview.title") %>
 
 <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
   // Dynamic chart colors based on theme
@@ -34,28 +34,28 @@
 
 <div>
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Analytics</h1>
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;"><%= red_t("red.analytics.overview.title") %></h1>
   </div>
 
   <!-- Time range pills -->
   <div style="display: flex; gap: 6px; margin-bottom: var(--space-6);">
-    <% [['7d', 7], ['14d', 14], ['30d', 30], ['60d', 60], ['90d', 90]].each do |label, days| %>
-      <%= link_to analytics_errors_path(days: days), class: "filter-pill #{@days == days ? 'active' : ''}", style: "text-decoration: none;" do %><%= label %><% end %>
+    <% [ 7, 14, 30, 60, 90 ].each do |days| %>
+      <%= link_to analytics_errors_path(days: days), class: "filter-pill #{@days == days ? 'active' : ''}", style: "text-decoration: none;" do %><%= red_t("red.analytics.days_pill.#{days}") %><% end %>
     <% end %>
   </div>
 
   <!-- Summary Stats -->
   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
     <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Total Errors</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.analytics.overview.stats.total_errors") %></div>
       <span class="stat-value"><%= @error_stats[:total] %></span>
     </div>
     <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Unresolved</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.analytics.overview.stats.unresolved") %></div>
       <span class="stat-value" style="color: var(--status-critical);"><%= @error_stats[:unresolved] %></span>
     </div>
     <div class="card stat-card" style="border-left: 3px solid var(--status-success); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Resolution Rate</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.analytics.overview.stats.resolution_rate") %></div>
       <span class="stat-value" style="color: var(--status-success);"><%= @resolution_rate %>%</span>
     </div>
   </div>
@@ -63,7 +63,7 @@
   <!-- Error Trend Chart -->
   <div class="card mb-4">
     <div class="card-header">
-      <h5 class="mb-0"><i class="bi bi-graph-up"></i> Error Trend (Last <%= @days %> Days)</h5>
+      <h5 class="mb-0"><i class="bi bi-graph-up"></i> <%= red_t("red.analytics.overview.trend_chart.title", days: @days) %></h5>
     </div>
     <div class="card-body">
       <div id="errors-over-time-chart"></div>
@@ -81,12 +81,12 @@
               scales: {
                 x: {
                   ticks: { color: colors.textColor },
-                  title: { color: colors.textColor, display: true, text: 'Date' },
+                  title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_date") %>' },
                   grid: { color: colors.gridColor }
                 },
                 y: {
                   ticks: { color: colors.textColor },
-                  title: { color: colors.textColor, display: true, text: 'Number of Errors' },
+                  title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_number_of_errors") %>' },
                   grid: { color: colors.gridColor }
                 }
               },
@@ -108,7 +108,7 @@
       <div class="col-md-12">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-phone"></i> Errors by Platform</h5>
+            <h5 class="mb-0"><i class="bi bi-phone"></i> <%= red_t("red.analytics.overview.platform_chart.title") %></h5>
           </div>
           <div class="card-body">
             <div id="errors-by-platform-chart"></div>
@@ -146,7 +146,7 @@
           </div>
           <div class="card-footer border-top-0">
             <div class="d-flex gap-2 flex-wrap">
-              <small class="text-muted me-2">Quick Links:</small>
+              <small class="text-muted me-2"><%= red_t("red.analytics.overview.platform_chart.quick_links") %></small>
               <% @errors_by_platform.keys.each do |platform| %>
                 <%= link_to platform, errors_path(platform: platform, unresolved: '0'), class: "btn btn-sm btn-outline-secondary" %>
               <% end %>
@@ -162,7 +162,7 @@
     <div class="col-md-12">
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-bug"></i> Top 10 Error Types</h5>
+          <h5 class="mb-0"><i class="bi bi-bug"></i> <%= red_t("red.analytics.overview.type_chart.title") %></h5>
         </div>
         <div class="card-body">
           <div id="errors-by-type-chart"></div>
@@ -178,12 +178,12 @@
                   scales: {
                     x: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: 'Error Type' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_error_type") %>' },
                       grid: { color: colors.gridColor }
                     },
                     y: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: 'Count' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_count") %>' },
                       grid: { color: colors.gridColor }
                     }
                   },
@@ -204,7 +204,7 @@
     <div class="col-md-12">
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-clock"></i> Errors by Hour of Day</h5>
+          <h5 class="mb-0"><i class="bi bi-clock"></i> <%= red_t("red.analytics.overview.hour_chart.title") %></h5>
         </div>
         <div class="card-body">
           <div id="errors-by-hour-chart"></div>
@@ -220,12 +220,12 @@
                   scales: {
                     x: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: 'Hour' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_hour") %>' },
                       grid: { color: colors.gridColor }
                     },
                     y: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: 'Number of Errors' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_number_of_errors") %>' },
                       grid: { color: colors.gridColor }
                     }
                   },
@@ -247,7 +247,7 @@
       <div class="col-md-12">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-people"></i> Top 10 Affected Users</h5>
+            <h5 class="mb-0"><i class="bi bi-people"></i> <%= red_t("red.analytics.overview.top_users.title") %></h5>
           </div>
           <div class="card-body p-0">
             <%= render partial: 'user_errors_table',
@@ -270,19 +270,19 @@
     <div class="col-md-12">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0"><i class="bi bi-list-check"></i> Error Type Breakdown</h5>
-          <small class="text-muted">Last <%= @days %> days</small>
+          <h5 class="mb-0"><i class="bi bi-list-check"></i> <%= red_t("red.analytics.overview.type_breakdown.title") %></h5>
+          <small class="text-muted"><%= red_t("red.analytics.overview.type_breakdown.subtitle", days: @days) %></small>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>Rank</th>
-                  <th>Error Type</th>
-                  <th>Count</th>
-                  <th>Percentage</th>
-                  <th>Actions</th>
+                  <th><%= red_t("red.analytics.overview.type_breakdown.column_rank") %></th>
+                  <th><%= red_t("red.analytics.overview.type_breakdown.column_error_type") %></th>
+                  <th><%= red_t("red.analytics.overview.type_breakdown.column_count") %></th>
+                  <th><%= red_t("red.analytics.overview.type_breakdown.column_percentage") %></th>
+                  <th><%= red_t("red.analytics.overview.type_breakdown.column_actions") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -304,7 +304,7 @@
                       </div>
                     </td>
                     <td>
-                      <%= link_to "View Errors", errors_path(error_type: error_type, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
+                      <%= link_to red_t("red.analytics.overview.type_breakdown.view_errors"), errors_path(error_type: error_type, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                     </td>
                   </tr>
                 <% end %>
@@ -319,21 +319,21 @@
   <!-- Recurring Issues Analysis -->
   <div class="card mb-4">
     <div class="card-header">
-      <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Recurring Issues</h5>
+      <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> <%= red_t("red.analytics.overview.recurring.title") %></h5>
     </div>
     <div class="card-body">
       <% if @recurring_data[:high_frequency_errors].any? %>
-        <h6 class="text-muted mb-3">High Frequency Errors</h6>
+        <h6 class="text-muted mb-3"><%= red_t("red.analytics.overview.recurring.high_frequency_title") %></h6>
         <div class="table-responsive mb-4">
           <table class="table table-sm">
             <thead>
               <tr>
-                <th>Error Type</th>
-                <th>Total Occurrences</th>
-                <th>Duration</th>
-                <th>First Seen</th>
-                <th>Last Seen</th>
-                <th>Status</th>
+                <th><%= red_t("red.analytics.overview.recurring.column_error_type") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_total_occurrences") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_duration") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_first_seen") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_last_seen") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_status") %></th>
               </tr>
             </thead>
             <tbody>
@@ -345,14 +345,14 @@
                     <% end %>
                   </td>
                   <td><span class="badge bg-danger"><%= error[:total_occurrences] %></span></td>
-                  <td><%= error[:duration_days] %> days</td>
+                  <td><%= red_t("red.analytics.overview.recurring.duration_days", days: error[:duration_days]) %></td>
                   <td><small class="text-muted"><%= local_time(error[:first_seen], format: :date_only) %></small></td>
                   <td><small class="text-muted"><%= local_time(error[:last_seen], format: :datetime) %></small></td>
                   <td>
                     <% if error[:still_active] %>
-                      <span class="badge bg-warning">Active</span>
+                      <span class="badge bg-warning"><%= red_t("red.analytics.overview.recurring.active") %></span>
                     <% else %>
-                      <span class="badge bg-secondary">Inactive</span>
+                      <span class="badge bg-secondary"><%= red_t("red.analytics.overview.recurring.inactive") %></span>
                     <% end %>
                   </td>
                 </tr>
@@ -361,24 +361,24 @@
           </table>
         </div>
       <% else %>
-        <p class="text-muted">No high-frequency errors found in the last <%= @days %> days.</p>
+        <p class="text-muted"><%= red_t("red.analytics.overview.recurring.empty_high_frequency", days: @days) %></p>
       <% end %>
 
       <% if @recurring_data[:persistent_errors].any? %>
-        <h6 class="text-muted mb-3 mt-4">Persistent Unresolved Errors</h6>
+        <h6 class="text-muted mb-3 mt-4"><%= red_t("red.analytics.overview.recurring.persistent_title") %></h6>
         <div class="alert alert-info">
-          <i class="bi bi-info-circle"></i> These errors have been unresolved for more than 7 days.
+          <i class="bi bi-info-circle"></i> <%= red_t("red.analytics.overview.recurring.persistent_hint") %>
         </div>
         <div class="table-responsive">
           <table class="table table-sm">
             <thead>
               <tr>
-                <th>Error Type</th>
-                <th>Message</th>
-                <th>Platform</th>
-                <th>Count</th>
-                <th>Age</th>
-                <th>Actions</th>
+                <th><%= red_t("red.analytics.overview.recurring.column_error_type") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_message") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_platform") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_count") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_age") %></th>
+                <th><%= red_t("red.analytics.overview.recurring.column_actions") %></th>
               </tr>
             </thead>
             <tbody>
@@ -389,10 +389,10 @@
                   <td><%= error[:platform] %></td>
                   <td><span class="badge bg-secondary"><%= error[:occurrence_count] %>x</span></td>
                   <td>
-                    <span class="badge bg-warning"><%= error[:age_days] %> days</span>
+                    <span class="badge bg-warning"><%= red_t("red.analytics.overview.recurring.age_days", days: error[:age_days]) %></span>
                   </td>
                   <td>
-                    <%= link_to "View", error_path(error[:id]), class: "btn btn-sm btn-outline-primary" %>
+                    <%= link_to red_t("red.analytics.overview.recurring.view"), error_path(error[:id]), class: "btn btn-sm btn-outline-primary" %>
                   </td>
                 </tr>
               <% end %>
@@ -410,7 +410,7 @@
       <div class="col-md-8">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-git"></i> Errors by Release Version</h5>
+            <h5 class="mb-0"><i class="bi bi-git"></i> <%= red_t("red.analytics.overview.releases.version_chart_title") %></h5>
           </div>
           <div class="card-body">
             <div id="errors-by-version-chart"></div>
@@ -436,40 +436,40 @@
       <div class="col-md-4">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0">Latest vs Previous</h5>
+            <h5 class="mb-0"><%= red_t("red.analytics.overview.releases.comparison_title") %></h5>
           </div>
           <div class="card-body">
             <% if @release_comparison.present? %>
               <div class="mb-3">
-                <small class="text-muted">Latest Version</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.releases.latest_version") %></small>
                 <h4><%= @release_comparison[:latest_version] %></h4>
                 <p class="mb-0">
-                  <span class="badge bg-danger"><%= @release_comparison[:latest_count] %> errors</span>
+                  <span class="badge bg-danger"><%= red_tp("red.analytics.overview.releases.latest_errors", count: @release_comparison[:latest_count]) %></span>
                   <% if @release_comparison[:latest_critical] > 0 %>
-                    <span class="badge bg-dark ms-1"><%= @release_comparison[:latest_critical] %> critical</span>
+                    <span class="badge bg-dark ms-1"><%= red_tp("red.analytics.overview.releases.latest_critical", count: @release_comparison[:latest_critical]) %></span>
                   <% end %>
                 </p>
               </div>
               <div class="mb-3">
-                <small class="text-muted">Previous Version</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.releases.previous_version") %></small>
                 <h4><%= @release_comparison[:previous_version] %></h4>
                 <p class="mb-0">
-                  <span class="badge bg-secondary"><%= @release_comparison[:previous_count] %> errors</span>
+                  <span class="badge bg-secondary"><%= red_tp("red.analytics.overview.releases.previous_errors", count: @release_comparison[:previous_count]) %></span>
                   <% if @release_comparison[:previous_critical] > 0 %>
-                    <span class="badge bg-secondary ms-1"><%= @release_comparison[:previous_critical] %> critical</span>
+                    <span class="badge bg-secondary ms-1"><%= red_tp("red.analytics.overview.releases.previous_critical", count: @release_comparison[:previous_critical]) %></span>
                   <% end %>
                 </p>
               </div>
               <hr>
               <div>
-                <small class="text-muted">Change</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.releases.change") %></small>
                 <h4 class="<%= @release_comparison[:change_percentage] > 0 ? 'text-danger' : 'text-success' %>">
                   <%= @release_comparison[:change_percentage] > 0 ? '↑' : '↓' %>
                   <%= @release_comparison[:change_percentage].abs %>%
                 </h4>
               </div>
             <% else %>
-              <p class="text-muted">Not enough release data for comparison.</p>
+              <p class="text-muted"><%= red_t("red.analytics.overview.releases.empty") %></p>
             <% end %>
           </div>
         </div>
@@ -479,15 +479,15 @@
     <!-- Problematic Releases Alert -->
     <% if @problematic_releases.any? %>
       <div class="alert alert-warning mb-4">
-        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Problematic Releases Detected</h5>
-        <p>The following releases have significantly higher error rates (&gt;2x average):</p>
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> <%= red_t("red.analytics.overview.releases.problematic_title") %></h5>
+        <p><%= red_t("red.analytics.overview.releases.problematic_hint_html", multiplier: 2) %></p>
         <ul class="mb-0">
           <% @problematic_releases.each do |release| %>
             <li>
               <strong><%= release[:version] %></strong>:
-              <%= release[:error_count] %> errors
-              (<%= release[:critical_count] %> critical,
-              +<%= release[:deviation_from_avg] %>% from average)
+              <%= red_t("red.analytics.overview.releases.problematic_entry",
+                         count: release[:error_count], critical: release[:critical_count],
+                         deviation: release[:deviation_from_avg]) %>
             </li>
           <% end %>
         </ul>
@@ -499,7 +499,7 @@
   <% if @mttr_stats[:total_resolved] > 0 %>
     <div class="card mb-4">
       <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Resolution Performance (MTTR)</h5>
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> <%= red_t("red.analytics.overview.mttr.title") %></h5>
       </div>
       <div class="card-body">
         <div class="row g-3 mb-4">
@@ -507,9 +507,9 @@
           <div class="col-md-3">
             <div class="card border-info">
               <div class="card-body text-center">
-                <small class="text-muted d-block">Overall MTTR</small>
+                <small class="text-muted d-block"><%= red_t("red.analytics.overview.mttr.overall_title") %></small>
                 <h3 class="text-info mb-0"><%= @mttr_stats[:overall_mttr] %>h</h3>
-                <small class="text-muted">Average resolution time</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.mttr.overall_hint") %></small>
               </div>
             </div>
           </div>
@@ -518,9 +518,9 @@
           <div class="col-md-3">
             <div class="card border-success">
               <div class="card-body text-center">
-                <small class="text-muted d-block">Fastest</small>
+                <small class="text-muted d-block"><%= red_t("red.analytics.overview.mttr.fastest_title") %></small>
                 <h3 class="text-success mb-0"><%= @mttr_stats[:fastest_resolution] || 0 %>m</h3>
-                <small class="text-muted">Best resolution time</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.mttr.fastest_hint") %></small>
               </div>
             </div>
           </div>
@@ -529,9 +529,9 @@
           <div class="col-md-3">
             <div class="card border-danger">
               <div class="card-body text-center">
-                <small class="text-muted d-block">Slowest</small>
+                <small class="text-muted d-block"><%= red_t("red.analytics.overview.mttr.slowest_title") %></small>
                 <h3 class="text-danger mb-0"><%= @mttr_stats[:slowest_resolution] || 0 %>h</h3>
-                <small class="text-muted">Longest resolution time</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.mttr.slowest_hint") %></small>
               </div>
             </div>
           </div>
@@ -540,9 +540,9 @@
           <div class="col-md-3">
             <div class="card border-secondary">
               <div class="card-body text-center">
-                <small class="text-muted d-block">Total Resolved</small>
+                <small class="text-muted d-block"><%= red_t("red.analytics.overview.mttr.total_resolved_title") %></small>
                 <h3 class="text-secondary mb-0"><%= @mttr_stats[:total_resolved] %></h3>
-                <small class="text-muted">In last <%= @days %> days</small>
+                <small class="text-muted"><%= red_t("red.analytics.overview.mttr.total_resolved_hint", days: @days) %></small>
               </div>
             </div>
           </div>
@@ -551,7 +551,7 @@
         <!-- MTTR by Platform -->
         <% if @mttr_by_platform.present? && @mttr_by_platform.any? %>
           <div class="mt-4">
-            <h6 class="text-muted mb-3">MTTR by Platform</h6>
+            <h6 class="text-muted mb-3"><%= red_t("red.analytics.overview.mttr.by_platform_title") %></h6>
             <div id="mttr-by-platform-chart"></div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
@@ -571,14 +571,14 @@
         <!-- MTTR by Severity -->
         <% if @mttr_stats[:mttr_by_severity].present? && @mttr_stats[:mttr_by_severity].any? %>
           <div class="mt-4">
-            <h6 class="text-muted mb-3">MTTR by Severity</h6>
+            <h6 class="text-muted mb-3"><%= red_t("red.analytics.overview.mttr.by_severity_title") %></h6>
             <div class="table-responsive">
               <table class="table table-sm">
                 <thead>
                   <tr>
-                    <th>Severity</th>
-                    <th>Average Time to Resolution</th>
-                    <th>Actions</th>
+                    <th><%= red_t("red.analytics.overview.mttr.column_severity") %></th>
+                    <th><%= red_t("red.analytics.overview.mttr.column_avg_time") %></th>
+                    <th><%= red_t("red.analytics.overview.mttr.column_actions") %></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -586,12 +586,12 @@
                     <tr>
                       <td>
                         <span class="badge bg-<%= severity_color(severity) %>">
-                          <%= severity.to_s.capitalize %>
+                          <%= red_t("red.common.severity.#{severity}", default: severity.to_s) %>
                         </span>
                       </td>
-                      <td><strong><%= hours %> hours</strong></td>
+                      <td><strong><%= red_t("red.analytics.overview.mttr.hours", hours: hours) %></strong></td>
                       <td>
-                        <%= link_to "View", errors_path(severity: severity, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
+                        <%= link_to red_t("red.analytics.overview.mttr.view"), errors_path(severity: severity, unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
                       </td>
                     </tr>
                   <% end %>
@@ -604,7 +604,7 @@
         <!-- MTTR Trend -->
         <% if @mttr_stats[:mttr_trend].present? && @mttr_stats[:mttr_trend].any? %>
           <div class="mt-4">
-            <h6 class="text-muted mb-3">MTTR Trend (Weekly)</h6>
+            <h6 class="text-muted mb-3"><%= red_t("red.analytics.overview.mttr.trend_title") %></h6>
             <div id="mttr-trend-chart"></div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {

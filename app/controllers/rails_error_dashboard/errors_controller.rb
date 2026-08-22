@@ -30,6 +30,23 @@ module RailsErrorDashboard
       sort_direction
     ].freeze
 
+    # Batch action param => the key naming its outcome. English happens to form
+    # all four by adding "d"/"ed"; most languages do not, so each outcome is
+    # named rather than derived from the param.
+    BATCH_OUTCOMES = {
+      "resolve" => "resolved",
+      "mute" => "muted",
+      "unmute" => "unmuted",
+      "delete" => "deleted"
+    }.freeze
+
+    # Named once: the check and the message that reports it were both writing
+    # 4000, and the copy that drifts is the one the user reads.
+    AI_HELP_QUESTION_LIMIT = 4000
+
+    # The initializer every "not enabled" notice points at. A path, not prose.
+    INITIALIZER_PATH = "config/initializers/rails_error_dashboard.rb"
+
     def overview
       # Get dashboard stats using Query (pass application filter)
       @stats = Queries::DashboardStats.call(application_id: @current_application_id)
@@ -155,10 +172,10 @@ module RailsErrorDashboard
       result = Commands::CreateIssue.call(params[:id], dashboard_url: dashboard_url)
 
       if result[:success]
-        flash[:notice] = "Issue created successfully"
+        flash[:notice] = red_t("red.flash.issue.created")
         flash[:new_issue_url] = result[:issue_url]
       else
-        flash[:alert] = "Failed to create issue: #{result[:error]}"
+        flash[:alert] = red_t("red.flash.issue.create_failed", reason: result[:error])
       end
       redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
@@ -167,27 +184,30 @@ module RailsErrorDashboard
       result = Commands::LinkExistingIssue.call(params[:id], issue_url: params[:issue_url])
 
       if result[:success]
-        flash[:notice] = "Issue linked successfully"
+        flash[:notice] = red_t("red.flash.issue.linked")
       else
-        flash[:alert] = "Failed to link issue: #{result[:error]}"
+        flash[:alert] = red_t("red.flash.issue.link_failed", reason: result[:error])
       end
       redirect_to error_path(params[:id], anchor: "issue-tracking", **app_context_params)
     end
 
     def ai_help
       unless RailsErrorDashboard.configuration.llm_configured?
-        render json: { error: "AI Help is not configured" }, status: :not_found
+        render json: { error: red_t("red.flash.ai_help.not_configured") }, status: :not_found
         return
       end
 
       question = params[:question].to_s.strip
       if question.blank?
-        render json: { error: "Question cannot be blank" }, status: :unprocessable_entity
+        render json: { error: red_t("red.flash.ai_help.blank_question") }, status: :unprocessable_entity
         return
       end
 
-      if question.length > 4000
-        render json: { error: "Question is too long. Keep it under 4,000 characters." }, status: :unprocessable_entity
+      if question.length > AI_HELP_QUESTION_LIMIT
+        render json: {
+          error: red_t("red.flash.ai_help.question_too_long",
+                       limit: helpers.number_with_delimiter(AI_HELP_QUESTION_LIMIT))
+        }, status: :unprocessable_entity
         return
       end
 
@@ -248,7 +268,7 @@ module RailsErrorDashboard
     def platform_comparison
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_platform_comparison
-        flash[:alert] = "Platform Comparison is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("platform_comparison")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -287,13 +307,25 @@ module RailsErrorDashboard
       when "delete"
         Commands::BatchDeleteErrors.call(error_ids)
       else
-        { success: false, count: 0, errors: [ "Invalid action type" ] }
+        { success: false, count: 0, errors: [ red_t("red.commands.invalid_action") ] }
       end
 
       if result[:success]
-        flash[:notice] = "Successfully #{action_type}d #{result[:count]} error(s)"
+        # One key per outcome rather than "Successfully #{action_type}d": the
+        # original conjugated English past tense by appending a "d" to the raw
+        # param, which no other language can be asked to do.
+        #
+        # An unrecognized action cannot reach here (the case above returns
+        # success: false), but the lookup still degrades rather than raising —
+        # a flash message is never worth a 500 on the error dashboard.
+        outcome = BATCH_OUTCOMES[action_type]
+        flash[:notice] = if outcome
+          red_tp("red.flash.batch.#{outcome}", count: result[:count])
+        else
+          red_t("red.commands.invalid_action")
+        end
       else
-        flash[:alert] = "Batch operation failed: #{result[:errors].join(', ')}"
+        flash[:alert] = red_t("red.flash.batch.failed", reason: result[:errors].join(", "))
       end
 
       redirect_to errors_path(**app_context_params)
@@ -302,7 +334,7 @@ module RailsErrorDashboard
     def correlation
       # Check if feature is enabled
       unless RailsErrorDashboard.configuration.enable_error_correlation
-        flash[:alert] = "Error Correlation is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("error_correlation")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -348,7 +380,7 @@ module RailsErrorDashboard
 
     def deprecations
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("breadcrumbs", plural: true)
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -368,7 +400,7 @@ module RailsErrorDashboard
 
     def n_plus_one_summary
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("breadcrumbs", plural: true)
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -388,7 +420,7 @@ module RailsErrorDashboard
 
     def cache_health_summary
       unless RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "Breadcrumbs are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("breadcrumbs", plural: true)
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -409,7 +441,7 @@ module RailsErrorDashboard
 
     def job_health_summary
       unless RailsErrorDashboard.configuration.enable_system_health
-        flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("system_health")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -429,7 +461,7 @@ module RailsErrorDashboard
 
     def database_health_summary
       unless RailsErrorDashboard.configuration.enable_system_health
-        flash[:alert] = "System health is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("system_health")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -462,9 +494,9 @@ module RailsErrorDashboard
       unless RailsErrorDashboard.configuration.detect_swallowed_exceptions
         # On Ruby < 3.3, validate! auto-disables this feature — tell the user why
         if RUBY_VERSION < "3.3"
-          flash[:alert] = "Swallowed exception detection requires Ruby 3.3+ (you have #{RUBY_VERSION}). Upgrade Ruby to use this feature."
+          flash[:alert] = red_t("red.flash.swallowed_requires_ruby", version: RUBY_VERSION)
         else
-          flash[:alert] = "Swallowed exception detection is not enabled. Enable it in config/initializers/rails_error_dashboard.rb"
+          flash[:alert] = feature_disabled_message("swallowed_exceptions")
         end
         redirect_to errors_path(**app_context_params)
         return
@@ -485,7 +517,7 @@ module RailsErrorDashboard
 
     def rack_attack_summary
       unless RailsErrorDashboard.configuration.enable_rack_attack_tracking
-        flash[:alert] = "Rack Attack tracking is not enabled. Set enable_rack_attack_tracking = true in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("rack_attack", options: "enable_rack_attack_tracking = true", set: true)
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -510,7 +542,7 @@ module RailsErrorDashboard
     def actioncable_health_summary
       unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "ActionCable tracking is not enabled. Enable enable_actioncable_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("actioncable", options: "enable_actioncable_tracking and enable_breadcrumbs")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -551,7 +583,7 @@ module RailsErrorDashboard
     def activestorage_health_summary
       unless RailsErrorDashboard.configuration.enable_activestorage_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
-        flash[:alert] = "ActiveStorage tracking is not enabled. Enable enable_activestorage_tracking and enable_breadcrumbs in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("activestorage", options: "enable_activestorage_tracking and enable_breadcrumbs")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -571,7 +603,7 @@ module RailsErrorDashboard
 
     def diagnostic_dumps
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
-        flash[:alert] = "Diagnostic dumps are not enabled. Enable them in config/initializers/rails_error_dashboard.rb"
+        flash[:alert] = feature_disabled_message("diagnostic_dumps", plural: true)
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -585,7 +617,7 @@ module RailsErrorDashboard
 
     def create_diagnostic_dump
       unless RailsErrorDashboard.configuration.enable_diagnostic_dump
-        flash[:alert] = "Diagnostic dumps are not enabled."
+        flash[:alert] = red_t("red.flash.diagnostic_dump.disabled")
         redirect_to errors_path(**app_context_params)
         return
       end
@@ -605,31 +637,31 @@ module RailsErrorDashboard
         note: params[:note].presence
       )
 
-      flash[:notice] = "Diagnostic dump captured successfully."
+      flash[:notice] = red_t("red.flash.diagnostic_dump.captured")
       redirect_to diagnostic_dumps_errors_path
     rescue => e
-      flash[:alert] = "Failed to capture diagnostic dump: #{e.message}"
+      flash[:alert] = red_t("red.flash.diagnostic_dump.failed", message: e.message)
       redirect_to diagnostic_dumps_errors_path
     end
 
     def enable_coverage
       unless RailsErrorDashboard.configuration.enable_coverage_tracking
-        flash[:alert] = "Coverage tracking is not enabled in configuration."
+        flash[:alert] = red_t("red.flash.coverage.not_enabled")
         redirect_to errors_path(**app_context_params)
         return
       end
 
       if Services::CoverageTracker.enable!
-        flash[:notice] = "Code path coverage enabled. Reproduce the error, then view source code to see executed lines."
+        flash[:notice] = red_t("red.flash.coverage.enabled")
       else
-        flash[:alert] = "Could not enable coverage. Requires Ruby 3.2+."
+        flash[:alert] = red_t("red.flash.coverage.unavailable")
       end
       redirect_back fallback_location: errors_path
     end
 
     def disable_coverage
       Services::CoverageTracker.disable!
-      flash[:notice] = "Code path coverage disabled."
+      flash[:notice] = red_t("red.flash.coverage.disabled")
       redirect_back fallback_location: errors_path
     end
 
@@ -643,10 +675,10 @@ module RailsErrorDashboard
 
       Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
 
-      flash[:notice] = "Test error logged successfully. Check your notification channels (Slack, Discord, email, etc.) to confirm delivery."
+      flash[:notice] = red_t("red.flash.test_error.logged")
       redirect_to errors_path(**app_context_params)
     rescue => e
-      flash[:alert] = "Failed to log test error: #{e.message}"
+      flash[:alert] = red_t("red.flash.test_error.failed", message: e.message)
       redirect_to settings_path(**app_context_params)
     end
 
@@ -655,6 +687,32 @@ module RailsErrorDashboard
     end
 
     private
+
+    # "X is not enabled. Enable it in <initializer>" was written out eleven
+    # times with only the feature name changing. One helper, so the wording
+    # cannot drift page to page — and the initializer path is interpolated
+    # rather than translated, because it is a path.
+    #
+    # English agrees the verb and pronoun with the feature name, so a plural
+    # feature ("Breadcrumbs are... Enable them") needs a different key from a
+    # singular one ("System health is... Enable it"). The caller says which;
+    # inferring it from the English string would be guessing at grammar.
+    #
+    # @param feature [String] a key under red.flash.features
+    # @param plural [Boolean] whether the feature name takes a plural verb
+    # @param options [String, nil] config option names to cite instead
+    # @param set [Boolean] use "Set" rather than "Enable" for those options
+    def feature_disabled_message(feature, plural: false, options: nil, set: false)
+      name = red_t("red.flash.features.#{feature}")
+
+      if options
+        key = set ? "red.flash.not_enabled_set_options" : "red.flash.not_enabled_options"
+        red_t(key, feature: name, options: options, file: INITIALIZER_PATH)
+      else
+        key = plural ? "red.flash.not_enabled_plural" : "red.flash.not_enabled"
+        red_t(key, feature: name, file: INITIALIZER_PATH)
+      end
+    end
 
     def calculate_release_comparison
       return {} if @errors_by_version.empty? || @errors_by_version.count < 2

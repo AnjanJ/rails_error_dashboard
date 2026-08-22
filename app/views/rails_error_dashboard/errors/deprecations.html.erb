@@ -1,21 +1,21 @@
-<% content_for :page_title, "Deprecation Warnings" %>
+<% content_for :page_title, red_t("red.errors.deprecations_page.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-exclamation-triangle me-2"></i>
-      Deprecation Warnings
+      <%= red_t("red.errors.deprecations_page.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to deprecations_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to deprecations_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to deprecations_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,17 +23,17 @@
   <% if @unique_count == 0 %>
     <div class="red-empty-state">
       <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-      <div class="red-empty-state-title">No Deprecation Warnings Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.errors.deprecations_page.empty_title") %></div>
       <p class="text-muted">
-        No deprecation warnings were detected in error breadcrumbs over the last <%= @days %> days.
+        <%= red_t("red.errors.deprecations_page.empty_body", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How deprecations are captured:</h6>
+          <h6><%= red_t("red.errors.deprecations_page.how_title") %></h6>
           <ul class="mb-0">
-            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
-            <li>Rails deprecation warnings are automatically captured as breadcrumbs</li>
-            <li>Deprecations appear here when an error occurs during a request with deprecation warnings</li>
+            <li><%= red_t("red.errors.pages.how_breadcrumbs_html", option: content_tag(:code, "enable_breadcrumbs = true")) %></li>
+            <li><%= red_t("red.errors.deprecations_page.how_captured") %></li>
+            <li><%= red_t("red.errors.deprecations_page.how_appear") %></li>
           </ul>
         </div>
       </div>
@@ -44,7 +44,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-danger"><%= @unique_count %></div>
-            <small class="text-muted">Unique Warnings</small>
+            <small class="text-muted"><%= red_t("red.errors.deprecations_page.unique_warnings") %></small>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= @total_count %></div>
-            <small class="text-muted">Total Occurrences</small>
+            <small class="text-muted"><%= red_t("red.errors.pages.total_occurrences") %></small>
           </div>
         </div>
       </div>
@@ -60,7 +60,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @affected_count %></div>
-            <small class="text-muted">Affected Errors</small>
+            <small class="text-muted"><%= red_t("red.errors.pages.affected_errors") %></small>
           </div>
         </div>
       </div>
@@ -70,7 +70,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-exclamation-triangle text-danger me-2"></i>
-          All Deprecation Warnings
+          <%= red_t("red.errors.deprecations_page.all_title") %>
           <span class="badge bg-danger"><%= @unique_count %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -80,11 +80,11 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th>Warning</th>
-                <th width="250">Source</th>
-                <th width="120">Occurrences</th>
-                <th width="250">Errors</th>
-                <th width="140">Last Seen</th>
+                <th><%= red_t("red.errors.deprecations_page.column_warning") %></th>
+                <th width="250"><%= red_t("red.errors.deprecations_page.column_source") %></th>
+                <th width="120"><%= red_t("red.errors.pages.column_occurrences") %></th>
+                <th width="250"><%= red_t("red.errors.pages.column_errors") %></th>
+                <th width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +99,7 @@
                       <%= link_to "##{eid}", error_path(eid), class: "text-decoration-none" %><%= "," unless i == shown_ids.size - 1 %>
                     <% end %>
                     <% if dep[:error_ids].size > 5 %>
-                      <small class="text-muted">+<%= dep[:error_ids].size - 5 %> more</small>
+                      <small class="text-muted"><%= red_tp("red.errors.pages.more_errors", count: dep[:error_ids].size - 5) %></small>
                     <% end %>
                   </td>
                   <td><%= local_time_ago(dep[:last_seen]) %></td>
@@ -112,11 +112,11 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Fix deprecations before upgrading Rails to avoid breaking changes.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.deprecations.footer_tip") %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/upgrading_ruby_on_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
-              <i class="bi bi-book"></i> Rails Upgrade Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.errors.deprecations.upgrade_guide") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>

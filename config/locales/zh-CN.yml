@@ -1,0 +1,1791 @@
+# RED dashboard translations — zh-CN
+#
+# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+# pull request is a perfectly good pull request.
+#
+# Structure is derived from en.yml, which is authoritative. Do not add keys
+# here that do not exist there — run bin/i18n-check after editing.
+zh-CN:
+  red:
+    common:
+      not_available: 不适用
+      close: 关闭
+      unknown: 未知
+      severity:
+        critical: 严重
+        high: 高
+        medium: 中
+        low: 低
+      days_filter:
+        '7': 7 天
+        '14': 14 天
+        '30': 30 天
+        '90': 90 天
+      frame_category:
+        app: 你的代码
+        gem: Gem
+        framework: Rails 框架
+        ruby_core: Ruby 核心
+        unknown: 未知
+      trend:
+        increasing: 上升
+        decreasing: 下降
+        stable: 平稳
+      health_status:
+        healthy: "✅ 正常"
+        warning: "⚠️ 警告"
+        critical: "\U0001F534 严重"
+      device_type:
+        mobile: Mobile
+        tablet: Tablet
+        bot: Bot
+        desktop: Desktop
+    nav:
+      sections:
+        core: 核心
+        health: 系统状态
+        diagnostics: 诊断
+        insights: 洞察
+      overview: 概览
+      errors: 错误
+      analytics: 分析
+      platform: 平台
+      cache: Cache
+      jobs: Jobs
+      database: 数据库
+      rate_limits: 限流
+      actioncable: ActionCable
+      activestorage: ActiveStorage
+      llm: LLM
+      n_plus_one: N+1 查询
+      deprecations: Deprecations
+      swallowed: 被吞异常
+      diagnostic_dumps: 诊断
+      storms: 风暴
+      correlation: 关联分析
+      releases: Releases
+      user_impact: 用户影响
+      settings: 设置
+    sidebar:
+      back_to_app: 返回 %{app}
+      back_to_app_home: 返回应用首页
+    navbar:
+      search_placeholder: 搜索错误... /
+      toggle_sidebar: 切换侧边栏 (S)
+      toggle_theme: 切换主题
+      keyboard_shortcuts_title: 键盘快捷键 (?)
+      all_applications: 全部应用
+      language: 语言
+      choose_language: 选择面板语言
+      all_apps: 全部应用 (%{count})
+    banners:
+      credentials:
+        label: 安全警告：
+        body_html: 你正在使用默认凭据（gandalf/youshallnotpass）。请设置环境变量 <code>ERROR_DASHBOARD_USER</code>
+          和 <code>ERROR_DASHBOARD_PASSWORD</code>，或在初始化文件中配置 <code>authenticate_with</code>。
+        dismiss: 本次会话内不再提示
+      storm:
+        active_title: 错误风暴进行中
+        recent_title: 近期触发过风暴保护
+        active_paused: "（自 %{time} 起）— 已触发风暴保护。出现次数仍精确计数；详情采集已暂停（仅计数模式）。"
+        active_sampled: "（自 %{time} 起）— 已触发风暴保护。出现次数仍精确计数；上下文采集改为抽样。"
+        recent_body: "（已于 %{time} 结束）— %{count} 次出现以精确计数记录，详情为抽样采集。"
+        view_history: 查看风暴历史
+    footer:
+      built_with: 构建于
+      credit_html: 由 %{author} 用 ❤️ 打造
+    shortcuts:
+      title: 键盘快捷键
+      refresh: 刷新页面
+      focus_search: 定位到搜索框
+      analytics: 分析
+      toggle_sidebar: 切换侧边栏
+      show_shortcuts: 显示快捷键
+    errors:
+      index:
+        title: 错误
+        last_updated_html: 最近更新：%{time}
+        live: 实时
+        summary:
+          errors_html:
+            other: "%{value} 个错误"
+          unresolved_html: "%{value} 个未解决"
+          all_time: 全部时间
+        spike:
+          critical: 检测到严重的错误激增！
+          high: 检测到明显的错误激增
+          elevated: 错误活动高于正常水平
+          today:
+            other: 今日：%{count} 个错误
+          average: "（7 日均值：%{avg}）"
+          multiplier: 为正常水平的 %{multiplier} 倍
+        filters:
+          search_placeholder: 搜索错误...
+          more: 更多筛选
+          apply: 应用筛选
+          clear: 清除
+          clear_all: 全部清除
+          active_label: 筛选条件：
+          status:
+            all: 全部
+            unresolved: 未解决
+            resolved: 已解决
+            assigned: 已指派
+            reopened: 已重新打开
+          severity:
+            any: 任意严重程度
+          all_apps: 全部应用
+          all_platforms: 全部平台
+          all_types: 全部类型
+          all_timeframes: 全部时间
+          all_frequencies: 全部频率
+          all_priorities: 全部优先级
+          all_assignments: 全部指派情况
+          all_assignees: 全部负责人
+          unassigned: 未指派
+          assigned: 已指派
+          unresolved_only: 仅未解决
+          hide_snoozed: 隐藏已延后
+          hide_muted: 隐藏已静音
+          timeframes:
+            last_hour: 最近一小时
+            today: 今天
+            yesterday: 昨天
+            last_7_days: 最近 7 天
+            last_30_days: 最近 30 天
+            last_90_days: 最近 90 天
+          frequencies:
+            once: 1 次
+            few: 2–9 次
+            frequent: 10–99 次
+            very_frequent: 100 次以上
+            recurring: 反复出现
+          chips:
+            search: 搜索：%{value}
+            application: 应用：%{value}
+            platform: 平台：%{value}
+            error_type: 类型：%{value}
+            severity: 严重程度：%{value}
+            timeframe: 时间范围：%{value}
+            frequency: 频率：%{value}
+            status: 状态：%{value}
+            priority: 优先级：%{value}
+            remove: 移除筛选条件
+        columns:
+          error: 错误
+          status: 状态
+          events: 事件
+          users: 用户
+          last_seen: 最近出现
+          application: 应用
+          platform: 平台
+          select_all: 选择全部错误
+        batch:
+          selected:
+            other: 已选择 %{count} 项
+          resolve: 解决
+          delete: 删除
+          confirm_delete: 确定要删除所选错误吗？
+        pagination: 显示第 %{from}–%{to} 条，共 %{count} 条错误
+        empty:
+          filtered_title: 没有符合筛选条件的错误
+          filtered_message: 可以尝试调整搜索关键词或筛选条件。
+          filtered_cta: 清除全部筛选条件
+          clear_title: 一切正常！
+          clear_message: 尚未记录任何错误，你的应用运行良好。错误一旦发生就会自动出现在这里。
+      show:
+        page_title: '错误 #%{id}'
+        breadcrumb_errors: 错误
+        hero:
+          reopened: 已重新打开
+          occurrences_html:
+            other: "%{value} 次出现"
+          user_html: 用户 %{value}
+          first_seen_html: 首次出现于 %{time}
+          last_seen_html: 最近出现于 %{time}
+        actions:
+          resolve: 解决
+          assign: 指派
+          copy_for_llm: 复制给 LLM
+          ai_help: AI 助手
+          export_json: 导出 JSON
+        tabs:
+          details: 详情
+          context: 上下文
+          history: 历史
+          issues: 工单
+        coverage:
+          active_label: 覆盖率已启用
+          active_body: 展开源代码即可查看已执行的行
+          inactive_label: 代码路径覆盖率
+          inactive_body: 启用后可查看已执行的行
+          enable: 启用
+          disable: 停用
+        baselines:
+          title: 基线统计
+          anomaly_label: 异常：
+          anomaly_body: 高于基线 %{sigma}σ（%{level}）
+          levels:
+            elevated: 偏高
+            high: 高
+            critical: 严重
+          hourly: 按小时
+          daily: 按天
+          weekly: 按周
+          mean: 均值：
+          std_dev: σ：
+          percentile_95: P95：
+        quick_actions:
+          title: 快捷操作
+          view_similar: 查看相似错误
+          view_user_errors: 查看该用户的错误
+          view_platform_errors: 查看 %{platform} 的错误
+          analytics: 分析
+      variables:
+        local_title: 局部变量
+        local_hint: 来自抛出异常的那个栈帧的变量
+        instance_title: 实例变量
+        instance_hint_html: 来自抛出异常处 %{klass} 的实例变量
+        instance_hint_generic: 来自抛出异常的那个对象的实例变量
+        captured:
+          other: 已捕获 %{count} 个
+        column_variable: 变量
+        column_type: 类型
+        column_value: 值
+        filtered: "[已过滤]"
+        truncated: 已截断
+      deprecations:
+        title: 废弃警告
+        hint: 本次请求中检测到的 Rails 废弃警告
+        column_warning: 警告
+        column_source: 来源
+        footer_tip: 升级 Rails 前请先处理废弃项，以免遇到不兼容的变更。
+        upgrade_guide: Rails 升级指南
+      n_plus_one:
+        title: N+1 查询检测
+        hint: 在本次请求的 SQL breadcrumbs 中检测到的重复查询模式
+        patterns:
+          other: "%{count} 种模式"
+        column_repeats: 重复次数
+        column_query: 查询模式
+        column_total_time: 总耗时
+        fingerprint: 指纹：%{fingerprint}
+        tip_preload_html: 提示：用 %{includes} 或 %{preload} 预加载 %{table}
+        tip_generic_html: 提示：使用 %{includes} 或 %{preload} 预加载关联数据
+        eager_loading_guide: Rails 预加载指南
+      cache_health:
+        title: 缓存状态
+        operations:
+          other: "%{count} 次操作"
+        hint: 基于本次请求 breadcrumbs 的缓存活动分析
+        reads: 读取
+        writes: 写入
+        hit_rate: 命中率
+        hits:
+          other: "%{count} 次命中"
+        misses:
+          other: "%{count} 次未命中"
+        unknown_status:
+          other: "%{count} 次读取的命中状态未知（较早的 breadcrumbs）"
+        total_time_html: 缓存总耗时：%{duration}
+        slowest_html: 最慢：%{duration}
+        low_hit_rate: 命中率偏低 — 建议检查缓存键的设计与 TTL 设置。
+        moderate_hit_rate: 命中率中等 — 可以考虑预热缓存或调整过期时间。
+        caching_guide: Rails 缓存指南
+      breadcrumbs:
+        title: Breadcrumbs
+        events:
+          other: "%{count} 个事件"
+        hint: 导致此错误的活动轨迹
+        column_category: 类别
+        column_message: 消息
+        column_duration: 耗时
+      patterns:
+        title: 出现规律
+        window: "（最近 %{days} 天）"
+        pattern_type: 规律类型
+        types:
+          business_hours:
+            label: 工作时段规律
+            description: 错误高峰出现在工作时段（9:00–17:00），说明与用户活动相关
+          night:
+            label: 夜间规律
+            description: 错误高峰出现在夜间（0:00–6:00），可能来自后台任务或定时作业
+          weekend:
+            label: 周末规律
+            description: 错误大多出现在周末，说明周末的使用方式有其特点
+          uniform:
+            label: 分布均匀
+            description: 错误在全天分布均匀，没有明显规律
+          none:
+            label: 未发现规律
+            description: 数据不足，无法识别明确的出现规律
+        strength: 规律强度
+        strengths:
+          strong:
+            label: 规律明显
+            description: 错误高度集中在特定时段
+          moderate:
+            label: 规律中等
+            description: 在特定时段有一定集中
+          weak:
+            label: 规律较弱
+            description: 错误分布相对均匀
+        heatmap_title: 按小时分布的热力图
+        heatmap_legend: 颜色越深表示错误越多。红色边框标示高峰时段（超过平均值的 %{multiplier} 倍）。
+        heatmap_cell:
+          other: "%{hour} — %{count} 个错误"
+        peak_hours: 高峰时段：
+        peak_hours_hint: 这些时段的错误率超过平均值的两倍。建议关注此时的发布与负载情况。
+        bursts_title: 错误突发
+        bursts_window: "（最近 %{days} 天）"
+        bursts_hint: 错误突发是指数分钟内接连出现多个错误。这可能意味着级联故障或负载激增。
+        column_start_time: 开始时间
+        column_duration: 持续时间
+        column_error_count: 错误数量
+        column_intensity: 强度
+        burst_duration: "%{minutes} 分钟"
+        burst_duration_seconds: "（%{seconds} 秒）"
+        burst_errors_html:
+          other: "%{value} 个错误"
+        intensity_high: 高（20 个以上错误）
+        intensity_medium: 中（10–19 个错误）
+        intensity_low: 低（5–9 个错误）
+        bursts_truncated: 显示 %{total} 次突发中的 %{shown} 次
+        recommendation_label: 建议：
+        recommendation_intro: 检测到多次错误突发。建议排查：
+        recommendation_deploys: 突发前后是否有发布或配置变更
+        recommendation_load: 负载激增或流量变化
+        recommendation_cascades: 由相关错误引发的级联故障
+        recommendation_jobs: 后台任务失败或重试风暴
+        empty: 未发现出现规律或突发。规律分析可能需要更多数据。
+      providers:
+        github: GitHub
+        gitlab: GitLab
+        bitbucket: Bitbucket
+        jira: Jira
+        linear: Linear
+        generic: 平台
+        generic_lowercase: 该平台
+      discussion:
+        title: 讨论
+        activity_log: 活动记录
+        reply_on: 在 %{provider} 上回复
+        start_on: 在 %{provider} 上发起讨论
+        empty: 还没有评论。来做第一个在 %{provider} 上讨论这个错误的人吧。
+      issue_section:
+        title: 工单系统
+        view_issue: 查看工单
+        linked: 已关联
+        issue_reference: "%{provider} #%{number}"
+        states:
+          open: 开启
+          closed: 已关闭
+          merged: 已合并
+        assignees: 负责人
+        unassigned: 未指派
+        labels: 标签
+        no_labels: 暂无标签
+        create_new: 新建工单
+        create_issue: 在 %{provider} 创建工单
+        configure_html: 在初始化文件中配置 %{token} 和 %{url}，即可启用工单创建功能。
+        link_existing: 关联已有工单
+        link: 关联
+      cascades:
+        title: 错误级联
+        hint: 错误之间的因果关系
+        triggered_by: 由以下错误引发
+        triggered_by_hint: "（导致此错误的错误）"
+        triggers: 引发以下错误
+        triggers_hint: "（由此错误导致的错误）"
+        column_error_type: 错误类型
+        column_message: 消息
+        column_probability: 概率
+        column_frequency: 频率
+        column_avg_delay: 平均间隔
+        view: 查看
+        footnote: 级联模式反映因果关系。概率高（≥%{probability}%）且频率高（≥%{frequency}）表示级联关系较强。
+      llm_summary:
+        title: LLM 调用
+        hint: 根据请求的 breadcrumbs 汇总
+        calls: 调用次数
+        tokens: Token
+        cost: 费用
+        input: 输入
+        output: 输出
+        tool_calls: 工具调用
+        total_time: 总耗时
+        errors: 错误
+        by_model: 按模型
+        failed_calls:
+          other: "%{count} 次调用失败 — 详情请查看 breadcrumbs 轨迹。"
+      timeline:
+        title: 时间线
+        hint: 近期的相关错误
+        current_error: 当前错误
+        user: 用户：%{id}
+        resolved: 已解决
+        notes_label: 解决说明：
+        notes_tooltip: 解决说明：%{notes}
+      user_errors_table:
+        column_rank: 排名
+        column_user: 用户
+        column_error_type_count: 不同错误类型数
+        column_error_count: 错误数量
+        column_percentage: 占比
+        column_error_types: 错误类型
+        column_actions: 操作
+        types:
+          other: "%{count} 种类型"
+        more:
+          other: 另有 %{count} 项
+        view_errors: 查看错误
+      co_occurring:
+        title: 同时出现的错误
+        badge: 时间规律
+        hint: 在该错误前后 %{minutes} 分钟内出现的错误
+        column_error_type: 错误类型
+        column_message: 消息
+        column_platform: 平台
+        column_frequency: 频率
+        column_avg_delay: 平均间隔
+        times:
+          other: "%{count} 次"
+        before: 早 %{duration}
+        after: 晚 %{duration}
+        simultaneous: 同时
+        view: 查看
+      modals:
+        cancel: 取消
+        name_placeholder: 例如：张三
+        resolve:
+          title: 将错误标记为已解决
+          name_label: 你的姓名
+          name_hint: 由谁解决这个错误？
+          reference_label: 关联引用（选填）
+          reference_placeholder: '例如：JIRA-123、PR #456、GitHub Issue #789'
+          reference_hint: 指向工单、PR 或 issue 的链接
+          notes_label: 解决说明（选填）
+          notes_placeholder: 描述为修复此错误做了哪些处理...
+          notes_hint: 为解决这个错误做了什么？
+          submit: 标记为已解决
+        assign:
+          title: 指派错误
+          label: 指派给
+          hint: 该由谁来排查这个错误？
+          submit: 指派
+        priority:
+          title: 更新优先级
+          label: 优先级
+          current: 当前：%{value}
+          submit: 更新优先级
+        snooze:
+          title: 延后错误
+          label: 延后时长
+          hint: 在活动视图中隐藏此错误
+          reason_label: 原因（选填）
+          reason_placeholder: 为什么要延后这个错误？
+          reason_hint: 原因将作为评论添加
+          submit: 延后
+          hours:
+            other: "%{count} 小时"
+          days:
+            other: "%{count} 天"
+          weeks:
+            other: "%{count} 周"
+          hours_with_equivalent: "%{hours}（%{equivalent}）"
+        mute:
+          title: 静音通知
+          description: 被静音的错误仍会显示在面板中，但不会触发任何通知（Slack、邮件、Discord、PagerDuty、webhooks）。
+          name_label: 你的姓名（选填）
+          reason_label: 原因（选填）
+          reason_placeholder: 为什么要静音这个错误？
+          reason_hint: 原因将作为评论添加
+          submit: 静音通知
+      request_context:
+        title: 请求上下文
+        url: 请求 URL：
+        hostname: 主机名：
+        content_type: 内容类型：
+        duration: 请求耗时：
+        params: 请求参数：
+        user_agent: User Agent：
+        ip_address: IP 地址：
+        replay: 重放请求：
+        raw_user_agent: 原始 User Agent
+        duration_seconds: "%{value} 秒"
+        duration_ms: "%{value} 毫秒"
+        copy_curl: 复制为 curl
+        copy_curl_title: 复制 curl 命令到剪贴板
+        copy_rspec: 复制为 RSpec
+        copy_rspec_title: 复制 RSpec request spec 到剪贴板
+      similar_errors:
+        title: 相似错误
+        badge: 模糊匹配
+        hint: backtrace 与消息相似的错误（相似度 %{threshold}% 以上）
+        column_similarity: 相似度
+        column_error_type: 错误类型
+        column_message: 消息
+        column_platform: 平台
+        column_occurrences: 出现次数
+        occurrences:
+          other: "%{count} 次"
+        view: 查看
+      source_code:
+        view_on: 在 %{host} 上查看
+        view_source: 查看源码
+        coverage_legend_html: 覆盖率已启用 — %{executed} = 已执行，%{not_executed} = 未执行
+        coverage_green: 绿色
+        coverage_gray: 灰色
+        read_failed: 无法读取源码：%{message}
+      ai_help:
+        title: AI 助手
+        providers:
+          openai: OpenAI
+          anthropic: Anthropic
+        close: 关闭 AI 助手
+        empty: 可以询问根本原因、复现步骤、可能的修复方式，或接下来该检查什么。
+        question_label: 问题
+        question_placeholder: 最可能的根本原因是什么？
+        ask: 提问
+      sidebar:
+        title: 元数据
+        occurrence_count: 出现次数
+        occurred_times:
+          other: 此错误已出现 %{count} 次
+        first_seen: 首次出现
+        last_seen: 最近出现
+        jump_to_timeline: 跳转到时间线
+        severity_level: 严重程度
+        view_all_severity: 查看所有 %{severity} 级错误
+        severity_badges:
+          critical: 严重
+          high: 高
+          medium: 中
+          low: 低
+        platform: 平台
+        view_all_platform: 查看 %{platform} 的所有错误
+        user: 用户
+        view_user_errors: 查看该用户的所有错误
+        user_id: ID：%{id}
+        user_id_label: 用户 ID：%{id}
+        guest: 访客 / 未认证
+        issue_tracking_linked_html: 状态、指派和优先级通过你的%{link}管理。
+        issue_tracking_link_text: 关联工单
+        issue_tracking_unlinked: 状态、指派和优先级通过你的工单系统管理。关联一个工单即可查看详情。
+        workflow_status: 流程状态
+        resolved: 已解决
+        unresolved: 未解决
+        reopened: 已重新打开
+        assigned_to: 指派给
+        assign: 指派
+        remove_assignment: 取消指派？
+        priority: 优先级
+        snooze: 延后
+        snoozed: 已延后
+        snoozed_until_html: 至 %{time}
+        unsnooze: 取消延后
+        notifications: 通知
+        muted: 已静音
+        muted_by: 操作人：%{name}
+        muted_since_html: 自 %{time} 起
+        mute: 静音
+        unmute: 取消静音
+        resolved_by: 解决人
+        reference: 关联引用
+        resolution_notes: 解决说明
+        error_id: 错误 ID
+        copy_error_id: 复制错误 ID
+        environment:
+          title: 运行环境
+          hint: 错误发生时的运行上下文
+          app_version: 应用版本：
+          view_all_version: 查看 %{version} 中的所有错误
+          git_sha: Git SHA：
+          rails: Rails：
+          ruby: Ruby：
+          environment: 环境：
+          server: 服务器：
+          database: 数据库：
+          key_gems: 主要 gems：
+        health:
+          title: 系统状态
+          hint: 错误触发时的运行状态
+          memory_rss: 内存（RSS）：
+          process_swap: 进程交换空间：
+          peak_rss: 峰值 RSS：
+          os_threads: 系统线程：
+          threads: 线程：
+          file_descriptors: 文件描述符：
+          load_average: 平均负载：
+          system_memory: 系统内存：
+          system_swap: 系统交换空间：
+          tcp_connections: TCP 连接：
+          gc_live_objects: GC 存活对象：
+          major_gc_runs: Major GC 次数：
+          last_gc: 上次 GC：
+          connection_pool: 连接池：
+          puma_threads: Puma 线程：
+          job_queue: 任务队列（%{adapter}）：
+          vm_cache_invalidations: VM 缓存失效次数：
+          vm_cache_misses: VM 缓存未命中：
+          shape_cache_size: Shape 缓存大小：
+          yjit_compiled: YJIT 已编译：
+          yjit_invalidations: YJIT 失效次数：
+          yjit_code_size: YJIT 代码大小：
+          yjit_compile_time: YJIT 编译耗时：
+          ruby_threads: "（Ruby：%{count}）"
+      info:
+        new_badge: 新
+        new_tooltip: 该错误出现在最近一小时内
+        reopened: 已重新打开
+        reopened_tooltip: 此前已解决，于 %{time} 再次出现
+        copy_error_type: 复制错误类型
+        message_label: 错误消息：
+        copy_message: 复制错误消息
+        copy: 复制
+        cause_chain:
+          title: 异常成因链
+          caused_by: 起因：
+          caused_by_indexed: 起因（#%{index}）：
+          backtrace: Backtrace
+        backtrace:
+          label: Backtrace：
+          frame_counts: "（%{app} 属于你的代码，%{framework} 属于框架/gems）"
+          copy_full: 复制完整 backtrace
+          copy_full_title: 复制完整 backtrace
+          your_code: 你的代码
+          framework_code: 框架与 gems 的代码
+          frames:
+            other: "%{count} 个栈帧"
+          click_to_expand: "（点击展开）"
+          view_source: 查看源码
+          none: 无可用的 backtrace
+      row:
+        new_badge: 新
+        reopened: 已重新打开
+        view_user_errors: 查看用户 %{user} 的所有错误
+        status:
+          unresolved: 未解决
+          resolved: 已解决
+          in_progress: 处理中
+          investigating: 排查中
+          wont_fix: 不予修复
+          assigned: 已指派
+          snoozed: 已延后
+          muted: 已静音
+      stats:
+        today: 今天
+        this_week: 本周
+        unresolved: 未解决
+        resolved: 已解决
+        reopened: 已重新打开
+      pages:
+        percent: "%{value}%"
+        column_errors: 错误
+        column_occurrences: 出现次数
+        column_last_seen: 最近出现
+        total_occurrences: 总出现次数
+        affected_errors: 受影响的错误
+        more_errors:
+          other: 另有 %{count} 项
+        none_in_last_days: 最近 %{days} 天内未检测到任何结果。
+        how_breadcrumbs_html: 必须启用 breadcrumbs（%{option}）
+      deprecations_page:
+        title: 废弃警告
+        empty_title: 未找到废弃警告
+        empty_body: 最近 %{days} 天的错误 breadcrumbs 中未检测到废弃警告。
+        how_title: 废弃警告的记录方式：
+        how_captured: Rails 的废弃警告会自动记录为 breadcrumbs
+        how_appear: 当带有废弃警告的请求发生错误时，警告就会显示在这里
+        unique_warnings: 警告种类
+        all_title: 全部废弃警告
+        column_warning: 警告
+        column_source: 来源
+      n_plus_one_page:
+        title: N+1 查询模式
+        empty_title: 未找到 N+1 查询模式
+        empty_body: 最近 %{days} 天的错误 breadcrumbs 中未检测到 N+1 查询模式。
+        how_title: N+1 检测的工作方式：
+        how_captured: 在产生错误的请求中，SQL 查询会被记录为 breadcrumbs
+        how_threshold_html: 形态相同且出现次数达到 %{threshold} 次及以上的查询会被标记
+        how_default:
+          other: 默认阈值为 %{count} 次重复
+        unique_patterns: 模式数量
+        all_title: 全部 N+1 查询模式
+        duration_ms: "%{value} 毫秒"
+        footer_tip_html: 可使用 %{includes}、%{preload} 或 %{eager_load} 修复 N+1 查询。
+      swallowed_page:
+        title: 被吞异常
+        empty_title: 未检测到被吞异常
+        empty_body: 最近 %{days} 天内未检测到 rescue 比例超过 %{threshold}% 的异常。
+        how_title: 被吞异常的检测方式：
+        how_raise: TracePoint(:raise) 统计每一次抛出的异常
+        how_rescue: TracePoint(:rescue) 统计每一次被捕获的异常
+        how_ratio: rescue 与 raise 的比例偏高 = 很可能被吞掉（被静默捕获）
+        how_requires_html: 需要 Ruby 3.3 及以上版本，以及 %{option}
+        swallowed_patterns: 被吞模式
+        total_rescues: rescue 总数
+        total_raises: raise 总数
+        all_title: 被吞异常的模式
+        column_exception_class: 异常类
+        column_raise_location: 抛出位置
+        column_rescue_location: 捕获位置
+        column_raises: 抛出
+        column_rescues: 捕获
+        column_ratio: 比例
+        view_unrescued: 查看未被捕获、已进入 error_log 的 %{exception} 错误
+        footer_tip: 被吞异常先被抛出，随后被静默捕获，可能掩盖真正的缺陷。
+      rack_attack_page:
+        title: 限流事件
+        missing_title: 尚未安装 Rack Attack
+        missing_body_html: 跟踪已启用，但本应用未加载 %{gem} gem — 因此无法记录任何事件。请将其加入 Gemfile 并至少配置一条规则，事件便会显示在这里。
+        empty_title: 未找到限流事件
+        empty_body: 最近 %{days} 天内未记录任何 Rack Attack 的 throttle、blocklist 或 track 事件。
+        how_title: Rack Attack 跟踪的工作方式：
+        how_enabled_html: 必须启用 Rack Attack 跟踪（%{option}）
+        how_installed: 应用中必须已安装并配置 Rack Attack
+        how_recorded: 只要规则命中，throttle、blocklist 和 track 事件就会被记录 — 无需发生错误
+        how_buffered: 事件会先缓冲，每 %{seconds} 秒写入一次，因此显示会略有延迟
+        unique_rules: 规则数
+        total_events: 事件总数
+        unique_ips: 独立 IP 数
+        all_title: 按规则查看限流事件
+        column_rule: 规则
+        column_type: 类型
+        column_count: 数量
+        column_ips: IP 地址
+        column_top_path: 主要路径
+        match_type:
+          blocklist: blocklist
+          throttle: throttle
+          track: track
+        footer_tip: 数量偏高可能意味着存在滥用，或规则配置有误。
+        docs: Rack Attack 文档
+      diagnostic_dumps_page:
+        title: 诊断转储
+        capture: 创建转储
+        empty_title: 尚无诊断转储
+        empty_body: 按需创建系统状态快照，便于排查问题。
+        how_title: 诊断转储的工作方式：
+        how_capture_html: 点击上方的%{button}，或执行 %{command}
+        how_captures: 记录内容：运行环境、GC 统计、线程、连接池、内存、任务队列
+        how_saved: 每次转储都会保存到数据库，便于历史对比
+        how_use: 可用转储排查生产问题，或确认系统状态
+        total_dumps: 转储总数
+        threads_latest: 线程（最新）
+        memory_latest: 内存（最新）
+        history_title: 转储历史
+        details: 详情
+        pid: PID：%{pid}
+        uptime: 运行时长：%{minutes} 分钟
+        section_environment: 运行环境
+        section_system_health: 系统状态
+        section_gc: GC
+        section_job_queue: 任务队列
+        env_versions: Ruby %{ruby} / Rails %{rails}
+        memory_mb: "%{value} MB"
+        threads:
+          other: "%{count} 个线程"
+        pool: 连接池：%{busy}/%{size}
+        gc_stats: 存活：%{live} / Major GC：%{major}
+        jobs_failed: 失败：%{count}
+        footer_tip_html: 也可以通过以下方式创建转储：%{command}
+        footer_note_html: 添加备注：%{command}
+        unknown_short: "?"
+      storms_page:
+        title: 风暴历史
+        intro_html: 当错误率骤增时（发布出问题、依赖服务故障），风暴保护会限制 gem 自身的数据库写入，以免加剧事故。出现次数始终精确计数 —
+          只有单条事件的详情会被抽样。阈值可通过 %{options} 选项按进程配置。
+        active_html: "%{label}，始于 %{time} — 峰值速率 %{rate}。"
+        active_label: 风暴进行中
+        empty_title: 未记录到风暴
+        empty_body: 风暴保护已就绪。若本应用遭遇错误洪峰，相关事件会连同被丢弃内容的精确计数一并显示在这里。
+        column_started: 开始时间
+        column_duration: 持续时间
+        column_peak_rate: 峰值速率
+        column_mode: 模式
+        column_counted: 已计数（精确）
+        column_overflow: 溢出
+        column_top_errors: 主要错误
+        active_badge: 进行中
+        mode_count_only: 仅计数
+        mode_shedding: 丢弃
+        rate_per_minute: "%{value}/分钟"
+        occurrence_multiplier: "×%{count}"
+      overview_page:
+        page_title: 面板
+        title: 概览
+        last_updated_html: 最近更新：%{time}
+        alert_banner:
+          other: 最近一小时出现 %{count} 个严重/高优先级错误
+        alert_occurrences:
+          other: "%{count} 次出现"
+        alert_view: 查看
+        error_rate: 错误率
+        error_rate_hint: 今日每小时错误数
+        unresolved: 未解决
+        unresolved_hint: 等待处理
+        resolution_rate: 解决率
+        resolution_hint: 已解决 %{total} 个中的 %{resolved} 个
+        affected_users: 受影响用户（今日）
+        users_change: 较昨日 %{count}
+        avg_resolution: 平均解决时长
+        avg_resolution_hint: 从发生到解决的平均时长
+        hours_short: "%{value} 小时"
+        error_trend: 错误趋势
+        top_errors: 影响最大的错误
+        view_all: 查看全部 →
+        users:
+          other: "%{count} 位用户"
+        platform_health: 平台健康度
+        full_comparison: 完整对比 →
+        stability_score_html: "%{score}/100"
+        platform_summary: "%{total} 个错误 · %{critical} 个严重 · %{unresolved} 个未处理"
+        correlation_title: 关联分析洞察
+        full_analysis: 完整分析 →
+        problematic_releases: 有问题的发布版本
+        release_errors:
+          other: "%{count} 个错误"
+        time_correlated: 时间上相关
+        correlation_value_html: 相关度 %{percent}（%{strength}）
+        multi_error_users: 遇到多种错误的用户
+        user_types_html: 用户 %{user} · %{types}
+        types:
+          other: "%{count} 种类型"
+    settings:
+      title: 设置
+      version: v%{version}
+      intro_html: 当前配置的只读视图。请通过 %{file} 或环境变量修改。
+      option_count:
+        other: "%{count} 项配置"
+      plugins:
+        title: 已启用的插件
+        column_name: 插件名称
+        column_version: 版本
+        column_description: 说明
+        column_status: 状态
+        active: 已启用
+        inactive: 未启用
+        empty: 当前没有注册任何插件。你可以创建自定义插件来扩展功能。
+      test_error:
+        title: 测试通知
+        description_html: 通过完整的捕获与通知链路发送一个测试错误。这会在错误日志中创建一个 %{error_class}，并向所有已配置的渠道（Slack、Discord、PagerDuty、邮件、webhooks）发送通知。测试错误会被明确标记，可以放心解决或删除。
+        confirm: 此操作将创建一个测试错误，并向所有已配置的渠道发送通知。是否继续？
+        submit: 发送测试错误
+      help:
+        title: 需要修改这些设置？
+        edit_html: 请在 %{file} 中修改配置，然后重启应用。
+        docs_html: 更多信息请参阅%{docs}。
+        docs_link: 文档
+      groups:
+        core_features: 核心功能
+        multi_app: 多应用支持
+        user_integration: 用户集成
+        performance: 性能设置
+        notifications: 通知渠道
+        analytics: 高级分析功能
+        source_code: 源代码集成
+        breadcrumbs: Breadcrumbs
+        system_health: 系统状态
+        enhanced_metrics: 增强指标
+        issue_tracking: 工单跟踪
+        deep_debugging: 深度调试
+        event_tracking: 事件跟踪
+        advanced: 高级配置
+        internal_logging: 内部日志
+      units:
+        lines:
+          other: "%{count} 行"
+        minutes:
+          other: "%{count} 分钟"
+        seconds:
+          other: "%{count} 秒"
+        events:
+          other: "%{count} 个事件"
+        queries:
+          other: "%{count} 条查询"
+        std_devs: "%{count}σ"
+      values:
+        enabled: 已启用
+        disabled: 已停用
+        not_set: 未设置
+        not_found: 未找到
+        not_available: 不可用
+        empty: 空
+        unknown: 未知
+        set: 已设置
+        auto_detected: 自动检测
+        configured: "（已配置）"
+        items:
+          other: "%{count} 项"
+        rules:
+          other: "%{count} 条规则"
+        users:
+          other: "%{formatted} 位用户"
+        days:
+          other: "%{count} 天"
+        rails_app_name_unavailable: 无法获取 Rails 应用名称
+        separate_db: 独立数据库：%{name}
+        configured_but_not_found: 已配置但未找到
+        shared_db_primary: 共享数据库（主库）
+        shared_db: 共享数据库
+        unable_to_detect: 无法检测
+        no_user_model: 未检测到 User 模型
+        unable_to_query_count: 无法查询数量
+        manual_cleanup_required: 需要手动清理
+        keep_forever: 永久保留
+        no_automatic_deletion: 不自动删除
+        run_command: 执行：
+        to_cleanup: 如需清理：
+      options:
+        enable_middleware: 捕获未处理的异常
+        enable_error_subscriber: 订阅 Rails 错误事件
+        retention_days: 仅手动清理（执行：rails error_dashboard:cleanup_resolved DAYS=90）
+        max_backtrace_lines: 堆栈跟踪深度上限
+        sampling_rate: 错误捕获的采样比例
+        application_name: 本应用的名称（未设置时自动检测）
+        database: 错误日志使用的数据库
+        use_separate_database: 为错误日志使用独立数据库
+        user_model: 用户关联所用的模型名（未设置时自动检测）
+        total_users_for_impact: 用于计算影响百分比（未设置时自动检测）
+        async_logging: 在后台任务中处理
+        async_adapter: 任务队列适配器
+        enable_rate_limiting: 对 API 请求限流
+        rate_limit_per_minute: 每个 IP 每分钟的请求数
+        enable_slack_notifications: 实时通知
+        slack_webhook_url: Slack webhook 地址
+        enable_email_notifications: 邮件告警
+        notification_email_recipients: 收件人地址
+        notification_email_from: 发件人地址
+        enable_discord_notifications: 通过 Discord webhook 通知
+        discord_webhook_url: Discord webhook 地址
+        enable_pagerduty_notifications: 严重错误升级
+        pagerduty_integration_key: PagerDuty API 密钥
+        enable_webhook_notifications: 通用 webhook 地址
+        webhook_urls: 自定义 webhook 地址
+        enable_scheduled_digests: 每日/每周摘要邮件。可通过 SolidQueue、Sidekiq 或 cron 调度
+        digest_frequency: 摘要邮件的发送频率
+        digest_recipients: 邮件地址（默认使用通知收件人）
+        enable_similar_errors: 按相似度查找相关错误
+        enable_co_occurring_errors: 同时发生的错误
+        enable_error_cascades: 父级→子级错误链
+        enable_error_correlation: 按版本/用户/时间分析
+        enable_platform_comparison: iOS 与 Android 对比分析
+        enable_occurrence_patterns: 周期性与突发检测
+        enable_baseline_alerts: 异常检测
+        baseline_alert_threshold_std_devs: 触发告警的标准差倍数
+        baseline_alert_severities: 需要告警的严重程度
+        baseline_alert_cooldown_minutes: 同一错误类型两次告警之间的间隔分钟数
+        enable_source_code_integration: 在堆栈跟踪中显示代码
+        source_code_context_lines: 目标行前后显示的行数
+        enable_git_blame: 显示 git blame 信息
+        source_code_cache_ttl: 源代码缓存时长
+        only_show_app_code_source: 出于安全考虑隐藏 gems/stdlib
+        git_branch_strategy: 分支解析策略
+        enable_breadcrumbs: 记录请求的活动轨迹
+        breadcrumb_buffer_size: 每个请求最多记录的 breadcrumbs 数
+        enable_n_plus_one_detection: 在 breadcrumbs 中检测重复查询
+        n_plus_one_threshold: 判定为 N+1 的最少重复次数
+        enable_system_health: 在错误发生时记录 GC、内存、线程和连接池
+        app_version: 应用当前版本
+        git_sha: 已部署的提交
+        git_repository_url: GitHub/GitLab 仓库地址
+        dashboard_base_url: 面板链接的基础地址
+        enable_issue_tracking: GitHub/GitLab/Codeberg 集成 — 一个开关启用全部功能：创建工单、自动创建、生命周期同步、平台状态镜像、评论展示。以平台状态取代工作流控制。
+        issue_tracker_token: RED 机器人令牌（请设置环境变量 RED_BOT_TOKEN）
+        issue_tracker_provider: 从 git_repository_url 自动检测
+        issue_tracker_repo: 从 git_repository_url 自动检测
+        issue_tracker_labels: 新建工单时添加的标签
+        issue_webhook_secret: 设置后启用双向同步（HMAC 校验）
+        enable_local_variables: TracePoint(:raise) — 在异常发生时捕获局部变量
+        enable_instance_variables: 在异常发生时捕获 self 的实例变量
+        detect_swallowed_exceptions: TracePoint(:raise) + (:rescue) — 检测被静默捕获的异常（Ruby
+          3.3+）
+        enable_diagnostic_dump: 按需生成系统状态快照
+        enable_crash_capture: 用 at_exit 钩子捕获未处理的崩溃
+        enable_coverage_tracking: 诊断模式 — 在面板中启用后，可在源码视图中看到已执行的行（Ruby 3.2+）
+        enable_rack_attack_tracking: 将 throttle/blocklist 事件记录到独立数据表
+        enable_actioncable_tracking: 将 WebSocket 频道事件记录为 breadcrumbs
+        enable_activestorage_tracking: 将上传/下载/删除记录为 breadcrumbs
+        custom_severity_rules: 错误类型到严重程度的映射
+        ignored_exceptions: 需要忽略的异常
+        enable_internal_logging: gem 的调试输出
+        log_level: 日志详细程度
+    flash:
+      locale:
+        unavailable: 该语言不可用，将使用默认语言。
+      batch:
+        resolved:
+          other: 已成功解决 %{count} 个错误
+        muted:
+          other: 已成功静音 %{count} 个错误
+        unmuted:
+          other: 已成功取消静音 %{count} 个错误
+        deleted:
+          other: 已成功删除 %{count} 个错误
+        failed: 批量操作失败：%{reason}
+      issue:
+        created: 工单创建成功
+        linked: 工单关联成功
+        create_failed: 创建工单失败：%{reason}
+        link_failed: 关联工单失败：%{reason}
+      not_enabled: "%{feature}未启用。请在 %{file} 中启用。"
+      not_enabled_plural: "%{feature}未启用。请在 %{file} 中启用。"
+      not_enabled_options: "%{feature}未启用。请在 %{file} 中启用 %{options}。"
+      not_enabled_set_options: "%{feature}未启用。请在 %{file} 中设置 %{options}。"
+      features:
+        platform_comparison: 平台对比
+        error_correlation: 错误关联分析
+        breadcrumbs: Breadcrumbs
+        system_health: 系统状态
+        swallowed_exceptions: 被吞异常检测
+        rack_attack: Rack Attack 跟踪
+        actioncable: ActionCable 跟踪
+        activestorage: ActiveStorage 跟踪
+        diagnostic_dumps: 诊断转储
+      diagnostic_dump:
+        disabled: 诊断转储未启用。
+        captured: 诊断转储创建成功。
+        failed: 创建诊断转储失败：%{message}
+      coverage:
+        not_enabled: 配置中未启用覆盖率跟踪。
+        enabled: 已启用代码路径覆盖率。请复现该错误，然后查看源代码以了解哪些行被执行。
+        disabled: 已停用代码路径覆盖率。
+        unavailable: 无法启用覆盖率，需要 Ruby 3.2 及以上版本。
+      test_error:
+        logged: 测试错误已记录。请检查你的通知渠道（Slack、Discord、邮件等）以确认送达。
+        failed: 记录测试错误失败：%{message}
+      swallowed_requires_ruby: 被吞异常检测需要 Ruby 3.3 及以上版本（当前为 %{version}）。请升级 Ruby 以使用此功能。
+      ai_help:
+        not_configured: AI 助手尚未配置
+        blank_question: 问题不能为空
+        question_too_long: 问题过长，请控制在 %{limit} 个字符以内。
+    commands:
+      no_error_ids: 未提供错误 ID
+      invalid_action: 操作类型无效
+      issue:
+        not_configured: 工单跟踪尚未配置
+        already_linked: 该错误已关联工单：%{url}
+        url_required: 必须提供工单 URL
+      error_not_found: 未找到错误：%{id}
+      batch_failed:
+        mute:
+          other: 静音 %{count} 个错误失败
+        unmute:
+          other: 取消静音 %{count} 个错误失败
+        resolve:
+          other: 解决 %{count} 个错误失败
+    mailers:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown_application: 未知
+      error_alert:
+        subject: "\U0001F6A8 [%{application}] %{error_type}：%{message}"
+        heading: "\U0001F6A8 错误告警"
+        labels:
+          application: 应用
+          error_type: 错误类型
+          platform: 平台
+          occurred_at: 发生时间
+          user_id: 用户 ID
+          ip_address: IP 地址
+          request_url: 请求 URL
+          message: 消息
+          error_id: 错误 ID
+        stack_trace:
+          other: 堆栈跟踪（前 %{count} 行）
+        view_details: 在面板中查看完整详情
+        view_details_text: 在面板中查看完整详情：
+        footer: 这是来自 %{product} 的自动错误通知。
+      digest:
+        subject:
+          other: RED 摘要 — %{count} 个新错误（%{period}）
+        heading: RED 错误摘要
+        periods:
+          daily: 最近 24 小时
+          weekly: 最近 7 天
+        generated_at: 生成时间
+        summary: 摘要
+        stats:
+          new_errors: 新错误
+          total_occurrences: 出现次数
+          total_occurrences_text: 总出现次数
+          resolved: 已解决
+          unresolved: 未解决
+          critical_high: 严重/高
+          resolution_rate: 解决率
+        comparison:
+          heading: 与上一周期对比
+          versus: 与上一周期（%{period}）相比：
+          current: 本期
+          previous: 上期
+          change: 变化
+          delta:
+            other: "%{delta} 个错误"
+        critical_unresolved: 未解决的严重与高优先级错误
+        top_errors: 出现次数最多的错误
+        columns:
+          severity: 严重程度
+          error: 错误
+          error_type: 错误类型
+          count: 次数
+        view: 查看
+        open_dashboard: 打开面板
+        view_dashboard_text: 查看完整面板：
+        manage_settings: 管理摘要设置
+        footer: 来自 RED 的自动摘要（%{product}）
+    notifications:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown: 未知
+        not_available: 不适用
+      error_alert:
+        fallback: "\U0001F6A8 新错误告警"
+        heading: "\U0001F6A8 错误告警"
+        discord_title: "\U0001F6A8 新错误：%{error_type}"
+        pagerduty_summary: "[%{application}] 严重错误：%{platform} 中的 %{error_type}"
+        labels:
+          application: 应用
+          error_type: 错误类型
+          platform: 平台
+          occurred: 发生时间
+          message: 消息
+          user: 用户
+          ip_address: IP 地址
+          request_url: 请求 URL
+          occurrences: 出现次数
+          controller: 控制器
+          action: 动作
+          first_seen: 首次出现
+          location: 位置
+        user_fallback: '用户 #%{id}'
+        view_details: 查看详情
+        view_in_dashboard: 在 Error Dashboard 中查看
+        error_id: 错误 ID：%{id}
+      baseline_alert:
+        fallback: "\U0001F6A8 基线异常告警"
+        heading: "\U0001F6A8 检测到基线异常"
+        labels:
+          severity: 严重程度
+          std_devs: 标准差
+          threshold: 阈值
+          baseline_type: 基线类型
+          baseline_info: 基线信息
+        level:
+          critical: 严重
+          high: 高
+          elevated: 偏高
+          unknown: 未知
+        std_devs_above: 高于基线 %{value}σ
+        threshold_errors:
+          other: "%{value} 个错误"
+        view_in_dashboard: 在面板中查看
+      storm:
+        detected: 在 %{application} 于 %{started_at} 检测到错误风暴。
+        mode:
+          open: 仅计数模式（统计出现次数，暂停详情采集）
+          shedding: 丢弃模式（已启用上下文抽样）
+        engaged: 已触发风暴保护 — %{mode}。
+        suppressed: 在风暴结束前，单条错误通知将被抑制；精确计数会予以保留。
+        dashboard: 面板：%{url}
+    time:
+      ago: "%{duration}前"
+      formats:
+        full: "%Y年%m月%d日 %H:%M:%S"
+        short: "%m/%d %H:%M"
+        date_only: "%Y年%m月%d日"
+        time_only: "%H:%M:%S"
+        datetime: "%Y年%m月%d日 %H:%M"
+    health:
+      columns:
+        error: 错误
+        last_seen: 最近出现
+      database:
+        title: 数据库状态
+        stats:
+          errors_with_pool: 含连接池数据的错误
+          peak_utilization: 峰值使用率
+          total_dead: 失效连接总数
+          total_waiting: 等待总数
+        live:
+          title: 数据库实时状态
+          non_postgresql: 检测到非 PostgreSQL 适配器（%{adapter}）。
+          non_postgresql_hint: 表、索引和活动的实时统计需要 PostgreSQL。连接池与历史数据仍可在下方查看。
+          pool_size: 连接池大小
+          busy: 忙碌
+          idle: 空闲
+          dead: 失效
+          waiting: 等待中
+        summary:
+          total_db_size: 数据库总大小
+          tables: 数据表
+          unused_indexes: 未使用的索引
+          active_connections: 活跃连接
+        host_tables:
+          title: 宿主应用的数据表
+        gem_tables:
+          title: Error Dashboard 的数据表
+        unused_indexes:
+          title: 未使用的索引
+          column_index: 索引
+          column_table: 数据表
+          column_size: 大小
+        activity:
+          title: 连接活动
+          total_badge: 共 %{count} 个
+          waiting_badge: "%{count} 个等待中"
+          column_state: 状态
+          column_count: 数量
+          column_waiting: 等待中
+        table_columns:
+          table: 数据表
+          est_rows: 预估行数
+          size: 大小
+          seq_scans: 顺序扫描
+          idx_scans: 索引扫描
+          dead_tuples: 死元组
+          last_vacuum: 上次 vacuum
+        never_vacuumed: 从未
+        pool_history:
+          title: 按错误查看连接池
+          empty_title: 未找到连接池数据
+          empty_message_html: 最近 %{days} 天的系统状态快照中未检测到连接池统计。启用 <code>enable_system_health
+            = true</code> 以在错误发生时采集连接池数据。
+          column_error: 错误
+          column_error_type: 错误类型
+          column_utilization: 使用率
+          column_busy: 忙碌
+          column_idle: 空闲
+          column_dead: 失效
+          column_waiting: 等待中
+          column_pool_size: 连接池大小
+          column_last_seen: 最近出现
+          tip: 错误期间使用率偏高，可能意味着连接池耗尽或存在长时间运行的查询。
+          guide_link: 数据库指南
+      llm:
+        title: LLM 状态
+        disabled:
+          title: 尚未启用 LLM 可观测性
+          message: 要在此查看各模型的 LLM 统计，请启用 LLM 可观测性和 breadcrumbs。
+          enable_in_html: 在 <code>config/initializers/rails_error_dashboard.rb</code>
+            中启用：
+        empty:
+          title: 未检测到 LLM 调用
+          message: 最近 %{days} 天的错误 breadcrumbs 中未捕获任何 LLM API 调用。可通过以下三种方式之一进行埋点：
+          tab_otel: OpenTelemetry
+          tab_faraday: Faraday / RubyLLM
+          tab_manual: 手动
+          otel_hint: 已经在运行 OTel collector？引入这个 gem，我们会自动订阅。
+          otel_requires_html: 需要 <code>enable_llm_observability = true</code>。
+          faraday_hint: 在用 <code>ruby_llm</code>、<code>openai</code>、<code>anthropic</code>
+            或其他基于 Faraday 的 SDK？只需插入一次中间件。
+          faraday_note: RED 会从请求与响应中自动识别提供方、模型和 token 数。
+          manual_hint: 直接使用 <code>Net::HTTP</code>、gRPC、本地推理或其他方式 — 请手动埋点。
+          manual_note_html: 费用会根据 token 自动估算 — payload 可通过 <code>cost_usd_estimate:</code>
+            覆盖。
+        stats:
+          calls: LLM 调用
+          models: 模型
+          errors_with_llm: 涉及 LLM 的错误（%{rate}%）
+          total_cost: 总费用
+        by_model:
+          title: 各模型的表现
+          column_provider_model: 提供方 · 模型
+          column_calls: 调用次数
+          column_tools: 工具
+          column_avg_tokens: 平均 token
+          column_avg_latency: 平均延迟
+          column_error_rate: 错误率
+          column_cost: 费用
+          column_top_error: 最常见错误
+          column_last_seen: 最近出现
+          avg_tokens_in: 输入
+          avg_tokens_out: 输出
+          failed_count: "%{count} 次失败"
+          tip_html: 某个模型错误率偏高，通常意味着配额或限流问题。延迟过高（&gt;5 秒）则提示提供方服务降级。
+          guide_link: 埋点指南
+      cache:
+        title: 缓存状态
+        empty:
+          title: 未找到缓存活动
+          message: 最近 %{days} 天的错误 breadcrumbs 中未检测到缓存操作。
+          how_it_works: 缓存跟踪的工作方式：
+          step_breadcrumbs_html: 必须启用 breadcrumbs（<code>enable_breadcrumbs = true</code>）
+          step_capture: 在产生错误的请求中，缓存的读写会被记录为 breadcrumbs
+          step_hit_status: 读操作会记录命中与未命中状态
+          step_sort: 本页按错误展示缓存表现，最差的排在最前
+        stats:
+          errors_with_cache: 涉及缓存的错误
+          avg_hit_rate: 平均命中率
+          total_ops: 缓存操作总数
+        table:
+          title: 按错误查看缓存表现
+          column_error: 错误
+          column_reads: 读取
+          column_writes: 写入
+          column_hit_rate: 命中率
+          column_total_time: 总耗时
+          column_slowest_op: 最慢操作
+          column_last_seen: 最近出现
+          tip: 命中率偏低可能说明缓存键过期太快，或者没有被正确写入。
+          guide_link: Rails 缓存指南
+      job:
+        title: 任务状态
+        empty:
+          title: 未找到任务队列数据
+          message: 最近 %{days} 天的系统状态快照中未检测到任务队列统计。
+          how_it_works: 任务状态跟踪的工作方式：
+          step_enable_html: 必须启用系统状态（<code>enable_system_health = true</code>）
+          step_capture: 检测到 Sidekiq、SolidQueue 或 GoodJob 时会自动采集任务队列统计
+          step_collected: 统计数据在捕获时按错误逐条收集
+          step_sort: 本页按错误展示任务队列状态，并按失败数量排序
+        stats:
+          errors_with_jobs: 含任务数据的错误
+          total_failed: 失败任务总数
+          adapters_detected: 已检测到的适配器
+        table:
+          title: 按错误查看任务队列状态
+          column_error: 错误
+          column_adapter: 适配器
+          column_failed: 失败
+          column_queued: 排队中
+          column_other_stats: 其他统计
+          column_last_seen: 最近出现
+          enqueued: 已入队
+          ready: 就绪
+          queued: 排队中
+          other_stats_sidekiq: 已死亡：%{dead}，重试：%{retry}，worker：%{workers}
+          other_stats_solid_queue: 已领取：%{claimed}，已阻塞：%{blocked}，已计划：%{scheduled}
+          other_stats_good_job: 已完成：%{finished}
+          tip: 错误期间失败任务偏多，可能意味着任务队列饱和或上游服务出现问题。
+          guide_link: Active Job 指南
+      actioncable:
+        title: ActionCable 状态
+        empty:
+          title: 未找到 ActionCable 事件
+          message: 最近 %{days} 天的错误 breadcrumbs 中未检测到 ActionCable 的频道操作、消息推送或订阅事件。
+          how_it_works: ActionCable 跟踪的工作方式：
+          step_breadcrumbs_html: 必须启用 breadcrumbs（<code>enable_breadcrumbs = true</code>）
+          step_tracking_html: 必须启用 ActionCable 跟踪（<code>enable_actioncable_tracking
+            = true</code>）
+          step_configured: 应用中必须已配置 ActionCable
+          step_capture: 在产生错误的请求中，频道操作、消息推送和订阅事件会被记录为 breadcrumbs
+        stats:
+          active_channels: 活跃频道
+          total_events: 事件总数
+          subscription_rejections: 订阅被拒次数
+        table:
+          title: 按频道查看 ActionCable 事件
+          column_channel: 频道
+          column_actions: 操作
+          column_transmissions: 消息推送
+          column_subscriptions: 订阅
+          column_rejections: 拒绝
+          column_errors: 错误
+          column_last_seen: 最近出现
+          tip: ActionCable 事件只在与错误同时发生时被记录。拒绝次数偏多可能意味着认证或授权存在问题。
+          guide_link: ActionCable 指南
+      activestorage:
+        title: ActiveStorage 状态
+        empty:
+          title: 未找到 ActiveStorage 事件
+          message: 最近 %{days} 天的错误 breadcrumbs 中未检测到 ActiveStorage 的服务操作。
+          how_it_works: ActiveStorage 跟踪的工作方式：
+          step_breadcrumbs_html: 必须启用 breadcrumbs（<code>enable_breadcrumbs = true</code>）
+          step_tracking_html: 必须启用 ActiveStorage 跟踪（<code>enable_activestorage_tracking
+            = true</code>）
+          step_configured: 应用中必须已配置 ActiveStorage
+          step_capture: 在产生错误的请求中，上传、下载和删除会被记录为 breadcrumbs
+        stats:
+          storage_services: 存储服务
+          total_operations: 操作总数
+          errors_with_storage: 涉及存储操作的错误
+        table:
+          title: 按服务查看存储操作
+          column_service: 服务
+          column_uploads: 上传
+          column_downloads: 下载
+          column_deletes: 删除
+          column_exists: 存在性检查
+          column_total: 合计
+          column_avg_duration: 平均耗时
+          column_slowest: 最慢
+          column_errors: 错误
+          column_last_seen: 最近出现
+          tip: 存储操作缓慢可能意味着网络问题、文件过大或服务提供方限流。
+          guide_link: ActiveStorage 指南
+    analytics:
+      stability:
+        green: 绿色
+        yellow: 黄色
+        red: 红色
+      trend:
+        increasing_significantly: 显著上升
+        increasing: 上升
+        stable: 平稳
+        decreasing: 下降
+        decreasing_significantly: 显著下降
+      correlation_strength:
+        strong: 强
+        moderate: 中等
+        weak: 弱
+      days_pill:
+        '7': 7 天
+        '14': 14 天
+        '30': 30 天
+        '60': 60 天
+        '90': 90 天
+      overview:
+        title: 分析
+        stats:
+          total_errors: 错误总数
+          unresolved: 未解决
+          resolution_rate: 解决率
+        trend_chart:
+          title: 错误趋势（最近 %{days} 天）
+        platform_chart:
+          title: 按平台统计错误
+          quick_links: 快捷链接：
+        type_chart:
+          title: 出现最多的 10 种错误类型
+        hour_chart:
+          title: 按小时统计错误
+        top_users:
+          title: 受影响最多的 10 位用户
+        type_breakdown:
+          title: 错误类型分布
+          subtitle: 最近 %{days} 天
+          column_rank: 排名
+          column_error_type: 错误类型
+          column_count: 数量
+          column_percentage: 占比
+          column_actions: 操作
+          view_errors: 查看错误
+        recurring:
+          title: 反复出现的问题
+          high_frequency_title: 高频错误
+          column_error_type: 错误类型
+          column_total_occurrences: 总出现次数
+          column_duration: 持续时间
+          column_first_seen: 首次出现
+          column_last_seen: 最近出现
+          column_status: 状态
+          duration_days: "%{days} 天"
+          active: 活跃
+          inactive: 不活跃
+          empty_high_frequency: 最近 %{days} 天未发现高频错误。
+          persistent_title: 长期未解决的错误
+          persistent_hint: 这些错误已超过 7 天未解决。
+          column_message: 消息
+          column_platform: 平台
+          column_count: 数量
+          column_age: 存在时长
+          column_actions: 操作
+          age_days: "%{days} 天"
+          view: 查看
+        releases:
+          version_chart_title: 按发布版本统计错误
+          comparison_title: 最新版与上一版对比
+          latest_version: 最新版本
+          latest_errors:
+            other: "%{count} 个错误"
+          latest_critical:
+            other: "%{count} 个严重"
+          previous_version: 上一版本
+          previous_errors:
+            other: "%{count} 个错误"
+          previous_critical:
+            other: "%{count} 个严重"
+          change: 变化
+          empty: 发布数据不足，无法进行对比。
+          problematic_title: 检测到有问题的发布版本
+          problematic_hint_html: 以下发布版本的错误率明显偏高（&gt;平均值的 %{multiplier} 倍）：
+          problematic_entry: "%{count} 个错误（%{critical} 个严重，高于平均 %{deviation}%）"
+        mttr:
+          title: 解决效率（MTTR）
+          overall_title: 整体 MTTR
+          overall_hint: 平均解决时长
+          fastest_title: 最快
+          fastest_hint: 最短解决时长
+          slowest_title: 最慢
+          slowest_hint: 最长解决时长
+          total_resolved_title: 已解决总数
+          total_resolved_hint: 最近 %{days} 天内
+          by_platform_title: 按平台统计 MTTR
+          by_severity_title: 按严重程度统计 MTTR
+          column_severity: 严重程度
+          column_avg_time: 平均解决时长
+          column_actions: 操作
+          hours: "%{hours} 小时"
+          view: 查看
+          trend_title: MTTR 趋势（按周）
+      correlation:
+        title: 错误关联分析
+        trend_analysis:
+          title: 趋势分析
+          current_period: 本期
+          previous_period: 上期
+          change: 变化
+          period_range: "%{start} — %{end}"
+        problematic_releases:
+          title: 有问题的发布版本
+          hint: 错误率超过平均值两倍的版本
+          column_version: 版本
+          column_error_count: 错误数量
+          column_deviation: 与平均值的偏差
+          column_critical: 严重错误
+          column_unique_types: 错误类型数
+          column_platforms: 平台
+          column_actions: 操作
+          view: 查看
+        by_version:
+          title: 按应用版本统计错误
+          column_version: 版本
+          column_errors: 错误
+          column_types: 类型
+          column_critical: 严重
+        by_git_sha:
+          title: 按 Git SHA 统计错误
+          column_sha: SHA
+          column_errors: 错误
+          column_types: 类型
+          column_versions: 版本
+        multi_error_users:
+          title: 遇到多种错误类型的用户
+          hint: 遇到 2 种及以上不同错误类型的用户
+          truncated: 显示 %{total} 位用户中的 %{shown} 位
+        time_correlated:
+          title: 时间上相关的错误
+          hint: 在一天中相近时段出现的错误类型
+          column_error_type_a: 错误类型 A
+          column_error_type_b: 错误类型 B
+          column_correlation: 相关度
+          column_strength: 强度
+          truncated: 显示 %{total} 组相关错误中的 %{shown} 组
+        platform_specific:
+          title: 平台专属错误与跨平台错误
+          occurrences:
+            other: "%{count} 次出现"
+          platform_specific: 平台专属
+          cross_platform: 跨平台
+          also_on: 同时出现在：%{platforms}
+        empty:
+          title: 数据不足，无法进行关联分析
+          message: 关联分析需要更多错误数据才能识别模式。
+          needed_title: 需要具备：
+          needed_version: 应用版本跟踪，用于与发布版本关联
+          needed_user: 用户跟踪，用于按用户关联
+          needed_types: 多种错误类型，用于时间关联
+          hint: 待记录更多错误后再回来查看。
+      platform_comparison:
+        title: 平台健康度对比
+        empty:
+          title: 暂无平台数据
+          message: 所选时间范围（%{days} 天）内未记录任何错误。
+          hint: 可以尝试选择更长的时间范围，或稍后再来查看。
+        health_card:
+          healthy: 正常
+          warning: 警告
+          critical: 严重
+          stability_score: 稳定性评分
+          total_errors: 错误总数：
+          critical_errors: 严重：
+          unresolved: 未解决：
+          resolution_rate: 解决率：
+          error_velocity: 错误增长速度：
+          view_errors: 查看 %{platform} 的错误
+        error_rate_chart:
+          title: 按平台统计错误率
+        daily_trend_chart:
+          title: 每日错误趋势
+        severity_distribution:
+          title: 严重程度分布
+          severity_count: "%{label}：%{count}"
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: 暂无错误
+        resolution_time_chart:
+          title: 平均解决时长
+        cross_platform:
+          title: 跨平台错误
+          column_error_type: 错误类型
+          column_platforms: 平台
+          column_total_occurrences: 总出现次数
+          column_breakdown: 分布
+        top_errors:
+          title: 主要错误 — %{platform}
+          empty: 未找到错误
+      releases:
+        title: Releases
+        empty:
+          title: 未找到发布数据
+          message: 最近 %{days} 天的错误中未检测到版本信息。
+          how_to_title: 如何启用发布跟踪：
+          step_config_html: 在初始化文件中设置 %{option}
+          step_env_html: 或者设置环境变量 %{env_var}
+          step_git_sha_html: Git SHA 会从 %{git_sha}、%{heroku} 或 %{render} 自动识别
+          step_captured: 错误发生时会自动记录版本与 SHA
+        summary:
+          releases: 发布版本
+          current_release: 当前版本
+          avg_errors: 每个版本的平均错误数
+          problematic: 有问题的版本
+        current_card:
+          title: 当前版本：
+          live_badge: 运行中
+          errors: 错误
+          error_types: 错误类型
+          new_errors: 新增错误
+          stability: 稳定性
+          git_sha: Git SHA
+          vs_previous: 与上一版对比
+        timeline:
+          title: 发布时间线
+          column_version: 版本
+          column_git_sha: Git SHA
+          column_time_range: 时间范围
+          column_errors: 错误
+          column_types: 类型
+          column_new_errors: 新增错误
+          column_stability: 稳定性
+          column_vs_previous: 与上一版对比
+          current_badge: 当前
+          problematic_badge: 有问题
+          more_shas: "+%{count}"
+          new_count:
+            other: "%{count} 个新增"
+          footer_html: 稳定性：<span class="badge bg-success">绿色</span> 不高于平均错误数，<span
+            class="badge bg-warning">黄色</span> 为平均值的 1–2 倍，<span class="badge bg-danger">红色</span>
+            超过平均值的 2 倍。“新增”错误是指在该版本中首次出现的错误类型。
+      user_impact:
+        title: 用户影响
+        empty:
+          title: 暂无用户影响数据
+          message: 最近 %{days} 天内未找到关联到用户的错误。
+          how_tracked_title: 用户影响的跟踪方式：
+          step_user_id_html: 错误必须关联 %{attribute}
+          step_auto_html: 通过 %{current_attributes} 或 %{current_user} 自动识别
+          step_config_html: 或者在初始化文件中设置 %{option}
+        summary:
+          error_types: 关联到用户的错误类型
+          total_users_affected: 受影响用户总数
+          most_impactful: 影响最大的错误
+          total_users: 用户总数（用于计算百分比）
+        table:
+          title: 按用户影响排序的错误
+          column_rank: "#"
+          column_error_type: 错误类型
+          column_unique_users: 独立用户数
+          column_occurrences: 出现次数
+          column_impact_percentage: 用户影响百分比
+          column_severity: 严重程度
+          column_last_seen: 最近出现
+          users:
+            other: "%{count} 位用户"
+          occurrences:
+            other: "%{count} 次"
+          footer: 按受影响的独立用户数排序，而非按出现次数。影响 1000 位用户各一次的错误，比让 1 位用户遇到 1000 次的错误更严重。
+    js:
+      months:
+      - 1月
+      - 2月
+      - 3月
+      - 4月
+      - 5月
+      - 6月
+      - 7月
+      - 8月
+      - 9月
+      - 10月
+      - 11月
+      - 12月
+      months_short:
+      - 1月
+      - 2月
+      - 3月
+      - 4月
+      - 5月
+      - 6月
+      - 7月
+      - 8月
+      - 9月
+      - 10月
+      - 11月
+      - 12月
+      days:
+      - 星期日
+      - 星期一
+      - 星期二
+      - 星期三
+      - 星期四
+      - 星期五
+      - 星期六
+      days_short:
+      - 周日
+      - 周一
+      - 周二
+      - 周三
+      - 周四
+      - 周五
+      - 周六
+      meridian:
+        am: 上午
+        pm: 下午
+      intl_locale: zh-CN
+      duration:
+        seconds:
+          other: "%{count} 秒"
+        minutes:
+          other: "%{count} 分钟"
+        hours:
+          other: "%{count} 小时"
+        days:
+          other: "%{count} 天"
+        months:
+          other: "%{count} 个月"
+        years:
+          other: "%{count} 年"
+      selected:
+        other: 已选择 %{count} 项
+      titles:
+        local_time: 你的本地时间（点击查看 UTC）
+        utc_time: UTC 时间（点击查看本地时间）
+        exact_time: 点击查看准确时间
+        relative_time: 点击查看相对时间
+    ui_js:
+      toast:
+        loading: 加载中...
+        copied: 已复制！
+        copied_to_clipboard: 已复制到剪贴板！
+        failed: 失败
+        copy_failed: 复制到剪贴板失败
+        downloaded: 已下载！
+      ai_help:
+        question_required: 请先输入问题。
+        streaming: 正在流式输出...
+        streaming_unsupported: 此浏览器不支持流式输出。
+        request_failed: 请求失败。
+      sections:
+        error: 错误
+        request: 请求
+        deprecations: Deprecations
+        n_plus_one: N+1
+        cache: Cache
+        breadcrumbs: Breadcrumbs
+        similar: 相似
+        co_occurring: 同时出现
+        timeline: 时间线
+        issue: 工单
+        discussion: 讨论
+        cascades: 级联
+        patterns: 模式
+      charts:
+        axis_date: 日期
+        axis_hour: 小时
+        axis_error_type: 错误类型
+        axis_count: 数量
+        axis_number_of_errors: 错误数量
+        axis_hours: 小时
+        series_total_errors: 错误总数
+        series_hours_to_resolve: 解决耗时（小时）

@@ -7,6 +7,11 @@ RailsErrorDashboard::Engine.routes.draw do
   # Settings page
   get "settings", to: "errors#settings", as: :settings
 
+  # Per-user dashboard language, persisted in the session (P5-T1).
+  # POST only: changing it is a state change, and a GET would let any link or
+  # prefetch alter the user's language.
+  post "locale", to: "locales#create", as: :locale
+
   # Webhook endpoint for two-way issue sync (GitHub/GitLab/Codeberg)
   post "webhooks/:provider", to: "webhooks#receive", as: :webhook
 

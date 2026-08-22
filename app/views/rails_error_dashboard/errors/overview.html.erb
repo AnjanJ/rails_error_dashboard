@@ -1,9 +1,9 @@
-<% content_for :page_title, "Dashboard" %>
+<% content_for :page_title, red_t("red.errors.overview_page.page_title") %>
 <div style="max-width: 100%;">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Overview</h1>
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;"><%= red_t("red.errors.overview_page.title") %></h1>
     <span style="font-size: 12px; color: var(--text-tertiary);">
-      Last updated: <%= local_time(Time.current, format: :full) %>
+      <%= red_t("red.errors.overview_page.last_updated_html", time: local_time(Time.current, format: :full)) %>
     </span>
   </div>
 
@@ -15,10 +15,10 @@
     %>
     <div class="alert-danger" style="display: flex; align-items: center; gap: 10px; padding: 10px var(--space-5); background: var(--status-critical-bg); border-radius: var(--radius-md); border: 1px solid var(--status-critical); margin-bottom: var(--space-6); font-size: 13px; color: var(--status-critical);">
       <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--status-critical); animation: pulse 2s infinite; flex-shrink: 0;"></span>
-      <strong><%= alert_count %> Critical/High Error<%= alert_count != 1 ? 's' : '' %> in Last Hour</strong>
+      <strong><%= red_tp("red.errors.overview_page.alert_banner", count: alert_count) %></strong>
       <span style="color: var(--text-secondary);">&mdash;</span>
-      <span style="color: var(--text-secondary);"><%= link_to error_path(top_alert, **app_context), style: "background: transparent; padding: 0; color: var(--status-critical); text-decoration: none; font-family: var(--font-mono); font-size: 13px;" do %><%= top_alert.error_type %><% end %> &middot; <%= top_alert.occurrence_count %> occurrences</span>
-      <%= link_to errors_path(app_context.merge(severity: 'critical')), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %>View<% end %>
+      <span style="color: var(--text-secondary);"><%= link_to error_path(top_alert, **app_context), style: "background: transparent; padding: 0; color: var(--status-critical); text-decoration: none; font-family: var(--font-mono); font-size: 13px;" do %><%= top_alert.error_type %><% end %> &middot; <%= red_tp("red.errors.overview_page.alert_occurrences", count: top_alert.occurrence_count) %></span>
+      <%= link_to errors_path(app_context.merge(severity: 'critical')), style: "margin-left: auto; padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: var(--radius-full); border: 1px solid var(--status-critical); background: transparent; color: var(--status-critical); text-decoration: none; white-space: nowrap;" do %><%= red_t("red.errors.overview_page.alert_view") %><% end %>
     </div>
   <% end %>
 
@@ -35,13 +35,13 @@
   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
     <!-- Error Rate -->
     <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Error Rate</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.error_rate") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
-        <span class="stat-value" style="color: var(--status-critical);"><%= @stats[:error_rate] %>%</span>
+        <span class="stat-value" style="color: var(--status-critical);"><%= red_t("red.errors.pages.percent", value: @stats[:error_rate]) %></span>
         <% if @stats[:trend_percentage].present? && @stats[:trend_percentage] != 0 %>
           <span style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: <%= @stats[:trend_percentage] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>;">
             <i class="bi <%= @stats[:trend_percentage] > 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' %>" style="font-size: 10px;"></i>
-            <%= @stats[:trend_percentage].abs %>%
+            <%= red_t("red.errors.pages.percent", value: @stats[:trend_percentage].abs) %>
           </span>
         <% end %>
       </div>
@@ -52,12 +52,12 @@
           <% end %>
         </div>
       <% end %>
-      <small style="color: var(--text-tertiary); margin-top: var(--space-1);">Errors per hour today</small>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);"><%= red_t("red.errors.overview_page.error_rate_hint") %></small>
     </div>
 
     <!-- Unresolved -->
     <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Unresolved</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.unresolved") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value"><%= @stats[:unresolved] %></span>
       </div>
@@ -68,14 +68,14 @@
           <% end %>
         </div>
       <% end %>
-      <small style="color: var(--text-tertiary); margin-top: var(--space-1);">Pending resolution</small>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);"><%= red_t("red.errors.overview_page.unresolved_hint") %></small>
     </div>
 
     <!-- Resolution Rate -->
     <div class="card stat-card" style="border-left: 3px solid var(--status-success); padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Resolution Rate</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.resolution_rate") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
-        <span class="stat-value" style="color: var(--status-success);"><%= resolution_rate %>%</span>
+        <span class="stat-value" style="color: var(--status-success);"><%= red_t("red.errors.pages.percent", value: resolution_rate) %></span>
       </div>
       <% if trend_values.any? %>
         <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px; margin-top: var(--space-2);">
@@ -84,7 +84,7 @@
           <% end %>
         </div>
       <% end %>
-      <small style="color: var(--text-tertiary); margin-top: var(--space-1);"><%= @stats[:resolved] %> of <%= total_errors %> resolved</small>
+      <small style="color: var(--text-tertiary); margin-top: var(--space-1);"><%= red_t("red.errors.overview_page.resolution_hint", resolved: @stats[:resolved], total: total_errors) %></small>
     </div>
   </div>
 
@@ -92,13 +92,13 @@
   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
     <!-- Affected Users -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Affected Users (Today)</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.affected_users") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value"><%= @stats[:affected_users_today] %></span>
         <% if @stats[:affected_users_change] != 0 %>
           <span style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: <%= @stats[:affected_users_change] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>;">
             <i class="bi <%= @stats[:affected_users_change] > 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' %>" style="font-size: 10px;"></i>
-            <%= @stats[:affected_users_change].abs %> from yesterday
+            <%= red_t("red.errors.overview_page.users_change", count: @stats[:affected_users_change].abs) %>
           </span>
         <% end %>
       </div>
@@ -106,22 +106,22 @@
 
     <!-- Avg Resolution Time -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Avg Resolution</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.avg_resolution") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <% if @stats[:average_resolution_time].present? %>
-          <span class="stat-value"><%= @stats[:average_resolution_time] %>h</span>
+          <span class="stat-value"><%= red_t("red.errors.overview_page.hours_short", value: @stats[:average_resolution_time]) %></span>
         <% else %>
           <span class="stat-value" style="color: var(--text-tertiary);">&mdash;</span>
         <% end %>
       </div>
-      <small style="color: var(--text-tertiary);">Mean time to resolution</small>
+      <small style="color: var(--text-tertiary);"><%= red_t("red.errors.overview_page.avg_resolution_hint") %></small>
     </div>
 
     <!-- Error Trend -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
-      <div class="stat-label" style="margin-bottom: 4px;">Error Trend</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.error_trend") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
-        <span class="stat-value"><%= trend_arrow(@stats[:trend_percentage]) %> <%= @stats[:trend_percentage].abs %>%</span>
+        <span class="stat-value"><%= trend_arrow(@stats[:trend_percentage]) %> <%= red_t("red.errors.pages.percent", value: @stats[:trend_percentage].abs) %></span>
       </div>
       <small style="color: var(--text-tertiary);"><%= trend_text(@stats[:trend_direction]) %></small>
     </div>
@@ -131,8 +131,8 @@
   <% if @stats[:top_errors_by_impact].any? %>
     <div class="card" style="margin-bottom: var(--space-6);">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
-        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Top Errors by Impact</span>
-        <%= link_to errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>View all &rarr;<% end %>
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);"><%= red_t("red.errors.overview_page.top_errors") %></span>
+        <%= link_to errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %><%= red_t("red.errors.overview_page.view_all") %><% end %>
       </div>
       <div>
         <% @stats[:top_errors_by_impact].each_with_index do |error, i| %>
@@ -140,7 +140,7 @@
             <span style="width: 24px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-tertiary);"><%= i + 1 %></span>
             <span class="badge bg-<%= severity_color(error[:severity]) %>" style="display: inline-flex; align-items: center; gap: 4px;">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-              <%= error[:severity] %>
+              <%= red_t("red.common.severity.#{error[:severity]}") %>
             </span>
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 12px;">
@@ -150,7 +150,7 @@
             </div>
             <div style="text-align: right; flex-shrink: 0;">
               <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums;"><%= number_with_delimiter(error[:occurrence_count]) %></div>
-              <div style="font-size: 11px; color: var(--text-tertiary);"><%= error[:affected_users] %> users</div>
+              <div style="font-size: 11px; color: var(--text-tertiary);"><%= red_tp("red.errors.overview_page.users", count: error[:affected_users]) %></div>
             </div>
           <% end %>
         <% end %>
@@ -162,9 +162,9 @@
   <% if @platform_health.any? %>
     <div class="card" style="margin-bottom: var(--space-6);">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
-        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Platform Health</span>
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);"><%= red_t("red.errors.overview_page.platform_health") %></span>
         <% if RailsErrorDashboard.configuration.enable_platform_comparison %>
-          <%= link_to platform_comparison_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full comparison &rarr;<% end %>
+          <%= link_to platform_comparison_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %><%= red_t("red.errors.overview_page.full_comparison") %><% end %>
         <% end %>
       </div>
       <div style="padding: var(--space-5) var(--space-6);">
@@ -172,17 +172,21 @@
           <% @platform_health.each do |platform, health| %>
             <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
-                <span style="font-size: 13px; font-weight: 600; text-transform: capitalize;"><%= platform %></span>
+                <%# No text-transform: the platform is a brand value stored as
+                    written (iOS, Android, Web). CSS capitalize is English
+                    morphology applied to an identifier — it renders "iOS" as
+                    "IOS" in some engines and mangles the Turkish dotless i. %>
+                <span style="font-size: 13px; font-weight: 600;"><%= platform %></span>
                 <span class="badge bg-<%= health_status_color(health[:health_status]) %>"><%= health_status_text(health[:health_status]) %></span>
               </div>
               <div style="margin-bottom: var(--space-2);">
-                <div style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;"><%= health[:stability_score] %><span style="font-size: 12px; color: var(--text-tertiary); font-weight: 400;">/100</span></div>
+                <div style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;"><%= red_t("red.errors.overview_page.stability_score_html", score: content_tag(:span, health[:stability_score])) %></div>
               </div>
               <div class="progress" style="height: 4px; margin-bottom: var(--space-3);">
                 <div class="progress-bar" style="width: <%= health[:stability_score] %>%; background: var(--status-<%= health[:health_status] == :healthy ? 'success' : health[:health_status] == :warning ? 'warning' : 'critical' %>);"></div>
               </div>
               <div style="font-size: 12px; color: var(--text-tertiary);">
-                <%= health[:total_errors] %> errors &middot; <%= health[:critical_errors] %> critical &middot; <%= health[:unresolved_errors] %> open
+                <%= red_t("red.errors.overview_page.platform_summary", total: health[:total_errors], critical: health[:critical_errors], unresolved: health[:unresolved_errors]) %>
               </div>
             </div>
           <% end %>
@@ -195,20 +199,20 @@
   <% if RailsErrorDashboard.configuration.enable_error_correlation && (@problematic_releases.any? || @time_correlated_errors.any? || @multi_error_users.any?) %>
     <div class="card" style="margin-bottom: var(--space-6);">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-primary);">
-        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Correlation Insights</span>
-        <%= link_to correlation_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %>Full analysis &rarr;<% end %>
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);"><%= red_t("red.errors.overview_page.correlation_title") %></span>
+        <%= link_to correlation_errors_path(app_context), style: "font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500;" do %><%= red_t("red.errors.overview_page.full_analysis") %><% end %>
       </div>
       <div style="padding: var(--space-5) var(--space-6);">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-4);">
           <% if @problematic_releases.any? %>
             <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-warning);">
               <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
-                <i class="bi bi-tag me-1"></i> Problematic Releases
+                <i class="bi bi-tag me-1"></i> <%= red_t("red.errors.overview_page.problematic_releases") %>
               </div>
               <% @problematic_releases.each do |release| %>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
                   <code style="font-size: 11px;"><%= release[:version] || release[:git_sha]&.truncate(8, omission: '') %></code>
-                  <span style="font-weight: 600;"><%= release[:error_count] %> errors</span>
+                  <span style="font-weight: 600;"><%= red_tp("red.errors.overview_page.release_errors", count: release[:error_count]) %></span>
                 </div>
               <% end %>
             </div>
@@ -217,7 +221,7 @@
           <% if @time_correlated_errors.any? %>
             <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-info);">
               <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
-                <i class="bi bi-clock-history me-1"></i> Time-Correlated
+                <i class="bi bi-clock-history me-1"></i> <%= red_t("red.errors.overview_page.time_correlated") %>
               </div>
               <% @time_correlated_errors.each do |_, data| %>
                 <div style="padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
@@ -227,7 +231,9 @@
                     <code style="font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;"><%= data[:error_type_b] %></code>
                   </div>
                   <div style="color: var(--text-tertiary); margin-top: 2px;">
-                    <strong><%= (data[:correlation] * 100).round(0) %>%</strong> correlation (<%= data[:strength] %>)
+                    <%= red_t("red.errors.overview_page.correlation_value_html",
+                              percent: content_tag(:strong, red_t("red.errors.pages.percent", value: (data[:correlation] * 100).round(0))),
+                              strength: red_t("red.analytics.correlation_strength.#{data[:strength]}")) %>
                   </div>
                 </div>
               <% end %>
@@ -237,11 +243,11 @@
           <% if @multi_error_users.any? %>
             <div style="padding: var(--space-4); border: 1px solid var(--border-primary); border-radius: var(--radius-md); border-left: 3px solid var(--status-critical);">
               <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-3);">
-                <i class="bi bi-people-fill me-1"></i> Multi-Error Users
+                <i class="bi bi-people-fill me-1"></i> <%= red_t("red.errors.overview_page.multi_error_users") %>
               </div>
               <% @multi_error_users.each do |user| %>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border-primary); font-size: 12px;">
-                  <span>User <strong><%= user[:user_id] %></strong> &middot; <%= user[:error_types].size %> types</span>
+                  <span><%= red_t("red.errors.overview_page.user_types_html", user: content_tag(:strong, user[:user_id]), types: red_tp("red.errors.overview_page.types", count: user[:error_types].size)) %></span>
                   <span style="font-weight: 600; color: var(--status-critical);"><%= user[:total_errors] %></span>
                 </div>
               <% end %>

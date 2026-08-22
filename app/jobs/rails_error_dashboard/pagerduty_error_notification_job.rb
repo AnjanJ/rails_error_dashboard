@@ -8,7 +8,9 @@ module RailsErrorDashboard
 
     PAGERDUTY_EVENTS_API = "https://events.pagerduty.com/v2/enqueue"
 
-    def perform(error_log_id)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(error_log_id, locale = nil)
       error_log = ErrorLog.find(error_log_id)
 
       # Only trigger PagerDuty for critical errors
@@ -17,7 +19,9 @@ module RailsErrorDashboard
       routing_key = RailsErrorDashboard.configuration.pagerduty_integration_key
       return unless routing_key.present?
 
-      payload = Services::PagerdutyPayloadBuilder.call(error_log, routing_key: routing_key)
+      payload = Services::PagerdutyPayloadBuilder.call(
+        error_log, routing_key: routing_key, locale: job_locale(locale)
+      )
       response = post_json(PAGERDUTY_EVENTS_API, payload)
 
       unless response_success?(response)

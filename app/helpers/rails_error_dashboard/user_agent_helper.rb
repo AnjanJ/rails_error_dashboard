@@ -2,6 +2,11 @@
 
 module RailsErrorDashboard
   module UserAgentHelper
+    # These helpers translate, so they depend on red_t explicitly rather
+    # than on the controller happening to mix every engine helper into
+    # one view context.
+    include I18nHelper
+
     # Parse user agent string into browser, OS, and device info
     def parse_user_agent(user_agent_string)
       return default_user_agent_info if user_agent_string.blank?
@@ -13,7 +18,11 @@ module RailsErrorDashboard
         browser_version: browser.version,
         os_name: os_name(browser),
         device_type: device_type(browser),
-        platform: browser.platform.to_s.titleize,
+        # No titleize: the platform is a machine identifier from the browser
+        # gem, and titleize applies English morphology to it. Nothing renders
+        # this value today; it stays raw so a future reader gets the identifier
+        # rather than a mangled version of one.
+        platform: browser.platform.to_s,
         is_mobile: browser.device.mobile?,
         is_tablet: browser.device.tablet?,
         is_bot: browser.bot?
@@ -76,6 +85,8 @@ module RailsErrorDashboard
 
     private
 
+    # Browser and OS names are brands and stay as written in every locale.
+    # Only the "Unknown" fallback is a word rather than a name.
     def browser_name(browser)
       return "Chrome" if browser.chrome?
       return "Firefox" if browser.firefox?
@@ -83,7 +94,7 @@ module RailsErrorDashboard
       return "Edge" if browser.edge?
       return "Opera" if browser.opera?
       return "Internet Explorer" if browser.ie?
-      "Unknown"
+      red_t("red.common.unknown")
     end
 
     def os_name(browser)
@@ -92,23 +103,26 @@ module RailsErrorDashboard
       return "Linux" if browser.platform.linux?
       return "Android" if browser.platform.android?
       return "iOS" if browser.platform.ios?
-      "Unknown"
+      red_t("red.common.unknown")
     end
 
+    # Unlike the browser and OS, these four are ordinary words, not brands.
     def device_type(browser)
-      return "Mobile" if browser.device.mobile?
-      return "Tablet" if browser.device.tablet?
-      return "Bot" if browser.bot?
-      "Desktop"
+      return red_t("red.common.device_type.mobile") if browser.device.mobile?
+      return red_t("red.common.device_type.tablet") if browser.device.tablet?
+      return red_t("red.common.device_type.bot") if browser.bot?
+      red_t("red.common.device_type.desktop")
     end
 
     def default_user_agent_info
+      unknown = red_t("red.common.unknown")
+
       {
-        browser_name: "Unknown",
+        browser_name: unknown,
         browser_version: nil,
-        os_name: "Unknown",
-        device_type: "Unknown",
-        platform: "Unknown",
+        os_name: unknown,
+        device_type: unknown,
+        platform: unknown,
         is_mobile: false,
         is_tablet: false,
         is_bot: false

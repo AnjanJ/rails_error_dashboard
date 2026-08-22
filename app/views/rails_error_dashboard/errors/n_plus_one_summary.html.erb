@@ -1,21 +1,21 @@
-<% content_for :page_title, "N+1 Query Patterns" %>
+<% content_for :page_title, red_t("red.errors.n_plus_one_page.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-arrow-repeat me-2"></i>
-      N+1 Query Patterns
+      <%= red_t("red.errors.n_plus_one_page.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to n_plus_one_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to n_plus_one_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to n_plus_one_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,21 @@
   <% if @unique_count == 0 %>
     <div class="red-empty-state">
       <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-      <div class="red-empty-state-title">No N+1 Query Patterns Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.errors.n_plus_one_page.empty_title") %></div>
       <p class="text-muted">
-        No N+1 query patterns were detected in error breadcrumbs over the last <%= @days %> days.
+        <%= red_t("red.errors.n_plus_one_page.empty_body", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How N+1 detection works:</h6>
+          <h6><%= red_t("red.errors.n_plus_one_page.how_title") %></h6>
           <ul class="mb-0">
-            <li>Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)</li>
-            <li>SQL queries are captured as breadcrumbs during requests that produce errors</li>
-            <li>Queries with the same shape appearing >= <code>n_plus_one_threshold</code> times are flagged</li>
-            <li>Default threshold is 3 repetitions</li>
+            <li><%= red_t("red.errors.pages.how_breadcrumbs_html", option: content_tag(:code, "enable_breadcrumbs = true")) %></li>
+            <li><%= red_t("red.errors.n_plus_one_page.how_captured") %></li>
+            <li><%= red_t("red.errors.n_plus_one_page.how_threshold_html", threshold: content_tag(:code, "n_plus_one_threshold")) %></li>
+            <%# The default is read from the configuration rather than written
+                here too: a prose copy of a config value drifts the moment the
+                default changes, and the copy the user reads is the stale one. %>
+            <li><%= red_tp("red.errors.n_plus_one_page.how_default", count: RailsErrorDashboard.configuration.n_plus_one_threshold) %></li>
           </ul>
         </div>
       </div>
@@ -45,7 +48,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-danger"><%= @unique_count %></div>
-            <small class="text-muted">Unique Patterns</small>
+            <small class="text-muted"><%= red_t("red.errors.n_plus_one_page.unique_patterns") %></small>
           </div>
         </div>
       </div>
@@ -53,7 +56,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= @total_count %></div>
-            <small class="text-muted">Total Occurrences</small>
+            <small class="text-muted"><%= red_t("red.errors.pages.total_occurrences") %></small>
           </div>
         </div>
       </div>
@@ -61,7 +64,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @affected_count %></div>
-            <small class="text-muted">Affected Errors</small>
+            <small class="text-muted"><%= red_t("red.errors.pages.affected_errors") %></small>
           </div>
         </div>
       </div>
@@ -71,7 +74,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-arrow-repeat text-danger me-2"></i>
-          All N+1 Query Patterns
+          <%= red_t("red.errors.n_plus_one_page.all_title") %>
           <span class="badge bg-danger"><%= @unique_count %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -81,11 +84,11 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th>Query Pattern</th>
-                <th width="120">Occurrences</th>
-                <th width="250">Errors</th>
-                <th width="120">Total Time</th>
-                <th width="140">Last Seen</th>
+                <th><%= red_t("red.errors.n_plus_one.column_query") %></th>
+                <th width="120"><%= red_t("red.errors.pages.column_occurrences") %></th>
+                <th width="250"><%= red_t("red.errors.pages.column_errors") %></th>
+                <th width="120"><%= red_t("red.errors.n_plus_one.column_total_time") %></th>
+                <th width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -99,12 +102,12 @@
                       <%= link_to "##{eid}", error_path(eid), class: "text-decoration-none" %><%= "," unless i == shown_ids.size - 1 %>
                     <% end %>
                     <% if pattern[:error_ids].size > 5 %>
-                      <small class="text-muted">+<%= pattern[:error_ids].size - 5 %> more</small>
+                      <small class="text-muted"><%= red_tp("red.errors.pages.more_errors", count: pattern[:error_ids].size - 5) %></small>
                     <% end %>
                   </td>
                   <td>
                     <span class="<%= pattern[:total_duration_ms] > 100 ? 'text-danger fw-bold' : '' %>">
-                      <%= pattern[:total_duration_ms] %> ms
+                      <%= red_t("red.errors.n_plus_one_page.duration_ms", value: pattern[:total_duration_ms]) %>
                     </span>
                   </td>
                   <td><%= local_time_ago(pattern[:last_seen]) %></td>
@@ -117,11 +120,11 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Use <code>includes</code>, <code>preload</code>, or <code>eager_load</code> to fix N+1 queries.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.n_plus_one_page.footer_tip_html", includes: content_tag(:code, "includes"), preload: content_tag(:code, "preload"), eager_load: content_tag(:code, "eager_load")) %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations" target="_blank" rel="noopener" class="text-decoration-none">
-              <i class="bi bi-book"></i> Rails Eager Loading Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.errors.n_plus_one.eager_loading_guide") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>

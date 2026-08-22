@@ -1,21 +1,21 @@
-<% content_for :page_title, "Job Health" %>
+<% content_for :page_title, red_t("red.health.job.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-cpu me-2"></i>
-      Job Health
+      <%= red_t("red.health.job.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to job_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to job_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to job_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,18 @@
   <% if @errors_with_jobs == 0 %>
     <div class="red-empty-state">
       <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-      <div class="red-empty-state-title">No Job Queue Data Found</div>
+      <div class="red-empty-state-title"><%= red_t("red.health.job.empty.title") %></div>
       <p class="text-muted">
-        No job queue stats were detected in system health snapshots over the last <%= @days %> days.
+        <%= red_t("red.health.job.empty.message", days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How job health tracking works:</h6>
+          <h6><%= red_t("red.health.job.empty.how_it_works") %></h6>
           <ul class="mb-0">
-            <li>System health must be enabled (<code>enable_system_health = true</code>)</li>
-            <li>Job queue stats are captured automatically when Sidekiq, SolidQueue, or GoodJob is detected</li>
-            <li>Stats are collected per-error at the time of capture</li>
-            <li>This page shows job queue health per-error, sorted by failed count</li>
+            <li><%= red_t("red.health.job.empty.step_enable_html") %></li>
+            <li><%= red_t("red.health.job.empty.step_capture") %></li>
+            <li><%= red_t("red.health.job.empty.step_collected") %></li>
+            <li><%= red_t("red.health.job.empty.step_sort") %></li>
           </ul>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @errors_with_jobs %></div>
-            <small class="text-muted">Errors with Job Data</small>
+            <small class="text-muted"><%= red_t("red.health.job.stats.errors_with_jobs") %></small>
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@
           <div class="card-body">
             <% failed_color = @total_failed > 0 ? "danger" : "success" %>
             <div class="display-6 text-<%= failed_color %>"><%= @total_failed %></div>
-            <small class="text-muted">Total Failed Jobs</small>
+            <small class="text-muted"><%= red_t("red.health.job.stats.total_failed") %></small>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-secondary"><%= @adapters_detected.size %></div>
-            <small class="text-muted">Adapters Detected</small>
+            <small class="text-muted"><%= red_t("red.health.job.stats.adapters_detected") %></small>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-cpu text-info me-2"></i>
-          Job Queue Health by Error
+          <%= red_t("red.health.job.table.title") %>
           <span class="badge bg-info"><%= @errors_with_jobs %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -82,12 +82,12 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th width="100">Error</th>
-                <th width="120">Adapter</th>
-                <th width="80">Failed</th>
-                <th width="120">Queued</th>
-                <th>Other Stats</th>
-                <th width="140">Last Seen</th>
+                <th width="100"><%= red_t("red.health.job.table.column_error") %></th>
+                <th width="120"><%= red_t("red.health.job.table.column_adapter") %></th>
+                <th width="80"><%= red_t("red.health.job.table.column_failed") %></th>
+                <th width="120"><%= red_t("red.health.job.table.column_queued") %></th>
+                <th><%= red_t("red.health.job.table.column_other_stats") %></th>
+                <th width="140"><%= red_t("red.health.job.table.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -106,22 +106,22 @@
                   <td>
                     <% case entry[:adapter] %>
                     <% when "sidekiq" %>
-                      <%= entry[:enqueued] %> enqueued
+                      <%= entry[:enqueued] %> <%= red_t("red.health.job.table.enqueued") %>
                     <% when "solid_queue" %>
-                      <%= entry[:ready] %> ready
+                      <%= entry[:ready] %> <%= red_t("red.health.job.table.ready") %>
                     <% when "good_job" %>
-                      <%= entry[:queued] %> queued
+                      <%= entry[:queued] %> <%= red_t("red.health.job.table.queued") %>
                     <% end %>
                   </td>
                   <td>
                     <small class="text-muted">
                       <% case entry[:adapter] %>
                       <% when "sidekiq" %>
-                        dead: <%= entry[:dead] %>, retry: <%= entry[:retry] %>, workers: <%= entry[:workers] %>
+                        <%= red_t("red.health.job.table.other_stats_sidekiq", dead: entry[:dead], retry: entry[:retry], workers: entry[:workers]) %>
                       <% when "solid_queue" %>
-                        claimed: <%= entry[:claimed] %>, blocked: <%= entry[:blocked] %>, scheduled: <%= entry[:scheduled] %>
+                        <%= red_t("red.health.job.table.other_stats_solid_queue", claimed: entry[:claimed], blocked: entry[:blocked], scheduled: entry[:scheduled]) %>
                       <% when "good_job" %>
-                        finished: <%= entry[:finished] %>
+                        <%= red_t("red.health.job.table.other_stats_good_job", finished: entry[:finished]) %>
                       <% end %>
                     </small>
                   </td>
@@ -135,11 +135,11 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> High failed job counts during errors may indicate job queue saturation or upstream service issues.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.health.job.table.tip") %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/active_job_basics.html" target="_blank" rel="noopener" class="text-decoration-none">
-              <i class="bi bi-book"></i> Active Job Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.health.job.table.guide_link") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>

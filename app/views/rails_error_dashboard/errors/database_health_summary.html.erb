@@ -1,39 +1,39 @@
-<% content_for :page_title, "DB Health" %>
+<% content_for :page_title, red_t("red.health.database.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-database me-2"></i>
-      Database Health
+      <%= red_t("red.health.database.title") %>
     </h1>
 
     <div style="display: flex; gap: 4px;">
-      <%= link_to database_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>7 Days<% end %>
-      <%= link_to database_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>30 Days<% end %>
-      <%= link_to database_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %>90 Days<% end %>
+      <%= link_to database_health_summary_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.7") %><% end %>
+      <%= link_to database_health_summary_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.30") %><% end %>
+      <%= link_to database_health_summary_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}", style: "text-decoration: none;" do %><%= red_t("red.common.days_filter.90") %><% end %>
     </div>
   </div>
 
   <%# ===== SECTION A: Summary Stats ===== %>
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
     <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-4) var(--space-5); text-align: center;">
-      <div class="stat-label" style="margin-bottom: 4px;">Errors with Pool Data</div>
+      <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.stats.errors_with_pool") %></div>
       <div class="stat-value"><%= @errors_with_pool %></div>
     </div>
     <% if @live_health[:connection_pool] %>
       <% pool = @live_health[:connection_pool] %>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Peak Utilization</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.stats.peak_utilization") %></div>
         <% util_color = @max_utilization >= 80 ? 'var(--status-critical)' : (@max_utilization >= 60 ? 'var(--status-caution)' : 'var(--status-success)') %>
         <div class="stat-value" style="color: <%= util_color %>;"><%= @max_utilization %>%</div>
       </div>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Total Dead</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.stats.total_dead") %></div>
         <% dead_color = @total_dead > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>
         <div class="stat-value" style="color: <%= dead_color %>;"><%= @total_dead %></div>
       </div>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Total Waiting</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.stats.total_waiting") %></div>
         <% waiting_color = @total_waiting > 0 ? 'var(--status-caution)' : 'var(--status-success)' %>
         <div class="stat-value" style="color: <%= waiting_color %>;"><%= @total_waiting %></div>
       </div>
@@ -44,15 +44,15 @@
   <div class="card" style="margin-bottom: var(--space-4);">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-primary);">
       <span style="font-size: 13px; font-weight: 600;">
-        <i class="bi bi-activity me-2"></i>Live Database Health
+        <i class="bi bi-activity me-2"></i><%= red_t("red.health.database.live.title") %>
       </span>
     </div>
 
     <% unless @live_health[:postgresql] %>
       <div class="alert alert-info" style="margin: var(--space-3) var(--space-5); padding: var(--space-3) var(--space-4); font-size: 12px;">
         <i class="bi bi-info-circle me-1"></i>
-        <strong>Non-PostgreSQL adapter detected (<%= @live_health[:adapter] || "unknown" %>).</strong>
-        Live table, index, and activity stats require PostgreSQL. Connection pool and historical data are still available below.
+        <strong><%= red_t("red.health.database.live.non_postgresql", adapter: @live_health[:adapter] || "unknown") %></strong>
+        <%= red_t("red.health.database.live.non_postgresql_hint") %>
       </div>
     <% end %>
 
@@ -62,26 +62,26 @@
         <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); margin-bottom: var(--space-4);">
           <div style="text-align: center; padding: var(--space-3); background: var(--surface-base); border-radius: var(--radius-md);">
             <div style="font-size: 24px; font-weight: 700; color: var(--accent);"><%= pool[:size] %></div>
-            <small style="color: var(--text-tertiary);">Pool Size</small>
+            <small style="color: var(--text-tertiary);"><%= red_t("red.health.database.live.pool_size") %></small>
           </div>
           <div style="text-align: center; padding: var(--space-3); background: var(--surface-base); border-radius: var(--radius-md);">
             <% busy_color = pool[:size] > 0 && (pool[:busy].to_f / pool[:size]) >= 0.8 ? 'var(--status-critical)' : 'var(--status-info)' %>
             <div style="font-size: 24px; font-weight: 700; color: <%= busy_color %>;"><%= pool[:busy] %></div>
-            <small style="color: var(--text-tertiary);">Busy</small>
+            <small style="color: var(--text-tertiary);"><%= red_t("red.health.database.live.busy") %></small>
           </div>
           <div style="text-align: center; padding: var(--space-3); background: var(--surface-base); border-radius: var(--radius-md);">
             <div style="font-size: 24px; font-weight: 700; color: var(--status-success);"><%= pool[:idle] %></div>
-            <small style="color: var(--text-tertiary);">Idle</small>
+            <small style="color: var(--text-tertiary);"><%= red_t("red.health.database.live.idle") %></small>
           </div>
           <div style="text-align: center; padding: var(--space-3); background: var(--surface-base); border-radius: var(--radius-md);">
             <% dead_color = pool[:dead] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>
             <div style="font-size: 24px; font-weight: 700; color: <%= dead_color %>;"><%= pool[:dead] %></div>
-            <small style="color: var(--text-tertiary);">Dead</small>
+            <small style="color: var(--text-tertiary);"><%= red_t("red.health.database.live.dead") %></small>
           </div>
           <div style="text-align: center; padding: var(--space-3); background: var(--surface-base); border-radius: var(--radius-md);">
             <% waiting_color = pool[:waiting] > 0 ? 'var(--status-caution)' : 'var(--status-success)' %>
             <div style="font-size: 24px; font-weight: 700; color: <%= waiting_color %>;"><%= pool[:waiting] %></div>
-            <small style="color: var(--text-tertiary);">Waiting</small>
+            <small style="color: var(--text-tertiary);"><%= red_t("red.health.database.live.waiting") %></small>
           </div>
         </div>
       </div>
@@ -93,21 +93,21 @@
     <% total_db_size = (@host_tables + @gem_tables).sum { |t| t[:total_bytes] } %>
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-4);">
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Total DB Size</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.summary.total_db_size") %></div>
         <div class="stat-value"><%= number_to_human_size(total_db_size) %></div>
       </div>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Tables</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.summary.tables") %></div>
         <div class="stat-value"><%= @host_tables.size + @gem_tables.size %></div>
       </div>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Unused Indexes</div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.summary.unused_indexes") %></div>
         <% unused_color = @live_health[:unused_indexes]&.any? ? 'var(--status-caution)' : 'var(--status-success)' %>
         <div class="stat-value" style="color: <%= unused_color %>;"><%= @live_health[:unused_indexes]&.size || 0 %></div>
       </div>
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
-        <div class="stat-label" style="margin-bottom: 4px;">Active Connections</div>
-        <div class="stat-value"><%= @live_health[:activity] ? @live_health[:activity][:total] : "N/A" %></div>
+        <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.summary.active_connections") %></div>
+        <div class="stat-value"><%= @live_health[:activity] ? @live_health[:activity][:total] : red_t("red.common.not_available") %></div>
       </div>
     </div>
 
@@ -117,7 +117,7 @@
         <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-table text-primary me-2"></i>
-            Host App Tables
+            <%= red_t("red.health.database.host_tables.title") %>
             <span class="badge bg-primary"><%= @host_tables.size %></span>
           </h5>
         </div>
@@ -126,13 +126,13 @@
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>Table</th>
-                  <th width="100">Est. Rows</th>
-                  <th width="100">Size</th>
-                  <th width="80">Seq Scans</th>
-                  <th width="80">Idx Scans</th>
-                  <th width="100">Dead Tuples</th>
-                  <th width="140">Last Vacuum</th>
+                  <th><%= red_t("red.health.database.table_columns.table") %></th>
+                  <th width="100"><%= red_t("red.health.database.table_columns.est_rows") %></th>
+                  <th width="100"><%= red_t("red.health.database.table_columns.size") %></th>
+                  <th width="80"><%= red_t("red.health.database.table_columns.seq_scans") %></th>
+                  <th width="80"><%= red_t("red.health.database.table_columns.idx_scans") %></th>
+                  <th width="100"><%= red_t("red.health.database.table_columns.dead_tuples") %></th>
+                  <th width="140"><%= red_t("red.health.database.table_columns.last_vacuum") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +150,7 @@
                         <%= number_with_delimiter(table[:dead_tuples]) %>
                       <% end %>
                     </td>
-                    <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : "Never" %></td>
+                    <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : red_t("red.health.database.never_vacuumed") %></td>
                   </tr>
                 <% end %>
               </tbody>
@@ -167,7 +167,7 @@
           <a class="text-decoration-none" data-bs-toggle="collapse" href="#gemTablesCollapse" role="button" aria-expanded="false" aria-controls="gemTablesCollapse">
             <h5 class="mb-0">
               <i class="bi bi-table text-secondary me-2"></i>
-              Error Dashboard Tables
+              <%= red_t("red.health.database.gem_tables.title") %>
               <span class="badge bg-secondary"><%= @gem_tables.size %></span>
               <i class="bi bi-chevron-down ms-2" style="font-size: 0.8em;"></i>
             </h5>
@@ -179,13 +179,13 @@
               <table class="table table-hover mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th>Table</th>
-                    <th width="100">Est. Rows</th>
-                    <th width="100">Size</th>
-                    <th width="80">Seq Scans</th>
-                    <th width="80">Idx Scans</th>
-                    <th width="100">Dead Tuples</th>
-                    <th width="140">Last Vacuum</th>
+                    <th><%= red_t("red.health.database.table_columns.table") %></th>
+                    <th width="100"><%= red_t("red.health.database.table_columns.est_rows") %></th>
+                    <th width="100"><%= red_t("red.health.database.table_columns.size") %></th>
+                    <th width="80"><%= red_t("red.health.database.table_columns.seq_scans") %></th>
+                    <th width="80"><%= red_t("red.health.database.table_columns.idx_scans") %></th>
+                    <th width="100"><%= red_t("red.health.database.table_columns.dead_tuples") %></th>
+                    <th width="140"><%= red_t("red.health.database.table_columns.last_vacuum") %></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -203,7 +203,7 @@
                           <%= number_with_delimiter(table[:dead_tuples]) %>
                         <% end %>
                       </td>
-                      <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : "Never" %></td>
+                      <td><%= table[:last_autovacuum] ? local_time_ago(parse_pg_timestamp(table[:last_autovacuum])) : red_t("red.health.database.never_vacuumed") %></td>
                     </tr>
                   <% end %>
                 </tbody>
@@ -220,7 +220,7 @@
         <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-            Unused Indexes
+            <%= red_t("red.health.database.unused_indexes.title") %>
             <span class="badge bg-warning text-dark"><%= @live_health[:unused_indexes].size %></span>
           </h5>
         </div>
@@ -229,9 +229,9 @@
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>Index</th>
-                  <th>Table</th>
-                  <th width="100">Size</th>
+                  <th><%= red_t("red.health.database.unused_indexes.column_index") %></th>
+                  <th><%= red_t("red.health.database.unused_indexes.column_table") %></th>
+                  <th width="100"><%= red_t("red.health.database.unused_indexes.column_size") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -255,10 +255,10 @@
         <div class="card-header">
           <h5 class="mb-0">
             <i class="bi bi-people text-info me-2"></i>
-            Connection Activity
-            <span class="badge bg-info"><%= @live_health[:activity][:total] %> total</span>
+            <%= red_t("red.health.database.activity.title") %>
+            <span class="badge bg-info"><%= red_t("red.health.database.activity.total_badge", count: @live_health[:activity][:total]) %></span>
             <% if @live_health[:activity][:total_waiting] > 0 %>
-              <span class="badge bg-warning text-dark"><%= @live_health[:activity][:total_waiting] %> waiting</span>
+              <span class="badge bg-warning text-dark"><%= red_t("red.health.database.activity.waiting_badge", count: @live_health[:activity][:total_waiting]) %></span>
             <% end %>
           </h5>
         </div>
@@ -267,9 +267,9 @@
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>State</th>
-                  <th width="100">Count</th>
-                  <th width="100">Waiting</th>
+                  <th><%= red_t("red.health.database.activity.column_state") %></th>
+                  <th width="100"><%= red_t("red.health.database.activity.column_count") %></th>
+                  <th width="100"><%= red_t("red.health.database.activity.column_waiting") %></th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +298,7 @@
   <div class="card" style="margin-bottom: var(--space-4);">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-primary);">
       <span style="font-size: 13px; font-weight: 600;">
-        <i class="bi bi-clock-history me-2"></i>Connection Pool by Error
+        <i class="bi bi-clock-history me-2"></i><%= red_t("red.health.database.pool_history.title") %>
         <% if @errors_with_pool > 0 %>
           <span class="badge bg-info"><%= @errors_with_pool %></span>
         <% end %>
@@ -311,10 +311,9 @@
     <% if @errors_with_pool == 0 %>
       <div class="red-empty-state" style="padding: var(--space-6);">
         <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-        <div class="red-empty-state-title">No Connection Pool Data Found</div>
+        <div class="red-empty-state-title"><%= red_t("red.health.database.pool_history.empty_title") %></div>
         <p style="color: var(--text-tertiary); font-size: 13px; max-width: 400px; margin: 0 auto;">
-          No connection pool stats were detected in system health snapshots over the last <%= @days %> days.
-          Enable <code>enable_system_health = true</code> to capture pool stats at error time.
+          <%= red_t("red.health.database.pool_history.empty_message_html", days: @days) %>
         </p>
       </div>
     <% else %>
@@ -323,15 +322,15 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               <tr>
-                <th width="80">Error</th>
-                <th>Error Type</th>
-                <th width="110">Utilization</th>
-                <th width="60">Busy</th>
-                <th width="60">Idle</th>
-                <th width="60">Dead</th>
-                <th width="70">Waiting</th>
-                <th width="70">Pool Size</th>
-                <th width="140">Last Seen</th>
+                <th width="80"><%= red_t("red.health.database.pool_history.column_error") %></th>
+                <th><%= red_t("red.health.database.pool_history.column_error_type") %></th>
+                <th width="110"><%= red_t("red.health.database.pool_history.column_utilization") %></th>
+                <th width="60"><%= red_t("red.health.database.pool_history.column_busy") %></th>
+                <th width="60"><%= red_t("red.health.database.pool_history.column_idle") %></th>
+                <th width="60"><%= red_t("red.health.database.pool_history.column_dead") %></th>
+                <th width="70"><%= red_t("red.health.database.pool_history.column_waiting") %></th>
+                <th width="70"><%= red_t("red.health.database.pool_history.column_pool_size") %></th>
+                <th width="140"><%= red_t("red.health.database.pool_history.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
@@ -379,11 +378,11 @@
       <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border-primary); font-size: 12px;">
         <div>
           <small style="color: var(--text-tertiary);">
-            <i class="bi bi-lightbulb" style="color: var(--status-caution);"></i> High utilization during errors may indicate connection pool exhaustion or long-running queries.
+            <i class="bi bi-lightbulb" style="color: var(--status-caution);"></i> <%= red_t("red.health.database.pool_history.tip") %>
           </small>
           <small class="ms-3">
             <a href="https://guides.rubyonrails.org/configuring.html#configuring-a-database" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none;">
-              <i class="bi bi-book"></i> Database Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+              <i class="bi bi-book"></i> <%= red_t("red.health.database.pool_history.guide_link") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
             </a>
           </small>
         </div>

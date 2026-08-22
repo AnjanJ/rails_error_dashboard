@@ -1,32 +1,39 @@
+<%# Separators are fixed-width but LABELS ARE NOT ALIGNED TO A COLUMN. %>
+<%# Padding "Application:" to a column assumes every translation is about as %>
+<%# long as the English one; German runs ~30% longer and would push values %>
+<%# past 80 characters or force translators to abbreviate. Label, space, %>
+<%# value — nothing to break. (P4-T2 REQ-3) %>
 ==========================================
-🚨 ERROR ALERT
+<%= red_mail_t("red.mailers.error_alert.heading") %>
 ==========================================
 
-Application: <%= @error_log.application&.name || 'Unknown' %>
-Error Type: <%= @error_log.error_type %>
-<% if @error_log.platform.present? %>Platform: <%= @error_log.platform %><% end %>
-Occurred At: <%= @error_log.occurred_at.strftime('%B %d, %Y at %I:%M %p %Z') %>
-<% if @error_log.user_id.present? %>User ID: <%= @error_log.user_id %><% end %>
-<% if @error_log.ip_address.present? %>IP Address: <%= @error_log.ip_address %><% end %>
-<% if @error_log.request_url.present? %>Request URL: <%= @error_log.request_url %><% end %>
+<%= red_mail_t("red.mailers.error_alert.labels.application") %>: <%= @error_log.application&.name || red_mail_t("red.mailers.shared.unknown_application") %>
+<%= red_mail_t("red.mailers.error_alert.labels.error_type") %>: <%= @error_log.error_type %>
+<% if @error_log.platform.present? %><%= red_mail_t("red.mailers.error_alert.labels.platform") %>: <%= @error_log.platform %><% end %>
+<%= red_mail_t("red.mailers.error_alert.labels.occurred_at") %>: <%= red_mail_time(@error_log.occurred_at) %>
+<% if @error_log.user_id.present? %><%= red_mail_t("red.mailers.error_alert.labels.user_id") %>: <%= @error_log.user_id %><% end %>
+<% if @error_log.ip_address.present? %><%= red_mail_t("red.mailers.error_alert.labels.ip_address") %>: <%= @error_log.ip_address %><% end %>
+<% if @error_log.request_url.present? %><%= red_mail_t("red.mailers.error_alert.labels.request_url") %>: <%= @error_log.request_url %><% end %>
 
 ------------------------------------------
-MESSAGE
+<%= red_mail_t("red.mailers.error_alert.labels.message") %>
 ------------------------------------------
+<%# Error content is diagnostic output and is never translated. %>
 <%= @error_log.message %>
 
 <% if @error_log.backtrace.present? %>
+<% backtrace_lines = @error_log.backtrace.split("\n").first(10) %>
 ------------------------------------------
-STACK TRACE (first 10 lines)
+<%= red_mail_tp("red.mailers.error_alert.stack_trace", count: backtrace_lines.length) %>
 ------------------------------------------
-<%= @error_log.backtrace.split("\n").first(10).join("\n") %>
+<%= backtrace_lines.join("\n") %>
 <% end %>
 
 ------------------------------------------
 
-View full details in the dashboard:
+<%= red_mail_t("red.mailers.error_alert.view_details_text") %>
 <%= @dashboard_url %>
 
-Error ID: <%= @error_log.id %>
+<%= red_mail_t("red.mailers.error_alert.labels.error_id") %>: <%= @error_log.id %>
 
-This is an automated error notification from Rails Error Dashboard.
+<%= red_mail_t("red.mailers.error_alert.footer", product: red_mail_t("red.mailers.shared.product_name")) %>

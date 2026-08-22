@@ -8,20 +8,20 @@
     <div class="card mb-4" id="section-llm-summary">
       <div class="card-header">
         <h5 class="mb-0">
-          <i class="bi bi-robot text-info" aria-hidden="true"></i> LLM Calls
+          <i class="bi bi-robot text-info" aria-hidden="true"></i> <%= red_t("red.errors.llm_summary.title") %>
           <span class="badge bg-info text-dark"><%= llm_summary[:total_calls] %></span>
         </h5>
-        <small class="text-muted">Aggregated from request breadcrumbs</small>
+        <small class="text-muted"><%= red_t("red.errors.llm_summary.hint") %></small>
       </div>
       <div class="card-body">
         <div class="row text-center mb-3">
           <div class="col-4">
             <div class="fs-4 fw-bold"><%= llm_summary[:total_calls] %></div>
-            <small class="text-muted">Calls</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.calls") %></small>
           </div>
           <div class="col-4">
             <div class="fs-4 fw-bold"><%= number_with_delimiter(llm_summary[:total_tokens]) %></div>
-            <small class="text-muted">Tokens</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.tokens") %></small>
           </div>
           <div class="col-4">
             <div class="fs-4 fw-bold">
@@ -31,32 +31,32 @@
                 <span class="text-muted">--</span>
               <% end %>
             </div>
-            <small class="text-muted">Cost</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.cost") %></small>
           </div>
         </div>
 
         <div class="mb-3">
           <div class="d-flex justify-content-between mb-1">
-            <small class="text-muted">Input</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.input") %></small>
             <small><strong><%= number_with_delimiter(llm_summary[:total_input_tokens]) %></strong></small>
           </div>
           <div class="d-flex justify-content-between mb-1">
-            <small class="text-muted">Output</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.output") %></small>
             <small><strong><%= number_with_delimiter(llm_summary[:total_output_tokens]) %></strong></small>
           </div>
           <% if llm_summary[:total_tool_calls] > 0 %>
             <div class="d-flex justify-content-between mb-1">
-              <small class="text-muted">Tool calls</small>
+              <small class="text-muted"><%= red_t("red.errors.llm_summary.tool_calls") %></small>
               <small><strong><%= llm_summary[:total_tool_calls] %></strong></small>
             </div>
           <% end %>
           <div class="d-flex justify-content-between mb-1">
-            <small class="text-muted">Total time</small>
+            <small class="text-muted"><%= red_t("red.errors.llm_summary.total_time") %></small>
             <small><strong><%= "%.1f" % llm_summary[:total_duration_ms] %>ms</strong></small>
           </div>
           <% if llm_summary[:error_count] > 0 %>
             <div class="d-flex justify-content-between mb-1">
-              <small class="text-muted">Errors</small>
+              <small class="text-muted"><%= red_t("red.errors.llm_summary.errors") %></small>
               <small><span class="badge bg-danger"><%= llm_summary[:error_count] %></span></small>
             </div>
           <% end %>
@@ -64,14 +64,14 @@
 
         <% if llm_summary[:by_model].any? %>
           <hr class="my-2">
-          <small class="text-muted d-block mb-2">By model</small>
+          <small class="text-muted d-block mb-2"><%= red_t("red.errors.llm_summary.by_model") %></small>
           <% llm_summary[:by_model].each do |row| %>
             <div class="d-flex justify-content-between align-items-center mb-1" style="gap: 0.5rem;">
-              <small style="min-width: 0; overflow-wrap: anywhere;" title="<%= [ row[:provider], row[:model].presence || "unknown" ].compact.join(" · ") %>">
+              <small style="min-width: 0; overflow-wrap: anywhere;" title="<%= [ row[:provider], row[:model].presence || red_t("red.common.unknown") ].compact.join(" · ") %>">
                 <% if row[:provider].present? %>
                   <span class="text-muted"><%= row[:provider] %>·</span>
                 <% end %>
-                <strong><%= row[:model].presence || "unknown" %></strong>
+                <strong><%= row[:model].presence || red_t("red.common.unknown") %></strong>
               </small>
               <small class="text-muted text-nowrap">
                 <%= row[:calls] %> · <%= number_with_delimiter(row[:tokens]) %>tok
@@ -87,7 +87,7 @@
           <div class="alert alert-danger py-1 px-2 mb-0 mt-2">
             <small>
               <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-              <%= llm_summary[:error_count] %> failed call<%= llm_summary[:error_count] == 1 ? "" : "s" %> — see breadcrumbs trail for details.
+              <%= red_tp("red.errors.llm_summary.failed_calls", count: llm_summary[:error_count]) %>
             </small>
           </div>
         <% end %>

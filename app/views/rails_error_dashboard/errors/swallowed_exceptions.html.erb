@@ -1,21 +1,21 @@
-<% content_for :page_title, "Swallowed Exceptions" %>
+<% content_for :page_title, red_t("red.errors.swallowed_page.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-eye-slash me-2"></i>
-      Swallowed Exceptions
+      <%= red_t("red.errors.swallowed_page.title") %>
     </h1>
 
     <div class="btn-group" role="group">
       <%= link_to swallowed_exceptions_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        7 Days
+        <%= red_t("red.common.days_filter.7") %>
       <% end %>
       <%= link_to swallowed_exceptions_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        30 Days
+        <%= red_t("red.common.days_filter.30") %>
       <% end %>
       <%= link_to swallowed_exceptions_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
-        90 Days
+        <%= red_t("red.common.days_filter.90") %>
       <% end %>
     </div>
   </div>
@@ -23,18 +23,18 @@
   <% if @unique_count == 0 %>
     <div class="red-empty-state">
       <div class="red-empty-state-icon" style="background: var(--status-success-bg); color: var(--status-success);"><i class="bi bi-check-lg"></i></div>
-      <div class="red-empty-state-title">No Swallowed Exceptions Detected</div>
+      <div class="red-empty-state-title"><%= red_t("red.errors.swallowed_page.empty_title") %></div>
       <p class="text-muted">
-        No exceptions with a rescue ratio above <%= (RailsErrorDashboard.configuration.swallowed_exception_threshold * 100).round %>% were detected in the last <%= @days %> days.
+        <%= red_t("red.errors.swallowed_page.empty_body", threshold: (RailsErrorDashboard.configuration.swallowed_exception_threshold * 100).round, days: @days) %>
       </p>
       <div class="card mx-auto" style="max-width: 500px;">
         <div class="card-body text-start">
-          <h6>How swallowed exceptions are detected:</h6>
+          <h6><%= red_t("red.errors.swallowed_page.how_title") %></h6>
           <ul class="mb-0">
-            <li>TracePoint(:raise) counts every exception raised</li>
-            <li>TracePoint(:rescue) counts every exception rescued</li>
-            <li>High rescue/raise ratio = likely swallowed (silently rescued)</li>
-            <li>Requires Ruby 3.3+ and <code>detect_swallowed_exceptions = true</code></li>
+            <li><%= red_t("red.errors.swallowed_page.how_raise") %></li>
+            <li><%= red_t("red.errors.swallowed_page.how_rescue") %></li>
+            <li><%= red_t("red.errors.swallowed_page.how_ratio") %></li>
+            <li><%= red_t("red.errors.swallowed_page.how_requires_html", option: content_tag(:code, "detect_swallowed_exceptions = true")) %></li>
           </ul>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-danger"><%= @unique_count %></div>
-            <small class="text-muted">Swallowed Patterns</small>
+            <small class="text-muted"><%= red_t("red.errors.swallowed_page.swallowed_patterns") %></small>
           </div>
         </div>
       </div>
@@ -53,7 +53,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= number_with_delimiter(@total_rescue_count) %></div>
-            <small class="text-muted">Total Rescues</small>
+            <small class="text-muted"><%= red_t("red.errors.swallowed_page.total_rescues") %></small>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= number_with_delimiter(@total_raise_count) %></div>
-            <small class="text-muted">Total Raises</small>
+            <small class="text-muted"><%= red_t("red.errors.swallowed_page.total_raises") %></small>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
           <i class="bi bi-eye-slash text-danger me-2"></i>
-          Swallowed Exception Patterns
+          <%= red_t("red.errors.swallowed_page.all_title") %>
           <span class="badge bg-danger"><%= @unique_count %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
@@ -81,25 +81,25 @@
           <table class="table table-hover mb-0">
             <thead>
               <tr style="border-bottom: 1px solid var(--border-primary);">
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Exception Class</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250">Raise Location</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250">Rescue Location</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Raises</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Rescues</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100">Ratio</th>
-                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="140">Last Seen</th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;"><%= red_t("red.errors.swallowed_page.column_exception_class") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250"><%= red_t("red.errors.swallowed_page.column_raise_location") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="250"><%= red_t("red.errors.swallowed_page.column_rescue_location") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100"><%= red_t("red.errors.swallowed_page.column_raises") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100"><%= red_t("red.errors.swallowed_page.column_rescues") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="100"><%= red_t("red.errors.swallowed_page.column_ratio") %></th>
+                <th style="padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
               </tr>
             </thead>
             <tbody>
               <% @entries.each do |entry| %>
                 <tr>
                   <td>
-                    <%= link_to errors_path(error_type: entry[:exception_class], unresolved: '0'), class: "text-decoration-none", title: "View any unrescued #{entry[:exception_class]} errors that leaked into error_log" do %>
+                    <%= link_to errors_path(error_type: entry[:exception_class], unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.swallowed_page.view_unrescued", exception: entry[:exception_class]) do %>
                       <code style="font-size: 0.85em;"><%= entry[:exception_class] %></code>
                     <% end %>
                   </td>
                   <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:raise_location] %></td>
-                  <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:rescue_location] || "Unknown" %></td>
+                  <td style="color: var(--text-secondary); font-size: 12px; word-break: break-all;"><%= entry[:rescue_location] || red_t("red.common.unknown") %></td>
                   <td><span class="badge bg-info text-dark"><%= number_with_delimiter(entry[:raise_count]) %></span></td>
                   <td><span class="badge bg-warning text-dark"><%= number_with_delimiter(entry[:rescue_count]) %></span></td>
                   <td>
@@ -118,7 +118,7 @@
       <div class="card-footer border-top d-flex justify-content-between align-items-center">
         <div>
           <small class="text-muted">
-            <i class="bi bi-lightbulb text-warning"></i> Swallowed exceptions are raised then silently rescued. They may hide real bugs.
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.swallowed_page.footer_tip") %>
           </small>
         </div>
         <div>

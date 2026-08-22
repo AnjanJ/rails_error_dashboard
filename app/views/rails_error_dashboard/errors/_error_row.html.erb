@@ -9,13 +9,13 @@
     <div style="display: flex; align-items: center; gap: 8px;">
       <span class="badge bg-<%= severity_color(error.severity) %>" style="display: inline-flex; align-items: center; gap: 4px;">
         <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-        <%= error.severity %>
+        <%= red_t("red.common.severity.#{error.severity}", default: error.severity.to_s) %>
       </span>
       <div style="min-width: 0;">
         <div style="font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           <%= error.error_type %>
           <% if error.recent? %>
-            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 4px; text-transform: uppercase;">NEW</span>
+            <span style="display: inline-block; padding: 1px 6px; font-size: 9px; font-weight: 600; border-radius: var(--radius-full); background: var(--status-success-bg); color: var(--status-success); margin-left: 4px; text-transform: uppercase;"><%= red_t("red.errors.row.new_badge") %></span>
           <% end %>
         </div>
         <div style="color: var(--text-tertiary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= error.message %>"><%= error.message %></div>
@@ -24,36 +24,43 @@
   </td>
   <td style="padding: var(--space-3) var(--space-4);">
     <%
-      # Use the model's status field if it has a meaningful workflow status
+      # Use the model's status field if it has a meaningful workflow status.
+      #
+      # status_key stays the machine value ("in_progress"): it drives the colour
+      # lookup and the translation key, neither of which may vary by locale.
+      # Only the rendered label is translated. The old code displayed the value
+      # itself via tr('_', ' ') plus a CSS capitalize, which is English
+      # morphology applied to an identifier.
       raw_status = error.respond_to?(:status) ? error.status : nil
-      status_text = if error.respond_to?(:muted?) && error.muted?
+      status_key = if error.respond_to?(:muted?) && error.muted?
         'muted'
       elsif error.respond_to?(:snoozed?) && error.snoozed?
         'snoozed'
       elsif raw_status.present? && raw_status != 'new'
-        raw_status.tr('_', ' ')
+        raw_status
       elsif error.resolved?
         'resolved'
       else
         'unresolved'
       end
+      status_text = red_t("red.errors.row.status.#{status_key}", default: status_key.tr('_', ' '))
       status_colors = {
         'unresolved' => { bg: 'var(--status-critical-bg)', color: 'var(--status-critical)' },
         'resolved' => { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
-        'in progress' => { bg: 'var(--status-info-bg)', color: 'var(--status-info)' },
+        'in_progress' => { bg: 'var(--status-info-bg)', color: 'var(--status-info)' },
         'investigating' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
-        'wont fix' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
+        'wont_fix' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
         'assigned' => { bg: 'var(--accent-subtle)', color: 'var(--accent)' },
         'snoozed' => { bg: 'var(--status-caution-bg)', color: 'var(--status-caution)' },
         'muted' => { bg: 'var(--surface-tertiary)', color: 'var(--text-tertiary)' },
       }
-      sc = status_colors[status_text] || status_colors['unresolved']
+      sc = status_colors[status_key] || status_colors['unresolved']
     %>
     <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; border-radius: var(--radius-full); background: <%= sc[:bg] %>; color: <%= sc[:color] %>; text-transform: capitalize;">
       <%= status_text %>
     </span>
     <% if error.reopened? %>
-      <i class="bi bi-arrow-counterclockwise" style="color: var(--status-warning); margin-left: 4px; font-size: 12px;" title="Reopened"></i>
+      <i class="bi bi-arrow-counterclockwise" style="color: var(--status-warning); margin-left: 4px; font-size: 12px;" title="<%= red_t("red.errors.row.reopened") %>"></i>
     <% end %>
   </td>
   <td style="padding: var(--space-3) var(--space-4); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary);">
@@ -61,7 +68,7 @@
   </td>
   <td style="padding: var(--space-3) var(--space-4); text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary);">
     <% if error.user_id %>
-      <%= link_to error.user_id, errors_path(user_id: error.user_id, unresolved: '0'), style: "color: inherit; text-decoration: none;", title: "View all errors for user #{error.user_id}" %>
+      <%= link_to error.user_id, errors_path(user_id: error.user_id, unresolved: '0'), style: "color: inherit; text-decoration: none;", title: red_t("red.errors.row.view_user_errors", user: error.user_id) %>
     <% else %>
       <span style="color: var(--text-tertiary);">&mdash;</span>
     <% end %>
@@ -70,8 +77,13 @@
     <%= local_time_ago(error.last_seen_at) %>
   </td>
   <% if local_assigns[:show_application] %>
-    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= error.application&.name || 'Unknown' %>">
-      <span class="badge bg-info"><%= error.application&.name || 'Unknown' %></span>
+    <%
+      # An application name is user data and is never translated; only the
+      # placeholder for a missing one is.
+      application_name = error.application&.name.presence || red_t("red.common.unknown")
+    %>
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= application_name %>">
+      <span class="badge bg-info"><%= application_name %></span>
     </td>
   <% end %>
   <% if local_assigns[:show_platform] %>

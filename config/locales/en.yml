@@ -1,0 +1,2719 @@
+# RED dashboard translations.
+#
+# This file is authoritative. Every other locale is a translation of it, and
+# every key here must exist before it can be translated elsewhere. A key
+# missing from another locale silently renders the English string — that is by
+# design (see lib/rails_error_dashboard/i18n_store.rb).
+#
+# These translations are loaded into RED's OWN I18n backend, not the host
+# app's. Adding keys here cannot collide with the host application.
+#
+# Conventions and the do-not-translate glossary live in
+# docs/guides/TRANSLATIONS.md. Read it before adding a locale.
+#
+# Namespaces (see tasks/i18n-sprint-plan.md, P1-T2):
+#   common        shared words reused across pages
+#   time          date/time formats and relative-time strings
+#   nav           sidebar and navbar labels
+#   errors        the errors index, detail page, and partials
+#   settings      the settings page
+#   analytics     analytics, correlation, releases, platform comparison
+#   health        the health summary pages
+#   flash         controller flash and JSON messages
+#   mailers       digest and alert emails
+#   notifications Slack/Discord/PagerDuty/webhook payload labels
+#   js            data the browser reads at runtime from window.RED_I18N
+#   ui_js         strings the server renders into inline <script> blocks
+#
+# Phases 2-4 fill in the rest.
+en:
+  red:
+    common:
+      not_available: "N/A"
+      close: "Close"
+      unknown: "Unknown"
+
+      # Severity levels. The stored value is a machine string ("critical");
+      # displaying it previously meant capitalize/titleize, which is English
+      # morphology applied to an identifier. Shared across pages, so these live
+      # in common rather than under errors.
+      severity:
+        critical: "Critical"
+        high: "High"
+        medium: "Medium"
+        low: "Low"
+
+      # The day-range toggle repeated verbatim across health summary pages
+      # (P2-T5) and several analytics pages (P2-T6). One key set so the
+      # wording can't drift page to page, and so P2-T9 pages with the same
+      # toggle can reuse it rather than adding their own.
+      days_filter:
+        "7": "7 Days"
+        "14": "14 Days"
+        "30": "30 Days"
+        "90": "90 Days"
+
+      # Strings returned by the view helpers (P2-T10). They live in common
+      # because a helper has no page of its own — the same value renders on
+      # whichever page calls it.
+
+      # Backtrace frame categories. The frame's origin, not its content: the
+      # backtrace itself is diagnostic output and is never translated.
+      # "Gem", "Rails" and "Ruby" are product names inside these labels.
+      frame_category:
+        app: "Your Code"
+        gem: "Gem"
+        framework: "Rails Framework"
+        ruby_core: "Ruby Core"
+        unknown: "Unknown"
+
+      # Error-rate trend direction. The value is a machine symbol
+      # (:increasing); these are its display labels.
+      trend:
+        increasing: "Increasing"
+        decreasing: "Decreasing"
+        stable: "Stable"
+
+      # Platform health badge on the overview. The emoji is part of the English
+      # rendering and a locale may drop it. Deliberately separate from
+      # red.analytics.platform_comparison.health_card, which renders the same
+      # states without emoji on a different page.
+      health_status:
+        healthy: "✅ Healthy"
+        warning: "⚠️ Warning"
+        critical: "🔴 Critical"
+
+      # Device classes reported by the user-agent parser. Browser and OS names
+      # (Chrome, Safari, Windows, iOS) are brands and stay as written; these
+      # four are ordinary words and are translated.
+      device_type:
+        mobile: "Mobile"
+        tablet: "Tablet"
+        bot: "Bot"
+        desktop: "Desktop"
+
+    nav:
+      # Section headings in the sidebar.
+      sections:
+        core: "Core"
+        health: "Health"
+        diagnostics: "Diagnostics"
+        insights: "Insights"
+
+      # Item labels. Shared by the desktop sidebar and the mobile offcanvas,
+      # which render the same destinations — a second copy of these strings
+      # would drift the moment one is edited.
+      overview: "Overview"
+      errors: "Errors"
+      analytics: "Analytics"
+      platform: "Platform"
+      cache: "Cache"
+      jobs: "Jobs"
+      database: "Database"
+      rate_limits: "Rate Limits"
+      actioncable: "ActionCable"
+      activestorage: "ActiveStorage"
+      llm: "LLM"
+      n_plus_one: "N+1 Queries"
+      deprecations: "Deprecations"
+      swallowed: "Swallowed"
+      diagnostic_dumps: "Diagnostics"
+      storms: "Storms"
+      correlation: "Correlation"
+      releases: "Releases"
+      user_impact: "User Impact"
+      settings: "Settings"
+
+    sidebar:
+      # %{app} is the host application's module name.
+      back_to_app: "Back to %{app}"
+      back_to_app_home: "Back to app home"
+
+    navbar:
+      search_placeholder: "Search errors... /"
+      toggle_sidebar: "Toggle sidebar (S)"
+      toggle_theme: "Toggle theme"
+      keyboard_shortcuts_title: "Keyboard shortcuts (?)"
+      all_applications: "All Applications"
+      # The language picker. The languages themselves are NOT keys — a
+      # language's own name does not change with the locale you view it from.
+      # See I18nStore::ENDONYMS.
+      language: "Language"
+      choose_language: "Choose dashboard language"
+      # %{count} is the number of applications being aggregated.
+      all_apps: "All Apps (%{count})"
+
+    banners:
+      credentials:
+        # Rendered as "<strong>Security Warning:</strong> You are using…", so
+        # the label and body are separate keys rather than embedded markup.
+        label: "Security Warning:"
+        body_html: >-
+          You are using default credentials (gandalf/youshallnotpass).
+          Set <code>ERROR_DASHBOARD_USER</code> and <code>ERROR_DASHBOARD_PASSWORD</code>
+          environment variables, or configure <code>authenticate_with</code> in your
+          initializer.
+        dismiss: "Dismiss for this session"
+
+      storm:
+        # Whole sentences, not fragments. The English original assembled these
+        # from a stem plus a conditional clause, which cannot be reordered into
+        # a natural sentence in every language.
+        active_title: "Error storm in progress"
+        recent_title: "Storm protection engaged recently"
+        # %{time} is a formatted clock time.
+        active_paused: >-
+          (since %{time}) — storm protection engaged. Occurrences are being counted
+          exactly; detail capture is paused (count-only mode).
+        active_sampled: >-
+          (since %{time}) — storm protection engaged. Occurrences are being counted
+          exactly; context capture is sampled.
+        # %{count} is a delimited occurrence count.
+        recent_body: >-
+          (ended %{time}) — %{count} occurrences were recorded as exact counts with
+          sampled detail.
+        view_history: "View storm history"
+
+    footer:
+      # "RED — Rails Error Dashboard" is the product name; do not translate it.
+      built_with: "Built with"
+      # %{author} is a linked name (an <a> tag), so this key is _html.
+      # Languages differ on where the attribution goes, hence one whole string
+      # rather than "Built with ❤️ by" plus a trailing link.
+      credit_html: "Built with ❤️ by %{author}"
+
+    shortcuts:
+      title: "Keyboard Shortcuts"
+      refresh: "Refresh page"
+      focus_search: "Focus search"
+      analytics: "Analytics"
+      toggle_sidebar: "Toggle sidebar"
+      show_shortcuts: "Show shortcuts"
+
+    errors:
+      index:
+        title: "Errors"
+        # %{time} is a <span class="local-time"> element rendered by
+        # ApplicationHelper#local_time, so this key is _html and the markup
+        # must survive interpolation.
+        last_updated_html: "Last updated: %{time}"
+        live: "Live"
+
+        # The summary line above the table. The original placed a bare noun
+        # after a <strong>-wrapped number; these keys interpolate the styled
+        # number instead, so a translation can put it anywhere in the phrase.
+        #
+        # %{count} selects the plural form and is the plain number; %{value} is
+        # the same number wrapped in its <strong>, which is why these are _html.
+        # Interpolating markup as %{count} would break form selection.
+        summary:
+          errors_html:
+            one: "%{value} error"
+            other: "%{value} errors"
+          unresolved_html: "%{value} unresolved"
+          all_time: "All time"
+
+        spike:
+          critical: "Critical Error Spike Detected!"
+          high: "High Error Spike Detected"
+          elevated: "Elevated Error Activity"
+          # %{count} is today's error count, %{avg} the 7-day average and
+          # %{multiplier} the ratio between them. One sentence, not three
+          # fragments — the clause order is not universal.
+          today:
+            one: "Today: %{count} error"
+            other: "Today: %{count} errors"
+          average: "(7-day avg: %{avg})"
+          multiplier: "%{multiplier}x normal levels"
+
+        filters:
+          search_placeholder: "Search errors..."
+          more: "More filters"
+          apply: "Apply Filters"
+          clear: "Clear"
+          clear_all: "Clear all"
+          # Label preceding the active-filter chips.
+          active_label: "Filters:"
+
+          status:
+            all: "All"
+            unresolved: "Unresolved"
+            resolved: "Resolved"
+            assigned: "Assigned"
+            reopened: "Reopened"
+
+          severity:
+            any: "Any severity"
+
+          # Select-tag "all" options. Each is a whole phrase, not "All" plus a
+          # noun — languages differ on agreement between the two.
+          all_apps: "All Apps"
+          all_platforms: "All Platforms"
+          all_types: "All Types"
+          all_timeframes: "All Time"
+          all_frequencies: "All Frequencies"
+          all_priorities: "All Priorities"
+          all_assignments: "All Assignments"
+          all_assignees: "All Assignees"
+
+          unassigned: "Unassigned"
+          assigned: "Assigned"
+
+          unresolved_only: "Unresolved only"
+          hide_snoozed: "Hide snoozed"
+          hide_muted: "Hide muted"
+
+          # Timeframe and frequency option labels. These were previously
+          # produced by humanize() on the param value, which applies English
+          # morphology to a machine value and yields nonsense elsewhere. The
+          # same keys serve both the select options and the active chips, so
+          # the two can never disagree.
+          timeframes:
+            last_hour: "Last Hour"
+            today: "Today"
+            yesterday: "Yesterday"
+            last_7_days: "Last 7 Days"
+            last_30_days: "Last 30 Days"
+            last_90_days: "Last 90 Days"
+
+          frequencies:
+            once: "Once"
+            few: "2-9 Times"
+            frequent: "10-99 Times"
+            very_frequent: "100+ Times"
+            recurring: "Recurring"
+
+          # Chip labels. %{value} is the filter's display value — for search
+          # terms, application and platform names it is free-form user data and
+          # is never translated, only the label around it.
+          chips:
+            search: "Search: %{value}"
+            application: "App: %{value}"
+            platform: "Platform: %{value}"
+            error_type: "Type: %{value}"
+            severity: "Severity: %{value}"
+            timeframe: "Timeframe: %{value}"
+            frequency: "Frequency: %{value}"
+            status: "Status: %{value}"
+            priority: "Priority: %{value}"
+            remove: "Remove filter"
+
+        columns:
+          error: "Error"
+          status: "Status"
+          events: "Events"
+          users: "Users"
+          last_seen: "Last seen"
+          application: "App"
+          platform: "Platform"
+          select_all: "Select all errors"
+
+        batch:
+          # %{count} of the visible errors are selected.
+          selected:
+            one: "%{count} selected"
+            other: "%{count} selected"
+          resolve: "Resolve"
+          delete: "Delete"
+          confirm_delete: "Are you sure you want to delete the selected errors?"
+
+        # %{from}, %{to} and %{count} bound the current page.
+        pagination: "Showing %{from}–%{to} of %{count} errors"
+
+        empty:
+          filtered_title: "No errors match your filters"
+          filtered_message: "Try adjusting your search or filter criteria to find what you're looking for."
+          filtered_cta: "Clear all filters"
+          clear_title: "All clear!"
+          clear_message: >-
+            No errors have been logged yet. Your application is running smoothly.
+            Errors will appear here automatically when they occur.
+
+      show:
+        # %{id} is the error's database id.
+        page_title: "Error #%{id}"
+        breadcrumb_errors: "Errors"
+
+        hero:
+          reopened: "Reopened"
+          # %{count} drives the plural form; %{value} is the same number
+          # wrapped in its <strong>, hence _html. Interpolating markup as
+          # %{count} would break form selection.
+          occurrences_html:
+            one: "%{value} occurrence"
+            other: "%{value} occurrences"
+          # %{value} is a <strong>-wrapped user identifier.
+          user_html: "User %{value}"
+          # %{time} is a relative time ("3 hours ago"), rendered as markup.
+          first_seen_html: "First seen %{time}"
+          last_seen_html: "Last seen %{time}"
+
+        actions:
+          resolve: "Resolve"
+          assign: "Assign"
+          copy_for_llm: "Copy for LLM"
+          ai_help: "AI Help"
+          export_json: "Export JSON"
+
+        tabs:
+          details: "Details"
+          context: "Context"
+          history: "History"
+          issues: "Issues"
+
+        coverage:
+          active_label: "Coverage Active"
+          active_body: "expand source code to see executed lines"
+          inactive_label: "Code Path Coverage"
+          inactive_body: "enable to see executed lines"
+          enable: "Enable"
+          disable: "Disable"
+
+        baselines:
+          title: "Baseline Statistics"
+          # %{sigma} is a standard-deviation count, %{level} an anomaly level.
+          anomaly_label: "Anomaly:"
+          anomaly_body: "%{sigma}σ above baseline (%{level})"
+
+          # Anomaly levels from ErrorBaseline#anomaly_level. These are NOT the
+          # severity levels — :elevated has no severity counterpart — so they
+          # get their own keys rather than reusing red.common.severity.
+          #
+          # Stored already uppercased. The English original called .upcase on
+          # the value, which is a Latin-alphabet assumption and mangles scripts
+          # with no case distinction or with different casing rules.
+          levels:
+            elevated: "ELEVATED"
+            high: "HIGH"
+            critical: "CRITICAL"
+          hourly: "Hourly"
+          daily: "Daily"
+          weekly: "Weekly"
+          mean: "Mean:"
+          std_dev: "σ:"
+          percentile_95: "P95:"
+
+        quick_actions:
+          title: "Quick Actions"
+          view_similar: "View Similar Errors"
+          view_user_errors: "View User's Errors"
+          # %{platform} is a platform name (iOS, Android, Web) and is not translated.
+          view_platform_errors: "View %{platform} Errors"
+          analytics: "Analytics"
+
+      variables:
+        local_title: "Local Variables"
+        local_hint: "Variables from the stack frame where the exception was raised"
+        instance_title: "Instance Variables"
+        # The English original split this sentence around a conditional <code>
+        # element ("Instance variables from" + class-or-"the object" + "where
+        # the exception was raised"). A clause cannot be spliced into the middle
+        # of a sentence in every language, so each branch is whole.
+        # %{klass} is a pre-formatted <code> element, hence _html.
+        instance_hint_html: "Instance variables from %{klass} where the exception was raised"
+        instance_hint_generic: "Instance variables from the object where the exception was raised"
+        # %{count} variables were captured.
+        captured:
+          one: "%{count} captured"
+          other: "%{count} captured"
+        column_variable: "Variable"
+        column_type: "Type"
+        column_value: "Value"
+        # Shown in place of a value scrubbed by the parameter filter.
+        filtered: "[FILTERED]"
+        truncated: "truncated"
+
+      # Issue-tracker provider display names. Brands, so identical in every
+      # locale, but keys rather than provider.capitalize — that renders "github"
+      # as "Github", which is not how any of them write their own name.
+      deprecations:
+        title: "Deprecation Warnings"
+        hint: "Rails deprecation warnings detected during this request"
+        column_warning: "Warning"
+        column_source: "Source"
+        footer_tip: "Fix deprecations before upgrading Rails to avoid breaking changes."
+        upgrade_guide: "Rails Upgrade Guide"
+
+      n_plus_one:
+        title: "N+1 Query Detection"
+        hint: "Repeated query patterns detected in this request's SQL breadcrumbs"
+        # %{count} repeated query patterns were found.
+        patterns:
+          one: "%{count} pattern"
+          other: "%{count} patterns"
+        column_repeats: "Repeats"
+        column_query: "Query Pattern"
+        column_total_time: "Total Time"
+        # %{fingerprint} is a normalized SQL fingerprint — diagnostic, verbatim.
+        fingerprint: "Fingerprint: %{fingerprint}"
+        # Whole sentences. The English original wrapped prose around <code>
+        # elements holding method names; the names stay English, but the words
+        # around them cannot be reassembled in that order in every language.
+        # %{table}, %{includes} and %{preload} arrive as markup, hence _html.
+        tip_preload_html: "Tip: Preload %{table} with %{includes} or %{preload}"
+        tip_generic_html: "Tip: Use %{includes} or %{preload} to eager load associations"
+        eager_loading_guide: "Rails Eager Loading Guide"
+
+      cache_health:
+        title: "Cache Health"
+        # %{count} cache operations were recorded.
+        operations:
+          one: "%{count} operation"
+          other: "%{count} operations"
+        hint: "Cache activity analysis from this request's breadcrumbs"
+        reads: "Reads"
+        writes: "Writes"
+        hit_rate: "Hit Rate"
+        # %{count} cache hits and misses.
+        hits:
+          one: "%{count} hit"
+          other: "%{count} hits"
+        misses:
+          one: "%{count} miss"
+          other: "%{count} misses"
+        # %{count} reads whose hit status was not recorded.
+        unknown_status:
+          one: "%{count} read with unknown hit status (older breadcrumbs)"
+          other: "%{count} reads with unknown hit status (older breadcrumbs)"
+        # %{duration} is a formatted millisecond figure wrapped in <strong>,
+        # hence _html.
+        total_time_html: "Total cache time: %{duration}"
+        slowest_html: "Slowest: %{duration}"
+        low_hit_rate: "Low hit rate — review cache key design and TTL settings."
+        moderate_hit_rate: "Moderate hit rate — consider warming caches or adjusting expiration."
+        caching_guide: "Rails Caching Guide"
+
+      breadcrumbs:
+        title: "Breadcrumbs"
+        # %{count} breadcrumb events were recorded.
+        events:
+          one: "%{count} event"
+          other: "%{count} events"
+        hint: "Activity trail leading up to this error"
+        column_category: "Category"
+        column_message: "Message"
+        column_duration: "Duration"
+
+      patterns:
+        title: "Occurrence Patterns"
+        # %{days} is the analysis window.
+        window: "(Last %{days} days)"
+        pattern_type: "Pattern Type"
+
+        types:
+          business_hours:
+            label: "Business Hours Pattern"
+            description: "Errors peak during business hours (9am-5pm), suggesting user activity correlation"
+          night:
+            label: "Night Pattern"
+            description: "Errors peak during night hours (midnight-6am), possibly from background jobs or automated tasks"
+          weekend:
+            label: "Weekend Pattern"
+            description: "Most errors occur on weekends, suggesting weekend-specific usage patterns"
+          uniform:
+            label: "Uniform Pattern"
+            description: "Errors distributed evenly throughout the day with no clear pattern"
+          none:
+            label: "No Pattern Detected"
+            description: "Not enough data to identify a clear occurrence pattern"
+
+        strength: "Pattern Strength"
+        # Each strength is one whole sentence. The English original was a bold
+        # fragment, a dash, and a trailing clause, which cannot be reassembled
+        # in that order in every language. %{label} is the bold part.
+        strengths:
+          strong:
+            label: "Strong pattern"
+            description: "Errors highly concentrated in specific hours"
+          moderate:
+            label: "Moderate pattern"
+            description: "Some concentration in specific hours"
+          weak:
+            label: "Weak pattern"
+            description: "Errors distributed fairly evenly"
+
+        heatmap_title: "Hourly Distribution Heatmap"
+        # %{multiplier} is the peak threshold relative to the average.
+        heatmap_legend: "Darker cells = more errors. Red borders indicate peak hours (>%{multiplier}x average)."
+        # %{hour} is a formatted hour, %{count} the error count in it.
+        heatmap_cell:
+          one: "%{hour} - %{count} error"
+          other: "%{hour} - %{count} errors"
+        peak_hours: "Peak Hours:"
+        peak_hours_hint: >-
+          These hours have more than 2x the average error rate. Consider monitoring
+          deployments or load during these times.
+
+        bursts_title: "Error Bursts"
+        # %{days} is the burst analysis window.
+        bursts_window: "(Last %{days} days)"
+        bursts_hint: >-
+          Error bursts are rapid sequences where multiple errors occur within minutes.
+          This may indicate cascading failures or load spikes.
+        column_start_time: "Start Time"
+        column_duration: "Duration"
+        column_error_count: "Error Count"
+        column_intensity: "Intensity"
+        # %{minutes} and %{seconds} are the burst's duration.
+        burst_duration: "%{minutes} min"
+        burst_duration_seconds: "(%{seconds}s)"
+        # %{count} errors in the burst. %{value} is the same number wrapped in
+        # its <strong>, hence _html; interpolating markup as %{count} would
+        # break plural-form selection.
+        burst_errors_html:
+          one: "%{value} error"
+          other: "%{value} errors"
+        intensity_high: "High (20+ errors)"
+        intensity_medium: "Medium (10-19 errors)"
+        intensity_low: "Low (5-9 errors)"
+        # %{shown} of %{total} bursts are listed.
+        bursts_truncated: "Showing %{shown} of %{total} detected bursts"
+
+        recommendation_label: "Recommendation:"
+        recommendation_intro: "Multiple error bursts detected. Investigate:"
+        recommendation_deploys: "Recent deployments or configuration changes around burst times"
+        recommendation_load: "Load spikes or traffic patterns"
+        recommendation_cascades: "Cascading failures from related errors"
+        recommendation_jobs: "Background job failures or retry storms"
+
+        empty: "No occurrence patterns or bursts detected. More data may be needed for pattern analysis."
+
+      providers:
+        github: "GitHub"
+        gitlab: "GitLab"
+        bitbucket: "Bitbucket"
+        jira: "Jira"
+        linear: "Linear"
+        # Used when no provider is configured. Unlike the names above this is a
+        # common noun and IS translated.
+        generic: "Platform"
+        generic_lowercase: "the platform"
+
+      discussion:
+        title: "Discussion"
+        activity_log: "Activity Log"
+        # %{provider} is a provider display name from red.errors.providers.
+        reply_on: "Reply on %{provider}"
+        start_on: "Start discussion on %{provider}"
+        empty: "No comments yet. Be the first to discuss this error on %{provider}."
+
+      issue_section:
+        title: "Issue Tracker"
+        view_issue: "View Issue"
+        # Shown instead of a provider name when the provider is unknown.
+        linked: "Linked"
+        # %{provider} is a display name, %{number} the issue number.
+        issue_reference: "%{provider} #%{number}"
+        # Issue states are machine values from the tracker's API. capitalize
+        # applied English morphology to them.
+        states:
+          open: "Open"
+          closed: "Closed"
+          merged: "Merged"
+        assignees: "Assignees"
+        unassigned: "Unassigned"
+        labels: "Labels"
+        no_labels: "No labels"
+        create_new: "Create New Issue"
+        # %{provider} is a provider display name. One key, not "Create " plus a
+        # name plus " Issue" — the object does not follow the verb everywhere.
+        create_issue: "Create %{provider} Issue"
+        # %{token} and %{url} are pre-formatted <code> elements naming config
+        # options, hence _html. The option names themselves stay English.
+        configure_html: "Configure %{token} and %{url} in your initializer to enable issue creation."
+        link_existing: "Link Existing Issue"
+        link: "Link"
+
+      cascades:
+        title: "Error Cascades"
+        hint: "Causal relationships between errors"
+        triggered_by: "Triggered By"
+        triggered_by_hint: "(errors that cause this one)"
+        triggers: "Triggers"
+        triggers_hint: "(errors caused by this one)"
+        # One key set: the parent and child tables render the same columns.
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_probability: "Probability"
+        column_frequency: "Frequency"
+        column_avg_delay: "Avg Delay"
+        view: "View"
+        # %{probability} and %{frequency} are the thresholds the footnote cites,
+        # so the sentence and the code that sets them cannot drift apart.
+        footnote: >-
+          Cascade patterns show causal relationships. High probability (≥%{probability}%)
+          and frequency (≥%{frequency}) indicate strong cascades.
+
+      llm_summary:
+        title: "LLM Calls"
+        hint: "Aggregated from request breadcrumbs"
+        calls: "Calls"
+        tokens: "Tokens"
+        cost: "Cost"
+        input: "Input"
+        output: "Output"
+        tool_calls: "Tool calls"
+        total_time: "Total time"
+        errors: "Errors"
+        by_model: "By model"
+        # One sentence, not a count plus a pluralized noun plus a trailing
+        # clause bolted on with an em dash.
+        failed_calls:
+          one: "%{count} failed call — see breadcrumbs trail for details."
+          other: "%{count} failed calls — see breadcrumbs trail for details."
+
+      timeline:
+        title: "Timeline"
+        hint: "Recent related errors"
+        current_error: "Current Error"
+        # %{id} is a user identifier — free-form data, not translated.
+        user: "User: %{id}"
+        resolved: "Resolved"
+        notes_label: "Resolution Notes:"
+        # %{notes} is the user's own resolution comment, interpolated verbatim.
+        notes_tooltip: "Resolution Notes: %{notes}"
+
+      user_errors_table:
+        column_rank: "Rank"
+        column_user: "User"
+        column_error_type_count: "Different Error Types"
+        column_error_count: "Error Count"
+        column_percentage: "Percentage"
+        column_error_types: "Error Types"
+        column_actions: "Actions"
+        # %{count} distinct error types affected this user.
+        types:
+          one: "%{count} type"
+          other: "%{count} types"
+        # %{count} further error types beyond the ones listed.
+        more:
+          one: "+%{count} more"
+          other: "+%{count} more"
+        view_errors: "View Errors"
+
+      co_occurring:
+        title: "Co-occurring Errors"
+        badge: "Time Patterns"
+        # %{minutes} is the correlation window.
+        hint: "Errors that occur within %{minutes} minutes of this error"
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_platform: "Platform"
+        column_frequency: "Frequency"
+        column_avg_delay: "Avg Delay"
+        # %{count} co-occurrences.
+        times:
+          one: "%{count} time"
+          other: "%{count} times"
+        # %{duration} is a formatted duration. Whole phrases rather than a
+        # duration with a direction word appended — word order differs.
+        before: "%{duration} before"
+        after: "%{duration} after"
+        simultaneous: "simultaneous"
+        view: "View"
+
+      modals:
+        # The five action modals on the error detail page. "Cancel" and the
+        # close button's aria-label are shared across all of them.
+        cancel: "Cancel"
+        # The placeholder is an example name. Translators should substitute a
+        # name that reads as a placeholder in their language.
+        name_placeholder: "e.g., John Doe"
+        # Marks a required field. The asterisk is separate markup, so this is
+        # only the label text.
+        resolve:
+          title: "Mark Error as Resolved"
+          name_label: "Your Name"
+          name_hint: "Who is resolving this error?"
+          reference_label: "Reference (Optional)"
+          # JIRA, PR and GitHub are product names and stay as written.
+          reference_placeholder: "e.g., JIRA-123, PR #456, GitHub Issue #789"
+          reference_hint: "Link to ticket, PR, or issue"
+          notes_label: "Resolution Notes (Optional)"
+          notes_placeholder: "Describe what was done to fix this error..."
+          notes_hint: "What was done to resolve this error?"
+          submit: "Mark as Resolved"
+        assign:
+          title: "Assign Error"
+          label: "Assign To"
+          hint: "Who should investigate this error?"
+          submit: "Assign"
+        priority:
+          title: "Update Priority"
+          label: "Priority Level"
+          # %{value} is the current priority's label.
+          current: "Current: %{value}"
+          submit: "Update Priority"
+        snooze:
+          title: "Snooze Error"
+          label: "Snooze Duration"
+          hint: "Hide this error from active views"
+          reason_label: "Reason (Optional)"
+          reason_placeholder: "Why are you snoozing this error?"
+          reason_hint: "Reason will be added as a comment"
+          submit: "Snooze"
+          # Duration options. English writes the longer spans twice — "24 hours
+          # (1 day)". The two halves pluralize on different counts (24 and 1),
+          # so each is its own plural key and %{equivalent} composes them. A
+          # locale that does not use the parenthetical can ignore it.
+          hours:
+            one: "%{count} hour"
+            other: "%{count} hours"
+          days:
+            one: "%{count} day"
+            other: "%{count} days"
+          weeks:
+            one: "%{count} week"
+            other: "%{count} weeks"
+          hours_with_equivalent: "%{hours} (%{equivalent})"
+        mute:
+          title: "Mute Notifications"
+          # The channel names are products and stay as written.
+          description: "Muted errors still appear in the dashboard but will not trigger any notifications (Slack, email, Discord, PagerDuty, webhooks)."
+          name_label: "Your Name (Optional)"
+          reason_label: "Reason (Optional)"
+          reason_placeholder: "Why are you muting this error?"
+          reason_hint: "Reason will be added as a comment"
+          submit: "Mute Notifications"
+
+      request_context:
+        title: "Request Context"
+        # Table row labels. The trailing colon is part of the label so a locale
+        # can drop it — several scripts do not use one.
+        url: "Request URL:"
+        hostname: "Hostname:"
+        content_type: "Content Type:"
+        duration: "Request Duration:"
+        params: "Request Params:"
+        user_agent: "User Agent:"
+        ip_address: "IP Address:"
+        replay: "Replay Request:"
+        raw_user_agent: "Raw User Agent"
+        # %{value} is a number. The unit is inside the key so a locale can put
+        # a space (or nothing) between number and unit as its typography wants.
+        duration_seconds: "%{value}s"
+        duration_ms: "%{value}ms"
+        # "curl" and "RSpec" are tool names and stay as written in every locale.
+        copy_curl: "Copy as curl"
+        copy_curl_title: "Copy curl command to clipboard"
+        copy_rspec: "Copy as RSpec"
+        copy_rspec_title: "Copy RSpec request spec to clipboard"
+
+      similar_errors:
+        title: "Similar Errors"
+        badge: "Fuzzy Matching"
+        # %{threshold} is the similarity cut-off as a percentage. It is passed
+        # from the same local that drives the query, so the prose cannot drift
+        # from the threshold actually applied.
+        hint: "Errors with similar backtraces and messages (%{threshold}%+ similarity)"
+        column_similarity: "Similarity"
+        column_error_type: "Error Type"
+        column_message: "Message"
+        column_platform: "Platform"
+        column_occurrences: "Occurrences"
+        # %{count} occurrences. English shortens "times" to a trailing "x";
+        # that abbreviation is not universal, so it is a full plural form here.
+        occurrences:
+          one: "%{count}x"
+          other: "%{count}x"
+        view: "View"
+
+      source_code:
+        # %{host} is a repository host name (GitHub, GitLab, Bitbucket) — a
+        # brand name, not translated.
+        view_on: "View on %{host}"
+        view_source: "View Source"
+        # The coverage legend was assembled from coloured fragments
+        # ("green = executed, gray = not executed"). %{executed} and
+        # %{not_executed} arrive as pre-coloured <span>s, hence _html.
+        coverage_legend_html: "Coverage active — %{executed} = executed, %{not_executed} = not executed"
+        coverage_green: "green"
+        coverage_gray: "gray"
+        # %{message} is the underlying read error — diagnostic text, verbatim.
+        read_failed: "Could not read source: %{message}"
+
+      ai_help:
+        title: "AI Help"
+        # LLM provider display names. Brand names, so they are identical in
+        # every locale — but they are keys rather than titleize on the config
+        # value, which renders "openai" as "Openai". Neither that nor the bare
+        # identifier is how either company writes its own name.
+        providers:
+          openai: "OpenAI"
+          anthropic: "Anthropic"
+        close: "Close AI Help"
+        empty: "Ask about root cause, reproduction steps, likely fixes, or what to inspect next."
+        question_label: "Question"
+        question_placeholder: "What is the likely root cause?"
+        ask: "Ask"
+
+      sidebar:
+        title: "Metadata"
+
+        occurrence_count: "Occurrence Count"
+        # %{count} times. The badge above it shows "12x"; this is the sentence
+        # under it, shown only when the count is greater than one.
+        occurred_times:
+          one: "This error has occurred %{count} time"
+          other: "This error has occurred %{count} times"
+
+        first_seen: "First Seen"
+        last_seen: "Last Seen"
+        jump_to_timeline: "Jump to timeline"
+
+        severity_level: "Severity Level"
+        # %{severity} is a translated severity label.
+        view_all_severity: "View all %{severity} errors"
+        # Severity badges, stored already-uppercased. The English original
+        # hardcoded "CRITICAL"/"HIGH"/"MEDIUM"/"LOW" per branch; .upcase would
+        # be a Latin-alphabet assumption, so the casing lives in the value.
+        severity_badges:
+          critical: "CRITICAL"
+          high: "HIGH"
+          medium: "MEDIUM"
+          low: "LOW"
+
+        platform: "Platform"
+        # %{platform} is a platform name (iOS, Android, Web) and is not translated.
+        view_all_platform: "View all %{platform} errors"
+
+        user: "User"
+        view_user_errors: "View all errors for this user"
+        # %{id} is a user identifier.
+        user_id: "ID: %{id}"
+        user_id_label: "User ID: %{id}"
+        guest: "Guest / Unauthenticated"
+
+        # Shown when issue tracking owns status/assignment/priority. Two whole
+        # sentences rather than a stem plus two endings — the clause order is
+        # not universal.
+        #
+        # %{link} is a fully-built <a> element, NOT a bare URL. An _html key is
+        # html_safe, so interpolating the raw external_issue_url here would let
+        # a crafted URL break out of the href and inject an event handler. The
+        # tag is built with link_to in the view, which escapes it.
+        issue_tracking_linked_html: "Status, assignment, and priority are managed via your %{link}."
+        issue_tracking_link_text: "linked issue"
+        issue_tracking_unlinked: >-
+          Status, assignment, and priority are managed via your issue tracker.
+          Link an issue to see details.
+
+        workflow_status: "Workflow Status"
+        resolved: "Resolved"
+        unresolved: "Unresolved"
+
+        reopened: "Reopened"
+
+        assigned_to: "Assigned To"
+        assign: "Assign"
+        remove_assignment: "Remove assignment?"
+
+        priority: "Priority"
+
+        snooze: "Snooze"
+        snoozed: "Snoozed"
+        # %{time} is a <span class="local-time"> element from
+        # ApplicationHelper#local_time, so this key is _html.
+        snoozed_until_html: "Until %{time}"
+        unsnooze: "Unsnooze"
+
+        notifications: "Notifications"
+        muted: "Muted"
+        # %{name} is whoever muted it — free-form data, not translated.
+        muted_by: "By %{name}"
+        # %{time} is a <span class="local-time"> element, hence _html.
+        muted_since_html: "Since %{time}"
+        mute: "Mute"
+        unmute: "Unmute"
+
+        resolved_by: "Resolved By"
+        reference: "Reference"
+        resolution_notes: "Resolution Notes"
+
+        error_id: "Error ID"
+        copy_error_id: "Copy error ID"
+
+        environment:
+          title: "Environment"
+          hint: "Runtime context at error time"
+          app_version: "App Version:"
+          # %{version} is a version string.
+          view_all_version: "View all errors in %{version}"
+          git_sha: "Git SHA:"
+          rails: "Rails:"
+          ruby: "Ruby:"
+          environment: "Environment:"
+          server: "Server:"
+          database: "Database:"
+          key_gems: "Key Gems:"
+
+        health:
+          title: "System Health"
+          hint: "Runtime state when error fired"
+
+          # Metric labels. The values beside them are machine state rendered in
+          # <code> and stay English (see the glossary in TRANSLATIONS.md):
+          # close_wait, time_wait, enqueued, iseqs, adapter names and so on are
+          # diagnostic tokens developers search for, not prose.
+          memory_rss: "Memory (RSS):"
+          process_swap: "Process Swap:"
+          peak_rss: "Peak RSS:"
+          os_threads: "OS Threads:"
+          threads: "Threads:"
+          file_descriptors: "File Descriptors:"
+          load_average: "Load Average:"
+          system_memory: "System Memory:"
+          system_swap: "System Swap:"
+          tcp_connections: "TCP Connections:"
+          gc_live_objects: "GC Live Objects:"
+          major_gc_runs: "Major GC Runs:"
+          last_gc: "Last GC:"
+          connection_pool: "Connection Pool:"
+          puma_threads: "Puma Threads:"
+          # %{adapter} is the job backend's name (sidekiq, solid_queue) and is
+          # not translated.
+          job_queue: "Job Queue (%{adapter}):"
+          vm_cache_invalidations: "VM Cache Invalidations:"
+          vm_cache_misses: "VM Cache Misses:"
+          shape_cache_size: "Shape Cache Size:"
+          yjit_compiled: "YJIT Compiled:"
+          yjit_invalidations: "YJIT Invalidations:"
+          yjit_code_size: "YJIT Code Size:"
+          yjit_compile_time: "YJIT Compile Time:"
+
+          # %{count} is a Ruby thread count shown beside the OS thread count.
+          ruby_threads: "(Ruby: %{count})"
+
+      info:
+        new_badge: "NEW"
+        new_tooltip: "Error occurred within the last hour"
+        reopened: "Reopened"
+        # %{time} is a formatted timestamp.
+        reopened_tooltip: "Previously resolved, recurred %{time}"
+        copy_error_type: "Copy error type"
+        message_label: "Error Message:"
+        copy_message: "Copy error message"
+        copy: "Copy"
+
+        cause_chain:
+          title: "Exception Cause Chain"
+          # The chain is a list; "Caused by:" labels one entry, and when there
+          # is more than one the index is appended. Two keys rather than a
+          # concatenated suffix, since the numbering may sit elsewhere in the
+          # sentence.
+          caused_by: "Caused by:"
+          # %{index} is the 1-based position in the chain.
+          caused_by_indexed: "Caused by (#%{index}):"
+          backtrace: "Backtrace"
+
+        backtrace:
+          label: "Backtrace:"
+          # %{app} frames are the user's own code, %{framework} are gems/Rails.
+          frame_counts: "(%{app} your code, %{framework} framework/gems)"
+          # The button label and its tooltip differ in the original ("Copy Full
+          # Backtrace" vs "Copy full backtrace"); kept as separate keys so a
+          # translator can decide whether the distinction is worth keeping.
+          copy_full: "Copy Full Backtrace"
+          copy_full_title: "Copy full backtrace"
+          your_code: "Your Code"
+          framework_code: "Framework & Gem Code"
+          # %{count} frames in the section.
+          frames:
+            one: "%{count} frame"
+            other: "%{count} frames"
+          click_to_expand: "(click to expand)"
+          view_source: "View Source"
+          none: "No backtrace available"
+
+      row:
+        # Badge on an error first seen within the recent window.
+        new_badge: "NEW"
+        reopened: "Reopened"
+        # %{user} is a user identifier — free-form data, never translated.
+        view_user_errors: "View all errors for user %{user}"
+
+        # Workflow status labels. The status is a machine value ("in_progress");
+        # it was previously displayed by tr('_', ' ') plus a CSS capitalize,
+        # which is English morphology applied to an identifier. Each value now
+        # has its own key, and an unrecognized value falls back to the raw text.
+        status:
+          unresolved: "unresolved"
+          resolved: "resolved"
+          in_progress: "in progress"
+          investigating: "investigating"
+          wont_fix: "wont fix"
+          assigned: "assigned"
+          snoozed: "snoozed"
+          muted: "muted"
+
+      # The five stat cards above the error list. Rendered on the index and
+      # re-rendered by ErrorBroadcaster#broadcast_stats over ActionCable, so
+      # these labels must be translated in both paths, not just the request one.
+      #
+      # Each is a bare noun phrase standing over a number, not a sentence
+      # fragment to be joined to one.
+      stats:
+        today: "Today"
+        this_week: "This Week"
+        unresolved: "Unresolved"
+        resolved: "Resolved"
+        reopened: "Reopened"
+
+      # Vocabulary shared by the diagnostic summary pages (deprecations, N+1,
+      # swallowed exceptions, rate limits, diagnostic dumps). These pages have
+      # one shape — title, day-range toggle, empty state with a "how it works"
+      # list, stat tiles, a table, a footer tip — so the repeated labels are
+      # named once rather than per page.
+      pages:
+        # Units rendered next to a number. They live in keys because both the
+        # symbol and its spacing vary — several locales put a space before "%".
+        # %{value} is the already-formatted number.
+        percent: "%{value}%"
+        column_errors: "Errors"
+        column_occurrences: "Occurrences"
+        column_last_seen: "Last Seen"
+        total_occurrences: "Total Occurrences"
+        affected_errors: "Affected Errors"
+        # %{count} is how many more error links exist beyond the five shown.
+        # English reads the same either way, but the form is selected properly
+        # so a locale that distinguishes them can.
+        more_errors:
+          one: "+%{count} more"
+          other: "+%{count} more"
+        # %{days} is the selected day range.
+        none_in_last_days: "No results were detected over the last %{days} days."
+        # Byte-identical on the deprecations and N+1 pages; %{option} is the
+        # config option name rendered as a <code> element.
+        how_breadcrumbs_html: "Breadcrumbs must be enabled (%{option})"
+
+      deprecations_page:
+        title: "Deprecation Warnings"
+        empty_title: "No Deprecation Warnings Found"
+        # %{days} is the selected day range.
+        empty_body: "No deprecation warnings were detected in error breadcrumbs over the last %{days} days."
+        how_title: "How deprecations are captured:"
+        how_captured: "Rails deprecation warnings are automatically captured as breadcrumbs"
+        how_appear: "Deprecations appear here when an error occurs during a request with deprecation warnings"
+        unique_warnings: "Unique Warnings"
+        all_title: "All Deprecation Warnings"
+        column_warning: "Warning"
+        column_source: "Source"
+
+      n_plus_one_page:
+        title: "N+1 Query Patterns"
+        empty_title: "No N+1 Query Patterns Found"
+        # %{days} is the selected day range.
+        empty_body: "No N+1 query patterns were detected in error breadcrumbs over the last %{days} days."
+        how_title: "How N+1 detection works:"
+        how_captured: "SQL queries are captured as breadcrumbs during requests that produce errors"
+        # %{threshold} is the configured option name as a <code> element.
+        how_threshold_html: "Queries with the same shape appearing >= %{threshold} times are flagged"
+        # %{count} is the configured default, read from the configuration so the
+        # prose cannot drift from the value actually applied.
+        how_default:
+          one: "Default threshold is %{count} repetition"
+          other: "Default threshold is %{count} repetitions"
+        unique_patterns: "Unique Patterns"
+        all_title: "All N+1 Query Patterns"
+        # column_query, column_total_time and eager_loading_guide are reused
+        # from red.errors.n_plus_one — the detail panel already names them and
+        # the strings are identical.
+        # %{value} is a duration in milliseconds.
+        duration_ms: "%{value} ms"
+        # The method names are Ruby API calls and stay as written.
+        footer_tip_html: "Use %{includes}, %{preload}, or %{eager_load} to fix N+1 queries."
+
+      swallowed_page:
+        title: "Swallowed Exceptions"
+        empty_title: "No Swallowed Exceptions Detected"
+        # %{threshold} is the configured rescue-ratio percentage and %{days} the
+        # selected day range.
+        empty_body: "No exceptions with a rescue ratio above %{threshold}% were detected in the last %{days} days."
+        how_title: "How swallowed exceptions are detected:"
+        # TracePoint(:raise) and TracePoint(:rescue) are Ruby APIs.
+        how_raise: "TracePoint(:raise) counts every exception raised"
+        how_rescue: "TracePoint(:rescue) counts every exception rescued"
+        how_ratio: "High rescue/raise ratio = likely swallowed (silently rescued)"
+        # %{option} is a config option name as a <code> element; the Ruby
+        # version is a literal.
+        how_requires_html: "Requires Ruby 3.3+ and %{option}"
+        swallowed_patterns: "Swallowed Patterns"
+        total_rescues: "Total Rescues"
+        total_raises: "Total Raises"
+        all_title: "Swallowed Exception Patterns"
+        column_exception_class: "Exception Class"
+        column_raise_location: "Raise Location"
+        column_rescue_location: "Rescue Location"
+        column_raises: "Raises"
+        column_rescues: "Rescues"
+        column_ratio: "Ratio"
+        # %{exception} is an exception class name and is never translated.
+        view_unrescued: "View any unrescued %{exception} errors that leaked into error_log"
+        footer_tip: "Swallowed exceptions are raised then silently rescued. They may hide real bugs."
+
+      rack_attack_page:
+        title: "Rate Limit Events"
+        missing_title: "Rack Attack Is Not Installed"
+        # %{gem} is the gem name as a <code> element — a package name, not prose.
+        missing_body_html: >-
+          Tracking is enabled, but the %{gem} gem is not loaded in this
+          application — so no events can be recorded. Add it to your Gemfile and
+          configure at least one rule, then events will appear here.
+        empty_title: "No Rate Limit Events Found"
+        # %{days} is the selected day range.
+        empty_body: "No Rack Attack throttle, blocklist, or track events were recorded over the last %{days} days."
+        how_title: "How Rack Attack tracking works:"
+        # %{option} is a config option name as a <code> element.
+        how_enabled_html: "Rack Attack tracking must be enabled (%{option})"
+        how_installed: "Rack Attack must be installed and configured in your app"
+        how_recorded: "Throttle, blocklist, and track events are recorded whenever a rule matches — no error required"
+        # %{seconds} is the configured flush interval.
+        how_buffered: "Events are buffered and written every %{seconds}s, so allow a short delay before they appear"
+        unique_rules: "Unique Rules"
+        total_events: "Total Events"
+        unique_ips: "Unique IPs"
+        all_title: "Rate Limit Events by Rule"
+        column_rule: "Rule"
+        column_type: "Type"
+        column_count: "Count"
+        column_ips: "IPs"
+        column_top_path: "Top Path"
+        # Rack Attack match types. These are machine values the view also
+        # compares by string equality, so the display is a lookup and the
+        # comparison keeps the English literal.
+        match_type:
+          blocklist: "blocklist"
+          throttle: "throttle"
+          track: "track"
+        footer_tip: "High counts may indicate abuse or misconfigured rules."
+        docs: "Rack Attack Docs"
+
+      diagnostic_dumps_page:
+        title: "Diagnostic Dumps"
+        capture: "Capture Dump"
+        empty_title: "No Diagnostic Dumps Yet"
+        empty_body: "Capture an on-demand snapshot of your system state for debugging."
+        how_title: "How diagnostic dumps work:"
+        # %{button} is the capture button's label and %{command} the rake task,
+        # both rendered as elements.
+        how_capture_html: "Click %{button} above or run %{command}"
+        how_captures: "Captures: environment, GC stats, threads, connection pool, memory, job queue"
+        how_saved: "Each dump is saved to the database for historical comparison"
+        how_use: "Use dumps to investigate production issues or verify system health"
+        total_dumps: "Total Dumps"
+        threads_latest: "Threads (Latest)"
+        memory_latest: "Memory (Latest)"
+        history_title: "Dump History"
+        details: "Details"
+        # PID is an acronym and stays as written. %{pid} is the process id.
+        pid: "PID: %{pid}"
+        # %{minutes} is the process uptime.
+        uptime: "Uptime: %{minutes}m"
+        section_environment: "Environment"
+        section_system_health: "System Health"
+        section_gc: "GC"
+        section_job_queue: "Job Queue"
+        # %{ruby} and %{rails} are version numbers; the language and framework
+        # names are products.
+        env_versions: "Ruby %{ruby} / Rails %{rails}"
+        # %{value} is a memory figure in megabytes. MB is a unit symbol.
+        memory_mb: "%{value} MB"
+        # %{count} is a thread count.
+        threads:
+          one: "%{count} thread"
+          other: "%{count} threads"
+        # %{busy} and %{size} are connection-pool counts.
+        pool: "Pool: %{busy}/%{size}"
+        # %{live} is a heap slot count and %{major} a GC run count.
+        gc_stats: "Live: %{live} / Major GC: %{major}"
+        # %{count} is a failed job count.
+        jobs_failed: "failed: %{count}"
+        # Both are literal rake invocations and are never translated.
+        footer_tip_html: "You can also capture dumps via: %{command}"
+        footer_note_html: "Add a note: %{command}"
+        unknown_short: "?"
+
+      storms_page:
+        title: "Storm History"
+        # storm_* is a config option prefix, rendered as a <code> element.
+        intro_html: >-
+          When the error rate spikes (a bad deploy, a dependency outage), storm
+          protection limits the gem's own database writes so it never amplifies
+          the incident. Occurrences are always counted exactly — only per-event
+          detail is sampled. Thresholds are configurable per process via
+          %{options} options.
+        # %{time} is a formatted timestamp and %{rate} a per-minute rate.
+        active_html: "%{label} since %{time} — peak rate %{rate}."
+        active_label: "Storm in progress"
+        empty_title: "No Storms Recorded"
+        empty_body: >-
+          Storm protection is standing by. If an error flood ever hits this app,
+          episodes will appear here with exact counts of what was shed.
+        column_started: "Started"
+        column_duration: "Duration"
+        column_peak_rate: "Peak Rate"
+        column_mode: "Mode"
+        column_counted: "Counted (exact)"
+        column_overflow: "Overflow"
+        column_top_errors: "Top Errors"
+        active_badge: "active"
+        # Storm modes. Machine states with their own keys rather than raw
+        # values, so a locale can name them.
+        mode_count_only: "count-only"
+        mode_shedding: "shedding"
+        # %{value} is a delimited number. "/min" is a rate unit.
+        rate_per_minute: "%{value}/min"
+        # %{count} is an occurrence count for one error class in a storm.
+        occurrence_multiplier: "×%{count}"
+
+      overview_page:
+        # The browser tab title and the page heading are deliberately different
+        # strings: the tab says what the app is, the heading says what the page
+        # is. One key for both would change the tab title.
+        page_title: "Dashboard"
+        title: "Overview"
+        # %{time} is a <span class="local-time"> element, hence _html.
+        last_updated_html: "Last updated: %{time}"
+        # %{count} critical or high severity errors in the last hour.
+        alert_banner:
+          one: "%{count} Critical/High Error in Last Hour"
+          other: "%{count} Critical/High Errors in Last Hour"
+        # %{count} is an occurrence count.
+        alert_occurrences:
+          one: "%{count} occurrence"
+          other: "%{count} occurrences"
+        alert_view: "View"
+        error_rate: "Error Rate"
+        error_rate_hint: "Errors per hour today"
+        unresolved: "Unresolved"
+        unresolved_hint: "Pending resolution"
+        resolution_rate: "Resolution Rate"
+        # %{resolved} of %{total} errors are resolved. One phrase, not three
+        # fragments — the order is not universal.
+        resolution_hint: "%{resolved} of %{total} resolved"
+        affected_users: "Affected Users (Today)"
+        # %{count} is the change in affected users since yesterday.
+        users_change: "%{count} from yesterday"
+        avg_resolution: "Avg Resolution"
+        avg_resolution_hint: "Mean time to resolution"
+        # %{value} is a duration in hours. The "h" suffix is a unit.
+        hours_short: "%{value}h"
+        error_trend: "Error Trend"
+        top_errors: "Top Errors by Impact"
+        view_all: "View all →"
+        # %{count} is a number of affected users.
+        users:
+          one: "%{count} user"
+          other: "%{count} users"
+        platform_health: "Platform Health"
+        full_comparison: "Full comparison →"
+        # %{score} is a stability score out of 100.
+        stability_score_html: "%{score}/100"
+        # One line summarising a platform's errors. Whole phrase rather than
+        # three fragments joined by separators.
+        platform_summary: "%{total} errors · %{critical} critical · %{unresolved} open"
+        correlation_title: "Correlation Insights"
+        full_analysis: "Full analysis →"
+        problematic_releases: "Problematic Releases"
+        # %{count} is an error count for one release.
+        release_errors:
+          one: "%{count} error"
+          other: "%{count} errors"
+        time_correlated: "Time-Correlated"
+        # %{percent} is the correlation percentage inside its <strong>, hence
+        # _html; %{strength} is a label from red.analytics.correlation_strength,
+        # reused rather than duplicated.
+        correlation_value_html: "%{percent} correlation (%{strength})"
+        multi_error_users: "Multi-Error Users"
+        # %{user} is a user identifier and %{count} how many distinct error
+        # types they hit.
+        user_types_html: "User %{user} · %{types}"
+        types:
+          one: "%{count} type"
+          other: "%{count} types"
+
+    settings:
+      title: "Settings"
+      # %{version} is the gem version. The "v" prefix is a sigil, not a word.
+      version: "v%{version}"
+      # %{file} is the initializer path, rendered as a <code> element. The path
+      # itself is never translated.
+      intro_html: "Read-only view of current configuration. Edit via %{file} or environment variables."
+      # %{count} is the number of options in a collapsed group.
+      option_count:
+        one: "%{count} option"
+        other: "%{count} options"
+
+      plugins:
+        title: "Active Plugins"
+        column_name: "Plugin Name"
+        column_version: "Version"
+        column_description: "Description"
+        column_status: "Status"
+        active: "Active"
+        inactive: "Inactive"
+        empty: "No plugins are currently registered. You can create custom plugins to extend functionality."
+
+      test_error:
+        title: "Test Notifications"
+        # %{error_class} is RailsErrorDashboard::TestError as a <code> element,
+        # so this key is _html. The channel names are products.
+        description_html: >-
+          Send a test error through the full capture and notification pipeline.
+          This creates a %{error_class} in the error log and dispatches
+          notifications to all configured channels (Slack, Discord, PagerDuty,
+          email, webhooks). The test error is clearly marked and safe to resolve
+          or delete.
+        confirm: "This will create a test error and send notifications to all configured channels. Continue?"
+        submit: "Send Test Error"
+
+      help:
+        title: "Need to change these settings?"
+        # Two whole sentences, rendered on separate lines. Each is one key with
+        # its element interpolated rather than prose fragments assembled around
+        # the markup — clause order is not universal.
+        # %{file} is the initializer path and %{docs} the documentation link,
+        # both pre-built elements, hence _html.
+        edit_html: "Edit your configuration in %{file} and restart your application."
+        docs_html: "See the %{docs} for more information."
+        docs_link: "documentation"
+
+      # Group headings, keyed by a stable slug so the display text can change
+      # without touching the view's structure.
+      groups:
+        core_features: "Core Features"
+        multi_app: "Multi-App Support"
+        user_integration: "User Integration"
+        performance: "Performance Settings"
+        notifications: "Notification Channels"
+        analytics: "Advanced Analytics Features"
+        source_code: "Source Code Integration"
+        breadcrumbs: "Breadcrumbs"
+        system_health: "System Health"
+        enhanced_metrics: "Enhanced Metrics"
+        issue_tracking: "Issue Tracking"
+        deep_debugging: "Deep Debugging"
+        event_tracking: "Event Tracking"
+        advanced: "Advanced Configuration"
+        internal_logging: "Internal Logging"
+
+      # Units appended to a numeric setting value. Plural forms because the
+      # value drives them; English happens to show the plural in every default
+      # but a locale cannot rely on that.
+      units:
+        lines:
+          one: "%{count} line"
+          other: "%{count} lines"
+        minutes:
+          one: "%{count} minute"
+          other: "%{count} minutes"
+        seconds:
+          one: "%{count} second"
+          other: "%{count} seconds"
+        events:
+          one: "%{count} event"
+          other: "%{count} events"
+        queries:
+          one: "%{count} query"
+          other: "%{count} queries"
+        # The standard-deviation symbol is a unit sign, not a word.
+        std_devs: "%{count}σ"
+
+      # Value badges rendered by settings/_value_badge. The five "absent"
+      # phrasings are deliberately distinct — they mean different things
+      # (unset vs. not found vs. unavailable vs. empty vs. undetectable) and
+      # collapsing them would lose that distinction in translation.
+      values:
+        enabled: "Enabled"
+        disabled: "Disabled"
+        not_set: "Not set"
+        not_found: "Not found"
+        not_available: "Not available"
+        empty: "Empty"
+        unknown: "Unknown"
+        set: "Set"
+        auto_detected: "Auto-detected"
+        # The parentheses are part of the English rendering; a locale may drop
+        # them.
+        configured: "(Configured)"
+        items:
+          one: "%{count} item"
+          other: "%{count} items"
+        rules:
+          one: "%{count} rule"
+          other: "%{count} rules"
+        # %{count} selects the form; %{formatted} is the same number with
+        # thousands delimiters, which is what should be displayed.
+        users:
+          one: "%{formatted} user"
+          other: "%{formatted} users"
+        days:
+          one: "%{count} day"
+          other: "%{count} days"
+        rails_app_name_unavailable: "Rails app name unavailable"
+        # %{name} is the database configuration's name — a config key, not
+        # prose.
+        separate_db: "Separate DB: %{name}"
+        configured_but_not_found: "Configured but not found"
+        # "primary" is the Rails database configuration key and stays literal.
+        shared_db_primary: "Shared DB (primary)"
+        shared_db: "Shared DB"
+        unable_to_detect: "Unable to detect"
+        no_user_model: "No User model detected"
+        unable_to_query_count: "Unable to query count"
+        manual_cleanup_required: "Manual cleanup required"
+        keep_forever: "Keep Forever"
+        no_automatic_deletion: "No automatic deletion"
+        # These label a rake command rendered beside them. The command is never
+        # translated.
+        run_command: "Run:"
+        to_cleanup: "To cleanup:"
+
+      # One description per config option, keyed by the option's own name so the
+      # key stays greppable from the initializer. The option names themselves,
+      # file paths, env vars, rake commands, Ruby APIs and product names inside
+      # these sentences are never translated.
+      options:
+        enable_middleware: "Catches unhandled exceptions"
+        enable_error_subscriber: "Subscribes to Rails error events"
+        retention_days: "Manual cleanup only (run: rails error_dashboard:cleanup_resolved DAYS=90)"
+        max_backtrace_lines: "Stack trace depth limit"
+        sampling_rate: "Percentage of errors captured"
+        application_name: "Name of this application (auto-detected if not set)"
+        database: "Active database for error logs"
+        use_separate_database: "Use dedicated DB for error logs"
+        user_model: "Model name for user associations (auto-detected if not set)"
+        total_users_for_impact: "For impact % calculation (auto-detected if not set)"
+        async_logging: "Background job processing"
+        async_adapter: "Job queue adapter"
+        enable_rate_limiting: "Throttle API requests"
+        rate_limit_per_minute: "Requests per minute per IP"
+        enable_slack_notifications: "Real-time notifications"
+        slack_webhook_url: "Slack webhook endpoint"
+        enable_email_notifications: "Email alerts"
+        notification_email_recipients: "Recipient addresses"
+        notification_email_from: "Sender address"
+        enable_discord_notifications: "Discord webhook notifications"
+        discord_webhook_url: "Discord webhook endpoint"
+        enable_pagerduty_notifications: "Critical error escalation"
+        pagerduty_integration_key: "PagerDuty API key"
+        enable_webhook_notifications: "Generic webhook endpoints"
+        webhook_urls: "Custom webhook endpoints"
+        enable_scheduled_digests: "Daily/weekly summary emails. Schedule via SolidQueue, Sidekiq, or cron"
+        digest_frequency: "How often to send digest emails"
+        digest_recipients: "Email addresses (falls back to notification recipients)"
+        enable_similar_errors: "Find related errors by similarity"
+        enable_co_occurring_errors: "Errors happening together"
+        enable_error_cascades: "Parent→child error chains"
+        enable_error_correlation: "Version/user/time analysis"
+        enable_platform_comparison: "iOS vs Android analytics"
+        enable_occurrence_patterns: "Cyclical/burst detection"
+        enable_baseline_alerts: "Anomaly detection"
+        baseline_alert_threshold_std_devs: "Standard deviations to trigger alert"
+        baseline_alert_severities: "Severities to alert on"
+        baseline_alert_cooldown_minutes: "Minutes between alerts for same error type"
+        enable_source_code_integration: "Show code in backtrace"
+        source_code_context_lines: "Lines before/after target line"
+        enable_git_blame: "Show git blame info"
+        source_code_cache_ttl: "Source code cache duration"
+        only_show_app_code_source: "Hide gems/stdlib for security"
+        git_branch_strategy: "Branch resolution strategy"
+        enable_breadcrumbs: "Capture request activity trail"
+        breadcrumb_buffer_size: "Max breadcrumbs per request"
+        enable_n_plus_one_detection: "Detect repeated query patterns in breadcrumbs"
+        n_plus_one_threshold: "Min repetitions to flag as N+1"
+        enable_system_health: "Capture GC, memory, threads, connection pool at error time"
+        app_version: "Current application version"
+        git_sha: "Deployed commit"
+        git_repository_url: "GitHub/GitLab repo URL"
+        dashboard_base_url: "Base URL for dashboard links"
+        enable_issue_tracking: >-
+          GitHub/GitLab/Codeberg integration — one switch enables all: issue
+          creation, auto-create, lifecycle sync, platform state mirroring,
+          comment display. Replaces workflow controls with platform state.
+        issue_tracker_token: "RED bot token (set RED_BOT_TOKEN env var)"
+        issue_tracker_provider: "Auto-detected from git_repository_url"
+        issue_tracker_repo: "Auto-detected from git_repository_url"
+        issue_tracker_labels: "Labels added to new issues"
+        issue_webhook_secret: "Set to enable two-way sync (HMAC verification)"
+        enable_local_variables: "TracePoint(:raise) — capture locals at exception time"
+        enable_instance_variables: "Capture self's ivars at exception time"
+        detect_swallowed_exceptions: "TracePoint(:raise) + (:rescue) — detect silently rescued exceptions (Ruby 3.3+)"
+        enable_diagnostic_dump: "On-demand system state snapshots"
+        enable_crash_capture: "at_exit hook for unhandled crashes"
+        enable_coverage_tracking: "Diagnostic mode — enable via dashboard to see executed lines in source view (Ruby 3.2+)"
+        enable_rack_attack_tracking: "Record throttle/blocklist events to their own table"
+        enable_actioncable_tracking: "Track WebSocket channel events as breadcrumbs"
+        enable_activestorage_tracking: "Track uploads/downloads/deletes as breadcrumbs"
+        custom_severity_rules: "Error type → severity mapping"
+        ignored_exceptions: "Exceptions to ignore"
+        enable_internal_logging: "Gem debugging output"
+        log_level: "Verbosity level"
+
+    flash:
+      locale:
+        # Shown when a submitted language is one RED does not ship. The stored
+        # value is cleared and the dashboard falls back to its configured
+        # locale, so this is informational rather than an error.
+        unavailable: "That language is not available. Using the default instead."
+
+      # Controller flash messages and the command result strings they wrap.
+      #
+      # The batch notice used to read "Successfully #{action_type}d N error(s)":
+      # it conjugated English past tense by bolting a "d" onto the raw action
+      # param and dodged pluralization with "(s)". No key can express that, so
+      # each outcome is its own key with real plural forms. Never interpolate a
+      # verb into a sentence — only data.
+      batch:
+        resolved:
+          one: "Successfully resolved %{count} error"
+          other: "Successfully resolved %{count} errors"
+        muted:
+          one: "Successfully muted %{count} error"
+          other: "Successfully muted %{count} errors"
+        unmuted:
+          one: "Successfully unmuted %{count} error"
+          other: "Successfully unmuted %{count} errors"
+        deleted:
+          one: "Successfully deleted %{count} error"
+          other: "Successfully deleted %{count} errors"
+        # %{reason} is a command's own error string.
+        failed: "Batch operation failed: %{reason}"
+
+      issue:
+        created: "Issue created successfully"
+        linked: "Issue linked successfully"
+        # %{reason} is a command's own error string.
+        create_failed: "Failed to create issue: %{reason}"
+        link_failed: "Failed to link issue: %{reason}"
+
+      # The "X is not enabled" notice was written out eleven times with only
+      # the feature name changing. Two keys rather than one because English
+      # agrees the verb and pronoun with the feature name: "Breadcrumbs are
+      # not enabled. Enable them" but "System health is not enabled. Enable
+      # it". A language with different agreement rules — or none — can give
+      # both keys the same text. The initializer path is a path, not prose,
+      # and is interpolated rather than translated.
+      not_enabled: "%{feature} is not enabled. Enable it in %{file}"
+      not_enabled_plural: "%{feature} are not enabled. Enable them in %{file}"
+      # A few features name the exact options instead. %{options} is a list of
+      # config option names — identifiers, never translated. "Set" is used when
+      # the option needs an explicit value, "Enable" when naming it is enough.
+      not_enabled_options: "%{feature} is not enabled. Enable %{options} in %{file}"
+      not_enabled_set_options: "%{feature} is not enabled. Set %{options} in %{file}"
+      # Feature names as they appear in those notices.
+      features:
+        platform_comparison: "Platform Comparison"
+        error_correlation: "Error Correlation"
+        breadcrumbs: "Breadcrumbs"
+        system_health: "System health"
+        swallowed_exceptions: "Swallowed exception detection"
+        rack_attack: "Rack Attack tracking"
+        actioncable: "ActionCable tracking"
+        activestorage: "ActiveStorage tracking"
+        diagnostic_dumps: "Diagnostic dumps"
+
+      diagnostic_dump:
+        disabled: "Diagnostic dumps are not enabled."
+        captured: "Diagnostic dump captured successfully."
+        # %{message} is an exception message — diagnostic output, never
+        # translated, only wrapped.
+        failed: "Failed to capture diagnostic dump: %{message}"
+
+      coverage:
+        not_enabled: "Coverage tracking is not enabled in configuration."
+        enabled: "Code path coverage enabled. Reproduce the error, then view source code to see executed lines."
+        disabled: "Code path coverage disabled."
+        # The Ruby version requirement is a literal.
+        unavailable: "Could not enable coverage. Requires Ruby 3.2+."
+
+      test_error:
+        # The channel names are products.
+        logged: "Test error logged successfully. Check your notification channels (Slack, Discord, email, etc.) to confirm delivery."
+        # %{message} is an exception message and stays verbatim.
+        failed: "Failed to log test error: %{message}"
+
+      # %{version} is the running Ruby version. "Ruby 3.3+" is a literal
+      # requirement, not prose.
+      swallowed_requires_ruby: "Swallowed exception detection requires Ruby 3.3+ (you have %{version}). Upgrade Ruby to use this feature."
+
+      # JSON error bodies for the AI help endpoint. The message is rendered in
+      # the help panel, so it is translated; the HTTP status carrying it is the
+      # machine-readable half and is untouched.
+      ai_help:
+        not_configured: "AI Help is not configured"
+        blank_question: "Question cannot be blank"
+        # %{limit} is the character cap, formatted with delimiters.
+        question_too_long: "Question is too long. Keep it under %{limit} characters."
+
+    commands:
+      # Strings returned by commands in their result hashes. They are not shown
+      # on their own — a controller wraps each one in a flash message — but they
+      # are the half of that sentence the command owns.
+      #
+      # Exception messages and class names returned alongside these are
+      # diagnostic output and are never translated.
+      no_error_ids: "No error IDs provided"
+      invalid_action: "Invalid action type"
+      issue:
+        not_configured: "Issue tracking is not configured"
+        # %{url} is the existing issue's URL.
+        already_linked: "Error already has a linked issue: %{url}"
+        url_required: "Issue URL is required"
+      # %{id} is the requested error's id.
+      error_not_found: "Error not found: %{id}"
+      # %{count} errors could not be updated in a batch operation.
+      batch_failed:
+        mute:
+          one: "Failed to mute %{count} error"
+          other: "Failed to mute %{count} errors"
+        unmute:
+          one: "Failed to unmute %{count} error"
+          other: "Failed to unmute %{count} errors"
+        resolve:
+          one: "Failed to resolve %{count} error"
+          other: "Failed to resolve %{count} errors"
+
+    mailers:
+      # Email is the one surface where a translation lands in someone else's
+      # mail client rather than in the dashboard. Three rules follow from that:
+      #
+      #   1. The .text.erb parts use red_mail_t, not red_t. red_t escapes for
+      #      HTML, so an apostrophe would arrive as "&#39;" in plain text.
+      #   2. Error content — class names, messages, backtraces — is diagnostic
+      #      output and is NEVER translated. Only the chrome around it is.
+      #   3. The fixed-width ASCII layout the text parts used to have has been
+      #      relaxed. Aligning labels to a column assumes every translation is
+      #      about as long as the English, which is false (German runs ~30%
+      #      longer). The templates now put label and value on the same line
+      #      with a single space, so nothing to break.
+      shared:
+        # Product name. Never translated — it is what the gem is called.
+        product_name: "Rails Error Dashboard"
+        unknown_application: "Unknown"
+
+      error_alert:
+        # Subject line. The emoji is part of the English rendering; a locale
+        # may drop it. %{application} is the host app's name, %{error_type} is
+        # an exception class name and %{message} is its message — both are
+        # verbatim error content and are not translated.
+        subject: "🚨 [%{application}] %{error_type}: %{message}"
+        heading: "🚨 Error Alert"
+        labels:
+          application: "Application"
+          error_type: "Error Type"
+          platform: "Platform"
+          occurred_at: "Occurred At"
+          user_id: "User ID"
+          ip_address: "IP Address"
+          request_url: "Request URL"
+          message: "Message"
+          error_id: "Error ID"
+        # %{count} is how many backtrace lines are shown, not how many exist.
+        stack_trace:
+          one: "Stack Trace (first %{count} line)"
+          other: "Stack Trace (first %{count} lines)"
+        view_details: "View Full Details in Dashboard"
+        view_details_text: "View full details in the dashboard:"
+        footer: "This is an automated error notification from %{product}."
+
+      digest:
+        # %{count} new errors in the period, %{period} is the period label
+        # below. Both interpolate into the subject, which is why the plural
+        # form lives here rather than being assembled in the mailer.
+        subject:
+          one: "RED Digest — %{count} new error (%{period})"
+          other: "RED Digest — %{count} new errors (%{period})"
+        heading: "RED Error Digest"
+        # Digest period labels. They appear in the subject AND the body, so
+        # they are keys rather than literals in DigestBuilder (P4-T2 REQ-4).
+        periods:
+          daily: "Last 24 hours"
+          weekly: "Last 7 days"
+        generated_at: "Generated"
+        summary: "Summary"
+        stats:
+          new_errors: "New Errors"
+          total_occurrences: "Occurrences"
+          total_occurrences_text: "Total Occurrences"
+          resolved: "Resolved"
+          unresolved: "Unresolved"
+          critical_high: "Critical/High"
+          resolution_rate: "Resolution Rate"
+        comparison:
+          heading: "vs Previous Period"
+          # %{period} is "daily"/"weekly" — the raw period, not its label.
+          versus: "vs previous %{period}:"
+          current: "Current"
+          previous: "Previous"
+          change: "Change"
+          # %{delta} carries its own sign, e.g. "+12" or "-3".
+          delta:
+            one: "%{delta} error"
+            other: "%{delta} errors"
+        critical_unresolved: "Critical & High Unresolved"
+        top_errors: "Top Errors by Count"
+        columns:
+          severity: "Severity"
+          error: "Error"
+          error_type: "Error Type"
+          count: "Count"
+        view: "View"
+        open_dashboard: "Open Dashboard"
+        view_dashboard_text: "View the full dashboard:"
+        manage_settings: "Manage digest settings"
+        footer: "Automated digest from RED (%{product})"
+
+    notifications:
+      # Slack / Discord / PagerDuty field labels and button text.
+      #
+      # THE RULE HERE IS NARROWER THAN ELSEWHERE. Only values a human reads get
+      # keys. Anything a receiving system parses stays English, because
+      # translating it breaks the integration rather than localizing it:
+      #
+      #   * Slack block "type" values (header, section, mrkdwn, actions,
+      #     button, plain_text) and "style"
+      #   * PagerDuty "event_action" ("trigger") and "severity" ("critical") —
+      #     these are API enums, not adjectives
+      #   * Every webhook JSON key AND its values. The whole webhook payload is
+      #     machine-readable by definition; it has no keys here at all.
+      #   * Discord "inline", "color", "timestamp"
+      #
+      # GitHub/GitLab/Linear issue bodies are also deliberately absent: they
+      # are dev-facing, and the maintainer reading an issue may not share the
+      # dashboard's locale.
+      shared:
+        # Product name, and the name RED gives itself as a PagerDuty client.
+        # Never translated.
+        product_name: "Rails Error Dashboard"
+        unknown: "Unknown"
+        not_available: "N/A"
+
+      error_alert:
+        # Slack's fallback text, shown in notification previews.
+        fallback: "🚨 New Error Alert"
+        heading: "🚨 Error Alert"
+        # %{error_type} is an exception class name — verbatim, not translated.
+        discord_title: "🚨 New Error: %{error_type}"
+        # PagerDuty incident summary. %{application}, %{error_type} and
+        # %{platform} are all verbatim values.
+        pagerduty_summary: "[%{application}] Critical Error: %{error_type} in %{platform}"
+        labels:
+          application: "Application"
+          error_type: "Error Type"
+          platform: "Platform"
+          occurred: "Occurred"
+          message: "Message"
+          user: "User"
+          ip_address: "IP Address"
+          request_url: "Request URL"
+          occurrences: "Occurrences"
+          controller: "Controller"
+          action: "Action"
+          first_seen: "First Seen"
+          location: "Location"
+        # %{id} is the user's database id, shown when no email is available.
+        user_fallback: "User #%{id}"
+        view_details: "View Details"
+        view_in_dashboard: "View in Error Dashboard"
+        # %{id} is the error's database id.
+        error_id: "Error ID: %{id}"
+
+      baseline_alert:
+        fallback: "🚨 Baseline Anomaly Alert"
+        heading: "🚨 Baseline Anomaly Detected"
+        labels:
+          severity: "Severity"
+          std_devs: "Standard Deviations"
+          threshold: "Threshold"
+          baseline_type: "Baseline Type"
+          baseline_info: "Baseline Info"
+        # Anomaly levels. NOT the same vocabulary as red.common.severity —
+        # an anomaly can be "elevated", an error cannot. Previously rendered
+        # by .upcase on the raw symbol, which is English morphology applied to
+        # a machine value.
+        level:
+          critical: "CRITICAL"
+          high: "HIGH"
+          elevated: "ELEVATED"
+          unknown: "UNKNOWN"
+        # %{value} is a rounded number of standard deviations.
+        std_devs_above: "%{value}σ above baseline"
+        # The alert threshold, in errors. %{value} is the displayed number
+        # (a rounded float); %{count} is its integer form and only drives
+        # plural selection, so it must not appear in the text.
+        threshold_errors:
+          one: "%{value} error"
+          other: "%{value} errors"
+        view_in_dashboard: "View in Dashboard"
+
+      storm:
+        # The single "error storm in progress" message. %{application} is the
+        # host app's name and %{started_at} an ISO8601 timestamp.
+        detected: "Error storm detected in %{application} at %{started_at}."
+        # Breaker state at notification time.
+        mode:
+          open: "count-only mode (occurrences tallied, detail paused)"
+          shedding: "shedding mode (context sampling active)"
+        # %{mode} is one of the two above.
+        engaged: "Storm protection engaged — %{mode}."
+        suppressed: "Per-error notifications are suppressed until the storm subsides; exact counts are preserved."
+        # %{url} links to the storms page.
+        dashboard: "Dashboard: %{url}"
+
+    time:
+      # "%{duration} ago" as a single key. Never build this by concatenating a
+      # duration and the word "ago" — word order differs across languages, and
+      # several put the equivalent of "ago" first.
+      ago: "%{duration} ago"
+
+      # strftime patterns, one per preset in ApplicationHelper#local_time.
+      # These are per-locale on purpose: "%B %d, %Y" is a US ordering, not
+      # merely English words. A German locale wants "%d. %B %Y".
+      #
+      # The same patterns are handed to the browser via data-format and
+      # re-rendered by formatDateTime() in the dashboard layout, so any
+      # directive used here must be one that function supports:
+      #   %Y %y %B %b %m %d %e %A %a %H %I %M %S %p %P
+      formats:
+        full: "%B %d, %Y %I:%M:%S %p"
+        short: "%m/%d %I:%M%p"
+        date_only: "%B %d, %Y"
+        time_only: "%I:%M:%S %p"
+        datetime: "%b %d, %Y %H:%M"
+
+    health:
+      # Table column headers repeated on more than one health page.
+      columns:
+        error: "Error"
+        last_seen: "Last Seen"
+
+      database:
+        title: "Database Health"
+
+        stats:
+          errors_with_pool: "Errors with Pool Data"
+          peak_utilization: "Peak Utilization"
+          total_dead: "Total Dead"
+          total_waiting: "Total Waiting"
+
+        live:
+          title: "Live Database Health"
+          # %{adapter} is the detected AR adapter name (e.g. "mysql2") — a
+          # machine identifier, not translated. NOT an _html key: the adapter
+          # name comes from ActiveRecord::Base.connection.adapter_name, and a
+          # custom/misbehaving adapter could return anything. Escaped via the
+          # normal red_t path; the <strong> wrapper is built in the view.
+          non_postgresql: "Non-PostgreSQL adapter detected (%{adapter})."
+          non_postgresql_hint: >-
+            Live table, index, and activity stats require PostgreSQL. Connection
+            pool and historical data are still available below.
+          pool_size: "Pool Size"
+          busy: "Busy"
+          idle: "Idle"
+          dead: "Dead"
+          waiting: "Waiting"
+
+        summary:
+          total_db_size: "Total DB Size"
+          tables: "Tables"
+          unused_indexes: "Unused Indexes"
+          active_connections: "Active Connections"
+
+        host_tables:
+          title: "Host App Tables"
+        gem_tables:
+          title: "Error Dashboard Tables"
+        unused_indexes:
+          title: "Unused Indexes"
+          column_index: "Index"
+          column_table: "Table"
+          column_size: "Size"
+        activity:
+          title: "Connection Activity"
+          # %{count} connections total, currently.
+          total_badge: "%{count} total"
+          # %{count} of them waiting.
+          waiting_badge: "%{count} waiting"
+          column_state: "State"
+          column_count: "Count"
+          column_waiting: "Waiting"
+
+        # Shared table columns for the host/gem table listings.
+        table_columns:
+          table: "Table"
+          est_rows: "Est. Rows"
+          size: "Size"
+          seq_scans: "Seq Scans"
+          idx_scans: "Idx Scans"
+          dead_tuples: "Dead Tuples"
+          last_vacuum: "Last Vacuum"
+        never_vacuumed: "Never"
+
+        pool_history:
+          title: "Connection Pool by Error"
+          empty_title: "No Connection Pool Data Found"
+          # %{days} is the analysis window.
+          empty_message_html: >-
+            No connection pool stats were detected in system health snapshots over
+            the last %{days} days. Enable <code>enable_system_health = true</code>
+            to capture pool stats at error time.
+          column_error: "Error"
+          column_error_type: "Error Type"
+          column_utilization: "Utilization"
+          column_busy: "Busy"
+          column_idle: "Idle"
+          column_dead: "Dead"
+          column_waiting: "Waiting"
+          column_pool_size: "Pool Size"
+          column_last_seen: "Last Seen"
+          tip: >-
+            High utilization during errors may indicate connection pool
+            exhaustion or long-running queries.
+          guide_link: "Database Guide"
+
+      llm:
+        title: "LLM Health"
+
+        disabled:
+          title: "LLM Observability Not Enabled"
+          message: "To see per-model LLM stats here, enable LLM observability and breadcrumbs."
+          enable_in_html: "Enable in <code>config/initializers/rails_error_dashboard.rb</code>:"
+
+        empty:
+          title: "No LLM Calls Detected"
+          # %{days} is the analysis window.
+          message: >-
+            No LLM API calls were captured in error breadcrumbs over the last
+            %{days} days. Instrument LLM calls in one of three ways:
+          tab_otel: "OpenTelemetry"
+          tab_faraday: "Faraday / RubyLLM"
+          tab_manual: "Manual"
+          otel_hint: "Already running an OTel collector? Drop in this gem and we'll subscribe automatically."
+          otel_requires_html: "Requires <code>enable_llm_observability = true</code>."
+          faraday_hint: "Using <code>ruby_llm</code>, <code>openai</code>, <code>anthropic</code>, or any Faraday-based SDK? Insert the middleware once."
+          faraday_note: "RED auto-detects provider/model and tokens from the request/response."
+          manual_hint: "Direct <code>Net::HTTP</code>, gRPC, local inference, or anything else — instrument by hand."
+          manual_note_html: "Cost is auto-estimated from tokens — payload can override with <code>cost_usd_estimate:</code>."
+
+        stats:
+          calls: "LLM Calls"
+          models: "Models"
+          # %{rate} is the error-rate percentage cited in the same stat tile.
+          errors_with_llm: "Errors with LLM (%{rate}%)"
+          total_cost: "Total Cost"
+
+        by_model:
+          title: "Performance by Model"
+          column_provider_model: "Provider · Model"
+          column_calls: "Calls"
+          column_tools: "Tools"
+          column_avg_tokens: "Avg tokens"
+          column_avg_latency: "Avg latency"
+          column_error_rate: "Error rate"
+          column_cost: "Cost"
+          column_top_error: "Top error"
+          column_last_seen: "Last seen"
+          avg_tokens_in: "in"
+          avg_tokens_out: "out"
+          # %{count} calls in this model failed.
+          failed_count: "%{count} failed"
+          # Contains a literal &gt; entity, hence _html.
+          tip_html: >-
+            High error rates on a model often signal quota or rate-limit issues.
+            Slow latency (&gt;5s) suggests provider degradation.
+          guide_link: "Instrumentation Guide"
+
+      cache:
+        title: "Cache Health"
+
+        empty:
+          title: "No Cache Activity Found"
+          # %{days} is the analysis window.
+          message: "No cache operations were detected in error breadcrumbs over the last %{days} days."
+          how_it_works: "How cache tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_capture: "Cache reads and writes are captured as breadcrumbs during requests that produce errors"
+          step_hit_status: "Hit/miss status is tracked for read operations"
+          step_sort: "This page shows cache performance per-error, sorted worst-first"
+
+        stats:
+          errors_with_cache: "Errors with Cache"
+          avg_hit_rate: "Avg Hit Rate"
+          total_ops: "Total Cache Ops"
+
+        table:
+          title: "Cache Performance by Error"
+          column_error: "Error"
+          column_reads: "Reads"
+          column_writes: "Writes"
+          column_hit_rate: "Hit Rate"
+          column_total_time: "Total Time"
+          column_slowest_op: "Slowest Op"
+          column_last_seen: "Last Seen"
+          tip: "Low hit rates may indicate cache keys that expire too quickly or aren't being set properly."
+          guide_link: "Rails Caching Guide"
+
+      job:
+        title: "Job Health"
+
+        empty:
+          title: "No Job Queue Data Found"
+          # %{days} is the analysis window.
+          message: "No job queue stats were detected in system health snapshots over the last %{days} days."
+          how_it_works: "How job health tracking works:"
+          step_enable_html: "System health must be enabled (<code>enable_system_health = true</code>)"
+          step_capture: "Job queue stats are captured automatically when Sidekiq, SolidQueue, or GoodJob is detected"
+          step_collected: "Stats are collected per-error at the time of capture"
+          step_sort: "This page shows job queue health per-error, sorted by failed count"
+
+        stats:
+          errors_with_jobs: "Errors with Job Data"
+          total_failed: "Total Failed Jobs"
+          adapters_detected: "Adapters Detected"
+
+        table:
+          title: "Job Queue Health by Error"
+          column_error: "Error"
+          column_adapter: "Adapter"
+          column_failed: "Failed"
+          column_queued: "Queued"
+          column_other_stats: "Other Stats"
+          column_last_seen: "Last Seen"
+          # Adapter-specific queue-depth labels. The adapter name itself
+          # (sidekiq, solid_queue, good_job) is a machine value and stays
+          # untranslated; only the noun after the count is a key.
+          enqueued: "enqueued"
+          ready: "ready"
+          queued: "queued"
+          # Adapter-specific "other stats" line, one whole phrase per adapter
+          # rather than assembled labels — the label:value order and the
+          # comma-separated layout are not universal.
+          # %{dead}, %{retry}, %{workers} are raw counts.
+          other_stats_sidekiq: "dead: %{dead}, retry: %{retry}, workers: %{workers}"
+          # %{claimed}, %{blocked}, %{scheduled} are raw counts.
+          other_stats_solid_queue: "claimed: %{claimed}, blocked: %{blocked}, scheduled: %{scheduled}"
+          # %{finished} is a raw count.
+          other_stats_good_job: "finished: %{finished}"
+          tip: "High failed job counts during errors may indicate job queue saturation or upstream service issues."
+          guide_link: "Active Job Guide"
+
+      actioncable:
+        title: "ActionCable Health"
+
+        empty:
+          title: "No ActionCable Events Found"
+          # %{days} is the analysis window.
+          message: >-
+            No ActionCable channel actions, transmissions, or subscription events
+            were detected in error breadcrumbs over the last %{days} days.
+          how_it_works: "How ActionCable tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_tracking_html: "ActionCable tracking must be enabled (<code>enable_actioncable_tracking = true</code>)"
+          step_configured: "ActionCable must be configured in your app"
+          step_capture: "Channel actions, transmissions, and subscription events are captured as breadcrumbs during requests that produce errors"
+
+        stats:
+          active_channels: "Active Channels"
+          total_events: "Total Events"
+          subscription_rejections: "Subscription Rejections"
+
+        table:
+          title: "ActionCable Events by Channel"
+          column_channel: "Channel"
+          column_actions: "Actions"
+          column_transmissions: "Transmissions"
+          column_subscriptions: "Subscriptions"
+          column_rejections: "Rejections"
+          column_errors: "Errors"
+          column_last_seen: "Last Seen"
+          tip: "ActionCable events are captured when they coincide with errors. High rejection counts may indicate authentication or authorization issues."
+          guide_link: "ActionCable Guide"
+
+      activestorage:
+        title: "ActiveStorage Health"
+
+        empty:
+          title: "No ActiveStorage Events Found"
+          # %{days} is the analysis window.
+          message: "No ActiveStorage service operations were detected in error breadcrumbs over the last %{days} days."
+          how_it_works: "How ActiveStorage tracking works:"
+          step_breadcrumbs_html: "Breadcrumbs must be enabled (<code>enable_breadcrumbs = true</code>)"
+          step_tracking_html: "ActiveStorage tracking must be enabled (<code>enable_activestorage_tracking = true</code>)"
+          step_configured: "ActiveStorage must be configured in your app"
+          step_capture: "Uploads, downloads, and deletes are captured as breadcrumbs during requests that produce errors"
+
+        stats:
+          storage_services: "Storage Services"
+          total_operations: "Total Operations"
+          errors_with_storage: "Errors with Storage Ops"
+
+        table:
+          title: "Storage Operations by Service"
+          column_service: "Service"
+          column_uploads: "Uploads"
+          column_downloads: "Downloads"
+          column_deletes: "Deletes"
+          column_exists: "Exists"
+          column_total: "Total"
+          column_avg_duration: "Avg Duration"
+          column_slowest: "Slowest"
+          column_errors: "Errors"
+          column_last_seen: "Last Seen"
+          tip: "Slow storage operations may indicate network issues, large file sizes, or service provider throttling."
+          guide_link: "ActiveStorage Guide"
+
+    analytics:
+      # Machine values shared across more than one analytics page. Stability
+      # (release health) and trend direction (correlation) are each their own
+      # small enum — not the same as red.common.severity — so they get their
+      # own lookup tables rather than being force-fit into an existing one.
+      stability:
+        green: "Green"
+        yellow: "Yellow"
+        red: "Red"
+
+      trend:
+        increasing_significantly: "increasing significantly"
+        increasing: "increasing"
+        stable: "stable"
+        decreasing: "decreasing"
+        decreasing_significantly: "decreasing significantly"
+
+      correlation_strength:
+        strong: "Strong"
+        moderate: "Moderate"
+        weak: "Weak"
+
+      # Shared "N days" pill labels for the analytics overview's compact
+      # time-range selector — visually distinct from red.common.days_filter's
+      # "7 Days" button labels, so kept separate rather than force-fit.
+      days_pill:
+        "7": "7d"
+        "14": "14d"
+        "30": "30d"
+        "60": "60d"
+        "90": "90d"
+
+      overview:
+        title: "Analytics"
+
+        stats:
+          total_errors: "Total Errors"
+          unresolved: "Unresolved"
+          resolution_rate: "Resolution Rate"
+
+        # %{days} is the analysis window, cited in both the chart heading and
+        # the query it drives.
+        trend_chart:
+          title: "Error Trend (Last %{days} Days)"
+
+        platform_chart:
+          title: "Errors by Platform"
+          quick_links: "Quick Links:"
+
+        type_chart:
+          title: "Top 10 Error Types"
+
+        hour_chart:
+          title: "Errors by Hour of Day"
+
+        top_users:
+          title: "Top 10 Affected Users"
+
+        type_breakdown:
+          title: "Error Type Breakdown"
+          # %{days} is the analysis window.
+          subtitle: "Last %{days} days"
+          column_rank: "Rank"
+          column_error_type: "Error Type"
+          column_count: "Count"
+          column_percentage: "Percentage"
+          column_actions: "Actions"
+          view_errors: "View Errors"
+
+        recurring:
+          title: "Recurring Issues"
+          high_frequency_title: "High Frequency Errors"
+          column_error_type: "Error Type"
+          column_total_occurrences: "Total Occurrences"
+          column_duration: "Duration"
+          column_first_seen: "First Seen"
+          column_last_seen: "Last Seen"
+          column_status: "Status"
+          # %{days} is the duration a high-frequency error has recurred over.
+          duration_days: "%{days} days"
+          active: "Active"
+          inactive: "Inactive"
+          # %{days} is the analysis window.
+          empty_high_frequency: "No high-frequency errors found in the last %{days} days."
+
+          persistent_title: "Persistent Unresolved Errors"
+          persistent_hint: "These errors have been unresolved for more than 7 days."
+          column_message: "Message"
+          column_platform: "Platform"
+          column_count: "Count"
+          column_age: "Age"
+          column_actions: "Actions"
+          # %{days} is how long the error has been open.
+          age_days: "%{days} days"
+          view: "View"
+
+        releases:
+          version_chart_title: "Errors by Release Version"
+          comparison_title: "Latest vs Previous"
+          latest_version: "Latest Version"
+          # %{count} errors in the latest release.
+          latest_errors:
+            one: "%{count} error"
+            other: "%{count} errors"
+          # %{count} critical errors in the latest release.
+          latest_critical:
+            one: "%{count} critical"
+            other: "%{count} critical"
+          previous_version: "Previous Version"
+          # %{count} errors in the previous release.
+          previous_errors:
+            one: "%{count} error"
+            other: "%{count} errors"
+          # %{count} critical errors in the previous release.
+          previous_critical:
+            one: "%{count} critical"
+            other: "%{count} critical"
+          change: "Change"
+          empty: "Not enough release data for comparison."
+
+          problematic_title: "Problematic Releases Detected"
+          # %{multiplier} is the deviation threshold (e.g. "2"), an integer
+          # from the view — not user data. Contains a literal &gt; entity,
+          # hence _html.
+          problematic_hint_html: "The following releases have significantly higher error rates (&gt;%{multiplier}x average):"
+          # %{count} errors, %{critical} of them critical, %{deviation}% above
+          # the average — one sentence rather than three fragments, since the
+          # clause order is not universal.
+          problematic_entry: >-
+            %{count} errors (%{critical} critical, +%{deviation}% from average)
+
+        mttr:
+          title: "Resolution Performance (MTTR)"
+          overall_title: "Overall MTTR"
+          overall_hint: "Average resolution time"
+          fastest_title: "Fastest"
+          fastest_hint: "Best resolution time"
+          slowest_title: "Slowest"
+          slowest_hint: "Longest resolution time"
+          total_resolved_title: "Total Resolved"
+          # %{days} is the analysis window.
+          total_resolved_hint: "In last %{days} days"
+
+          by_platform_title: "MTTR by Platform"
+
+          by_severity_title: "MTTR by Severity"
+          column_severity: "Severity"
+          column_avg_time: "Average Time to Resolution"
+          column_actions: "Actions"
+          # %{hours} is a formatted duration.
+          hours: "%{hours} hours"
+          view: "View"
+
+          trend_title: "MTTR Trend (Weekly)"
+
+      correlation:
+        title: "Error Correlation Analysis"
+
+        trend_analysis:
+          title: "Trend Analysis"
+          current_period: "Current Period"
+          previous_period: "Previous Period"
+          change: "Change"
+          # %{start} and %{end} are formatted dates.
+          period_range: "%{start} - %{end}"
+
+        problematic_releases:
+          title: "Problematic Releases"
+          hint: "Versions with more than 2x the average error rate"
+          column_version: "Version"
+          column_error_count: "Error Count"
+          column_deviation: "Deviation from Avg"
+          column_critical: "Critical Errors"
+          column_unique_types: "Unique Error Types"
+          column_platforms: "Platforms"
+          column_actions: "Actions"
+          view: "View"
+
+        by_version:
+          title: "Errors by App Version"
+          column_version: "Version"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_critical: "Critical"
+
+        by_git_sha:
+          title: "Errors by Git SHA"
+          column_sha: "SHA"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_versions: "Versions"
+
+        multi_error_users:
+          title: "Users Affected by Multiple Error Types"
+          hint: "Users experiencing 2+ different error types"
+          # %{shown} of %{total} users are listed.
+          truncated: "Showing %{shown} of %{total} users"
+
+        time_correlated:
+          title: "Time-Correlated Errors"
+          hint: "Error types that occur at similar times of day"
+          column_error_type_a: "Error Type A"
+          column_error_type_b: "Error Type B"
+          column_correlation: "Correlation"
+          column_strength: "Strength"
+          # %{shown} of %{total} correlated pairs are listed.
+          truncated: "Showing %{shown} of %{total} correlated error pairs"
+
+        platform_specific:
+          title: "Platform-Specific vs Cross-Platform Errors"
+          # %{count} occurrences of this error.
+          occurrences:
+            one: "%{count} occurrence"
+            other: "%{count} occurrences"
+          platform_specific: "Platform-Specific"
+          cross_platform: "Cross-Platform"
+          # %{platforms} is a comma-joined list of platform names.
+          also_on: "Also on: %{platforms}"
+
+        empty:
+          title: "Not Enough Data for Correlation Analysis"
+          message: "Correlation analysis requires more error data to identify patterns."
+          needed_title: "What's needed:"
+          needed_version: "App version tracking for release correlation"
+          needed_user: "User tracking for user correlation"
+          needed_types: "Multiple error types for time correlation"
+          hint: "Check back once more errors have been logged."
+
+      platform_comparison:
+        title: "Platform Health Comparison"
+
+        empty:
+          title: "No Platform Data Available"
+          # %{days} is the analysis window.
+          message: "No errors were logged for the selected time period (%{days} days)."
+          hint: "Try selecting a longer time period or check back later."
+
+        health_card:
+          healthy: "Healthy"
+          warning: "Warning"
+          critical: "Critical"
+          stability_score: "Stability Score"
+          total_errors: "Total Errors:"
+          critical_errors: "Critical:"
+          unresolved: "Unresolved:"
+          resolution_rate: "Resolution Rate:"
+          error_velocity: "Error Velocity:"
+          # %{platform} is a platform name (iOS, Android, Web) and is not
+          # translated.
+          view_errors: "View %{platform} Errors"
+
+        error_rate_chart:
+          title: "Error Rate by Platform"
+
+        daily_trend_chart:
+          title: "Daily Error Trends"
+
+        severity_distribution:
+          title: "Severity Distribution"
+          # %{label} is a translated red.common.severity label, %{count} a raw
+          # count — used both as the bar's title= tooltip and the number shown
+          # inside a wide-enough bar segment.
+          severity_count: "%{label}: %{count}"
+          # %{critical}, %{high}, %{medium}, %{low} are raw counts; the
+          # "Critical:"/"High:"/etc. labels come from red.common.severity, not
+          # from this key, so they translate along with everything else. One
+          # sentence rather than four fragments joined with "|", since the
+          # separator and ordering are not universal.
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: "No errors"
+
+        resolution_time_chart:
+          title: "Average Resolution Time"
+
+        cross_platform:
+          title: "Cross-Platform Errors"
+          column_error_type: "Error Type"
+          column_platforms: "Platforms"
+          column_total_occurrences: "Total Occurrences"
+          column_breakdown: "Breakdown"
+
+        top_errors:
+          # %{platform} is a platform name and is not translated.
+          title: "Top Errors - %{platform}"
+          empty: "No errors found"
+
+      releases:
+        title: "Releases"
+
+        empty:
+          title: "No Release Data Found"
+          # %{days} is the analysis window.
+          message: "No version data was detected in errors over the last %{days} days."
+          how_to_title: "How to enable release tracking:"
+          # %{option} is a pre-formatted <code> element naming the config
+          # option, hence _html.
+          step_config_html: "Set %{option} in your initializer"
+          # %{env_var} is a pre-formatted <code> element, hence _html.
+          step_env_html: "Or set the %{env_var} environment variable"
+          # %{git_sha}, %{heroku}, %{render} are pre-formatted <code>
+          # elements naming env vars, hence _html.
+          step_git_sha_html: "Git SHA is auto-detected from %{git_sha}, %{heroku}, or %{render}"
+          step_captured: "Version and SHA are captured automatically when errors occur"
+
+        summary:
+          releases: "Releases"
+          current_release: "Current Release"
+          avg_errors: "Avg Errors / Release"
+          problematic: "Problematic Releases"
+
+        current_card:
+          title: "Current Release:"
+          live_badge: "Live"
+          errors: "Errors"
+          error_types: "Error Types"
+          new_errors: "New Errors"
+          stability: "Stability"
+          git_sha: "Git SHA"
+          vs_previous: "vs Previous"
+
+        timeline:
+          title: "Release Timeline"
+          column_version: "Version"
+          column_git_sha: "Git SHA"
+          column_time_range: "Time Range"
+          column_errors: "Errors"
+          column_types: "Types"
+          column_new_errors: "New Errors"
+          column_stability: "Stability"
+          column_vs_previous: "vs Previous"
+          current_badge: "Current"
+          problematic_badge: "Problematic"
+          # %{count} additional git SHAs beyond the first shown.
+          more_shas: "+%{count}"
+          # %{count} new error types first seen in this release.
+          new_count:
+            one: "%{count} new"
+            other: "%{count} new"
+
+          footer_html: >-
+            Stability: <span class="badge bg-success">Green</span> &le; avg errors,
+            <span class="badge bg-warning">Yellow</span> 1-2x avg,
+            <span class="badge bg-danger">Red</span> &gt; 2x avg.
+            "New" errors are error types first seen in that release.
+
+      user_impact:
+        title: "User Impact"
+
+        empty:
+          title: "No User Impact Data"
+          # %{days} is the analysis window.
+          message: "No errors with user attribution were found in the last %{days} days."
+          how_tracked_title: "How user impact is tracked:"
+          # %{attribute} is a pre-formatted <code> element naming the
+          # attribute, hence _html.
+          step_user_id_html: "Errors must have a %{attribute} associated"
+          # %{current_attributes} and %{current_user} are pre-formatted
+          # <code> elements, hence _html.
+          step_auto_html: "Auto-detected via %{current_attributes} or %{current_user}"
+          # %{option} is a pre-formatted <code> element, hence _html.
+          step_config_html: "Or set %{option} in your initializer"
+
+        summary:
+          error_types: "Error Types with Users"
+          total_users_affected: "Total Users Affected"
+          most_impactful: "Most Impactful Error"
+          total_users: "Total Users (for %)"
+
+        table:
+          title: "Errors Ranked by User Impact"
+          column_rank: "#"
+          column_error_type: "Error Type"
+          column_unique_users: "Unique Users"
+          column_occurrences: "Occurrences"
+          column_impact_percentage: "User Impact %"
+          column_severity: "Severity"
+          column_last_seen: "Last Seen"
+          # %{count} unique users affected.
+          users:
+            one: "%{count} user"
+            other: "%{count} users"
+          # %{count} total occurrences.
+          occurrences:
+            one: "%{count}x"
+            other: "%{count}x"
+          footer: >-
+            Ranked by unique users affected, not occurrence count. An error
+            hitting 1000 users once is worse than hitting 1 user 1000 times.
+
+    # Strings handed to inline JavaScript via window.RED_I18N (P3-T1).
+    #
+    # This subtree is serialized into every dashboard page, so it is kept small
+    # on purpose — only what the browser actually re-renders belongs here.
+    # Server-rendered strings stay in their own namespaces and never ship twice.
+    js:
+      # Month and day names for formatDateTime()'s %B/%b/%A/%a directives.
+      # Arrays, not numbered keys, because the JS indexes them directly by
+      # Date#getMonth() and Date#getDay(). Order is fixed and must not be
+      # rearranged when translating: January first, Sunday first.
+      months:
+        - "January"
+        - "February"
+        - "March"
+        - "April"
+        - "May"
+        - "June"
+        - "July"
+        - "August"
+        - "September"
+        - "October"
+        - "November"
+        - "December"
+      months_short:
+        - "Jan"
+        - "Feb"
+        - "Mar"
+        - "Apr"
+        - "May"
+        - "Jun"
+        - "Jul"
+        - "Aug"
+        - "Sep"
+        - "Oct"
+        - "Nov"
+        - "Dec"
+      days:
+        - "Sunday"
+        - "Monday"
+        - "Tuesday"
+        - "Wednesday"
+        - "Thursday"
+        - "Friday"
+        - "Saturday"
+      days_short:
+        - "Sun"
+        - "Mon"
+        - "Tue"
+        - "Wed"
+        - "Thu"
+        - "Fri"
+        - "Sat"
+      # %p / %P. Many locales use a 24-hour clock and never render these; a
+      # translation may legitimately be an empty string.
+      meridian:
+        am: "AM"
+        pm: "PM"
+      # BCP 47 tag handed to Intl for the timezone abbreviation. Separate from
+      # the locale name because RED's locale set and the browser's need not
+      # agree — an unsupported tag falls back to en-US in the JS.
+      intl_locale: "en-US"
+
+      # Durations for formatRelativeTime(). These are the duration ALONE —
+      # the JS wraps the result in red.time.ago, exactly as local_time_ago
+      # does on the server, so both sides put "ago" wherever the language
+      # wants it rather than assuming it trails.
+      #
+      # Plural forms, never a ternary on "s". A locale needing more categories
+      # than English adds them here; one supplying only :other still renders,
+      # because the JS selector falls back to :other for any missing category.
+      duration:
+        seconds:
+          one: "1 second"
+          other: "%{count} seconds"
+        minutes:
+          one: "1 minute"
+          other: "%{count} minutes"
+        hours:
+          one: "1 hour"
+          other: "%{count} hours"
+        days:
+          one: "1 day"
+          other: "%{count} days"
+        months:
+          one: "1 month"
+          other: "%{count} months"
+        years:
+          one: "1 year"
+          other: "%{count} years"
+
+      # Batch-selection counter on the errors index. Lives here rather than in
+      # ui_js because the count is only known once the user ticks a box, so the
+      # browser selects the plural form — never count + " selected", which
+      # assumes both the word order and the agreement of English.
+      selected:
+        one: "1 selected"
+        other: "%{count} selected"
+
+      # Timestamp tooltips and the UTC suffix on the toggled-to view.
+      # "UTC" itself is a standard abbreviation and stays as-is.
+      titles:
+        local_time: "Your local time (click to see UTC)"
+        utc_time: "UTC time (click to see local time)"
+        exact_time: "Click to see exact time"
+        relative_time: "Click to see relative time"
+
+    # Strings the SERVER renders into inline <script> blocks (P3-T3).
+    #
+    # Separate from red.js on purpose. red.js ships to the browser in
+    # window.RED_I18N on every page load and must stay small; these are
+    # resolved by red_t at render time and the browser never looks them up,
+    # so shipping them would be pure payload with no reader.
+    #
+    # The test is where the lookup happens, not what the string looks like:
+    # if JS builds the text at runtime it belongs in red.js, and if ERB writes
+    # it into the script body it belongs here.
+    ui_js:
+      # Transient button and status text the JS writes (P3-T3). Rendered by
+      # the server into the script blocks, so these are red_t at render time,
+      # not redT lookups — the pages that use them are ERB, not static assets.
+      toast:
+        loading: "Loading..."
+        copied: "Copied!"
+        copied_to_clipboard: "Copied to clipboard!"
+        failed: "Failed"
+        copy_failed: "Failed to copy to clipboard"
+        downloaded: "Downloaded!"
+
+      # AI help panel status line.
+      ai_help:
+        question_required: "Enter a question first."
+        streaming: "Streaming..."
+        streaming_unsupported: "Streaming is not supported by this browser."
+        request_failed: "Request failed."
+
+      # Section pills on the error detail page. Short by design — they sit in a
+      # horizontally scrolling bar, so a translation that runs long will scroll
+      # rather than wrap. "N+1" is the standard name for the pattern and stays
+      # as-is, like the rest of the error-domain jargon in the glossary.
+      sections:
+        error: "Error"
+        request: "Request"
+        deprecations: "Deprecations"
+        n_plus_one: "N+1"
+        cache: "Cache"
+        breadcrumbs: "Breadcrumbs"
+        similar: "Similar"
+        co_occurring: "Co-occurring"
+        timeline: "Timeline"
+        issue: "Issue"
+        discussion: "Discussion"
+        cascades: "Cascades"
+        patterns: "Patterns"
+
+      # Chart.js axis titles and series labels. Chart.js renders these itself,
+      # so they are values in a JS config object rather than page text.
+      charts:
+        axis_date: "Date"
+        axis_hour: "Hour"
+        axis_error_type: "Error Type"
+        axis_count: "Count"
+        axis_number_of_errors: "Number of Errors"
+        axis_hours: "Hours"
+        series_total_errors: "Total Errors"
+        series_hours_to_resolve: "Hours to Resolve"

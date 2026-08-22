@@ -1,0 +1,2108 @@
+# RED dashboard translations — pl
+#
+# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+# pull request is a perfectly good pull request.
+#
+# Structure is derived from en.yml, which is authoritative. Do not add keys
+# here that do not exist there — run bin/i18n-check after editing.
+pl:
+  red:
+    common:
+      not_available: Nd.
+      close: Zamknij
+      unknown: Nieznane
+      severity:
+        critical: Krytyczny
+        high: Wysoki
+        medium: Średni
+        low: Niski
+      days_filter:
+        '7': 7 dni
+        '14': 14 dni
+        '30': 30 dni
+        '90': 90 dni
+      frame_category:
+        app: Twój kod
+        gem: Gem
+        framework: Framework Rails
+        ruby_core: Rdzeń Ruby
+        unknown: Nieznane
+      trend:
+        increasing: Rośnie
+        decreasing: Maleje
+        stable: Stabilnie
+      health_status:
+        healthy: "✅ Sprawny"
+        warning: "⚠️ Ostrzeżenie"
+        critical: "\U0001F534 Krytyczny"
+      device_type:
+        mobile: Mobile
+        tablet: Tablet
+        bot: Bot
+        desktop: Desktop
+    nav:
+      sections:
+        core: Podstawowe
+        health: Stan systemu
+        diagnostics: Diagnostyka
+        insights: Analiza
+      overview: Przegląd
+      errors: Błędy
+      analytics: Analityka
+      platform: Platforma
+      cache: Cache
+      jobs: Jobs
+      database: Baza danych
+      rate_limits: Limity żądań
+      actioncable: ActionCable
+      activestorage: ActiveStorage
+      llm: LLM
+      n_plus_one: Zapytania N+1
+      deprecations: Deprecations
+      swallowed: Wyciszone
+      diagnostic_dumps: Diagnostyka
+      storms: Sztormy
+      correlation: Korelacja
+      releases: Releases
+      user_impact: Wpływ na użytkowników
+      settings: Ustawienia
+    sidebar:
+      back_to_app: Powrót do %{app}
+      back_to_app_home: Powrót na stronę główną aplikacji
+    navbar:
+      search_placeholder: Szukaj błędów... /
+      toggle_sidebar: Przełącz panel boczny (S)
+      toggle_theme: Przełącz motyw
+      keyboard_shortcuts_title: Skróty klawiszowe (?)
+      all_applications: Wszystkie aplikacje
+      language: Język
+      choose_language: Wybierz język panelu
+      all_apps: Wszystkie aplikacje (%{count})
+    banners:
+      credentials:
+        label: 'Ostrzeżenie bezpieczeństwa:'
+        body_html: Używasz domyślnych danych logowania (gandalf/youshallnotpass).
+          Ustaw zmienne środowiskowe <code>ERROR_DASHBOARD_USER</code> i <code>ERROR_DASHBOARD_PASSWORD</code>
+          albo skonfiguruj <code>authenticate_with</code> w swoim inicjalizatorze.
+        dismiss: Ukryj na czas tej sesji
+      storm:
+        active_title: Trwa sztorm błędów
+        recent_title: Ochrona przed sztormem zadziałała niedawno
+        active_paused: "(od %{time}) — zadziałała ochrona przed sztormem. Wystąpienia
+          są liczone dokładnie; zapisywanie szczegółów wstrzymane (tryb samego liczenia)."
+        active_sampled: "(od %{time}) — zadziałała ochrona przed sztormem. Wystąpienia
+          są liczone dokładnie; kontekst zapisywany wyrywkowo."
+        recent_body: "(zakończony %{time}) — %{count} wystąpień zapisano jako dokładne
+          liczby z wyrywkowymi szczegółami."
+        view_history: Zobacz historię sztormów
+    footer:
+      built_with: Zbudowano z
+      credit_html: Zbudowane z ❤️ przez %{author}
+    shortcuts:
+      title: Skróty klawiszowe
+      refresh: Odśwież stronę
+      focus_search: Przejdź do wyszukiwania
+      analytics: Analityka
+      toggle_sidebar: Przełącz panel boczny
+      show_shortcuts: Pokaż skróty
+    errors:
+      index:
+        title: Błędy
+        last_updated_html: 'Ostatnia aktualizacja: %{time}'
+        live: Na żywo
+        summary:
+          errors_html:
+            one: "%{value} błąd"
+            other: "%{value} błędu"
+            few: "%{value} błędy"
+            many: "%{value} błędów"
+          unresolved_html: "%{value} nierozwiązanych"
+          all_time: Od początku
+        spike:
+          critical: Wykryto krytyczny skok błędów!
+          high: Wykryto znaczny skok błędów
+          elevated: Podwyższona aktywność błędów
+          today:
+            one: 'Dzisiaj: %{count} błąd'
+            other: 'Dzisiaj: %{count} błędu'
+            few: 'Dzisiaj: %{count} błędy'
+            many: 'Dzisiaj: %{count} błędów'
+          average: "(średnia z 7 dni: %{avg})"
+          multiplier: "%{multiplier}x normalnego poziomu"
+        filters:
+          search_placeholder: Szukaj błędów...
+          more: Więcej filtrów
+          apply: Zastosuj filtry
+          clear: Wyczyść
+          clear_all: Wyczyść wszystko
+          active_label: 'Filtry:'
+          status:
+            all: Wszystkie
+            unresolved: Nierozwiązane
+            resolved: Rozwiązane
+            assigned: Przypisane
+            reopened: Otwarte ponownie
+          severity:
+            any: Dowolna waga
+          all_apps: Wszystkie aplikacje
+          all_platforms: Wszystkie platformy
+          all_types: Wszystkie typy
+          all_timeframes: Od początku
+          all_frequencies: Wszystkie częstotliwości
+          all_priorities: Wszystkie priorytety
+          all_assignments: Wszystkie przypisania
+          all_assignees: Wszyscy przypisani
+          unassigned: Nieprzypisane
+          assigned: Przypisane
+          unresolved_only: Tylko nierozwiązane
+          hide_snoozed: Ukryj odłożone
+          hide_muted: Ukryj wyciszone
+          timeframes:
+            last_hour: Ostatnia godzina
+            today: Dzisiaj
+            yesterday: Wczoraj
+            last_7_days: Ostatnie 7 dni
+            last_30_days: Ostatnie 30 dni
+            last_90_days: Ostatnie 90 dni
+          frequencies:
+            once: Raz
+            few: 2–9 razy
+            frequent: 10–99 razy
+            very_frequent: 100+ razy
+            recurring: Powtarzające się
+          chips:
+            search: 'Szukaj: %{value}'
+            application: 'Aplikacja: %{value}'
+            platform: 'Platforma: %{value}'
+            error_type: 'Typ: %{value}'
+            severity: 'Waga: %{value}'
+            timeframe: 'Okres: %{value}'
+            frequency: 'Częstotliwość: %{value}'
+            status: 'Status: %{value}'
+            priority: 'Priorytet: %{value}'
+            remove: Usuń filtr
+        columns:
+          error: Błąd
+          status: Status
+          events: Zdarzenia
+          users: Użytkownicy
+          last_seen: Ostatnio widziany
+          application: Aplikacja
+          platform: Platforma
+          select_all: Zaznacz wszystkie błędy
+        batch:
+          selected:
+            one: Wybrano %{count}
+            other: Wybrano %{count}
+            few: Wybrano %{count}
+            many: Wybrano %{count}
+          resolve: Rozwiąż
+          delete: Usuń
+          confirm_delete: Czy na pewno chcesz usunąć wybrane błędy?
+        pagination: Pokazano %{from}–%{to} z %{count} błędów
+        empty:
+          filtered_title: Żaden błąd nie pasuje do filtrów
+          filtered_message: Spróbuj zmienić wyszukiwanie lub kryteria filtrowania.
+          filtered_cta: Wyczyść wszystkie filtry
+          clear_title: Wszystko czyste!
+          clear_message: Nie zapisano jeszcze żadnych błędów. Twoja aplikacja działa
+            poprawnie. Błędy pojawią się tutaj automatycznie.
+      show:
+        page_title: 'Błąd #%{id}'
+        breadcrumb_errors: Błędy
+        hero:
+          reopened: Otwarty ponownie
+          occurrences_html:
+            one: "%{value} wystąpienie"
+            other: "%{value} wystąpienia"
+            few: "%{value} wystąpienia"
+            many: "%{value} wystąpień"
+          user_html: Użytkownik %{value}
+          first_seen_html: Pierwsze wystąpienie %{time}
+          last_seen_html: Ostatnio widziany %{time}
+        actions:
+          resolve: Rozwiąż
+          assign: Przypisz
+          copy_for_llm: Skopiuj dla LLM
+          ai_help: Pomoc AI
+          export_json: Eksportuj JSON
+        tabs:
+          details: Szczegóły
+          context: Kontekst
+          history: Historia
+          issues: Zgłoszenia
+        coverage:
+          active_label: Pokrycie aktywne
+          active_body: rozwiń kod źródłowy, aby zobaczyć wykonane linie
+          inactive_label: Pokrycie ścieżek kodu
+          inactive_body: włącz, aby zobaczyć wykonane linie
+          enable: Włącz
+          disable: Wyłącz
+        baselines:
+          title: Statystyki poziomu bazowego
+          anomaly_label: 'Anomalia:'
+          anomaly_body: "%{sigma}σ powyżej poziomu bazowego (%{level})"
+          levels:
+            elevated: PODWYŻSZONY
+            high: WYSOKI
+            critical: KRYTYCZNY
+          hourly: Godzinowo
+          daily: Dziennie
+          weekly: Tygodniowo
+          mean: 'Średnia:'
+          std_dev: 'σ:'
+          percentile_95: 'P95:'
+        quick_actions:
+          title: Szybkie akcje
+          view_similar: Zobacz podobne błędy
+          view_user_errors: Zobacz błędy użytkownika
+          view_platform_errors: Zobacz błędy %{platform}
+          analytics: Analityka
+      variables:
+        local_title: Zmienne lokalne
+        local_hint: Zmienne z ramki stosu, w której podniesiono wyjątek
+        instance_title: Zmienne instancji
+        instance_hint_html: Zmienne instancji z %{klass}, gdzie podniesiono wyjątek
+        instance_hint_generic: Zmienne instancji z obiektu, w którym podniesiono wyjątek
+        captured:
+          one: "%{count} przechwycona"
+          other: "%{count} przechwyconej"
+          few: "%{count} przechwycone"
+          many: "%{count} przechwyconych"
+        column_variable: Zmienna
+        column_type: Typ
+        column_value: Wartość
+        filtered: "[ODFILTROWANE]"
+        truncated: skrócone
+      deprecations:
+        title: Ostrzeżenia o przestarzałym kodzie
+        hint: Ostrzeżenia Rails o przestarzałym kodzie wykryte podczas tego żądania
+        column_warning: Ostrzeżenie
+        column_source: Źródło
+        footer_tip: Napraw przestarzały kod przed aktualizacją Rails, aby uniknąć
+          niezgodnych zmian.
+        upgrade_guide: Przewodnik po aktualizacji Rails
+      n_plus_one:
+        title: Wykrywanie zapytań N+1
+        hint: Powtarzające się wzorce zapytań wykryte w breadcrumbs SQL tego żądania
+        patterns:
+          one: "%{count} wzorzec"
+          other: "%{count} wzorca"
+          few: "%{count} wzorce"
+          many: "%{count} wzorców"
+        column_repeats: Powtórzenia
+        column_query: Wzorzec zapytania
+        column_total_time: Czas całkowity
+        fingerprint: 'Odcisk: %{fingerprint}'
+        tip_preload_html: 'Wskazówka: wczytaj wcześniej %{table} przez %{includes}
+          lub %{preload}'
+        tip_generic_html: 'Wskazówka: użyj %{includes} lub %{preload}, aby zachłannie
+          wczytać powiązania'
+        eager_loading_guide: Przewodnik po eager loading w Rails
+      cache_health:
+        title: Stan cache
+        operations:
+          one: "%{count} operacja"
+          other: "%{count} operacji"
+          few: "%{count} operacje"
+          many: "%{count} operacji"
+        hint: Analiza aktywności cache na podstawie breadcrumbs tego żądania
+        reads: Odczyty
+        writes: Zapisy
+        hit_rate: Wskaźnik trafień
+        hits:
+          one: "%{count} trafienie"
+          other: "%{count} trafienia"
+          few: "%{count} trafienia"
+          many: "%{count} trafień"
+        misses:
+          one: "%{count} chybienie"
+          other: "%{count} chybienia"
+          few: "%{count} chybienia"
+          many: "%{count} chybień"
+        unknown_status:
+          one: "%{count} odczyt o nieznanym statusie trafienia (starsze breadcrumbs)"
+          other: "%{count} odczytu o nieznanym statusie trafienia (starsze breadcrumbs)"
+          few: "%{count} odczyty o nieznanym statusie trafienia (starsze breadcrumbs)"
+          many: "%{count} odczytów o nieznanym statusie trafienia (starsze breadcrumbs)"
+        total_time_html: 'Łączny czas cache: %{duration}'
+        slowest_html: 'Najwolniejsza: %{duration}'
+        low_hit_rate: Niski wskaźnik trafień — przejrzyj strukturę kluczy cache i
+          ustawienia TTL.
+        moderate_hit_rate: Umiarkowany wskaźnik trafień — rozważ rozgrzewanie cache
+          lub zmianę czasu wygaśnięcia.
+        caching_guide: Przewodnik po cache w Rails
+      breadcrumbs:
+        title: Breadcrumbs
+        events:
+          one: "%{count} zdarzenie"
+          other: "%{count} zdarzenia"
+          few: "%{count} zdarzenia"
+          many: "%{count} zdarzeń"
+        hint: Ślad aktywności prowadzącej do tego błędu
+        column_category: Kategoria
+        column_message: Komunikat
+        column_duration: Czas trwania
+      patterns:
+        title: Wzorce występowania
+        window: "(ostatnie %{days} dni)"
+        pattern_type: Typ wzorca
+        types:
+          business_hours:
+            label: Wzorzec godzin pracy
+            description: Szczyt błędów przypada na godziny pracy (9:00–17:00), co
+              sugeruje związek z aktywnością użytkowników
+          night:
+            label: Wzorzec nocny
+            description: Szczyt błędów przypada na godziny nocne (00:00–06:00), możliwe
+              że przez zadania w tle lub procesy automatyczne
+          weekend:
+            label: Wzorzec weekendowy
+            description: Większość błędów występuje w weekendy, co sugeruje specyficzny
+              sposób użytkowania w te dni
+          uniform:
+            label: Wzorzec równomierny
+            description: Błędy rozłożone równomiernie w ciągu doby, bez wyraźnego
+              wzorca
+          none:
+            label: Nie wykryto wzorca
+            description: Za mało danych, aby ustalić wyraźny wzorzec występowania
+        strength: Wyrazistość wzorca
+        strengths:
+          strong:
+            label: Wyraźny wzorzec
+            description: Błędy silnie skupione w określonych godzinach
+          moderate:
+            label: Umiarkowany wzorzec
+            description: Pewne skupienie w określonych godzinach
+          weak:
+            label: Słaby wzorzec
+            description: Błędy rozłożone dość równomiernie
+        heatmap_title: Mapa cieplna rozkładu godzinowego
+        heatmap_legend: Ciemniejsze komórki = więcej błędów. Czerwona ramka oznacza
+          godziny szczytu (>%{multiplier}x średniej).
+        heatmap_cell:
+          one: "%{hour} — %{count} błąd"
+          other: "%{hour} — %{count} błędu"
+          few: "%{hour} — %{count} błędy"
+          many: "%{hour} — %{count} błędów"
+        peak_hours: 'Godziny szczytu:'
+        peak_hours_hint: W tych godzinach wskaźnik błędów ponad dwukrotnie przekracza
+          średnią. Warto obserwować wdrożenia i obciążenie w tym czasie.
+        bursts_title: Serie błędów
+        bursts_window: "(ostatnie %{days} dni)"
+        bursts_hint: Serie błędów to szybkie sekwencje, w których wiele błędów występuje
+          w ciągu kilku minut. Może to wskazywać na awarie kaskadowe lub skoki obciążenia.
+        column_start_time: Czas rozpoczęcia
+        column_duration: Czas trwania
+        column_error_count: Liczba błędów
+        column_intensity: Intensywność
+        burst_duration: "%{minutes} min"
+        burst_duration_seconds: "(%{seconds} s)"
+        burst_errors_html:
+          one: "%{value} błąd"
+          other: "%{value} błędu"
+          few: "%{value} błędy"
+          many: "%{value} błędów"
+        intensity_high: Wysoka (20+ błędów)
+        intensity_medium: Średnia (10–19 błędów)
+        intensity_low: Niska (5–9 błędów)
+        bursts_truncated: Pokazano %{shown} z %{total} wykrytych serii
+        recommendation_label: 'Zalecenie:'
+        recommendation_intro: 'Wykryto wiele serii błędów. Sprawdź:'
+        recommendation_deploys: Niedawne wdrożenia lub zmiany konfiguracji w czasie
+          serii
+        recommendation_load: Skoki obciążenia lub charakter ruchu
+        recommendation_cascades: Awarie kaskadowe wynikające z powiązanych błędów
+        recommendation_jobs: Awarie zadań w tle lub sztormy ponowień
+        empty: Nie wykryto wzorców występowania ani serii. Analiza może wymagać więcej
+          danych.
+      providers:
+        github: GitHub
+        gitlab: GitLab
+        bitbucket: Bitbucket
+        jira: Jira
+        linear: Linear
+        generic: Platforma
+        generic_lowercase: platformie
+      discussion:
+        title: Dyskusja
+        activity_log: Dziennik aktywności
+        reply_on: Odpowiedz na %{provider}
+        start_on: Rozpocznij dyskusję na %{provider}
+        empty: Brak komentarzy. Bądź pierwszą osobą, która omówi ten błąd na %{provider}.
+      issue_section:
+        title: System zgłoszeń
+        view_issue: Zobacz zgłoszenie
+        linked: Powiązane
+        issue_reference: "%{provider} #%{number}"
+        states:
+          open: Otwarte
+          closed: Zamknięte
+          merged: Scalone
+        assignees: Przypisani
+        unassigned: Nieprzypisane
+        labels: Etykiety
+        no_labels: Brak etykiet
+        create_new: Utwórz nowe zgłoszenie
+        create_issue: Utwórz zgłoszenie w %{provider}
+        configure_html: Skonfiguruj %{token} i %{url} w swoim inicjalizatorze, aby
+          włączyć tworzenie zgłoszeń.
+        link_existing: Powiąż istniejące zgłoszenie
+        link: Powiąż
+      cascades:
+        title: Kaskady błędów
+        hint: Zależności przyczynowe między błędami
+        triggered_by: Wywołany przez
+        triggered_by_hint: "(błędy powodujące ten)"
+        triggers: Wywołuje
+        triggers_hint: "(błędy spowodowane przez ten)"
+        column_error_type: Typ błędu
+        column_message: Komunikat
+        column_probability: Prawdopodobieństwo
+        column_frequency: Częstotliwość
+        column_avg_delay: Śr. opóźnienie
+        view: Zobacz
+        footnote: Wzorce kaskad pokazują zależności przyczynowe. Wysokie prawdopodobieństwo
+          (≥%{probability}%) i częstotliwość (≥%{frequency}) wskazują na silne kaskady.
+      llm_summary:
+        title: Wywołania LLM
+        hint: Zagregowane z breadcrumbs żądania
+        calls: Wywołania
+        tokens: Tokeny
+        cost: Koszt
+        input: Wejście
+        output: Wyjście
+        tool_calls: Wywołania narzędzi
+        total_time: Czas całkowity
+        errors: Błędy
+        by_model: Wg modelu
+        failed_calls:
+          one: "%{count} nieudane wywołanie — szczegóły w śladzie breadcrumbs."
+          other: "%{count} nieudanego wywołania — szczegóły w śladzie breadcrumbs."
+          few: "%{count} nieudane wywołania — szczegóły w śladzie breadcrumbs."
+          many: "%{count} nieudanych wywołań — szczegóły w śladzie breadcrumbs."
+      timeline:
+        title: Oś czasu
+        hint: Niedawne powiązane błędy
+        current_error: Bieżący błąd
+        user: 'Użytkownik: %{id}'
+        resolved: Rozwiązany
+        notes_label: 'Notatki o rozwiązaniu:'
+        notes_tooltip: 'Notatki o rozwiązaniu: %{notes}'
+      user_errors_table:
+        column_rank: Pozycja
+        column_user: Użytkownik
+        column_error_type_count: Różne typy błędów
+        column_error_count: Liczba błędów
+        column_percentage: Odsetek
+        column_error_types: Typy błędów
+        column_actions: Akcje
+        types:
+          one: "%{count} typ"
+          other: "%{count} typu"
+          few: "%{count} typy"
+          many: "%{count} typów"
+        more:
+          one: "+%{count} więcej"
+          other: "+%{count} więcej"
+          few: "+%{count} więcej"
+          many: "+%{count} więcej"
+        view_errors: Zobacz błędy
+      co_occurring:
+        title: Współwystępujące błędy
+        badge: Wzorce czasowe
+        hint: Błędy występujące w ciągu %{minutes} minut od tego błędu
+        column_error_type: Typ błędu
+        column_message: Komunikat
+        column_platform: Platforma
+        column_frequency: Częstotliwość
+        column_avg_delay: Śr. opóźnienie
+        times:
+          one: "%{count} raz"
+          other: "%{count} razy"
+          few: "%{count} razy"
+          many: "%{count} razy"
+        before: "%{duration} przed"
+        after: "%{duration} po"
+        simultaneous: jednocześnie
+        view: Zobacz
+      modals:
+        cancel: Anuluj
+        name_placeholder: np. Jan Kowalski
+        resolve:
+          title: Oznacz błąd jako rozwiązany
+          name_label: Twoje imię
+          name_hint: Kto rozwiązuje ten błąd?
+          reference_label: Odnośnik (opcjonalnie)
+          reference_placeholder: 'np. JIRA-123, PR #456, GitHub Issue #789'
+          reference_hint: Odnośnik do zgłoszenia, PR-a lub zadania
+          notes_label: Notatki o rozwiązaniu (opcjonalnie)
+          notes_placeholder: Opisz, co zrobiono, aby naprawić ten błąd...
+          notes_hint: Co zrobiono, aby rozwiązać ten błąd?
+          submit: Oznacz jako rozwiązany
+        assign:
+          title: Przypisz błąd
+          label: Przypisz do
+          hint: Kto powinien zbadać ten błąd?
+          submit: Przypisz
+        priority:
+          title: Zmień priorytet
+          label: Poziom priorytetu
+          current: 'Obecny: %{value}'
+          submit: Zmień priorytet
+        snooze:
+          title: Odłóż błąd
+          label: Czas odłożenia
+          hint: Ukryj ten błąd w aktywnych widokach
+          reason_label: Powód (opcjonalnie)
+          reason_placeholder: Dlaczego odkładasz ten błąd?
+          reason_hint: Powód zostanie dodany jako komentarz
+          submit: Odłóż
+          hours:
+            one: "%{count} godzina"
+            other: "%{count} godziny"
+            few: "%{count} godziny"
+            many: "%{count} godzin"
+          days:
+            one: "%{count} dzień"
+            other: "%{count} dnia"
+            few: "%{count} dni"
+            many: "%{count} dni"
+          weeks:
+            one: "%{count} tydzień"
+            other: "%{count} tygodnia"
+            few: "%{count} tygodnie"
+            many: "%{count} tygodni"
+          hours_with_equivalent: "%{hours} (%{equivalent})"
+        mute:
+          title: Wycisz powiadomienia
+          description: Wyciszone błędy nadal pojawiają się w panelu, ale nie wyzwalają
+            żadnych powiadomień (Slack, e-mail, Discord, PagerDuty, webhooks).
+          name_label: Twoje imię (opcjonalnie)
+          reason_label: Powód (opcjonalnie)
+          reason_placeholder: Dlaczego wyciszasz ten błąd?
+          reason_hint: Powód zostanie dodany jako komentarz
+          submit: Wycisz powiadomienia
+      request_context:
+        title: Kontekst żądania
+        url: 'URL żądania:'
+        hostname: 'Nazwa hosta:'
+        content_type: 'Typ treści:'
+        duration: 'Czas trwania żądania:'
+        params: 'Parametry żądania:'
+        user_agent: 'User Agent:'
+        ip_address: 'Adres IP:'
+        replay: 'Odtwórz żądanie:'
+        raw_user_agent: Surowy User Agent
+        duration_seconds: "%{value} s"
+        duration_ms: "%{value} ms"
+        copy_curl: Skopiuj jako curl
+        copy_curl_title: Skopiuj polecenie curl do schowka
+        copy_rspec: Skopiuj jako RSpec
+        copy_rspec_title: Skopiuj request spec RSpec do schowka
+      similar_errors:
+        title: Podobne błędy
+        badge: Dopasowanie rozmyte
+        hint: Błędy o podobnych backtrace i komunikatach (podobieństwo %{threshold}%+)
+        column_similarity: Podobieństwo
+        column_error_type: Typ błędu
+        column_message: Komunikat
+        column_platform: Platforma
+        column_occurrences: Wystąpienia
+        occurrences:
+          one: "%{count}x"
+          other: "%{count}x"
+          few: "%{count}x"
+          many: "%{count}x"
+        view: Zobacz
+      source_code:
+        view_on: Zobacz na %{host}
+        view_source: Zobacz kod
+        coverage_legend_html: Pokrycie aktywne — %{executed} = wykonane, %{not_executed}
+          = niewykonane
+        coverage_green: zielony
+        coverage_gray: szary
+        read_failed: 'Nie udało się odczytać kodu: %{message}'
+      ai_help:
+        title: Pomoc AI
+        providers:
+          openai: OpenAI
+          anthropic: Anthropic
+        close: Zamknij pomoc AI
+        empty: Zapytaj o przyczynę źródłową, kroki odtworzenia, prawdopodobne poprawki
+          lub co sprawdzić dalej.
+        question_label: Pytanie
+        question_placeholder: Jaka jest prawdopodobna przyczyna źródłowa?
+        ask: Zapytaj
+      sidebar:
+        title: Metadane
+        occurrence_count: Liczba wystąpień
+        occurred_times:
+          one: Ten błąd wystąpił %{count} raz
+          other: Ten błąd wystąpił %{count} razy
+          few: Ten błąd wystąpił %{count} razy
+          many: Ten błąd wystąpił %{count} razy
+        first_seen: Pierwsze wystąpienie
+        last_seen: Ostatnio widziany
+        jump_to_timeline: Przejdź do osi czasu
+        severity_level: Poziom wagi
+        view_all_severity: Zobacz wszystkie błędy o wadze %{severity}
+        severity_badges:
+          critical: KRYTYCZNY
+          high: WYSOKI
+          medium: ŚREDNI
+          low: NISKI
+        platform: Platforma
+        view_all_platform: Zobacz wszystkie błędy %{platform}
+        user: Użytkownik
+        view_user_errors: Zobacz wszystkie błędy tego użytkownika
+        user_id: 'ID: %{id}'
+        user_id_label: 'ID użytkownika: %{id}'
+        guest: Gość / bez uwierzytelnienia
+        issue_tracking_linked_html: Status, przypisanie i priorytet są zarządzane
+          przez %{link}.
+        issue_tracking_link_text: powiązane zgłoszenie
+        issue_tracking_unlinked: Status, przypisanie i priorytet są zarządzane przez
+          Twój system zgłoszeń. Powiąż zgłoszenie, aby zobaczyć szczegóły.
+        workflow_status: Status w procesie
+        resolved: Rozwiązany
+        unresolved: Nierozwiązany
+        reopened: Otwarty ponownie
+        assigned_to: Przypisany do
+        assign: Przypisz
+        remove_assignment: Usunąć przypisanie?
+        priority: Priorytet
+        snooze: Odłóż
+        snoozed: Odłożony
+        snoozed_until_html: Do %{time}
+        unsnooze: Anuluj odłożenie
+        notifications: Powiadomienia
+        muted: Wyciszony
+        muted_by: Przez %{name}
+        muted_since_html: Od %{time}
+        mute: Wycisz
+        unmute: Wyłącz wyciszenie
+        resolved_by: Rozwiązany przez
+        reference: Odnośnik
+        resolution_notes: Notatki o rozwiązaniu
+        error_id: ID błędu
+        copy_error_id: Skopiuj ID błędu
+        environment:
+          title: Środowisko
+          hint: Kontekst wykonania w chwili błędu
+          app_version: 'Wersja aplikacji:'
+          view_all_version: Zobacz wszystkie błędy w %{version}
+          git_sha: 'Git SHA:'
+          rails: 'Rails:'
+          ruby: 'Ruby:'
+          environment: 'Środowisko:'
+          server: 'Serwer:'
+          database: 'Baza danych:'
+          key_gems: 'Kluczowe gems:'
+        health:
+          title: Stan systemu
+          hint: Stan wykonania w chwili błędu
+          memory_rss: 'Pamięć (RSS):'
+          process_swap: 'Swap procesu:'
+          peak_rss: 'Szczytowy RSS:'
+          os_threads: 'Wątki systemu:'
+          threads: 'Wątki:'
+          file_descriptors: 'Deskryptory plików:'
+          load_average: 'Średnie obciążenie:'
+          system_memory: 'Pamięć systemu:'
+          system_swap: 'Swap systemu:'
+          tcp_connections: 'Połączenia TCP:'
+          gc_live_objects: 'Żywe obiekty GC:'
+          major_gc_runs: 'Główne przebiegi GC:'
+          last_gc: 'Ostatni GC:'
+          connection_pool: 'Pula połączeń:'
+          puma_threads: 'Wątki Puma:'
+          job_queue: 'Kolejka zadań (%{adapter}):'
+          vm_cache_invalidations: 'Unieważnienia cache VM:'
+          vm_cache_misses: 'Chybienia cache VM:'
+          shape_cache_size: 'Rozmiar cache shape:'
+          yjit_compiled: 'Skompilowane YJIT:'
+          yjit_invalidations: 'Unieważnienia YJIT:'
+          yjit_code_size: 'Rozmiar kodu YJIT:'
+          yjit_compile_time: 'Czas kompilacji YJIT:'
+          ruby_threads: "(Ruby: %{count})"
+      info:
+        new_badge: NOWY
+        new_tooltip: Błąd wystąpił w ciągu ostatniej godziny
+        reopened: Otwarty ponownie
+        reopened_tooltip: Wcześniej rozwiązany, powtórzył się %{time}
+        copy_error_type: Skopiuj typ błędu
+        message_label: 'Komunikat błędu:'
+        copy_message: Skopiuj komunikat błędu
+        copy: Kopiuj
+        cause_chain:
+          title: Łańcuch przyczyn wyjątku
+          caused_by: 'Spowodowany przez:'
+          caused_by_indexed: 'Spowodowany przez (#%{index}):'
+          backtrace: Backtrace
+        backtrace:
+          label: 'Backtrace:'
+          frame_counts: "(%{app} Twój kod, %{framework} framework/gems)"
+          copy_full: Skopiuj pełny backtrace
+          copy_full_title: Skopiuj pełny backtrace
+          your_code: Twój kod
+          framework_code: Kod frameworka i gems
+          frames:
+            one: "%{count} ramka"
+            other: "%{count} ramki"
+            few: "%{count} ramki"
+            many: "%{count} ramek"
+          click_to_expand: "(kliknij, aby rozwinąć)"
+          view_source: Zobacz kod
+          none: Backtrace niedostępny
+      row:
+        new_badge: NOWY
+        reopened: Otwarty ponownie
+        view_user_errors: Zobacz wszystkie błędy użytkownika %{user}
+        status:
+          unresolved: nierozwiązany
+          resolved: rozwiązany
+          in_progress: w toku
+          investigating: badany
+          wont_fix: nie będzie naprawiany
+          assigned: przypisany
+          snoozed: odłożony
+          muted: wyciszony
+      stats:
+        today: Dzisiaj
+        this_week: W tym tygodniu
+        unresolved: Nierozwiązane
+        resolved: Rozwiązane
+        reopened: Otwarte ponownie
+      pages:
+        percent: "%{value}%"
+        column_errors: Błędy
+        column_occurrences: Wystąpienia
+        column_last_seen: Ostatnio widziany
+        total_occurrences: Łącznie wystąpień
+        affected_errors: Dotknięte błędy
+        more_errors:
+          one: "+%{count} więcej"
+          other: "+%{count} więcej"
+          few: "+%{count} więcej"
+          many: "+%{count} więcej"
+        none_in_last_days: W ciągu ostatnich %{days} dni nie wykryto żadnych wyników.
+        how_breadcrumbs_html: Breadcrumbs muszą być włączone (%{option})
+      deprecations_page:
+        title: Ostrzeżenia o przestarzałym kodzie
+        empty_title: Nie znaleziono ostrzeżeń o przestarzałym kodzie
+        empty_body: W ciągu ostatnich %{days} dni nie wykryto ostrzeżeń o przestarzałym
+          kodzie w breadcrumbs błędów.
+        how_title: 'Jak przechwytywane są ostrzeżenia o przestarzałym kodzie:'
+        how_captured: Ostrzeżenia Rails o przestarzałym kodzie są automatycznie przechwytywane
+          jako breadcrumbs
+        how_appear: Ostrzeżenia pojawiają się tutaj, gdy błąd wystąpi podczas żądania
+          z ostrzeżeniami o przestarzałym kodzie
+        unique_warnings: Unikalne ostrzeżenia
+        all_title: Wszystkie ostrzeżenia o przestarzałym kodzie
+        column_warning: Ostrzeżenie
+        column_source: Źródło
+      n_plus_one_page:
+        title: Wzorce zapytań N+1
+        empty_title: Nie znaleziono wzorców zapytań N+1
+        empty_body: W ciągu ostatnich %{days} dni nie wykryto wzorców zapytań N+1
+          w breadcrumbs błędów.
+        how_title: 'Jak działa wykrywanie N+1:'
+        how_captured: Zapytania SQL są przechwytywane jako breadcrumbs podczas żądań,
+          które kończą się błędem
+        how_threshold_html: Zapytania o tym samym kształcie występujące >= %{threshold}
+          razy są oznaczane
+        how_default:
+          one: Domyślny próg to %{count} powtórzenie
+          other: Domyślny próg to %{count} powtórzenia
+          few: Domyślny próg to %{count} powtórzenia
+          many: Domyślny próg to %{count} powtórzeń
+        unique_patterns: Unikalne wzorce
+        all_title: Wszystkie wzorce zapytań N+1
+        duration_ms: "%{value} ms"
+        footer_tip_html: Użyj %{includes}, %{preload} lub %{eager_load}, aby naprawić
+          zapytania N+1.
+      swallowed_page:
+        title: Wyciszone wyjątki
+        empty_title: Nie wykryto wyciszonych wyjątków
+        empty_body: W ciągu ostatnich %{days} dni nie wykryto wyjątków o współczynniku
+          przechwyceń powyżej %{threshold}%.
+        how_title: 'Jak wykrywane są wyciszone wyjątki:'
+        how_raise: TracePoint(:raise) liczy każdy podniesiony wyjątek
+        how_rescue: TracePoint(:rescue) liczy każdy przechwycony wyjątek
+        how_ratio: Wysoki stosunek przechwyceń do podniesień = prawdopodobnie wyciszony
+          (po cichu przechwycony)
+        how_requires_html: Wymaga Ruby 3.3+ oraz %{option}
+        swallowed_patterns: Wyciszone wzorce
+        total_rescues: Łącznie przechwyceń
+        total_raises: Łącznie podniesień
+        all_title: Wzorce wyciszonych wyjątków
+        column_exception_class: Klasa wyjątku
+        column_raise_location: Miejsce podniesienia
+        column_rescue_location: Miejsce przechwycenia
+        column_raises: Podniesienia
+        column_rescues: Przechwycenia
+        column_ratio: Stosunek
+        view_unrescued: Zobacz nieprzechwycone błędy %{exception}, które trafiły do
+          error_log
+        footer_tip: Wyciszone wyjątki są podnoszone, a następnie po cichu przechwytywane.
+          Mogą ukrywać prawdziwe błędy.
+      rack_attack_page:
+        title: Zdarzenia limitu żądań
+        missing_title: Rack Attack nie jest zainstalowany
+        missing_body_html: Śledzenie jest włączone, ale gem %{gem} nie jest załadowany
+          w tej aplikacji — więc żadne zdarzenia nie są zapisywane. Dodaj go do Gemfile
+          i skonfiguruj co najmniej jedną regułę, a zdarzenia pojawią się tutaj.
+        empty_title: Nie znaleziono zdarzeń limitu żądań
+        empty_body: W ciągu ostatnich %{days} dni nie zapisano żadnych zdarzeń throttle,
+          blocklist ani track od Rack Attack.
+        how_title: 'Jak działa śledzenie Rack Attack:'
+        how_enabled_html: Śledzenie Rack Attack musi być włączone (%{option})
+        how_installed: Rack Attack musi być zainstalowany i skonfigurowany w Twojej
+          aplikacji
+        how_recorded: Zdarzenia throttle, blocklist i track są zapisywane za każdym
+          razem, gdy reguła zadziała — błąd nie jest wymagany
+        how_buffered: Zdarzenia są buforowane i zapisywane co %{seconds} s, więc odczekaj
+          chwilę, zanim się pojawią
+        unique_rules: Unikalne reguły
+        total_events: Łącznie zdarzeń
+        unique_ips: Unikalne adresy IP
+        all_title: Zdarzenia limitu żądań wg reguły
+        column_rule: Reguła
+        column_type: Typ
+        column_count: Liczba
+        column_ips: Adresy IP
+        column_top_path: Najczęstsza ścieżka
+        match_type:
+          blocklist: blocklist
+          throttle: throttle
+          track: track
+        footer_tip: Duża liczba może wskazywać na nadużycia lub źle skonfigurowane
+          reguły.
+        docs: Dokumentacja Rack Attack
+      diagnostic_dumps_page:
+        title: Zrzuty diagnostyczne
+        capture: Utwórz zrzut
+        empty_title: Brak zrzutów diagnostycznych
+        empty_body: Utwórz migawkę stanu systemu na żądanie na potrzeby debugowania.
+        how_title: 'Jak działają zrzuty diagnostyczne:'
+        how_capture_html: Kliknij %{button} powyżej lub uruchom %{command}
+        how_captures: 'Przechwytuje: środowisko, statystyki GC, wątki, pulę połączeń,
+          pamięć, kolejkę zadań'
+        how_saved: Każdy zrzut jest zapisywany w bazie danych do porównań historycznych
+        how_use: Używaj zrzutów do badania problemów na produkcji lub weryfikacji
+          stanu systemu
+        total_dumps: Łącznie zrzutów
+        threads_latest: Wątki (ostatni)
+        memory_latest: Pamięć (ostatni)
+        history_title: Historia zrzutów
+        details: Szczegóły
+        pid: 'PID: %{pid}'
+        uptime: 'Czas działania: %{minutes} min'
+        section_environment: Środowisko
+        section_system_health: Stan systemu
+        section_gc: GC
+        section_job_queue: Kolejka zadań
+        env_versions: Ruby %{ruby} / Rails %{rails}
+        memory_mb: "%{value} MB"
+        threads:
+          one: "%{count} wątek"
+          other: "%{count} wątku"
+          few: "%{count} wątki"
+          many: "%{count} wątków"
+        pool: 'Pula: %{busy}/%{size}'
+        gc_stats: 'Żywe: %{live} / Główne GC: %{major}'
+        jobs_failed: 'nieudane: %{count}'
+        footer_tip_html: 'Zrzuty możesz też tworzyć przez: %{command}'
+        footer_note_html: 'Dodaj notatkę: %{command}'
+        unknown_short: "?"
+      storms_page:
+        title: Historia sztormów
+        intro_html: Gdy wskaźnik błędów gwałtownie rośnie (nieudane wdrożenie, awaria
+          zależności), ochrona przed sztormem ogranicza własne zapisy gem do bazy
+          danych, aby nigdy nie potęgować incydentu. Wystąpienia są zawsze liczone
+          dokładnie — wyrywkowo zapisywane są tylko szczegóły pojedynczych zdarzeń.
+          Progi konfiguruje się dla każdego procesu przez opcje %{options}.
+        active_html: "%{label} od %{time} — szczytowy wskaźnik %{rate}."
+        active_label: Trwa sztorm
+        empty_title: Nie zarejestrowano sztormów
+        empty_body: Ochrona przed sztormem czuwa. Jeśli tę aplikację kiedyś zaleje
+          potok błędów, epizody pojawią się tutaj z dokładnymi liczbami tego, co odrzucono.
+        column_started: Rozpoczęcie
+        column_duration: Czas trwania
+        column_peak_rate: Szczytowy wskaźnik
+        column_mode: Tryb
+        column_counted: Policzone (dokładnie)
+        column_overflow: Przepełnienie
+        column_top_errors: Najczęstsze błędy
+        active_badge: aktywny
+        mode_count_only: samo liczenie
+        mode_shedding: odrzucanie
+        rate_per_minute: "%{value}/min"
+        occurrence_multiplier: "×%{count}"
+      overview_page:
+        page_title: Panel
+        title: Przegląd
+        last_updated_html: 'Ostatnia aktualizacja: %{time}'
+        alert_banner:
+          one: "%{count} błąd krytyczny/wysoki w ostatniej godzinie"
+          other: "%{count} błędu krytycznego/wysokiego w ostatniej godzinie"
+          few: "%{count} błędy krytyczne/wysokie w ostatniej godzinie"
+          many: "%{count} błędów krytycznych/wysokich w ostatniej godzinie"
+        alert_occurrences:
+          one: "%{count} wystąpienie"
+          other: "%{count} wystąpienia"
+          few: "%{count} wystąpienia"
+          many: "%{count} wystąpień"
+        alert_view: Zobacz
+        error_rate: Wskaźnik błędów
+        error_rate_hint: Błędów na godzinę dzisiaj
+        unresolved: Nierozwiązane
+        unresolved_hint: Oczekują na rozwiązanie
+        resolution_rate: Wskaźnik rozwiązań
+        resolution_hint: Rozwiązano %{resolved} z %{total}
+        affected_users: Dotknięci użytkownicy (dzisiaj)
+        users_change: "%{count} w porównaniu z wczoraj"
+        avg_resolution: Śr. czas rozwiązania
+        avg_resolution_hint: Średni czas do rozwiązania
+        hours_short: "%{value} godz."
+        error_trend: Trend błędów
+        top_errors: Błędy o największym wpływie
+        view_all: Zobacz wszystkie →
+        users:
+          one: "%{count} użytkownik"
+          other: "%{count} użytkownika"
+          few: "%{count} użytkownicy"
+          many: "%{count} użytkowników"
+        platform_health: Stan platform
+        full_comparison: Pełne porównanie →
+        stability_score_html: "%{score}/100"
+        platform_summary: "%{total} błędów · %{critical} krytycznych · %{unresolved}
+          otwartych"
+        correlation_title: Wnioski z korelacji
+        full_analysis: Pełna analiza →
+        problematic_releases: Problematyczne wydania
+        release_errors:
+          one: "%{count} błąd"
+          other: "%{count} błędu"
+          few: "%{count} błędy"
+          many: "%{count} błędów"
+        time_correlated: Skorelowane w czasie
+        correlation_value_html: "%{percent} korelacji (%{strength})"
+        multi_error_users: Użytkownicy z wieloma błędami
+        user_types_html: Użytkownik %{user} · %{types}
+        types:
+          one: "%{count} typ"
+          other: "%{count} typu"
+          few: "%{count} typy"
+          many: "%{count} typów"
+    settings:
+      title: Ustawienia
+      version: v%{version}
+      intro_html: Podgląd bieżącej konfiguracji tylko do odczytu. Zmiany wprowadzaj
+        w %{file} lub przez zmienne środowiskowe.
+      option_count:
+        one: "%{count} opcja"
+        other: "%{count} opcji"
+        few: "%{count} opcje"
+        many: "%{count} opcji"
+      plugins:
+        title: Aktywne wtyczki
+        column_name: Nazwa wtyczki
+        column_version: Wersja
+        column_description: Opis
+        column_status: Status
+        active: Aktywna
+        inactive: Nieaktywna
+        empty: Obecnie nie zarejestrowano żadnych wtyczek. Możesz tworzyć własne wtyczki,
+          aby rozszerzyć funkcjonalność.
+      test_error:
+        title: Test powiadomień
+        description_html: Wyślij błąd testowy przez pełny potok przechwytywania i
+          powiadomień. Tworzy to %{error_class} w dzienniku błędów i wysyła powiadomienia
+          do wszystkich skonfigurowanych kanałów (Slack, Discord, PagerDuty, e-mail,
+          webhooks). Błąd testowy jest wyraźnie oznaczony i można go bezpiecznie rozwiązać
+          lub usunąć.
+        confirm: Spowoduje to utworzenie błędu testowego i wysłanie powiadomień do
+          wszystkich skonfigurowanych kanałów. Kontynuować?
+        submit: Wyślij błąd testowy
+      help:
+        title: Chcesz zmienić te ustawienia?
+        edit_html: Zmień konfigurację w %{file} i uruchom ponownie aplikację.
+        docs_html: Więcej informacji znajdziesz w %{docs}.
+        docs_link: dokumentacji
+      groups:
+        core_features: Funkcje podstawowe
+        multi_app: Obsługa wielu aplikacji
+        user_integration: Integracja z użytkownikami
+        performance: Ustawienia wydajności
+        notifications: Kanały powiadomień
+        analytics: Zaawansowana analityka
+        source_code: Integracja z kodem źródłowym
+        breadcrumbs: Breadcrumbs
+        system_health: Stan systemu
+        enhanced_metrics: Rozszerzone metryki
+        issue_tracking: Śledzenie zgłoszeń
+        deep_debugging: Zaawansowane debugowanie
+        event_tracking: Śledzenie zdarzeń
+        advanced: Konfiguracja zaawansowana
+        internal_logging: Wewnętrzne logowanie
+      units:
+        lines:
+          one: "%{count} linia"
+          other: "%{count} linii"
+          few: "%{count} linie"
+          many: "%{count} linii"
+        minutes:
+          one: "%{count} minuta"
+          other: "%{count} minuty"
+          few: "%{count} minuty"
+          many: "%{count} minut"
+        seconds:
+          one: "%{count} sekunda"
+          other: "%{count} sekundy"
+          few: "%{count} sekundy"
+          many: "%{count} sekund"
+        events:
+          one: "%{count} zdarzenie"
+          other: "%{count} zdarzenia"
+          few: "%{count} zdarzenia"
+          many: "%{count} zdarzeń"
+        queries:
+          one: "%{count} zapytanie"
+          other: "%{count} zapytania"
+          few: "%{count} zapytania"
+          many: "%{count} zapytań"
+        std_devs: "%{count}σ"
+      values:
+        enabled: Włączone
+        disabled: Wyłączone
+        not_set: Nie ustawiono
+        not_found: Nie znaleziono
+        not_available: Niedostępne
+        empty: Puste
+        unknown: Nieznane
+        set: Ustawione
+        auto_detected: Wykryte automatycznie
+        configured: "(Skonfigurowane)"
+        items:
+          one: "%{count} element"
+          other: "%{count} elementu"
+          few: "%{count} elementy"
+          many: "%{count} elementów"
+        rules:
+          one: "%{count} reguła"
+          other: "%{count} reguły"
+          few: "%{count} reguły"
+          many: "%{count} reguł"
+        users:
+          one: "%{formatted} użytkownik"
+          other: "%{formatted} użytkownika"
+          few: "%{formatted} użytkownicy"
+          many: "%{formatted} użytkowników"
+        days:
+          one: "%{count} dzień"
+          other: "%{count} dnia"
+          few: "%{count} dni"
+          many: "%{count} dni"
+        rails_app_name_unavailable: Nazwa aplikacji Rails niedostępna
+        separate_db: 'Osobna BD: %{name}'
+        configured_but_not_found: Skonfigurowane, ale nie znaleziono
+        shared_db_primary: Wspólna BD (główna)
+        shared_db: Wspólna BD
+        unable_to_detect: Nie udało się wykryć
+        no_user_model: Nie wykryto modelu User
+        unable_to_query_count: Nie udało się odczytać liczby
+        manual_cleanup_required: Wymagane ręczne czyszczenie
+        keep_forever: Przechowuj bezterminowo
+        no_automatic_deletion: Bez automatycznego usuwania
+        run_command: 'Uruchom:'
+        to_cleanup: 'Aby wyczyścić:'
+      options:
+        enable_middleware: Przechwytuje nieobsłużone wyjątki
+        enable_error_subscriber: Subskrybuje zdarzenia błędów Rails
+        retention_days: 'Tylko ręczne czyszczenie (uruchom: rails error_dashboard:cleanup_resolved
+          DAYS=90)'
+        max_backtrace_lines: Limit głębokości śladu stosu
+        sampling_rate: Odsetek przechwytywanych błędów
+        application_name: Nazwa tej aplikacji (wykrywana automatycznie, jeśli nie
+          ustawiono)
+        database: Aktywna baza danych dla dzienników błędów
+        use_separate_database: Używaj dedykowanej BD dla dzienników błędów
+        user_model: Nazwa modelu powiązań z użytkownikami (wykrywana automatycznie,
+          jeśli nie ustawiono)
+        total_users_for_impact: Do obliczenia % wpływu (wykrywane automatycznie, jeśli
+          nie ustawiono)
+        async_logging: Przetwarzanie w zadaniach w tle
+        async_adapter: Adapter kolejki zadań
+        enable_rate_limiting: Ogranicza żądania do API
+        rate_limit_per_minute: Żądań na minutę z jednego IP
+        enable_slack_notifications: Powiadomienia w czasie rzeczywistym
+        slack_webhook_url: Punkt końcowy webhooka Slack
+        enable_email_notifications: Alerty e-mail
+        notification_email_recipients: Adresy odbiorców
+        notification_email_from: Adres nadawcy
+        enable_discord_notifications: Powiadomienia przez webhook Discord
+        discord_webhook_url: Punkt końcowy webhooka Discord
+        enable_pagerduty_notifications: Eskalacja błędów krytycznych
+        pagerduty_integration_key: Klucz API PagerDuty
+        enable_webhook_notifications: Dowolne punkty końcowe webhooków
+        webhook_urls: Własne punkty końcowe webhooków
+        enable_scheduled_digests: Dzienne/tygodniowe e-maile podsumowujące. Planuj
+          przez SolidQueue, Sidekiq lub cron
+        digest_frequency: Jak często wysyłać e-maile podsumowujące
+        digest_recipients: Adresy e-mail (domyślnie odbiorcy powiadomień)
+        enable_similar_errors: Znajduj powiązane błędy na podstawie podobieństwa
+        enable_co_occurring_errors: Błędy występujące razem
+        enable_error_cascades: Łańcuchy błędów nadrzędny→podrzędny
+        enable_error_correlation: Analiza wersji/użytkownika/czasu
+        enable_platform_comparison: Analityka iOS kontra Android
+        enable_occurrence_patterns: Wykrywanie cykliczności i gwałtownych wzrostów
+        enable_baseline_alerts: Wykrywanie anomalii
+        baseline_alert_threshold_std_devs: Odchylenia standardowe wyzwalające alert
+        baseline_alert_severities: Poziomy wagi objęte alertami
+        baseline_alert_cooldown_minutes: Minut między alertami dla tego samego typu
+          błędu
+        enable_source_code_integration: Pokazuj kod w śladzie stosu
+        source_code_context_lines: Linie przed i po linii docelowej
+        enable_git_blame: Pokazuj informacje git blame
+        source_code_cache_ttl: Czas buforowania kodu źródłowego
+        only_show_app_code_source: Ukryj gems/stdlib ze względów bezpieczeństwa
+        git_branch_strategy: Strategia ustalania gałęzi
+        enable_breadcrumbs: Przechwytuj ślad aktywności żądania
+        breadcrumb_buffer_size: Maksymalna liczba breadcrumbs na żądanie
+        enable_n_plus_one_detection: Wykrywaj powtarzające się zapytania w breadcrumbs
+        n_plus_one_threshold: Minimalna liczba powtórzeń do oznaczenia jako N+1
+        enable_system_health: Przechwytuj GC, pamięć, wątki i pulę połączeń w chwili
+          błędu
+        app_version: Bieżąca wersja aplikacji
+        git_sha: Wdrożony commit
+        git_repository_url: URL repozytorium GitHub/GitLab
+        dashboard_base_url: Bazowy URL dla odnośników panelu
+        enable_issue_tracking: 'Integracja z GitHub/GitLab/Codeberg — jeden przełącznik
+          włącza wszystko: tworzenie zgłoszeń, autotworzenie, synchronizację cyklu
+          życia, odzwierciedlanie stanu platformy, wyświetlanie komentarzy. Zastępuje
+          sterowanie procesem stanem platformy.'
+        issue_tracker_token: Token bota RED (ustaw zmienną środowiskową RED_BOT_TOKEN)
+        issue_tracker_provider: Wykrywany automatycznie z git_repository_url
+        issue_tracker_repo: Wykrywany automatycznie z git_repository_url
+        issue_tracker_labels: Etykiety dodawane do nowych zgłoszeń
+        issue_webhook_secret: Ustaw, aby włączyć synchronizację dwukierunkową (weryfikacja
+          HMAC)
+        enable_local_variables: TracePoint(:raise) — przechwytywanie zmiennych lokalnych
+          w chwili wyjątku
+        enable_instance_variables: Przechwytywanie zmiennych instancji self w chwili
+          wyjątku
+        detect_swallowed_exceptions: TracePoint(:raise) + (:rescue) — wykrywanie po
+          cichu przechwyconych wyjątków (Ruby 3.3+)
+        enable_diagnostic_dump: Migawki stanu systemu na żądanie
+        enable_crash_capture: Hak at_exit dla nieobsłużonych awarii
+        enable_coverage_tracking: Tryb diagnostyczny — włącz w panelu, aby widzieć
+          wykonane linie w podglądzie kodu (Ruby 3.2+)
+        enable_rack_attack_tracking: Zapisuj zdarzenia throttle/blocklist w osobnej
+          tabeli
+        enable_actioncable_tracking: Śledź zdarzenia kanałów WebSocket jako breadcrumbs
+        enable_activestorage_tracking: Śledź przesyłanie/pobieranie/usuwanie jako
+          breadcrumbs
+        custom_severity_rules: Mapowanie typu błędu na wagę
+        ignored_exceptions: Wyjątki do zignorowania
+        enable_internal_logging: Wyjście debugowania gem
+        log_level: Poziom szczegółowości
+    flash:
+      locale:
+        unavailable: Ten język jest niedostępny. Używany jest domyślny.
+      batch:
+        resolved:
+          one: Pomyślnie rozwiązano %{count} błąd
+          other: Pomyślnie rozwiązano %{count} błędu
+          few: Pomyślnie rozwiązano %{count} błędy
+          many: Pomyślnie rozwiązano %{count} błędów
+        muted:
+          one: Pomyślnie wyciszono %{count} błąd
+          other: Pomyślnie wyciszono %{count} błędu
+          few: Pomyślnie wyciszono %{count} błędy
+          many: Pomyślnie wyciszono %{count} błędów
+        unmuted:
+          one: Pomyślnie wyłączono wyciszenie %{count} błędu
+          other: Pomyślnie wyłączono wyciszenie %{count} błędu
+          few: Pomyślnie wyłączono wyciszenie %{count} błędów
+          many: Pomyślnie wyłączono wyciszenie %{count} błędów
+        deleted:
+          one: Pomyślnie usunięto %{count} błąd
+          other: Pomyślnie usunięto %{count} błędu
+          few: Pomyślnie usunięto %{count} błędy
+          many: Pomyślnie usunięto %{count} błędów
+        failed: 'Operacja grupowa nie powiodła się: %{reason}'
+      issue:
+        created: Zgłoszenie zostało utworzone
+        linked: Zgłoszenie zostało powiązane
+        create_failed: 'Nie udało się utworzyć zgłoszenia: %{reason}'
+        link_failed: 'Nie udało się powiązać zgłoszenia: %{reason}'
+      not_enabled: "%{feature} nie jest włączone. Włącz w %{file}"
+      not_enabled_plural: "%{feature} nie są włączone. Włącz je w %{file}"
+      not_enabled_options: "%{feature} nie jest włączone. Włącz %{options} w %{file}"
+      not_enabled_set_options: "%{feature} nie jest włączone. Ustaw %{options} w %{file}"
+      features:
+        platform_comparison: Porównanie platform
+        error_correlation: Korelacja błędów
+        breadcrumbs: Breadcrumbs
+        system_health: Stan systemu
+        swallowed_exceptions: Wykrywanie wyciszonych wyjątków
+        rack_attack: Śledzenie Rack Attack
+        actioncable: Śledzenie ActionCable
+        activestorage: Śledzenie ActiveStorage
+        diagnostic_dumps: Zrzuty diagnostyczne
+      diagnostic_dump:
+        disabled: Zrzuty diagnostyczne nie są włączone.
+        captured: Zrzut diagnostyczny został utworzony.
+        failed: 'Nie udało się utworzyć zrzutu diagnostycznego: %{message}'
+      coverage:
+        not_enabled: Śledzenie pokrycia nie jest włączone w konfiguracji.
+        enabled: Pokrycie ścieżek kodu włączone. Odtwórz błąd, a następnie otwórz
+          kod źródłowy, aby zobaczyć wykonane linie.
+        disabled: Pokrycie ścieżek kodu wyłączone.
+        unavailable: Nie udało się włączyć pokrycia. Wymagany Ruby 3.2+.
+      test_error:
+        logged: Błąd testowy został zapisany. Sprawdź swoje kanały powiadomień (Slack,
+          Discord, e-mail itp.), aby potwierdzić dostarczenie.
+        failed: 'Nie udało się zapisać błędu testowego: %{message}'
+      swallowed_requires_ruby: Wykrywanie wyciszonych wyjątków wymaga Ruby 3.3+ (masz
+        %{version}). Zaktualizuj Ruby, aby korzystać z tej funkcji.
+      ai_help:
+        not_configured: Pomoc AI nie jest skonfigurowana
+        blank_question: Pytanie nie może być puste
+        question_too_long: Pytanie jest za długie. Zmieść się w %{limit} znakach.
+    commands:
+      no_error_ids: Nie podano identyfikatorów błędów
+      invalid_action: Nieprawidłowy typ akcji
+      issue:
+        not_configured: Śledzenie zgłoszeń nie jest skonfigurowane
+        already_linked: 'Błąd ma już powiązane zgłoszenie: %{url}'
+        url_required: Adres URL zgłoszenia jest wymagany
+      error_not_found: 'Nie znaleziono błędu: %{id}'
+      batch_failed:
+        mute:
+          one: Nie udało się wyciszyć %{count} błędu
+          other: Nie udało się wyciszyć %{count} błędu
+          few: Nie udało się wyciszyć %{count} błędów
+          many: Nie udało się wyciszyć %{count} błędów
+        unmute:
+          one: Nie udało się wyłączyć wyciszenia %{count} błędu
+          other: Nie udało się wyłączyć wyciszenia %{count} błędu
+          few: Nie udało się wyłączyć wyciszenia %{count} błędów
+          many: Nie udało się wyłączyć wyciszenia %{count} błędów
+        resolve:
+          one: Nie udało się rozwiązać %{count} błędu
+          other: Nie udało się rozwiązać %{count} błędu
+          few: Nie udało się rozwiązać %{count} błędów
+          many: Nie udało się rozwiązać %{count} błędów
+    mailers:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown_application: Nieznana
+      error_alert:
+        subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        heading: "\U0001F6A8 Alert o błędzie"
+        labels:
+          application: Aplikacja
+          error_type: Typ błędu
+          platform: Platforma
+          occurred_at: Czas wystąpienia
+          user_id: ID użytkownika
+          ip_address: Adres IP
+          request_url: URL żądania
+          message: Komunikat
+          error_id: ID błędu
+        stack_trace:
+          one: Ślad stosu (pierwsza %{count} linia)
+          other: Ślad stosu (pierwszych %{count} linii)
+          few: Ślad stosu (pierwsze %{count} linie)
+          many: Ślad stosu (pierwszych %{count} linii)
+        view_details: Zobacz pełne szczegóły w panelu
+        view_details_text: 'Zobacz pełne szczegóły w panelu:'
+        footer: To automatyczne powiadomienie o błędzie od %{product}.
+      digest:
+        subject:
+          one: Podsumowanie RED — %{count} nowy błąd (%{period})
+          other: Podsumowanie RED — %{count} nowego błędu (%{period})
+          few: Podsumowanie RED — %{count} nowe błędy (%{period})
+          many: Podsumowanie RED — %{count} nowych błędów (%{period})
+        heading: Podsumowanie błędów RED
+        periods:
+          daily: Ostatnie 24 godziny
+          weekly: Ostatnie 7 dni
+        generated_at: Wygenerowano
+        summary: Podsumowanie
+        stats:
+          new_errors: Nowe błędy
+          total_occurrences: Wystąpienia
+          total_occurrences_text: Łącznie wystąpień
+          resolved: Rozwiązane
+          unresolved: Nierozwiązane
+          critical_high: Krytyczne/wysokie
+          resolution_rate: Wskaźnik rozwiązań
+        comparison:
+          heading: W porównaniu z poprzednim okresem
+          versus: 'w porównaniu z poprzednim okresem (%{period}):'
+          current: Obecny
+          previous: Poprzedni
+          change: Zmiana
+          delta:
+            one: "%{delta} błąd"
+            other: "%{delta} błędu"
+            few: "%{delta} błędy"
+            many: "%{delta} błędów"
+        critical_unresolved: Krytyczne i wysokie nierozwiązane
+        top_errors: Najczęstsze błędy
+        columns:
+          severity: Waga
+          error: Błąd
+          error_type: Typ błędu
+          count: Liczba
+        view: Zobacz
+        open_dashboard: Otwórz panel
+        view_dashboard_text: 'Zobacz pełny panel:'
+        manage_settings: Zarządzaj ustawieniami podsumowań
+        footer: Automatyczne podsumowanie od RED (%{product})
+    notifications:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown: Nieznane
+        not_available: Nd.
+      error_alert:
+        fallback: "\U0001F6A8 Alert o nowym błędzie"
+        heading: "\U0001F6A8 Alert o błędzie"
+        discord_title: "\U0001F6A8 Nowy błąd: %{error_type}"
+        pagerduty_summary: "[%{application}] Błąd krytyczny: %{error_type} w %{platform}"
+        labels:
+          application: Aplikacja
+          error_type: Typ błędu
+          platform: Platforma
+          occurred: Wystąpił
+          message: Komunikat
+          user: Użytkownik
+          ip_address: Adres IP
+          request_url: URL żądania
+          occurrences: Wystąpienia
+          controller: Kontroler
+          action: Akcja
+          first_seen: Pierwsze wystąpienie
+          location: Lokalizacja
+        user_fallback: 'Użytkownik #%{id}'
+        view_details: Zobacz szczegóły
+        view_in_dashboard: Zobacz w Error Dashboard
+        error_id: 'ID błędu: %{id}'
+      baseline_alert:
+        fallback: "\U0001F6A8 Alert o odchyleniu od poziomu bazowego"
+        heading: "\U0001F6A8 Wykryto odchylenie od poziomu bazowego"
+        labels:
+          severity: Waga
+          std_devs: Odchylenia standardowe
+          threshold: Próg
+          baseline_type: Typ poziomu bazowego
+          baseline_info: Dane poziomu bazowego
+        level:
+          critical: KRYTYCZNY
+          high: WYSOKI
+          elevated: PODWYŻSZONY
+          unknown: NIEZNANY
+        std_devs_above: "%{value}σ powyżej poziomu bazowego"
+        threshold_errors:
+          one: "%{value} błąd"
+          other: "%{value} błędu"
+          few: "%{value} błędy"
+          many: "%{value} błędów"
+        view_in_dashboard: Zobacz w panelu
+      storm:
+        detected: Wykryto sztorm błędów w %{application} o %{started_at}.
+        mode:
+          open: tryb samego liczenia (wystąpienia liczone, szczegóły wstrzymane)
+          shedding: tryb odrzucania (aktywne wyrywkowe zapisywanie kontekstu)
+        engaged: Zadziałała ochrona przed sztormem — %{mode}.
+        suppressed: Powiadomienia o pojedynczych błędach są wstrzymane do końca sztormu;
+          dokładne liczby są zachowywane.
+        dashboard: 'Panel: %{url}'
+    time:
+      ago: "%{duration} temu"
+      formats:
+        full: "%d %B %Y %H:%M:%S"
+        short: "%d.%m %H:%M"
+        date_only: "%d %B %Y"
+        time_only: "%H:%M:%S"
+        datetime: "%d %b %Y %H:%M"
+    health:
+      columns:
+        error: Błąd
+        last_seen: Ostatnio widziany
+      database:
+        title: Stan bazy danych
+        stats:
+          errors_with_pool: Błędy z danymi puli
+          peak_utilization: Szczytowe wykorzystanie
+          total_dead: Łącznie martwych
+          total_waiting: Łącznie oczekujących
+        live:
+          title: Stan bazy danych na żywo
+          non_postgresql: Wykryto adapter inny niż PostgreSQL (%{adapter}).
+          non_postgresql_hint: Statystyki tabel, indeksów i aktywności na żywo wymagają
+            PostgreSQL. Pula połączeń i dane historyczne są dostępne poniżej.
+          pool_size: Rozmiar puli
+          busy: Zajęte
+          idle: Bezczynne
+          dead: Martwe
+          waiting: Oczekujące
+        summary:
+          total_db_size: Całkowity rozmiar BD
+          tables: Tabele
+          unused_indexes: Nieużywane indeksy
+          active_connections: Aktywne połączenia
+        host_tables:
+          title: Tabele aplikacji
+        gem_tables:
+          title: Tabele Error Dashboard
+        unused_indexes:
+          title: Nieużywane indeksy
+          column_index: Indeks
+          column_table: Tabela
+          column_size: Rozmiar
+        activity:
+          title: Aktywność połączeń
+          total_badge: łącznie %{count}
+          waiting_badge: "%{count} oczekujących"
+          column_state: Stan
+          column_count: Liczba
+          column_waiting: Oczekujące
+        table_columns:
+          table: Tabela
+          est_rows: Szac. wierszy
+          size: Rozmiar
+          seq_scans: Skany sekwencyjne
+          idx_scans: Skany indeksowe
+          dead_tuples: Martwe krotki
+          last_vacuum: Ostatni vacuum
+        never_vacuumed: Nigdy
+        pool_history:
+          title: Pula połączeń wg błędów
+          empty_title: Nie znaleziono danych o puli połączeń
+          empty_message_html: W migawkach stanu systemu z ostatnich %{days} dni nie
+            wykryto statystyk puli połączeń. Włącz <code>enable_system_health = true</code>,
+            aby przechwytywać statystyki puli w chwili błędu.
+          column_error: Błąd
+          column_error_type: Typ błędu
+          column_utilization: Wykorzystanie
+          column_busy: Zajęte
+          column_idle: Bezczynne
+          column_dead: Martwe
+          column_waiting: Oczekujące
+          column_pool_size: Rozmiar puli
+          column_last_seen: Ostatnio widziany
+          tip: Wysokie wykorzystanie podczas błędów może wskazywać na wyczerpanie
+            puli połączeń lub długo trwające zapytania.
+          guide_link: Przewodnik po bazie danych
+      llm:
+        title: Stan LLM
+        disabled:
+          title: Obserwowalność LLM nie jest włączona
+          message: Aby zobaczyć tutaj statystyki LLM wg modeli, włącz obserwowalność
+            LLM i breadcrumbs.
+          enable_in_html: 'Włącz w <code>config/initializers/rails_error_dashboard.rb</code>:'
+        empty:
+          title: Nie wykryto wywołań LLM
+          message: 'W ciągu ostatnich %{days} dni nie przechwycono żadnego wywołania
+            API LLM w breadcrumbs błędów. Oprzyrząduj wywołania LLM na jeden z trzech
+            sposobów:'
+          tab_otel: OpenTelemetry
+          tab_faraday: Faraday / RubyLLM
+          tab_manual: Ręcznie
+          otel_hint: Masz już kolektor OTel? Dodaj ten gem, a my zasubskrybujemy automatycznie.
+          otel_requires_html: Wymaga <code>enable_llm_observability = true</code>.
+          faraday_hint: Używasz <code>ruby_llm</code>, <code>openai</code>, <code>anthropic</code>
+            lub innego SDK opartego na Faraday? Wstaw middleware raz.
+          faraday_note: RED automatycznie wykrywa dostawcę/model i tokeny z żądania
+            i odpowiedzi.
+          manual_hint: Bezpośrednie <code>Net::HTTP</code>, gRPC, lokalne wnioskowanie
+            lub cokolwiek innego — oprzyrząduj ręcznie.
+          manual_note_html: Koszt jest szacowany automatycznie na podstawie tokenów
+            — payload może go nadpisać przez <code>cost_usd_estimate:</code>.
+        stats:
+          calls: Wywołania LLM
+          models: Modele
+          errors_with_llm: Błędy z LLM (%{rate}%)
+          total_cost: Koszt całkowity
+        by_model:
+          title: Wydajność wg modelu
+          column_provider_model: Dostawca · Model
+          column_calls: Wywołania
+          column_tools: Narzędzia
+          column_avg_tokens: Śr. tokenów
+          column_avg_latency: Śr. opóźnienie
+          column_error_rate: Wskaźnik błędów
+          column_cost: Koszt
+          column_top_error: Najczęstszy błąd
+          column_last_seen: Ostatnio widziany
+          avg_tokens_in: wejście
+          avg_tokens_out: wyjście
+          failed_count: "%{count} nieudanych"
+          tip_html: Wysoki wskaźnik błędów dla modelu często sygnalizuje problemy
+            z limitem lub przepustowością. Wolna odpowiedź (&gt;5 s) sugeruje degradację
+            dostawcy.
+          guide_link: Przewodnik po oprzyrządowaniu
+      cache:
+        title: Stan cache
+        empty:
+          title: Nie znaleziono aktywności cache
+          message: W ciągu ostatnich %{days} dni nie wykryto operacji cache w breadcrumbs
+            błędów.
+          how_it_works: 'Jak działa śledzenie cache:'
+          step_breadcrumbs_html: Breadcrumbs muszą być włączone (<code>enable_breadcrumbs
+            = true</code>)
+          step_capture: Odczyty i zapisy cache są przechwytywane jako breadcrumbs
+            podczas żądań, które kończą się błędem
+          step_hit_status: Dla operacji odczytu śledzony jest status trafień i chybień
+          step_sort: Ta strona pokazuje wydajność cache wg błędów, najgorsze na początku
+        stats:
+          errors_with_cache: Błędy z cache
+          avg_hit_rate: Śr. wskaźnik trafień
+          total_ops: Łącznie operacji cache
+        table:
+          title: Wydajność cache wg błędów
+          column_error: Błąd
+          column_reads: Odczyty
+          column_writes: Zapisy
+          column_hit_rate: Wskaźnik trafień
+          column_total_time: Czas całkowity
+          column_slowest_op: Najwolniejsza operacja
+          column_last_seen: Ostatnio widziany
+          tip: Niski wskaźnik trafień może wskazywać na klucze cache wygasające zbyt
+            szybko lub ustawiane nieprawidłowo.
+          guide_link: Przewodnik po cache w Rails
+      job:
+        title: Stan zadań
+        empty:
+          title: Nie znaleziono danych o kolejkach zadań
+          message: W migawkach stanu systemu z ostatnich %{days} dni nie wykryto statystyk
+            kolejek zadań.
+          how_it_works: 'Jak działa śledzenie stanu zadań:'
+          step_enable_html: Stan systemu musi być włączony (<code>enable_system_health
+            = true</code>)
+          step_capture: Statystyki kolejek zadań są przechwytywane automatycznie,
+            gdy wykryto Sidekiq, SolidQueue lub GoodJob
+          step_collected: Statystyki są zbierane dla każdego błędu w chwili przechwycenia
+          step_sort: Ta strona pokazuje stan kolejek zadań wg błędów, posortowany
+            według liczby nieudanych
+        stats:
+          errors_with_jobs: Błędy z danymi zadań
+          total_failed: Łącznie nieudanych zadań
+          adapters_detected: Wykryte adaptery
+        table:
+          title: Stan kolejek zadań wg błędów
+          column_error: Błąd
+          column_adapter: Adapter
+          column_failed: Nieudane
+          column_queued: W kolejce
+          column_other_stats: Inne statystyki
+          column_last_seen: Ostatnio widziany
+          enqueued: w kolejce
+          ready: gotowe
+          queued: zakolejkowane
+          other_stats_sidekiq: 'martwe: %{dead}, ponowienia: %{retry}, workery: %{workers}'
+          other_stats_solid_queue: 'przejęte: %{claimed}, zablokowane: %{blocked},
+            zaplanowane: %{scheduled}'
+          other_stats_good_job: 'zakończone: %{finished}'
+          tip: Duża liczba nieudanych zadań podczas błędów może wskazywać na przeciążenie
+            kolejki lub problemy usług zewnętrznych.
+          guide_link: Przewodnik po Active Job
+      actioncable:
+        title: Stan ActionCable
+        empty:
+          title: Nie znaleziono zdarzeń ActionCable
+          message: W ciągu ostatnich %{days} dni nie wykryto akcji kanałów, transmisji
+            ani zdarzeń subskrypcji ActionCable w breadcrumbs błędów.
+          how_it_works: 'Jak działa śledzenie ActionCable:'
+          step_breadcrumbs_html: Breadcrumbs muszą być włączone (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: Śledzenie ActionCable musi być włączone (<code>enable_actioncable_tracking
+            = true</code>)
+          step_configured: ActionCable musi być skonfigurowany w Twojej aplikacji
+          step_capture: Akcje kanałów, transmisje i zdarzenia subskrypcji są przechwytywane
+            jako breadcrumbs podczas żądań, które kończą się błędem
+        stats:
+          active_channels: Aktywne kanały
+          total_events: Łącznie zdarzeń
+          subscription_rejections: Odrzucone subskrypcje
+        table:
+          title: Zdarzenia ActionCable wg kanału
+          column_channel: Kanał
+          column_actions: Akcje
+          column_transmissions: Transmisje
+          column_subscriptions: Subskrypcje
+          column_rejections: Odrzucenia
+          column_errors: Błędy
+          column_last_seen: Ostatnio widziany
+          tip: Zdarzenia ActionCable są przechwytywane, gdy zbiegają się z błędami.
+            Duża liczba odrzuceń może wskazywać na problemy z uwierzytelnianiem lub
+            autoryzacją.
+          guide_link: Przewodnik po ActionCable
+      activestorage:
+        title: Stan ActiveStorage
+        empty:
+          title: Nie znaleziono zdarzeń ActiveStorage
+          message: W ciągu ostatnich %{days} dni nie wykryto operacji usług ActiveStorage
+            w breadcrumbs błędów.
+          how_it_works: 'Jak działa śledzenie ActiveStorage:'
+          step_breadcrumbs_html: Breadcrumbs muszą być włączone (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: Śledzenie ActiveStorage musi być włączone (<code>enable_activestorage_tracking
+            = true</code>)
+          step_configured: ActiveStorage musi być skonfigurowany w Twojej aplikacji
+          step_capture: Przesyłanie, pobieranie i usuwanie są przechwytywane jako
+            breadcrumbs podczas żądań, które kończą się błędem
+        stats:
+          storage_services: Usługi przechowywania
+          total_operations: Łącznie operacji
+          errors_with_storage: Błędy z operacjami przechowywania
+        table:
+          title: Operacje przechowywania wg usługi
+          column_service: Usługa
+          column_uploads: Przesłania
+          column_downloads: Pobrania
+          column_deletes: Usunięcia
+          column_exists: Sprawdzenia istnienia
+          column_total: Łącznie
+          column_avg_duration: Śr. czas trwania
+          column_slowest: Najwolniejsza
+          column_errors: Błędy
+          column_last_seen: Ostatnio widziany
+          tip: Wolne operacje przechowywania mogą wskazywać na problemy z siecią,
+            duże rozmiary plików lub ograniczenia dostawcy.
+          guide_link: Przewodnik po ActiveStorage
+    analytics:
+      stability:
+        green: Zielony
+        yellow: Żółty
+        red: Czerwony
+      trend:
+        increasing_significantly: znacząco rośnie
+        increasing: rośnie
+        stable: stabilnie
+        decreasing: maleje
+        decreasing_significantly: znacząco maleje
+      correlation_strength:
+        strong: Silna
+        moderate: Umiarkowana
+        weak: Słaba
+      days_pill:
+        '7': 7 dni
+        '14': 14 dni
+        '30': 30 dni
+        '60': 60 dni
+        '90': 90 dni
+      overview:
+        title: Analityka
+        stats:
+          total_errors: Łącznie błędów
+          unresolved: Nierozwiązane
+          resolution_rate: Wskaźnik rozwiązań
+        trend_chart:
+          title: Trend błędów (ostatnie %{days} dni)
+        platform_chart:
+          title: Błędy wg platformy
+          quick_links: 'Szybkie odnośniki:'
+        type_chart:
+          title: 10 najczęstszych typów błędów
+        hour_chart:
+          title: Błędy wg godziny doby
+        top_users:
+          title: 10 najbardziej dotkniętych użytkowników
+        type_breakdown:
+          title: Podział wg typów błędów
+          subtitle: Ostatnie %{days} dni
+          column_rank: Pozycja
+          column_error_type: Typ błędu
+          column_count: Liczba
+          column_percentage: Odsetek
+          column_actions: Akcje
+          view_errors: Zobacz błędy
+        recurring:
+          title: Powtarzające się problemy
+          high_frequency_title: Częste błędy
+          column_error_type: Typ błędu
+          column_total_occurrences: Łącznie wystąpień
+          column_duration: Czas trwania
+          column_first_seen: Pierwsze wystąpienie
+          column_last_seen: Ostatnio widziany
+          column_status: Status
+          duration_days: "%{days} dni"
+          active: Aktywny
+          inactive: Nieaktywny
+          empty_high_frequency: W ciągu ostatnich %{days} dni nie znaleziono częstych
+            błędów.
+          persistent_title: Uporczywe nierozwiązane błędy
+          persistent_hint: Te błędy pozostają nierozwiązane od ponad 7 dni.
+          column_message: Komunikat
+          column_platform: Platforma
+          column_count: Liczba
+          column_age: Wiek
+          column_actions: Akcje
+          age_days: "%{days} dni"
+          view: Zobacz
+        releases:
+          version_chart_title: Błędy wg wersji wydania
+          comparison_title: Najnowsze kontra poprzednie
+          latest_version: Najnowsza wersja
+          latest_errors:
+            one: "%{count} błąd"
+            other: "%{count} błędu"
+            few: "%{count} błędy"
+            many: "%{count} błędów"
+          latest_critical:
+            one: "%{count} krytyczny"
+            other: "%{count} krytycznego"
+            few: "%{count} krytyczne"
+            many: "%{count} krytycznych"
+          previous_version: Poprzednia wersja
+          previous_errors:
+            one: "%{count} błąd"
+            other: "%{count} błędu"
+            few: "%{count} błędy"
+            many: "%{count} błędów"
+          previous_critical:
+            one: "%{count} krytyczny"
+            other: "%{count} krytycznego"
+            few: "%{count} krytyczne"
+            many: "%{count} krytycznych"
+          change: Zmiana
+          empty: Za mało danych o wydaniach do porównania.
+          problematic_title: Wykryto problematyczne wydania
+          problematic_hint_html: 'Poniższe wydania mają znacząco wyższy wskaźnik błędów
+            (&gt;%{multiplier}x średniej):'
+          problematic_entry: "%{count} błędów (%{critical} krytycznych, +%{deviation}%
+            powyżej średniej)"
+        mttr:
+          title: Skuteczność rozwiązywania (MTTR)
+          overall_title: Ogólny MTTR
+          overall_hint: Średni czas rozwiązania
+          fastest_title: Najszybciej
+          fastest_hint: Najlepszy czas rozwiązania
+          slowest_title: Najwolniej
+          slowest_hint: Najdłuższy czas rozwiązania
+          total_resolved_title: Łącznie rozwiązanych
+          total_resolved_hint: W ciągu ostatnich %{days} dni
+          by_platform_title: MTTR wg platformy
+          by_severity_title: MTTR wg wagi
+          column_severity: Waga
+          column_avg_time: Średni czas do rozwiązania
+          column_actions: Akcje
+          hours: "%{hours} godzin"
+          view: Zobacz
+          trend_title: Trend MTTR (tygodniowo)
+      correlation:
+        title: Analiza korelacji błędów
+        trend_analysis:
+          title: Analiza trendu
+          current_period: Bieżący okres
+          previous_period: Poprzedni okres
+          change: Zmiana
+          period_range: "%{start} — %{end}"
+        problematic_releases:
+          title: Problematyczne wydania
+          hint: Wersje z ponad dwukrotnie wyższym wskaźnikiem błędów niż średnia
+          column_version: Wersja
+          column_error_count: Liczba błędów
+          column_deviation: Odchylenie od średniej
+          column_critical: Błędy krytyczne
+          column_unique_types: Unikalne typy błędów
+          column_platforms: Platformy
+          column_actions: Akcje
+          view: Zobacz
+        by_version:
+          title: Błędy wg wersji aplikacji
+          column_version: Wersja
+          column_errors: Błędy
+          column_types: Typy
+          column_critical: Krytyczne
+        by_git_sha:
+          title: Błędy wg Git SHA
+          column_sha: SHA
+          column_errors: Błędy
+          column_types: Typy
+          column_versions: Wersje
+        multi_error_users:
+          title: Użytkownicy dotknięci wieloma typami błędów
+          hint: Użytkownicy doświadczający 2+ różnych typów błędów
+          truncated: Pokazano %{shown} z %{total} użytkowników
+        time_correlated:
+          title: Błędy skorelowane w czasie
+          hint: Typy błędów występujące o podobnych porach doby
+          column_error_type_a: Typ błędu A
+          column_error_type_b: Typ błędu B
+          column_correlation: Korelacja
+          column_strength: Siła
+          truncated: Pokazano %{shown} z %{total} skorelowanych par błędów
+        platform_specific:
+          title: Błędy specyficzne dla platformy kontra międzyplatformowe
+          occurrences:
+            one: "%{count} wystąpienie"
+            other: "%{count} wystąpienia"
+            few: "%{count} wystąpienia"
+            many: "%{count} wystąpień"
+          platform_specific: Specyficzne dla platformy
+          cross_platform: Międzyplatformowe
+          also_on: 'Także na: %{platforms}'
+        empty:
+          title: Za mało danych do analizy korelacji
+          message: Analiza korelacji wymaga więcej danych o błędach, aby wykryć wzorce.
+          needed_title: 'Co jest potrzebne:'
+          needed_version: Śledzenie wersji aplikacji do korelacji z wydaniami
+          needed_user: Śledzenie użytkowników do korelacji wg użytkownika
+          needed_types: Wiele typów błędów do korelacji w czasie
+          hint: Wróć, gdy zostanie zapisanych więcej błędów.
+      platform_comparison:
+        title: Porównanie stanu platform
+        empty:
+          title: Brak danych o platformach
+          message: W wybranym okresie (%{days} dni) nie zapisano żadnych błędów.
+          hint: Spróbuj wybrać dłuższy okres lub wróć później.
+        health_card:
+          healthy: Sprawna
+          warning: Ostrzeżenie
+          critical: Krytyczna
+          stability_score: Ocena stabilności
+          total_errors: 'Łącznie błędów:'
+          critical_errors: 'Krytyczne:'
+          unresolved: 'Nierozwiązane:'
+          resolution_rate: 'Wskaźnik rozwiązań:'
+          error_velocity: 'Tempo powstawania błędów:'
+          view_errors: Zobacz błędy %{platform}
+        error_rate_chart:
+          title: Wskaźnik błędów wg platformy
+        daily_trend_chart:
+          title: Dzienne trendy błędów
+        severity_distribution:
+          title: Rozkład wagi
+          severity_count: "%{label}: %{count}"
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: Brak błędów
+        resolution_time_chart:
+          title: Średni czas rozwiązania
+        cross_platform:
+          title: Błędy międzyplatformowe
+          column_error_type: Typ błędu
+          column_platforms: Platformy
+          column_total_occurrences: Łącznie wystąpień
+          column_breakdown: Podział
+        top_errors:
+          title: Najczęstsze błędy — %{platform}
+          empty: Nie znaleziono błędów
+      releases:
+        title: Releases
+        empty:
+          title: Nie znaleziono danych o wydaniach
+          message: W ciągu ostatnich %{days} dni nie wykryto danych o wersjach w błędach.
+          how_to_title: 'Jak włączyć śledzenie wydań:'
+          step_config_html: Ustaw %{option} w swoim inicjalizatorze
+          step_env_html: Albo ustaw zmienną środowiskową %{env_var}
+          step_git_sha_html: Git SHA jest wykrywany automatycznie z %{git_sha}, %{heroku}
+            lub %{render}
+          step_captured: Wersja i SHA są przechwytywane automatycznie, gdy wystąpi
+            błąd
+        summary:
+          releases: Wydania
+          current_release: Bieżące wydanie
+          avg_errors: Śr. błędów na wydanie
+          problematic: Problematyczne wydania
+        current_card:
+          title: 'Bieżące wydanie:'
+          live_badge: Na żywo
+          errors: Błędy
+          error_types: Typy błędów
+          new_errors: Nowe błędy
+          stability: Stabilność
+          git_sha: Git SHA
+          vs_previous: Kontra poprzednie
+        timeline:
+          title: Oś czasu wydań
+          column_version: Wersja
+          column_git_sha: Git SHA
+          column_time_range: Zakres czasu
+          column_errors: Błędy
+          column_types: Typy
+          column_new_errors: Nowe błędy
+          column_stability: Stabilność
+          column_vs_previous: Kontra poprzednie
+          current_badge: Bieżące
+          problematic_badge: Problematyczne
+          more_shas: "+%{count}"
+          new_count:
+            one: "%{count} nowy"
+            other: "%{count} nowego"
+            few: "%{count} nowe"
+            many: "%{count} nowych"
+          footer_html: 'Stabilność: <span class="badge bg-success">Zielony</span>
+            &le; średniej liczby błędów, <span class="badge bg-warning">Żółty</span>
+            1–2x średniej, <span class="badge bg-danger">Czerwony</span> &gt; 2x średniej.
+            „Nowe” błędy to typy błędów zaobserwowane po raz pierwszy w danym wydaniu.'
+      user_impact:
+        title: Wpływ na użytkowników
+        empty:
+          title: Brak danych o wpływie na użytkowników
+          message: W ciągu ostatnich %{days} dni nie znaleziono błędów powiązanych
+            z użytkownikami.
+          how_tracked_title: 'Jak śledzony jest wpływ na użytkowników:'
+          step_user_id_html: Błędy muszą mieć powiązany %{attribute}
+          step_auto_html: Wykrywane automatycznie przez %{current_attributes} lub
+            %{current_user}
+          step_config_html: Albo ustaw %{option} w swoim inicjalizatorze
+        summary:
+          error_types: Typy błędów z użytkownikami
+          total_users_affected: Łącznie dotkniętych użytkowników
+          most_impactful: Błąd o największym wpływie
+          total_users: Łącznie użytkowników (dla %)
+        table:
+          title: Błędy uszeregowane wg wpływu na użytkowników
+          column_rank: "#"
+          column_error_type: Typ błędu
+          column_unique_users: Unikalni użytkownicy
+          column_occurrences: Wystąpienia
+          column_impact_percentage: "% wpływu na użytkowników"
+          column_severity: Waga
+          column_last_seen: Ostatnio widziany
+          users:
+            one: "%{count} użytkownik"
+            other: "%{count} użytkownika"
+            few: "%{count} użytkownicy"
+            many: "%{count} użytkowników"
+          occurrences:
+            one: "%{count}x"
+            other: "%{count}x"
+            few: "%{count}x"
+            many: "%{count}x"
+          footer: Uszeregowane wg liczby unikalnych dotkniętych użytkowników, a nie
+            liczby wystąpień. Błąd dotykający 1000 użytkowników raz jest gorszy niż
+            taki, który dotyka 1 użytkownika 1000 razy.
+    js:
+      months:
+      - stycznia
+      - lutego
+      - marca
+      - kwietnia
+      - maja
+      - czerwca
+      - lipca
+      - sierpnia
+      - września
+      - października
+      - listopada
+      - grudnia
+      months_short:
+      - sty
+      - lut
+      - mar
+      - kwi
+      - maj
+      - cze
+      - lip
+      - sie
+      - wrz
+      - paź
+      - lis
+      - gru
+      days:
+      - niedziela
+      - poniedziałek
+      - wtorek
+      - środa
+      - czwartek
+      - piątek
+      - sobota
+      days_short:
+      - nd
+      - pn
+      - wt
+      - śr
+      - cz
+      - pt
+      - sb
+      meridian:
+        am: AM
+        pm: PM
+      intl_locale: pl-PL
+      duration:
+        seconds:
+          one: "%{count} sekunda"
+          other: "%{count} sekundy"
+          few: "%{count} sekundy"
+          many: "%{count} sekund"
+        minutes:
+          one: "%{count} minuta"
+          other: "%{count} minuty"
+          few: "%{count} minuty"
+          many: "%{count} minut"
+        hours:
+          one: "%{count} godzina"
+          other: "%{count} godziny"
+          few: "%{count} godziny"
+          many: "%{count} godzin"
+        days:
+          one: "%{count} dzień"
+          other: "%{count} dnia"
+          few: "%{count} dni"
+          many: "%{count} dni"
+        months:
+          one: "%{count} miesiąc"
+          other: "%{count} miesiąca"
+          few: "%{count} miesiące"
+          many: "%{count} miesięcy"
+        years:
+          one: "%{count} rok"
+          other: "%{count} roku"
+          few: "%{count} lata"
+          many: "%{count} lat"
+      selected:
+        one: Wybrano %{count}
+        other: Wybrano %{count}
+        few: Wybrano %{count}
+        many: Wybrano %{count}
+      titles:
+        local_time: Twój czas lokalny (kliknij, aby zobaczyć UTC)
+        utc_time: Czas UTC (kliknij, aby zobaczyć czas lokalny)
+        exact_time: Kliknij, aby zobaczyć dokładny czas
+        relative_time: Kliknij, aby zobaczyć czas względny
+    ui_js:
+      toast:
+        loading: Ładowanie...
+        copied: Skopiowano!
+        copied_to_clipboard: Skopiowano do schowka!
+        failed: Niepowodzenie
+        copy_failed: Nie udało się skopiować do schowka
+        downloaded: Pobrano!
+      ai_help:
+        question_required: Najpierw wpisz pytanie.
+        streaming: Przesyłanie strumieniowe...
+        streaming_unsupported: Ta przeglądarka nie obsługuje przesyłania strumieniowego.
+        request_failed: Żądanie nie powiodło się.
+      sections:
+        error: Błąd
+        request: Żądanie
+        deprecations: Deprecations
+        n_plus_one: N+1
+        cache: Cache
+        breadcrumbs: Breadcrumbs
+        similar: Podobne
+        co_occurring: Współwystępujące
+        timeline: Oś czasu
+        issue: Zgłoszenie
+        discussion: Dyskusja
+        cascades: Kaskady
+        patterns: Wzorce
+      charts:
+        axis_date: Data
+        axis_hour: Godzina
+        axis_error_type: Typ błędu
+        axis_count: Liczba
+        axis_number_of_errors: Liczba błędów
+        axis_hours: Godziny
+        series_total_errors: Łącznie błędów
+        series_hours_to_resolve: Godzin do rozwiązania

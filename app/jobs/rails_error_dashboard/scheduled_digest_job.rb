@@ -12,18 +12,23 @@ module RailsErrorDashboard
   class ScheduledDigestJob < ApplicationJob
     queue_as :default
 
-    def perform(period: "daily", application_id: nil)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(period: "daily", application_id: nil, locale: nil)
       return unless RailsErrorDashboard.configuration.enable_scheduled_digests
 
       recipients = effective_recipients
       return if recipients.blank?
 
+      resolved_locale = job_locale(locale)
+
       digest = Services::DigestBuilder.call(
         period: period.to_sym,
-        application_id: application_id
+        application_id: application_id,
+        locale: resolved_locale
       )
 
-      DigestMailer.digest_summary(digest, recipients).deliver_now
+      DigestMailer.digest_summary(digest, recipients, locale: resolved_locale).deliver_now
     rescue => e
       Rails.logger.error("[RailsErrorDashboard] ScheduledDigestJob failed: #{e.class}: #{e.message}")
     end

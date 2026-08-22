@@ -8,25 +8,25 @@
             <div class="card mb-4" id="section-deprecation-warnings" style="border-color: var(--bs-danger);">
               <div class="card-header">
                 <h5 class="mb-0">
-                  <i class="bi bi-exclamation-triangle text-danger"></i> Deprecation Warnings
+                  <i class="bi bi-exclamation-triangle text-danger"></i> <%= red_t("red.errors.deprecations.title") %>
                   <span class="badge bg-danger"><%= deprecation_crumbs.size %></span>
                 </h5>
-                <small class="text-muted">Rails deprecation warnings detected during this request</small>
+                <small class="text-muted"><%= red_t("red.errors.deprecations.hint") %></small>
               </div>
               <div class="card-body p-0">
                 <div class="table-responsive">
                   <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
                       <tr>
-                        <th>Warning</th>
-                        <th width="300">Source</th>
+                        <th><%= red_t("red.errors.deprecations.column_warning") %></th>
+                        <th width="300"><%= red_t("red.errors.deprecations.column_source") %></th>
                       </tr>
                     </thead>
                     <tbody>
                       <% deprecation_crumbs.each do |crumb| %>
                         <tr>
                           <td><code style="font-size: 0.85em;"><%= crumb["m"] %></code></td>
-                          <td><small class="text-muted"><%= crumb.dig("meta", "caller") || "N/A" %></small></td>
+                          <td><small class="text-muted"><%= crumb.dig("meta", "caller") || red_t("red.common.not_available") %></small></td>
                         </tr>
                       <% end %>
                     </tbody>
@@ -35,11 +35,11 @@
               </div>
               <div class="card-footer bg-white border-top">
                 <small class="text-muted">
-                  <i class="bi bi-lightbulb text-warning"></i> Fix deprecations before upgrading Rails to avoid breaking changes.
+                  <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.deprecations.footer_tip") %>
                 </small>
                 <small class="float-end">
                   <a href="https://guides.rubyonrails.org/upgrading_ruby_on_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
-                    <i class="bi bi-book"></i> Rails Upgrade Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                    <i class="bi bi-book"></i> <%= red_t("red.errors.deprecations.upgrade_guide") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
                   </a>
                 </small>
               </div>
@@ -52,19 +52,19 @@
               <div class="card mb-4" id="section-n-plus-one" style="border-color: var(--bs-warning);">
                 <div class="card-header">
                   <h5 class="mb-0">
-                    <i class="bi bi-arrow-repeat text-warning"></i> N+1 Query Detection
-                    <span class="badge bg-warning text-dark"><%= n_plus_one_patterns.size %> pattern<%= n_plus_one_patterns.size == 1 ? "" : "s" %></span>
+                    <i class="bi bi-arrow-repeat text-warning"></i> <%= red_t("red.errors.n_plus_one.title") %>
+                    <span class="badge bg-warning text-dark"><%= red_tp("red.errors.n_plus_one.patterns", count: n_plus_one_patterns.size) %></span>
                   </h5>
-                  <small class="text-muted">Repeated query patterns detected in this request's SQL breadcrumbs</small>
+                  <small class="text-muted"><%= red_t("red.errors.n_plus_one.hint") %></small>
                 </div>
                 <div class="card-body p-0">
                   <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0">
                       <thead class="table-light">
                         <tr>
-                          <th width="80">Repeats</th>
-                          <th>Query Pattern</th>
-                          <th width="100">Total Time</th>
+                          <th width="80"><%= red_t("red.errors.n_plus_one.column_repeats") %></th>
+                          <th><%= red_t("red.errors.n_plus_one.column_query") %></th>
+                          <th width="100"><%= red_t("red.errors.n_plus_one.column_total_time") %></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -73,14 +73,21 @@
                             <td><span class="badge bg-warning text-dark"><%= pattern[:count] %>x</span></td>
                             <td>
                               <code style="word-break: break-all; font-size: 0.85em;"><%= truncate(pattern[:sample_query], length: 200) %></code>
-                              <br><small class="text-muted">Fingerprint: <%= truncate(pattern[:fingerprint], length: 120) %></small>
+                              <br><small class="text-muted"><%= red_t("red.errors.n_plus_one.fingerprint", fingerprint: truncate(pattern[:fingerprint], length: 120)) %></small>
                               <% table_name = extract_table_from_sql(pattern[:sample_query]) %>
                               <br><small class="text-muted">
                                 <i class="bi bi-lightbulb text-warning"></i>
+                                <%# Method names stay English; only the words
+                                    around them are translated. %>
                                 <% if table_name %>
-                                  Tip: Preload <strong><%= table_name %></strong> with <code>.includes(:association)</code> or <code>.preload(:association)</code>
+                                  <%= red_t("red.errors.n_plus_one.tip_preload_html",
+                                        table: tag.strong(table_name),
+                                        includes: tag.code(".includes(:association)"),
+                                        preload: tag.code(".preload(:association)")) %>
                                 <% else %>
-                                  Tip: Use <code>.includes</code> or <code>.preload</code> to eager load associations
+                                  <%= red_t("red.errors.n_plus_one.tip_generic_html",
+                                        includes: tag.code(".includes"),
+                                        preload: tag.code(".preload")) %>
                                 <% end %>
                               </small>
                             </td>
@@ -98,7 +105,7 @@
                 <div class="card-footer bg-white border-top">
                   <small class="float-end">
                     <a href="https://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations" target="_blank" rel="noopener" class="text-decoration-none">
-                      <i class="bi bi-book"></i> Rails Eager Loading Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                      <i class="bi bi-book"></i> <%= red_t("red.errors.n_plus_one.eager_loading_guide") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
                     </a>
                   </small>
                 </div>
@@ -111,30 +118,30 @@
             <div class="card mb-4" id="section-cache-health" style="border-color: var(--bs-info);">
               <div class="card-header">
                 <h5 class="mb-0">
-                  <i class="bi bi-lightning-charge text-info"></i> Cache Health
-                  <span class="badge bg-info text-dark"><%= cache_analysis[:reads] + cache_analysis[:writes] %> operations</span>
+                  <i class="bi bi-lightning-charge text-info"></i> <%= red_t("red.errors.cache_health.title") %>
+                  <span class="badge bg-info text-dark"><%= red_tp("red.errors.cache_health.operations", count: cache_analysis[:reads] + cache_analysis[:writes]) %></span>
                 </h5>
-                <small class="text-muted">Cache activity analysis from this request's breadcrumbs</small>
+                <small class="text-muted"><%= red_t("red.errors.cache_health.hint") %></small>
               </div>
               <div class="card-body">
                 <div class="row text-center mb-3">
                   <div class="col-4">
                     <div class="fs-4 fw-bold"><%= cache_analysis[:reads] %></div>
-                    <small class="text-muted">Reads</small>
+                    <small class="text-muted"><%= red_t("red.errors.cache_health.reads") %></small>
                   </div>
                   <div class="col-4">
                     <div class="fs-4 fw-bold"><%= cache_analysis[:writes] %></div>
-                    <small class="text-muted">Writes</small>
+                    <small class="text-muted"><%= red_t("red.errors.cache_health.writes") %></small>
                   </div>
                   <div class="col-4">
                     <% if cache_analysis[:hit_rate] %>
                       <div class="fs-4 fw-bold text-<%= cache_analysis[:hit_rate] >= 80 ? 'success' : cache_analysis[:hit_rate] >= 50 ? 'warning' : 'danger' %>">
                         <%= cache_analysis[:hit_rate] %>%
                       </div>
-                      <small class="text-muted">Hit Rate</small>
+                      <small class="text-muted"><%= red_t("red.errors.cache_health.hit_rate") %></small>
                     <% else %>
                       <div class="fs-4 fw-bold text-muted">--</div>
-                      <small class="text-muted">Hit Rate</small>
+                      <small class="text-muted"><%= red_t("red.errors.cache_health.hit_rate") %></small>
                     <% end %>
                   </div>
                 </div>
@@ -142,8 +149,8 @@
                 <% if cache_analysis[:hits] > 0 || cache_analysis[:misses] > 0 %>
                   <div class="mb-3">
                     <div class="d-flex justify-content-between mb-1">
-                      <small><span class="badge bg-success"><%= cache_analysis[:hits] %> hits</span></small>
-                      <small><span class="badge bg-danger"><%= cache_analysis[:misses] %> misses</span></small>
+                      <small><span class="badge bg-success"><%= red_tp("red.errors.cache_health.hits", count: cache_analysis[:hits]) %></span></small>
+                      <small><span class="badge bg-danger"><%= red_tp("red.errors.cache_health.misses", count: cache_analysis[:misses]) %></span></small>
                     </div>
                     <% hit_pct = cache_analysis[:hit_rate] || 0 %>
                     <div class="progress" style="height: 6px;">
@@ -155,14 +162,14 @@
 
                 <% if cache_analysis[:unknown] > 0 %>
                   <small class="text-muted d-block mb-2">
-                    <i class="bi bi-info-circle"></i> <%= cache_analysis[:unknown] %> read<%= cache_analysis[:unknown] == 1 ? "" : "s" %> with unknown hit status (older breadcrumbs)
+                    <i class="bi bi-info-circle"></i> <%= red_tp("red.errors.cache_health.unknown_status", count: cache_analysis[:unknown]) %>
                   </small>
                 <% end %>
 
                 <div class="d-flex justify-content-between">
-                  <small class="text-muted">Total cache time: <strong><%= "%.1f" % cache_analysis[:total_duration_ms] %>ms</strong></small>
+                  <small class="text-muted"><%= red_t("red.errors.cache_health.total_time_html", duration: tag.strong("#{"%.1f" % cache_analysis[:total_duration_ms]}ms")) %></small>
                   <% if cache_analysis[:slowest] && cache_analysis[:slowest][:duration_ms] > 0 %>
-                    <small class="text-muted">Slowest: <strong><%= "%.1f" % cache_analysis[:slowest][:duration_ms] %>ms</strong></small>
+                    <small class="text-muted"><%= red_t("red.errors.cache_health.slowest_html", duration: tag.strong("#{"%.1f" % cache_analysis[:slowest][:duration_ms]}ms")) %></small>
                   <% end %>
                 </div>
 
@@ -171,9 +178,9 @@
                     <small>
                       <i class="bi bi-lightbulb text-warning"></i>
                       <% if cache_analysis[:hit_rate] < 50 %>
-                        Low hit rate — review cache key design and TTL settings.
+                        <%= red_t("red.errors.cache_health.low_hit_rate") %>
                       <% else %>
-                        Moderate hit rate — consider warming caches or adjusting expiration.
+                        <%= red_t("red.errors.cache_health.moderate_hit_rate") %>
                       <% end %>
                     </small>
                   </div>
@@ -182,7 +189,7 @@
               <div class="card-footer bg-white border-top">
                 <small class="float-end">
                   <a href="https://guides.rubyonrails.org/caching_with_rails.html" target="_blank" rel="noopener" class="text-decoration-none">
-                    <i class="bi bi-book"></i> Rails Caching Guide <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+                    <i class="bi bi-book"></i> <%= red_t("red.errors.cache_health.caching_guide") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
                   </a>
                 </small>
               </div>
@@ -192,10 +199,10 @@
           <div class="card mb-4" id="section-breadcrumbs">
             <div class="card-header">
               <h5 class="mb-0">
-                <i class="bi bi-signpost-2"></i> Breadcrumbs
-                <span class="badge bg-secondary"><%= breadcrumbs.size %> events</span>
+                <i class="bi bi-signpost-2"></i> <%= red_t("red.errors.breadcrumbs.title") %>
+                <span class="badge bg-secondary"><%= red_tp("red.errors.breadcrumbs.events", count: breadcrumbs.size) %></span>
               </h5>
-              <small class="text-muted">Activity trail leading up to this error</small>
+              <small class="text-muted"><%= red_t("red.errors.breadcrumbs.hint") %></small>
             </div>
             <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
               <div class="table-responsive">
@@ -203,9 +210,9 @@
                   <thead class="table-light">
                     <tr>
                       <th width="60">#</th>
-                      <th width="100">Category</th>
-                      <th>Message</th>
-                      <th width="100">Duration</th>
+                      <th width="100"><%= red_t("red.errors.breadcrumbs.column_category") %></th>
+                      <th><%= red_t("red.errors.breadcrumbs.column_message") %></th>
+                      <th width="100"><%= red_t("red.errors.breadcrumbs.column_duration") %></th>
                     </tr>
                   </thead>
                   <tbody>

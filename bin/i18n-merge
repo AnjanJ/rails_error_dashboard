@@ -1,0 +1,264 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Assembles a locale YAML from flat key/value translations.
+#
+# Translating 1,510 keys by hand-writing nested YAML invites structural drift —
+# a mis-indented block silently reparents a whole namespace, and the result
+# still parses. This takes a flat "key: value" mapping, validates it against
+# en.yml, and emits a file whose STRUCTURE is derived from English rather than
+# retyped.
+#
+# It is a build-time authoring aid for the maintainer, not part of the gem's
+# runtime. bin/i18n-check remains the authority on whether the result is valid.
+#
+# Usage:
+#   bin/i18n-merge de translations.yml           # write config/locales/de.yml
+#   bin/i18n-merge de translations.yml --stdout  # print instead of writing
+#   bin/i18n-merge de translations.yml --partial # allow an incomplete batch
+#
+# The input is a flat mapping of dotted keys to translated strings:
+#
+#   red.common.close: "Schließen"
+#   red.errors.index.title: "Fehler"
+#
+# Plural groups are expanded to the target locale's CLDR categories: supply the
+# forms your language needs and the merger checks them against the same table
+# bin/i18n-check enforces.
+
+require "yaml"
+
+ROOT = File.expand_path("..", __dir__)
+LOCALES_DIR = File.join(ROOT, "config", "locales")
+SOURCE_LOCALE = "en"
+
+CLDR_CATEGORIES = {
+  "en" => %w[one other],
+  "de" => %w[one other],
+  "fr" => %w[one many other],
+  "es" => %w[one many other],
+  "pt-BR" => %w[one many other],
+  # `other` alone — see the same note in bin/i18n-check. plural_parents() is
+  # only ever called on en.yml here, so its `size >= 2` rule stays correct;
+  # this table governs what a batch may supply for the target.
+  "ja" => %w[other],
+  "zh-CN" => %w[other],
+  # See the same note in bin/i18n-check: four forms, `other` for fractions.
+  # uk and pl share this category list but NOT ru's selection rule (pl gives
+  # `one` to exactly 1, ru/uk also to 21 and 101). This table only governs which
+  # forms a batch may supply; the rule lives in PrivateBackend::PLURAL_RULES.
+  "ru" => %w[one few many other],
+  "uk" => %w[one few many other],
+  "pl" => %w[one few many other],
+  # Romance three-category shape, identical to fr/es/pt-BR.
+  "it" => %w[one many other]
+}.freeze
+
+ALL_PLURAL_CATEGORIES = %w[zero one two few many other].freeze
+
+def flatten(node, path = [], out = {})
+  if node.is_a?(Hash)
+    node.each { |key, value| flatten(value, path + [ key.to_s ], out) }
+  else
+    out[path.join(".")] = node
+  end
+  out
+end
+
+def plural_parents(flat)
+  children = Hash.new { |hash, key| hash[key] = [] }
+  flat.each_key do |key|
+    parts = key.split(".")
+    next if parts.size < 2
+
+    children[parts[0..-2].join(".")] << parts[-1]
+  end
+  children.select { |_, kids| kids.size >= 2 && kids.all? { |k| ALL_PLURAL_CATEGORIES.include?(k) } }
+          .keys.to_set
+end
+
+def interpolation_vars(value)
+  value.to_s.scan(/%\{(\w+)\}/).flatten.sort
+end
+
+# Rebuilds nesting in en.yml's key order, so a diff between two locale files
+# lines up instead of showing a reordering.
+def nest(flat_pairs, source_order)
+  root = {}
+  source_order.each do |key|
+    next unless flat_pairs.key?(key)
+
+    parts = key.split(".")
+    cursor = root
+    parts[0..-2].each { |part| cursor = (cursor[part] ||= {}) }
+    cursor[parts[-1]] = flat_pairs[key]
+  end
+  root
+end
+
+def die(message)
+  warn "i18n-merge: #{message}"
+  exit 1
+end
+
+locale = ARGV[0]
+input_path = ARGV[1]
+stdout_only = ARGV.include?("--stdout")
+partial = ARGV.include?("--partial")
+
+die "usage: bin/i18n-merge <locale> <translations.yml> [--stdout] [--partial]" unless locale && input_path
+die "no such file: #{input_path}" unless File.exist?(input_path)
+
+source_path = File.join(LOCALES_DIR, "#{SOURCE_LOCALE}.yml")
+source = flatten(YAML.load_file(source_path)[SOURCE_LOCALE])
+source_plurals = plural_parents(source)
+
+raw = YAML.load_file(input_path)
+die "#{input_path} is not a mapping of dotted keys to strings" unless raw.is_a?(Hash)
+
+# Accept either a flat mapping or one already nested under the locale.
+incoming = raw.values.any? { |v| v.is_a?(Hash) } ? flatten(raw[locale] || raw) : raw
+incoming = incoming.transform_keys(&:to_s)
+
+categories = CLDR_CATEGORIES[locale] or die "no CLDR category list for '#{locale}' — add it to bin/i18n-merge"
+
+errors = []
+warnings = []
+
+# Every incoming key must correspond to something in English. A plural form the
+# source lacks (French `many`) is checked against the group's `other`.
+incoming.each_key do |key|
+  next if source.key?(key)
+
+  parts = key.split(".")
+  parent = parts[0..-2].join(".")
+  if source_plurals.include?(parent) && ALL_PLURAL_CATEGORIES.include?(parts[-1])
+    unless categories.include?(parts[-1])
+      errors << "#{key}: category '#{parts[-1]}' is not valid for '#{locale}' (CLDR allows #{categories.join(", ")})"
+    end
+    next
+  end
+
+  errors << "#{key}: no such key in #{SOURCE_LOCALE}.yml"
+end
+
+# Interpolation variables must survive translation.
+#
+# Within a plural group a target may use any variable the SOURCE GROUP uses,
+# not just the one its matching form uses. English `one: "1 second"` hardcodes
+# the numeral because `one` there means exactly 1; Russian `one` also covers
+# 21, 31, 101 …, so a correct ru.yml interpolates %{count} where en.yml did
+# not. Mirrors the same allowance in bin/i18n-check — keep the two in step.
+source_plural_parents = plural_parents(source)
+group_vars_for = lambda do |key|
+  parent = key.split(".")[0..-2].join(".")
+  return nil unless source_plural_parents.include?(parent)
+
+  source.each_with_object([]) do |(source_key, value), acc|
+    next unless source_key.start_with?("#{parent}.")
+    next if source_key[(parent.size + 1)..].include?(".")
+
+    acc.concat(interpolation_vars(value))
+  end.uniq.sort
+end
+
+incoming.each do |key, value|
+  reference = source[key]
+  if reference.nil?
+    parts = key.split(".")
+    reference = source["#{parts[0..-2].join(".")}.other"]
+  end
+  next if reference.nil?
+
+  expected = interpolation_vars(reference)
+  actual = interpolation_vars(value)
+  next if expected == actual
+
+  group_vars = group_vars_for.call(key)
+  next if group_vars && (actual - expected - group_vars).empty? && (expected - actual).empty?
+
+  dropped = expected - actual
+  added = actual - expected
+  detail = []
+  detail << "missing #{dropped.map { |v| "%{#{v}}" }.join(", ")}" unless dropped.empty?
+  detail << "unexpected #{added.map { |v| "%{#{v}}" }.join(", ")}" unless added.empty?
+  errors << "#{key}: interpolation mismatch — #{detail.join("; ")}"
+end
+
+# Required plural categories present for every group being translated.
+touched_groups = incoming.keys.filter_map do |key|
+  parts = key.split(".")
+  parent = parts[0..-2].join(".")
+  parent if source_plurals.include?(parent)
+end.uniq
+
+touched_groups.each do |group|
+  supplied = incoming.keys.select { |k| k.start_with?("#{group}.") }.map { |k| k.split(".").last }
+  missing = categories - supplied
+  errors << "#{group}: missing plural category #{missing.join(", ")} required by '#{locale}'" unless missing.empty?
+end
+
+# Coverage against English, unless this is a deliberate partial batch.
+expected_keys = source.keys.reject do |key|
+  parts = key.split(".")
+  source_plurals.include?(parts[0..-2].join(".")) && !categories.include?(parts[-1])
+end
+missing_keys = expected_keys - incoming.keys
+untranslated = incoming.select { |key, value| source[key] && source[key].to_s == value.to_s }
+
+unless missing_keys.empty?
+  if partial
+    warnings << "#{missing_keys.size} key(s) not in this batch (--partial)"
+  else
+    errors << "#{missing_keys.size} key(s) missing. First 15:"
+    missing_keys.first(15).each { |key| errors << "  - #{key}" }
+  end
+end
+
+warnings << "#{untranslated.size} value(s) identical to English — intended (identifiers, N/A) or missed?" unless untranslated.empty?
+
+unless errors.empty?
+  warn "i18n-merge: #{errors.size} problem(s) in #{input_path}"
+  errors.first(40).each { |e| warn "  #{e}" }
+  warn "  … and #{errors.size - 40} more" if errors.size > 40
+  exit 1
+end
+
+# Merge over any existing file so batches accumulate.
+existing_path = File.join(LOCALES_DIR, "#{locale}.yml")
+merged = {}
+if File.exist?(existing_path) && partial
+  loaded = YAML.load_file(existing_path)
+  merged = flatten(loaded[locale] || {}) if loaded.is_a?(Hash)
+end
+merged.merge!(incoming)
+
+ordering = expected_keys + (merged.keys - expected_keys)
+nested = nest(merged, ordering.uniq)
+
+header = <<~HEADER
+  # RED dashboard translations — #{locale}
+  #
+  # MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+  # See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+  # pull request is a perfectly good pull request.
+  #
+  # Structure is derived from en.yml, which is authoritative. Do not add keys
+  # here that do not exist there — run bin/i18n-check after editing.
+HEADER
+
+output = header + { locale => nested }.to_yaml.sub(/\A---\n/, "")
+
+warnings.each { |w| warn "i18n-merge: note — #{w}" }
+
+if stdout_only
+  puts output
+else
+  File.write(existing_path, output)
+  # Count against the merged file, not this batch: with --partial the batch is
+  # only a slice, and reporting its shortfall made a finished locale look
+  # incomplete.
+  outstanding = expected_keys - merged.keys
+  puts "i18n-merge: wrote #{existing_path.sub("#{ROOT}/", "")} " \
+       "(#{merged.size} keys#{", #{outstanding.size} still missing" unless outstanding.empty?})"
+end
