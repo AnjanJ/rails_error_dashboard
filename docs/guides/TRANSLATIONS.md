@@ -5,8 +5,8 @@ translatable. This guide covers how the system works and how to add or correct
 a locale.
 
 > **Status:** the dashboard, mailers and notifications are extracted and
-> translatable. **Eight locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
-> `ru` and `uk`.**
+> translatable. **Nine locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
+> `ru`, `uk` and `pl`.**
 > Everything but English is machine-translated and unreviewed — see
 > [Review status](#review-status).
 
@@ -218,6 +218,9 @@ re-flagged on every future locale.
 | `uk` | `storm` | шторм | The ordinary Ukrainian rendering; RED's sense carries over. |
 | `uk` | `swallowed exception` | придушений виняток | What Ukrainian Rails developers say. |
 | `uk` | `deprecation` | застарілий код | Used throughout, including page bodies — Ukrainian has a settled term and mixing in the English read worse than committing to it. |
+| `pl` | `storm` | sztorm | The ordinary Polish rendering; RED's sense carries over. |
+| `pl` | `swallowed exception` | wyciszony wyjątek | What Polish Rails developers say for an exception rescued and dropped. |
+| `pl` | `deprecation` | przestarzały kod | Polish has a settled term; the English adds nothing a Polish reader needs. |
 
 These raise `bin/i18n-check` warnings and always will: the check matches ASCII
 substrings, so it cannot see a term rendered in kana or kanji. **A glossary
@@ -242,6 +245,7 @@ operating a production system, often at work:
 | `ja` | **です・ます体** (polite form) |
 | `ru` | **вы** (lowercase, formal) |
 | `uk` | **ви** (lowercase, formal) |
+| `pl` | **Ty** (capitalised, the Polish formal-written convention) |
 
 Japanese has no pronoun to choose here — the register lives in the verb endings,
 so the rule is です・ます体 throughout rather than plain form (だ・である体).
@@ -256,8 +260,8 @@ instead of guessing.
 
 ## Review status
 
-**German, Spanish, French, Brazilian Portuguese, Japanese, Russian and
-Ukrainian ship alongside English. All seven are machine-translated and have not
+**German, Spanish, French, Brazilian Portuguese, Japanese, Russian, Ukrainian
+and Polish ship alongside English. All eight are machine-translated and have not
 been reviewed by a native speaker.**
 RED's maintainer reads only English, so this is stated plainly rather than
 described as "beta", which would imply a review process that has not happened.
@@ -280,6 +284,7 @@ What this does and does not mean:
 | `ja` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `ru` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 | `uk` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
+| `pl` | **Shipped — machine-translated, unreviewed.** Corrections welcome |
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If a
 string reads wrong to you, change that string — you are not expected to review
