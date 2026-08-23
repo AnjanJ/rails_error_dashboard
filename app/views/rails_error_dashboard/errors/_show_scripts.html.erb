@@ -44,7 +44,7 @@
     // Visual feedback
     const button = event.currentTarget;
     const originalHTML = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+    button.innerHTML = '<i class="bi bi-check"></i> <%= red_js_t("red.ui_js.toast.downloaded") %>';
     button.classList.remove('btn-outline-secondary');
     button.classList.add('btn-success');
 
@@ -58,19 +58,19 @@
   // Section Navigation — pill bar with scroll spy
   document.addEventListener('DOMContentLoaded', function() {
     var sectionConfig = [
-      { id: 'section-error-info', icon: 'bi-bug-fill', label: 'Error' },
-      { id: 'section-request-context', icon: 'bi-globe', label: 'Request' },
-      { id: 'section-deprecation-warnings', icon: 'bi-exclamation-triangle', label: 'Deprecations' },
-      { id: 'section-n-plus-one', icon: 'bi-arrow-repeat', label: 'N+1' },
-      { id: 'section-cache-health', icon: 'bi-lightning-charge', label: 'Cache' },
-      { id: 'section-breadcrumbs', icon: 'bi-signpost-2', label: 'Breadcrumbs' },
-      { id: 'section-similar-errors', icon: 'bi-diagram-3', label: 'Similar' },
-      { id: 'section-co-occurring', icon: 'bi-intersect', label: 'Co-occurring' },
-      { id: 'section-timeline', icon: 'bi-clock-history', label: 'Timeline' },
-      { id: 'issue-tracking', icon: 'bi-link-45deg', label: 'Issue' },
-      { id: 'section-discussion', icon: 'bi-chat-dots', label: 'Discussion' },
-      { id: 'section-error-cascades', icon: 'bi-share', label: 'Cascades' },
-      { id: 'section-occurrence-patterns', icon: 'bi-graph-up', label: 'Patterns' }
+      { id: 'section-error-info', icon: 'bi-bug-fill', label: '<%= red_js_t("red.ui_js.sections.error") %>' },
+      { id: 'section-request-context', icon: 'bi-globe', label: '<%= red_js_t("red.ui_js.sections.request") %>' },
+      { id: 'section-deprecation-warnings', icon: 'bi-exclamation-triangle', label: '<%= red_js_t("red.ui_js.sections.deprecations") %>' },
+      { id: 'section-n-plus-one', icon: 'bi-arrow-repeat', label: '<%= red_js_t("red.ui_js.sections.n_plus_one") %>' },
+      { id: 'section-cache-health', icon: 'bi-lightning-charge', label: '<%= red_js_t("red.ui_js.sections.cache") %>' },
+      { id: 'section-breadcrumbs', icon: 'bi-signpost-2', label: '<%= red_js_t("red.ui_js.sections.breadcrumbs") %>' },
+      { id: 'section-similar-errors', icon: 'bi-diagram-3', label: '<%= red_js_t("red.ui_js.sections.similar") %>' },
+      { id: 'section-co-occurring', icon: 'bi-intersect', label: '<%= red_js_t("red.ui_js.sections.co_occurring") %>' },
+      { id: 'section-timeline', icon: 'bi-clock-history', label: '<%= red_js_t("red.ui_js.sections.timeline") %>' },
+      { id: 'issue-tracking', icon: 'bi-link-45deg', label: '<%= red_js_t("red.ui_js.sections.issue") %>' },
+      { id: 'section-discussion', icon: 'bi-chat-dots', label: '<%= red_js_t("red.ui_js.sections.discussion") %>' },
+      { id: 'section-error-cascades', icon: 'bi-share', label: '<%= red_js_t("red.ui_js.sections.cascades") %>' },
+      { id: 'section-occurrence-patterns', icon: 'bi-graph-up', label: '<%= red_js_t("red.ui_js.sections.patterns") %>' }
     ];
 
     var scrollContainer = document.querySelector('.section-nav-scroll');

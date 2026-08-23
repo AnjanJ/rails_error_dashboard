@@ -3,17 +3,35 @@
 <% platform_comments = @platform_comments || [] %>
 <% issue_tracking_enabled = RailsErrorDashboard.configuration.enable_issue_tracking %>
 
+<%#
+  Provider display name. github -> "GitHub", not provider.capitalize's "Github".
+  An unrecognised provider falls back to its raw value; a missing one falls back
+  to the translated generic noun.
+%>
+<%
+  discussion_provider = if error.external_issue_provider.present?
+    red_t("red.errors.providers.#{error.external_issue_provider}",
+          default: error.external_issue_provider.to_s)
+  else
+    red_t("red.errors.providers.generic")
+  end
+  discussion_provider_lc = if error.external_issue_provider.present?
+    discussion_provider
+  else
+    red_t("red.errors.providers.generic_lowercase")
+  end
+%>
 <% if has_linked_issue && (platform_comments.any? || has_audit_comments) %>
   <div class="card mb-4" id="section-discussion">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
-        <i class="bi bi-chat-dots"></i> Discussion
+        <i class="bi bi-chat-dots"></i> <%= red_t("red.errors.discussion.title") %>
         <% if platform_comments.any? %>
           <span class="badge bg-secondary ms-2"><%= platform_comments.size %></span>
         <% end %>
       </h5>
       <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-box-arrow-up-right me-1"></i> Reply on <%= error.external_issue_provider&.capitalize || "Platform" %>
+        <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.reply_on", provider: discussion_provider) %>
       </a>
     </div>
     <div class="card-body p-0">
@@ -28,8 +46,8 @@
                   <i class="bi bi-person-circle" style="font-size: 1.3em; flex-shrink: 0;"></i>
                 <% end %>
                 <div>
-                  <strong class="text-primary"><%= comment[:author] || "Unknown" %></strong>
-                  <small class="text-muted ms-2"><%= comment[:created_at] ? Time.parse(comment[:created_at]).strftime("%b %d, %Y %H:%M") : "" %></small>
+                  <strong class="text-primary"><%= comment[:author] || red_t("red.common.unknown") %></strong>
+                  <small class="text-muted ms-2"><%= comment[:created_at] ? Time.parse(comment[:created_at]).strftime(red_time_format(:datetime)) : "" %></small>
                 </div>
               </div>
               <div class="ms-4 text-break" style="font-size: 0.9em;">
@@ -43,7 +61,7 @@
       <% if has_audit_comments %>
         <!-- Audit trail — workflow actions -->
         <div class="px-3 py-2 bg-light border-top">
-          <small class="text-muted fw-bold"><i class="bi bi-clock-history"></i> Activity Log</small>
+          <small class="text-muted fw-bold"><i class="bi bi-clock-history"></i> <%= red_t("red.errors.discussion.activity_log") %></small>
         </div>
         <% error.comments.recent_first.each_with_index do |comment, index| %>
           <div class="px-3 py-2 <%= index < error.comments.count - 1 ? 'border-bottom' : '' %>">
@@ -64,14 +82,14 @@
   <div class="card mb-4" id="section-discussion">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
-        <i class="bi bi-chat-dots"></i> Discussion
+        <i class="bi bi-chat-dots"></i> <%= red_t("red.errors.discussion.title") %>
       </h5>
       <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-box-arrow-up-right me-1"></i> Start discussion on <%= error.external_issue_provider&.capitalize || "Platform" %>
+        <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.start_on", provider: discussion_provider) %>
       </a>
     </div>
     <div class="card-body text-center py-3">
-      <p class="text-muted small mb-0">No comments yet. Be the first to discuss this error on <%= error.external_issue_provider&.capitalize || "the platform" %>.</p>
+      <p class="text-muted small mb-0"><%= red_t("red.errors.discussion.empty", provider: discussion_provider_lc) %></p>
     </div>
   </div>
 <% elsif has_audit_comments %>
@@ -79,7 +97,7 @@
   <div class="card mb-4" id="section-discussion">
     <div class="card-header">
       <h5 class="mb-0">
-        <i class="bi bi-clock-history"></i> Activity Log
+        <i class="bi bi-clock-history"></i> <%= red_t("red.errors.discussion.activity_log") %>
       </h5>
     </div>
     <div class="card-body p-0">

@@ -2,7 +2,7 @@
   <div class="col">
     <div class="card stat-card">
       <div class="card-body">
-        <div class="stat-label mb-2">Today</div>
+        <div class="stat-label mb-2"><%= red_t("red.errors.stats.today") %></div>
         <div class="stat-value text-info"><%= stats[:total_today] %></div>
       </div>
     </div>
@@ -10,7 +10,7 @@
   <div class="col">
     <div class="card stat-card">
       <div class="card-body">
-        <div class="stat-label mb-2">This Week</div>
+        <div class="stat-label mb-2"><%= red_t("red.errors.stats.this_week") %></div>
         <div class="stat-value text-primary"><%= stats[:total_week] %></div>
       </div>
     </div>
@@ -18,7 +18,7 @@
   <div class="col">
     <div class="card stat-card">
       <div class="card-body">
-        <div class="stat-label mb-2">Unresolved</div>
+        <div class="stat-label mb-2"><%= red_t("red.errors.stats.unresolved") %></div>
         <div class="stat-value text-danger"><%= stats[:unresolved] %></div>
       </div>
     </div>
@@ -26,7 +26,7 @@
   <div class="col">
     <div class="card stat-card">
       <div class="card-body">
-        <div class="stat-label mb-2">Resolved</div>
+        <div class="stat-label mb-2"><%= red_t("red.errors.stats.resolved") %></div>
         <div class="stat-value text-success"><%= stats[:resolved] %></div>
       </div>
     </div>
@@ -34,7 +34,7 @@
   <div class="col">
     <div class="card stat-card">
       <div class="card-body">
-        <div class="stat-label mb-2">Reopened</div>
+        <div class="stat-label mb-2"><%= red_t("red.errors.stats.reopened") %></div>
         <div class="stat-value text-warning"><%= stats[:reopened] %></div>
       </div>
     </div>

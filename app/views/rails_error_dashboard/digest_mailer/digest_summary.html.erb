@@ -36,8 +36,8 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <h1>RED Error Digest</h1>
-      <div class="subtitle"><%= @digest[:period_label] %> — <%= @digest[:generated_at].strftime('%B %d, %Y') %></div>
+      <h1><%= red_t("red.mailers.digest.heading") %></h1>
+      <div class="subtitle"><%= @digest[:period_label] %> — <%= red_mail_time(@digest[:generated_at], format: :date_only) %></div>
     </div>
 
     <!-- Summary Stats -->
@@ -45,27 +45,27 @@
       <div class="stat-grid">
         <div class="stat-box">
           <div class="stat-value text-primary"><%= @digest[:stats][:new_errors] %></div>
-          <div class="stat-label">New Errors</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.new_errors") %></div>
         </div>
         <div class="stat-box">
           <div class="stat-value"><%= @digest[:stats][:total_occurrences] %></div>
-          <div class="stat-label">Occurrences</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.total_occurrences") %></div>
         </div>
         <div class="stat-box">
           <div class="stat-value text-success"><%= @digest[:stats][:resolved] %></div>
-          <div class="stat-label">Resolved</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.resolved") %></div>
         </div>
         <div class="stat-box">
           <div class="stat-value text-warning"><%= @digest[:stats][:unresolved] %></div>
-          <div class="stat-label">Unresolved</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.unresolved") %></div>
         </div>
         <div class="stat-box">
           <div class="stat-value text-danger"><%= @digest[:stats][:critical_high] %></div>
-          <div class="stat-label">Critical/High</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.critical_high") %></div>
         </div>
         <div class="stat-box">
           <div class="stat-value"><%= @digest[:stats][:resolution_rate] %>%</div>
-          <div class="stat-label">Resolution Rate</div>
+          <div class="stat-label"><%= red_t("red.mailers.digest.stats.resolution_rate") %></div>
         </div>
       </div>
     </div>
@@ -81,10 +81,10 @@
         %>
         <div class="comparison">
           <div>
-            <span class="text-muted">vs previous <%= @digest[:period] %>:</span>
+            <span class="text-muted"><%= red_t("red.mailers.digest.comparison.versus", period: @digest[:period]) %></span>
           </div>
           <div class="delta <%= delta_class %>">
-            <%== arrow %> <%= delta > 0 ? "+#{delta}" : delta %> errors
+            <%== arrow %> <%= red_tp("red.mailers.digest.comparison.delta", count: delta.abs, delta: delta > 0 ? "+#{delta}" : delta) %>
             (<%= pct > 0 ? "+#{pct}" : pct %>%)
           </div>
         </div>
@@ -94,12 +94,12 @@
     <!-- Critical / High Unresolved -->
     <% if @digest[:critical_unresolved].any? %>
       <div class="card">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px;">Critical &amp; High Unresolved</h3>
+        <h3 style="margin: 0 0 12px 0; font-size: 16px;"><%= red_t("red.mailers.digest.critical_unresolved") %></h3>
         <table>
           <thead>
             <tr>
-              <th>Severity</th>
-              <th>Error</th>
+              <th><%= red_t("red.mailers.digest.columns.severity") %></th>
+              <th><%= red_t("red.mailers.digest.columns.error") %></th>
               <th></th>
             </tr>
           </thead>
@@ -107,14 +107,15 @@
             <% @digest[:critical_unresolved].each do |error| %>
               <tr>
                 <td>
-                  <span class="badge badge-<%= error[:severity].to_s.downcase %>"><%= error[:severity].to_s.upcase %></span>
+                  <%# Severity is a machine value; its label comes from red.common. %>
+                  <span class="badge badge-<%= error[:severity].to_s.downcase %>"><%= red_t("red.common.severity.#{error[:severity].to_s.downcase}") %></span>
                 </td>
                 <td>
                   <strong><%= error[:error_type] %></strong><br>
                   <small class="text-muted"><%= error[:message] %></small>
                 </td>
                 <td>
-                  <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>">View</a>
+                  <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>"><%= red_t("red.mailers.digest.view") %></a>
                 </td>
               </tr>
             <% end %>
@@ -126,12 +127,12 @@
     <!-- Top Errors -->
     <% if @digest[:top_errors].any? %>
       <div class="card">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px;">Top Errors by Count</h3>
+        <h3 style="margin: 0 0 12px 0; font-size: 16px;"><%= red_t("red.mailers.digest.top_errors") %></h3>
         <table>
           <thead>
             <tr>
-              <th>Error Type</th>
-              <th>Count</th>
+              <th><%= red_t("red.mailers.digest.columns.error_type") %></th>
+              <th><%= red_t("red.mailers.digest.columns.count") %></th>
               <th></th>
             </tr>
           </thead>
@@ -145,7 +146,7 @@
                 <td><%= error[:count] %></td>
                 <td>
                   <% if error[:id] %>
-                    <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>">View</a>
+                    <a href="<%= @dashboard_url %>/errors/<%= error[:id] %>"><%= red_t("red.mailers.digest.view") %></a>
                   <% end %>
                 </td>
               </tr>
@@ -158,14 +159,14 @@
     <!-- CTA -->
     <div class="card" style="text-align: center;">
       <a href="<%= @dashboard_url %>" style="display: inline-block; padding: 10px 24px; background: #3b82f6; color: #ffffff; border-radius: 6px; font-weight: 600; text-decoration: none;">
-        Open Dashboard
+        <%= red_t("red.mailers.digest.open_dashboard") %>
       </a>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      Automated digest from <strong>RED</strong> (Rails Error Dashboard)<br>
-      <a href="<%= @dashboard_url %>/settings">Manage digest settings</a>
+      <%= red_t("red.mailers.digest.footer", product: red_t("red.mailers.shared.product_name")) %><br>
+      <a href="<%= @dashboard_url %>/settings"><%= red_t("red.mailers.digest.manage_settings") %></a>
     </div>
   </div>
 </body>

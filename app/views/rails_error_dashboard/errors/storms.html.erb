@@ -1,35 +1,35 @@
-<% content_for :page_title, "Storm History" %>
+<% content_for :page_title, red_t("red.errors.storms_page.title") %>
 
 <div>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
       <i class="bi bi-cloud-lightning-rain me-2"></i>
-      Storm History
+      <%= red_t("red.errors.storms_page.title") %>
     </h1>
   </div>
 
   <p class="text-muted" style="font-size: 13px; margin-bottom: var(--space-4);">
-    When the error rate spikes (a bad deploy, a dependency outage), storm protection
-    limits the gem's own database writes so it never amplifies the incident.
-    Occurrences are always counted exactly — only per-event detail is sampled.
-    Thresholds are configurable per process via <code>storm_*</code> options.
+    <%= red_t("red.errors.storms_page.intro_html", options: content_tag(:code, "storm_*")) %>
   </p>
 
   <% if @active_storm %>
     <div class="alert alert-danger" style="border-left: 4px solid var(--status-critical);">
       <i class="bi bi-cloud-lightning-rain-fill me-1"></i>
-      <strong>Storm in progress</strong> since <%= @active_storm.started_at.strftime("%Y-%m-%d %H:%M %Z") %> —
-      peak rate <%= number_with_delimiter(@active_storm.peak_rate_per_minute) %>/min.
+      <%# One sentence rather than a <strong> label with fragments trailing
+          after it: the clause order does not hold in every language. %>
+      <%= red_t("red.errors.storms_page.active_html",
+                label: content_tag(:strong, red_t("red.errors.storms_page.active_label")),
+                time: @active_storm.started_at.strftime(red_time_format(:datetime)),
+                rate: red_t("red.errors.storms_page.rate_per_minute", value: number_with_delimiter(@active_storm.peak_rate_per_minute))) %>
     </div>
   <% end %>
 
   <% if @storm_events.empty? %>
     <div class="red-empty-state">
       <i class="bi bi-cloud-sun display-1 text-muted mb-3"></i>
-      <div class="red-empty-state-title">No Storms Recorded</div>
+      <div class="red-empty-state-title"><%= red_t("red.errors.storms_page.empty_title") %></div>
       <p class="text-muted">
-        Storm protection is standing by. If an error flood ever hits this app,
-        episodes will appear here with exact counts of what was shed.
+        <%= red_t("red.errors.storms_page.empty_body") %>
       </p>
     </div>
   <% else %>
@@ -38,37 +38,43 @@
         <table class="table" style="margin: 0;">
           <thead>
             <tr>
-              <th>Started</th>
-              <th>Duration</th>
-              <th>Peak Rate</th>
-              <th>Mode</th>
-              <th class="text-end">Counted (exact)</th>
-              <th class="text-end">Overflow</th>
-              <th>Top Errors</th>
+              <th><%= red_t("red.errors.storms_page.column_started") %></th>
+              <th><%= red_t("red.errors.storms_page.column_duration") %></th>
+              <th><%= red_t("red.errors.storms_page.column_peak_rate") %></th>
+              <th><%= red_t("red.errors.storms_page.column_mode") %></th>
+              <th class="text-end"><%= red_t("red.errors.storms_page.column_counted") %></th>
+              <th class="text-end"><%= red_t("red.errors.storms_page.column_overflow") %></th>
+              <th><%= red_t("red.errors.storms_page.column_top_errors") %></th>
             </tr>
           </thead>
           <tbody>
             <% @storm_events.each do |event| %>
               <tr>
                 <td style="white-space: nowrap;">
-                  <%= event.started_at.strftime("%Y-%m-%d %H:%M") %>
+                  <%= event.started_at.strftime(red_time_format(:datetime)) %>
                   <% if event.active? %>
-                    <span class="badge bg-danger ms-1">active</span>
+                    <span class="badge bg-danger ms-1"><%= red_t("red.errors.storms_page.active_badge") %></span>
                   <% end %>
                 </td>
                 <td>
                   <% if event.duration_seconds %>
+                    <%# Duration#inspect emits English ("1 hour and 3 minutes").
+                        Rails' distance_of_time_in_words would translate, but
+                        through the HOST's I18n, which RED must not read — the
+                        same limitation local_time_ago documents in
+                        application_helper. Left English until RED owns a
+                        duration formatter of its own. %>
                     <%= ActiveSupport::Duration.build(event.duration_seconds).inspect %>
                   <% else %>
                     &mdash;
                   <% end %>
                 </td>
-                <td><%= number_with_delimiter(event.peak_rate_per_minute) %>/min</td>
+                <td><%= red_t("red.errors.storms_page.rate_per_minute", value: number_with_delimiter(event.peak_rate_per_minute)) %></td>
                 <td>
                   <% if event.reached_open %>
-                    <span class="badge bg-danger">count-only</span>
+                    <span class="badge bg-danger"><%= red_t("red.errors.storms_page.mode_count_only") %></span>
                   <% else %>
-                    <span class="badge bg-warning text-dark">shedding</span>
+                    <span class="badge bg-warning text-dark"><%= red_t("red.errors.storms_page.mode_shedding") %></span>
                   <% end %>
                 </td>
                 <td class="text-end"><%= number_with_delimiter(event.events_counted_only) %></td>
@@ -77,7 +83,7 @@
                   <% event.top_fingerprints_list.first(3).each do |fp| %>
                     <div style="font-size: 12px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= fp["message"] %>">
                       <strong><%= fp["class"] %></strong>
-                      <span class="text-muted">&times;<%= number_with_delimiter(fp["count"]) %></span>
+                      <span class="text-muted"><%= red_t("red.errors.storms_page.occurrence_multiplier", count: number_with_delimiter(fp["count"])) %></span>
                     </div>
                   <% end %>
                 </td>

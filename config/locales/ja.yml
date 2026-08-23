@@ -1,0 +1,1802 @@
+# RED dashboard translations — ja
+#
+# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+# pull request is a perfectly good pull request.
+#
+# Structure is derived from en.yml, which is authoritative. Do not add keys
+# here that do not exist there — run bin/i18n-check after editing.
+ja:
+  red:
+    common:
+      not_available: N/A
+      close: 閉じる
+      unknown: 不明
+      severity:
+        critical: 重大
+        high: 高
+        medium: 中
+        low: 低
+      days_filter:
+        '7': 7日間
+        '14': 14日間
+        '30': 30日間
+        '90': 90日間
+      frame_category:
+        app: 自分のコード
+        gem: Gem
+        framework: Rails フレームワーク
+        ruby_core: Ruby コア
+        unknown: 不明
+      trend:
+        increasing: 増加
+        decreasing: 減少
+        stable: 横ばい
+      health_status:
+        healthy: "✅ 正常"
+        warning: "⚠️ 警告"
+        critical: "\U0001F534 重大"
+      device_type:
+        mobile: モバイル
+        tablet: タブレット
+        bot: Bot
+        desktop: デスクトップ
+    nav:
+      sections:
+        core: 基本
+        health: 状態
+        diagnostics: 診断
+        insights: インサイト
+      overview: 概要
+      errors: エラー
+      analytics: 分析
+      platform: プラットフォーム
+      cache: キャッシュ
+      jobs: ジョブ
+      database: データベース
+      rate_limits: レート制限
+      actioncable: ActionCable
+      activestorage: ActiveStorage
+      llm: LLM
+      n_plus_one: N+1 クエリ
+      deprecations: 非推奨
+      swallowed: 握りつぶし
+      diagnostic_dumps: 診断
+      storms: ストーム
+      correlation: 相関
+      releases: リリース
+      user_impact: ユーザー影響
+      settings: 設定
+    sidebar:
+      back_to_app: "%{app}に戻る"
+      back_to_app_home: アプリのホームに戻る
+    navbar:
+      search_placeholder: エラーを検索... /
+      toggle_sidebar: サイドバーの表示切替 (S)
+      toggle_theme: テーマの切替
+      keyboard_shortcuts_title: キーボードショートカット (?)
+      all_applications: すべてのアプリケーション
+      language: 言語
+      choose_language: ダッシュボードの言語を選択
+      all_apps: すべてのアプリ (%{count})
+    banners:
+      credentials:
+        label: 'セキュリティ警告:'
+        body_html: デフォルトの認証情報 (gandalf/youshallnotpass) が使用されています。環境変数 <code>ERROR_DASHBOARD_USER</code>
+          と <code>ERROR_DASHBOARD_PASSWORD</code> を設定するか、イニシャライザで <code>authenticate_with</code>
+          を設定してください。
+        dismiss: このセッションでは表示しない
+      storm:
+        active_title: エラーストームが発生中です
+        recent_title: ストーム保護が最近作動しました
+        active_paused: "(%{time}から) — ストーム保護が作動しています。発生回数は正確に集計されていますが、詳細の記録は一時停止中です
+          (カウントのみモード)。"
+        active_sampled: "(%{time}から) — ストーム保護が作動しています。発生回数は正確に集計され、コンテキストはサンプリングして記録されます。"
+        recent_body: "(%{time}に終了) — %{count}件の発生が正確な件数として記録され、詳細はサンプリングされました。"
+        view_history: ストーム履歴を表示
+    footer:
+      built_with: Built with
+      credit_html: Built with ❤️ by %{author}
+    shortcuts:
+      title: キーボードショートカット
+      refresh: ページを更新
+      focus_search: 検索にフォーカス
+      analytics: 分析
+      toggle_sidebar: サイドバーの表示切替
+      show_shortcuts: ショートカットを表示
+    errors:
+      index:
+        title: エラー
+        last_updated_html: '最終更新: %{time}'
+        live: ライブ
+        summary:
+          errors_html:
+            other: "%{value}件のエラー"
+          unresolved_html: "%{value}件が未解決"
+          all_time: 全期間
+        spike:
+          critical: 重大なエラースパイクを検知しました
+          high: 高頻度のエラースパイクを検知しました
+          elevated: エラー発生数が増加しています
+          today:
+            other: '本日: %{count}件のエラー'
+          average: "(7日間平均: %{avg})"
+          multiplier: 通常の%{multiplier}倍
+        filters:
+          search_placeholder: エラーを検索...
+          more: 詳細フィルタ
+          apply: フィルタを適用
+          clear: クリア
+          clear_all: すべてクリア
+          active_label: 'フィルタ:'
+          status:
+            all: すべて
+            unresolved: 未解決
+            resolved: 解決済み
+            assigned: 割り当て済み
+            reopened: 再オープン
+          severity:
+            any: 深刻度を指定しない
+          all_apps: すべてのアプリ
+          all_platforms: すべてのプラットフォーム
+          all_types: すべての種類
+          all_timeframes: 全期間
+          all_frequencies: すべての頻度
+          all_priorities: すべての優先度
+          all_assignments: すべての割り当て
+          all_assignees: すべての担当者
+          unassigned: 未割り当て
+          assigned: 割り当て済み
+          unresolved_only: 未解決のみ
+          hide_snoozed: スヌーズ中を非表示
+          hide_muted: ミュート中を非表示
+          timeframes:
+            last_hour: 過去1時間
+            today: 本日
+            yesterday: 昨日
+            last_7_days: 過去7日間
+            last_30_days: 過去30日間
+            last_90_days: 過去90日間
+          frequencies:
+            once: 1回
+            few: 2〜9回
+            frequent: 10〜99回
+            very_frequent: 100回以上
+            recurring: 繰り返し発生
+          chips:
+            search: '検索: %{value}'
+            application: 'アプリ: %{value}'
+            platform: 'プラットフォーム: %{value}'
+            error_type: '種類: %{value}'
+            severity: '深刻度: %{value}'
+            timeframe: '期間: %{value}'
+            frequency: '頻度: %{value}'
+            status: 'ステータス: %{value}'
+            priority: '優先度: %{value}'
+            remove: フィルタを削除
+        columns:
+          error: エラー
+          status: ステータス
+          events: イベント
+          users: ユーザー
+          last_seen: 最終発生
+          application: アプリ
+          platform: プラットフォーム
+          select_all: すべてのエラーを選択
+        batch:
+          selected:
+            other: "%{count}件を選択中"
+          resolve: 解決
+          delete: 削除
+          confirm_delete: 選択したエラーを削除してもよろしいですか？
+        pagination: "%{count}件中 %{from}〜%{to}件を表示"
+        empty:
+          filtered_title: フィルタに一致するエラーはありません
+          filtered_message: 検索条件やフィルタ条件を変更してお試しください。
+          filtered_cta: フィルタをすべてクリア
+          clear_title: 問題ありません
+          clear_message: まだエラーは記録されていません。アプリケーションは正常に稼働しています。エラーが発生すると、ここに自動的に表示されます。
+      show:
+        page_title: 'エラー #%{id}'
+        breadcrumb_errors: エラー
+        hero:
+          reopened: 再オープン
+          occurrences_html:
+            other: "%{value}件の発生"
+          user_html: ユーザー %{value}
+          first_seen_html: 初回発生 %{time}
+          last_seen_html: 最終発生 %{time}
+        actions:
+          resolve: 解決
+          assign: 割り当て
+          copy_for_llm: LLM 用にコピー
+          ai_help: AI サポート
+          export_json: JSON をエクスポート
+        tabs:
+          details: 詳細
+          context: コンテキスト
+          history: 履歴
+          issues: イシュー
+        coverage:
+          active_label: カバレッジ有効
+          active_body: ソースコードを展開すると実行された行を確認できます
+          inactive_label: コードパスカバレッジ
+          inactive_body: 有効にすると実行された行を確認できます
+          enable: 有効にする
+          disable: 無効にする
+        baselines:
+          title: ベースライン統計
+          anomaly_label: '異常:'
+          anomaly_body: ベースラインより%{sigma}σ高い水準です (%{level})
+          levels:
+            elevated: 上昇
+            high: 高
+            critical: 重大
+          hourly: 時間別
+          daily: 日別
+          weekly: 週別
+          mean: '平均:'
+          std_dev: 'σ:'
+          percentile_95: 'P95:'
+        quick_actions:
+          title: クイックアクション
+          view_similar: 類似エラーを表示
+          view_user_errors: このユーザーのエラーを表示
+          view_platform_errors: "%{platform}のエラーを表示"
+          analytics: 分析
+      variables:
+        local_title: ローカル変数
+        local_hint: 例外が発生したスタックフレームの変数
+        instance_title: インスタンス変数
+        instance_hint_html: 例外が発生した%{klass}のインスタンス変数
+        instance_hint_generic: 例外が発生したオブジェクトのインスタンス変数
+        captured:
+          other: "%{count}件を取得"
+        column_variable: 変数
+        column_type: 型
+        column_value: 値
+        filtered: "[フィルタ済み]"
+        truncated: 切り詰め済み
+      deprecations:
+        title: 非推奨 (deprecation) の警告
+        hint: このリクエスト中に検出された Rails の deprecation 警告
+        column_warning: 警告
+        column_source: 発生元
+        footer_tip: 破壊的変更を避けるため、Rails をアップグレードする前に deprecation を解消してください。
+        upgrade_guide: Rails アップグレードガイド
+      n_plus_one:
+        title: N+1 クエリの検出
+        hint: このリクエストの SQL breadcrumb から検出された繰り返しクエリパターン
+        patterns:
+          other: "%{count}件のパターン"
+        column_repeats: 繰り返し回数
+        column_query: クエリパターン
+        column_total_time: 合計時間
+        fingerprint: 'フィンガープリント: %{fingerprint}'
+        tip_preload_html: 'ヒント: %{includes}または%{preload}で%{table}を事前読み込みしてください'
+        tip_generic_html: 'ヒント: %{includes}または%{preload}で関連を事前読み込みしてください'
+        eager_loading_guide: Rails 事前読み込みガイド
+      cache_health:
+        title: キャッシュの状態
+        operations:
+          other: "%{count}回の操作"
+        hint: このリクエストの breadcrumb から解析したキャッシュ動作
+        reads: 読み取り
+        writes: 書き込み
+        hit_rate: ヒット率
+        hits:
+          other: "%{count}件のヒット"
+        misses:
+          other: "%{count}件のミス"
+        unknown_status:
+          other: ヒット状況が不明な読み取りが%{count}件あります (古い breadcrumb)
+        total_time_html: 'キャッシュ処理の合計時間: %{duration}'
+        slowest_html: '最も遅い処理: %{duration}'
+        low_hit_rate: ヒット率が低い状態です — キャッシュキーの設計と TTL の設定を見直してください。
+        moderate_hit_rate: ヒット率は中程度です — キャッシュのウォームアップや有効期限の調整を検討してください。
+        caching_guide: Rails キャッシュガイド
+      breadcrumbs:
+        title: Breadcrumb
+        events:
+          other: "%{count}件のイベント"
+        hint: このエラーに至るまでの操作履歴
+        column_category: カテゴリ
+        column_message: メッセージ
+        column_duration: 所要時間
+      patterns:
+        title: 発生パターン
+        window: "(過去%{days}日間)"
+        pattern_type: パターンの種類
+        types:
+          business_hours:
+            label: 業務時間帯パターン
+            description: エラーは業務時間帯(9時〜17時)に集中しており、ユーザーの利用状況との関連が考えられます
+          night:
+            label: 夜間パターン
+            description: エラーは夜間(0時〜6時)に集中しており、バックグラウンドジョブや自動処理が原因の可能性があります
+          weekend:
+            label: 週末パターン
+            description: エラーの大半が週末に発生しており、週末特有の利用パターンが考えられます
+          uniform:
+            label: 均一パターン
+            description: エラーは一日を通して均等に分布しており、明確なパターンはありません
+          none:
+            label: パターンを検出できません
+            description: 明確な発生パターンを特定するにはデータが不足しています
+        strength: パターンの強度
+        strengths:
+          strong:
+            label: 強いパターン
+            description: エラーが特定の時間帯に強く集中しています
+          moderate:
+            label: 中程度のパターン
+            description: 特定の時間帯にある程度の集中が見られます
+          weak:
+            label: 弱いパターン
+            description: エラーはほぼ均等に分布しています
+        heatmap_title: 時間帯別ヒートマップ
+        heatmap_legend: セルの色が濃いほどエラーが多いことを示します。赤い枠線はピーク時間帯(平均の%{multiplier}倍超)を表します。
+        heatmap_cell:
+          other: "%{hour} - %{count}件のエラー"
+        peak_hours: 'ピーク時間帯:'
+        peak_hours_hint: これらの時間帯は平均エラー率の2倍を超えています。この時間帯のデプロイや負荷状況の監視を検討してください。
+        bursts_title: エラーバースト
+        bursts_window: "(過去%{days}日間)"
+        bursts_hint: エラーバーストとは、数分以内に複数のエラーが連続して発生する状態です。連鎖障害や負荷スパイクを示している可能性があります。
+        column_start_time: 開始時刻
+        column_duration: 継続時間
+        column_error_count: エラー件数
+        column_intensity: 強度
+        burst_duration: "%{minutes}分"
+        burst_duration_seconds: "(%{seconds}秒)"
+        burst_errors_html:
+          other: "%{value}件のエラー"
+        intensity_high: 高 (20件以上)
+        intensity_medium: 中 (10〜19件)
+        intensity_low: 低 (5〜9件)
+        bursts_truncated: 検出された%{total}件のバーストのうち%{shown}件を表示
+        recommendation_label: '推奨対応:'
+        recommendation_intro: '複数のエラーバーストを検出しました。次の点を調査してください:'
+        recommendation_deploys: バースト発生時刻前後のデプロイや設定変更
+        recommendation_load: 負荷スパイクやトラフィックの傾向
+        recommendation_cascades: 関連エラーによる連鎖障害
+        recommendation_jobs: バックグラウンドジョブの失敗やリトライストームの発生
+        empty: 発生パターンやバーストは検出されませんでした。パターン分析にはより多くのデータが必要な場合があります。
+      providers:
+        github: GitHub
+        gitlab: GitLab
+        bitbucket: Bitbucket
+        jira: Jira
+        linear: Linear
+        generic: プラットフォーム
+        generic_lowercase: プラットフォーム
+      discussion:
+        title: ディスカッション
+        activity_log: アクティビティログ
+        reply_on: "%{provider}で返信"
+        start_on: "%{provider}でディスカッションを開始"
+        empty: まだコメントはありません。%{provider}で最初のディスカッションを始めてください。
+      issue_section:
+        title: イシュートラッカー
+        view_issue: イシューを表示
+        linked: 連携済み
+        issue_reference: "%{provider} #%{number}"
+        states:
+          open: オープン
+          closed: クローズ
+          merged: マージ済み
+        assignees: 担当者
+        unassigned: 未割り当て
+        labels: ラベル
+        no_labels: ラベルなし
+        create_new: 新しいイシューを作成
+        create_issue: "%{provider}のイシューを作成"
+        configure_html: イシュー作成を有効にするには、イニシャライザで%{token}と%{url}を設定してください。
+        link_existing: 既存のイシューを連携
+        link: 連携
+      cascades:
+        title: エラーの連鎖
+        hint: エラー間の因果関係
+        triggered_by: 起因するエラー
+        triggered_by_hint: "(このエラーを引き起こすエラー)"
+        triggers: 誘発するエラー
+        triggers_hint: "(このエラーが引き起こすエラー)"
+        column_error_type: エラー種別
+        column_message: メッセージ
+        column_probability: 確率
+        column_frequency: 頻度
+        column_avg_delay: 平均遅延
+        view: 表示
+        footnote: 連鎖パターンは因果関係を示します。確率が高く (%{probability}%以上)、頻度が高い (%{frequency}以上)
+          場合は強い連鎖を示します。
+      llm_summary:
+        title: LLM 呼び出し
+        hint: リクエストの breadcrumb から集計
+        calls: 呼び出し数
+        tokens: トークン数
+        cost: コスト
+        input: 入力
+        output: 出力
+        tool_calls: ツール呼び出し
+        total_time: 合計時間
+        errors: エラー
+        by_model: モデル別
+        failed_calls:
+          other: "%{count}件の呼び出しが失敗しました — 詳細は breadcrumb の履歴をご確認ください。"
+      timeline:
+        title: タイムライン
+        hint: 関連する最近のエラー
+        current_error: 現在のエラー
+        user: 'ユーザー: %{id}'
+        resolved: 解決済み
+        notes_label: '解決メモ:'
+        notes_tooltip: '解決メモ: %{notes}'
+      user_errors_table:
+        column_rank: 順位
+        column_user: ユーザー
+        column_error_type_count: エラー種別数
+        column_error_count: エラー件数
+        column_percentage: 割合
+        column_error_types: エラー種別
+        column_actions: 操作
+        types:
+          other: "%{count}種類"
+        more:
+          other: 他%{count}件
+        view_errors: エラーを表示
+      co_occurring:
+        title: 同時発生エラー
+        badge: 時間パターン
+        hint: このエラーの前後%{minutes}分以内に発生したエラー
+        column_error_type: エラー種別
+        column_message: メッセージ
+        column_platform: プラットフォーム
+        column_frequency: 頻度
+        column_avg_delay: 平均遅延
+        times:
+          other: "%{count}回"
+        before: "%{duration}前"
+        after: "%{duration}後"
+        simultaneous: 同時
+        view: 表示
+      modals:
+        cancel: キャンセル
+        name_placeholder: '例: 山田太郎'
+        resolve:
+          title: エラーを解決済みにする
+          name_label: お名前
+          name_hint: このエラーを解決したのは誰ですか？
+          reference_label: 参照 (任意)
+          reference_placeholder: '例: JIRA-123, PR #456, GitHub Issue #789'
+          reference_hint: チケット、PR、イシューへのリンク
+          notes_label: 解決メモ (任意)
+          notes_placeholder: このエラーを修正するために行った内容を記述してください...
+          notes_hint: このエラーを解決するために何を行いましたか？
+          submit: 解決済みにする
+        assign:
+          title: エラーを割り当てる
+          label: 割り当て先
+          hint: このエラーを調査するのは誰ですか？
+          submit: 割り当て
+        priority:
+          title: 優先度を変更
+          label: 優先度
+          current: '現在: %{value}'
+          submit: 優先度を更新
+        snooze:
+          title: エラーをスヌーズ
+          label: スヌーズ期間
+          hint: このエラーをアクティブな表示から隠します
+          reason_label: 理由 (任意)
+          reason_placeholder: このエラーをスヌーズする理由は何ですか？
+          reason_hint: 理由はコメントとして追加されます
+          submit: スヌーズ
+          hours:
+            other: "%{count}時間"
+          days:
+            other: "%{count}日間"
+          weeks:
+            other: "%{count}週間"
+          hours_with_equivalent: "%{hours} (%{equivalent})"
+        mute:
+          title: 通知をミュート
+          description: ミュートしたエラーもダッシュボードには表示されますが、通知(Slack、メール、Discord、PagerDuty、webhook)は送信されません。
+          name_label: お名前 (任意)
+          reason_label: 理由 (任意)
+          reason_placeholder: このエラーをミュートする理由は何ですか？
+          reason_hint: 理由はコメントとして追加されます
+          submit: 通知をミュート
+      request_context:
+        title: リクエストコンテキスト
+        url: 'リクエスト URL:'
+        hostname: 'ホスト名:'
+        content_type: 'Content Type:'
+        duration: 'リクエスト所要時間:'
+        params: 'リクエストパラメータ:'
+        user_agent: 'User Agent:'
+        ip_address: 'IP アドレス:'
+        replay: 'リクエストの再現:'
+        raw_user_agent: User Agent の生データ
+        duration_seconds: "%{value}秒"
+        duration_ms: "%{value}ミリ秒"
+        copy_curl: curl としてコピー
+        copy_curl_title: curl コマンドをクリップボードにコピー
+        copy_rspec: RSpec としてコピー
+        copy_rspec_title: RSpec のリクエストスペックをクリップボードにコピー
+      similar_errors:
+        title: 類似エラー
+        badge: あいまい一致
+        hint: backtrace とメッセージが類似したエラー (類似度%{threshold}%以上)
+        column_similarity: 類似度
+        column_error_type: エラー種別
+        column_message: メッセージ
+        column_platform: プラットフォーム
+        column_occurrences: 発生回数
+        occurrences:
+          other: "%{count}回"
+        view: 表示
+      source_code:
+        view_on: "%{host}で表示"
+        view_source: ソースを表示
+        coverage_legend_html: カバレッジ有効 — %{executed} = 実行済み、%{not_executed} = 未実行
+        coverage_green: 緑
+        coverage_gray: グレー
+        read_failed: 'ソースを読み込めませんでした: %{message}'
+      ai_help:
+        title: AI サポート
+        providers:
+          openai: OpenAI
+          anthropic: Anthropic
+        close: AI サポートを閉じる
+        empty: 根本原因、再現手順、考えられる修正方法、次に確認すべき点などをご質問ください。
+        question_label: 質問
+        question_placeholder: 根本原因として考えられるものは何ですか？
+        ask: 質問する
+      sidebar:
+        title: メタデータ
+        occurrence_count: 発生回数
+        occurred_times:
+          other: このエラーは%{count}回発生しています
+        first_seen: 初回発生
+        last_seen: 最終発生
+        jump_to_timeline: タイムラインへ移動
+        severity_level: 深刻度
+        view_all_severity: 深刻度が%{severity}のエラーをすべて表示
+        severity_badges:
+          critical: 重大
+          high: 高
+          medium: 中
+          low: 低
+        platform: プラットフォーム
+        view_all_platform: "%{platform}のエラーをすべて表示"
+        user: ユーザー
+        view_user_errors: このユーザーのエラーをすべて表示
+        user_id: 'ID: %{id}'
+        user_id_label: 'ユーザーID: %{id}'
+        guest: ゲスト / 未認証
+        issue_tracking_linked_html: ステータス、担当者、優先度は%{link}で管理されています。
+        issue_tracking_link_text: 連携中のイシュー
+        issue_tracking_unlinked: ステータス、担当者、優先度はイシュートラッカーで管理されています。詳細を表示するにはイシューを連携してください。
+        workflow_status: ワークフローステータス
+        resolved: 解決済み
+        unresolved: 未解決
+        reopened: 再オープン
+        assigned_to: 担当者
+        assign: 割り当て
+        remove_assignment: 割り当てを解除しますか？
+        priority: 優先度
+        snooze: スヌーズ
+        snoozed: スヌーズ中
+        snoozed_until_html: "%{time}まで"
+        unsnooze: スヌーズ解除
+        notifications: 通知
+        muted: ミュート中
+        muted_by: "%{name}による"
+        muted_since_html: "%{time}から"
+        mute: ミュート
+        unmute: ミュート解除
+        resolved_by: 解決者
+        reference: 参照
+        resolution_notes: 解決メモ
+        error_id: エラーID
+        copy_error_id: エラーIDをコピー
+        environment:
+          title: 実行環境
+          hint: エラー発生時のランタイムコンテキスト
+          app_version: 'アプリバージョン:'
+          view_all_version: "%{version}のエラーをすべて表示"
+          git_sha: 'Git SHA:'
+          rails: 'Rails:'
+          ruby: 'Ruby:'
+          environment: '環境:'
+          server: 'サーバー:'
+          database: 'データベース:'
+          key_gems: '主要な Gem:'
+        health:
+          title: システムヘルス
+          hint: エラー発生時のランタイム状態
+          memory_rss: 'メモリ (RSS):'
+          process_swap: 'プロセススワップ:'
+          peak_rss: 'ピーク RSS:'
+          os_threads: 'OS スレッド:'
+          threads: 'スレッド:'
+          file_descriptors: 'ファイルディスクリプタ:'
+          load_average: 'ロードアベレージ:'
+          system_memory: 'システムメモリ:'
+          system_swap: 'システムスワップ:'
+          tcp_connections: 'TCP 接続数:'
+          gc_live_objects: 'GC ライブオブジェクト:'
+          major_gc_runs: 'メジャー GC 実行回数:'
+          last_gc: '最終 GC:'
+          connection_pool: 'コネクションプール:'
+          puma_threads: 'Puma スレッド:'
+          job_queue: 'ジョブキュー (%{adapter}):'
+          vm_cache_invalidations: 'VM キャッシュ無効化:'
+          vm_cache_misses: 'VM キャッシュミス:'
+          shape_cache_size: 'シェイプキャッシュサイズ:'
+          yjit_compiled: 'YJIT コンパイル済み:'
+          yjit_invalidations: 'YJIT 無効化:'
+          yjit_code_size: 'YJIT コードサイズ:'
+          yjit_compile_time: 'YJIT コンパイル時間:'
+          ruby_threads: "(Ruby: %{count})"
+      info:
+        new_badge: NEW
+        new_tooltip: 過去1時間以内に発生したエラーです
+        reopened: 再オープン
+        reopened_tooltip: 解決済みでしたが、%{time}に再発しました
+        copy_error_type: エラー種別をコピー
+        message_label: 'エラーメッセージ:'
+        copy_message: エラーメッセージをコピー
+        copy: コピー
+        cause_chain:
+          title: 例外の原因チェーン
+          caused_by: '原因:'
+          caused_by_indexed: '原因 (#%{index}):'
+          backtrace: Backtrace
+        backtrace:
+          label: 'Backtrace:'
+          frame_counts: "(自分のコード%{app}件、フレームワーク/gem %{framework}件)"
+          copy_full: Backtrace 全体をコピー
+          copy_full_title: Backtrace 全体をコピー
+          your_code: 自分のコード
+          framework_code: フレームワーク・gem のコード
+          frames:
+            other: "%{count}フレーム"
+          click_to_expand: "(クリックで展開)"
+          view_source: ソースを表示
+          none: Backtrace はありません
+      row:
+        new_badge: NEW
+        reopened: 再オープン
+        view_user_errors: ユーザー%{user}のエラーをすべて表示
+        status:
+          unresolved: 未解決
+          resolved: 解決済み
+          in_progress: 対応中
+          investigating: 調査中
+          wont_fix: 対応しない
+          assigned: 割り当て済み
+          snoozed: スヌーズ中
+          muted: ミュート中
+      stats:
+        today: 本日
+        this_week: 今週
+        unresolved: 未解決
+        resolved: 解決済み
+        reopened: 再オープン
+      pages:
+        percent: "%{value}%"
+        column_errors: エラー
+        column_occurrences: 発生回数
+        column_last_seen: 最終発生
+        total_occurrences: 総発生回数
+        affected_errors: 影響を受けたエラー
+        more_errors:
+          other: 他%{count}件
+        none_in_last_days: 過去%{days}日間、該当する結果は検出されませんでした。
+        how_breadcrumbs_html: Breadcrumb を有効にする必要があります (%{option})
+      deprecations_page:
+        title: 非推奨 (deprecation) の警告
+        empty_title: deprecation の警告は見つかりませんでした
+        empty_body: 過去%{days}日間、エラーの breadcrumb から deprecation の警告は検出されませんでした。
+        how_title: 'deprecation の記録方法:'
+        how_captured: Rails の deprecation 警告は breadcrumb として自動的に記録されます
+        how_appear: deprecation 警告が出ているリクエストでエラーが発生すると、ここに表示されます
+        unique_warnings: 警告の種類数
+        all_title: すべての deprecation 警告
+        column_warning: 警告
+        column_source: 発生元
+      n_plus_one_page:
+        title: N+1 クエリパターン
+        empty_title: N+1 クエリパターンは見つかりませんでした
+        empty_body: 過去%{days}日間、エラーの breadcrumb から N+1 クエリパターンは検出されませんでした。
+        how_title: 'N+1 検出の仕組み:'
+        how_captured: エラーが発生したリクエストでは、SQL クエリが breadcrumb として記録されます
+        how_threshold_html: 同じ形のクエリが%{threshold}回以上出現すると検出対象になります
+        how_default:
+          other: デフォルトのしきい値は%{count}回です
+        unique_patterns: パターン数
+        all_title: すべての N+1 クエリパターン
+        duration_ms: "%{value} ミリ秒"
+        footer_tip_html: N+1 クエリを解消するには%{includes}、%{preload}、%{eager_load}をご利用ください。
+      swallowed_page:
+        title: 握りつぶされた例外 (swallowed exception)
+        empty_title: 握りつぶされた例外は検出されませんでした
+        empty_body: 過去%{days}日間、rescue 率が%{threshold}%を超える例外は検出されませんでした。
+        how_title: '握りつぶされた例外の検出方法:'
+        how_raise: TracePoint(:raise) が raise された例外をすべてカウントします
+        how_rescue: TracePoint(:rescue) が rescue された例外をすべてカウントします
+        how_ratio: rescue/raise 比が高い = 握りつぶされている (暗黙的に rescue されている) 可能性が高い
+        how_requires_html: Ruby 3.3 以上と%{option}が必要です
+        swallowed_patterns: 握りつぶしパターン
+        total_rescues: 総 rescue 数
+        total_raises: 総 raise 数
+        all_title: 握りつぶされた例外のパターン
+        column_exception_class: 例外クラス
+        column_raise_location: raise 箇所
+        column_rescue_location: rescue 箇所
+        column_raises: raise 数
+        column_rescues: rescue 数
+        column_ratio: 比率
+        view_unrescued: error_log に記録された未 rescue の%{exception}エラーを表示
+        footer_tip: 握りつぶされた例外とは、raise された後に暗黙的に rescue された例外です。実際の不具合を隠している可能性があります。
+      rack_attack_page:
+        title: レート制限イベント
+        missing_title: Rack Attack がインストールされていません
+        missing_body_html: トラッキングは有効ですが、このアプリケーションでは%{gem} gem が読み込まれていないため、イベントを記録できません。Gemfile
+          に追加してルールを1つ以上設定すると、ここにイベントが表示されます。
+        empty_title: レート制限イベントはありません
+        empty_body: 過去%{days}日間、Rack Attack の throttle、blocklist、track イベントは記録されていません。
+        how_title: 'Rack Attack トラッキングの仕組み:'
+        how_enabled_html: Rack Attack トラッキングを有効にする必要があります (%{option})
+        how_installed: アプリに Rack Attack がインストールされ、設定されている必要があります
+        how_recorded: ルールに一致するたびに throttle、blocklist、track の各イベントが記録されます — エラーの発生は不要です
+        how_buffered: イベントはバッファリングされ%{seconds}秒ごとに書き込まれるため、表示までに少し時間がかかります
+        unique_rules: ルール数
+        total_events: 総イベント数
+        unique_ips: ユニーク IP 数
+        all_title: ルール別レート制限イベント
+        column_rule: ルール
+        column_type: 種類
+        column_count: 件数
+        column_ips: IP 数
+        column_top_path: 上位パス
+        match_type:
+          blocklist: blocklist
+          throttle: throttle
+          track: track
+        footer_tip: 件数が多い場合、不正利用またはルールの設定ミスの可能性があります。
+        docs: Rack Attack ドキュメント
+      diagnostic_dumps_page:
+        title: 診断ダンプ
+        capture: ダンプを取得
+        empty_title: 診断ダンプはまだありません
+        empty_body: デバッグ用にシステム状態のスナップショットを取得できます。
+        how_title: '診断ダンプの仕組み:'
+        how_capture_html: 上の%{button}をクリックするか、%{command}を実行します
+        how_captures: '取得内容: 実行環境、GC 統計、スレッド、コネクションプール、メモリ、ジョブキュー'
+        how_saved: 各ダンプは履歴比較のためデータベースに保存されます
+        how_use: 本番環境の問題調査やシステム状態の確認にご利用ください
+        total_dumps: 総ダンプ数
+        threads_latest: スレッド (最新)
+        memory_latest: メモリ (最新)
+        history_title: ダンプ履歴
+        details: 詳細
+        pid: 'PID: %{pid}'
+        uptime: '稼働時間: %{minutes}分'
+        section_environment: 実行環境
+        section_system_health: システムヘルス
+        section_gc: GC
+        section_job_queue: ジョブキュー
+        env_versions: Ruby %{ruby} / Rails %{rails}
+        memory_mb: "%{value} MB"
+        threads:
+          other: "%{count}スレッド"
+        pool: 'プール: %{busy}/%{size}'
+        gc_stats: 'ライブ: %{live} / メジャー GC: %{major}'
+        jobs_failed: '失敗: %{count}'
+        footer_tip_html: '次の方法でもダンプを取得できます: %{command}'
+        footer_note_html: 'メモを追加: %{command}'
+        unknown_short: "?"
+      storms_page:
+        title: ストーム履歴
+        intro_html: エラー率が急増した場合 (不具合のあるデプロイ、依存サービスの障害など)、ストーム保護が gem 自身のデータベース書き込みを制限し、障害を増幅させないようにします。発生回数は常に正確にカウントされ、サンプリングされるのはイベントごとの詳細のみです。しきい値は%{options}オプションでプロセスごとに設定できます。
+        active_html: "%{time}から%{label} — ピーク時のレートは%{rate}です。"
+        active_label: ストーム発生中
+        empty_title: ストームの記録はありません
+        empty_body: ストーム保護は待機中です。このアプリでエラーが大量発生した場合、抑制された内容の正確な件数とともにここに表示されます。
+        column_started: 開始
+        column_duration: 継続時間
+        column_peak_rate: ピークレート
+        column_mode: モード
+        column_counted: カウント数 (正確)
+        column_overflow: オーバーフロー
+        column_top_errors: 上位エラー
+        active_badge: 発生中
+        mode_count_only: カウントのみ
+        mode_shedding: 抑制中
+        rate_per_minute: "%{value}/分"
+        occurrence_multiplier: "×%{count}"
+      overview_page:
+        page_title: ダッシュボード
+        title: 概要
+        last_updated_html: '最終更新: %{time}'
+        alert_banner:
+          other: 過去1時間に重大/高深刻度のエラーが%{count}件発生
+        alert_occurrences:
+          other: "%{count}件の発生"
+        alert_view: 表示
+        error_rate: エラー率
+        error_rate_hint: 本日の1時間あたりのエラー数
+        unresolved: 未解決
+        unresolved_hint: 解決待ち
+        resolution_rate: 解決率
+        resolution_hint: "%{total}件中%{resolved}件が解決済み"
+        affected_users: 影響を受けたユーザー (本日)
+        users_change: 前日比 %{count}
+        avg_resolution: 平均解決時間
+        avg_resolution_hint: 解決までの平均所要時間
+        hours_short: "%{value}時間"
+        error_trend: エラーの推移
+        top_errors: 影響度の高いエラー
+        view_all: すべて表示 →
+        users:
+          other: "%{count}人のユーザー"
+        platform_health: プラットフォームの状態
+        full_comparison: 詳細な比較 →
+        stability_score_html: "%{score}/100"
+        platform_summary: エラー%{total}件 · 重大%{critical}件 · 未対応%{unresolved}件
+        correlation_title: 相関インサイト
+        full_analysis: 詳細な分析 →
+        problematic_releases: 問題のあるリリース
+        release_errors:
+          other: "%{count}件のエラー"
+        time_correlated: 時間相関あり
+        correlation_value_html: 相関 %{percent} (%{strength})
+        multi_error_users: 複数エラーの発生ユーザー
+        user_types_html: ユーザー %{user} · %{types}
+        types:
+          other: "%{count}種類"
+    settings:
+      title: 設定
+      version: v%{version}
+      intro_html: 現在の設定内容の読み取り専用ビューです。変更は%{file}または環境変数から行ってください。
+      option_count:
+        other: "%{count}項目"
+      plugins:
+        title: 有効なプラグイン
+        column_name: プラグイン名
+        column_version: バージョン
+        column_description: 説明
+        column_status: ステータス
+        active: 有効
+        inactive: 無効
+        empty: 現在登録されているプラグインはありません。カスタムプラグインを作成して機能を拡張できます。
+      test_error:
+        title: 通知のテスト
+        description_html: テスト用のエラーを、記録から通知までの一連の流れに沿って送信します。エラーログに%{error_class}を作成し、設定済みのすべてのチャネル
+          (Slack、Discord、PagerDuty、メール、webhook) に通知を送信します。テストエラーであることは明示されるため、解決または削除しても問題ありません。
+        confirm: テストエラーを作成し、設定済みのすべてのチャネルに通知を送信します。続行しますか？
+        submit: テストエラーを送信
+      help:
+        title: 設定を変更するには
+        edit_html: "%{file}で設定を編集し、アプリケーションを再起動してください。"
+        docs_html: 詳しくは%{docs}をご覧ください。
+        docs_link: ドキュメント
+      groups:
+        core_features: 基本機能
+        multi_app: マルチアプリ対応
+        user_integration: ユーザー連携
+        performance: パフォーマンス設定
+        notifications: 通知チャネル
+        analytics: 高度な分析機能
+        source_code: ソースコード連携
+        breadcrumbs: Breadcrumb
+        system_health: システムヘルス
+        enhanced_metrics: 拡張メトリクス
+        issue_tracking: イシュートラッキング
+        deep_debugging: 詳細デバッグ
+        event_tracking: イベントトラッキング
+        advanced: 詳細設定
+        internal_logging: 内部ログ
+      units:
+        lines:
+          other: "%{count}行"
+        minutes:
+          other: "%{count}分"
+        seconds:
+          other: "%{count}秒"
+        events:
+          other: "%{count}件のイベント"
+        queries:
+          other: "%{count}クエリ"
+        std_devs: "%{count}σ"
+      values:
+        enabled: 有効
+        disabled: 無効
+        not_set: 未設定
+        not_found: 見つかりません
+        not_available: 利用できません
+        empty: 空
+        unknown: 不明
+        set: 設定済み
+        auto_detected: 自動検出
+        configured: "(設定済み)"
+        items:
+          other: "%{count}件"
+        rules:
+          other: "%{count}件のルール"
+        users:
+          other: "%{formatted}人のユーザー"
+        days:
+          other: "%{count}日"
+        rails_app_name_unavailable: Rails アプリ名を取得できません
+        separate_db: '別 DB: %{name}'
+        configured_but_not_found: 設定されていますが見つかりません
+        shared_db_primary: 共有 DB (primary)
+        shared_db: 共有 DB
+        unable_to_detect: 検出できません
+        no_user_model: User モデルが見つかりません
+        unable_to_query_count: 件数を取得できません
+        manual_cleanup_required: 手動でのクリーンアップが必要です
+        keep_forever: 無期限に保持
+        no_automatic_deletion: 自動削除は行いません
+        run_command: '実行:'
+        to_cleanup: 'クリーンアップするには:'
+      options:
+        enable_middleware: 未処理の例外を捕捉します
+        enable_error_subscriber: Rails のエラーイベントを購読します
+        retention_days: '手動クリーンアップのみ (実行: rails error_dashboard:cleanup_resolved DAYS=90)'
+        max_backtrace_lines: スタックトレースの深さの上限
+        sampling_rate: エラーを記録する割合
+        application_name: このアプリケーションの名前 (未設定の場合は自動検出)
+        database: エラーログで使用中のデータベース
+        use_separate_database: エラーログ専用の DB を使用します
+        user_model: ユーザー紐づけに使うモデル名 (未設定の場合は自動検出)
+        total_users_for_impact: 影響率の算出に使用 (未設定の場合は自動検出)
+        async_logging: バックグラウンドジョブで処理します
+        async_adapter: ジョブキューのアダプタ
+        enable_rate_limiting: API リクエストを制限します
+        rate_limit_per_minute: IP ごとの1分あたりのリクエスト数
+        enable_slack_notifications: リアルタイム通知
+        slack_webhook_url: Slack の webhook エンドポイント
+        enable_email_notifications: メールによるアラート
+        notification_email_recipients: 宛先アドレス
+        notification_email_from: 送信元アドレス
+        enable_discord_notifications: Discord の webhook 通知
+        discord_webhook_url: Discord の webhook エンドポイント
+        enable_pagerduty_notifications: 重大なエラーのエスカレーション
+        pagerduty_integration_key: PagerDuty の API キー
+        enable_webhook_notifications: 汎用の webhook エンドポイント
+        webhook_urls: カスタム webhook エンドポイント
+        enable_scheduled_digests: 日次/週次のサマリーメール。SolidQueue、Sidekiq、cron でスケジュールします
+        digest_frequency: ダイジェストメールの送信頻度
+        digest_recipients: メールアドレス (未設定の場合は通知の宛先を使用)
+        enable_similar_errors: 類似度から関連エラーを検出します
+        enable_co_occurring_errors: 同時に発生するエラー
+        enable_error_cascades: 親→子のエラー連鎖
+        enable_error_correlation: バージョン/ユーザー/時間の分析
+        enable_platform_comparison: iOS と Android の比較分析
+        enable_occurrence_patterns: 周期性・バーストの検出
+        enable_baseline_alerts: 異常検知
+        baseline_alert_threshold_std_devs: アラートを発報する標準偏差
+        baseline_alert_severities: アラート対象の深刻度
+        baseline_alert_cooldown_minutes: 同一エラー種別のアラート間隔 (分)
+        enable_source_code_integration: backtrace にコードを表示します
+        source_code_context_lines: 対象行の前後に表示する行数
+        enable_git_blame: git blame の情報を表示します
+        source_code_cache_ttl: ソースコードのキャッシュ保持時間
+        only_show_app_code_source: セキュリティのため gem/標準ライブラリを非表示にします
+        git_branch_strategy: ブランチの解決方法
+        enable_breadcrumbs: リクエストの操作履歴を記録します
+        breadcrumb_buffer_size: リクエストあたりの breadcrumb の最大数
+        enable_n_plus_one_detection: breadcrumb から繰り返しクエリパターンを検出します
+        n_plus_one_threshold: N+1 と判定する最小の繰り返し回数
+        enable_system_health: エラー発生時の GC、メモリ、スレッド、コネクションプールを記録します
+        app_version: 現在のアプリケーションのバージョン
+        git_sha: デプロイされているコミット
+        git_repository_url: GitHub/GitLab のリポジトリ URL
+        dashboard_base_url: ダッシュボードのリンクに使うベース URL
+        enable_issue_tracking: GitHub/GitLab/Codeberg 連携 — この1つの設定で、イシュー作成、自動作成、ライフサイクル同期、プラットフォーム状態のミラーリング、コメント表示のすべてが有効になります。ワークフロー管理はプラットフォーム側の状態に置き換わります。
+        issue_tracker_token: RED bot のトークン (環境変数 RED_BOT_TOKEN で設定)
+        issue_tracker_provider: git_repository_url から自動検出
+        issue_tracker_repo: git_repository_url から自動検出
+        issue_tracker_labels: 新規イシューに付与するラベル
+        issue_webhook_secret: 双方向同期を有効にする場合に設定します (HMAC 検証)
+        enable_local_variables: TracePoint(:raise) — 例外発生時のローカル変数を記録します
+        enable_instance_variables: 例外発生時の self のインスタンス変数を記録します
+        detect_swallowed_exceptions: TracePoint(:raise) + (:rescue) — 暗黙的に rescue
+          された例外を検出します (Ruby 3.3 以上)
+        enable_diagnostic_dump: オンデマンドのシステム状態スナップショット
+        enable_crash_capture: 未処理のクラッシュを捕捉する at_exit フック
+        enable_coverage_tracking: 診断モード — ダッシュボードから有効にすると、ソース表示で実行された行を確認できます (Ruby
+          3.2 以上)
+        enable_rack_attack_tracking: throttle/blocklist イベントを専用テーブルに記録します
+        enable_actioncable_tracking: WebSocket のチャネルイベントを breadcrumb として記録します
+        enable_activestorage_tracking: アップロード/ダウンロード/削除を breadcrumb として記録します
+        custom_severity_rules: エラー種別 → 深刻度の対応付け
+        ignored_exceptions: 無視する例外
+        enable_internal_logging: gem のデバッグ出力
+        log_level: 出力の詳細度
+    flash:
+      locale:
+        unavailable: その言語は利用できません。デフォルトの言語を使用します。
+      batch:
+        resolved:
+          other: "%{count}件のエラーを解決しました"
+        muted:
+          other: "%{count}件のエラーをミュートしました"
+        unmuted:
+          other: "%{count}件のエラーのミュートを解除しました"
+        deleted:
+          other: "%{count}件のエラーを削除しました"
+        failed: '一括操作に失敗しました: %{reason}'
+      issue:
+        created: イシューを作成しました
+        linked: イシューを連携しました
+        create_failed: 'イシューの作成に失敗しました: %{reason}'
+        link_failed: 'イシューの連携に失敗しました: %{reason}'
+      not_enabled: "%{feature}は有効になっていません。%{file}で有効にしてください"
+      not_enabled_plural: "%{feature}は有効になっていません。%{file}で有効にしてください"
+      not_enabled_options: "%{feature}は有効になっていません。%{file}で%{options}を有効にしてください"
+      not_enabled_set_options: "%{feature}は有効になっていません。%{file}で%{options}を設定してください"
+      features:
+        platform_comparison: プラットフォーム比較
+        error_correlation: エラー相関分析
+        breadcrumbs: Breadcrumb
+        system_health: システムヘルス
+        swallowed_exceptions: 握りつぶされた例外の検出
+        rack_attack: Rack Attack トラッキング
+        actioncable: ActionCable トラッキング
+        activestorage: ActiveStorage トラッキング
+        diagnostic_dumps: 診断ダンプ
+      diagnostic_dump:
+        disabled: 診断ダンプは有効になっていません。
+        captured: 診断ダンプを取得しました。
+        failed: '診断ダンプの取得に失敗しました: %{message}'
+      coverage:
+        not_enabled: カバレッジトラッキングが設定で有効になっていません。
+        enabled: コードパスカバレッジを有効にしました。エラーを再現してから、ソースコードで実行された行をご確認ください。
+        disabled: コードパスカバレッジを無効にしました。
+        unavailable: カバレッジを有効にできませんでした。Ruby 3.2 以上が必要です。
+      test_error:
+        logged: テストエラーを記録しました。通知チャネル (Slack、Discord、メールなど) で受信をご確認ください。
+        failed: 'テストエラーの記録に失敗しました: %{message}'
+      swallowed_requires_ruby: 握りつぶされた例外の検出には Ruby 3.3 以上が必要です (現在%{version})。この機能を使うには
+        Ruby をアップグレードしてください。
+      ai_help:
+        not_configured: AI サポートが設定されていません
+        blank_question: 質問を入力してください
+        question_too_long: 質問が長すぎます。%{limit}文字以内で入力してください。
+    commands:
+      no_error_ids: エラーIDが指定されていません
+      invalid_action: 操作の種類が不正です
+      issue:
+        not_configured: イシュートラッキングが設定されていません
+        already_linked: 'このエラーにはすでにイシューが連携されています: %{url}'
+        url_required: イシューの URL を入力してください
+      error_not_found: 'エラーが見つかりません: %{id}'
+      batch_failed:
+        mute:
+          other: "%{count}件のエラーのミュートに失敗しました"
+        unmute:
+          other: "%{count}件のエラーのミュート解除に失敗しました"
+        resolve:
+          other: "%{count}件のエラーの解決に失敗しました"
+    mailers:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown_application: 不明
+      error_alert:
+        subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        heading: "\U0001F6A8 エラーアラート"
+        labels:
+          application: アプリケーション
+          error_type: エラー種別
+          platform: プラットフォーム
+          occurred_at: 発生日時
+          user_id: ユーザーID
+          ip_address: IP アドレス
+          request_url: リクエスト URL
+          message: メッセージ
+          error_id: エラーID
+        stack_trace:
+          other: スタックトレース (先頭%{count}行)
+        view_details: ダッシュボードで詳細を表示
+        view_details_text: 'ダッシュボードで詳細をご確認ください:'
+        footer: これは%{product}からの自動エラー通知です。
+      digest:
+        subject:
+          other: RED ダイジェスト — 新規エラー%{count}件 (%{period})
+        heading: RED エラーダイジェスト
+        periods:
+          daily: 過去24時間
+          weekly: 過去7日間
+        generated_at: 作成日時
+        summary: サマリー
+        stats:
+          new_errors: 新規エラー
+          total_occurrences: 発生回数
+          total_occurrences_text: 総発生回数
+          resolved: 解決済み
+          unresolved: 未解決
+          critical_high: 重大/高
+          resolution_rate: 解決率
+        comparison:
+          heading: 前期との比較
+          versus: '前%{period}との比較:'
+          current: 今期
+          previous: 前期
+          change: 変化
+          delta:
+            other: "%{delta}件のエラー"
+        critical_unresolved: 重大・高の未解決エラー
+        top_errors: 件数の多いエラー
+        columns:
+          severity: 深刻度
+          error: エラー
+          error_type: エラー種別
+          count: 件数
+        view: 表示
+        open_dashboard: ダッシュボードを開く
+        view_dashboard_text: 'ダッシュボード全体を表示:'
+        manage_settings: ダイジェストの設定を変更
+        footer: RED (%{product}) からの自動ダイジェストです
+    notifications:
+      shared:
+        product_name: Rails Error Dashboard
+        unknown: 不明
+        not_available: N/A
+      error_alert:
+        fallback: "\U0001F6A8 新規エラーアラート"
+        heading: "\U0001F6A8 エラーアラート"
+        discord_title: "\U0001F6A8 新規エラー: %{error_type}"
+        pagerduty_summary: "[%{application}] 重大なエラー: %{platform}で%{error_type}"
+        labels:
+          application: アプリケーション
+          error_type: エラー種別
+          platform: プラットフォーム
+          occurred: 発生日時
+          message: メッセージ
+          user: ユーザー
+          ip_address: IP アドレス
+          request_url: リクエスト URL
+          occurrences: 発生回数
+          controller: コントローラ
+          action: アクション
+          first_seen: 初回発生
+          location: 発生箇所
+        user_fallback: 'ユーザー #%{id}'
+        view_details: 詳細を表示
+        view_in_dashboard: エラーダッシュボードで表示
+        error_id: 'エラーID: %{id}'
+      baseline_alert:
+        fallback: "\U0001F6A8 ベースライン異常アラート"
+        heading: "\U0001F6A8 ベースラインからの異常を検知しました"
+        labels:
+          severity: 深刻度
+          std_devs: 標準偏差
+          threshold: しきい値
+          baseline_type: ベースラインの種類
+          baseline_info: ベースライン情報
+        level:
+          critical: 重大
+          high: 高
+          elevated: 上昇
+          unknown: 不明
+        std_devs_above: ベースラインより%{value}σ高い水準
+        threshold_errors:
+          other: "%{value}件のエラー"
+        view_in_dashboard: ダッシュボードで表示
+      storm:
+        detected: "%{started_at}に%{application}でエラーストームを検知しました。"
+        mode:
+          open: カウントのみモード (発生回数は集計し、詳細の記録は一時停止)
+          shedding: 抑制モード (コンテキストのサンプリングが有効)
+        engaged: ストーム保護が作動しました — %{mode}。
+        suppressed: ストームが収まるまで個別のエラー通知は抑制されますが、正確な件数は保持されます。
+        dashboard: 'ダッシュボード: %{url}'
+    time:
+      ago: "%{duration}前"
+      formats:
+        full: "%Y年%m月%d日 %H:%M:%S"
+        short: "%m/%d %H:%M"
+        date_only: "%Y年%m月%d日"
+        time_only: "%H:%M:%S"
+        datetime: "%Y年%m月%d日 %H:%M"
+    health:
+      columns:
+        error: エラー
+        last_seen: 最終発生
+      database:
+        title: データベースの状態
+        stats:
+          errors_with_pool: プール情報のあるエラー
+          peak_utilization: 最大使用率
+          total_dead: デッド接続の合計
+          total_waiting: 待機の合計
+        live:
+          title: データベースのリアルタイム状態
+          non_postgresql: PostgreSQL 以外のアダプタを検出しました (%{adapter})。
+          non_postgresql_hint: テーブル、インデックス、アクティビティのリアルタイム統計には PostgreSQL が必要です。コネクションプールと履歴データは以下でご確認いただけます。
+          pool_size: プールサイズ
+          busy: 使用中
+          idle: アイドル
+          dead: デッド
+          waiting: 待機中
+        summary:
+          total_db_size: DB 全体のサイズ
+          tables: テーブル数
+          unused_indexes: 未使用インデックス
+          active_connections: アクティブな接続数
+        host_tables:
+          title: ホストアプリのテーブル
+        gem_tables:
+          title: エラーダッシュボードのテーブル
+        unused_indexes:
+          title: 未使用インデックス
+          column_index: インデックス
+          column_table: テーブル
+          column_size: サイズ
+        activity:
+          title: 接続アクティビティ
+          total_badge: 合計%{count}件
+          waiting_badge: 待機中%{count}件
+          column_state: 状態
+          column_count: 件数
+          column_waiting: 待機中
+        table_columns:
+          table: テーブル
+          est_rows: 推定行数
+          size: サイズ
+          seq_scans: Seq Scan 数
+          idx_scans: Index Scan 数
+          dead_tuples: デッドタプル
+          last_vacuum: 最終 VACUUM
+        never_vacuumed: 未実行
+        pool_history:
+          title: エラー別コネクションプール
+          empty_title: コネクションプールのデータが見つかりません
+          empty_message_html: 過去%{days}日間のシステムヘルススナップショットからコネクションプールの統計は検出されませんでした。エラー発生時にプール統計を記録するには
+            <code>enable_system_health = true</code> を有効にしてください。
+          column_error: エラー
+          column_error_type: エラー種別
+          column_utilization: 使用率
+          column_busy: 使用中
+          column_idle: アイドル
+          column_dead: デッド
+          column_waiting: 待機中
+          column_pool_size: プールサイズ
+          column_last_seen: 最終発生
+          tip: エラー発生時の使用率が高い場合、コネクションプールの枯渇や長時間実行されているクエリが原因の可能性があります。
+          guide_link: データベースガイド
+      llm:
+        title: LLM の状態
+        disabled:
+          title: LLM オブザーバビリティが有効になっていません
+          message: モデル別の LLM 統計をここに表示するには、LLM オブザーバビリティと breadcrumb を有効にしてください。
+          enable_in_html: "<code>config/initializers/rails_error_dashboard.rb</code>
+            で有効にします:"
+        empty:
+          title: LLM 呼び出しは検出されませんでした
+          message: '過去%{days}日間、エラーの breadcrumb から LLM API の呼び出しは記録されていません。LLM 呼び出しの計測方法は次の3通りです:'
+          tab_otel: OpenTelemetry
+          tab_faraday: Faraday / RubyLLM
+          tab_manual: 手動
+          otel_hint: すでに OTel コレクターを運用中の場合は、この gem を導入するだけで自動的に購読します。
+          otel_requires_html: "<code>enable_llm_observability = true</code> が必要です。"
+          faraday_hint: "<code>ruby_llm</code>、<code>openai</code>、<code>anthropic</code>
+            などの Faraday ベースの SDK をお使いの場合は、ミドルウェアを一度挿入するだけです。"
+          faraday_note: RED はリクエスト/レスポンスからプロバイダ、モデル、トークン数を自動検出します。
+          manual_hint: "<code>Net::HTTP</code> の直接利用、gRPC、ローカル推論など、その他の場合は手動で計測します。"
+          manual_note_html: コストはトークン数から自動推定されます。payload の <code>cost_usd_estimate:</code>
+            で上書きできます。
+        stats:
+          calls: LLM 呼び出し数
+          models: モデル数
+          errors_with_llm: LLM を伴うエラー (%{rate}%)
+          total_cost: 合計コスト
+        by_model:
+          title: モデル別のパフォーマンス
+          column_provider_model: プロバイダ · モデル
+          column_calls: 呼び出し数
+          column_tools: ツール
+          column_avg_tokens: 平均トークン数
+          column_avg_latency: 平均レイテンシ
+          column_error_rate: エラー率
+          column_cost: コスト
+          column_top_error: 最多のエラー
+          column_last_seen: 最終発生
+          avg_tokens_in: 入力
+          avg_tokens_out: 出力
+          failed_count: "%{count}件が失敗"
+          tip_html: 特定モデルのエラー率が高い場合、クォータやレート制限が原因であることが多くあります。レイテンシが遅い場合 (&gt;5秒)
+            はプロバイダ側の性能低下が考えられます。
+          guide_link: 計測ガイド
+      cache:
+        title: キャッシュの状態
+        empty:
+          title: キャッシュの動作が見つかりません
+          message: 過去%{days}日間、エラーの breadcrumb からキャッシュ操作は検出されませんでした。
+          how_it_works: 'キャッシュトラッキングの仕組み:'
+          step_breadcrumbs_html: Breadcrumb を有効にする必要があります (<code>enable_breadcrumbs
+            = true</code>)
+          step_capture: エラーが発生したリクエストでは、キャッシュの読み書きが breadcrumb として記録されます
+          step_hit_status: 読み取り操作についてはヒット/ミスの状況が記録されます
+          step_sort: このページではエラーごとのキャッシュ性能を、問題の大きい順に表示します
+        stats:
+          errors_with_cache: キャッシュ操作のあるエラー
+          avg_hit_rate: 平均ヒット率
+          total_ops: キャッシュ操作の合計
+        table:
+          title: エラー別キャッシュ性能
+          column_error: エラー
+          column_reads: 読み取り
+          column_writes: 書き込み
+          column_hit_rate: ヒット率
+          column_total_time: 合計時間
+          column_slowest_op: 最も遅い操作
+          column_last_seen: 最終発生
+          tip: ヒット率が低い場合、キャッシュキーの有効期限が短すぎるか、正しく設定されていない可能性があります。
+          guide_link: Rails キャッシュガイド
+      job:
+        title: ジョブの状態
+        empty:
+          title: ジョブキューのデータが見つかりません
+          message: 過去%{days}日間のシステムヘルススナップショットからジョブキューの統計は検出されませんでした。
+          how_it_works: 'ジョブ状態トラッキングの仕組み:'
+          step_enable_html: システムヘルスを有効にする必要があります (<code>enable_system_health = true</code>)
+          step_capture: Sidekiq、SolidQueue、GoodJob を検出すると、ジョブキューの統計が自動的に記録されます
+          step_collected: 統計はエラーの記録時にエラーごとに収集されます
+          step_sort: このページではエラーごとのジョブキューの状態を、失敗件数順に表示します
+        stats:
+          errors_with_jobs: ジョブ情報のあるエラー
+          total_failed: 失敗したジョブの合計
+          adapters_detected: 検出されたアダプタ
+        table:
+          title: エラー別ジョブキューの状態
+          column_error: エラー
+          column_adapter: アダプタ
+          column_failed: 失敗
+          column_queued: キュー待ち
+          column_other_stats: その他の統計
+          column_last_seen: 最終発生
+          enqueued: 投入済み
+          ready: 実行可能
+          queued: キュー待ち
+          other_stats_sidekiq: 'dead: %{dead}, retry: %{retry}, workers: %{workers}'
+          other_stats_solid_queue: 'claimed: %{claimed}, blocked: %{blocked}, scheduled:
+            %{scheduled}'
+          other_stats_good_job: 'finished: %{finished}'
+          tip: エラー発生時に失敗ジョブが多い場合、ジョブキューの飽和や外部サービスの問題が考えられます。
+          guide_link: Active Job ガイド
+      actioncable:
+        title: ActionCable の状態
+        empty:
+          title: ActionCable のイベントが見つかりません
+          message: 過去%{days}日間、エラーの breadcrumb から ActionCable のチャネルアクション、送信、サブスクリプションのイベントは検出されませんでした。
+          how_it_works: 'ActionCable トラッキングの仕組み:'
+          step_breadcrumbs_html: Breadcrumb を有効にする必要があります (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: ActionCable トラッキングを有効にする必要があります (<code>enable_actioncable_tracking
+            = true</code>)
+          step_configured: アプリで ActionCable が設定されている必要があります
+          step_capture: エラーが発生したリクエストでは、チャネルアクション、送信、サブスクリプションのイベントが breadcrumb として記録されます
+        stats:
+          active_channels: アクティブなチャネル数
+          total_events: 総イベント数
+          subscription_rejections: サブスクリプションの拒否数
+        table:
+          title: チャネル別 ActionCable イベント
+          column_channel: チャネル
+          column_actions: アクション
+          column_transmissions: 送信
+          column_subscriptions: サブスクリプション
+          column_rejections: 拒否
+          column_errors: エラー
+          column_last_seen: 最終発生
+          tip: ActionCable のイベントはエラーと同時に発生した場合に記録されます。拒否数が多い場合、認証や認可の問題が考えられます。
+          guide_link: ActionCable ガイド
+      activestorage:
+        title: ActiveStorage の状態
+        empty:
+          title: ActiveStorage のイベントが見つかりません
+          message: 過去%{days}日間、エラーの breadcrumb から ActiveStorage のサービス操作は検出されませんでした。
+          how_it_works: 'ActiveStorage トラッキングの仕組み:'
+          step_breadcrumbs_html: Breadcrumb を有効にする必要があります (<code>enable_breadcrumbs
+            = true</code>)
+          step_tracking_html: ActiveStorage トラッキングを有効にする必要があります (<code>enable_activestorage_tracking
+            = true</code>)
+          step_configured: アプリで ActiveStorage が設定されている必要があります
+          step_capture: エラーが発生したリクエストでは、アップロード、ダウンロード、削除が breadcrumb として記録されます
+        stats:
+          storage_services: ストレージサービス数
+          total_operations: 総操作数
+          errors_with_storage: ストレージ操作のあるエラー
+        table:
+          title: サービス別ストレージ操作
+          column_service: サービス
+          column_uploads: アップロード
+          column_downloads: ダウンロード
+          column_deletes: 削除
+          column_exists: 存在確認
+          column_total: 合計
+          column_avg_duration: 平均所要時間
+          column_slowest: 最長
+          column_errors: エラー
+          column_last_seen: 最終発生
+          tip: ストレージ操作が遅い場合、ネットワークの問題、ファイルサイズの大きさ、サービス提供元による制限が考えられます。
+          guide_link: ActiveStorage ガイド
+    analytics:
+      stability:
+        green: 良好
+        yellow: 注意
+        red: 危険
+      trend:
+        increasing_significantly: 大幅に増加
+        increasing: 増加
+        stable: 横ばい
+        decreasing: 減少
+        decreasing_significantly: 大幅に減少
+      correlation_strength:
+        strong: 強い
+        moderate: 中程度
+        weak: 弱い
+      days_pill:
+        '7': 7日
+        '14': 14日
+        '30': 30日
+        '60': 60日
+        '90': 90日
+      overview:
+        title: 分析
+        stats:
+          total_errors: 総エラー数
+          unresolved: 未解決
+          resolution_rate: 解決率
+        trend_chart:
+          title: エラーの推移 (過去%{days}日間)
+        platform_chart:
+          title: プラットフォーム別エラー
+          quick_links: 'クイックリンク:'
+        type_chart:
+          title: エラー種別 上位10件
+        hour_chart:
+          title: 時間帯別エラー
+        top_users:
+          title: 影響を受けたユーザー 上位10名
+        type_breakdown:
+          title: エラー種別の内訳
+          subtitle: 過去%{days}日間
+          column_rank: 順位
+          column_error_type: エラー種別
+          column_count: 件数
+          column_percentage: 割合
+          column_actions: 操作
+          view_errors: エラーを表示
+        recurring:
+          title: 繰り返し発生している問題
+          high_frequency_title: 高頻度エラー
+          column_error_type: エラー種別
+          column_total_occurrences: 総発生回数
+          column_duration: 継続期間
+          column_first_seen: 初回発生
+          column_last_seen: 最終発生
+          column_status: ステータス
+          duration_days: "%{days}日間"
+          active: 継続中
+          inactive: 停止
+          empty_high_frequency: 過去%{days}日間、高頻度のエラーは見つかりませんでした。
+          persistent_title: 長期間未解決のエラー
+          persistent_hint: これらのエラーは7日以上未解決の状態です。
+          column_message: メッセージ
+          column_platform: プラットフォーム
+          column_count: 件数
+          column_age: 経過日数
+          column_actions: 操作
+          age_days: "%{days}日"
+          view: 表示
+        releases:
+          version_chart_title: リリースバージョン別エラー
+          comparison_title: 最新版と前版の比較
+          latest_version: 最新バージョン
+          latest_errors:
+            other: "%{count}件のエラー"
+          latest_critical:
+            other: "%{count}件が重大"
+          previous_version: 前のバージョン
+          previous_errors:
+            other: "%{count}件のエラー"
+          previous_critical:
+            other: "%{count}件が重大"
+          change: 変化
+          empty: 比較に十分なリリースデータがありません。
+          problematic_title: 問題のあるリリースを検出しました
+          problematic_hint_html: '次のリリースはエラー率が著しく高くなっています (平均の&gt;%{multiplier}倍):'
+          problematic_entry: エラー%{count}件 (うち重大%{critical}件、平均比+%{deviation}%)
+        mttr:
+          title: 解決パフォーマンス (MTTR)
+          overall_title: 全体の MTTR
+          overall_hint: 平均解決時間
+          fastest_title: 最短
+          fastest_hint: 最も短い解決時間
+          slowest_title: 最長
+          slowest_hint: 最も長い解決時間
+          total_resolved_title: 解決済み総数
+          total_resolved_hint: 過去%{days}日間
+          by_platform_title: プラットフォーム別 MTTR
+          by_severity_title: 深刻度別 MTTR
+          column_severity: 深刻度
+          column_avg_time: 平均解決時間
+          column_actions: 操作
+          hours: "%{hours}時間"
+          view: 表示
+          trend_title: MTTR の推移 (週次)
+      correlation:
+        title: エラー相関分析
+        trend_analysis:
+          title: 推移分析
+          current_period: 今期
+          previous_period: 前期
+          change: 変化
+          period_range: "%{start} - %{end}"
+        problematic_releases:
+          title: 問題のあるリリース
+          hint: 平均エラー率の2倍を超えるバージョン
+          column_version: バージョン
+          column_error_count: エラー件数
+          column_deviation: 平均との差
+          column_critical: 重大なエラー
+          column_unique_types: エラー種別数
+          column_platforms: プラットフォーム
+          column_actions: 操作
+          view: 表示
+        by_version:
+          title: アプリバージョン別エラー
+          column_version: バージョン
+          column_errors: エラー
+          column_types: 種別
+          column_critical: 重大
+        by_git_sha:
+          title: Git SHA 別エラー
+          column_sha: SHA
+          column_errors: エラー
+          column_types: 種別
+          column_versions: バージョン
+        multi_error_users:
+          title: 複数の種別のエラーが発生したユーザー
+          hint: 2種類以上のエラーが発生しているユーザー
+          truncated: "%{total}名中%{shown}名を表示"
+        time_correlated:
+          title: 時間相関のあるエラー
+          hint: 近い時間帯に発生するエラー種別
+          column_error_type_a: エラー種別 A
+          column_error_type_b: エラー種別 B
+          column_correlation: 相関
+          column_strength: 強度
+          truncated: 相関のあるエラーの組み合わせ%{total}件中%{shown}件を表示
+        platform_specific:
+          title: 特定プラットフォーム固有のエラーと横断的なエラー
+          occurrences:
+            other: "%{count}件の発生"
+          platform_specific: プラットフォーム固有
+          cross_platform: プラットフォーム横断
+          also_on: '他の発生環境: %{platforms}'
+        empty:
+          title: 相関分析に十分なデータがありません
+          message: 相関分析でパターンを特定するには、より多くのエラーデータが必要です。
+          needed_title: '必要なもの:'
+          needed_version: リリース相関のためのアプリバージョンのトラッキング
+          needed_user: ユーザー相関のためのユーザーのトラッキング
+          needed_types: 時間相関のための複数のエラー種別
+          hint: エラーがさらに記録されてから再度ご確認ください。
+      platform_comparison:
+        title: プラットフォーム別の状態比較
+        empty:
+          title: プラットフォームのデータがありません
+          message: 選択された期間 (%{days}日間) に記録されたエラーはありません。
+          hint: より長い期間を選択するか、しばらくしてから再度ご確認ください。
+        health_card:
+          healthy: 正常
+          warning: 警告
+          critical: 重大
+          stability_score: 安定性スコア
+          total_errors: '総エラー数:'
+          critical_errors: '重大:'
+          unresolved: '未解決:'
+          resolution_rate: '解決率:'
+          error_velocity: 'エラー発生速度:'
+          view_errors: "%{platform}のエラーを表示"
+        error_rate_chart:
+          title: プラットフォーム別エラー率
+        daily_trend_chart:
+          title: 日次エラー推移
+        severity_distribution:
+          title: 深刻度の分布
+          severity_count: "%{label}: %{count}"
+          breakdown_html: "%{critical} | %{high} | %{medium} | %{low}"
+          empty: エラーなし
+        resolution_time_chart:
+          title: 平均解決時間
+        cross_platform:
+          title: プラットフォーム横断のエラー
+          column_error_type: エラー種別
+          column_platforms: プラットフォーム
+          column_total_occurrences: 総発生回数
+          column_breakdown: 内訳
+        top_errors:
+          title: 上位エラー - %{platform}
+          empty: エラーは見つかりませんでした
+      releases:
+        title: リリース
+        empty:
+          title: リリースデータが見つかりません
+          message: 過去%{days}日間のエラーからバージョン情報は検出されませんでした。
+          how_to_title: 'リリーストラッキングを有効にする方法:'
+          step_config_html: イニシャライザで%{option}を設定します
+          step_env_html: または環境変数%{env_var}を設定します
+          step_git_sha_html: Git SHA は%{git_sha}、%{heroku}、%{render}から自動検出されます
+          step_captured: エラー発生時にバージョンと SHA が自動的に記録されます
+        summary:
+          releases: リリース数
+          current_release: 現在のリリース
+          avg_errors: リリースあたり平均エラー数
+          problematic: 問題のあるリリース
+        current_card:
+          title: '現在のリリース:'
+          live_badge: 稼働中
+          errors: エラー
+          error_types: エラー種別
+          new_errors: 新規エラー
+          stability: 安定性
+          git_sha: Git SHA
+          vs_previous: 前回比
+        timeline:
+          title: リリースタイムライン
+          column_version: バージョン
+          column_git_sha: Git SHA
+          column_time_range: 期間
+          column_errors: エラー
+          column_types: 種別
+          column_new_errors: 新規エラー
+          column_stability: 安定性
+          column_vs_previous: 前回比
+          current_badge: 現在
+          problematic_badge: 要注意
+          more_shas: "+%{count}"
+          new_count:
+            other: 新規%{count}件
+          footer_html: '安定性: <span class="badge bg-success">良好</span> は平均エラー数以下、<span
+            class="badge bg-warning">注意</span> は平均の1〜2倍、<span class="badge bg-danger">危険</span>
+            は平均の2倍超を示します。「新規」エラーとは、そのリリースで初めて確認されたエラー種別です。'
+      user_impact:
+        title: ユーザーへの影響
+        empty:
+          title: ユーザー影響のデータがありません
+          message: 過去%{days}日間、ユーザーが紐づいたエラーは見つかりませんでした。
+          how_tracked_title: 'ユーザー影響のトラッキング方法:'
+          step_user_id_html: エラーに%{attribute}が紐づいている必要があります
+          step_auto_html: "%{current_attributes}または%{current_user}から自動検出されます"
+          step_config_html: またはイニシャライザで%{option}を設定します
+        summary:
+          error_types: ユーザーが紐づくエラー種別
+          total_users_affected: 影響を受けたユーザー総数
+          most_impactful: 最も影響の大きいエラー
+          total_users: 総ユーザー数 (割合算出用)
+        table:
+          title: ユーザー影響度順のエラー
+          column_rank: "#"
+          column_error_type: エラー種別
+          column_unique_users: ユーザー数
+          column_occurrences: 発生回数
+          column_impact_percentage: ユーザー影響率
+          column_severity: 深刻度
+          column_last_seen: 最終発生
+          users:
+            other: "%{count}人"
+          occurrences:
+            other: "%{count}回"
+          footer: 発生回数ではなく、影響を受けたユーザー数で順位付けしています。1000人に1回発生するエラーは、1人に1000回発生するエラーよりも深刻です。
+    js:
+      months:
+      - 1月
+      - 2月
+      - 3月
+      - 4月
+      - 5月
+      - 6月
+      - 7月
+      - 8月
+      - 9月
+      - 10月
+      - 11月
+      - 12月
+      months_short:
+      - 1月
+      - 2月
+      - 3月
+      - 4月
+      - 5月
+      - 6月
+      - 7月
+      - 8月
+      - 9月
+      - 10月
+      - 11月
+      - 12月
+      days:
+      - 日曜日
+      - 月曜日
+      - 火曜日
+      - 水曜日
+      - 木曜日
+      - 金曜日
+      - 土曜日
+      days_short:
+      - 日
+      - 月
+      - 火
+      - 水
+      - 木
+      - 金
+      - 土
+      meridian:
+        am: 午前
+        pm: 午後
+      intl_locale: ja-JP
+      duration:
+        seconds:
+          other: "%{count}秒"
+        minutes:
+          other: "%{count}分"
+        hours:
+          other: "%{count}時間"
+        days:
+          other: "%{count}日"
+        months:
+          other: "%{count}か月"
+        years:
+          other: "%{count}年"
+      selected:
+        other: "%{count}件を選択中"
+      titles:
+        local_time: ローカル時刻 (クリックで UTC 表示)
+        utc_time: UTC 時刻 (クリックでローカル時刻表示)
+        exact_time: クリックで正確な時刻を表示
+        relative_time: クリックで相対時間を表示
+    ui_js:
+      toast:
+        loading: 読み込み中...
+        copied: コピーしました
+        copied_to_clipboard: クリップボードにコピーしました
+        failed: 失敗しました
+        copy_failed: クリップボードへのコピーに失敗しました
+        downloaded: ダウンロードしました
+      ai_help:
+        question_required: 先に質問を入力してください。
+        streaming: ストリーミング中...
+        streaming_unsupported: このブラウザはストリーミングに対応していません。
+        request_failed: リクエストに失敗しました。
+      sections:
+        error: エラー
+        request: リクエスト
+        deprecations: 非推奨
+        n_plus_one: N+1
+        cache: キャッシュ
+        breadcrumbs: Breadcrumb
+        similar: 類似
+        co_occurring: 同時発生
+        timeline: タイムライン
+        issue: イシュー
+        discussion: ディスカッション
+        cascades: 連鎖
+        patterns: パターン
+      charts:
+        axis_date: 日付
+        axis_hour: 時刻
+        axis_error_type: エラー種別
+        axis_count: 件数
+        axis_number_of_errors: エラー件数
+        axis_hours: 時間
+        series_total_errors: 総エラー数
+        series_hours_to_resolve: 解決までの時間

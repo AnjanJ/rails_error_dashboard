@@ -1,28 +1,31 @@
-      <% cache [error, 'error_details_v1'] do %>
+      <%# The locale is part of the cache key: this fragment now contains
+          translated text, and without it the first locale to render an error
+          would be served to every other one. %>
+      <% cache [error, 'error_details_v2', red_locale] do %>
       <div class="card mb-4" id="section-error-info">
         <div class="card-header bg-danger text-white">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
               <i class="bi bi-bug-fill"></i> <%= error.error_type %>
               <% if error.recent? %>
-                <span class="badge bg-success ms-2" data-bs-toggle="tooltip" title="Error occurred within the last hour">NEW</span>
+                <span class="badge bg-success ms-2" data-bs-toggle="tooltip" title="<%= red_t("red.errors.info.new_tooltip") %>"><%= red_t("red.errors.info.new_badge") %></span>
               <% end %>
               <% if error.reopened? %>
-                <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip" title="Previously resolved, recurred <%= error.reopened_at&.strftime('%b %d, %Y %H:%M') %>">
-                  <i class="bi bi-arrow-counterclockwise"></i> Reopened
+                <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip" title="<%= red_t("red.errors.info.reopened_tooltip", time: error.reopened_at&.strftime(red_time_format(:datetime))) %>">
+                  <i class="bi bi-arrow-counterclockwise"></i> <%= red_t("red.errors.info.reopened") %>
                 </span>
               <% end %>
             </h5>
-            <button type="button" class="btn btn-sm btn-outline-light" data-red-action="copy" data-red-copy-text="<%= j error.error_type %>" title="Copy error type">
+            <button type="button" class="btn btn-sm btn-outline-light" data-red-action="copy" data-red-copy-text="<%= j error.error_type %>" title="<%= red_t("red.errors.info.copy_error_type") %>">
               <i class="bi bi-clipboard"></i>
             </button>
           </div>
         </div>
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="text-muted mb-0">Error Message:</h6>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= j error.message %>" title="Copy error message">
-              <i class="bi bi-clipboard"></i> Copy
+            <h6 class="text-muted mb-0"><%= red_t("red.errors.info.message_label") %></h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= j error.message %>" title="<%= red_t("red.errors.info.copy_message") %>">
+              <i class="bi bi-clipboard"></i> <%= red_t("red.errors.info.copy") %>
             </button>
           </div>
           <div class="alert alert-danger">
@@ -35,7 +38,7 @@
               <% if cause_chain.is_a?(Array) && cause_chain.any? %>
                 <div class="mt-4 mb-3">
                   <h6 class="text-muted mb-2">
-                    <i class="bi bi-link-45deg"></i> Exception Cause Chain
+                    <i class="bi bi-link-45deg"></i> <%= red_t("red.errors.info.cause_chain.title") %>
                     <span class="badge bg-secondary ms-1"><%= cause_chain.length %></span>
                   </h6>
                   <div class="cause-chain">
@@ -46,7 +49,7 @@
                         <div class="card-header bg-warning bg-opacity-10 py-2">
                           <div class="d-flex justify-content-between align-items-center">
                             <div>
-                              <small class="text-muted">Caused by<%= " (##{index + 1})" if cause_chain.length > 1 %>:</small>
+                              <small class="text-muted"><%= cause_chain.length > 1 ? red_t("red.errors.info.cause_chain.caused_by_indexed", index: index + 1) : red_t("red.errors.info.cause_chain.caused_by") %></small>
                               <strong class="ms-1"><code><%= cause["class_name"] %></code></strong>
                             </div>
                             <% if cause_bt.any? %>
@@ -54,7 +57,7 @@
                                       data-bs-toggle="collapse"
                                       data-bs-target="#cause-backtrace-<%= index %>"
                                       aria-expanded="false">
-                                <small><i class="bi bi-code-slash"></i> Backtrace</small>
+                                <small><i class="bi bi-code-slash"></i> <%= red_t("red.errors.info.cause_chain.backtrace") %></small>
                               </button>
                             <% end %>
                           </div>
@@ -84,19 +87,19 @@
 
           <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
             <h6 class="text-muted mb-0">
-              Backtrace:
+              <%= red_t("red.errors.info.backtrace.label") %>
               <% if error.backtrace.present? %>
                 <% frames = parse_backtrace(error.backtrace) %>
                 <% app_frames = filter_app_code(frames) %>
                 <% framework_frames = filter_framework_code(frames) %>
                 <small class="text-muted">
-                  (<%= app_frames.count %> your code, <%= framework_frames.count %> framework/gems)
+                  <%= red_t("red.errors.info.backtrace.frame_counts", app: app_frames.count, framework: framework_frames.count) %>
                 </small>
               <% end %>
             </h6>
             <% if error.backtrace.present? %>
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= j error.backtrace %>" title="Copy full backtrace">
-                <i class="bi bi-clipboard"></i> Copy Full Backtrace
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= j error.backtrace %>" title="<%= red_t("red.errors.info.backtrace.copy_full_title") %>">
+                <i class="bi bi-clipboard"></i> <%= red_t("red.errors.info.backtrace.copy_full") %>
               </button>
             <% end %>
           </div>
@@ -111,9 +114,9 @@
                 <div class="card-header bg-success bg-opacity-10 border-success">
                   <div class="d-flex justify-content-between align-items-center">
                     <strong class="text-success">
-                      <i class="bi bi-code-square"></i> Your Code
+                      <i class="bi bi-code-square"></i> <%= red_t("red.errors.info.backtrace.your_code") %>
                     </strong>
-                    <span class="badge bg-success"><%= app_frames.count %> frames</span>
+                    <span class="badge bg-success"><%= red_tp("red.errors.info.backtrace.frames", count: app_frames.count) %></span>
                   </div>
                 </div>
                 <div class="card-body p-0">
@@ -134,7 +137,7 @@
                                     data-bs-target="#source-code-<%= index %>"
                                     aria-expanded="false"
                                     aria-controls="source-code-<%= index %>">
-                              <i class="bi bi-code-slash"></i> <span class="d-none d-md-inline">View Source</span>
+                              <i class="bi bi-code-slash"></i> <span class="d-none d-md-inline"><%= red_t("red.errors.info.backtrace.view_source") %></span>
                             </button>
                           <% end %>
                         </div>
@@ -159,9 +162,9 @@
                   <h2 class="accordion-header">
                     <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#frameworkBacktrace" aria-expanded="false" aria-controls="frameworkBacktrace">
                       <i class="bi bi-gear me-2 text-warning"></i>
-                      <strong>Framework & Gem Code</strong>
-                      <span class="badge bg-secondary ms-2"><%= framework_frames.count %> frames</span>
-                      <small class="text-muted ms-2">(click to expand)</small>
+                      <strong><%= red_t("red.errors.info.backtrace.framework_code") %></strong>
+                      <span class="badge bg-secondary ms-2"><%= red_tp("red.errors.info.backtrace.frames", count: framework_frames.count) %></span>
+                      <small class="text-muted ms-2"><%= red_t("red.errors.info.backtrace.click_to_expand") %></small>
                     </button>
                   </h2>
                   <div id="frameworkBacktrace" class="accordion-collapse collapse" data-bs-parent="#frameworkBacktraceAccordion">
@@ -183,7 +186,7 @@
               </div>
             <% end %>
           <% else %>
-            <p class="text-muted">No backtrace available</p>
+            <p class="text-muted"><%= red_t("red.errors.info.backtrace.none") %></p>
           <% end %>
         </div>
       </div>

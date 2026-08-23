@@ -5,13 +5,13 @@
     if value
 %>
     <span class="badge bg-success fs-6">
-      <i class="bi bi-check-circle"></i> Enabled
+      <i class="bi bi-check-circle"></i> <%= red_t("red.settings.values.enabled") %>
     </span>
 <%
     else
 %>
     <span class="badge bg-secondary fs-6">
-      <i class="bi bi-x-circle"></i> Disabled
+      <i class="bi bi-x-circle"></i> <%= red_t("red.settings.values.disabled") %>
     </span>
 <%
     end
@@ -19,22 +19,24 @@
   when :integer
     if value.present?
 %>
-    <span class="badge bg-info fs-6"><%= value %><%= " #{unit}" if unit %></span>
+    <%# The unit is a plural key driven by the value, not an English word
+        appended to a number — position and form both vary by locale. %>
+    <span class="badge bg-info fs-6"><%= unit ? red_tp("red.settings.units.#{unit}", count: value) : value %></span>
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
   when :float
     if value.present?
 %>
-    <span class="badge bg-info fs-6"><%= value %><%= unit %></span>
+    <span class="badge bg-info fs-6"><%= unit ? red_tp("red.settings.units.#{unit}", count: value) : value %></span>
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
@@ -45,7 +47,7 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
@@ -56,7 +58,7 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
@@ -67,7 +69,7 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
@@ -78,29 +80,29 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
   when :array
     if value.present? && value.any?
 %>
-    <span class="badge bg-info fs-6"><%= value.count %> item<%= value.count != 1 ? 's' : '' %></span>
+    <span class="badge bg-info fs-6"><%= red_tp("red.settings.values.items", count: value.count) %></span>
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Empty</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.empty") %></span>
 <%
     end
 
   when :hash
     if value.present? && value.any?
 %>
-    <span class="badge bg-info fs-6"><%= value.count %> rule<%= value.count != 1 ? 's' : '' %></span>
+    <span class="badge bg-info fs-6"><%= red_tp("red.settings.values.rules", count: value.count) %></span>
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Empty</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.empty") %></span>
 <%
     end
 
@@ -111,7 +113,7 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
 
@@ -128,18 +130,18 @@
       <code class="fs-6"><%= effective_value %></code>
       <% if is_auto_detected %>
         <small class="text-success d-block">
-          <i class="bi bi-magic"></i> Auto-detected
+          <i class="bi bi-magic"></i> <%= red_t("red.settings.values.auto_detected") %>
         </small>
       <% else %>
-        <small class="text-muted d-block">(Configured)</small>
+        <small class="text-muted d-block"><%= red_t("red.settings.values.configured") %></small>
       <% end %>
     </div>
 <%
     else
 %>
     <div>
-      <span class="badge bg-secondary fs-6">Not set</span>
-      <small class="text-muted d-block">Rails app name unavailable</small>
+      <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
+      <small class="text-muted d-block"><%= red_t("red.settings.values.rails_app_name_unavailable") %></small>
     </div>
 <%
     end
@@ -154,11 +156,11 @@
         if db_config
           db_name = db_config.database
           status_badge = 'bg-success'
-          status_text = "Separate DB: #{db_config_name}"
+          status_text = red_t("red.settings.values.separate_db", name: db_config_name)
         else
           db_name = db_config_name
           status_badge = 'bg-warning'
-          status_text = "Configured but not found"
+          status_text = red_t("red.settings.values.configured_but_not_found")
         end
       else
         # Using primary database
@@ -166,12 +168,12 @@
         if db_config
           db_name = db_config.database
           status_badge = 'bg-info'
-          status_text = "Shared DB (primary)"
+          status_text = red_t("red.settings.values.shared_db_primary")
         else
           # Fallback to current connection
-          db_name = RailsErrorDashboard::ErrorLog.connection.current_database rescue 'Unknown'
+          db_name = RailsErrorDashboard::ErrorLog.connection.current_database rescue red_t("red.settings.values.unknown")
           status_badge = 'bg-info'
-          status_text = "Shared DB"
+          status_text = red_t("red.settings.values.shared_db")
         end
       end
 %>
@@ -183,8 +185,8 @@
     rescue => e
 %>
     <div>
-      <span class="badge bg-secondary fs-6">Unknown</span>
-      <small class="text-muted d-block">Unable to detect</small>
+      <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.unknown") %></span>
+      <small class="text-muted d-block"><%= red_t("red.settings.values.unable_to_detect") %></small>
     </div>
 <%
     end
@@ -201,18 +203,18 @@
       <code class="fs-6"><%= effective_value %></code>
       <% if is_auto_detected %>
         <small class="text-success d-block">
-          <i class="bi bi-magic"></i> Auto-detected
+          <i class="bi bi-magic"></i> <%= red_t("red.settings.values.auto_detected") %>
         </small>
       <% else %>
-        <small class="text-muted d-block">(Configured)</small>
+        <small class="text-muted d-block"><%= red_t("red.settings.values.configured") %></small>
       <% end %>
     </div>
 <%
     else
 %>
     <div>
-      <span class="badge bg-secondary fs-6">Not found</span>
-      <small class="text-muted d-block">No User model detected</small>
+      <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_found") %></span>
+      <small class="text-muted d-block"><%= red_t("red.settings.values.no_user_model") %></small>
     </div>
 <%
     end
@@ -226,21 +228,23 @@
     if effective_value.present?
 %>
     <div>
-      <span class="badge <%= is_auto_detected ? 'bg-success' : 'bg-info' %> fs-6"><%= number_with_delimiter(effective_value) %> users</span>
+      <span class="badge <%= is_auto_detected ? 'bg-success' : 'bg-info' %> fs-6"><%# count drives the plural form; the delimited number is what gets displayed,
+          so both are passed and the key interpolates %{formatted}. %>
+      <%= red_tp("red.settings.values.users", count: effective_value, formatted: number_with_delimiter(effective_value)) %></span>
       <% if is_auto_detected %>
         <small class="text-success d-block">
-          <i class="bi bi-magic"></i> Auto-detected
+          <i class="bi bi-magic"></i> <%= red_t("red.settings.values.auto_detected") %>
         </small>
       <% else %>
-        <small class="text-muted d-block">(Configured)</small>
+        <small class="text-muted d-block"><%= red_t("red.settings.values.configured") %></small>
       <% end %>
     </div>
 <%
     else
 %>
     <div>
-      <span class="badge bg-secondary fs-6">Not available</span>
-      <small class="text-muted d-block">Unable to query count</small>
+      <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_available") %></span>
+      <small class="text-muted d-block"><%= red_t("red.settings.values.unable_to_query_count") %></small>
     </div>
 <%
     end
@@ -249,13 +253,13 @@
     if value.present?
 %>
     <span class="badge bg-success fs-6">
-      <i class="bi bi-check-circle"></i> Set
+      <i class="bi bi-check-circle"></i> <%= red_t("red.settings.values.set") %>
     </span>
 <%
     else
 %>
     <span class="badge bg-warning text-dark fs-6">
-      <i class="bi bi-exclamation-triangle"></i> Not set
+      <i class="bi bi-exclamation-triangle"></i> <%= red_t("red.settings.values.not_set") %>
     </span>
 <%
     end
@@ -265,22 +269,22 @@
     if value.present?
 %>
     <div>
-      <span class="badge bg-warning text-dark fs-6"><%= value %> days</span>
+      <span class="badge bg-warning text-dark fs-6"><%= red_tp("red.settings.values.days", count: value) %></span>
       <small class="text-danger d-block">
-        <i class="bi bi-exclamation-triangle"></i> Manual cleanup required
+        <i class="bi bi-exclamation-triangle"></i> <%= red_t("red.settings.values.manual_cleanup_required") %>
       </small>
       <small class="text-muted d-block mt-1">
-        Run: <code class="small">rails error_dashboard:cleanup_resolved DAYS=<%= value %></code>
+        <%= red_t("red.settings.values.run_command") %> <code class="small">rails error_dashboard:cleanup_resolved DAYS=<%= value %></code>
       </small>
     </div>
 <%
     else
 %>
     <div>
-      <span class="badge bg-success fs-6"><i class="bi bi-infinity"></i> Keep Forever</span>
-      <small class="text-muted d-block">No automatic deletion</small>
+      <span class="badge bg-success fs-6"><i class="bi bi-infinity"></i> <%= red_t("red.settings.values.keep_forever") %></span>
+      <small class="text-muted d-block"><%= red_t("red.settings.values.no_automatic_deletion") %></small>
       <small class="text-muted d-block mt-1">
-        To cleanup: <code class="small">rails error_dashboard:cleanup_resolved DAYS=90</code>
+        <%= red_t("red.settings.values.to_cleanup") %> <code class="small">rails error_dashboard:cleanup_resolved DAYS=90</code>
       </small>
     </div>
 <%
@@ -294,7 +298,7 @@
 <%
     else
 %>
-    <span class="badge bg-secondary fs-6">Not set</span>
+    <span class="badge bg-secondary fs-6"><%= red_t("red.settings.values.not_set") %></span>
 <%
     end
   end

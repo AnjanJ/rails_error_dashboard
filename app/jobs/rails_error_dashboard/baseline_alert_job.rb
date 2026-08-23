@@ -11,7 +11,9 @@ module RailsErrorDashboard
 
     # @param error_log_id [Integer] The error log that triggered the alert
     # @param anomaly_data [Hash] Anomaly information from baseline check
-    def perform(error_log_id, anomaly_data)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(error_log_id, anomaly_data, locale = nil)
       error_log = ErrorLog.find_by(id: error_log_id)
       return unless error_log
 
@@ -36,49 +38,49 @@ module RailsErrorDashboard
       )
 
       # Send notifications through all enabled channels
-      send_notifications(error_log, anomaly_data, config)
+      send_notifications(error_log, anomaly_data, config, job_locale(locale))
     end
 
     private
 
-    def send_notifications(error_log, anomaly_data, config)
+    def send_notifications(error_log, anomaly_data, config, locale)
       # Slack notification
       if config.enable_slack_notifications && config.slack_webhook_url.present?
-        send_slack_notification(error_log, anomaly_data, config)
+        send_slack_notification(error_log, anomaly_data, config, locale)
       end
 
       # Email notification
       if config.enable_email_notifications && config.notification_email_recipients.any?
-        send_email_notification(error_log, anomaly_data, config)
+        send_email_notification(error_log, anomaly_data, config, locale)
       end
 
       # Discord notification
       if config.enable_discord_notifications && config.discord_webhook_url.present?
-        send_discord_notification(error_log, anomaly_data, config)
+        send_discord_notification(error_log, anomaly_data, config, locale)
       end
 
       # Webhook notification
       if config.enable_webhook_notifications && config.webhook_urls.any?
-        send_webhook_notification(error_log, anomaly_data, config)
+        send_webhook_notification(error_log, anomaly_data, config, locale)
       end
 
       # PagerDuty for critical anomalies
       if config.enable_pagerduty_notifications &&
          config.pagerduty_integration_key.present? &&
          anomaly_data[:level] == :critical
-        send_pagerduty_notification(error_log, anomaly_data, config)
+        send_pagerduty_notification(error_log, anomaly_data, config, locale)
       end
     end
 
-    def send_slack_notification(error_log, anomaly_data, config)
-      payload = Services::BaselineAlertPayloadBuilder.slack_payload(error_log, anomaly_data)
+    def send_slack_notification(error_log, anomaly_data, config, locale)
+      payload = Services::BaselineAlertPayloadBuilder.slack_payload(error_log, anomaly_data, locale: locale)
 
       post_json(config.slack_webhook_url, payload)
     rescue => e
       Rails.logger.error("Failed to send baseline alert to Slack: #{e.message}")
     end
 
-    def send_email_notification(error_log, _anomaly_data, _config)
+    def send_email_notification(error_log, _anomaly_data, _config, _locale)
       Rails.logger.info(
         "Baseline alert email would be sent for #{error_log.error_type}"
       )
@@ -86,16 +88,16 @@ module RailsErrorDashboard
       Rails.logger.error("Failed to send baseline alert email: #{e.message}")
     end
 
-    def send_discord_notification(error_log, anomaly_data, config)
-      payload = Services::BaselineAlertPayloadBuilder.discord_payload(error_log, anomaly_data)
+    def send_discord_notification(error_log, anomaly_data, config, locale)
+      payload = Services::BaselineAlertPayloadBuilder.discord_payload(error_log, anomaly_data, locale: locale)
 
       post_json(config.discord_webhook_url, payload)
     rescue => e
       Rails.logger.error("Failed to send baseline alert to Discord: #{e.message}")
     end
 
-    def send_webhook_notification(error_log, anomaly_data, config)
-      payload = Services::BaselineAlertPayloadBuilder.webhook_payload(error_log, anomaly_data)
+    def send_webhook_notification(error_log, anomaly_data, config, locale)
+      payload = Services::BaselineAlertPayloadBuilder.webhook_payload(error_log, anomaly_data, locale: locale)
 
       config.webhook_urls.each do |url|
         post_json(url, payload)
@@ -120,7 +122,7 @@ module RailsErrorDashboard
       end
     end
 
-    def send_pagerduty_notification(error_log, _anomaly_data, _config)
+    def send_pagerduty_notification(error_log, _anomaly_data, _config, _locale)
       Rails.logger.info(
         "Baseline alert PagerDuty notification for #{error_log.error_type}"
       )

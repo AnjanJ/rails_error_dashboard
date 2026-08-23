@@ -1,0 +1,116 @@
+name: 🌍 Translation Correction
+description: Report or fix a wrong, awkward, or missing translation
+title: "[i18n]: "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks — this is genuinely useful.
+
+        Every language except English is **machine-translated and has not been
+        reviewed by a native speaker**. RED's maintainer reads only English, so
+        the people best placed to catch a wrong translation are the people
+        annoyed by it. That is you, right now.
+
+        **A one-key fix is a perfectly good contribution.** You are not
+        expected to review the whole file, and you do not need to open a PR —
+        filing this issue is enough. If you would rather fix it directly, see
+        the [translation contributor guide](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/TRANSLATIONS.md#contributing-a-translation-fix).
+
+  - type: dropdown
+    id: locale
+    attributes:
+      label: Language
+      description: Which locale is wrong?
+      options:
+        - "de — Deutsch"
+        - "es — Español"
+        - "fr — Français"
+        - "pt-BR — Português (Brasil)"
+        - "ja — 日本語"
+        - "ru — Русский"
+        - "uk — Українська"
+        - "pl — Polski"
+        - "it — Italiano"
+        - "zh-CN — 简体中文"
+        - "Other / a language RED does not ship yet"
+    validations:
+      required: true
+
+  - type: input
+    id: key
+    attributes:
+      label: Translation key
+      description: >
+        The dotted key, if you know it — e.g. `red.nav.user_impact`. Find it by
+        searching the English text in `config/locales/en.yml`. Leave blank if
+        you are not sure; describing where you saw it is enough.
+      placeholder: red.errors.index.summary.unresolved_html
+    validations:
+      required: false
+
+  - type: input
+    id: current
+    attributes:
+      label: Current text
+      description: What it says now — copy and paste it if you can.
+      placeholder: "Nicht behoben"
+    validations:
+      required: true
+
+  - type: input
+    id: suggested
+    attributes:
+      label: Suggested text
+      description: >
+        What it should say. If you are not sure of the exact wording, say what
+        is wrong about the current one and we will work it out in the thread.
+      placeholder: "Ungelöst"
+    validations:
+      required: false
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What's wrong with it?
+      description: >
+        Wrong meaning, wrong register (too formal/informal), unnatural phrasing,
+        a term developers in your language would not use, wrong grammatical
+        form after a number, text overflowing its box — whatever it is.
+      placeholder: >
+        "Nicht behoben" reads like a medical diagnosis. German developers say
+        "Ungelöst" for an unresolved error.
+    validations:
+      required: true
+
+  - type: input
+    id: where
+    attributes:
+      label: Where did you see it?
+      description: Which page or screen, if it is not obvious from the key.
+      placeholder: The error list page, in the filter chips
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: register
+    attributes:
+      label: Form of address
+      description: >
+        RED uses a **formal** register in every language (Sie / вы / vous /
+        です・ます体). This is recorded per language in
+        [TRANSLATIONS.md](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/TRANSLATIONS.md#form-of-address).
+      options:
+        - label: My suggestion keeps the formal register RED uses
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Some things are deliberately left in English** — exception class
+        names, Ruby and Rails identifiers, webhook and API field names, and
+        brand names like ActionCable or ActiveStorage. Translating those breaks
+        debugging or breaks integrations. The full list is in
+        [TRANSLATIONS.md](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/TRANSLATIONS.md#do-not-translate).

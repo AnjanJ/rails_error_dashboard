@@ -128,19 +128,19 @@
   </head>
   <body>
     <div class="header">
-      <h1>🚨 Error Alert</h1>
+      <h1><%= red_t("red.mailers.error_alert.heading") %></h1>
     </div>
 
     <div class="content">
       <div class="info-grid">
-        <div class="label">Application:</div>
-        <div class="value"><strong><%= @error_log.application&.name || 'Unknown' %></strong></div>
+        <div class="label"><%= red_t("red.mailers.error_alert.labels.application") %>:</div>
+        <div class="value"><strong><%= @error_log.application&.name || red_t("red.mailers.shared.unknown_application") %></strong></div>
 
-        <div class="label">Error Type:</div>
+        <div class="label"><%= red_t("red.mailers.error_alert.labels.error_type") %>:</div>
         <div class="value"><code><%= @error_log.error_type %></code></div>
 
         <% if @error_log.platform.present? %>
-          <div class="label">Platform:</div>
+          <div class="label"><%= red_t("red.mailers.error_alert.labels.platform") %>:</div>
           <div class="value">
             <span class="badge badge-<%= @error_log.platform.downcase %>">
               <%= @error_log.platform %>
@@ -148,47 +148,49 @@
           </div>
         <% end %>
 
-        <div class="label">Occurred At:</div>
-        <div class="value"><%= @error_log.occurred_at.strftime('%B %d, %Y at %I:%M %p %Z') %></div>
+        <div class="label"><%= red_t("red.mailers.error_alert.labels.occurred_at") %>:</div>
+        <div class="value"><%= red_mail_time(@error_log.occurred_at) %></div>
 
         <% if @error_log.user_id.present? %>
-          <div class="label">User ID:</div>
+          <div class="label"><%= red_t("red.mailers.error_alert.labels.user_id") %>:</div>
           <div class="value"><%= @error_log.user_id %></div>
         <% end %>
 
         <% if @error_log.ip_address.present? %>
-          <div class="label">IP Address:</div>
+          <div class="label"><%= red_t("red.mailers.error_alert.labels.ip_address") %>:</div>
           <div class="value"><%= @error_log.ip_address %></div>
         <% end %>
 
         <% if @error_log.request_url.present? %>
-          <div class="label">Request URL:</div>
+          <div class="label"><%= red_t("red.mailers.error_alert.labels.request_url") %>:</div>
           <div class="value"><%= @error_log.request_url %></div>
         <% end %>
       </div>
 
       <div class="error-message">
-        <strong>Message:</strong><br/>
+        <strong><%= red_t("red.mailers.error_alert.labels.message") %>:</strong><br/>
         <code><%= @error_log.message %></code>
       </div>
 
       <% if @error_log.backtrace.present? %>
+        <% backtrace_lines = @error_log.backtrace.split("\n").first(10) %>
         <div class="backtrace">
-          <strong>Stack Trace (first 10 lines):</strong>
-          <pre><%= @error_log.backtrace.split("\n").first(10).join("\n") %></pre>
+          <strong><%= red_tp("red.mailers.error_alert.stack_trace", count: backtrace_lines.length) %>:</strong>
+          <%# Backtrace content is diagnostic output and is never translated. %>
+          <pre><%= backtrace_lines.join("\n") %></pre>
         </div>
       <% end %>
 
       <div style="text-align: center;">
         <a href="<%= @dashboard_url %>" class="button">
-          View Full Details in Dashboard
+          <%= red_t("red.mailers.error_alert.view_details") %>
         </a>
       </div>
 
       <div class="footer">
         <p>
-          This is an automated error notification from Rails Error Dashboard.<br/>
-          Error ID: <%= @error_log.id %>
+          <%= red_t("red.mailers.error_alert.footer", product: red_t("red.mailers.shared.product_name")) %><br/>
+          <%= red_t("red.mailers.error_alert.labels.error_id") %>: <%= @error_log.id %>
         </p>
       </div>
     </div>

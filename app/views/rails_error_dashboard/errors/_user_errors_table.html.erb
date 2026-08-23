@@ -3,20 +3,20 @@
     <thead class="table-light">
       <tr>
         <% if show_rank %>
-          <th>Rank</th>
+          <th><%= red_t("red.errors.user_errors_table.column_rank") %></th>
         <% end %>
-        <th>User</th>
+        <th><%= red_t("red.errors.user_errors_table.column_user") %></th>
         <% if show_error_type_count %>
-          <th>Different Error Types</th>
+          <th><%= red_t("red.errors.user_errors_table.column_error_type_count") %></th>
         <% end %>
-        <th>Error Count</th>
+        <th><%= red_t("red.errors.user_errors_table.column_error_count") %></th>
         <% if show_percentage %>
-          <th>Percentage</th>
+          <th><%= red_t("red.errors.user_errors_table.column_percentage") %></th>
         <% end %>
         <% if show_error_types %>
-          <th>Error Types</th>
+          <th><%= red_t("red.errors.user_errors_table.column_error_types") %></th>
         <% end %>
-        <th>Actions</th>
+        <th><%= red_t("red.errors.user_errors_table.column_actions") %></th>
       </tr>
     </thead>
     <tbody>
@@ -29,7 +29,7 @@
           <% if show_error_type_count %>
             <td>
               <span class="badge bg-warning text-dark">
-                <%= user_data[:error_type_count] %> types
+                <%= red_tp("red.errors.user_errors_table.types", count: user_data[:error_type_count]) %>
               </span>
             </td>
           <% end %>
@@ -52,16 +52,19 @@
           <% end %>
           <% if show_error_types && user_data[:error_types].present? %>
             <td>
-              <% user_data[:error_types].first(3).each do |error_type| %>
+              <%# The cut-off is named once: it bounds the list and the
+                  "+N more" count, which must agree. %>
+              <% shown_error_types = 3 %>
+              <% user_data[:error_types].first(shown_error_types).each do |error_type| %>
                 <code class="small me-1"><%= error_type %></code>
               <% end %>
-              <% if user_data[:error_types].count > 3 %>
-                <span class="text-muted small">+<%= user_data[:error_types].count - 3 %> more</span>
+              <% if user_data[:error_types].count > shown_error_types %>
+                <span class="text-muted small"><%= red_tp("red.errors.user_errors_table.more", count: user_data[:error_types].count - shown_error_types) %></span>
               <% end %>
             </td>
           <% end %>
           <td>
-            <%= link_to "View Errors", errors_path(user_id: user_data[:user_id], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
+            <%= link_to red_t("red.errors.user_errors_table.view_errors"), errors_path(user_id: user_data[:user_id], unresolved: '0'), class: "btn btn-sm btn-outline-primary" %>
           </td>
         </tr>
       <% end %>

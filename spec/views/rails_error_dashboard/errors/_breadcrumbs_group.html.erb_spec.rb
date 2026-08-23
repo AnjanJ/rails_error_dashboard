@@ -9,6 +9,8 @@ RSpec.describe "rails_error_dashboard/errors/_breadcrumbs_group.html.erb", type:
   # Include it manually so `breadcrumb_badge_color` resolves.
   before(:all) do
     ActionView::TestCase::TestController.helper(RailsErrorDashboard::ApplicationHelper)
+    # Same reason: the partial now calls red_t, which lives in I18nHelper.
+    ActionView::TestCase::TestController.helper(RailsErrorDashboard::I18nHelper)
   end
 
   before do

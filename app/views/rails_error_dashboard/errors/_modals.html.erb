@@ -5,32 +5,32 @@
       <%= form_with url: resolve_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="resolveModalLabel">
-            <i class="bi bi-check-circle"></i> Mark Error as Resolved
+            <i class="bi bi-check-circle"></i> <%= red_t("red.errors.modals.resolve.title") %>
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="resolved_by_name" class="form-label">Your Name <span class="text-danger">*</span></label>
-            <%= text_field_tag :resolved_by_name, nil, class: "form-control", placeholder: "e.g., John Doe", required: true %>
-            <small class="text-muted">Who is resolving this error?</small>
+            <label for="resolved_by_name" class="form-label"><%= red_t("red.errors.modals.resolve.name_label") %> <span class="text-danger">*</span></label>
+            <%= text_field_tag :resolved_by_name, nil, class: "form-control", placeholder: red_t("red.errors.modals.name_placeholder"), required: true %>
+            <small class="text-muted"><%= red_t("red.errors.modals.resolve.name_hint") %></small>
           </div>
 
           <div class="mb-3">
-            <label for="resolution_reference" class="form-label">Reference (Optional)</label>
-            <%= text_field_tag :resolution_reference, nil, class: "form-control", placeholder: "e.g., JIRA-123, PR #456, GitHub Issue #789" %>
-            <small class="text-muted">Link to ticket, PR, or issue</small>
+            <label for="resolution_reference" class="form-label"><%= red_t("red.errors.modals.resolve.reference_label") %></label>
+            <%= text_field_tag :resolution_reference, nil, class: "form-control", placeholder: red_t("red.errors.modals.resolve.reference_placeholder") %>
+            <small class="text-muted"><%= red_t("red.errors.modals.resolve.reference_hint") %></small>
           </div>
 
           <div class="mb-3">
-            <label for="resolution_comment" class="form-label">Resolution Notes (Optional)</label>
-            <%= text_area_tag :resolution_comment, nil, class: "form-control", rows: 4, placeholder: "Describe what was done to fix this error..." %>
-            <small class="text-muted">What was done to resolve this error?</small>
+            <label for="resolution_comment" class="form-label"><%= red_t("red.errors.modals.resolve.notes_label") %></label>
+            <%= text_area_tag :resolution_comment, nil, class: "form-control", rows: 4, placeholder: red_t("red.errors.modals.resolve.notes_placeholder") %>
+            <small class="text-muted"><%= red_t("red.errors.modals.resolve.notes_hint") %></small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Mark as Resolved", class: "btn btn-success", data: { action: "click->loading#click" } %>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= red_t("red.errors.modals.cancel") %></button>
+          <%= submit_tag red_t("red.errors.modals.resolve.submit"), class: "btn btn-success", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -44,20 +44,20 @@
       <%= form_with url: assign_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="assignModalLabel">
-            <i class="bi bi-person-plus"></i> Assign Error
+            <i class="bi bi-person-plus"></i> <%= red_t("red.errors.modals.assign.title") %>
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="assigned_to" class="form-label">Assign To <span class="text-danger">*</span></label>
-            <%= text_field_tag :assigned_to, nil, class: "form-control", placeholder: "e.g., John Doe", required: true, autofocus: true %>
-            <small class="text-muted">Who should investigate this error?</small>
+            <label for="assigned_to" class="form-label"><%= red_t("red.errors.modals.assign.label") %> <span class="text-danger">*</span></label>
+            <%= text_field_tag :assigned_to, nil, class: "form-control", placeholder: red_t("red.errors.modals.name_placeholder"), required: true, autofocus: true %>
+            <small class="text-muted"><%= red_t("red.errors.modals.assign.hint") %></small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Assign", class: "btn btn-primary", data: { action: "click->loading#click" } %>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= red_t("red.errors.modals.cancel") %></button>
+          <%= submit_tag red_t("red.errors.modals.assign.submit"), class: "btn btn-primary", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -71,25 +71,25 @@
       <%= form_with url: update_priority_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="priorityModalLabel">
-            <i class="bi bi-flag"></i> Update Priority
+            <i class="bi bi-flag"></i> <%= red_t("red.errors.modals.priority.title") %>
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="priority_level" class="form-label">Priority Level <span class="text-danger">*</span></label>
+            <label for="priority_level" class="form-label"><%= red_t("red.errors.modals.priority.label") %> <span class="text-danger">*</span></label>
             <%= select_tag :priority_level,
                 options_for_select(
                   RailsErrorDashboard::ErrorLog.priority_options,
                   error.priority_level
                 ),
                 class: "form-select", required: true %>
-            <small class="text-muted">Current: <%= error.priority_label %></small>
+            <small class="text-muted"><%= red_t("red.errors.modals.priority.current", value: error.priority_label) %></small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Update Priority", class: "btn btn-warning", data: { action: "click->loading#click" } %>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= red_t("red.errors.modals.cancel") %></button>
+          <%= submit_tag red_t("red.errors.modals.priority.submit"), class: "btn btn-warning", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -103,35 +103,44 @@
       <%= form_with url: snooze_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="snoozeModalLabel">
-            <i class="bi bi-alarm"></i> Snooze Error
+            <i class="bi bi-alarm"></i> <%= red_t("red.errors.modals.snooze.title") %>
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="hours" class="form-label">Snooze Duration <span class="text-danger">*</span></label>
+            <label for="hours" class="form-label"><%= red_t("red.errors.modals.snooze.label") %> <span class="text-danger">*</span></label>
+            <%# The longer spans are written twice in English ("24 hours (1 day)").
+                The halves pluralize on different counts, so each is its own
+                plural key and hours_with_equivalent composes the pair. %>
+            <% snooze_hours = ->(count) { red_tp("red.errors.modals.snooze.hours", count: count) } %>
+            <% snooze_pair = lambda do |hours, unit_key, unit_count|
+                 red_t("red.errors.modals.snooze.hours_with_equivalent",
+                       hours: snooze_hours.call(hours),
+                       equivalent: red_tp("red.errors.modals.snooze.#{unit_key}", count: unit_count))
+               end %>
             <%= select_tag :hours,
                 options_for_select([
-                  ['1 hour', 1],
-                  ['4 hours', 4],
-                  ['8 hours', 8],
-                  ['24 hours (1 day)', 24],
-                  ['48 hours (2 days)', 48],
-                  ['168 hours (1 week)', 168]
+                  [ snooze_hours.call(1), 1 ],
+                  [ snooze_hours.call(4), 4 ],
+                  [ snooze_hours.call(8), 8 ],
+                  [ snooze_pair.call(24, "days", 1), 24 ],
+                  [ snooze_pair.call(48, "days", 2), 48 ],
+                  [ snooze_pair.call(168, "weeks", 1), 168 ]
                 ], 24),
                 class: "form-select", required: true %>
-            <small class="text-muted">Hide this error from active views</small>
+            <small class="text-muted"><%= red_t("red.errors.modals.snooze.hint") %></small>
           </div>
 
           <div class="mb-3">
-            <label for="reason" class="form-label">Reason (Optional)</label>
-            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: "Why are you snoozing this error?" %>
-            <small class="text-muted">Reason will be added as a comment</small>
+            <label for="reason" class="form-label"><%= red_t("red.errors.modals.snooze.reason_label") %></label>
+            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: red_t("red.errors.modals.snooze.reason_placeholder") %>
+            <small class="text-muted"><%= red_t("red.errors.modals.snooze.reason_hint") %></small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Snooze", class: "btn btn-warning", data: { action: "click->loading#click" } %>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= red_t("red.errors.modals.cancel") %></button>
+          <%= submit_tag red_t("red.errors.modals.snooze.submit"), class: "btn btn-warning", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>
@@ -145,28 +154,27 @@
       <%= form_with url: mute_error_path(error), method: :post do |f| %>
         <div class="modal-header">
           <h5 class="modal-title" id="muteModalLabel">
-            <i class="bi bi-bell-slash"></i> Mute Notifications
+            <i class="bi bi-bell-slash"></i> <%= red_t("red.errors.modals.mute.title") %>
           </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= red_t("red.common.close") %>"></button>
         </div>
         <div class="modal-body">
           <p class="text-muted">
-            Muted errors still appear in the dashboard but will not trigger any notifications
-            (Slack, email, Discord, PagerDuty, webhooks).
+            <%= red_t("red.errors.modals.mute.description") %>
           </p>
           <div class="mb-3">
-            <label for="muted_by" class="form-label">Your Name (Optional)</label>
-            <%= text_field_tag :muted_by, nil, class: "form-control", placeholder: "e.g., John Doe" %>
+            <label for="muted_by" class="form-label"><%= red_t("red.errors.modals.mute.name_label") %></label>
+            <%= text_field_tag :muted_by, nil, class: "form-control", placeholder: red_t("red.errors.modals.name_placeholder") %>
           </div>
           <div class="mb-3">
-            <label for="reason" class="form-label">Reason (Optional)</label>
-            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: "Why are you muting this error?" %>
-            <small class="text-muted">Reason will be added as a comment</small>
+            <label for="reason" class="form-label"><%= red_t("red.errors.modals.mute.reason_label") %></label>
+            <%= text_area_tag :reason, nil, class: "form-control", rows: 3, placeholder: red_t("red.errors.modals.mute.reason_placeholder") %>
+            <small class="text-muted"><%= red_t("red.errors.modals.mute.reason_hint") %></small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <%= submit_tag "Mute Notifications", class: "btn btn-secondary", data: { action: "click->loading#click" } %>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= red_t("red.errors.modals.cancel") %></button>
+          <%= submit_tag red_t("red.errors.modals.mute.submit"), class: "btn btn-secondary", data: { action: "click->loading#click" } %>
         </div>
       <% end %>
     </div>

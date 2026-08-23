@@ -1,21 +1,21 @@
       <!-- Metadata Card -->
       <div class="card mb-4">
         <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-info-circle"></i> Metadata</h5>
+          <h5 class="mb-0"><i class="bi bi-info-circle"></i> <%= red_t("red.errors.sidebar.title") %></h5>
         </div>
         <div class="card-body">
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">Occurrence Count</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.occurrence_count") %></small>
             <span class="badge bg-primary fs-5"><%= error.occurrence_count %>x</span>
             <% if error.occurrence_count > 1 %>
-              <br><small class="text-muted">This error has occurred <%= error.occurrence_count %> times</small>
+              <br><small class="text-muted"><%= red_tp("red.errors.sidebar.occurred_times", count: error.occurrence_count) %></small>
             <% end %>
           </div>
 
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">First Seen</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.first_seen") %></small>
             <% if related_errors.any? %>
-              <%= link_to "#section-timeline", class: "text-decoration-none", data: { bs_toggle: "tooltip" }, title: "Jump to timeline" do %>
+              <%= link_to "#section-timeline", class: "text-decoration-none", data: { bs_toggle: "tooltip" }, title: red_t("red.errors.sidebar.jump_to_timeline") do %>
                 <strong><%= local_time(error.first_seen_at, format: :date_only) %></strong><br>
                 <small><%= local_time(error.first_seen_at, format: :time_only) %></small>
                 <i class="bi bi-arrow-down-circle ms-1"></i>
@@ -27,31 +27,34 @@
           </div>
 
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">Last Seen</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.last_seen") %></small>
             <strong><%= local_time(error.last_seen_at, format: :date_only) %></strong><br>
             <small><%= local_time(error.last_seen_at, format: :time_only) %></small>
           </div>
 
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">Severity Level</small>
-            <% severity = error.severity %>
-            <%= link_to errors_path(severity: severity, unresolved: '0'), class: "text-decoration-none", title: "View all #{severity} errors" do %>
-              <% if severity == :critical %>
-                <span class="badge bg-danger fs-6">CRITICAL</span>
-              <% elsif severity == :high %>
-                <span class="badge bg-warning text-dark fs-6">HIGH</span>
-              <% elsif severity == :medium %>
-                <span class="badge bg-info text-dark fs-6">MEDIUM</span>
-              <% else %>
-                <span class="badge bg-secondary fs-6">LOW</span>
-              <% end %>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.severity_level") %></small>
+            <%
+              severity = error.severity
+              # The badge class stays keyed on the machine value; only the label
+              # is translated. An unknown severity keeps the old "else" branch's
+              # secondary badge rather than falling through to nothing.
+              severity_badge_class = case severity
+              when :critical then "bg-danger"
+              when :high then "bg-warning text-dark"
+              when :medium then "bg-info text-dark"
+              else "bg-secondary"
+              end
+            %>
+            <%= link_to errors_path(severity: severity, unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.sidebar.view_all_severity", severity: red_t("red.common.severity.#{severity}", default: severity.to_s)) do %>
+              <span class="badge <%= severity_badge_class %> fs-6"><%= red_t("red.errors.sidebar.severity_badges.#{severity}", default: severity.to_s.upcase) %></span>
             <% end %>
           </div>
 
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">Platform</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.platform") %></small>
             <% if error.platform.present? %>
-              <%= link_to errors_path(platform: error.platform, unresolved: '0'), class: "text-decoration-none", title: "View all #{error.platform} errors" do %>
+              <%= link_to errors_path(platform: error.platform, unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.sidebar.view_all_platform", platform: error.platform) do %>
                 <% if error.platform == 'iOS' %>
                   <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
                 <% elsif error.platform == 'Android' %>
@@ -68,18 +71,18 @@
           </div>
 
           <div class="mb-3">
-            <small class="metadata-label d-block mb-1">User</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.user") %></small>
             <% if error.respond_to?(:user) && error.user %>
-              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none", title: "View all errors for this user" do %>
+              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.sidebar.view_user_errors") do %>
                 <strong><%= error.user.email %></strong><br>
-                <small class="text-muted">ID: <%= error.user_id %></small>
+                <small class="text-muted"><%= red_t("red.errors.sidebar.user_id", id: error.user_id) %></small>
               <% end %>
             <% elsif error.user_id %>
-              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none text-muted", title: "View all errors for this user" do %>
-                User ID: <%= error.user_id %>
+              <%= link_to errors_path(user_id: error.user_id, unresolved: '0'), class: "text-decoration-none text-muted", title: red_t("red.errors.sidebar.view_user_errors") do %>
+                <%= red_t("red.errors.sidebar.user_id_label", id: error.user_id) %>
               <% end %>
             <% else %>
-              <span class="text-muted">Guest / Unauthenticated</span>
+              <span class="text-muted"><%= red_t("red.errors.sidebar.guest") %></span>
             <% end %>
           </div>
 
@@ -87,11 +90,21 @@
             <div class="mb-3">
               <small class="text-muted" style="font-size: 0.78em;">
                 <i class="bi bi-info-circle me-1"></i>
-                Status, assignment, and priority are managed via your
+                <%# Two whole sentences, not a shared stem plus two endings: the
+                    link's position in the sentence is not the same in every
+                    language.
+
+                    The <a> is built here rather than living in the key. The key
+                    is _html and therefore html_safe, so a raw URL interpolated
+                    into an href inside it would not be escaped and a crafted
+                    external_issue_url could inject an event handler. link_to
+                    escapes the URL. %>
                 <% if error.respond_to?(:external_issue_url) && error.external_issue_url.present? %>
-                  <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener">linked issue</a>.
+                  <%= red_t("red.errors.sidebar.issue_tracking_linked_html",
+                        link: link_to(red_t("red.errors.sidebar.issue_tracking_link_text"),
+                              error.external_issue_url, target: "_blank", rel: "noopener")) %>
                 <% else %>
-                  issue tracker. Link an issue to see details.
+                  <%= red_t("red.errors.sidebar.issue_tracking_unlinked") %>
                 <% end %>
               </small>
             </div>
@@ -99,16 +112,19 @@
           <% unless RailsErrorDashboard.configuration.enable_issue_tracking %>
             <!-- Workflow Status -->
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Workflow Status</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.workflow_status") %></small>
               <% if error.respond_to?(:status) %>
                 <% badge_color = error.status_badge_color %>
                 <% text_dark = %w[info warning light].include?(badge_color) ? 'text-dark' : '' %>
                 <span class="badge bg-<%= badge_color %> <%= text_dark %> fs-6">
-                  <%= error.status.titleize %>
+                  <%# titleize would apply English morphology to a machine value
+                      ("in_progress" -> "In Progress"). The status labels are the
+                      ones the index and show pages already read. %>
+                  <%= red_t("red.errors.row.status.#{error.status}", default: error.status.to_s.tr('_', ' ')) %>
                 </span>
               <% elsif error.resolved? %>
                 <span class="badge bg-success">
-                  <i class="bi bi-check-circle"></i> Resolved
+                  <i class="bi bi-check-circle"></i> <%= red_t("red.errors.sidebar.resolved") %>
                 </span>
                 <% if error.resolved_at.present? %>
                   <br>
@@ -118,7 +134,7 @@
                 <% end %>
               <% else %>
                 <span class="badge bg-danger">
-                  <i class="bi bi-exclamation-circle"></i> Unresolved
+                  <i class="bi bi-exclamation-circle"></i> <%= red_t("red.errors.sidebar.unresolved") %>
                 </span>
               <% end %>
             </div>
@@ -126,9 +142,9 @@
             <!-- Reopened indicator -->
             <% if error.reopened? %>
               <div class="mb-3">
-                <small class="metadata-label d-block mb-1">Reopened</small>
+                <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.reopened") %></small>
                 <span class="badge bg-warning text-dark">
-                  <i class="bi bi-arrow-counterclockwise"></i> Reopened
+                  <i class="bi bi-arrow-counterclockwise"></i> <%= red_t("red.errors.sidebar.reopened") %>
                 </span>
                 <br>
                 <small class="text-muted mt-1 d-block">
@@ -140,7 +156,7 @@
             <!-- Assignment -->
             <% if error.respond_to?(:assigned_to) %>
               <div class="mb-3">
-                <small class="metadata-label d-block mb-1">Assigned To</small>
+                <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.assigned_to") %></small>
                 <% if error.assigned? %>
                   <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -154,20 +170,22 @@
                       <% end %>
                     </div>
                     <%= button_to unassign_error_path(error), method: :post, class: "btn btn-sm btn-outline-secondary",
-                        data: { turbo_confirm: "Remove assignment?" } do %>
+                        data: { turbo_confirm: red_t("red.errors.sidebar.remove_assignment") } do %>
                       <i class="bi bi-x"></i>
                     <% end %>
                   </div>
                 <% else %>
                   <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
-                    <i class="bi bi-person-plus"></i> Assign
+                    <i class="bi bi-person-plus"></i> <%= red_t("red.errors.sidebar.assign") %>
                   </button>
                 <% end %>
               </div>
 
               <!-- Priority -->
               <div class="mb-3">
-                <small class="metadata-label d-block mb-1">Priority</small>
+                <%# error.priority_label comes from PRIORITY_LEVELS in the model,
+                    which P2-T11 covers; only the field label is extracted here. %>
+                <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.priority") %></small>
                 <% if error.respond_to?(:priority_level) %>
                   <span class="badge bg-<%= error.priority_color %> fs-6">
                     <%= error.priority_label %>
@@ -183,19 +201,19 @@
           <!-- Snooze (always visible — no platform equivalent) -->
           <% if error.respond_to?(:assigned_to) %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Snooze</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.snooze") %></small>
               <% if error.respond_to?(:snoozed?) && error.snoozed? %>
                 <div class="alert alert-warning py-2 mb-2">
                   <i class="bi bi-alarm"></i>
-                  <strong>Snoozed</strong><br>
-                  <small>Until <%= local_time(error.snoozed_until, format: :datetime) %></small>
+                  <strong><%= red_t("red.errors.sidebar.snoozed") %></strong><br>
+                  <small><%= red_t("red.errors.sidebar.snoozed_until_html", time: local_time(error.snoozed_until, format: :datetime)) %></small>
                 </div>
                 <%= button_to unsnooze_error_path(error), method: :post, class: "btn btn-sm btn-outline-warning" do %>
-                  <i class="bi bi-alarm-fill"></i> Unsnooze
+                  <i class="bi bi-alarm-fill"></i> <%= red_t("red.errors.sidebar.unsnooze") %>
                 <% end %>
               <% else %>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#snoozeModal">
-                  <i class="bi bi-alarm"></i> Snooze
+                  <i class="bi bi-alarm"></i> <%= red_t("red.errors.sidebar.snooze") %>
                 </button>
               <% end %>
             </div>
@@ -204,27 +222,27 @@
           <!-- Mute Notifications -->
           <% if error.respond_to?(:muted?) %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Notifications</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.notifications") %></small>
               <% if error.muted? %>
                 <div class="alert alert-secondary py-2 mb-2">
                   <i class="bi bi-bell-slash"></i>
-                  <strong>Muted</strong><br>
+                  <strong><%= red_t("red.errors.sidebar.muted") %></strong><br>
                   <% if error.muted_by.present? %>
-                    <small>By <%= error.muted_by %></small><br>
+                    <small><%= red_t("red.errors.sidebar.muted_by", name: error.muted_by) %></small><br>
                   <% end %>
                   <% if error.muted_reason.present? %>
                     <small><em><%= error.muted_reason %></em></small><br>
                   <% end %>
                   <% if error.muted_at.present? %>
-                    <small>Since <%= local_time(error.muted_at, format: :short) %></small>
+                    <small><%= red_t("red.errors.sidebar.muted_since_html", time: local_time(error.muted_at, format: :short)) %></small>
                   <% end %>
                 </div>
                 <%= button_to unmute_error_path(error), method: :post, class: "btn btn-sm btn-outline-primary" do %>
-                  <i class="bi bi-bell"></i> Unmute
+                  <i class="bi bi-bell"></i> <%= red_t("red.errors.sidebar.unmute") %>
                 <% end %>
               <% else %>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#muteModal">
-                  <i class="bi bi-bell-slash"></i> Mute
+                  <i class="bi bi-bell-slash"></i> <%= red_t("red.errors.sidebar.mute") %>
                 </button>
               <% end %>
             </div>
@@ -232,21 +250,21 @@
 
           <% if error.resolved? && error.resolved_by_name.present? %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Resolved By</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.resolved_by") %></small>
               <strong><%= error.resolved_by_name %></strong>
             </div>
           <% end %>
 
           <% if error.resolved? && error.resolution_reference.present? %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Reference</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.reference") %></small>
               <code><%= error.resolution_reference %></code>
             </div>
           <% end %>
 
           <% if error.resolved? && error.resolution_comment.present? %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1">Resolution Notes</small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.resolution_notes") %></small>
               <div class="alert alert-success mb-0">
                 <%= auto_link_urls(error.resolution_comment, error: error).html_safe %>
               </div>
@@ -255,13 +273,13 @@
 
           <!-- Environment Information -->
           <div class="sidebar-section sidebar-section-blue">
-            <div class="sidebar-section-title"><i class="bi bi-gear"></i> Environment</div>
-            <small class="sidebar-section-hint">Runtime context at error time</small>
+            <div class="sidebar-section-title"><i class="bi bi-gear"></i> <%= red_t("red.errors.sidebar.environment.title") %></div>
+            <small class="sidebar-section-hint"><%= red_t("red.errors.sidebar.environment.hint") %></small>
             <div class="sidebar-section-body">
               <% if error.app_version.present? %>
                 <div class="mb-1">
-                  <small class="text-muted">App Version:</small>
-                  <%= link_to errors_path(app_version: error.app_version, unresolved: '0'), class: "ms-1 text-decoration-none", title: "View all errors in #{error.app_version}" do %>
+                  <small class="text-muted"><%= red_t("red.errors.sidebar.environment.app_version") %></small>
+                  <%= link_to errors_path(app_version: error.app_version, unresolved: '0'), class: "ms-1 text-decoration-none", title: red_t("red.errors.sidebar.environment.view_all_version", version: error.app_version) do %>
                     <code><%= error.app_version %></code>
                   <% end %>
                 </div>
@@ -269,7 +287,7 @@
 
               <% if error.git_sha.present? %>
                 <div class="mb-1">
-                  <small class="text-muted">Git SHA:</small>
+                  <small class="text-muted"><%= red_t("red.errors.sidebar.environment.git_sha") %></small>
                   <span class="ms-1"><%= git_commit_link(error.git_sha) %></span>
                 </div>
               <% end %>
@@ -278,40 +296,47 @@
                    JSON.parse(error.environment_info, symbolize_names: true) : nil rescue nil %>
 
               <div class="mb-1">
-                <small class="text-muted">Rails:</small>
+                <small class="text-muted"><%= red_t("red.errors.sidebar.environment.rails") %></small>
                 <code class="ms-1"><%= env_info&.dig(:rails_version) || Rails.version %></code>
               </div>
 
               <div class="mb-1">
-                <small class="text-muted">Ruby:</small>
+                <small class="text-muted"><%= red_t("red.errors.sidebar.environment.ruby") %></small>
                 <code class="ms-1"><%= env_info&.dig(:ruby_version) || RUBY_VERSION %></code>
               </div>
 
               <div class="mb-1">
-                <small class="text-muted">Environment:</small>
+                <small class="text-muted"><%= red_t("red.errors.sidebar.environment.environment") %></small>
                 <% env_name = env_info&.dig(:rails_env) || Rails.env.to_s %>
                 <span class="badge bg-<%= env_name == 'production' ? 'danger' : env_name == 'development' ? 'success' : 'warning' %> ms-1">
-                  <%= env_name.titleize %>
+                  <%# A Rails environment name is a machine value the host app
+                      chooses ("production", "staging_eu"). titleize applied
+                      English morphology to it; it is shown verbatim instead.
+                      The badge is text-transform: uppercase either way. %>
+                  <%= env_name %>
                 </span>
               </div>
 
               <% if env_info&.dig(:server).present? && env_info[:server] != "unknown" %>
                 <div class="mb-1">
-                  <small class="text-muted">Server:</small>
+                  <small class="text-muted"><%= red_t("red.errors.sidebar.environment.server") %></small>
+                  <%# A server name (puma, unicorn, passenger) is a product name
+                      and stays English. capitalize is kept: it is cosmetic on a
+                      known-ASCII value, not morphology applied to prose. %>
                   <code class="ms-1"><%= env_info[:server].capitalize %></code>
                 </div>
               <% end %>
 
               <% if env_info&.dig(:database_adapter).present? && env_info[:database_adapter] != "unknown" %>
                 <div class="mb-1">
-                  <small class="text-muted">Database:</small>
+                  <small class="text-muted"><%= red_t("red.errors.sidebar.environment.database") %></small>
                   <code class="ms-1"><%= env_info[:database_adapter] %></code>
                 </div>
               <% end %>
 
               <% if env_info&.dig(:gem_versions)&.any? %>
                 <div class="mb-1">
-                  <small class="text-muted d-block">Key Gems:</small>
+                  <small class="text-muted d-block"><%= red_t("red.errors.sidebar.environment.key_gems") %></small>
                   <div class="ps-2">
                     <% env_info[:gem_versions].each do |name, version| %>
                       <small><code><%= name %> <%= version %></code></small><br>
@@ -327,13 +352,13 @@
             <% health = begin; JSON.parse(error.system_health, symbolize_names: true); rescue; nil; end %>
             <% if health %>
               <div class="sidebar-section sidebar-section-red">
-                <div class="sidebar-section-title"><i class="bi bi-heart-pulse"></i> System Health</div>
-                <small class="sidebar-section-hint">Runtime state when error fired</small>
+                <div class="sidebar-section-title"><i class="bi bi-heart-pulse"></i> <%= red_t("red.errors.sidebar.health.title") %></div>
+                <small class="sidebar-section-hint"><%= red_t("red.errors.sidebar.health.hint") %></small>
                 <div class="sidebar-section-body">
                   <% if health[:process_memory] %>
                     <% pm = health[:process_memory] %>
                     <div class="mb-1">
-                      <small class="text-muted">Memory (RSS):</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.memory_rss") %></small>
                       <% mem = pm[:rss_mb].to_f %>
                       <code class="ms-1 text-<%= mem > 1024 ? 'danger' : mem > 512 ? 'warning' : 'success' %>">
                         <%= mem %> MB
@@ -341,28 +366,28 @@
                     </div>
                     <% if pm[:swap_mb].to_f > 0 %>
                       <div class="mb-1">
-                        <small class="text-muted">Process Swap:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.process_swap") %></small>
                         <code class="ms-1 text-danger"><%= pm[:swap_mb] %> MB</code>
                       </div>
                     <% end %>
                     <% if pm[:rss_peak_mb] %>
                       <div class="mb-1">
-                        <small class="text-muted">Peak RSS:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.peak_rss") %></small>
                         <code class="ms-1"><%= pm[:rss_peak_mb] %> MB</code>
                       </div>
                     <% end %>
                     <% if pm[:os_threads] %>
                       <div class="mb-1">
-                        <small class="text-muted">OS Threads:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.os_threads") %></small>
                         <code class="ms-1"><%= pm[:os_threads] %></code>
                         <% if health[:thread_count] %>
-                          <small class="text-muted ms-1">(Ruby: <%= health[:thread_count] %>)</small>
+                          <small class="text-muted ms-1"><%= red_t("red.errors.sidebar.health.ruby_threads", count: health[:thread_count]) %></small>
                         <% end %>
                       </div>
                     <% end %>
                   <% elsif health[:process_memory_mb] %>
                     <div class="mb-1">
-                      <small class="text-muted">Memory (RSS):</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.memory_rss") %></small>
                       <% mem = health[:process_memory_mb].to_f %>
                       <code class="ms-1 text-<%= mem > 1024 ? 'danger' : mem > 512 ? 'warning' : 'success' %>">
                         <%= mem %> MB
@@ -370,7 +395,7 @@
                     </div>
                     <% if health[:thread_count] %>
                       <div class="mb-1">
-                        <small class="text-muted">Threads:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.threads") %></small>
                         <code class="ms-1"><%= health[:thread_count] %></code>
                       </div>
                     <% end %>
@@ -379,7 +404,7 @@
                   <% if health[:file_descriptors] %>
                     <% fd = health[:file_descriptors] %>
                     <div class="mb-1">
-                      <small class="text-muted">File Descriptors:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.file_descriptors") %></small>
                       <% fd_pct = fd[:utilization_pct].to_f %>
                       <code class="ms-1 text-<%= fd_pct > 80 ? 'danger' : fd_pct > 60 ? 'warning' : 'success' %>">
                         <%= fd[:open] %> / <%= fd[:limit] %> (<%= fd_pct %>%)
@@ -390,7 +415,7 @@
                   <% if health[:system_load] %>
                     <% sl = health[:system_load] %>
                     <div class="mb-1">
-                      <small class="text-muted">Load Average:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.load_average") %></small>
                       <% lr = sl[:load_ratio].to_f %>
                       <code class="ms-1 text-<%= lr > 2.0 ? 'danger' : lr > 1.0 ? 'warning' : 'success' %>">
                         <%= sl[:load_1m] %><% if sl[:cpu_count] %> / <%= sl[:cpu_count] %> CPUs<% end %>
@@ -402,7 +427,7 @@
                   <% if health[:system_memory] %>
                     <% sm = health[:system_memory] %>
                     <div class="mb-1">
-                      <small class="text-muted">System Memory:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.system_memory") %></small>
                       <% used_pct = sm[:used_pct].to_f %>
                       <code class="ms-1 text-<%= used_pct > 90 ? 'danger' : used_pct > 80 ? 'warning' : 'success' %>">
                         <%= sm[:available_mb] %> MB free / <%= sm[:total_mb] %> MB (<%= used_pct %>% used)
@@ -410,7 +435,7 @@
                     </div>
                     <% if sm[:swap_used_mb].to_i > 0 %>
                       <div class="mb-1">
-                        <small class="text-muted">System Swap:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.system_swap") %></small>
                         <code class="ms-1 text-danger"><%= sm[:swap_used_mb] %> MB used</code>
                       </div>
                     <% end %>
@@ -419,7 +444,7 @@
                   <% if health[:tcp_connections] %>
                     <% tcp = health[:tcp_connections] %>
                     <div class="mb-1">
-                      <small class="text-muted">TCP Connections:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.tcp_connections") %></small>
                       <code class="ms-1">
                         <%= tcp[:established] %> established<% if tcp[:close_wait].to_i > 0 %>, <span class="text-danger"><%= tcp[:close_wait] %> close_wait</span><% end %><% if tcp[:time_wait].to_i > 0 %>, <span class="text-warning"><%= tcp[:time_wait] %> time_wait</span><% end %>
                       </code>
@@ -428,11 +453,11 @@
 
                   <% if health[:gc] %>
                     <div class="mb-1">
-                      <small class="text-muted">GC Live Objects:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.gc_live_objects") %></small>
                       <code class="ms-1"><%= begin; number_with_delimiter(health[:gc][:heap_live_slots]); rescue; health[:gc][:heap_live_slots]; end %></code>
                     </div>
                     <div class="mb-1">
-                      <small class="text-muted">Major GC Runs:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.major_gc_runs") %></small>
                       <code class="ms-1"><%= health[:gc][:major_gc_count] %></code>
                     </div>
                   <% end %>
@@ -440,7 +465,7 @@
                   <% if health[:gc_latest] %>
                     <% gcl = health[:gc_latest] %>
                     <div class="mb-1">
-                      <small class="text-muted">Last GC:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.last_gc") %></small>
                       <code class="ms-1">
                         <%= gcl[:major_by] ? "major (#{gcl[:major_by]})" : "minor" %> by <%= gcl[:gc_by] %><% if gcl[:state].to_s != "none" %>, <span class="text-warning">state: <%= gcl[:state] %></span><% end %>
                       </code>
@@ -450,7 +475,7 @@
                   <% if health[:connection_pool] %>
                     <% cp = health[:connection_pool] %>
                     <div class="mb-1">
-                      <small class="text-muted">Connection Pool:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.connection_pool") %></small>
                       <code class="ms-1">
                         <%= cp[:busy] %>/<%= cp[:size] %> busy, <%= cp[:idle] %> idle<% if cp[:dead].to_i > 0 %>, <span class="text-danger"><%= cp[:dead] %> dead</span><% end %><% if cp[:waiting].to_i > 0 %>, <span class="text-warning"><%= cp[:waiting] %> waiting</span><% end %>
                       </code>
@@ -460,7 +485,7 @@
                   <% if health[:puma] %>
                     <% ps = health[:puma] %>
                     <div class="mb-1">
-                      <small class="text-muted">Puma Threads:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.puma_threads") %></small>
                       <code class="ms-1">
                         <%= ps[:running] %>/<%= ps[:max_threads] %> running, <%= ps[:pool_capacity] %> capacity<% if ps[:backlog].to_i > 0 %>, <span class="text-warning"><%= ps[:backlog] %> backlog</span><% end %>
                       </code>
@@ -487,17 +512,17 @@
                   <% if health[:ruby_vm] %>
                     <% vm = health[:ruby_vm] %>
                     <div class="mb-1">
-                      <small class="text-muted">VM Cache Invalidations:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.vm_cache_invalidations") %></small>
                       <% invals = vm[:constant_cache_invalidations].to_i %>
                       <code class="ms-1 <%= 'text-danger' if invals > 10_000 %>"><%= begin; number_with_delimiter(invals); rescue; invals; end %></code>
                     </div>
                     <div class="mb-1">
-                      <small class="text-muted">VM Cache Misses:</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.vm_cache_misses") %></small>
                       <code class="ms-1"><%= begin; number_with_delimiter(vm[:constant_cache_misses]); rescue; vm[:constant_cache_misses]; end %></code>
                     </div>
                     <% if vm[:shape_cache_size] %>
                       <div class="mb-1">
-                        <small class="text-muted">Shape Cache Size:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.shape_cache_size") %></small>
                         <code class="ms-1"><%= begin; number_with_delimiter(vm[:shape_cache_size]); rescue; vm[:shape_cache_size]; end %></code>
                       </div>
                     <% end %>
@@ -507,26 +532,26 @@
                     <% yj = health[:yjit] %>
                     <% if yj[:compiled_iseq_count] || yj[:compiled_block_count] %>
                       <div class="mb-1">
-                        <small class="text-muted">YJIT Compiled:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.yjit_compiled") %></small>
                         <code class="ms-1"><%= yj[:compiled_iseq_count] %> iseqs / <%= yj[:compiled_block_count] %> blocks</code>
                       </div>
                     <% end %>
                     <% if yj[:invalidation_count] %>
                       <div class="mb-1">
-                        <small class="text-muted">YJIT Invalidations:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.yjit_invalidations") %></small>
                         <% yj_invals = yj[:invalidation_count].to_i %>
                         <code class="ms-1 <%= 'text-danger' if yj_invals > 100 %>"><%= yj_invals %></code>
                       </div>
                     <% end %>
                     <% if yj[:code_region_size] %>
                       <div class="mb-1">
-                        <small class="text-muted">YJIT Code Size:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.yjit_code_size") %></small>
                         <code class="ms-1"><%= (yj[:code_region_size].to_f / 1024).round(1) %> KB</code>
                       </div>
                     <% end %>
                     <% if yj[:compile_time_ns] %>
                       <div class="mb-1">
-                        <small class="text-muted">YJIT Compile Time:</small>
+                        <small class="text-muted"><%= red_t("red.errors.sidebar.health.yjit_compile_time") %></small>
                         <code class="ms-1"><%= (yj[:compile_time_ns].to_f / 1_000_000).round(2) %> ms</code>
                       </div>
                     <% end %>
@@ -537,10 +562,10 @@
           <% end %>
 
           <div>
-            <small class="metadata-label d-block mb-1">Error ID</small>
+            <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.error_id") %></small>
             <div class="d-flex align-items-center gap-2">
               <code><%= error.id %></code>
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= error.id %>" title="Copy error ID">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-red-action="copy" data-red-copy-text="<%= error.id %>" title="<%= red_t("red.errors.sidebar.copy_error_id") %>">
                 <i class="bi bi-clipboard"></i>
               </button>
             </div>

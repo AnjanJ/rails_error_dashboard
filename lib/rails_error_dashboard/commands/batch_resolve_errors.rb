@@ -5,6 +5,8 @@ module RailsErrorDashboard
     # Command: Resolve multiple errors at once
     # This is a write operation that updates multiple ErrorLog records
     class BatchResolveErrors
+      include RailsErrorDashboard::Translation
+
       def self.call(error_ids, resolved_by_name: nil, resolution_comment: nil)
         new(error_ids, resolved_by_name, resolution_comment).call
       end
@@ -16,7 +18,7 @@ module RailsErrorDashboard
       end
 
       def call
-        return { success: false, count: 0, errors: [ "No error IDs provided" ] } if @error_ids.empty?
+        return { success: false, count: 0, errors: [ red_t("red.commands.no_error_ids") ] } if @error_ids.empty?
 
         errors = ErrorLog.where(id: @error_ids)
 
@@ -50,7 +52,7 @@ module RailsErrorDashboard
           count: resolved_count,
           total: @error_ids.size,
           failed_ids: failed_ids,
-          errors: failed_ids.empty? ? [] : [ "Failed to resolve #{failed_ids.size} error(s)" ]
+          errors: failed_ids.empty? ? [] : [ red_tp("red.commands.batch_failed.resolve", count: failed_ids.size) ]
         }
       rescue => e
         RailsErrorDashboard::Logger.error("Batch resolve failed: #{e.message}")

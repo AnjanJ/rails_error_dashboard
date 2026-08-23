@@ -240,7 +240,8 @@ module RailsErrorDashboard
             @storm_notified_episode = episode[:started_at]
             StormNotificationJob.perform_later(
               started_at: episode[:started_at].iso8601,
-              state: state.to_s
+              state: state.to_s,
+              locale: ApplicationJob.enqueue_locale
             )
           rescue => e
             RailsErrorDashboard::Logger.error(

@@ -25,28 +25,33 @@ module RailsErrorDashboard
           config = RailsErrorDashboard.configuration
           fired = []
 
+          # Resolved once, here, in the enqueueing thread. Jobs must not
+          # resolve it themselves — they run without a request, possibly on a
+          # thread another request left state on. See Concerns::LocalizedJob.
+          locale = ApplicationJob.enqueue_locale
+
           if config.enable_slack_notifications && config.slack_webhook_url.present?
-            SlackErrorNotificationJob.perform_later(error_log.id)
+            SlackErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "slack"
           end
 
           if config.enable_email_notifications && config.notification_email_recipients.present?
-            EmailErrorNotificationJob.perform_later(error_log.id)
+            EmailErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "email"
           end
 
           if config.enable_discord_notifications && config.discord_webhook_url.present?
-            DiscordErrorNotificationJob.perform_later(error_log.id)
+            DiscordErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "discord"
           end
 
           if config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?
-            PagerdutyErrorNotificationJob.perform_later(error_log.id)
+            PagerdutyErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "pagerduty"
           end
 
           if config.enable_webhook_notifications && config.webhook_urls.present?
-            WebhookErrorNotificationJob.perform_later(error_log.id)
+            WebhookErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "webhook"
           end
 

@@ -11,6 +11,8 @@ module RailsErrorDashboard
     #   result = LinkExistingIssue.call(error_id, issue_url: "https://github.com/user/repo/issues/42")
     #   result[:success] # => true
     class LinkExistingIssue
+      include RailsErrorDashboard::Translation
+
       PROVIDER_PATTERNS = {
         github: %r{github\.com/([^/]+/[^/]+)/issues/(\d+)}i,
         gitlab: %r{gitlab\.com/([^/]+/[^/]+)/-/issues/(\d+)}i,
@@ -29,7 +31,7 @@ module RailsErrorDashboard
       end
 
       def call
-        return { success: false, error: "Issue URL is required" } if @issue_url.blank?
+        return { success: false, error: red_t("red.commands.issue.url_required") } if @issue_url.blank?
 
         error = ErrorLog.find(@error_id)
         parsed = parse_issue_url(@issue_url)
@@ -42,7 +44,7 @@ module RailsErrorDashboard
 
         { success: true, issue_url: @issue_url, provider: parsed[:provider] }
       rescue ActiveRecord::RecordNotFound
-        { success: false, error: "Error not found: #{@error_id}" }
+        { success: false, error: red_t("red.commands.error_not_found", id: @error_id) }
       rescue => e
         { success: false, error: "#{e.class}: #{e.message}" }
       end

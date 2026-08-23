@@ -545,7 +545,11 @@ namespace :error_dashboard do
     end
 
     puts "Sending #{period} error digest to #{recipients.join(', ')}..."
-    RailsErrorDashboard::ScheduledDigestJob.perform_later(period: period, application_id: app_id)
+    RailsErrorDashboard::ScheduledDigestJob.perform_later(
+      period: period,
+      application_id: app_id,
+      locale: RailsErrorDashboard::ApplicationJob.enqueue_locale
+    )
     puts "Digest job enqueued."
   end
 end

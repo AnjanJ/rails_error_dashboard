@@ -100,4 +100,101 @@ RSpec.describe "Dashboard locale isolation", type: :request do
       expect(response.body).to include("Displaying")
     end
   end
+
+  # RED's own translations (as opposed to Pagy's pagination labels) render
+  # through a private I18n backend and a request-scoped locale. The same
+  # leak-prevention properties must hold for both.
+  describe "RED's own translation state" do
+    # NOTE: asserting Current.locale is nil AFTER a `get` proves nothing —
+    # ActiveSupport resets CurrentAttributes between requests, so that holds
+    # even with the ensure deleted. These call the around_action directly so
+    # the cleanup itself is what is under test.
+    let(:controller) { RailsErrorDashboard::ErrorsController.new }
+
+    it "clears the request-scoped locale when the block completes" do
+      RailsErrorDashboard::Current.locale = "sentinel"
+
+      controller.send(:with_dashboard_locale) do
+        expect(RailsErrorDashboard::Current.locale).to eq("en")
+      end
+
+      expect(RailsErrorDashboard::Current.locale).to be_nil
+    end
+
+    it "clears the request-scoped locale even when the block raises" do
+      expect {
+        controller.send(:with_dashboard_locale) { raise "boom" }
+      }.to raise_error("boom")
+
+      expect(RailsErrorDashboard::Current.locale).to be_nil
+    end
+
+    it "does not strand its locale for a subsequent request on the same thread" do
+      # The #148 shape: a value left on a Puma thread that the next request
+      # inherits. Two consecutive invocations on one thread, no reset between.
+      controller.send(:with_dashboard_locale) { nil }
+
+      expect(RailsErrorDashboard::Current.locale).to be_nil
+
+      observed = nil
+      controller.send(:with_dashboard_locale) { observed = RailsErrorDashboard::Current.locale }
+
+      expect(observed).to eq("en")
+      expect(RailsErrorDashboard::Current.locale).to be_nil
+    end
+
+    it "clears the request-scoped locale across a full request cycle" do
+      get "/error_dashboard/errors"
+
+      expect(response).to have_http_status(:ok)
+      expect(RailsErrorDashboard::Current.locale).to be_nil
+    end
+
+    it "leaves the host app's I18n untouched" do
+      before_state = [
+        I18n.load_path.dup,
+        I18n.available_locales.dup,
+        I18n.default_locale,
+        I18n.locale
+      ]
+
+      get "/error_dashboard/errors"
+
+      expect(response).to have_http_status(:ok)
+      expect([ I18n.load_path, I18n.available_locales, I18n.default_locale, I18n.locale ])
+        .to eq(before_state)
+    end
+
+    it "renders while the host app is in a different locale" do
+      original = I18n.locale
+
+      begin
+        I18n.locale = :en
+        RailsErrorDashboard.configuration.dashboard_locale = "en"
+
+        get "/error_dashboard/errors"
+
+        expect(response).to have_http_status(:ok)
+        expect(I18n.locale).to eq(:en)
+      ensure
+        I18n.locale = original
+      end
+    end
+
+    it "sets the html lang attribute from the dashboard locale" do
+      get "/error_dashboard/errors"
+
+      expect(response.body).to include('<html lang="en"')
+    end
+
+    it "renders when the dashboard locale is one Pagy does not ship" do
+      # RED's locales and Pagy's are resolved independently. A locale RED can
+      # serve but Pagy cannot must still render, with English pagination.
+      RailsErrorDashboard.configuration.dashboard_locale = "en"
+
+      get "/error_dashboard/errors/user_impact"
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end

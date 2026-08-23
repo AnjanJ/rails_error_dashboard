@@ -4,21 +4,23 @@ module RailsErrorDashboard
   class SlackErrorNotificationJob < ApplicationJob
     queue_as :error_notifications
 
-    def perform(error_log_id)
+    # @param locale [String, nil] resolved at enqueue time. nil for jobs
+    #   enqueued by a pre-Phase-4 version still draining from the queue.
+    def perform(error_log_id, locale = nil)
       error_log = ErrorLog.find_by(id: error_log_id)
       return unless error_log
 
       webhook_url = RailsErrorDashboard.configuration.slack_webhook_url
       return unless webhook_url.present?
 
-      send_slack_notification(error_log, webhook_url)
+      send_slack_notification(error_log, webhook_url, job_locale(locale))
     rescue => e
       Rails.logger.error("Failed to send Slack notification: #{e.message}")
     end
 
     private
 
-    def send_slack_notification(error_log, webhook_url)
+    def send_slack_notification(error_log, webhook_url, locale)
       require "net/http"
       require "json"
 
@@ -31,7 +33,7 @@ module RailsErrorDashboard
       http.read_timeout = 10  # 10 seconds to read response
 
       request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
-      request.body = Services::SlackPayloadBuilder.call(error_log).to_json
+      request.body = Services::SlackPayloadBuilder.call(error_log, locale: locale).to_json
 
       response = http.request(request)
 

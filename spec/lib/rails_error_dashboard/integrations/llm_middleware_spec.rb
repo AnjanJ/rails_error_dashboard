@@ -92,8 +92,12 @@ RSpec.describe RailsErrorDashboard::Integrations::LlmMiddleware do
       crumb = crumbs.first
       expect(crumb[:c]).to eq("llm")
       expect(crumb[:m]).to include("openai", "gpt-4o-mini", "in:120/out:35")
+      # Not `> 0`: the duration is (monotonic_ms - started_at).round(2) around a
+      # stubbed call, so on a fast machine the elapsed time rounds to 0.0 and the
+      # example fails intermittently. The contract is a non-negative duration in
+      # milliseconds, which is what this asserts.
       expect(crumb[:d]).to be_a(Numeric)
-      expect(crumb[:d]).to be > 0
+      expect(crumb[:d]).to be >= 0
 
       # BreadcrumbCollector stringifies metadata values (lesson 14a).
       meta = crumb[:meta]
