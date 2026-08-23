@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.9.0 highlights — the dashboard is now translated
+
+> Detail for the `feat(i18n)` entry above.
+
+RED's dashboard, its emails and its notification payloads render in **eleven
+languages**. Set the default with `config.dashboard_locale`, and users can
+override it for themselves from a picker in the navbar:
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it, zh-CN
+end
+```
+
+`en` (source) · `de` Deutsch · `es` Español · `fr` Français · `pt-BR` Português
+(Brasil) · `ja` 日本語 · `ru` Русский · `uk` Українська · `pl` Polski ·
+`it` Italiano · `zh-CN` 简体中文
+
+**Your application's `I18n` is untouched.** RED translates through its own
+private backend, so it never reads, writes or mutates `I18n.load_path`,
+`I18n.locale`, `I18n.available_locales`, `I18n.default_locale`, `I18n.backend`
+or `I18n.exception_handler`. RED's locale is independent of your app's — a host
+running in French can render the dashboard in German, and vice versa. This also
+means hosts cannot override RED's strings with their own locale files, which is
+a deliberate trade-off for a self-hosted ops tool.
+
+Nothing in the translation path can raise. A missing or wrong translation
+**falls back to English**, never to a broken page — which matters on the one
+page that has to work when everything else is broken.
+
+**Upgrading changes nothing unless you opt in.** The default locale is `en`, and
+English rendering is unchanged.
+
+#### ⚠️ Every non-English locale is machine-translated and unreviewed
+
+**None of the ten translations has been reviewed by a native speaker.** RED's
+maintainer reads only English. This is stated plainly rather than as "beta",
+which would imply a review process that has not happened.
+
+What is and is not verified:
+
+- Key structure, interpolation variables and CLDR plural categories **are**
+  verified mechanically in every locale, on every CI run.
+- Wording, register and idiom are **not** verified by anyone.
+
+**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If
+you read any of these languages, [every locale has an open issue][review-issues]
+tracking its review, or you can [report a bad translation][report] without
+touching any code. See the [translations guide][guide] for how the system works,
+what is deliberately left in English, and how to add a language.
+
+[review-issues]: https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review
+[report]: https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml
+[guide]: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/TRANSLATIONS.md
+
 ## [0.8.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.3...rails_error_dashboard/v0.8.4) (2026-08-13)
 
 
