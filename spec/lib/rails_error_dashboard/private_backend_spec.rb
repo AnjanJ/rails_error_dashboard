@@ -55,7 +55,17 @@ RSpec.describe RailsErrorDashboard::PrivateBackend do
 
       stock.translate(:en, "red.pinned")
 
-      expect(stock.send(:translations).keys).to include(*I18n.backend.send(:translations).keys),
+      # The host backend is lazy: nothing here has forced it to read its own
+      # load_path, and on some orderings nothing earlier in the suite has
+      # either. Left uninitialized its translations hash is empty, the splat
+      # below passes zero arguments, and `include()` raises ArgumentError
+      # instead of asserting anything — the pin silently stops pinning.
+      I18n.backend.send(:init_translations) unless I18n.backend.initialized?
+      host_locales = I18n.backend.send(:translations).keys
+      expect(host_locales).not_to be_empty,
+        "the host backend must hold translations for this pin to mean anything"
+
+      expect(stock.send(:translations).keys).to include(*host_locales),
         "upstream init_translations no longer reads I18n.load_path — " \
         "PrivateBackend#init_translations may no longer be needed"
     end
