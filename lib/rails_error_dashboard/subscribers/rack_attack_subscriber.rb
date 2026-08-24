@@ -70,7 +70,7 @@ module RailsErrorDashboard
 
           match_type = event_name.split(".").first # "throttle", "blocklist", "track"
           rule = env["rack.attack.matched"].to_s
-          discriminator = env["rack.attack.match_discriminator"].to_s
+          discriminator = resolve_discriminator(env, request)
           path = request.respond_to?(:path) ? request.path.to_s : ""
           method = request.respond_to?(:request_method) ? request.request_method.to_s : ""
 
@@ -101,6 +101,31 @@ module RailsErrorDashboard
           }
 
           Services::BreadcrumbCollector.add("rack_attack", message, metadata: metadata)
+        end
+
+        # Resolve the discriminator, falling back to the client IP.
+        #
+        # WHY (issue #170): a `track` rule declared without :limit/:period is a
+        # Rack::Attack::Check, and Check#matched_by? sets only "rack.attack.matched"
+        # and "rack.attack.match_type" — never "rack.attack.match_discriminator".
+        # Only Throttle#annotate_request_with_matched_data sets that key. The value
+        # the rule's block returns (typically `req.ip`) is used purely as a truthy
+        # match test and then discarded upstream.
+        #
+        # Without this fallback every track row stores a blank discriminator, so
+        # RackAttackSummary reports "Unique IPs: 0" for a rule that plainly matched
+        # real clients. We use request.ip rather than re-invoking the rule's block:
+        # the block is arbitrary host code that may have side effects or return a
+        # non-IP value, and re-running it from a notification subscriber would
+        # execute it a second time per request.
+        def resolve_discriminator(env, request)
+          explicit = env["rack.attack.match_discriminator"].to_s
+          return explicit unless explicit.empty?
+
+          # request.ip parses X-Forwarded-For and can raise on malformed input.
+          request.respond_to?(:ip) ? request.ip.to_s : ""
+        rescue => e
+          ""
         end
       end
     end

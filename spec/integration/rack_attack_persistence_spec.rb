@@ -19,16 +19,21 @@ RSpec.describe "Rack::Attack event persistence", type: :request do
   let(:tracker) { RailsErrorDashboard::Services::RackAttackTracker }
   let(:event_model) { RailsErrorDashboard::RackAttackEvent }
 
-  def fake_request(path: "/admin/users/sign_in", method: "POST", rule: "logins/ip", ip: "127.0.0.1")
-    env = {
-      "rack.attack.matched" => rule,
-      "rack.attack.match_discriminator" => ip
-    }
+  # set_discriminator: false models a plain `track` rule, which Rack::Attack
+  # routes through Check — and Check never writes "rack.attack.match_discriminator"
+  # into the env (issue #170). In that case the subscriber must fall back to
+  # request.ip, so the double still answers #ip.
+  def fake_request(path: "/admin/users/sign_in", method: "POST", rule: "logins/ip",
+                   ip: "127.0.0.1", set_discriminator: true)
+    env = { "rack.attack.matched" => rule }
+    env["rack.attack.match_discriminator"] = ip if set_discriminator
+
     instance_double(
       "Rack::Attack::Request",
       env: env,
       path: path,
-      request_method: method
+      request_method: method,
+      ip: ip
     )
   end
 
@@ -134,6 +139,27 @@ RSpec.describe "Rack::Attack event persistence", type: :request do
 
       expect(event_model.last.match_type).to eq("track")
       expect(event_model.last.discriminator).to eq("user_42")
+    end
+
+    # Issue #170: the shape a real plain `track` rule actually produces.
+    it "persists a track event with the client IP when Check omits the discriminator" do
+      ActiveSupport::Notifications.instrument(
+        "track.rack_attack",
+        request: fake_request(
+          rule: "requests accepting markdown",
+          path: "/doc",
+          method: "GET",
+          ip: "198.51.100.42",
+          set_discriminator: false
+        )
+      ) { }
+      tracker.flush!(sync: true)
+
+      event = event_model.last
+      expect(event.match_type).to eq("track")
+      expect(event.rule).to eq("requests accepting markdown")
+      # Previously blank, which made RackAttackSummary report "Unique IPs: 0".
+      expect(event.discriminator).to eq("198.51.100.42")
     end
   end
 

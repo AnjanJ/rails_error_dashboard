@@ -97,15 +97,19 @@ RSpec.describe RailsErrorDashboard::Subscribers::RackAttackSubscriber do
   describe "track.rack_attack subscriber" do
     before { described_class.subscribe! }
 
+    # A plain `track` rule (no :limit/:period) is a Rack::Attack::Check, and Check
+    # NEVER writes "rack.attack.match_discriminator" into the env — only Throttle
+    # does. These doubles therefore omit that key deliberately: including it would
+    # make the fixture more generous than reality and hide issue #170.
     it "adds rack_attack breadcrumb with track details" do
       request = double("Rack::Request",
         env: {
           "rack.attack.matched" => "api_usage",
-          "rack.attack.match_type" => :track,
-          "rack.attack.match_discriminator" => "user_42"
+          "rack.attack.match_type" => :track
         },
         path: "/api/v1/users",
-        request_method: "GET")
+        request_method: "GET",
+        ip: "203.0.113.7")
 
       ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
 
@@ -114,8 +118,61 @@ RSpec.describe RailsErrorDashboard::Subscribers::RackAttackSubscriber do
       expect(ra_crumbs).not_to be_empty
 
       crumb = ra_crumbs.last
-      expect(crumb[:m]).to eq("track: api_usage (user_42) GET /api/v1/users")
+      expect(crumb[:m]).to eq("track: api_usage (203.0.113.7) GET /api/v1/users")
       expect(crumb[:meta][:type]).to eq("track")
+    end
+
+    it "falls back to the client IP when Check omits the discriminator (issue #170)" do
+      request = double("Rack::Request",
+        env: {
+          "rack.attack.matched" => "requests accepting markdown",
+          "rack.attack.match_type" => :track
+        },
+        path: "/doc",
+        request_method: "GET",
+        ip: "198.51.100.42")
+
+      ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
+
+      crumb = collector.harvest.select { |c| c[:c] == "rack_attack" }.last
+      expect(crumb[:meta][:discriminator]).to eq("198.51.100.42")
+    end
+
+    it "prefers an explicit discriminator over the IP fallback" do
+      # A counted track (limit:/period:) routes through Throttle, which DOES set
+      # the discriminator — that value must win over request.ip.
+      request = double("Rack::Request",
+        env: {
+          "rack.attack.matched" => "api_usage",
+          "rack.attack.match_type" => :track,
+          "rack.attack.match_discriminator" => "user_42"
+        },
+        path: "/api/v1/users",
+        request_method: "GET",
+        ip: "203.0.113.7")
+
+      ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
+
+      crumb = collector.harvest.select { |c| c[:c] == "rack_attack" }.last
+      expect(crumb[:meta][:discriminator]).to eq("user_42")
+    end
+
+    it "does not raise when request.ip itself raises" do
+      request = double("Rack::Request",
+        env: {
+          "rack.attack.matched" => "api_usage",
+          "rack.attack.match_type" => :track
+        },
+        path: "/doc",
+        request_method: "GET")
+      allow(request).to receive(:ip).and_raise(ArgumentError, "malformed X-Forwarded-For")
+
+      expect {
+        ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
+      }.not_to raise_error
+
+      crumb = collector.harvest.select { |c| c[:c] == "rack_attack" }.last
+      expect(crumb[:meta][:discriminator]).to eq("")
     end
   end
 
@@ -154,6 +211,8 @@ RSpec.describe RailsErrorDashboard::Subscribers::RackAttackSubscriber do
       allow(request).to receive(:respond_to?).with(:env).and_return(false)
       allow(request).to receive(:respond_to?).with(:path).and_return(true)
       allow(request).to receive(:respond_to?).with(:request_method).and_return(true)
+      # resolve_discriminator probes :ip for the track fallback (issue #170).
+      allow(request).to receive(:respond_to?).with(:ip).and_return(false)
 
       ActiveSupport::Notifications.instrument("throttle.rack_attack", { request: request }) { }
 
