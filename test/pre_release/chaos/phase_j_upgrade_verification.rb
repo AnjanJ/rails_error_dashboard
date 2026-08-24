@@ -19,8 +19,25 @@ PreReleaseTestHarness.header("CHAOS TEST PHASE J: UPGRADE PATH VERIFICATION")
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("J1: Version is updated")
 
-assert "J1: version is 0.2.0", RailsErrorDashboard::VERSION == "0.2.0",
-  "got #{RailsErrorDashboard::VERSION}"
+# The from-version is resolved at runtime, so this cannot assert a literal.
+#
+# It also cannot assert the working copy is NEWER than the published gem:
+# release-please bumps version.rb as part of the release commit, so on a normal
+# branch the working copy still carries the released version number. Comparing
+# them would fail on every pre-release run.
+#
+# What is genuinely invariant is that the app is loading the gem from a path
+# (the working copy) rather than the installed .gem — that is what proves the
+# Gemfile swap took effect and the rest of this phase is testing new code.
+from_version = ENV["UPGRADE_FROM_VERSION"].to_s
+gem_path = RailsErrorDashboard.const_source_location(:VERSION)&.first.to_s
+
+assert "J1: app is running the working copy, not the published gem",
+  !gem_path.include?("/gems/rails_error_dashboard-"),
+  "loaded from #{gem_path} — expected a path-sourced copy, not an installed gem"
+
+assert "J1: upgraded from a published release", !from_version.empty?,
+  "UPGRADE_FROM_VERSION was not set by the harness"
 puts ""
 
 # ---------------------------------------------------------------------------
@@ -88,28 +105,28 @@ puts ""
 # ---------------------------------------------------------------------------
 # J5: New columns exist (nil for old records, populated for new)
 # ---------------------------------------------------------------------------
-PreReleaseTestHarness.section("J5: New v0.2 columns exist")
+PreReleaseTestHarness.section("J5: Long-standing columns survive the upgrade")
 
 columns = RailsErrorDashboard::ErrorLog.column_names
 
-new_v2_columns = %w[
+# These were "new" when this phase was written against a v0.1 -> v0.2 upgrade.
+# They have shipped for many releases since, so the old assertion that a
+# pre-upgrade record leaves them nil is no longer true — the from-version now
+# populates them itself. What still matters is that the upgrade does not DROP
+# them and does not corrupt the rows that already carry values.
+expected_columns = %w[
   exception_cause http_method hostname content_type
   request_duration_ms environment_info reopened_at
   app_version git_sha
 ]
 
-new_v2_columns.each do |col|
-  if columns.include?(col)
-    assert "J5: new column #{col} exists", true
+expected_columns.each do |col|
+  assert "J5: column #{col} still exists after upgrade", columns.include?(col),
+    "column not found — the upgrade appears to have dropped it"
+end
 
-    # Old records should have nil for new columns
-    old_value = sample_error&.send(col)
-    assert "J5: old record #{col} is nil", old_value.nil?,
-      "expected nil, got #{old_value.inspect}"
-  else
-    assert "J5: column #{col} missing (may not be in this version)", false,
-      "column not found"
-  end
+assert_no_crash("J5: pre-upgrade record still readable across all columns") do
+  sample_error&.attributes
 end
 puts ""
 
@@ -236,6 +253,63 @@ end
 
 assert_no_crash("J9: AnalyticsStats") do
   RailsErrorDashboard::Queries::AnalyticsStats.call
+end
+puts ""
+
+# ---------------------------------------------------------------------------
+# J10: Schema additions from this release applied cleanly
+#
+# WHY: the docs tell upgraders to run install:migrations + db:migrate. This is
+# the only place that instruction is verified end-to-end against a real app that
+# was installed at the PREVIOUS published release. A column added this cycle but
+# never copied into the host app would break the dashboard at runtime, not here,
+# so assert on the schema directly rather than trusting the migration ran.
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("J10: New columns exist after migrating")
+
+ra_table = RailsErrorDashboard::RackAttackEvent.table_name
+ra_columns = RailsErrorDashboard::RackAttackEvent.connection.columns(ra_table).map(&:name)
+
+assert "J10: rack_attack_events table exists",
+  RailsErrorDashboard::RackAttackEvent.connection.table_exists?(ra_table)
+
+assert "J10: user_agent column was added by the upgrade",
+  ra_columns.include?("user_agent"),
+  "columns: #{ra_columns.sort.join(', ')}"
+
+# The unique upsert index is budgeted against MySQL's 3072-byte utf8mb4 limit.
+# user_agent must stay out of it or the migration breaks on MySQL — a failure
+# SQLite would never surface.
+upsert_index = RailsErrorDashboard::RackAttackEvent.connection
+  .indexes(ra_table).find { |i| i.name == "index_rack_attack_events_upsert_key" }
+
+assert "J10: upsert index still exists", upsert_index.present?
+
+assert "J10: user_agent stayed OUT of the upsert index",
+  upsert_index.nil? || !upsert_index.columns.include?("user_agent"),
+  "index columns: #{upsert_index&.columns&.join(', ')}"
+
+# The column has to be writable, not merely present.
+assert_no_crash("J10: rack_attack event round-trips with a user agent") do
+  RailsErrorDashboard::RackAttackEvent.create!(
+    rule: "upgrade-check",
+    match_type: "track",
+    discriminator: "198.51.100.42",
+    path: "/doc",
+    http_method: "GET",
+    user_agent: "ChatGPT-User/1.0",
+    period_hour: Time.current.beginning_of_hour,
+    event_count: 1,
+    last_seen_at: Time.current
+  )
+end
+
+written = RailsErrorDashboard::RackAttackEvent.find_by(rule: "upgrade-check")
+assert "J10: user agent persisted", written&.user_agent == "ChatGPT-User/1.0",
+  "got #{written&.user_agent.inspect}"
+
+assert_no_crash("J10: RackAttackSummary query works post-upgrade") do
+  RailsErrorDashboard::Queries::RackAttackSummary.call(30)
 end
 puts ""
 
