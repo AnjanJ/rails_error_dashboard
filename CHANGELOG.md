@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.9.0...rails_error_dashboard/v0.9.1) (2026-08-24)
+
+
+### 🐛 Bug Fixes
+
+* **security:** refuse default credentials outside development and test ([#173](https://github.com/AnjanJ/rails_error_dashboard/issues/173)) ([2dca278](https://github.com/AnjanJ/rails_error_dashboard/commit/2dca278bbfc896748b3778de8ad9f0ea724d7908))
+
 ### 0.9.1 highlights — default credentials are now refused outside development and test
 
 > Detail for the `fix(security)` entry above. Security advisory:
