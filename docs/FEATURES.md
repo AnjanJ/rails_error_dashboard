@@ -1049,7 +1049,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 - **Custom authentication** via `config.authenticate_with` lambda — use Devise, Warden, session-based, or any auth system
 - **Configurable credentials** via environment variables
 - **Fail-closed security** — lambda errors are rescued, logged, and result in 403 Forbidden
-- **Default credentials protection** — App refuses to boot in production with default (`gandalf/youshallnotpass`) or blank credentials. Dashboard shows a reminder banner in all environments until credentials are changed
+- **Default credentials protection** — App refuses to boot with default (`gandalf/youshallnotpass`) or blank credentials in **any environment except development and test** — including `staging`, `uat`, `demo` and any other name you deploy under. Dashboard shows a reminder banner in all environments until credentials are changed
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure

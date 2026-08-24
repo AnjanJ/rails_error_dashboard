@@ -478,12 +478,22 @@ module RailsErrorDashboard
       errors = []
       warnings = []
 
-      # Block boot with default or blank credentials in production
+      # Block boot with default or blank credentials anywhere that is not local
+      # development or test.
+      #
+      # Deliberately an ALLOWLIST of safe environments rather than a check for
+      # `production`. Gating on Rails.env.production? tests one literal string,
+      # so an internet-facing `staging`, `uat`, `demo` or `preprod` box booted
+      # happily on credentials this project publishes in its own README
+      # (GHSA-qhgm-3pxf-mvc6). Every future environment name a team invents is
+      # now refused by default and has to be added here on purpose.
+      #
       # Skip during asset precompilation (SECRET_KEY_BASE_DUMMY=1) — ENV vars aren't available at build time
       if default_credentials? &&
-         defined?(Rails) && Rails.respond_to?(:env) && Rails.env.production? &&
+         defined?(Rails) && Rails.respond_to?(:env) &&
+         !Rails.env.development? && !Rails.env.test? &&
          ENV["SECRET_KEY_BASE_DUMMY"].blank?
-        errors << "Default or blank credentials cannot be used in production. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
+        errors << "Default or blank credentials cannot be used in #{Rails.env}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
       end
 
       # Validate sampling_rate (must be between 0.0 and 1.0)

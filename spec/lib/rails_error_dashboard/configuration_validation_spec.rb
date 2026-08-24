@@ -841,7 +841,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
-  describe "default credentials in production" do
+  describe "default credentials outside development and test" do
     it "raises ConfigurationError in production with default credentials" do
       allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
 
@@ -885,6 +885,59 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
 
     it "does not raise in production during asset precompilation (SECRET_KEY_BASE_DUMMY)" do
       allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    # GHSA-qhgm-3pxf-mvc6. The guard used to read Rails.env.production?, which
+    # tests one literal string, so an internet-facing box under any other
+    # environment name booted on the credentials this project publishes in its
+    # own README. These are the environment names that used to be exempt.
+    [ "staging", "uat", "demo", "preprod", "qa", "review" ].each do |env_name|
+      it "raises ConfigurationError in #{env_name} with default credentials" do
+        allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new(env_name))
+
+        expect { config.validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError,
+          /Default or blank credentials cannot be used in #{env_name}/
+        )
+      end
+    end
+
+    it "names the offending environment rather than saying production" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging/
+      )
+    end
+
+    it "does not raise in test with default credentials" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("test"))
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "does not raise in staging once credentials are set" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = "secure_pass"
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "does not raise in staging when authenticate_with is set" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.authenticate_with = -> { true }
+
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "does not raise in staging during asset precompilation (SECRET_KEY_BASE_DUMMY)" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
 
