@@ -869,12 +869,16 @@ pl:
         unique_rules: Unikalne reguły
         total_events: Łącznie zdarzeń
         unique_ips: Unikalne adresy IP
+        ai_events: Żądania agentów AI
         all_title: Zdarzenia limitu żądań wg reguły
         column_rule: Reguła
         column_type: Typ
         column_count: Liczba
         column_ips: Adresy IP
         column_top_path: Najczęstsza ścieżka
+        column_top_agent: Główny agent
+        overflow_notice_html: >-
+          Nie udało się przypisać %{count} zdarzeń do żadnej reguły, ponieważ bufor mechanizmu śledzenia był pełny. Zwiększ %{option}, aby rejestrować więcej.
         match_type:
           blocklist: blocklist
           throttle: throttle

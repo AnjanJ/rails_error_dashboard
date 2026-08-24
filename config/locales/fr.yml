@@ -861,12 +861,16 @@ fr:
         unique_rules: Règles uniques
         total_events: Total des événements
         unique_ips: IP uniques
+        ai_events: Requêtes d'agents IA
         all_title: Événements de limitation de débit par règle
         column_rule: Règle
         column_type: Type
         column_count: Nombre
         column_ips: IP
         column_top_path: Chemin principal
+        column_top_agent: Agent principal
+        overflow_notice_html: >-
+          %{count} événements n'ont pas pu être attribués à une règle car la mémoire tampon du traceur était pleine. Augmentez %{option} pour en capturer davantage.
         match_type:
           blocklist: blocklist
           throttle: throttle

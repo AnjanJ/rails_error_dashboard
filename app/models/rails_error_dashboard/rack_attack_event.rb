@@ -12,8 +12,12 @@ module RailsErrorDashboard
   class RackAttackEvent < ErrorLogsRecord
     self.table_name = "rails_error_dashboard_rack_attack_events"
 
-    # Event types emitted by Rack::Attack (v5.0+)
-    MATCH_TYPES = %w[throttle blocklist track safelist].freeze
+    # Event types emitted by Rack::Attack (v5.0+), plus "overflow" — not a
+    # Rack::Attack event at all, but a synthetic bucket holding counts dropped
+    # by the tracker's LRU eviction so totals stay truthful. Overflow rows are
+    # excluded from the per-rule listing and surfaced separately.
+    MATCH_TYPES = %w[throttle blocklist track safelist overflow].freeze
+    OVERFLOW_MATCH_TYPE = "overflow"
 
     belongs_to :application, optional: true
 

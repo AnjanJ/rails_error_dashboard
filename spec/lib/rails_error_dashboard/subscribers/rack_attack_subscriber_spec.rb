@@ -157,6 +157,40 @@ RSpec.describe RailsErrorDashboard::Subscribers::RackAttackSubscriber do
       expect(crumb[:meta][:discriminator]).to eq("user_42")
     end
 
+    it "captures the user agent so the agent can be identified (issue #170)" do
+      request = double("Rack::Request",
+        env: {
+          "rack.attack.matched" => "requests accepting markdown",
+          "rack.attack.match_type" => :track
+        },
+        path: "/doc",
+        request_method: "GET",
+        ip: "198.51.100.42",
+        user_agent: "ChatGPT-User/1.0")
+
+      expect(RailsErrorDashboard::Services::RackAttackTracker).to receive(:record)
+        .with(hash_including(user_agent: "ChatGPT-User/1.0"))
+
+      ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
+    end
+
+    it "falls back to the raw env header when the request has no #user_agent" do
+      request = double("Rack::Request",
+        env: {
+          "rack.attack.matched" => "md",
+          "rack.attack.match_type" => :track,
+          "HTTP_USER_AGENT" => "GPTBot/1.2"
+        },
+        path: "/doc",
+        request_method: "GET",
+        ip: "198.51.100.42")
+
+      expect(RailsErrorDashboard::Services::RackAttackTracker).to receive(:record)
+        .with(hash_including(user_agent: "GPTBot/1.2"))
+
+      ActiveSupport::Notifications.instrument("track.rack_attack", { request: request }) { }
+    end
+
     it "does not raise when request.ip itself raises" do
       request = double("Rack::Request",
         env: {
@@ -211,8 +245,10 @@ RSpec.describe RailsErrorDashboard::Subscribers::RackAttackSubscriber do
       allow(request).to receive(:respond_to?).with(:env).and_return(false)
       allow(request).to receive(:respond_to?).with(:path).and_return(true)
       allow(request).to receive(:respond_to?).with(:request_method).and_return(true)
-      # resolve_discriminator probes :ip for the track fallback (issue #170).
+      # resolve_discriminator probes :ip for the track fallback (issue #170),
+      # and resolve_user_agent probes :user_agent for agent attribution.
       allow(request).to receive(:respond_to?).with(:ip).and_return(false)
+      allow(request).to receive(:respond_to?).with(:user_agent).and_return(false)
 
       ActiveSupport::Notifications.instrument("throttle.rack_attack", { request: request }) { }
 

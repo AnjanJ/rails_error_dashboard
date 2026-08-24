@@ -6,7 +6,7 @@ RSpec.describe RailsErrorDashboard::Queries::RackAttackSummary do
   def create_event(rule:, match_type: "throttle", discriminator: "1.2.3.4",
                    path: "/login", http_method: "POST", count: 1,
                    period_hour: 1.day.ago.beginning_of_hour, application_id: nil,
-                   last_seen_at: nil)
+                   last_seen_at: nil, user_agent: nil)
     RailsErrorDashboard::RackAttackEvent.create!(
       rule: rule,
       match_type: match_type,
@@ -16,7 +16,8 @@ RSpec.describe RailsErrorDashboard::Queries::RackAttackSummary do
       event_count: count,
       period_hour: period_hour,
       last_seen_at: last_seen_at || period_hour,
-      application_id: application_id
+      application_id: application_id,
+      user_agent: user_agent
     )
   end
 
@@ -156,6 +157,84 @@ RSpec.describe RailsErrorDashboard::Queries::RackAttackSummary do
       allow(RailsErrorDashboard::RackAttackEvent).to receive(:where).and_raise(StandardError, "boom")
 
       expect(described_class.call(30)[:events]).to eq([])
+    end
+  end
+
+  describe "overflow rows" do
+    # Overflow is a synthetic bucket for counts the tracker's LRU eviction
+    # dropped. It belongs to no rule, so it must not render as one.
+    it "excludes overflow rows from the per-rule listing" do
+      create_event(rule: "logins/ip", match_type: "throttle")
+      create_event(rule: "__overflow__", match_type: "overflow", discriminator: nil,
+                   path: nil, http_method: nil, count: 42)
+
+      events = described_class.call(30)[:events]
+
+      expect(events.map { |e| e[:rule] }).to eq([ "logins/ip" ])
+    end
+
+    it "reports the overflow total separately" do
+      create_event(rule: "__overflow__", match_type: "overflow", discriminator: nil,
+                   path: nil, http_method: nil, count: 42)
+
+      expect(described_class.call(30)[:overflow_count]).to eq(42)
+    end
+
+    it "sums overflow across buckets" do
+      2.times do |i|
+        create_event(rule: "__overflow__", match_type: "overflow", discriminator: nil,
+                     path: nil, http_method: nil, count: 10,
+                     period_hour: (i + 1).days.ago.beginning_of_hour)
+      end
+
+      expect(described_class.call(30)[:overflow_count]).to eq(20)
+    end
+
+    it "is zero when no overflow has occurred" do
+      create_event(rule: "logins/ip", match_type: "throttle")
+
+      expect(described_class.call(30)[:overflow_count]).to eq(0)
+    end
+  end
+
+  describe "user agent aggregation" do
+    it "names the most frequent agent for a rule" do
+      create_event(rule: "md", match_type: "track", discriminator: "1.1.1.1",
+                   count: 5, user_agent: "Mozilla/5.0 (compatible; GPTBot/1.2)")
+      create_event(rule: "md", match_type: "track", discriminator: "2.2.2.2",
+                   count: 1, user_agent: "curl/8.4.0")
+
+      row = described_class.call(30)[:events].first
+
+      expect(row[:top_agent]).to eq("GPTBot")
+      expect(row[:unique_agents]).to eq(2)
+    end
+
+    it "counts events from recognised AI agents" do
+      create_event(rule: "md", match_type: "track", discriminator: "1.1.1.1",
+                   count: 3, user_agent: "ChatGPT-User/1.0")
+      create_event(rule: "md", match_type: "track", discriminator: "2.2.2.2",
+                   count: 7, user_agent: "Mozilla/5.0 (Macintosh) Chrome/120.0")
+
+      row = described_class.call(30)[:events].first
+
+      # Only the assistant counts; the browser does not.
+      expect(row[:ai_count]).to eq(3)
+    end
+
+    it "falls back to the raw user agent when unrecognised" do
+      create_event(rule: "md", match_type: "track", user_agent: "TotallyNovelAgent/1.0")
+
+      expect(described_class.call(30)[:events].first[:top_agent]).to eq("TotallyNovelAgent/1.0")
+    end
+
+    it "leaves the agent blank when no user agent was captured" do
+      create_event(rule: "logins/ip", match_type: "throttle", user_agent: nil)
+
+      row = described_class.call(30)[:events].first
+
+      expect(row[:top_agent]).to be_nil
+      expect(row[:ai_count]).to eq(0)
     end
   end
 end

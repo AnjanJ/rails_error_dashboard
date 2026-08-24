@@ -49,7 +49,7 @@
     </div>
   <% else %>
     <div class="row mb-4">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-warning"><%= @unique_rules %></div>
@@ -57,7 +57,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-danger"><%= @total_events %></div>
@@ -65,7 +65,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card text-center">
           <div class="card-body">
             <div class="display-6 text-info"><%= @unique_ips %></div>
@@ -73,7 +73,26 @@
           </div>
         </div>
       </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-primary"><%= @ai_events %></div>
+            <small class="text-muted"><%= red_t("red.errors.rack_attack_page.ai_events") %></small>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <% if @overflow_count.to_i.positive? %>
+      <div class="alert alert-warning d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <div>
+          <%= red_t("red.errors.rack_attack_page.overflow_notice_html",
+                    count: @overflow_count,
+                    option: content_tag(:code, "rack_attack_max_cache_size")) %>
+        </div>
+      </div>
+    <% end %>
 
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
@@ -94,6 +113,7 @@
                 <th width="80"><%= red_t("red.errors.rack_attack_page.column_count") %></th>
                 <th width="80"><%= red_t("red.errors.rack_attack_page.column_ips") %></th>
                 <th><%= red_t("red.errors.rack_attack_page.column_top_path") %></th>
+                <th width="160"><%= red_t("red.errors.rack_attack_page.column_top_agent") %></th>
                 <th width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
               </tr>
             </thead>
@@ -115,6 +135,19 @@
                   <td><strong><%= event[:count] %></strong></td>
                   <td><%= event[:unique_ips] %></td>
                   <td><code><%= event[:top_path] %></code></td>
+                  <td>
+                    <% if event[:top_agent].present? %>
+                      <%# AI agents are highlighted because "which agent" is the
+                          question IP counts cannot answer — one agent is a fleet. %>
+                      <span class="badge <%= event[:ai_count].to_i.positive? ? "bg-primary" : "bg-light text-dark" %>"
+                            title="<%= event[:top_agent] %>"><%= truncate(event[:top_agent], length: 22) %></span>
+                      <% if event[:unique_agents].to_i > 1 %>
+                        <small class="text-muted">+<%= event[:unique_agents].to_i - 1 %></small>
+                      <% end %>
+                    <% else %>
+                      <span class="text-muted">&mdash;</span>
+                    <% end %>
+                  </td>
                   <td><%= local_time_ago(event[:last_seen]) %></td>
                 </tr>
               <% end %>

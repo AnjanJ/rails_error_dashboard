@@ -1172,12 +1172,16 @@ en:
         unique_rules: "Unique Rules"
         total_events: "Total Events"
         unique_ips: "Unique IPs"
+        ai_events: "AI Agent Requests"
         all_title: "Rate Limit Events by Rule"
         column_rule: "Rule"
         column_type: "Type"
         column_count: "Count"
         column_ips: "IPs"
         column_top_path: "Top Path"
+        column_top_agent: "Top Agent"
+        overflow_notice_html: >-
+          %{count} events could not be attributed to a rule because the tracker's buffer was full. Raise %{option} to capture more.
         # Rack Attack match types. These are machine values the view also
         # compares by string equality, so the display is a lookup and the
         # comparison keeps the English literal.

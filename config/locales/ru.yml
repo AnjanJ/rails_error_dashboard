@@ -871,12 +871,16 @@ ru:
         unique_rules: Уникальные правила
         total_events: Всего событий
         unique_ips: Уникальные IP
+        ai_events: Запросы ИИ-агентов
         all_title: События ограничения частоты по правилам
         column_rule: Правило
         column_type: Тип
         column_count: Количество
         column_ips: IP-адреса
         column_top_path: Частый путь
+        column_top_agent: Основной агент
+        overflow_notice_html: >-
+          Не удалось отнести %{count} событий ни к одному правилу, так как буфер трекера был заполнен. Увеличьте %{option}, чтобы записывать больше.
         match_type:
           blocklist: blocklist
           throttle: throttle

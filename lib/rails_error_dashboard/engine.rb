@@ -85,6 +85,13 @@ module RailsErrorDashboard
       if RailsErrorDashboard.configuration.enable_rack_attack_tracking &&
          defined?(Rack::Attack)
         RailsErrorDashboard::Subscribers::RackAttackSubscriber.subscribe!
+
+        # Buffered counts live on the Puma threads that served the requests and
+        # are only written out on the flush interval, which a low-traffic rule
+        # may never reach. Without this, everything still buffered at SIGTERM
+        # (every deploy) is lost. at_exit, not Signal.trap — trapping would
+        # clobber Puma's USR1/USR2 handlers (safety rule 9).
+        at_exit { RailsErrorDashboard::Services::RackAttackTracker.flush_all_threads! }
       end
 
       # Subscribe to ActionCable AS::Notifications events (requires breadcrumbs + ActionCable)

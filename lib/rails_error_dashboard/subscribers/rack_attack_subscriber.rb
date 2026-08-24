@@ -73,6 +73,7 @@ module RailsErrorDashboard
           discriminator = resolve_discriminator(env, request)
           path = request.respond_to?(:path) ? request.path.to_s : ""
           method = request.respond_to?(:request_method) ? request.request_method.to_s : ""
+          user_agent = resolve_user_agent(request, env)
 
           # Persist independently of error capture. A throttled request returns
           # HTTP 429 and raises nothing, so it would otherwise never reach the
@@ -82,7 +83,8 @@ module RailsErrorDashboard
             match_type: match_type,
             discriminator: discriminator,
             path: path,
-            http_method: method
+            http_method: method,
+            user_agent: user_agent
           )
 
           # Also record a breadcrumb so the event still shows up in the activity
@@ -124,6 +126,17 @@ module RailsErrorDashboard
 
           # request.ip parses X-Forwarded-For and can raise on malformed input.
           request.respond_to?(:ip) ? request.ip.to_s : ""
+        rescue => e
+          ""
+        end
+
+        # The user agent identifies WHICH client matched a rule — the question
+        # IP counts cannot answer, since one AI agent is a rotating fleet of
+        # addresses (issue #170). Falls back to the raw env key so a request
+        # object that does not implement #user_agent still yields the value.
+        def resolve_user_agent(request, env)
+          ua = request.respond_to?(:user_agent) ? request.user_agent : nil
+          (ua || env["HTTP_USER_AGENT"]).to_s
         rescue => e
           ""
         end
