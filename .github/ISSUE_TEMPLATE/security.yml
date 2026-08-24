@@ -10,7 +10,7 @@ body:
 
         If you've discovered a **critical security vulnerability**, please **DO NOT** open a public issue.
 
-        Instead, please report it privately to: **security@anjan.dev**
+        Instead, please use [private vulnerability reporting](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/new) — it is visible only to you and the maintainer.
 
         For **non-critical security concerns** or **security enhancement suggestions**, you may use this template.
 
@@ -127,7 +127,7 @@ body:
           required: true
         - label: I have not exploited this vulnerability in production systems
           required: true
-        - label: I understand that critical vulnerabilities should be reported privately to security@anjan.dev
+        - label: I understand that critical vulnerabilities should be reported through GitHub private vulnerability reporting, not this public form
           required: true
 
   - type: markdown

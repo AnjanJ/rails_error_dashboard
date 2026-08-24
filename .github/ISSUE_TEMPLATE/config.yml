@@ -10,8 +10,8 @@ contact_links:
     url: https://github.com/AnjanJ/rails_error_dashboard#readme
     about: Read the documentation for setup, configuration, and usage guides
   - name: 🔒 Security Vulnerability (Private)
-    url: mailto:security@anjan.dev
-    about: Report critical security vulnerabilities privately via email
+    url: https://github.com/AnjanJ/rails_error_dashboard/security/advisories/new
+    about: Report a vulnerability privately — visible only to you and the maintainer
   - name: 💼 Commercial Support
-    url: mailto:conduct@anjan.dev
+    url: mailto:anjan.jagirdar+red@gmail.com
     about: Contact us for commercial support, consulting, or partnerships

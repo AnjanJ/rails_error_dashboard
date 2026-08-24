@@ -80,7 +80,7 @@ This Code of Conduct also applies when representing the project in public spaces
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project team at:
 
-**Email:** conduct@anjan.dev
+**Email:** anjan.jagirdar+red@gmail.com
 
 All complaints will be:
 - Reviewed and investigated promptly and fairly
@@ -190,7 +190,7 @@ When reporting, please include:
 If you have questions about this Code of Conduct:
 
 - Open a [GitHub Discussion](https://github.com/AnjanJ/rails_error_dashboard/discussions)
-- Email: conduct@anjan.dev
+- Email: anjan.jagirdar+red@gmail.com
 - Reach out to project maintainers
 
 ---

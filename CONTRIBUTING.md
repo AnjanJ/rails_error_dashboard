@@ -20,7 +20,7 @@ Following these guidelines helps communicate that you respect the time of the de
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to conduct@anjan.dev.
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to anjan.jagirdar+red@gmail.com.
 
 ## How Can I Contribute?
 
