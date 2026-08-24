@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.4...rails_error_dashboard/v0.9.0) (2026-08-23)
+
+
+### ✨ Features
+
+* **i18n:** translate the dashboard, mailers and notifications — eleven locales ([#155](https://github.com/AnjanJ/rails_error_dashboard/issues/155)) ([fe23196](https://github.com/AnjanJ/rails_error_dashboard/commit/fe231968addd97da9d049c114147eba4f566352c))
+
+
+### 🐛 Bug Fixes
+
+* **security:** authenticate every dashboard controller, not just ErrorsController ([#167](https://github.com/AnjanJ/rails_error_dashboard/issues/167)) ([6e34f12](https://github.com/AnjanJ/rails_error_dashboard/commit/6e34f12ee6a141279716c18d2f656568359b5a7e)), closes [#148](https://github.com/AnjanJ/rails_error_dashboard/issues/148)
+* **specs:** restore every credential this spec overwrites, not just one ([#168](https://github.com/AnjanJ/rails_error_dashboard/issues/168)) ([1da82a2](https://github.com/AnjanJ/rails_error_dashboard/commit/1da82a22ef183a22524bf4ff2132b9a1e78356d2)), closes [#166](https://github.com/AnjanJ/rails_error_dashboard/issues/166)
+
 ### 0.9.0 highlights — the dashboard is now translated
 
 > Detail for the `feat(i18n)` entry above.
