@@ -7,7 +7,8 @@ Gem::Specification.new do |spec|
   spec.email       = [ "anjan.jagirdar@gmail.com" ]
   spec.homepage    = "https://AnjanJ.github.io/rails_error_dashboard"
   spec.summary     = "Self-hosted error tracking for Rails — local variables, system health, " \
-                     "separate or shared database. A free, open-source Sentry alternative."
+                     "separate or shared database, dashboard in 11 languages. " \
+                     "A free, open-source Sentry alternative."
   spec.description = "Own your errors. Own your stack. A fully open-source, self-hosted error tracking " \
                      "Rails engine — a free Sentry alternative that runs entirely inside your own " \
                      "process, with no external services and zero recurring cost. " \
@@ -23,6 +24,14 @@ Gem::Specification.new do |spec|
                      "workflow management, advanced analytics, platform detection (iOS/Android/Web/API), " \
                      "and two-way issue sync with GitHub, GitLab, Codeberg, and Linear. Also: LLM " \
                      "observability, AI-powered debugging help, and OpenTelemetry span export. " \
+                     "The dashboard, mailers and notification payloads are translated into 11 " \
+                     "languages: English, German, Spanish, French, Brazilian Portuguese, Italian, " \
+                     "Polish, Russian, Ukrainian, Japanese, and Simplified Chinese — 1,515 source " \
+                     "strings, set via config.dashboard_locale with a per-user picker. RED " \
+                     "translates through its own private I18n backend and never mutates your app's " \
+                     "I18n; a missing translation falls back to English. Backtraces, exception " \
+                     "names and webhook payload keys stay English by design. The ten non-English " \
+                     "locales are machine-translated and not yet reviewed by native speakers. " \
                      "5-minute setup, works out-of-the-box. Rails 7.0-8.1, Ruby 3.2-4.0. " \
                      "BETA: API may change before v1.0.0. " \
                      "Live demo: https://rails-error-dashboard.anjan.dev (gandalf/youshallnotpass)"
