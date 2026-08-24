@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.9.1 highlights — default credentials are now refused outside development and test
+
+> Detail for the `fix(security)` entry above. Security advisory:
+> [GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6),
+> reported by [@rajnisht7](https://github.com/rajnisht7).
+
+RED has always refused to boot on the built-in `gandalf` / `youshallnotpass`
+credentials — but the check asked `Rails.env.production?`, which tests one
+literal string. An internet-facing app deployed under any other environment
+name (`staging`, `uat`, `demo`, `preprod`, `qa`) booted successfully on
+credentials this project publishes in its own README. The only remaining
+protection was a dismissible banner, visible only to someone who was already
+inside.
+
+The guard is now an **allowlist**: only `development` and `test` may run on the
+built-in credentials. Every other environment name — including ones that do not
+exist yet — is refused by default.
+
+#### ⚠️ This can stop an app booting when you upgrade
+
+**If you run RED in a non-production environment on the default credentials,
+that app will now raise `ConfigurationError` on boot instead of starting.** That
+is the intended outcome — it was reachable with published credentials — but it
+is a behaviour change, so it is called out here rather than buried.
+
+The error names the environment it refused, and there are three ways to fix it:
+
+```ruby
+# 1. Set the environment variables (recommended)
+ENV["ERROR_DASHBOARD_USER"]     = "..."
+ENV["ERROR_DASHBOARD_PASSWORD"] = "..."
+
+# 2. Or set them in the initializer
+RailsErrorDashboard.configure do |config|
+  config.dashboard_username = "..."
+  config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD")
+end
+
+# 3. Or hand authentication to your own app
+RailsErrorDashboard.configure do |config|
+  config.authenticate_with = -> { current_user&.admin? }
+end
+```
+
+Setting either environment variable is enough to satisfy the check — RED treats
+an explicitly-set variable as a deliberate choice.
+
+**Unaffected:** apps already setting credentials or `authenticate_with`; apps
+running only in `development` or `test`; and Docker asset precompilation, which
+is still skipped via `SECRET_KEY_BASE_DUMMY`.
+
 ## [0.9.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.8.4...rails_error_dashboard/v0.9.0) (2026-08-23)
 
 
