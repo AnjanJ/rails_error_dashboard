@@ -8,7 +8,10 @@ module RailsErrorDashboard
     # hourly-bucketed rows. Uses find_or_initialize_by + increment for
     # cross-database compatibility (no raw SQL upsert).
     #
-    # counts keys: "rule\x1Fmatch_type\x1Fdiscriminator\x1Fpath\x1Fhttp_method"
+    # counts keys: "rule\x1Fmatch_type\x1Fdiscriminator\x1Fpath\x1Fhttp_method\x1Fuser_agent"
+    #
+    # http_method and user_agent are carried on the key but are NOT part of the
+    # row's identity — see upsert_event.
     class FlushRackAttackEvents
       def self.call(counts:)
         new(counts: counts).call

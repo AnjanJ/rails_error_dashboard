@@ -920,6 +920,43 @@ end
 
 If `rack-attack` is not loaded, a startup warning is logged and no events are recorded. Enabling breadcrumbs as well adds the event to the activity trail on error detail pages. Dashboard page at `/errors/rack_attack_summary`.
 
+### Measuring AI crawler traffic (v0.10.0)
+
+Events record the client's user agent, and known AI agents are named on the dashboard — `GPTBot`, `ChatGPT-User`, `OAI-SearchBot`, `ClaudeBot`, `Claude-User`, `Claude Code`, `PerplexityBot`, `Bytespider`, `CCBot` and others, alongside ordinary crawlers such as Googlebot so the two can be told apart. The page shows an **AI Agent Requests** total and a **Top Agent** column per rule.
+
+`Rack::Attack.track` rules are the way to feed it. They count matching requests without blocking or throttling anything:
+
+```ruby
+# Who is reading the site, regardless of the format they ask for
+Rack::Attack.track("ai agents") do |req|
+  ua = req.user_agent.to_s
+  req.ip if ua.match?(/GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|Claude-Code|PerplexityBot/i)
+end
+
+# Who specifically wants Markdown
+Rack::Attack.track("requests accepting markdown") do |req|
+  req.ip if req.get? && req.env["HTTP_ACCEPT"].to_s.include?("text/markdown")
+end
+```
+
+Run together, the two answer different questions — how many agents read the site, versus how many prefer Markdown. A rule keyed only on `Accept: text/markdown` will undercount badly: agents differ enormously in whether they use content negotiation at all, so a low Markdown figure means "this agent doesn't ask for it", not "no agent wants it".
+
+`path` is recorded per event, so `.md` routes and `/llms.txt` hits appear in the per-rule breakdown without extra configuration.
+
+> **Don't add `limit:`/`period:` to a `track` rule.** Rack::Attack routes a counted track through `Throttle`, which only emits a notification once `count > limit` — so the rule stays silent *below* its limit, the opposite of what adding a limit suggests. Leave track rules uncounted.
+
+### Buffer overflow
+
+Events are buffered per thread, keyed on rule, match type, discriminator, path and method, and capped by `rack_attack_max_cache_size`. Past the cap the oldest entry is evicted, and its count is added to an overflow total rather than discarded — the dashboard reports it instead of silently showing a smaller number.
+
+Tracking many clients (a crawler fleet on rotating IPs generates a distinct key per address) makes eviction more likely. Raise the cap if the page reports overflow:
+
+```ruby
+config.rack_attack_max_cache_size = 5000
+```
+
+Buffered counts are flushed on the interval above, and also at process exit, so a deploy does not discard whatever a thread was still holding.
+
 ---
 
 ## Process Crash Capture (v0.4.0)

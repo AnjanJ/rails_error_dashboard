@@ -908,13 +908,14 @@ If breadcrumbs are also enabled, the event is additionally recorded on the reque
 
 ### Dashboard Page
 
-The page at `/errors/rack_attack_summary` shows event breakdown with time range filtering (7, 30, or 90 days).
+The page at `/errors/rack_attack_summary` shows event breakdown with time range filtering (7, 30, or 90 days), including an **AI Agent Requests** total and the top user agent per rule — so `track` rules can be used to measure which AI crawlers read the app.
 
 ### Safety
 
 - **Degrades cleanly** — If the `rack-attack` gem is not loaded, the subscriber never registers and a startup warning is logged (no crash). The dashboard page says so explicitly instead of showing a blank report
 - **Zero I/O in the request path** — Events are counted in a thread-local buffer and flushed to the database asynchronously, so a rate-limit flood never turns into a write flood
-- **Bounded memory** — LRU eviction caps buffered keys per thread, so an attacker rotating IPs cannot grow the buffer without limit
+- **Bounded memory** — LRU eviction caps buffered keys per thread, so an attacker rotating IPs cannot grow the buffer without limit. Evicted counts are added to an overflow total rather than discarded, so the dashboard never silently under-reports
+- **Survives restarts** — buffers are flushed at process exit as well as on the interval, so a deploy does not discard counts a thread was still holding
 - **Zero integration cost** — Rack::Attack already emits AS::Notifications events; this just subscribes to them
 
 ---
