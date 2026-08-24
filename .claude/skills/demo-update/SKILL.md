@@ -79,15 +79,47 @@ The demo pins **Ruby 3.4.5** and **Bundler 4.0.3** — match both.
 6. **Check whether the seed file needs updating** — `db/seeds.rb` only needs work
    if the new version added a feature that requires demo data to show anything.
 
-7. **Commit and push**:
+7. **UPDATE THE LANDING-PAGE COPY. This is the step that gets missed.**
+
+   `app/views/pages/home.html.erb` has three places that describe *what* the
+   release contains. None of them update themselves, and the version number
+   sitting next to them DOES — so a stale headline reads as a fresh claim about
+   the new version. The hero pill shipped reading
+   `v0.9.0 · Storm protection` for two releases after storm protection landed
+   in 0.8.2.
+
+   | What | Where | Auto? |
+   |---|---|---|
+   | Hero pill version tag | `<span class="pill-tag">v<%= @version %></span>` | **yes** — `@version` is `RailsErrorDashboard::VERSION` |
+   | **Hero pill headline** | the `<span>` right after it | **NO — hardcoded** |
+   | **Feature card** | a `.gcell` in the `grid-features` section | **NO** |
+   | **Card version badge** | `<span class="vbadge">vX.Y.Z</span>` | **NO** |
+   | Footer / install snippet version | `<%= @version %>` | **yes** |
+
+   For a release with a user-visible headline feature:
+   - Rewrite the hero pill headline to name it (short — it sits on one line).
+   - Add a `.gcell` to the `grid-features` grid, newest first, with a
+     `<span class="vbadge">` naming the version that introduced it.
+   - Badge the version the feature SHIPPED IN, not the current version. Storm
+     protection stays `v0.8.2` forever.
+
+   For a patch release with no user-visible feature (a security or bug fix),
+   leave the copy alone — the version numbers update themselves.
+
+   Verify by loading `/` and reading the pill: the version tag and the headline
+   beside it must describe the same release.
+
+8. **Commit and push**:
    ```bash
    git add Gemfile.lock            # add Gemfile too only if you edited it
+   git add app/views/pages/home.html.erb   # if you changed the copy in step 7
    git commit -m "chore: update rails_error_dashboard to X.Y.Z"
    git push origin main
    ```
 
-8. **Confirm the deploy** — Render redeploys automatically; the site updates
-   within a few minutes. Load the dashboard and confirm the footer version.
+9. **Confirm the deploy** — Render redeploys automatically; the site updates
+   within a few minutes. Load the dashboard and confirm the footer version, and
+   load `/` to confirm the hero pill reads correctly.
 
 ## Demo App Details
 
