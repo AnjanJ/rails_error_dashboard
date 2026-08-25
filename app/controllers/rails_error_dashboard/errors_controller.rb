@@ -535,6 +535,12 @@ module RailsErrorDashboard
       @unique_rules = all_events.size
       @total_events = all_events.sum { |e| e[:count] }
       @unique_ips = all_events.flat_map { |e| e[:ips] }.uniq.size
+      # Events matched by a recognised AI agent. Counts requests, not addresses —
+      # one agent rotates through many IPs, so unique_ips overstates it (#170).
+      @ai_events = all_events.sum { |e| e[:ai_count].to_i }
+      # Counts the tracker's LRU eviction dropped; shown so the totals above are
+      # never silently understated.
+      @overflow_count = result[:overflow_count].to_i
 
       @pagy, @events = pagy(:offset, all_events, limit: params[:per_page] || 25)
     end

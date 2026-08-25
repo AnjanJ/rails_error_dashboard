@@ -22,9 +22,13 @@ module RailsErrorDashboard
         # Mode 1: Persist provided snapshot (dispatched from tracker flush)
         Commands::FlushRackAttackEvents.call(counts: counts)
       else
-        # Mode 2: Flush current thread's buffer (scheduled cron safety net).
-        # sync: true because we are already off the request path.
-        Services::RackAttackTracker.flush!(sync: true)
+        # Mode 2: Flush EVERY live thread's buffer (scheduled cron safety net).
+        #
+        # This used to call flush!, which only ever sees Thread.current — the
+        # job worker's own buffer, which is always empty. The counts live on the
+        # Puma threads that served the requests, so the documented safety net
+        # swept nothing. flush_all_threads! is what makes the promise true.
+        Services::RackAttackTracker.flush_all_threads!
       end
     end
   end

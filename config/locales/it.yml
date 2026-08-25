@@ -847,12 +847,16 @@ it:
         unique_rules: Regole uniche
         total_events: Eventi totali
         unique_ips: IP unici
+        ai_events: Richieste di agenti IA
         all_title: Eventi di limite di richieste per regola
         column_rule: Regola
         column_type: Tipo
         column_count: Conteggio
         column_ips: Indirizzi IP
         column_top_path: Percorso principale
+        column_top_agent: Agente principale
+        overflow_notice_html: >-
+          %{count} eventi non sono stati attribuiti a nessuna regola perché il buffer del tracker era pieno. Aumenta %{option} per acquisirne di più.
         match_type:
           blocklist: blocklist
           throttle: throttle

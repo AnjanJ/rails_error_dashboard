@@ -869,12 +869,16 @@ uk:
         unique_rules: Унікальні правила
         total_events: Усього подій
         unique_ips: Унікальні IP
+        ai_events: Запити ШІ-агентів
         all_title: Події обмеження запитів за правилами
         column_rule: Правило
         column_type: Тип
         column_count: Кількість
         column_ips: IP-адреси
         column_top_path: Найчастіший шлях
+        column_top_agent: Основний агент
+        overflow_notice_html: >-
+          Не вдалося віднести %{count} подій до жодного правила, оскільки буфер трекера був заповнений. Збільште %{option}, щоб записувати більше.
         match_type:
           blocklist: blocklist
           throttle: throttle
