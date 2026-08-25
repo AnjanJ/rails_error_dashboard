@@ -13,17 +13,26 @@ Capybara.register_driver(:cuprite) do |app|
       "disable-gpu" => nil,
       "disable-dev-shm-usage" => nil
     },
-    # The dashboard layout pulls nine assets from jsdelivr on EVERY page load
-    # (see the layout's <head> and footer). Cuprite waits for all in-flight
-    # requests before `visit` returns, so a slow or flaky CDN surfaced as
-    # `Ferrum::PendingConnectionsError` / `Ferrum::TimeoutError` — the root
+    # The dashboard layout pulls assets from THREE external hosts on EVERY page
+    # load (see the layout's <head> and footer): nine from jsdelivr, two
+    # stylesheets from fonts.googleapis.com, and the font files those
+    # stylesheets in turn request from fonts.gstatic.com. Cuprite waits for all
+    # in-flight requests before `visit` returns, so a slow or flaky CDN surfaced
+    # as `Ferrum::PendingConnectionsError` / `Ferrum::TimeoutError` — the root
     # cause of the intermittent system-spec failures, and of the modal
     # failures downstream of them (Bootstrap's JS comes from the same CDN).
     #
     # Blocking the purely decorative assets removes that network dependency.
-    # Charts, syntax highlighting, icon fonts, and Stimulus are not asserted on
-    # by any system spec; they degrade gracefully by design (see CLAUDE.md —
-    # the layout must work with CDNs unavailable).
+    # Charts, syntax highlighting, icon fonts, webfonts and Stimulus are not
+    # asserted on by any system spec; they degrade gracefully by design (see
+    # CLAUDE.md — the layout must work with CDNs unavailable).
+    #
+    # The font hosts were missed when this list was first written, so the flake
+    # it was meant to eliminate kept recurring: a markdown-only PR failed CI
+    # with `PendingConnectionsError` naming both css2 stylesheets (issue #183).
+    # Match on HOST, not on a path prefix — the stylesheet URLs carry query
+    # strings (`?family=Inter:wght@400;500…`) and gstatic serves versioned
+    # binary paths, so anchoring to either would rot.
     #
     # bootstrap.bundle.min.js is deliberately NOT blocked: the modal specs need
     # real Bootstrap behaviour. See ModalHelpers for the timing guards that
@@ -36,7 +45,9 @@ Capybara.register_driver(:cuprite) do |app|
       %r{cdn\.jsdelivr\.net/npm/@catppuccin},
       %r{cdn\.jsdelivr\.net/gh/highlightjs},
       %r{cdn\.jsdelivr\.net/npm/highlightjs-line-numbers},
-      %r{cdn\.jsdelivr\.net/npm/@hotwired/stimulus}
+      %r{cdn\.jsdelivr\.net/npm/@hotwired/stimulus},
+      %r{fonts\.googleapis\.com},
+      %r{fonts\.gstatic\.com}
     ],
     process_timeout: 15,
     timeout: 30,
