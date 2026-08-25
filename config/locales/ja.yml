@@ -1798,5 +1798,6 @@ ja:
         axis_count: 件数
         axis_number_of_errors: エラー件数
         axis_hours: 時間
+        suffix_hours: "時間"
         series_total_errors: 総エラー数
         series_hours_to_resolve: 解決までの時間

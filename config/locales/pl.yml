@@ -2104,5 +2104,6 @@ pl:
         axis_count: Liczba
         axis_number_of_errors: Liczba błędów
         axis_hours: Godziny
+        suffix_hours: " godz."
         series_total_errors: Łącznie błędów
         series_hours_to_resolve: Godzin do rozwiązania

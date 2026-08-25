@@ -80,6 +80,50 @@ RSpec.describe "Server-rendered JS strings", type: :request do
     ensure
       RailsErrorDashboard.configuration.enable_platform_comparison = original_platform_comparison
     end
+
+    # #178. Chartkick's BarChart sets indexAxis:"y", so it is horizontal: the
+    # categories sit on y and the values on x, the opposite of the ColumnCharts
+    # on the same page. The titles used to be assigned the other way round.
+    it "puts the count on the horizontal axis of the horizontal bar chart" do
+      get "/error_dashboard/errors/analytics"
+
+      bar_chart = response.body[/Chartkick\.BarChart\("errors-by-type-chart".*?\}\);/m]
+      expect(bar_chart).not_to be_nil
+
+      scales = bar_chart[/scales: \{(.*?)\n\s*\},\n\s*plugins:/m, 1]
+      expect(scales).not_to be_nil
+
+      # Each axis block runs from its key to the closing brace of its `grid`.
+      x_title = scales[/\bx: \{(?:(?!\by: \{).)*?text: '([^']*)'/m, 1]
+      y_title = scales[/\by: \{(?:(?!\bx: \{).)*?text: '([^']*)'/m, 1]
+
+      expect(x_title).to eq("Count")
+      expect(y_title).to eq("Error Type")
+    end
+
+    # #178. Chartkick's own xtitle/ytitle were hardcoded English sitting beside
+    # the translated library.scales titles. library merges last so the
+    # translation won, but the literals were one Chartkick upgrade away from
+    # taking over. They are gone; nothing should reintroduce them.
+    it "sets axis titles only through the translated library options" do
+      get "/error_dashboard/errors/analytics"
+
+      expect(response.body).not_to include("xtitle:")
+      expect(response.body).not_to include("ytitle:")
+    end
+
+    # #178. Chartkick concatenates `suffix` after each value. The chart is
+    # guarded on @mttr_by_platform, which needs a resolved error carrying a
+    # platform and a resolved_at.
+    it "renders the MTTR hours suffix from a key" do
+      create(:error_log, :resolved, application: application, platform: "Web",
+                                    occurred_at: 2.days.ago, resolved_at: 1.day.ago)
+
+      get "/error_dashboard/errors/analytics"
+
+      expect(response.body).to include("suffix: ' hours'")
+      expect(response.body).not_to include('suffix: " hours"')
+    end
   end
 
   # REQ-1 for the payload: red.ui_js is resolved server-side, so shipping it to

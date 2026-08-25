@@ -2715,5 +2715,8 @@ en:
         axis_count: "Count"
         axis_number_of_errors: "Number of Errors"
         axis_hours: "Hours"
+        # Chartkick concatenates this after a number on the MTTR charts, so it
+        # carries its own leading space and is a bare unit, not a sentence.
+        suffix_hours: " hours"
         series_total_errors: "Total Errors"
         series_hours_to_resolve: "Hours to Resolve"

@@ -2056,5 +2056,6 @@ it:
         axis_count: Conteggio
         axis_number_of_errors: Numero di errori
         axis_hours: Ore
+        suffix_hours: " ore"
         series_total_errors: Errori totali
         series_hours_to_resolve: Ore per la risoluzione

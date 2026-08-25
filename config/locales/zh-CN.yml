@@ -1787,5 +1787,6 @@ zh-CN:
         axis_count: 数量
         axis_number_of_errors: 错误数量
         axis_hours: 小时
+        suffix_hours: "小时"
         series_total_errors: 错误总数
         series_hours_to_resolve: 解决耗时（小时）
