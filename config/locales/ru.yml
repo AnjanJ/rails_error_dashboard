@@ -2109,5 +2109,6 @@ ru:
         axis_count: Количество
         axis_number_of_errors: Количество ошибок
         axis_hours: Часы
+        suffix_hours: " ч"
         series_total_errors: Всего ошибок
         series_hours_to_resolve: Часов до решения

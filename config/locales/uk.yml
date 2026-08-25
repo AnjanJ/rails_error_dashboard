@@ -2106,5 +2106,6 @@ uk:
         axis_count: Кількість
         axis_number_of_errors: Кількість помилок
         axis_hours: Години
+        suffix_hours: " год"
         series_total_errors: Усього помилок
         series_hours_to_resolve: Годин до вирішення

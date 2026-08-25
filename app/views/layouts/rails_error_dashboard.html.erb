@@ -1751,6 +1751,51 @@ document.addEventListener('DOMContentLoaded', function() {
       .replace('%H',pad(h)).replace('%I',pad(h12)).replace('%M',pad(mi)).replace('%S',pad(s)).replace('%p',ampm).replace('%P',ampm.toLowerCase());
   }
 
+  // Chart.js renders date axes through chartjs-adapter-date-fns, whose bundle
+  // ships English locale data only. Loading eleven date-fns locales from a CDN
+  // to fix that would be absurd when RED already carries localized month and
+  // day names in red.js.* for formatDateTime(). So the adapter's format() is
+  // redirected through the same vocabulary the rest of the dashboard uses, and
+  // a chart axis, a page timestamp and an email now agree.
+  //
+  // Only the tokens the adapter's own format table can emit are mapped:
+  //   datetime "MMM d, yyyy, h:mm:ss aaaa"   millisecond "h:mm:ss.SSS aaaa"
+  //   second "h:mm:ss aaaa"  minute "h:mm aaaa"  hour "ha"  day "MMM d"
+  //   week "PP"  month "MMM yyyy"  quarter "qqq - yyyy"  year "yyyy"
+  // Anything else — a caller-supplied pattern, a future adapter version — is
+  // handed back to the original implementation rather than half-translated.
+  function installRedChartDateAdapter() {
+    if (typeof Chart === 'undefined' || !Chart._adapters || !Chart._adapters._date) return;
+    var proto = Chart._adapters._date.prototype;
+    if (!proto || typeof proto.format !== 'function' || proto._redPatched) return;
+
+    // date-fns token -> strftime, for the patterns the adapter actually uses.
+    var TOKENS = {
+      'MMM d, yyyy, h:mm:ss aaaa': '%b %d, %Y, %I:%M:%S %p',
+      'h:mm:ss.SSS aaaa': '%I:%M:%S %p',
+      'h:mm:ss aaaa': '%I:%M:%S %p',
+      'h:mm aaaa': '%I:%M %p',
+      'ha': '%I %p',
+      'MMM d': '%b %d',
+      'PP': '%b %d, %Y',
+      'MMM yyyy': '%b %Y',
+      'yyyy': '%Y'
+    };
+
+    var original = proto.format;
+    proto.format = function(time, fmt) {
+      try {
+        var strf = TOKENS[fmt];
+        if (strf) return formatDateTime(new Date(time), strf);
+      } catch (e) {
+        // Fall through — a chart with English axes beats a chart that throws.
+      }
+      return original.call(this, time, fmt);
+    };
+    proto._redPatched = true;
+  }
+
+
   function getTimezoneAbbreviation(date) {
     // RED's locale set and the browser's Intl data need not agree, so an
     // unsupported tag throws RangeError here rather than degrading. Catch it
@@ -1801,6 +1846,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   convertToLocalTime();
+
+  // Localize Chart.js date axes. Kept out of the block above on purpose: that
+  // region is extracted and run in bare node by js_date_parity_spec, where
+  // `document` is a stub, so it must contain definitions only — no top-level
+  // browser calls. The adapter is patched on the prototype, so charts drawn
+  // later pick it up; chartkick:load re-asserts for page scripts whose own
+  // DOMContentLoaded handler beat this one, and _redPatched makes that a no-op.
+  installRedChartDateAdapter();
+  document.addEventListener('chartkick:load', installRedChartDateAdapter);
+
   if (typeof Turbo !== 'undefined') {
     document.addEventListener('turbo:load', convertToLocalTime);
     document.addEventListener('turbo:frame-load', convertToLocalTime);

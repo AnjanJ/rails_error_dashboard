@@ -2007,5 +2007,6 @@ de:
         axis_count: Anzahl
         axis_number_of_errors: Anzahl der Fehler
         axis_hours: Stunden
+        suffix_hours: " Stunden"
         series_total_errors: Fehler gesamt
         series_hours_to_resolve: Stunden bis zur Behebung

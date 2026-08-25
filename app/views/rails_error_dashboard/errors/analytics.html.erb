@@ -75,8 +75,6 @@
             curve: false,
             points: true,
             height: "300px",
-            xtitle: "Date",
-            ytitle: "Number of Errors",
             library: {
               scales: {
                 x: {
@@ -172,18 +170,19 @@
               new Chartkick.BarChart("errors-by-type-chart", <%= raw @errors_by_type.to_json %>, {
                 color: "#EF4444",
                 height: "400px",
-                xtitle: "Error Type",
-                ytitle: "Count",
                 library: {
                   scales: {
+                    // Chartkick's BarChart is horizontal (it sets indexAxis:"y"),
+                    // so the categories sit on y and the counts on x — the
+                    // opposite of the ColumnCharts on this page. #178.
                     x: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_error_type") %>' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_count") %>' },
                       grid: { color: colors.gridColor }
                     },
                     y: {
                       ticks: { color: colors.textColor },
-                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_count") %>' },
+                      title: { color: colors.textColor, display: true, text: '<%= red_js_t("red.ui_js.charts.axis_error_type") %>' },
                       grid: { color: colors.gridColor }
                     }
                   },
@@ -214,8 +213,6 @@
               new Chartkick.ColumnChart("errors-by-hour-chart", <%= raw @errors_by_hour.to_json %>, {
                 color: "#DC2626",
                 height: "300px",
-                xtitle: "Hour",
-                ytitle: "Number of Errors",
                 library: {
                   scales: {
                     x: {
@@ -422,8 +419,6 @@
                 new Chartkick.ColumnChart("errors-by-version-chart", versionData, {
                   colors: ["#8B5CF6", "#EF4444", "#F59E0B", "#10B981"],
                   height: "300px",
-                  xtitle: "Version",
-                  ytitle: "Error Count",
                   library: window.getChartLibraryOptions()
                 });
               });
@@ -558,7 +553,7 @@
                 const colors = window.getChartColors();
                 new Chartkick.BarChart("mttr-by-platform-chart",
                   <%= raw @mttr_by_platform.to_json %>, {
-                  suffix: " hours",
+                  suffix: '<%= red_js_t("red.ui_js.charts.suffix_hours") %>',
                   height: "200px",
                   colors: ["#8B5CF6"],
                   library: window.getChartLibraryOptions()
@@ -611,7 +606,7 @@
                 const colors = window.getChartColors();
                 new Chartkick.LineChart("mttr-trend-chart",
                   <%= raw @mttr_stats[:mttr_trend].to_json %>, {
-                  suffix: " hours",
+                  suffix: '<%= red_js_t("red.ui_js.charts.suffix_hours") %>',
                   height: "250px",
                   colors: ["#10B981"],
                   curve: false,

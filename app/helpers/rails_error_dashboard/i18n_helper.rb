@@ -150,5 +150,31 @@ module RailsErrorDashboard
     rescue StandardError
       "%B %d, %Y %I:%M:%S %p"
     end
+
+    # A finished, localized date string for somewhere the browser will not
+    # re-render it.
+    #
+    # Almost every timestamp on the dashboard goes out as a <span data-format>
+    # that formatDateTime() localizes client-side. Chart labels cannot: they
+    # are serialized into a JS array and handed to Chart.js as plain strings,
+    # so whatever the server writes is what the axis shows. Calling strftime
+    # directly there is what put English month names on every locale's charts
+    # (#178) — Ruby's strftime is not locale-aware.
+    #
+    # Same formatter the mailers and the Slack/Discord payloads use, so a chart
+    # axis and an email agree about what a date looks like.
+    #
+    # @param time [Time, Date, nil]
+    # @param pattern [String] a strftime pattern
+    # @return [String] "" for nil — an axis label must never read "undefined"
+    def red_chart_date(time, pattern)
+      return "" if time.nil?
+
+      time = time.to_time if time.respond_to?(:to_time) && !time.is_a?(Time)
+      Services::LocalizedTimeFormatter.call(time, pattern: pattern, locale: red_locale)
+    rescue StandardError
+      # A chart with an English axis beats a chart that fails to render.
+      time.respond_to?(:strftime) ? time.strftime(pattern) : time.to_s
+    end
   end
 end
