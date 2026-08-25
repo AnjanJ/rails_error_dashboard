@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.9.1...rails_error_dashboard/v0.10.0) (2026-08-25)
+
+
+### ✨ Features
+
+* **rack-attack:** fix track discriminator, count loss and shutdown flush; record agents ([#177](https://github.com/AnjanJ/rails_error_dashboard/issues/177)) ([e49a986](https://github.com/AnjanJ/rails_error_dashboard/commit/e49a98623d9cc943e1d45573d8bdbc69a345fc67)), closes [#170](https://github.com/AnjanJ/rails_error_dashboard/issues/170)
+
+
+### 🐛 Bug Fixes
+
+* **i18n:** localize chart dates and correct the horizontal bar chart axes ([#179](https://github.com/AnjanJ/rails_error_dashboard/issues/179)) ([4a8edf8](https://github.com/AnjanJ/rails_error_dashboard/commit/4a8edf8638f2bb96a6ae7b85b7de47b87fde2eb0))
+
 ## [0.9.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.9.0...rails_error_dashboard/v0.9.1) (2026-08-24)
 
 
