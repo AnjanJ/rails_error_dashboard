@@ -122,6 +122,30 @@ The demo pins **Ruby 3.4.5** and **Bundler 4.0.3** — match both.
 7. **Check whether the seed file needs updating** — `db/seeds.rb` only needs work
    if the new version added a feature that requires demo data to show anything.
 
+   **The test is not "did the feature ship", it is "can a visitor SEE it".** If
+   step 8 is about to add a landing-page card for the feature, that card links
+   to a page which must not be empty. 0.10.0 shipped AI crawler tracking and
+   `/red/errors/rack_attack_summary` read "no events can be recorded", because
+   nothing had ever written to that table on the demo.
+
+   Seeding notes learned there:
+   - Check the table's **unique index** before writing rows. `rack_attack_events`
+     is keyed on `(rule, match_type, discriminator, path, period_hour,
+     application_id)`, so every seeded row must differ in at least one.
+   - Some tables are **hourly aggregates, not request logs**. Seed buckets
+     across a range of hours so the page's time filters have something to do.
+   - Where a classifier decides what renders (`AiAgentClassifier` here), verify
+     your fixture strings against it rather than assuming — and include a
+     negative case (Googlebot is named but `ai=false`) so the page demonstrates
+     the distinction rather than counting everything as a hit.
+   - Vary the shape. Flat identical counts across every bucket read as
+     synthetic; assistants spiking in working hours while crawlers grind
+     steadily reads as traffic.
+   - **Add the model to the `CLEAR_BEFORE_SEED` block.** `bin/docker-entrypoint`
+     reseeds on every boot, so anything missing there accumulates per deploy.
+   - Guard new model references with `defined?`, so the seed still runs against
+     an older gem.
+
 8. **UPDATE THE LANDING-PAGE COPY. This is the step that gets missed.**
 
    `app/views/pages/home.html.erb` has three places that describe *what* the
