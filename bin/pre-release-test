@@ -21,7 +21,7 @@ set -uo pipefail
 #   bin/pre-release-test full_kitchen_sink # Every config option at once
 #   bin/pre-release-test full_multi_app    # Two apps sharing one DB
 #   bin/pre-release-test full_solid_queue  # Async via SolidQueue adapter
-#   bin/pre-release-test full_upgrade      # v0.1.38 → v0.2.0 upgrade path
+#   bin/pre-release-test full_upgrade      # latest published → working copy upgrade
 #   bin/pre-release-test                   # Same as 'all'
 # ============================================================================
 
@@ -34,6 +34,32 @@ TARGET="${1:-all}"
 
 # ALL test apps run in production mode — this is how users run the gem
 export RAILS_ENV=production
+
+# In-place sed that works on both BSD (macOS, where these tests are usually run)
+# and GNU (Linux CI runners). BSD requires an explicit backup suffix argument;
+# GNU treats that same argument as the script. Without this the upgrade test
+# fails on Ubuntu with "sed: can't read : No such file or directory".
+sed_i() {
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$@"          # GNU
+  else
+    sed -i '' "$@"       # BSD
+  fi
+}
+
+# Latest rails_error_dashboard published to RubyGems.
+#
+# The upgrade test used to hardcode a from-version, which silently rotted: it
+# kept proving an upgrade path no user would ever take (and one that predated
+# most of the schema). Resolving it at runtime means the test always exercises
+# "current release -> this working copy", which is the only upgrade that
+# actually happens, and it never needs bumping by hand.
+latest_published_version() {
+  local v
+  v="$(gem list -r --exact rails_error_dashboard 2>/dev/null \
+       | sed -n 's/^rails_error_dashboard (\([^,)]*\).*/\1/p' | head -1)"
+  echo "$v"
+}
 
 # Colors
 RED='\033[0;31m'
@@ -419,7 +445,7 @@ RUBY
   # inside the existing Rails.application.routes.draw block
   local routes_file="$app_dir/config/routes.rb"
   # Remove the trailing 'end' line, add routes, then re-add 'end'
-  sed -i '' '$ d' "$routes_file"
+  sed_i '$ d' "$routes_file"
   cat >> "$routes_file" << 'ROUTES'
 
   # Phase F test error routes
@@ -848,60 +874,80 @@ RUBY
 }
 
 test_full_upgrade() {
-  log_header "APP 8/8: full_upgrade — Upgrade Path v0.1.38 → v0.2.0 (production)"
+  # Resolve the from-version at runtime rather than pinning it. See
+  # latest_published_version() for why.
+  local from_version
+  from_version="$(latest_published_version)"
+
+  if [ -z "$from_version" ]; then
+    log_error "Could not resolve the latest published version from RubyGems."
+    log_error "The upgrade test needs network access to rubygems.org. Skipping is NOT"
+    log_error "safe here — a green run would mean the upgrade path went unverified."
+    FAILED=$((FAILED + 1))
+    return 1
+  fi
+
+  # Exported so phase_j can assert the upgrade moved forward without pinning a
+  # literal version (the chaos phases run via `rails runner`, inheriting env).
+  export UPGRADE_FROM_VERSION="$from_version"
+
+  log_header "APP 8/8: full_upgrade — Upgrade Path v${from_version} → working copy (production)"
 
   create_app "full_upgrade_app"
 
   local app_dir="$TEST_DIR/full_upgrade_app"
 
-  # --- Phase 1: Install published v0.1.38 from RubyGems ---
-  log_step "Installing published v0.1.38 from RubyGems..."
+  # --- Phase 1: Install the currently published version from RubyGems ---
+  log_step "Installing published v${from_version} from RubyGems..."
 
   # Replace the local gem path with the published version
-  sed -i '' "s|gem 'rails_error_dashboard', path: '.*'|gem 'rails_error_dashboard', '0.1.38'|" "$app_dir/Gemfile"
+  sed_i "s|gem 'rails_error_dashboard', path: '.*'|gem 'rails_error_dashboard', '${from_version}'|" "$app_dir/Gemfile"
 
-  log_step "Running bundle install for v0.1.38..."
+  log_step "Running bundle install for v${from_version}..."
   (cd "$app_dir" && bundle install 2>&1 | tail -5)
 
   # Run generator
-  log_step "Running v0.1.38 generator..."
+  log_step "Running v${from_version} generator..."
   (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
 
-  # Apply minimal initializer compatible with v0.1.38
-  log_step "Applying v0.1.38 initializer..."
+  # Apply an initializer the OLD version understands. Options added since the
+  # published release would raise NoMethodError on boot under that version.
+  log_step "Applying v${from_version} initializer..."
   cp "$TEMPLATES_DIR/upgrade_pre_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
 
   # Run migrations
-  log_step "Running v0.1.38 migrations..."
+  log_step "Running v${from_version} migrations..."
   (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
 
-  log_success "v0.1.38 installed"
+  log_success "v${from_version} installed"
 
   # Seed data under old schema
   run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_j0_seed_old_data.rb"
 
-  # --- Phase 2: Upgrade to local gem (v0.2.0) ---
-  log_step "Upgrading to local v0.2.0..."
+  # --- Phase 2: Upgrade to the working copy ---
+  log_step "Upgrading to the working copy..."
 
   # Swap Gemfile back to local gem
-  sed -i '' "s|gem 'rails_error_dashboard', '0.1.38'|gem 'rails_error_dashboard', path: '$GEM_DIR'|" "$app_dir/Gemfile"
+  sed_i "s|gem 'rails_error_dashboard', '${from_version}'|gem 'rails_error_dashboard', path: '$GEM_DIR'|" "$app_dir/Gemfile"
 
-  log_step "Running bundle install for v0.2.0..."
+  log_step "Running bundle install for the working copy..."
   (cd "$app_dir" && bundle install 2>&1 | tail -5)
 
-  # Re-run generator to copy new migration files from v0.2.0
+  # Re-run generator to copy any migrations added since the published release.
+  # This is the step the upgrade instructions in the docs tell users to run
+  # (rails rails_error_dashboard:install:migrations), so it must stay verified.
   log_step "Re-running generator to pick up new migrations..."
   (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive 2>&1 | grep -v "^$" | head -5)
 
   # Run new migrations
-  log_step "Running v0.2.0 migrations..."
+  log_step "Running working-copy migrations..."
   (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -5)
 
-  # Apply full initializer with v0.2 features
-  log_step "Applying v0.2.0 initializer..."
+  # Apply the full initializer, now that the new version is in place
+  log_step "Applying working-copy initializer..."
   cp "$TEMPLATES_DIR/full_sync_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
 
-  log_success "Upgraded to v0.2.0"
+  log_success "Upgraded to the working copy"
 
   # Verify upgrade
   run_chaos_tests "$app_dir" \

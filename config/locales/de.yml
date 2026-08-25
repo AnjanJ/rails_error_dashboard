@@ -833,12 +833,16 @@ de:
         unique_rules: Eindeutige Regeln
         total_events: Ereignisse gesamt
         unique_ips: Eindeutige IPs
+        ai_events: KI-Agent-Anfragen
         all_title: Rate-Limit-Ereignisse nach Regel
         column_rule: Regel
         column_type: Typ
         column_count: Anzahl
         column_ips: IPs
         column_top_path: Häufigster Pfad
+        column_top_agent: Häufigster Agent
+        overflow_notice_html: >-
+          %{count} Ereignisse konnten keiner Regel zugeordnet werden, da der Puffer des Trackers voll war. Erhöhen Sie %{option}, um mehr zu erfassen.
         match_type:
           blocklist: blocklist
           throttle: throttle

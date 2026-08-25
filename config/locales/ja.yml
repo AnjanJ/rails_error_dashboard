@@ -755,12 +755,16 @@ ja:
         unique_rules: ルール数
         total_events: 総イベント数
         unique_ips: ユニーク IP 数
+        ai_events: AI エージェントのリクエスト数
         all_title: ルール別レート制限イベント
         column_rule: ルール
         column_type: 種類
         column_count: 件数
         column_ips: IP 数
         column_top_path: 上位パス
+        column_top_agent: 主要エージェント
+        overflow_notice_html: >-
+          トラッカーのバッファが満杯だったため、%{count} 件のイベントをルールに割り当てられませんでした。より多く記録するには %{option} を増やしてください。
         match_type:
           blocklist: blocklist
           throttle: throttle

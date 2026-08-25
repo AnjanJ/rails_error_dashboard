@@ -859,12 +859,16 @@ pt-BR:
         unique_rules: Regras únicas
         total_events: Total de eventos
         unique_ips: IPs únicos
+        ai_events: Solicitações de agentes de IA
         all_title: Eventos de limite de taxa por regra
         column_rule: Regra
         column_type: Tipo
         column_count: Quantidade
         column_ips: IPs
         column_top_path: Caminho principal
+        column_top_agent: Agente principal
+        overflow_notice_html: >-
+          Não foi possível atribuir %{count} eventos a nenhuma regra porque o buffer do rastreador estava cheio. Aumente %{option} para capturar mais.
         match_type:
           blocklist: blocklist
           throttle: throttle

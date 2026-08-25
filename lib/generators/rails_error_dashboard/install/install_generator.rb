@@ -348,7 +348,19 @@ module RailsErrorDashboard
           end
         end
 
+        # Start after the highest timestamp already present, not at the current
+        # clock. The counter increments per copied file, so a re-run that happens
+        # within N seconds of the previous install (N = number of migrations)
+        # would otherwise reuse numbers the first install already consumed —
+        # and Rails aborts the whole `db:migrate` with "Multiple migrations have
+        # the version number ...", so the upgrade silently applies nothing.
         timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S").to_i
+        highest_existing = [ "db/migrate", "db/error_dashboard_migrate" ].flat_map do |dir|
+          full_path = File.join(destination_root, dir)
+          next [] unless Dir.exist?(full_path)
+          Dir.glob(File.join(full_path, "*.rb")).map { |f| File.basename(f)[/^\d+/].to_i }
+        end.max
+        timestamp = highest_existing + 1 if highest_existing && highest_existing >= timestamp
 
         Dir.glob(File.join(source_dir, "*.rb")).sort.each do |source_file|
           basename = File.basename(source_file)

@@ -8,7 +8,10 @@ module RailsErrorDashboard
     # hourly-bucketed rows. Uses find_or_initialize_by + increment for
     # cross-database compatibility (no raw SQL upsert).
     #
-    # counts keys: "rule\x1Fmatch_type\x1Fdiscriminator\x1Fpath\x1Fhttp_method"
+    # counts keys: "rule\x1Fmatch_type\x1Fdiscriminator\x1Fpath\x1Fhttp_method\x1Fuser_agent"
+    #
+    # http_method and user_agent are carried on the key but are NOT part of the
+    # row's identity — see upsert_event.
     class FlushRackAttackEvents
       def self.call(counts:)
         new(counts: counts).call
@@ -25,7 +28,7 @@ module RailsErrorDashboard
         app_id = current_application_id
 
         @counts.each do |key, count|
-          rule, match_type, discriminator, path, http_method =
+          rule, match_type, discriminator, path, http_method, user_agent =
             Services::RackAttackTracker.parse_key(key)
 
           next if rule.blank? || match_type.blank?
@@ -36,6 +39,7 @@ module RailsErrorDashboard
             discriminator: discriminator,
             path: path,
             http_method: http_method,
+            user_agent: user_agent,
             period: period,
             app_id: app_id,
             count: count
@@ -49,7 +53,8 @@ module RailsErrorDashboard
 
       private
 
-      def upsert_event(rule:, match_type:, discriminator:, path:, http_method:, period:, app_id:, count:)
+      def upsert_event(rule:, match_type:, discriminator:, path:, http_method:, user_agent:,
+                       period:, app_id:, count:)
         # nil and "" must map to the same row — the unique index treats them as
         # distinct in some adapters, so normalize blanks to nil consistently.
         record = RackAttackEvent.find_or_initialize_by(
@@ -61,7 +66,11 @@ module RailsErrorDashboard
           application_id: app_id
         )
 
+        # http_method and user_agent are deliberately NOT part of the upsert key
+        # (the unique index is already at 2736 of MySQL's 3072 bytes), so they
+        # are first-write-wins attributes of the bucket rather than identity.
         record.http_method = http_method.presence if record.http_method.blank?
+        record.user_agent = user_agent.presence if record.user_agent.blank?
         record.event_count = (record.event_count || 0) + count
         record.last_seen_at = Time.current
         record.save!

@@ -751,12 +751,16 @@ zh-CN:
         unique_rules: 规则数
         total_events: 事件总数
         unique_ips: 独立 IP 数
+        ai_events: AI 代理请求数
         all_title: 按规则查看限流事件
         column_rule: 规则
         column_type: 类型
         column_count: 数量
         column_ips: IP 地址
         column_top_path: 主要路径
+        column_top_agent: 主要代理
+        overflow_notice_html: >-
+          由于跟踪器缓冲区已满，%{count} 个事件无法归属到任何规则。请调高 %{option} 以捕获更多事件。
         match_type:
           blocklist: blocklist
           throttle: throttle

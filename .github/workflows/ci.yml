@@ -60,3 +60,53 @@ jobs:
       - name: Run full integration tests
         run: bin/full-integration-test all
 
+
+  # Verifies the upgrade instructions we give users actually work:
+  # install the currently published gem, seed data under that schema, swap to
+  # this branch, re-run the generator, migrate, and assert the new columns landed.
+  #
+  # Gated rather than run on every PR because it installs two gem versions and
+  # boots a real Rails app (~3-5 min), and it depends on rubygems.org being
+  # reachable. It runs when it can actually catch something:
+  #   - release PRs (branch is always release-please--… ), the last gate before publish
+  #   - any PR touching db/migrate/**, which is what breaks upgrades
+  upgrade:
+    runs-on: ubuntu-latest
+    name: Upgrade Path (published → this branch)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # A job-level `if` cannot inspect changed files, so the decision lives here.
+      # Release PRs always run it; other PRs only when they touch migrations.
+      - name: Decide whether to run
+        id: decide
+        run: |
+          if [[ "${{ github.head_ref }}" == release-please--* ]]; then
+            echo "run=true"  >> "$GITHUB_OUTPUT"
+            echo "Release PR — verifying the upgrade path before publish."
+          elif git diff --name-only "origin/${{ github.base_ref || 'main' }}"...HEAD \
+               | grep -qE '^db/migrate/'; then
+            echo "run=true"  >> "$GITHUB_OUTPUT"
+            echo "Migrations changed — verifying the upgrade path."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No migration changes and not a release PR — skipping."
+          fi
+
+      - name: Set up Ruby
+        if: steps.decide.outputs.run == 'true'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Install Rails CLI
+        if: steps.decide.outputs.run == 'true'
+        run: gem install rails --no-document
+
+      - name: Run upgrade path test
+        if: steps.decide.outputs.run == 'true'
+        run: bin/pre-release-test full_upgrade

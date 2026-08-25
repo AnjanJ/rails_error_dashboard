@@ -17,6 +17,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_000001) do
     t.string "discriminator", limit: 191
     t.string "path", limit: 191
     t.string "http_method", limit: 10
+    t.string "user_agent", limit: 191
     t.datetime "period_hour", null: false
     t.integer "event_count", default: 0, null: false
     t.datetime "last_seen_at"
