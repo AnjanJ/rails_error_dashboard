@@ -99,4 +99,12 @@
       <% end %>
     </td>
   <% end %>
+  <% if local_assigns[:show_environment] %>
+    <%# Environment names are free-form data (production, staging, uat...) and are never translated. %>
+    <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= error.environment %>">
+      <% if error.environment.present? %>
+        <span class="badge badge-api" data-environment-badge="<%= error.environment %>"><i class="bi bi-hdd-stack"></i> <%= error.environment %></span>
+      <% end %>
+    </td>
+  <% end %>
 </tr>

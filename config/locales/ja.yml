@@ -139,6 +139,7 @@ ja:
             any: 深刻度を指定しない
           all_apps: すべてのアプリ
           all_platforms: すべてのプラットフォーム
+          all_environments: すべての環境
           all_types: すべての種類
           all_timeframes: 全期間
           all_frequencies: すべての頻度
@@ -167,6 +168,7 @@ ja:
             search: '検索: %{value}'
             application: 'アプリ: %{value}'
             platform: 'プラットフォーム: %{value}'
+            environment: '環境: %{value}'
             error_type: '種類: %{value}'
             severity: '深刻度: %{value}'
             timeframe: '期間: %{value}'
@@ -182,6 +184,7 @@ ja:
           last_seen: 最終発生
           application: アプリ
           platform: プラットフォーム
+          environment: 環境
           select_all: すべてのエラーを選択
         batch:
           selected:
@@ -569,6 +572,7 @@ ja:
           low: 低
         platform: プラットフォーム
         view_all_platform: "%{platform}のエラーをすべて表示"
+        view_all_environment: "%{environment}のエラーをすべて表示"
         user: ユーザー
         view_user_errors: このユーザーのエラーをすべて表示
         user_id: 'ID: %{id}'
@@ -763,8 +767,8 @@ ja:
         column_ips: IP 数
         column_top_path: 上位パス
         column_top_agent: 主要エージェント
-        overflow_notice_html: >-
-          トラッカーのバッファが満杯だったため、%{count} 件のイベントをルールに割り当てられませんでした。より多く記録するには %{option} を増やしてください。
+        overflow_notice_html: トラッカーのバッファが満杯だったため、%{count} 件のイベントをルールに割り当てられませんでした。より多く記録するには
+          %{option} を増やしてください。
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -954,6 +958,8 @@ ja:
         max_backtrace_lines: スタックトレースの深さの上限
         sampling_rate: エラーを記録する割合
         application_name: このアプリケーションの名前 (未設定の場合は自動検出)
+        environment: エラーを紐付ける環境（未設定の場合は Rails.env）
+        notification_environments: 通知する環境を限定（未設定の場合はすべて）
         database: エラーログで使用中のデータベース
         use_separate_database: エラーログ専用の DB を使用します
         user_model: ユーザー紐づけに使うモデル名 (未設定の場合は自動検出)
@@ -1093,11 +1099,14 @@ ja:
         unknown_application: 不明
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 エラーアラート"
         labels:
           application: アプリケーション
           error_type: エラー種別
           platform: プラットフォーム
+          environment: 環境
           occurred_at: 発生日時
           user_id: ユーザーID
           ip_address: IP アドレス
@@ -1160,6 +1169,7 @@ ja:
           application: アプリケーション
           error_type: エラー種別
           platform: プラットフォーム
+          environment: 環境
           occurred: 発生日時
           message: メッセージ
           user: ユーザー
@@ -1463,6 +1473,10 @@ ja:
         platform_chart:
           title: プラットフォーム別エラー
           quick_links: 'クイックリンク:'
+        environment_chart:
+          title: 環境別のエラー
+          quick_links: 'クイックリンク:'
+          unknown: 不明
         type_chart:
           title: エラー種別 上位10件
         hour_chart:
@@ -1802,6 +1816,6 @@ ja:
         axis_count: 件数
         axis_number_of_errors: エラー件数
         axis_hours: 時間
-        suffix_hours: "時間"
+        suffix_hours: 時間
         series_total_errors: 総エラー数
         series_hours_to_resolve: 解決までの時間

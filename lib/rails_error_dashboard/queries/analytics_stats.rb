@@ -25,6 +25,7 @@ module RailsErrorDashboard
             errors_over_time: errors_over_time,
             errors_by_type: errors_by_type,
             errors_by_platform: errors_by_platform,
+            errors_by_environment: errors_by_environment,
             errors_by_hour: errors_by_hour,
             top_users: top_affected_users,
             resolution_rate: resolution_rate,
@@ -86,6 +87,14 @@ module RailsErrorDashboard
 
       def errors_by_platform
         base_query.group(:platform).count
+      end
+
+      # NULL (captured before the column existed) is reported under :unknown
+      # rather than dropped, so the chart's total still matches the period.
+      def errors_by_environment
+        return {} unless ErrorLog.column_names.include?("environment")
+
+        base_query.group(:environment).count.transform_keys { |env| env.nil? ? :unknown : env }
       end
 
       def errors_by_hour

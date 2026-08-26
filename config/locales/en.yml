@@ -249,6 +249,7 @@ en:
           # noun — languages differ on agreement between the two.
           all_apps: "All Apps"
           all_platforms: "All Platforms"
+          all_environments: "All Environments"
           all_types: "All Types"
           all_timeframes: "All Time"
           all_frequencies: "All Frequencies"
@@ -290,6 +291,7 @@ en:
             search: "Search: %{value}"
             application: "App: %{value}"
             platform: "Platform: %{value}"
+            environment: "Environment: %{value}"
             error_type: "Type: %{value}"
             severity: "Severity: %{value}"
             timeframe: "Timeframe: %{value}"
@@ -306,6 +308,7 @@ en:
           last_seen: "Last seen"
           application: "App"
           platform: "Platform"
+          environment: "Environment"
           select_all: "Select all errors"
 
         batch:
@@ -876,6 +879,8 @@ en:
         platform: "Platform"
         # %{platform} is a platform name (iOS, Android, Web) and is not translated.
         view_all_platform: "View all %{platform} errors"
+        # %{environment} is an environment name (production, staging, uat) and is not translated.
+        view_all_environment: "View all %{environment} errors"
 
         user: "User"
         view_user_errors: "View all errors for this user"
@@ -1484,6 +1489,8 @@ en:
         max_backtrace_lines: "Stack trace depth limit"
         sampling_rate: "Percentage of errors captured"
         application_name: "Name of this application (auto-detected if not set)"
+        environment: "Environment errors are attributed to (Rails.env if not set)"
+        notification_environments: "Only notify for these environments (all if not set)"
         database: "Active database for error logs"
         use_separate_database: "Use dedicated DB for error logs"
         user_model: "Model name for user associations (auto-detected if not set)"
@@ -1702,11 +1709,15 @@ en:
         # an exception class name and %{message} is its message — both are
         # verbatim error content and are not translated.
         subject: "🚨 [%{application}] %{error_type}: %{message}"
+        # Used instead of `subject` when the error carries an environment.
+        # %{environment} is an environment name and is not translated.
+        subject_with_environment: "🚨 [%{application} · %{environment}] %{error_type}: %{message}"
         heading: "🚨 Error Alert"
         labels:
           application: "Application"
           error_type: "Error Type"
           platform: "Platform"
+          environment: "Environment"
           occurred_at: "Occurred At"
           user_id: "User ID"
           ip_address: "IP Address"
@@ -1806,6 +1817,7 @@ en:
           application: "Application"
           error_type: "Error Type"
           platform: "Platform"
+          environment: "Environment"
           occurred: "Occurred"
           message: "Message"
           user: "User"
@@ -2215,6 +2227,11 @@ en:
         platform_chart:
           title: "Errors by Platform"
           quick_links: "Quick Links:"
+        environment_chart:
+          title: "Errors by Environment"
+          quick_links: "Quick Links:"
+          # Label for errors captured before the environment column existed.
+          unknown: "Unknown"
 
         type_chart:
           title: "Top 10 Error Types"

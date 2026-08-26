@@ -46,6 +46,7 @@ module RailsErrorDashboard
               controller: error_log.controller_name,
               action: error_log.action_name,
               platform: error_log.platform,
+              environment: error_log.environment,
               occurrences: error_log.occurrence_count,
               first_seen_at: error_log.first_seen_at&.iso8601,
               last_seen_at: error_log.last_seen_at&.iso8601,

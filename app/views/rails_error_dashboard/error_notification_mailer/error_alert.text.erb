@@ -10,6 +10,7 @@
 <%= red_mail_t("red.mailers.error_alert.labels.application") %>: <%= @error_log.application&.name || red_mail_t("red.mailers.shared.unknown_application") %>
 <%= red_mail_t("red.mailers.error_alert.labels.error_type") %>: <%= @error_log.error_type %>
 <% if @error_log.platform.present? %><%= red_mail_t("red.mailers.error_alert.labels.platform") %>: <%= @error_log.platform %><% end %>
+<% if @error_log.respond_to?(:environment) && @error_log.environment.present? %><%= red_mail_t("red.mailers.error_alert.labels.environment") %>: <%= @error_log.environment %><% end %>
 <%= red_mail_t("red.mailers.error_alert.labels.occurred_at") %>: <%= red_mail_time(@error_log.occurred_at) %>
 <% if @error_log.user_id.present? %><%= red_mail_t("red.mailers.error_alert.labels.user_id") %>: <%= @error_log.user_id %><% end %>
 <% if @error_log.ip_address.present? %><%= red_mail_t("red.mailers.error_alert.labels.ip_address") %>: <%= @error_log.ip_address %><% end %>

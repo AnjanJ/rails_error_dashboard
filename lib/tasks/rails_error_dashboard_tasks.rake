@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 namespace :rails_error_dashboard do
+  desc "Fill in environment on error logs captured before the column existed (from environment_info.rails_env)"
+  task backfill_environments: :environment do
+    updated = RailsErrorDashboard::Commands::BackfillEnvironments.call
+    puts "rails_error_dashboard: backfilled environment on #{updated} error log(s)."
+  end
+
   namespace :db do
     desc "Drop all Rails Error Dashboard database tables (⚠️  DESTRUCTIVE - deletes all error data)"
     task drop: :environment do

@@ -219,4 +219,46 @@ RSpec.describe RailsErrorDashboard::Services::NotificationThrottler do
       expect { threads.each(&:join) }.not_to raise_error
     end
   end
+
+  describe ".environment_allowed?" do
+    let(:staging_error) { instance_double(RailsErrorDashboard::ErrorLog, environment: "staging") }
+    let(:legacy_error) { instance_double(RailsErrorDashboard::ErrorLog, environment: nil) }
+
+    it "allows everything when notification_environments is nil" do
+      RailsErrorDashboard.configuration.notification_environments = nil
+      expect(described_class.environment_allowed?(staging_error)).to be true
+    end
+
+    it "allows an error whose environment is listed" do
+      RailsErrorDashboard.configuration.notification_environments = %w[production staging]
+      expect(described_class.environment_allowed?(staging_error)).to be true
+    end
+
+    it "rejects an error whose environment is not listed" do
+      RailsErrorDashboard.configuration.notification_environments = %w[production]
+      expect(described_class.environment_allowed?(staging_error)).to be false
+    end
+
+    it "treats a legacy NULL environment as the process environment" do
+      RailsErrorDashboard.configuration.environment = "production"
+      RailsErrorDashboard.configuration.notification_environments = %w[production]
+      expect(described_class.environment_allowed?(legacy_error)).to be true
+
+      RailsErrorDashboard.configuration.notification_environments = %w[staging]
+      expect(described_class.environment_allowed?(legacy_error)).to be false
+    end
+
+    it "accepts a bare environment name, and nil for the process environment" do
+      RailsErrorDashboard.configuration.environment = "uat"
+      RailsErrorDashboard.configuration.notification_environments = %w[uat]
+      expect(described_class.environment_allowed?("uat")).to be true
+      expect(described_class.environment_allowed?("production")).to be false
+      expect(described_class.environment_allowed?).to be true
+    end
+
+    it "fails open if the check itself raises" do
+      allow(RailsErrorDashboard.configuration).to receive(:notification_environments).and_raise("boom")
+      expect(described_class.environment_allowed?(staging_error)).to be true
+    end
+  end
 end

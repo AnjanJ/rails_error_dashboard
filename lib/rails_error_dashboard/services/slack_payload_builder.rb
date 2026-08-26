@@ -64,6 +64,7 @@ module RailsErrorDashboard
                 locale
               )
             },
+            *environment_fields(error_log, locale),
             {
               type: "mrkdwn",
               text: NotificationHelpers.field(
@@ -72,6 +73,14 @@ module RailsErrorDashboard
             }
           ]
         }
+      end
+
+      # One field when the error carries an environment, none for a legacy
+      # row — so pre-0.11 notifications render exactly as they did.
+      def self.environment_fields(error_log, locale)
+        return [] unless error_log.respond_to?(:environment) && error_log.environment.present?
+
+        [ { type: "mrkdwn", text: NotificationHelpers.field(:environment, error_log.environment, locale) } ]
       end
 
       def self.message_block(error_log, locale)

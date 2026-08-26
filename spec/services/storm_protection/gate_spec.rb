@@ -195,4 +195,28 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       }.not_to have_enqueued_job(RailsErrorDashboard::StormFlushJob)
     end
   end
+
+  describe "storm notification environment allowlist" do
+    before do
+      gate.reset!
+      allow(gate.breaker).to receive(:record!).and_return(:open)
+      allow(gate.breaker).to receive(:episode_snapshot).and_return(
+        { started_at: Time.current, ended_at: nil, peak_rate_per_minute: 600, reached_open: true }
+      )
+    end
+
+    it "does not enqueue when the process environment is not allowlisted" do
+      RailsErrorDashboard.configuration.notification_environments = %w[production]
+      RailsErrorDashboard.configuration.environment = "staging"
+
+      expect { gate.admit!(boom) }.not_to have_enqueued_job(RailsErrorDashboard::StormNotificationJob)
+    end
+
+    it "enqueues when the process environment is allowlisted" do
+      RailsErrorDashboard.configuration.notification_environments = %w[production]
+      RailsErrorDashboard.configuration.environment = "production"
+
+      expect { gate.admit!(boom) }.to have_enqueued_job(RailsErrorDashboard::StormNotificationJob).exactly(:once)
+    end
+  end
 end

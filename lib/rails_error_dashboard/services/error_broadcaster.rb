@@ -23,9 +23,11 @@ module RailsErrorDashboard
 
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
+        show_environment = ErrorLog.column_names.include?("environment") &&
+                           ErrorLog.distinct.pluck(:environment).compact.size > 1
 
         html = render_partial("rails_error_dashboard/errors/error_row",
-          error: error_log, show_platform: show_platform)
+          error: error_log, show_platform: show_platform, show_environment: show_environment)
 
         Turbo::StreamsChannel.broadcast_prepend_to(
           "error_list",
@@ -46,9 +48,11 @@ module RailsErrorDashboard
 
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
+        show_environment = ErrorLog.column_names.include?("environment") &&
+                           ErrorLog.distinct.pluck(:environment).compact.size > 1
 
         html = render_partial("rails_error_dashboard/errors/error_row",
-          error: error_log, show_platform: show_platform)
+          error: error_log, show_platform: show_platform, show_environment: show_environment)
 
         Turbo::StreamsChannel.broadcast_replace_to(
           "error_list",

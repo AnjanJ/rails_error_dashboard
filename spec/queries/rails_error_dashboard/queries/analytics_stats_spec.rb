@@ -330,4 +330,28 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
       end
     end
   end
+
+  describe "errors_by_environment" do
+    it "counts errors per environment, labelling NULL as unknown" do
+      create(:error_log, occurred_at: 1.day.ago, environment: "production")
+      create(:error_log, occurred_at: 1.day.ago, environment: "production")
+      create(:error_log, occurred_at: 1.day.ago, environment: "staging")
+      create(:error_log, occurred_at: 1.day.ago, environment: nil) # captured before the column existed
+      Rails.cache.clear
+
+      by_env = described_class.call[:errors_by_environment]
+      expect(by_env["production"]).to eq(2)
+      expect(by_env["staging"]).to eq(1)
+      expect(by_env[:unknown]).to eq(1)
+      expect(by_env).not_to have_key(nil)
+    end
+
+    it "returns an empty hash when the column is not migrated yet" do
+      without = RailsErrorDashboard::ErrorLog.column_names - [ "environment" ]
+      allow(RailsErrorDashboard::ErrorLog).to receive(:column_names).and_return(without)
+      Rails.cache.clear
+
+      expect(described_class.call[:errors_by_environment]).to eq({})
+    end
+  end
 end

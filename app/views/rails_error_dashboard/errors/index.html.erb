@@ -157,6 +157,9 @@
       <% if @platforms.size > 1 %>
         <%= select_tag :platform, options_for_select([[red_t("red.errors.index.filters.all_platforms"), '']] + @platforms.map { |p| [p, p] }, params[:platform]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <% end %>
+      <% if @environments.size > 1 %>
+        <%= select_tag :environment, options_for_select([[red_t("red.errors.index.filters.all_environments"), '']] + @environments.map { |e| [e, e] }, params[:environment]), class: "form-select", style: "width: auto; min-width: 120px;" %>
+      <% end %>
       <%= select_tag :error_type, options_for_select([[red_t("red.errors.index.filters.all_types"), '']] + @error_types.map { |t| [t, t] }, params[:error_type]), class: "form-select", style: "width: auto; min-width: 120px;" %>
       <%
         # Built from the same keys the active chips read, so a label can never
@@ -217,6 +220,7 @@
       active_filters << { label: red_t("red.errors.index.filters.chips.application", value: app_name), param: :application_id } if app_name
     end
     active_filters << { label: red_t("red.errors.index.filters.chips.platform", value: params[:platform]), param: :platform } if params[:platform].present?
+    active_filters << { label: red_t("red.errors.index.filters.chips.environment", value: params[:environment]), param: :environment } if params[:environment].present?
     active_filters << { label: red_t("red.errors.index.filters.chips.error_type", value: params[:error_type]), param: :error_type } if params[:error_type].present?
     active_filters << { label: red_t("red.errors.index.filters.chips.severity", value: severity_label.call(params[:severity])), param: :severity } if params[:severity].present?
     active_filters << { label: red_t("red.errors.index.filters.chips.timeframe", value: timeframe_label.call(params[:timeframe])), param: :timeframe } if params[:timeframe].present?
@@ -287,11 +291,14 @@
               <% if @platforms.size > 1 %>
                 <th style="padding: var(--space-3) var(--space-4); width: 100px;"><%= red_t("red.errors.index.columns.platform") %></th>
               <% end %>
+              <% if @environments.size > 1 %>
+                <th style="padding: var(--space-3) var(--space-4); width: 110px;"><%= red_t("red.errors.index.columns.environment") %></th>
+              <% end %>
             </tr>
           </thead>
           <tbody id="error_list">
             <% @errors.each do |error| %>
-              <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
+              <%= render "error_row", error: error, show_platform: @platforms.size > 1, show_environment: @environments.size > 1, show_application: (@applications.size > 1 && params[:application_id].blank?) %>
             <% end %>
           </tbody>
         </table>

@@ -1104,4 +1104,46 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
   end
+
+  describe "environment awareness" do
+    let(:env_exception) do
+      e = RuntimeError.new("env boom")
+      e.set_backtrace([ "#{Rails.root}/app/models/widget.rb:7:in 'explode'" ])
+      e
+    end
+
+    before { RailsErrorDashboard.configuration.async_logging = false }
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "stores the process environment (Rails.env by default)" do
+      log = described_class.call(env_exception)
+      expect(log.environment).to eq("test")
+    end
+
+    it "stores config.environment when set" do
+      RailsErrorDashboard.configuration.environment = "uat"
+      expect(described_class.call(env_exception).environment).to eq("uat")
+    end
+
+    it "lets context[:environment] override the configured environment" do
+      RailsErrorDashboard.configuration.environment = "uat"
+      log = described_class.call(env_exception, { environment: "remote-sender" })
+      expect(log.environment).to eq("remote-sender")
+    end
+
+    it "truncates an over-long context environment to the column limit" do
+      log = described_class.call(env_exception, { environment: "x" * 80 })
+      expect(log.environment.length).to eq(64)
+    end
+
+    it "captures normally when the environment column does not exist yet" do
+      without = RailsErrorDashboard::ErrorLog.column_names - [ "environment" ]
+      allow(RailsErrorDashboard::ErrorLog).to receive(:column_names).and_return(without)
+      expect(RailsErrorDashboard::Logger).not_to receive(:error)
+
+      log = described_class.call(env_exception)
+      expect(log).to be_persisted
+      expect(log.environment).to be_nil
+    end
+  end
 end

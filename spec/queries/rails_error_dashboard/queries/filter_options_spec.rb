@@ -150,4 +150,22 @@ RSpec.describe RailsErrorDashboard::Queries::FilterOptions do
       end
     end
   end
+
+  describe "environments" do
+    it "returns distinct, sorted environments, ignoring NULL" do
+      create(:error_log, environment: "staging")
+      create(:error_log, environment: "production")
+      create(:error_log, environment: "production")
+      create(:error_log, environment: nil)
+
+      expect(described_class.call[:environments]).to eq(%w[production staging])
+    end
+
+    it "returns an empty list when the column is not migrated yet" do
+      without = RailsErrorDashboard::ErrorLog.column_names - [ "environment" ]
+      allow(RailsErrorDashboard::ErrorLog).to receive(:column_names).and_return(without)
+
+      expect(described_class.call[:environments]).to eq([])
+    end
+  end
 end

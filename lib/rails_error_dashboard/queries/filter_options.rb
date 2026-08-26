@@ -17,9 +17,18 @@ module RailsErrorDashboard
         {
           error_types: base_scope.distinct.pluck(:error_type).compact.sort,
           platforms: base_scope.distinct.pluck(:platform).compact,
+          environments: environments,
           applications: Application.ordered_by_name.pluck(:name, :id),
           assignees: assignees
         }
+      end
+
+      # Sorted so the select is stable between requests. Empty until the
+      # environment migration has run, so the index simply shows no filter.
+      def environments
+        return [] unless ErrorLog.column_names.include?("environment")
+
+        base_scope.distinct.pluck(:environment).compact.sort
       end
 
       def assignees

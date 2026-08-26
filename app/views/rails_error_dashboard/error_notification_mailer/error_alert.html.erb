@@ -148,6 +148,11 @@
           </div>
         <% end %>
 
+        <% if @error_log.respond_to?(:environment) && @error_log.environment.present? %>
+          <div class="label"><%= red_t("red.mailers.error_alert.labels.environment") %>:</div>
+          <div class="value"><strong><%= @error_log.environment %></strong></div>
+        <% end %>
+
         <div class="label"><%= red_t("red.mailers.error_alert.labels.occurred_at") %>:</div>
         <div class="value"><%= red_mail_time(@error_log.occurred_at) %></div>
 

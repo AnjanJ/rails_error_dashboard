@@ -1,4 +1,11 @@
----
+# RED dashboard translations — it
+#
+# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
+# pull request is a perfectly good pull request.
+#
+# Structure is derived from en.yml, which is authoritative. Do not add keys
+# here that do not exist there — run bin/i18n-check after editing.
 it:
   red:
     common:
@@ -139,6 +146,7 @@ it:
             any: Qualsiasi gravità
           all_apps: Tutte le app
           all_platforms: Tutte le piattaforme
+          all_environments: Tutti gli ambienti
           all_types: Tutti i tipi
           all_timeframes: Da sempre
           all_frequencies: Tutte le frequenze
@@ -167,6 +175,7 @@ it:
             search: 'Ricerca: %{value}'
             application: 'App: %{value}'
             platform: 'Piattaforma: %{value}'
+            environment: 'Ambiente: %{value}'
             error_type: 'Tipo: %{value}'
             severity: 'Gravità: %{value}'
             timeframe: 'Periodo: %{value}'
@@ -182,6 +191,7 @@ it:
           last_seen: Ultima occorrenza
           application: App
           platform: Piattaforma
+          environment: Ambiente
           select_all: Seleziona tutti gli errori
         batch:
           selected:
@@ -637,6 +647,7 @@ it:
           low: BASSO
         platform: Piattaforma
         view_all_platform: Vedi tutti gli errori di %{platform}
+        view_all_environment: Vedi tutti gli errori di %{environment}
         user: Utente
         view_user_errors: Vedi tutti gli errori di questo utente
         user_id: 'ID: %{id}'
@@ -855,8 +866,9 @@ it:
         column_ips: Indirizzi IP
         column_top_path: Percorso principale
         column_top_agent: Agente principale
-        overflow_notice_html: >-
-          %{count} eventi non sono stati attribuiti a nessuna regola perché il buffer del tracker era pieno. Aumenta %{option} per acquisirne di più.
+        overflow_notice_html: "%{count} eventi non sono stati attribuiti a nessuna
+          regola perché il buffer del tracker era pieno. Aumenta %{option} per acquisirne
+          di più."
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1096,6 +1108,10 @@ it:
         sampling_rate: Percentuale di errori acquisiti
         application_name: Nome di questa applicazione (rilevato automaticamente se
           non impostato)
+        environment: Ambiente a cui vengono attribuiti gli errori (Rails.env se non
+          impostato)
+        notification_environments: Notifica solo per questi ambienti (tutti se non
+          impostato)
         database: Database attivo per i registri degli errori
         use_separate_database: Usa un DB dedicato per i registri degli errori
         user_model: Nome del modello per le associazioni con gli utenti (rilevato
@@ -1268,11 +1284,14 @@ it:
         unknown_application: Sconosciuta
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 Avviso di errore"
         labels:
           application: Applicazione
           error_type: Tipo di errore
           platform: Piattaforma
+          environment: Ambiente
           occurred_at: Data e ora
           user_id: ID utente
           ip_address: Indirizzo IP
@@ -1341,6 +1360,7 @@ it:
           application: Applicazione
           error_type: Tipo di errore
           platform: Piattaforma
+          environment: Ambiente
           occurred: Verificatosi
           message: Messaggio
           user: Utente
@@ -1676,6 +1696,10 @@ it:
         platform_chart:
           title: Errori per piattaforma
           quick_links: 'Collegamenti rapidi:'
+        environment_chart:
+          title: Errori per ambiente
+          quick_links: 'Collegamenti rapidi:'
+          unknown: Sconosciuto
         type_chart:
           title: I 10 tipi di errore più frequenti
         hour_chart:

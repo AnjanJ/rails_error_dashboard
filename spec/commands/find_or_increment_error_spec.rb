@@ -204,4 +204,69 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
       end
     end
   end
+
+  describe "environment matching" do
+    let(:production) { base_attributes.merge(environment: "production") }
+    let(:staging) { base_attributes.merge(environment: "staging") }
+
+    it "keeps the same hash as separate rows per environment" do
+      described_class.call(error_hash, production)
+      described_class.call(error_hash, staging)
+
+      rows = RailsErrorDashboard::ErrorLog.where(error_hash: error_hash)
+      expect(rows.count).to eq(2)
+      expect(rows.pluck(:environment)).to contain_exactly("production", "staging")
+    end
+
+    it "increments an existing row in the same environment" do
+      first = described_class.call(error_hash, production)
+      second = described_class.call(error_hash, production)
+
+      expect(second.id).to eq(first.id)
+      expect(second.occurrence_count).to eq(2)
+      expect(RailsErrorDashboard::ErrorLog.where(error_hash: error_hash).count).to eq(1)
+    end
+
+    it "adopts a legacy NULL-environment row and stamps it" do
+      legacy = described_class.call(error_hash, base_attributes) # environment: nil
+      expect(legacy.environment).to be_nil
+
+      result = described_class.call(error_hash, production)
+
+      expect(result.id).to eq(legacy.id)
+      expect(result.occurrence_count).to eq(2)
+      expect(result.environment).to eq("production")
+      expect(result.error_hash).to eq(error_hash) # the hash never changes
+    end
+
+    it "prefers an exact match to adoption when a NULL row and an exact row coexist" do
+      legacy = RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, environment: nil))
+      exact = RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, environment: "production"))
+
+      result = described_class.call(error_hash, production)
+
+      expect(result.id).to eq(exact.id)
+      expect(legacy.reload.environment).to be_nil
+      expect(legacy.occurrence_count).to eq(1)
+    end
+
+    it "reopens a resolved NULL-environment row and stamps it" do
+      legacy = described_class.call(error_hash, base_attributes)
+      legacy.update!(resolved: true, status: "resolved", resolved_at: 1.hour.ago)
+
+      result = described_class.call(error_hash, staging)
+
+      expect(result.id).to eq(legacy.id)
+      expect(result.resolved).to be(false)
+      expect(result.environment).to eq("staging")
+    end
+
+    it "does not let a staging occurrence increment a production row" do
+      prod = described_class.call(error_hash, production)
+      result = described_class.call(error_hash, staging)
+
+      expect(result.id).not_to eq(prod.id)
+      expect(prod.reload.occurrence_count).to eq(1)
+    end
+  end
 end

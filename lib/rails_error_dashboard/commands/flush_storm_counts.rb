@@ -59,20 +59,38 @@ module RailsErrorDashboard
 
         error_hash = canonical_hash(entry, application)
         last_seen = parse_time(entry["last_seen_at"]) || Time.current
+        env = current_environment
 
-        # Priority 1: unresolved match — one UPDATE, no row instantiation
-        updated = ErrorLog.unresolved
-          .where(error_hash: error_hash, application_id: application.id)
-          .update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen ])
-        return count if updated.positive?
+        # Priority 1: unresolved match — one UPDATE, no row instantiation.
+        # Environment mirrors FindOrIncrementError: exact row first, then a
+        # legacy NULL row which is stamped as it is claimed. Two statements
+        # rather than one IN (env, NULL), because update_all would hit BOTH
+        # rows when they coexist and double-count.
+        unresolved = ErrorLog.unresolved.where(error_hash: error_hash, application_id: application.id)
+        if env
+          updated = unresolved.where(environment: env)
+            .update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen ])
+          return count if updated.positive?
+
+          updated = unresolved.where(environment: nil)
+            .update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?, environment = ?",
+                          count, last_seen, env ])
+          return count if updated.positive?
+        else
+          updated = unresolved.update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen ])
+          return count if updated.positive?
+        end
 
         # Priority 2: resolved/wont_fix match — reopen, mirroring
         # FindOrIncrementError so storm recurrences don't stay buried
-        resolved = ErrorLog
+        resolved_scope = ErrorLog
           .where(error_hash: error_hash, application_id: application.id)
           .where(status: %w[resolved wont_fix])
-          .order(last_seen_at: :desc)
-          .first
+        if env
+          resolved_scope = resolved_scope.where(environment: [ env, nil ])
+            .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
+        end
+        resolved = resolved_scope.order(last_seen_at: :desc).first
         if resolved
           attrs = {
             resolved: false,
@@ -82,6 +100,7 @@ module RailsErrorDashboard
             last_seen_at: last_seen
           }
           attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
+          attrs[:environment] = env if env && resolved.environment.blank?
           resolved.update!(attrs)
           return count
         end
@@ -89,7 +108,11 @@ module RailsErrorDashboard
         # Priority 3: first seen during count-only mode — minimal ErrorLog
         # from the exemplar (no backtrace/context was captured; the next
         # occurrence after the storm fills in detail via the normal path)
+        create_attrs = {
+          environment: env
+        }.compact
         ErrorLog.create!(
+          **create_attrs,
           application_id: application.id,
           error_type: entry["error_class"],
           message: entry["message"],
@@ -121,6 +144,14 @@ module RailsErrorDashboard
         ].compact.join("|")
 
         Digest::SHA256.hexdigest(digest_input)[0..15]
+      end
+
+      # nil when the column is not migrated yet, so every environment clause
+      # above disappears and the command behaves exactly as before.
+      def current_environment
+        return nil unless ErrorLog.column_names.include?("environment")
+
+        RailsErrorDashboard.configuration.current_environment
       end
 
       def resolve_application

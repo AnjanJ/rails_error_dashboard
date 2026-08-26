@@ -147,6 +147,7 @@ fr:
             any: Toutes gravités
           all_apps: Toutes les applications
           all_platforms: Toutes les plateformes
+          all_environments: Tous les environnements
           all_types: Tous les types
           all_timeframes: Toute la période
           all_frequencies: Toutes les fréquences
@@ -175,6 +176,7 @@ fr:
             search: 'Recherche : %{value}'
             application: 'Application : %{value}'
             platform: 'Plateforme : %{value}'
+            environment: 'Environnement : %{value}'
             error_type: 'Type : %{value}'
             severity: 'Gravité : %{value}'
             timeframe: 'Période : %{value}'
@@ -190,6 +192,7 @@ fr:
           last_seen: Dernière occurrence
           application: Application
           platform: Plateforme
+          environment: Environnement
           select_all: Sélectionner toutes les erreurs
         batch:
           selected:
@@ -651,6 +654,7 @@ fr:
           low: FAIBLE
         platform: Plateforme
         view_all_platform: Voir toutes les erreurs %{platform}
+        view_all_environment: Voir toutes les erreurs de %{environment}
         user: Utilisateur
         view_user_errors: Voir toutes les erreurs de cet utilisateur
         user_id: 'ID : %{id}'
@@ -869,8 +873,9 @@ fr:
         column_ips: IP
         column_top_path: Chemin principal
         column_top_agent: Agent principal
-        overflow_notice_html: >-
-          %{count} événements n'ont pas pu être attribués à une règle car la mémoire tampon du traceur était pleine. Augmentez %{option} pour en capturer davantage.
+        overflow_notice_html: "%{count} événements n'ont pas pu être attribués à une
+          règle car la mémoire tampon du traceur était pleine. Augmentez %{option}
+          pour en capturer davantage."
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1113,6 +1118,10 @@ fr:
         sampling_rate: Pourcentage d'erreurs capturées
         application_name: Nom de cette application (détecté automatiquement si non
           défini)
+        environment: Environnement auquel les erreurs sont attribuées (Rails.env si
+          non défini)
+        notification_environments: Ne notifier que pour ces environnements (tous si
+          non défini)
         database: Base de données active pour les journaux d'erreurs
         use_separate_database: Utiliser une base de données dédiée aux journaux d'erreurs
         user_model: Nom du modèle pour les associations utilisateur (détecté automatiquement
@@ -1285,11 +1294,14 @@ fr:
         unknown_application: Inconnue
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type} : %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}
+          : %{message}"
         heading: "\U0001F6A8 Alerte d'erreur"
         labels:
           application: Application
           error_type: Type d'erreur
           platform: Plateforme
+          environment: Environnement
           occurred_at: Survenue le
           user_id: ID utilisateur
           ip_address: Adresse IP
@@ -1359,6 +1371,7 @@ fr:
           application: Application
           error_type: Type d'erreur
           platform: Plateforme
+          environment: Environnement
           occurred: Survenue
           message: Message
           user: Utilisateur
@@ -1698,6 +1711,10 @@ fr:
         platform_chart:
           title: Erreurs par plateforme
           quick_links: 'Liens rapides :'
+        environment_chart:
+          title: Erreurs par environnement
+          quick_links: 'Liens rapides :'
+          unknown: Inconnu
         type_chart:
           title: Top 10 des types d'erreurs
         hour_chart:

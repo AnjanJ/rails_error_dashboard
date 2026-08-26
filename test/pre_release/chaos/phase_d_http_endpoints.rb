@@ -303,6 +303,47 @@ assert_http "GET /errors/diagnostic_dumps", get_status("/errors/diagnostic_dumps
 puts ""
 
 # ---------------------------------------------------------------------------
+# D13: Environment awareness (v0.11.0)
+# The chaos apps run in production mode, so every captured error must carry
+# environment = "production", and the index filter must honour it.
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("D13: Environment awareness")
+
+def get_body(path)
+  uri = URI.parse("#{HTTP_BASE}#{path}")
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.open_timeout = 10
+  http.read_timeout = 30
+  request = Net::HTTP::Get.new(uri.request_uri)
+  request.basic_auth(HTTP_USER, HTTP_PASS)
+  http.request(request).body.to_s
+rescue => e
+  "ERROR: #{e.class}: #{e.message}"
+end
+
+env_marker = "EnvAwareChaos#{SecureRandom.hex(4)}"
+env_error = begin
+  raise RuntimeError, "#{env_marker} boom"
+rescue => e
+  log_error_and_find(e, { platform: "Web" })
+end
+
+if env_error
+  assert "captured error carries environment=production", env_error.environment == "production",
+         "got #{env_error.environment.inspect}"
+  assert_http "GET /errors?environment=production", get_status("/errors?environment=production&unresolved=0")
+  assert_http "GET /errors?environment=staging", get_status("/errors?environment=staging&unresolved=0")
+  # Match the full message: the bare marker is echoed back in the search box
+  # and the "Search:" chip even when the filter returns no rows.
+  assert "production filter lists the error", get_body("/errors?environment=production&unresolved=0&search=#{env_marker}").include?("#{env_marker} boom")
+  assert "staging filter hides the error", !get_body("/errors?environment=staging&unresolved=0&search=#{env_marker}").include?("#{env_marker} boom")
+  assert "single-environment index shows no environment column", !get_body("/errors?unresolved=0").include?("data-environment-badge")
+else
+  assert "captured error for environment check", false, "log_error_and_find returned nil"
+end
+puts ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 exit_code = PreReleaseTestHarness.summary("PHASE D")

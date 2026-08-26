@@ -147,6 +147,7 @@ es:
             any: Cualquier gravedad
           all_apps: Todas las aplicaciones
           all_platforms: Todas las plataformas
+          all_environments: Todos los entornos
           all_types: Todos los tipos
           all_timeframes: Todo el periodo
           all_frequencies: Todas las frecuencias
@@ -175,6 +176,7 @@ es:
             search: 'Búsqueda: %{value}'
             application: 'Aplicación: %{value}'
             platform: 'Plataforma: %{value}'
+            environment: 'Entorno: %{value}'
             error_type: 'Tipo: %{value}'
             severity: 'Gravedad: %{value}'
             timeframe: 'Periodo: %{value}'
@@ -190,6 +192,7 @@ es:
           last_seen: Última aparición
           application: Aplicación
           platform: Plataforma
+          environment: Entorno
           select_all: Seleccionar todos los errores
         batch:
           selected:
@@ -652,6 +655,7 @@ es:
           low: BAJA
         platform: Plataforma
         view_all_platform: Ver todos los errores de %{platform}
+        view_all_environment: Ver todos los errores de %{environment}
         user: Usuario
         view_user_errors: Ver todos los errores de este usuario
         user_id: 'ID: %{id}'
@@ -870,8 +874,9 @@ es:
         column_ips: IP
         column_top_path: Ruta principal
         column_top_agent: Agente principal
-        overflow_notice_html: >-
-          No se pudieron atribuir %{count} eventos a ninguna regla porque el búfer del rastreador estaba lleno. Aumente %{option} para capturar más.
+        overflow_notice_html: No se pudieron atribuir %{count} eventos a ninguna regla
+          porque el búfer del rastreador estaba lleno. Aumente %{option} para capturar
+          más.
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1112,6 +1117,9 @@ es:
         sampling_rate: Porcentaje de errores capturados
         application_name: Nombre de esta aplicación (se detecta automáticamente si
           no se define)
+        environment: Entorno al que se atribuyen los errores (Rails.env si no se define)
+        notification_environments: Notificar solo para estos entornos (todos si no
+          se define)
         database: Base de datos activa para los registros de errores
         use_separate_database: Usar una base de datos dedicada para los registros
           de errores
@@ -1287,11 +1295,14 @@ es:
         unknown_application: Desconocida
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 Alerta de error"
         labels:
           application: Aplicación
           error_type: Tipo de error
           platform: Plataforma
+          environment: Entorno
           occurred_at: Ocurrió el
           user_id: ID de usuario
           ip_address: Dirección IP
@@ -1360,6 +1371,7 @@ es:
           application: Aplicación
           error_type: Tipo de error
           platform: Plataforma
+          environment: Entorno
           occurred: Ocurrió
           message: Mensaje
           user: Usuario
@@ -1696,6 +1708,10 @@ es:
         platform_chart:
           title: Errores por plataforma
           quick_links: 'Enlaces rápidos:'
+        environment_chart:
+          title: Errores por entorno
+          quick_links: 'Enlaces rápidos:'
+          unknown: Desconocido
         type_chart:
           title: Los 10 tipos de error más frecuentes
         hour_chart:

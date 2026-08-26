@@ -19,6 +19,7 @@
       color: "info",
       settings: {
         application_name: { type: :application_name },
+        environment: { type: :string },
         database: { type: :database_name },
         use_separate_database: { type: :boolean }
       }
@@ -45,6 +46,7 @@
       icon: "bi-bell",
       color: "info",
       settings: {
+        notification_environments: { type: :array },
         enable_slack_notifications: { type: :boolean },
         slack_webhook_url: { type: :url, show_if: :enable_slack_notifications },
         enable_email_notifications: { type: :boolean },

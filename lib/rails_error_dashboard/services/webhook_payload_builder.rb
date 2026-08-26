@@ -37,6 +37,7 @@ module RailsErrorDashboard
             message: error_log.message,
             severity: error_log.severity.to_s,
             platform: error_log.platform,
+            environment: error_log.environment,
             controller: error_log.controller_name,
             action: error_log.action_name,
             occurrence_count: error_log.occurrence_count,

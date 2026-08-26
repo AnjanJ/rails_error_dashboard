@@ -11,6 +11,7 @@ module RailsErrorDashboard
       error_type
       unresolved
       platform
+      environment
       application_id
       search
       severity
@@ -94,6 +95,7 @@ module RailsErrorDashboard
       filter_options = Queries::FilterOptions.call(application_id: @current_application_id)
       @error_types = filter_options[:error_types]
       @platforms = filter_options[:platforms]
+      @environments = filter_options[:environments]
       @assignees = filter_options[:assignees]
     end
 
@@ -242,6 +244,7 @@ module RailsErrorDashboard
       @errors_over_time = analytics[:errors_over_time]
       @errors_by_type = analytics[:errors_by_type]
       @errors_by_platform = analytics[:errors_by_platform]
+      @errors_by_environment = analytics[:errors_by_environment]
       @errors_by_hour = analytics[:errors_by_hour]
       @top_users = analytics[:top_users]
       @resolution_rate = analytics[:resolution_rate]

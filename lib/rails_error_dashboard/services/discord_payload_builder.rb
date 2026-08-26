@@ -47,6 +47,7 @@ module RailsErrorDashboard
                 value: error_log.platform || unknown,
                 inline: true
               },
+              *environment_fields(error_log, locale),
               {
                 name: NotificationHelpers.label(:occurrences, locale),
                 value: error_log.occurrence_count.to_s,
@@ -84,6 +85,13 @@ module RailsErrorDashboard
 
       # @param error_log [ErrorLog] The error
       # @return [Integer] Discord color integer
+      # One field when the error carries an environment, none for a legacy row.
+      def self.environment_fields(error_log, locale)
+        return [] unless error_log.respond_to?(:environment) && error_log.environment.present?
+
+        [ { name: NotificationHelpers.label(:environment, locale), value: error_log.environment, inline: true } ]
+      end
+
       def self.severity_color(error_log)
         SEVERITY_COLORS[error_log.severity] || DEFAULT_COLOR
       end

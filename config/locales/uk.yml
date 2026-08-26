@@ -147,6 +147,7 @@ uk:
             any: Будь-яка критичність
           all_apps: Усі застосунки
           all_platforms: Усі платформи
+          all_environments: Усі середовища
           all_types: Усі типи
           all_timeframes: За весь час
           all_frequencies: Усі частоти
@@ -175,6 +176,7 @@ uk:
             search: 'Пошук: %{value}'
             application: 'Застосунок: %{value}'
             platform: 'Платформа: %{value}'
+            environment: 'Середовище: %{value}'
             error_type: 'Тип: %{value}'
             severity: 'Критичність: %{value}'
             timeframe: 'Період: %{value}'
@@ -190,6 +192,7 @@ uk:
           last_seen: Востаннє помічено
           application: Застосунок
           platform: Платформа
+          environment: Середовище
           select_all: Вибрати всі помилки
         batch:
           selected:
@@ -657,6 +660,7 @@ uk:
           low: НИЗЬКА
         platform: Платформа
         view_all_platform: Переглянути всі помилки %{platform}
+        view_all_environment: Переглянути всі помилки %{environment}
         user: Користувач
         view_user_errors: Переглянути всі помилки цього користувача
         user_id: 'ID: %{id}'
@@ -877,8 +881,9 @@ uk:
         column_ips: IP-адреси
         column_top_path: Найчастіший шлях
         column_top_agent: Основний агент
-        overflow_notice_html: >-
-          Не вдалося віднести %{count} подій до жодного правила, оскільки буфер трекера був заповнений. Збільште %{option}, щоб записувати більше.
+        overflow_notice_html: Не вдалося віднести %{count} подій до жодного правила,
+          оскільки буфер трекера був заповнений. Збільште %{option}, щоб записувати
+          більше.
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1132,6 +1137,9 @@ uk:
         sampling_rate: Відсоток захоплених помилок
         application_name: Назва цього застосунку (визначається автоматично, якщо не
           задано)
+        environment: Середовище, до якого належать помилки (Rails.env, якщо не задано)
+        notification_environments: Сповіщати лише для цих середовищ (усі, якщо не
+          задано)
         database: Активна база даних для журналів помилок
         use_separate_database: Використовувати окрему БД для журналів помилок
         user_model: Назва моделі для звʼязків із користувачами (визначається автоматично,
@@ -1307,11 +1315,14 @@ uk:
         unknown_application: Невідомо
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 Сповіщення про помилку"
         labels:
           application: Застосунок
           error_type: Тип помилки
           platform: Платформа
+          environment: Середовище
           occurred_at: Час виникнення
           user_id: ID користувача
           ip_address: IP-адреса
@@ -1383,6 +1394,7 @@ uk:
           application: Застосунок
           error_type: Тип помилки
           platform: Платформа
+          environment: Середовище
           occurred: Сталася
           message: Повідомлення
           user: Користувач
@@ -1714,6 +1726,10 @@ uk:
         platform_chart:
           title: Помилки за платформами
           quick_links: 'Швидкі посилання:'
+        environment_chart:
+          title: Помилки за середовищами
+          quick_links: 'Швидкі посилання:'
+          unknown: Невідомо
         type_chart:
           title: 10 найчастіших типів помилок
         hour_chart:
