@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: August 26, 2026 | Current version: v0.10.0 | Next: v0.10.1 (PR #184, open)
+> Last updated: August 26, 2026 | Current version: v0.11.0 | Next: nothing scheduled — see "Open, uncommitted"
 >
 > **Working analysis docs are local-only, by design.** Earlier revisions of this file linked to
 > `DEEP_INTROSPECTION_ANALYSIS.md`, `FAULTLINE_COMPARISON.md`, `TIMESERIES_ANALYSIS.md` and
@@ -500,11 +500,12 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Effort:** 1-2 days
 - **Implemented:** Four providers — GitHub, GitLab and Codeberg in v0.5.8, Linear added in v0.8.1 (#133). Manual creation, auto-create, lifecycle sync and inbound webhooks
 
-### 9. Environment/Stage Awareness
+### 9. Environment/Stage Awareness — DONE (v0.11.0)
 - **What:** Track which environment errors come from (development/staging/production). Filter by environment. Show environment badge on errors. Separate notification rules per environment
 - **Why:** Currently there's no concept of environment — all errors are treated equally. In practice, a staging error is very different from a production error. Every SaaS competitor separates these
 - **Community impact:** Any team with staging + production environments needs this
 - **Effort:** 1 day
+- **Implemented (#187, 2026-08-26):** every error records its environment — a free-form name defaulting to `Rails.env`, overridable with `config.environment` / `ERROR_DASHBOARD_ENVIRONMENT`, never an enum (the v0.9.1 advisory was a check that knew one environment name). Index filter + chip, row and sidebar badges, an Errors-by-Environment chart, all shown only when more than one environment exists. **Environment is a match dimension in dedup, not a fingerprint input**: the same error in staging and production is two rows with independent status, hashes are unchanged, and rows captured before the column existed are adopted by their next occurrence (`rails_error_dashboard:backfill_environments` for history). `config.notification_environments` is one allowlist checked at the notification choke point plus storm and baseline alerts; every payload names the environment and the email subject becomes `[App · env] …`. Spec and three decision records in `.shipkit/specs/environment-awareness/`. This feature existed in v0.1.x and was removed wholesale in `a69e77b` — the roadmap should not lose it a second time
 
 ### 10. Reduce Runtime Dependencies — DONE
 - **What:** Make `turbo-rails`, `browser`, `httparty`, and `chartkick` optional. Core gem should only require `pagy` and `groupdate`. Load optional features only if the dependency is available
@@ -622,7 +623,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ### Where we actually are
 
-Nine months, 655 commits, 80 published versions, currently **v0.10.0**. The version-by-version
+Nine months, 659 commits, 81 published versions, currently **v0.11.0**. The version-by-version
 table that used to live here had gone stale in a way that made it actively misleading — it still
 targeted i18n at "v1.1+" months after it shipped in v0.9.0, and listed features at v0.5/v0.6 that
 had been done since spring. It has been replaced by the shipped history below plus a short,
@@ -642,17 +643,18 @@ honest forward list.
 | v0.9.0 | Aug 23 2026 | **Internationalization — eleven locales**, plus authenticating every dashboard controller |
 | v0.9.1 | Aug 24 2026 | Default-credential allowlist ([GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6)) |
 | v0.10.0 | Aug 25 2026 | Rack::Attack `track` discriminator, count loss on eviction, shutdown flush, AI-agent classification (#177, closes #170); localized chart date axes and corrected horizontal bar chart axis titles (#179, closes #178) |
+| v0.11.0 | Aug 26 2026 | **Environment awareness** (#187, item 9) — filter, badges, chart, per-environment notification allowlist, migration; plus the mobile sideways-scroll fix and offline system specs (#184) |
 
 Note the shape: the first three quarters were feature build-out (156 commits in March alone), the
-last two months are hardening and correctness (21 commits in August, but a security advisory
-and three releases). That shift is deliberate. Depth before breadth.
+last two months are hardening and correctness (25 commits in August, but a security advisory
+and four releases). That shift is deliberate. Depth before breadth.
 
 ### Next up
 
 | When | Item | State |
 |------|------|-------|
-| **v0.10.1** | System specs no longer touch the network (host-level blocking, vendored scripts); dashboard no longer scrolls sideways on a 375px phone | **PR #184**, refs #183. Started as a CI-flake fix and surfaced a real mobile layout bug: navbar flex items never shrank and four inline `repeat(3, 1fr)` stat grids could not carry a media query. All 19 checks green |
 | **Verifying** | v0.10.0 fixes for #170 and #178 | Shipped 2026-08-25. Both issues deliberately left open for @gmarziou to confirm and close |
+| **Demo** | Live demo on v0.11.0 with seeded staging errors so the environment filter, badges and chart are visible | Done 2026-08-26; demo CI fully green for the first time since July (Brakeman 8.0.6, sqlite3 2.9.6) |
 | **Unblocked now** | Submit to awesome-ruby (21) | 30K download bar cleared at 37,381 — see Tier 5 |
 | **Waiting** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Reporter owed an email once assigned |
 | **Community-owned** | Native-speaker review of 10 locales (#156–#165) | Open by design — the contribution path, not a backlog |
@@ -664,7 +666,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Item | Effort | Impact | Note |
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
-| Environment awareness (9) | 1 day | Team workflow ++ | Sharpened by the v0.9.1 advisory — we now care a lot about which environment we are in |
 | Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
 | Webhook HMAC signatures (20) | Half day | Security + | Standard practice for outbound webhooks |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
@@ -721,7 +722,7 @@ principle (see its entry above).
 - Translation quality (unscored) — ten locales are machine-translated and unreviewed. Mechanically verified, honestly labelled, but a native speaker has reviewed none of them. Issues #156–#165 are the open invitation
 - Performance monitoring (0/10) — no request timing or slow query tracking. Deferred on principle, not backlog (see Z)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN + functional indexes added
-- Environment awareness (4/10) — errors carry a Rails env string, but there is no first-class filtering, badging or per-environment notification rule. The v0.9.1 advisory made this gap feel larger than it reads
+- Environment awareness (9/10) — shipped in v0.11.0: first-class column, filter, badges, chart and a notification allowlist. What is left is per-channel routing (Slack everywhere, PagerDuty production-only), which today needs a callback lambda
 - Community growth — Ruby Toolbox PR still open ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)). awesome-ruby's 30K download bar is **now cleared** (37,381) and submission is unblocked but not done
 
 ### Security Track Record
