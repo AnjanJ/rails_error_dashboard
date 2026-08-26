@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: August 25, 2026 | Current version: v0.9.1 | Next: v0.10.0 (PR #177, held)
+> Last updated: August 26, 2026 | Current version: v0.10.0 | Next: v0.10.1 (PR #184, open)
 >
 > **Working analysis docs are local-only, by design.** Earlier revisions of this file linked to
 > `DEEP_INTROSPECTION_ANALYSIS.md`, `FAULTLINE_COMPARISON.md`, `TIMESERIES_ANALYSIS.md` and
@@ -292,7 +292,7 @@ Environment:
 - **Implementation:** `ActiveSupport::Notifications.subscribe("throttle.rack_attack")`, guard with `defined?(Rack::Attack)`, store as breadcrumbs or dedicated counter
 - **Effort:** Half day
 - **Impact:** Operational + (useful if Rack Attack is installed)
-- **Reworked three times since.** v0.8.3 (#143) made events persist independently of error capture — they were previously lost unless an error happened to fire. v0.8.4 (#150) surfaced a missing `rack-attack` gem instead of failing silently. **v0.10.0 (PR #177, held)** fixes the remaining three defects found via issue [#170](https://github.com/AnjanJ/rails_error_dashboard/issues/170): `track` events never set a discriminator (so "Unique IPs" always read 0 next to a real count), counts were silently lost on LRU eviction, and there was no flush on shutdown. It also adds AI-agent classification from the User-Agent header
+- **Reworked three times since.** v0.8.3 (#143) made events persist independently of error capture — they were previously lost unless an error happened to fire. v0.8.4 (#150) surfaced a missing `rack-attack` gem instead of failing silently. **v0.10.0 (#177, shipped 2026-08-25)** fixes the remaining three defects found via issue [#170](https://github.com/AnjanJ/rails_error_dashboard/issues/170): `track` events never set a discriminator (so "Unique IPs" always read 0 next to a real count), counts were silently lost on LRU eviction, and there was no flush on shutdown. It also adds AI-agent classification from the User-Agent header
 
 ### S. ActionCable Connection Monitoring -- DONE (v0.5.0)
 - **What:** Track WebSocket connection counts, channel actions, transmissions, subscription confirmations/rejections. Surface ActionCable health alongside errors
@@ -349,7 +349,7 @@ Environment:
 - **What shipped:** A private I18n backend isolated from the host app, request-scoped locale state, the `red_t` helper family, plural/relative-time/date-format helpers, a dynamic `<html lang>`, the full ~1,500-key extraction across views, inline JS, mailers and notification payloads, a JS translation payload, a session-persisted language picker, and `bin/i18n-check` to verify locale files mechanically. **Eleven locales ship** — `en` (source) plus `de`, `es`, `fr`, `pt-BR`, `ja`, `ru`, `uk`, `pl`, `it` and `zh-CN`
 - **Translation quality is explicitly unreviewed.** Every non-English locale is machine-translated, because the maintainer reads only English. `bin/i18n-check` enforces what a script can verify — key parity, interpolation variables, CLDR plural categories — and the English fallback means a wrong translation degrades to English rather than a broken page. Wording, register and idiom are labelled unreviewed rather than pretended away
 - **Open follow-up:** issues [#156–#165](https://github.com/AnjanJ/rails_error_dashboard/issues/156) — one per locale, tagged `good first issue` / `translation:needs-review`, inviting native speakers to correct wording. These stay open by design; they are the contribution path, not a backlog
-- **That path has already paid for itself.** The first reviewer to take one up (@gmarziou, French, #158) reported not a wording problem but two real bugs: chart date axes rendering in English in every locale, and inverted axis titles on the horizontal bar chart — plus a latent third (issue #178, fixed in PR #179). Worth stating plainly, because `bin/i18n-check` could not have caught any of it: it verifies key structure, interpolation variables and plural categories, not what reaches a `<canvas>`. **A locale can pass every mechanical check and still render English on every chart.** When auditing i18n coverage, grep for `strftime` and `to_json` in views, not only for missing `red_t` calls — data serialized to JS is the blind spot
+- **That path has already paid for itself.** The first reviewer to take one up (@gmarziou, French, #158) reported not a wording problem but two real bugs: chart date axes rendering in English in every locale, and inverted axis titles on the horizontal bar chart — plus a latent third (issue #178, fixed in #179, shipped in v0.10.0). Worth stating plainly, because `bin/i18n-check` could not have caught any of it: it verifies key structure, interpolation variables and plural categories, not what reaches a `<canvas>`. **A locale can pass every mechanical check and still render English on every chart.** When auditing i18n coverage, grep for `strftime` and `to_json` in views, not only for missing `red_t` calls — data serialized to JS is the blind spot
 - **Two follow-up fixes landed after the release:** pagination rendering in the dashboard's own locale (v0.8.4, #152) and authenticating every dashboard controller rather than only `ErrorsController` (v0.9.0, #167)
 - **Demand signal:** still no user request and zero i18n issues filed before the work started. It proceeded because the foundation made it incremental, not because demand appeared
 - **Effort (actual):** foundation 2-3 days · extraction + tooling ~14 days · locales ~4 days · verification and release ~2 days
@@ -602,7 +602,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ### Where we actually are
 
-Nine months, 654 commits, 78 published versions, currently **v0.9.1**. The version-by-version
+Nine months, 655 commits, 80 published versions, currently **v0.10.0**. The version-by-version
 table that used to live here had gone stale in a way that made it actively misleading — it still
 targeted i18n at "v1.1+" months after it shipped in v0.9.0, and listed features at v0.5/v0.6 that
 had been done since spring. It has been replaced by the shipped history below plus a short,
@@ -621,17 +621,18 @@ honest forward list.
 | v0.8.3–v0.8.4 | Jul – Aug 2026 | Rack Attack persistence independent of error capture, missing-gem diagnostics, pagination locale isolation |
 | v0.9.0 | Aug 23 2026 | **Internationalization — eleven locales**, plus authenticating every dashboard controller |
 | v0.9.1 | Aug 24 2026 | Default-credential allowlist ([GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6)) |
+| v0.10.0 | Aug 25 2026 | Rack::Attack `track` discriminator, count loss on eviction, shutdown flush, AI-agent classification (#177, closes #170); localized chart date axes and corrected horizontal bar chart axis titles (#179, closes #178) |
 
 Note the shape: the first three quarters were feature build-out (156 commits in March alone), the
-last two months are hardening and correctness (20 commits in August, but both security advisories
-and two releases). That shift is deliberate. Depth before breadth.
+last two months are hardening and correctness (21 commits in August, but a security advisory
+and three releases). That shift is deliberate. Depth before breadth.
 
 ### Next up
 
 | When | Item | State |
 |------|------|-------|
-| **v0.10.0** | Rack::Attack track discriminator, count loss, shutdown flush, AI-agent classification | **PR #177 — all 19 checks green, MERGEABLE, held on purpose.** Two releases already shipped on 2026-08-24; this is a minor with a migration and wants its own release rather than a third same-day one. Merging it closes the loop owed to issue #170 |
-| **v0.10.0** | Chart date axes ignored the locale; horizontal bar chart axis titles inverted | **PR #179**, closes #178. Found by @gmarziou during the French locale review (#158) — a user-visible i18n bug affecting all eleven locales. Ships alongside #177 so both of that reporter's findings land in one release |
+| **v0.10.1** | System specs no longer touch the network (host-level blocking, vendored scripts); dashboard no longer scrolls sideways on a 375px phone | **PR #184**, refs #183. Started as a CI-flake fix and surfaced a real mobile layout bug: navbar flex items never shrank and four inline `repeat(3, 1fr)` stat grids could not carry a media query. All 19 checks green |
+| **Verifying** | v0.10.0 fixes for #170 and #178 | Shipped 2026-08-25. Both issues deliberately left open for @gmarziou to confirm and close |
 | **Unblocked now** | Submit to awesome-ruby (21) | 30K download bar cleared at 37,381 — see Tier 5 |
 | **Waiting** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Reporter owed an email once assigned |
 | **Community-owned** | Native-speaker review of 10 locales (#156–#165) | Open by design — the contribution path, not a backlog |

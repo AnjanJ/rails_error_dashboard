@@ -9,7 +9,7 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 ## Architecture Rules
 
 1. **HOST APP SAFETY FIRST** — Never raise in capture path, never block requests, budget every operation, clean up Thread.current, always re-raise original exceptions
-2. **CQRS** — Commands for writes (`app/commands/`), Queries for reads (`app/queries/`), Services for algorithms (`app/services/`)
+2. **CQRS** — Commands for writes (`lib/rails_error_dashboard/commands/`), Queries for reads (`lib/rails_error_dashboard/queries/`), Services for algorithms (`lib/rails_error_dashboard/services/`)
 3. **NEVER depend on Rails asset pipeline** — no Sprockets, no Propshaft, no `app/assets/`, no `public/` directory serving
 4. All CSS is inline in the layout `<style>` block, all JS is inline in `<script>` blocks
 5. External dependencies (Bootstrap JS for tooltips/modals, Chart.js, Highlight.js) loaded via CDN only — Bootstrap CSS was removed in v0.6.0 in favor of a custom design token system
@@ -19,7 +19,7 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 
 ### RSpec (unit/integration)
 ```bash
-bundle exec rspec                          # full suite (~3636 specs, ~53s)
+bundle exec rspec                          # full suite (~4,280 specs)
 bundle exec rspec spec/system/             # system tests (Capybara + Cuprite)
 HEADLESS=false bundle exec rspec spec/system/  # visible browser
 ```
@@ -56,9 +56,9 @@ Skip all hooks: `LEFTHOOK=0 git commit -m "msg"`
 | `lib/rails_error_dashboard/` | Core gem code |
 | `lib/rails_error_dashboard/engine.rb` | Engine setup, middleware, subscriber |
 | `lib/rails_error_dashboard/configuration.rb` | 100+ config options |
-| `app/commands/rails_error_dashboard/` | CQRS commands (writes) |
-| `app/queries/rails_error_dashboard/` | CQRS queries (reads) |
-| `app/services/rails_error_dashboard/` | Services (algorithms) |
+| `lib/rails_error_dashboard/commands/` | CQRS commands (writes) |
+| `lib/rails_error_dashboard/queries/` | CQRS queries (reads) |
+| `lib/rails_error_dashboard/services/` | Services (algorithms) |
 | `app/views/rails_error_dashboard/` | Dashboard views (ERB) |
 | `spec/` | RSpec tests |
 | `test/pre_release/` | Chaos test scripts + templates |
