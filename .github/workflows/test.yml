@@ -92,4 +92,11 @@ jobs:
       env:
         RAILS_VERSION: '8.1'
         COVERAGE: false
+        # Ferrum waits this long for Chrome to print its websocket URL, and
+        # defaults to 10s. A cold GitHub runner can exceed that, which surfaces
+        # as `Ferrum::ProcessTimeoutError` on a spec that has nothing wrong with
+        # it. spec/support/capybara.rb passes process_timeout: 15, but the env
+        # var is read by Ferrum::Browser::Options directly, so it also covers
+        # browser restarts, where the driver's options are not re-applied.
+        FERRUM_PROCESS_TIMEOUT: 30
       run: bundle exec rspec spec/system/ --format documentation

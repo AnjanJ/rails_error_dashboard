@@ -32,7 +32,7 @@
     trend_values = @stats[:errors_trend_7d].values rescue []
     trend_max = [ trend_values.max || 1, 1 ].max
   %>
-  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+  <div class="red-stat-grid">
     <!-- Error Rate -->
     <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
       <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.error_rate") %></div>
@@ -89,7 +89,7 @@
   </div>
 
   <!-- Secondary Stats (3 cards) -->
-  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+  <div class="red-stat-grid">
     <!-- Affected Users -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
       <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.affected_users") %></div>

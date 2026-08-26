@@ -35,6 +35,40 @@ module SystemHelpers
   def wait_for_page_load
     expect(page).to have_css("header.red-navbar, nav.navbar", wait: 10)
     wait_for_bootstrap
+    wait_for_content_fade_in
+  end
+
+  # `main { animation: contentFadeIn 0.15s ease; }` starts the page content at
+  # opacity 0. Capybara treats an opacity-0 ancestor as invisible, so any
+  # assertion that lands inside those 150ms sees nothing — `first(".local-time")`
+  # returns nil and the caller skips rather than fails, which is the worst
+  # possible way for this to surface.
+  #
+  # This never used to bite because every page spent about a second waiting on
+  # CDN assets, which is far longer than the animation. Once #183 removed the
+  # network from the critical path the suite got fast enough to outrun its own
+  # fade-in. The animation is real behaviour, so the specs wait for it rather
+  # than the layout dropping it.
+  def wait_for_content_fade_in(timeout: 2)
+    deadline = Time.now + timeout
+    loop do
+      settled = page.evaluate_script(<<~JS)
+        (function() {
+          var m = document.querySelector('main');
+          if (!m) return true;
+          return parseFloat(getComputedStyle(m).opacity) >= 1;
+        })()
+      JS
+      return true if settled
+      break if Time.now > deadline
+
+      sleep 0.02
+    end
+    false
+  rescue StandardError
+    # Mid-navigation evaluate_script can raise; the caller's own assertion gives
+    # the better message.
+    false
   end
 
   # Block until Bootstrap's bundle has executed and registered its global.

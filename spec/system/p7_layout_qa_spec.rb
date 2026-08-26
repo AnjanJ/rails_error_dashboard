@@ -21,6 +21,10 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   let!(:application) { create(:application) }
 
   WIDTHS = { mobile: [ 375, 812 ], tablet: [ 768, 1024 ], desktop: [ 1440, 900 ] }.freeze
+
+  # Matches the driver's window_size in spec/support/capybara.rb. Restored after
+  # every example here so a resize cannot leak into an unrelated spec.
+  DEFAULT_WINDOW_SIZE = [ 1400, 900 ].freeze
   LOCALES = %w[fr ru de zh-CN].freeze
   THEMES = %w[light dark].freeze
 
@@ -31,6 +35,15 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   after do
     RailsErrorDashboard.configuration.authenticate_with = nil
     RailsErrorDashboard.configuration.dashboard_locale = "en"
+
+    # These examples resize to 375px and Cuprite does NOT restore the viewport
+    # between examples — the window belongs to the browser, not the session, so
+    # Capybara's reset leaves it wherever this spec left it. With random
+    # ordering that silently hands the next spec a mobile layout, where
+    # elements the desktop layout shows are hidden: js_date_localization's
+    # `.local-time` assertions turned into skips ("no .local-time element on
+    # this page") purely because this file happened to run first.
+    page.driver.resize_window(*DEFAULT_WINDOW_SIZE)
   end
 
   # Any element whose content is wider than its box. Excludes the elements
@@ -99,8 +112,16 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   # one: any excess over the English baseline is expansion, which is exactly
   # what REQ-2 and REQ-5 are about.
   #
-  # A 4px tolerance absorbs sub-pixel font metrics; real expansion overflow
-  # runs to tens or hundreds of pixels (ru's nav label alone is +13 chars).
+  # A 4px tolerance absorbs sub-pixel font metrics; real expansion overflow runs
+  # to tens or hundreds of pixels (ru's nav label alone is +13 chars).
+  #
+  # This briefly went to 20px while the navbar still overflowed: with webfonts
+  # blocked (#183) the wider fallback face pushed fr/overview@375 to 448px
+  # against a 434px English baseline. Widening the tolerance was the wrong call
+  # — the page was genuinely scrolling sideways at 375px in EVERY locale,
+  # English included, and loosening a spec to accept that ships the defect to
+  # users. The navbar is fixed instead (min-width:0 on its flex groups), so both
+  # locales now measure exactly the viewport width and 4px is honest again.
   def expect_no_worse_than_english(label, path)
     RailsErrorDashboard.configuration.dashboard_locale = "en"
     visit_dashboard(path)

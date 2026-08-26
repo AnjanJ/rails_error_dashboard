@@ -91,7 +91,7 @@
   <% if @live_health[:postgresql] %>
     <%# Summary cards for PostgreSQL %>
     <% total_db_size = (@host_tables + @gem_tables).sum { |t| t[:total_bytes] } %>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-4);">
+    <div class="red-stat-grid" style="margin-bottom: var(--space-4);">
       <div class="card stat-card" style="padding: var(--space-4) var(--space-5); text-align: center;">
         <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.health.database.summary.total_db_size") %></div>
         <div class="stat-value"><%= number_to_human_size(total_db_size) %></div>
