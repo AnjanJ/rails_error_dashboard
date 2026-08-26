@@ -45,7 +45,7 @@
   </div>
 
   <!-- Summary Stats -->
-  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6);">
+  <div class="red-stat-grid">
     <div class="card stat-card" style="border-left: 3px solid var(--accent); padding: var(--space-5) var(--space-6);">
       <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.analytics.overview.stats.total_errors") %></div>
       <span class="stat-value"><%= @error_stats[:total] %></span>

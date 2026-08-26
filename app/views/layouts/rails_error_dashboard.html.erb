@@ -660,7 +660,16 @@ dd { color: var(--text-primary); }
   height: 48px; flex-shrink: 0;
   background: var(--surface-primary);
   border-bottom: 1px solid var(--border-primary);
+  /* A flex item's default min-width is auto, meaning "never shrink below my
+     content". Both navbar groups therefore kept their full intrinsic width on a
+     narrow screen and pushed the right-hand controls past the viewport — the
+     dashboard scrolled sideways at 375px in EVERY locale, English included.
+     min-width:0 lets them shrink; overflow:hidden keeps whatever still cannot
+     fit from extending the page rather than being clipped inside the bar. */
+  min-width: 0;
+  overflow: hidden;
 }
+.red-navbar > * { min-width: 0; }
 .red-search-input {
   width: 240px; padding: 5px 10px 5px 30px; font-size: 13px;
   border: 1px solid var(--border-primary); border-radius: var(--radius-sm);
@@ -720,6 +729,21 @@ dd { color: var(--text-primary); }
   .red-sidebar.collapsed { display: none; }
 }
 
+/* Stat grids
+   These were inline `grid-template-columns: repeat(N, 1fr)`, which cannot carry
+   a media query, so three or four cards stayed side by side at 375px and pushed
+   the page to 488px — it scrolled sideways on a phone in EVERY locale, English
+   worst of all. auto-fit + minmax lets the row reflow to two columns and then
+   one, and minmax's 0 floor stops a long word forcing a track wider than the
+   screen. */
+.red-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.red-stat-grid > * { min-width: 0; }
+
 /* Error detail responsive grid */
 .red-detail-grid { display: grid; grid-template-columns: 1fr 260px; gap: var(--space-4); }
 @media (max-width: 1023.98px) { .red-detail-grid { grid-template-columns: 1fr; } }
@@ -729,7 +753,13 @@ dd { color: var(--text-primary); }
   padding: 3px 10px; font-size: 11px; font-weight: 600;
   border-radius: var(--radius-full);
   text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap;
 }
+/* Below the sidebar breakpoint the navbar has to fit a menu button, search,
+   language picker, shortcuts, theme toggle and the env badge. The badge is
+   decoration — the environment is also on the overview page — so it is the
+   first thing dropped rather than letting it push the page sideways. */
+@media (max-width: 575.98px) { .red-env-badge { display: none; } }
 
 /* Kbd shortcut */
 kbd {

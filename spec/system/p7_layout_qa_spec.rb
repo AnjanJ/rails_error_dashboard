@@ -112,18 +112,16 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   # one: any excess over the English baseline is expansion, which is exactly
   # what REQ-2 and REQ-5 are about.
   #
-  # A 20px tolerance absorbs font-metric noise; real expansion overflow runs to
-  # tens or hundreds of pixels (ru's nav label alone is +13 chars), so the guard
-  # keeps its teeth.
+  # A 4px tolerance absorbs sub-pixel font metrics; real expansion overflow runs
+  # to tens or hundreds of pixels (ru's nav label alone is +13 chars).
   #
-  # It was 4px while the suite still fetched Inter and JetBrains Mono from
-  # Google. #183 blocked every external host — a system spec that waits on a CDN
-  # is a system spec that fails when the CDN is slow — so both sides of this
-  # comparison now render in the fallback face. That is still apples-to-apples
-  # (English and the translation use the same font), but the fallback is wider
-  # per character, so genuine expansion that Inter's narrow metrics absorbed now
-  # shows up: fr/overview@375 measures 448px against a 434px English baseline.
-  # 14px of that is the font, not a layout defect in the shipped dashboard.
+  # This briefly went to 20px while the navbar still overflowed: with webfonts
+  # blocked (#183) the wider fallback face pushed fr/overview@375 to 448px
+  # against a 434px English baseline. Widening the tolerance was the wrong call
+  # — the page was genuinely scrolling sideways at 375px in EVERY locale,
+  # English included, and loosening a spec to accept that ships the defect to
+  # users. The navbar is fixed instead (min-width:0 on its flex groups), so both
+  # locales now measure exactly the viewport width and 4px is honest again.
   def expect_no_worse_than_english(label, path)
     RailsErrorDashboard.configuration.dashboard_locale = "en"
     visit_dashboard(path)
@@ -135,7 +133,7 @@ RSpec.describe "P7-T2 layout QA", type: :system do
     wait_for_page_load
     translated = page.evaluate_script("document.documentElement.scrollWidth")
 
-    expect(translated).to be <= (baseline + 20),
+    expect(translated).to be <= (baseline + 4),
       "#{label}: translation widened the page beyond English " \
       "(#{translated}px vs #{baseline}px baseline) — this IS an expansion defect"
   end
