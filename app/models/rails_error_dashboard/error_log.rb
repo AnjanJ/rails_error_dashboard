@@ -61,6 +61,7 @@ module RailsErrorDashboard
     scope :by_error_type, ->(type) { where(error_type: type) }
     scope :by_type, ->(type) { where(error_type: type) }
     scope :by_platform, ->(platform) { where(platform: platform) }
+    scope :by_environment, ->(environment) { where(environment: environment) }
     scope :last_24_hours, -> { where("occurred_at >= ?", 24.hours.ago) }
     scope :last_week, -> { where("occurred_at >= ?", 1.week.ago) }
 

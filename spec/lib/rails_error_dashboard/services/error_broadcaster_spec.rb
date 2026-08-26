@@ -117,4 +117,31 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
       end
     end
   end
+
+  describe ".broadcast_new environment column" do
+    before do
+      allow(described_class).to receive(:available?).and_return(true)
+      allow(described_class).to receive(:broadcast_stats)
+      stub_const("Turbo::StreamsChannel", double("StreamsChannel", broadcast_prepend_to: true))
+    end
+
+    it "shows the environment cell only when more than one environment exists" do
+      create(:error_log, environment: "staging")
+      row = create(:error_log, environment: "production")
+
+      expect(described_class).to receive(:render_partial)
+        .with("rails_error_dashboard/errors/error_row", hash_including(show_environment: true))
+        .and_return("<tr></tr>")
+      described_class.broadcast_new(row)
+    end
+
+    it "hides the environment cell with a single environment" do
+      row = create(:error_log, environment: "production")
+
+      expect(described_class).to receive(:render_partial)
+        .with("rails_error_dashboard/errors/error_row", hash_including(show_environment: false))
+        .and_return("<tr></tr>")
+      described_class.broadcast_new(row)
+    end
+  end
 end

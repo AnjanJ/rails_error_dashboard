@@ -212,4 +212,46 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(RailsErrorDashboard::StormEvent.last.top_fingerprints_list).to be_an(Array)
     end
   end
+
+  describe "environment awareness" do
+    def capture_in(environment)
+      RailsErrorDashboard.configuration.environment = environment
+      error = StandardError.new("storm boom")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+    end
+
+    it "lands counts on the flushing process's environment, not a sibling environment's row" do
+      production = capture_in("production")
+      staging = capture_in("staging")
+      expect(production.id).not_to eq(staging.id)
+
+      RailsErrorDashboard.configuration.environment = "staging"
+      described_class.call(entries: [ entry_for(count: 5) ])
+
+      expect(staging.reload.occurrence_count).to eq(6)
+      expect(production.reload.occurrence_count).to eq(1)
+    end
+
+    it "adopts a legacy NULL-environment row and stamps it" do
+      legacy = capture_in("production")
+      legacy.update_column(:environment, nil)
+
+      RailsErrorDashboard.configuration.environment = "production"
+      described_class.call(entries: [ entry_for(count: 3) ])
+
+      expect(legacy.reload.occurrence_count).to eq(4)
+      expect(legacy.environment).to eq("production")
+      expect(RailsErrorDashboard::ErrorLog.where(message: "storm boom").count).to eq(1)
+    end
+
+    it "creates a first-seen row carrying the environment" do
+      RailsErrorDashboard.configuration.environment = "uat"
+      described_class.call(entries: [ entry_for(message: "never seen before", count: 2) ])
+
+      row = RailsErrorDashboard::ErrorLog.find_by(message: "never seen before")
+      expect(row.environment).to eq("uat")
+      expect(row.occurrence_count).to eq(2)
+    end
+  end
 end

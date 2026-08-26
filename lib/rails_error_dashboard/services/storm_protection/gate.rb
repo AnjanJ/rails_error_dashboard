@@ -232,6 +232,8 @@ module RailsErrorDashboard
           def maybe_storm_notification(state)
             return if state == :closed
             return unless RailsErrorDashboard.configuration.storm_notification
+            # A storm on staging should not page whoever is on call for production.
+            return unless RailsErrorDashboard::Services::NotificationThrottler.environment_allowed?
 
             episode = breaker.episode_snapshot
             return unless episode

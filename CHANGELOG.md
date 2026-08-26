@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.11.0 highlights — environment awareness
+
+> Detail for the `feat(environment)` entry above.
+
+Every error now records the **environment** it came from — `production`, `staging`,
+`uat`, `preprod`, whatever your deploys are called. Names are free-form, never an
+enum: the 0.9.1 advisory was caused by a check that only knew one environment name,
+and this feature is built so that a name nobody has invented yet still works.
+
+- **Index filter and chip**, a **badge** on each row and on the detail page, and an
+  **Errors by Environment** chart on Analytics — each shown only when more than one
+  environment exists, so single-environment installs look exactly as before.
+- **The same error in staging and in production is two rows**, each with its own
+  status, assignee and resolution. Fingerprints are unchanged; environment is a match
+  dimension beside the application.
+- **`config.notification_environments = %w[production]`** keeps staging out of your
+  pager. It applies to every channel — Slack, Discord, PagerDuty, email, webhooks —
+  and to storm and baseline alerts. `nil` (the default) notifies everywhere, as before.
+- **Every notification names the environment.** Email subjects become
+  `[Shop · production] NoMethodError: …`; Slack and Discord gain a field; webhook and
+  PagerDuty payloads gain an `environment` key. "Copy for LLM" and issue-tracker bodies
+  list it too.
+- **`config.environment`** overrides `Rails.env` (also `ERROR_DASHBOARD_ENVIRONMENT`)
+  for the deploy that runs under `RAILS_ENV=production` but is really staging.
+
+#### ⚠️ This release has a migration
+
+```
+rails rails_error_dashboard:install:migrations && rails db:migrate
+```
+
+The gem keeps capturing normally before the migration runs — it just does not record
+the environment until the column exists.
+
+**Errors captured before this version have no environment.** They show no badge and
+match as a wildcard: the next occurrence of such an error claims the row and stamps
+it, so live errors migrate themselves. To fill in the rest from the Ruby/Rails
+snapshot each error already carries, run
+`rails rails_error_dashboard:backfill_environments` once.
+
 ## [0.10.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.9.1...rails_error_dashboard/v0.10.0) (2026-08-25)
 
 

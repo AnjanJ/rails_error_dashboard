@@ -104,6 +104,7 @@ module RailsErrorDashboard
 
       def metadata_section
         items = []
+        items << "- **Environment:** #{@error.environment}" if @error.respond_to?(:environment) && @error.environment.present?
         items << "- **Platform:** #{@error.platform}" if @error.platform.present?
         items << "- **First seen:** #{@error.first_seen_at&.utc&.strftime("%Y-%m-%d %H:%M:%S UTC")}" if @error.first_seen_at
         items << "- **Occurrences:** #{@error.occurrence_count}" if @error.occurrence_count

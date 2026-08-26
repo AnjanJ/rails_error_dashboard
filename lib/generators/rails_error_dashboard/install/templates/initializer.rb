@@ -11,6 +11,17 @@ RailsErrorDashboard.configure do |config|
   config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
 
+  # Environment awareness (v0.11.0). Every error records the environment it
+  # came from, the index can filter by it, and staging can be kept out of
+  # your pager. Defaults to Rails.env; override when a deploy runs under
+  # RAILS_ENV=production but is really "staging", "uat", "preprod"... names
+  # are free-form, never an enum.
+  # config.environment = ENV.fetch("ERROR_DASHBOARD_ENVIRONMENT", "staging")
+  #
+  # Only notify (Slack, email, Discord, PagerDuty, webhooks, storm and
+  # baseline alerts) for these environments. nil = every environment.
+  # config.notification_environments = %w[production]
+
   # === Custom Authentication (optional) ===
   # Use your app's existing auth instead of HTTP Basic Auth.
   # The lambda runs in controller context (via instance_exec), giving access to

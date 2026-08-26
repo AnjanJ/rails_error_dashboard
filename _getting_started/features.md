@@ -104,6 +104,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 ### Search & Filtering
 - **Text search** across error messages and types
 - **Filter by platform** (iOS, Android, Web, API)
+- **Filter by environment** (production, staging, uat — whatever your deploys are called; v0.11.0)
 - **Filter by severity** (Critical, High, Medium, Low)
 - **Filter by status** (Resolved, Unresolved, All)
 - **Date range filtering** (Today, This Week, This Month, Custom)
@@ -227,11 +228,13 @@ config.enable_webhook_notifications = true
 - **Severity filter** — `config.notification_minimum_severity` skips notifications for low-priority errors
 - **Per-error cooldown** — `config.notification_cooldown_minutes` (default: 5) prevents duplicate notifications for the same error
 - **Threshold alerts** — `config.notification_threshold_alerts` (default: `[10, 50, 100, 500, 1000]`) sends milestone notifications when errors hit occurrence thresholds
+- **Environment allowlist** — `config.notification_environments` (default: `nil` = all) keeps staging out of your pager; applies to every channel plus storm and baseline alerts (v0.11.0)
 
 ```ruby
 config.notification_minimum_severity = :medium  # Skip :low severity
 config.notification_cooldown_minutes = 10       # 10-minute cooldown per error
 config.notification_threshold_alerts = [10, 50, 100, 500, 1000]  # Milestone alerts
+config.notification_environments = %w[production]  # Staging never pages
 ```
 
 ### Notification Callbacks

@@ -268,4 +268,26 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
       end
     end
   end
+
+  describe "environment filter" do
+    let!(:staging) { create(:error_log, environment: "staging") }
+    let!(:production) { create(:error_log, environment: "production") }
+
+    it "filters to the given environment" do
+      result = described_class.call(environment: "staging")
+      expect(result).to include(staging)
+      expect(result).not_to include(production)
+    end
+
+    it "ignores a blank environment" do
+      expect(described_class.call(environment: "")).to include(staging, production)
+    end
+
+    it "ignores the filter when the column is not migrated yet" do
+      without = RailsErrorDashboard::ErrorLog.column_names - [ "environment" ]
+      allow(RailsErrorDashboard::ErrorLog).to receive(:column_names).and_return(without)
+
+      expect(described_class.call(environment: "staging")).to include(staging, production)
+    end
+  end
 end

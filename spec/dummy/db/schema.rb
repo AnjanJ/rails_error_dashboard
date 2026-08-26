@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_30_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_26_000001) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -119,6 +119,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_000001) do
     t.text "user_agent"
     t.string "ip_address"
     t.string "platform"
+    t.string "environment", limit: 64
     t.boolean "resolved", null: false
     t.text "resolution_comment"
     t.string "resolution_reference"
@@ -178,6 +179,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_000001) do
     t.index [ "occurred_at" ], name: "index_rails_error_dashboard_error_logs_on_occurred_at"
     t.index [ "occurrence_count" ], name: "index_rails_error_dashboard_error_logs_on_occurrence_count"
     t.index [ "platform", "occurred_at" ], name: "index_error_logs_on_platform_and_occurred_at"
+    t.index [ "environment", "occurred_at" ], name: "index_error_logs_on_environment_and_occurred_at"
     t.index [ "platform" ], name: "index_rails_error_dashboard_error_logs_on_platform"
     t.index [ "priority_score" ], name: "index_rails_error_dashboard_error_logs_on_priority_score"
     t.index [ "resolved", "occurred_at" ], name: "index_error_logs_on_resolved_and_occurred_at"

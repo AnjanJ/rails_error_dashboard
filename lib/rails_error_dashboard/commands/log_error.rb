@@ -290,6 +290,12 @@ module RailsErrorDashboard
           attributes[:environment_info] = Services::EnvironmentSnapshot.snapshot.to_json
         end
 
+        # Environment awareness (if column exists). context wins so a sender
+        # elsewhere can attribute an event to its own environment.
+        if ErrorLog.column_names.include?("environment")
+          attributes[:environment] = resolve_environment
+        end
+
         # Apply sensitive data filtering (on by default)
         attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
 
@@ -424,10 +430,20 @@ module RailsErrorDashboard
       def maybe_notify(error_log)
         return if error_log.muted?
         return if Services::StormProtection::Gate.notifications_suppressed?
+        return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless yield
 
         Services::ErrorNotificationDispatcher.call(error_log)
         Services::NotificationThrottler.record_notification(error_log)
+      end
+
+      # The environment this error is attributed to: an explicit context value
+      # (truncated to the column) or the process-wide resolution. Never nil.
+      def resolve_environment
+        name = @context[:environment].to_s.strip
+        return name[0, 64] unless name.empty?
+
+        RailsErrorDashboard.configuration.current_environment
       end
 
       # Find or create application for multi-app support
@@ -492,6 +508,7 @@ module RailsErrorDashboard
         # Return early if baseline alerts are disabled or error is muted
         return unless config.enable_baseline_alerts
         return if error_log.muted?
+        return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless defined?(Queries::BaselineStats)
         return unless defined?(BaselineAlertJob)
 

@@ -144,6 +144,7 @@ de:
             any: Beliebiger Schweregrad
           all_apps: Alle Anwendungen
           all_platforms: Alle Plattformen
+          all_environments: Alle Umgebungen
           all_types: Alle Typen
           all_timeframes: Gesamter Zeitraum
           all_frequencies: Alle Häufigkeiten
@@ -172,6 +173,7 @@ de:
             search: 'Suche: %{value}'
             application: 'Anwendung: %{value}'
             platform: 'Plattform: %{value}'
+            environment: 'Umgebung: %{value}'
             error_type: 'Typ: %{value}'
             severity: 'Schweregrad: %{value}'
             timeframe: 'Zeitraum: %{value}'
@@ -187,6 +189,7 @@ de:
           last_seen: Zuletzt gesehen
           application: Anwendung
           platform: Plattform
+          environment: Umgebung
           select_all: Alle Fehler auswählen
         batch:
           selected:
@@ -625,6 +628,7 @@ de:
           low: NIEDRIG
         platform: Plattform
         view_all_platform: Alle %{platform}-Fehler ansehen
+        view_all_environment: Alle Fehler aus %{environment} ansehen
         user: Benutzer
         view_user_errors: Alle Fehler dieses Benutzers ansehen
         user_id: 'ID: %{id}'
@@ -841,8 +845,9 @@ de:
         column_ips: IPs
         column_top_path: Häufigster Pfad
         column_top_agent: Häufigster Agent
-        overflow_notice_html: >-
-          %{count} Ereignisse konnten keiner Regel zugeordnet werden, da der Puffer des Trackers voll war. Erhöhen Sie %{option}, um mehr zu erfassen.
+        overflow_notice_html: "%{count} Ereignisse konnten keiner Regel zugeordnet
+          werden, da der Puffer des Trackers voll war. Erhöhen Sie %{option}, um mehr
+          zu erfassen."
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1070,6 +1075,10 @@ de:
         sampling_rate: Anteil der erfassten Fehler
         application_name: Name dieser Anwendung (wird automatisch erkannt, wenn nicht
           gesetzt)
+        environment: Umgebung, der Fehler zugeordnet werden (Rails.env, falls nicht
+          gesetzt)
+        notification_environments: Nur für diese Umgebungen benachrichtigen (alle,
+          falls nicht gesetzt)
         database: Aktive Datenbank für Fehlerprotokolle
         use_separate_database: Eigene Datenbank für Fehlerprotokolle verwenden
         user_model: Modellname für Benutzerzuordnungen (wird automatisch erkannt,
@@ -1237,11 +1246,14 @@ de:
         unknown_application: Unbekannt
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 Fehlermeldung"
         labels:
           application: Anwendung
           error_type: Fehlertyp
           platform: Plattform
+          environment: Umgebung
           occurred_at: Aufgetreten am
           user_id: Benutzer-ID
           ip_address: IP-Adresse
@@ -1307,6 +1319,7 @@ de:
           application: Anwendung
           error_type: Fehlertyp
           platform: Plattform
+          environment: Umgebung
           occurred: Aufgetreten
           message: Meldung
           user: Benutzer
@@ -1641,6 +1654,10 @@ de:
         platform_chart:
           title: Fehler nach Plattform
           quick_links: 'Schnellzugriff:'
+        environment_chart:
+          title: Fehler nach Umgebung
+          quick_links: 'Schnellzugriff:'
+          unknown: Unbekannt
         type_chart:
           title: Top 10 Fehlertypen
         hour_chart:

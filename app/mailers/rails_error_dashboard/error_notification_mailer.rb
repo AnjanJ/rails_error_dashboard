@@ -20,12 +20,19 @@ module RailsErrorDashboard
     # The subject is assembled from a key rather than interpolated inline, so a
     # locale can reorder or drop the emoji. error_type and message are verbatim
     # error content and are never translated.
+    #
+    # An error that carries an environment uses subject_with_environment; a
+    # legacy row keeps the pre-0.11 subject so existing mail filters still match.
     def subject_for(error_log, locale)
+      environment = error_log.respond_to?(:environment) ? error_log.environment : nil
+      key = environment.present? ? "red.mailers.error_alert.subject_with_environment" : "red.mailers.error_alert.subject"
+
       I18nStore.translate(
-        "red.mailers.error_alert.subject",
+        key,
         locale: locale,
         application: error_log.application&.name ||
           I18nStore.translate("red.mailers.shared.unknown_application", locale: locale),
+        environment: environment,
         error_type: error_log.error_type,
         message: truncate_subject(error_log.message)
       )

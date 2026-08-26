@@ -147,6 +147,7 @@ ru:
             any: Любая важность
           all_apps: Все приложения
           all_platforms: Все платформы
+          all_environments: Все окружения
           all_types: Все типы
           all_timeframes: За всё время
           all_frequencies: Любая частота
@@ -175,6 +176,7 @@ ru:
             search: 'Поиск: %{value}'
             application: 'Приложение: %{value}'
             platform: 'Платформа: %{value}'
+            environment: 'Окружение: %{value}'
             error_type: 'Тип: %{value}'
             severity: 'Важность: %{value}'
             timeframe: 'Период: %{value}'
@@ -190,6 +192,7 @@ ru:
           last_seen: Последнее появление
           application: Приложение
           platform: Платформа
+          environment: Окружение
           select_all: Выбрать все ошибки
         batch:
           selected:
@@ -659,6 +662,7 @@ ru:
           low: НИЗКАЯ
         platform: Платформа
         view_all_platform: 'Все ошибки: %{platform}'
+        view_all_environment: 'Все ошибки: %{environment}'
         user: Пользователь
         view_user_errors: Все ошибки этого пользователя
         user_id: 'ID: %{id}'
@@ -879,8 +883,9 @@ ru:
         column_ips: IP-адреса
         column_top_path: Частый путь
         column_top_agent: Основной агент
-        overflow_notice_html: >-
-          Не удалось отнести %{count} событий ни к одному правилу, так как буфер трекера был заполнен. Увеличьте %{option}, чтобы записывать больше.
+        overflow_notice_html: Не удалось отнести %{count} событий ни к одному правилу,
+          так как буфер трекера был заполнен. Увеличьте %{option}, чтобы записывать
+          больше.
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -1136,6 +1141,9 @@ ru:
         sampling_rate: Доля захватываемых ошибок
         application_name: Имя этого приложения (определяется автоматически, если не
           задано)
+        environment: Окружение, к которому относятся ошибки (Rails.env, если не задано)
+        notification_environments: Уведомлять только для этих окружений (все, если
+          не задано)
         database: Активная база данных для журнала ошибок
         use_separate_database: Использовать отдельную БД для журнала ошибок
         user_model: Имя модели для связи с пользователями (определяется автоматически,
@@ -1309,11 +1317,14 @@ ru:
         unknown_application: Неизвестно
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}: %{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}:
+          %{message}"
         heading: "\U0001F6A8 Оповещение об ошибке"
         labels:
           application: Приложение
           error_type: Тип ошибки
           platform: Платформа
+          environment: Окружение
           occurred_at: Время возникновения
           user_id: ID пользователя
           ip_address: IP-адрес
@@ -1385,6 +1396,7 @@ ru:
           application: Приложение
           error_type: Тип ошибки
           platform: Платформа
+          environment: Окружение
           occurred: Возникла
           message: Сообщение
           user: Пользователь
@@ -1715,6 +1727,10 @@ ru:
         platform_chart:
           title: Ошибки по платформам
           quick_links: 'Быстрые ссылки:'
+        environment_chart:
+          title: Ошибки по окружениям
+          quick_links: 'Быстрые ссылки:'
+          unknown: Неизвестно
         type_chart:
           title: Топ-10 типов ошибок
         hour_chart:

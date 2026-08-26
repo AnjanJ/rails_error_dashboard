@@ -29,6 +29,29 @@ module RailsErrorDashboard
           true
         end
 
+        # Does this error's environment pass config.notification_environments?
+        #
+        # nil list → everything notifies (the pre-0.11 behaviour). Accepts an
+        # ErrorLog, a bare environment name, or nothing (the process
+        # environment) — the storm and baseline paths have no row to hand over.
+        # A legacy row with a NULL environment is judged as the process
+        # environment, so upgrading never silences an error that was notifying
+        # before. Fails open: an allowlist bug must not lose a page.
+        #
+        # @param subject [ErrorLog, String, nil]
+        # @return [Boolean]
+        def environment_allowed?(subject = nil)
+          allowed = RailsErrorDashboard.configuration.notification_environments
+          return true if allowed.nil?
+
+          name = subject.respond_to?(:environment) ? subject.environment : subject
+          name = RailsErrorDashboard.configuration.current_environment if name.blank?
+          allowed.include?(name.to_s)
+        rescue => e
+          RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] NotificationThrottler.environment_allowed? failed: #{e.message}")
+          true
+        end
+
         # Does the error's severity meet the configured minimum?
         # @param error_log [ErrorLog] The error to check
         # @return [Boolean] true if severity is at or above minimum

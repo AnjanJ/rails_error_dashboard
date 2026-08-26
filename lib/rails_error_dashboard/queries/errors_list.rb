@@ -28,6 +28,7 @@ module RailsErrorDashboard
         query = filter_by_error_type(query)
         query = filter_by_resolved(query)
         query = filter_by_platform(query)
+        query = filter_by_environment(query)
         query = filter_by_application(query)
         query = filter_by_user_id(query)
         query = filter_by_app_version(query)
@@ -90,6 +91,13 @@ module RailsErrorDashboard
         return query unless @filters[:platform].present?
 
         query.where(platform: @filters[:platform])
+      end
+
+      def filter_by_environment(query)
+        return query unless @filters[:environment].present?
+        return query unless ErrorLog.column_names.include?("environment")
+
+        query.where(environment: @filters[:environment])
       end
 
       def filter_by_application(query)

@@ -645,4 +645,16 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
       end
     end
   end
+
+  describe "environment in metadata" do
+    it "lists the environment when present" do
+      error = create(:error_log, environment: "staging")
+      expect(described_class.call(error, related_errors: [])).to include("**Environment:** staging")
+    end
+
+    it "omits it for a legacy row" do
+      error = create(:error_log, environment: nil)
+      expect(described_class.call(error, related_errors: [])).not_to include("**Environment:**")
+    end
+  end
 end

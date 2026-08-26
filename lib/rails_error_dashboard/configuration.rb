@@ -14,6 +14,12 @@ module RailsErrorDashboard
     attr_accessor :application_name
     attr_accessor :database  # Database connection name for shared error dashboard DB
 
+    # Environment awareness. Errors record which environment they came from
+    # (production, staging, uat, ...). Names are free-form strings, never an
+    # enum -- teams invent environment names, and a fixed list is wrong tomorrow.
+    attr_accessor :environment                # Overrides Rails.env for captured errors (ENV: ERROR_DASHBOARD_ENVIRONMENT)
+    attr_accessor :notification_environments  # Only notify for these environments; nil = all (ENV: ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS)
+
     # Notifications
     attr_accessor :slack_webhook_url
     attr_accessor :notification_email_recipients
@@ -261,6 +267,10 @@ module RailsErrorDashboard
       # Multi-app support defaults
       @application_name = ENV["APPLICATION_NAME"]  # Auto-detected if not set
       @database = nil  # Use primary database by default
+
+      # Environment awareness defaults: attribute to Rails.env unless overridden
+      @environment = ENV["ERROR_DASHBOARD_ENVIRONMENT"].to_s.strip.then { |v| v.empty? ? nil : v }
+      @notification_environments = parse_name_list(ENV["ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS"])
 
       # Notification settings (disabled by default - enable during installation or in initializer)
       @slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
@@ -792,6 +802,26 @@ module RailsErrorDashboard
         errors << "total_users_for_impact must be at least 1 (got: #{total_users_for_impact})"
       end
 
+      # Validate environment (free-form, but it has to fit the 64-char column)
+      unless environment.nil?
+        if !environment.is_a?(String) || environment.strip.empty?
+          errors << "environment must not be blank (got: #{environment.inspect}); leave it nil to use Rails.env"
+        elsif environment.length > 64
+          errors << "environment must be 64 characters or fewer (got #{environment.length})"
+        end
+      end
+
+      # Validate notification_environments (nil = notify everywhere; otherwise names only)
+      unless notification_environments.nil?
+        valid_list = notification_environments.is_a?(Array) &&
+                     notification_environments.any? &&
+                     notification_environments.all? { |name| name.is_a?(String) && !name.strip.empty? }
+        unless valid_list
+          errors << "notification_environments must be nil or a non-empty Array of environment names " \
+                    "(got: #{notification_environments.inspect})"
+        end
+      end
+
       # Validate notification_minimum_severity (must be valid symbol)
       if notification_minimum_severity
         valid_notification_severities = %i[critical high medium low]
@@ -820,6 +850,28 @@ module RailsErrorDashboard
       raise ConfigurationError, errors if errors.any?
 
       true
+    end
+
+    # The environment this process attributes captured errors to.
+    #
+    # Explicit option first, then Rails.env. Never nil and never raises: an
+    # error must still be captured when the environment cannot be named.
+    #
+    # @return [String]
+    def current_environment
+      name = environment.to_s.strip
+      return name unless name.empty?
+
+      rails_env = defined?(Rails) && Rails.respond_to?(:env) ? Rails.env.to_s.strip : ""
+      rails_env.empty? ? "unknown" : rails_env
+    rescue StandardError
+      "unknown"
+    end
+
+    # "production, uat" -> ["production", "uat"]; blank or all-blank -> nil.
+    def parse_name_list(raw)
+      list = raw.to_s.split(",").map(&:strip).reject(&:empty?)
+      list.empty? ? nil : list
     end
 
     # Check if using default or blank demo credentials with basic auth

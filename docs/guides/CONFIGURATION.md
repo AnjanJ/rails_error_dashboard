@@ -51,6 +51,7 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `application_name` | String | Auto-detected | Application identifier (ENV: `APPLICATION_NAME`) |
+| `environment` | String | `Rails.env` | Environment errors are attributed to — `production`, `staging`, `uat`, any name (ENV: `ERROR_DASHBOARD_ENVIRONMENT`) |
 | `database` | Symbol/String | `nil` | Database connection name (nil = primary database) |
 | `use_separate_database` | Boolean | `false` | Use separate database for errors (ENV: `USE_SEPARATE_ERROR_DB`) |
 
@@ -103,6 +104,12 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `enable_webhook_notifications` | Boolean | `false` | Enable custom webhooks |
 | `webhook_urls` | Array | `[]` | Custom webhook URLs (ENV: `WEBHOOK_URLS`, comma-separated) |
+
+### Notifications - Environment Filter (v0.11.0)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `notification_environments` | Array | `nil` (all) | Only notify for these environments; applies to every channel plus storm and baseline alerts (ENV: `ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS`, comma-separated) |
 
 ### Core Features
 
@@ -302,6 +309,8 @@ ERROR_DASHBOARD_PASSWORD=secure_password
 
 # Multi-App
 APPLICATION_NAME=my-api
+ERROR_DASHBOARD_ENVIRONMENT=staging                 # Defaults to Rails.env
+ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS=production  # Comma-separated; unset = notify everywhere
 
 # Database
 USE_SEPARATE_ERROR_DB=true  # "true" or "false"

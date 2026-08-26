@@ -372,7 +372,7 @@ config.llm_model = "gpt-5"
 <details>
 <summary><strong>Notifications — Slack, Discord, PagerDuty, Email, Webhooks</strong></summary>
 
-Multi-channel alerting with severity filters, per-error cooldown, and milestone threshold alerts to prevent alert fatigue.
+Multi-channel alerting with severity filters, per-error cooldown, milestone threshold alerts, and a per-environment allowlist (`config.notification_environments = %w[production]`) so a staging deploy never pages anyone.
 
 ```ruby
 config.enable_slack_notifications = true
@@ -380,6 +380,19 @@ config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 ```
 
 [Notification setup guide →](docs/guides/NOTIFICATIONS.md)
+</details>
+
+<details>
+<summary><strong>Environment Awareness — Filter, Badge, Notify per Environment</strong></summary>
+
+Every error records the environment it came from — `production`, `staging`, `uat`, `preprod`, any name your deploys use. The errors index filters by it, rows and the detail page carry a badge, the analytics page breaks errors down by environment, and every notification names it. The same error in staging and production is two rows with independent status, so resolving one never hides the other.
+
+```ruby
+config.environment = ENV.fetch("ERROR_DASHBOARD_ENVIRONMENT", Rails.env)  # free-form, defaults to Rails.env
+config.notification_environments = %w[production]                         # nil = notify everywhere
+```
+
+Errors captured before v0.11.0 show no badge until they recur (the next occurrence claims the row) or you run `rails rails_error_dashboard:backfill_environments`.
 </details>
 
 <details>

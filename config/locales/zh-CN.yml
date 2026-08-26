@@ -137,6 +137,7 @@ zh-CN:
             any: 任意严重程度
           all_apps: 全部应用
           all_platforms: 全部平台
+          all_environments: 全部环境
           all_types: 全部类型
           all_timeframes: 全部时间
           all_frequencies: 全部频率
@@ -165,6 +166,7 @@ zh-CN:
             search: 搜索：%{value}
             application: 应用：%{value}
             platform: 平台：%{value}
+            environment: 环境：%{value}
             error_type: 类型：%{value}
             severity: 严重程度：%{value}
             timeframe: 时间范围：%{value}
@@ -180,6 +182,7 @@ zh-CN:
           last_seen: 最近出现
           application: 应用
           platform: 平台
+          environment: 环境
           select_all: 选择全部错误
         batch:
           selected:
@@ -566,6 +569,7 @@ zh-CN:
           low: 低
         platform: 平台
         view_all_platform: 查看 %{platform} 的所有错误
+        view_all_environment: 查看 %{environment} 的所有错误
         user: 用户
         view_user_errors: 查看该用户的所有错误
         user_id: ID：%{id}
@@ -759,8 +763,7 @@ zh-CN:
         column_ips: IP 地址
         column_top_path: 主要路径
         column_top_agent: 主要代理
-        overflow_notice_html: >-
-          由于跟踪器缓冲区已满，%{count} 个事件无法归属到任何规则。请调高 %{option} 以捕获更多事件。
+        overflow_notice_html: 由于跟踪器缓冲区已满，%{count} 个事件无法归属到任何规则。请调高 %{option} 以捕获更多事件。
         match_type:
           blocklist: blocklist
           throttle: throttle
@@ -950,6 +953,8 @@ zh-CN:
         max_backtrace_lines: 堆栈跟踪深度上限
         sampling_rate: 错误捕获的采样比例
         application_name: 本应用的名称（未设置时自动检测）
+        environment: 错误所属的环境（未设置时为 Rails.env）
+        notification_environments: 仅对这些环境发送通知（未设置时为全部）
         database: 错误日志使用的数据库
         use_separate_database: 为错误日志使用独立数据库
         user_model: 用户关联所用的模型名（未设置时自动检测）
@@ -1087,11 +1092,13 @@ zh-CN:
         unknown_application: 未知
       error_alert:
         subject: "\U0001F6A8 [%{application}] %{error_type}：%{message}"
+        subject_with_environment: "\U0001F6A8 [%{application} · %{environment}] %{error_type}：%{message}"
         heading: "\U0001F6A8 错误告警"
         labels:
           application: 应用
           error_type: 错误类型
           platform: 平台
+          environment: 环境
           occurred_at: 发生时间
           user_id: 用户 ID
           ip_address: IP 地址
@@ -1154,6 +1161,7 @@ zh-CN:
           application: 应用
           error_type: 错误类型
           platform: 平台
+          environment: 环境
           occurred: 发生时间
           message: 消息
           user: 用户
@@ -1452,6 +1460,10 @@ zh-CN:
         platform_chart:
           title: 按平台统计错误
           quick_links: 快捷链接：
+        environment_chart:
+          title: 按环境统计的错误
+          quick_links: 快捷链接：
+          unknown: 未知
         type_chart:
           title: 出现最多的 10 种错误类型
         hour_chart:
@@ -1791,6 +1803,6 @@ zh-CN:
         axis_count: 数量
         axis_number_of_errors: 错误数量
         axis_hours: 小时
-        suffix_hours: "小时"
+        suffix_hours: 小时
         series_total_errors: 错误总数
         series_hours_to_resolve: 解决耗时（小时）

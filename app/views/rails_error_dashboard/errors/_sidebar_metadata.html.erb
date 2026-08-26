@@ -70,6 +70,15 @@
             <% end %>
           </div>
 
+          <% if error.respond_to?(:environment) && error.environment.present? %>
+            <div class="mb-3">
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.environment") %></small>
+              <%= link_to errors_path(environment: error.environment, unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.sidebar.view_all_environment", environment: error.environment) do %>
+                <span class="badge badge-api" data-environment-badge="<%= error.environment %>"><i class="bi bi-hdd-stack"></i> <%= error.environment %></span>
+              <% end %>
+            </div>
+          <% end %>
+
           <div class="mb-3">
             <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.user") %></small>
             <% if error.respond_to?(:user) && error.user %>
