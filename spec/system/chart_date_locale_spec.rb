@@ -24,6 +24,10 @@ RSpec.describe "Chart date axes follow the dashboard locale", type: :system do
     example.run
   ensure
     RailsErrorDashboard.configuration.dashboard_locale = original
+    # Current is request-scoped but survives between examples in the test
+    # process. Leaving a locale set here made js_date_localization's
+    # `.local-time` assertions skip when this file happened to run first.
+    RailsErrorDashboard::Current.locale = nil
   end
 
   # The adapter is what turns a timestamp into an axis label. Asking it
