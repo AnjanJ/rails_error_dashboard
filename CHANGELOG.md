@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.10.0...rails_error_dashboard/v0.11.0) (2026-08-26)
+
+
+### ✨ Features
+
+* **environment:** record, filter, badge and notify per environment ([#187](https://github.com/AnjanJ/rails_error_dashboard/issues/187)) ([23b6822](https://github.com/AnjanJ/rails_error_dashboard/commit/23b682253489117dbe01eaee4fcde0d9ef051be1))
+
+
+### 🐛 Bug Fixes
+
+* **ui:** stop the dashboard scrolling sideways on a phone; system specs go offline ([#184](https://github.com/AnjanJ/rails_error_dashboard/issues/184)) ([8e51278](https://github.com/AnjanJ/rails_error_dashboard/commit/8e51278d04fa3e4d5a77d14c16f9d25a9738d4cf))
+
 ### 0.11.0 highlights — environment awareness
 
 > Detail for the `feat(environment)` entry above.
