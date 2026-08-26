@@ -23,7 +23,7 @@ gem 'rails_error_dashboard'
 
 **[rails-error-dashboard.anjan.dev](https://rails-error-dashboard.anjan.dev)** — Username: `gandalf` · Password: `youshallnotpass`
 
-> **Beta Software** — Functional and tested (2,700+ tests passing), but the API may change before v1.0. Supports Rails 7.0-8.1 and Ruby 3.2-4.0.
+> **Beta Software** — Functional and tested (4,200+ tests passing), but the API may change before v1.0. Supports Rails 7.0-8.1 and Ruby 3.2-4.0.
 
 ### Screenshots
 
@@ -709,7 +709,7 @@ Built with **CQRS (Command/Query Responsibility Segregation)**:
 
 ## Testing
 
-2,600+ tests covering unit, integration, and browser-based system tests.
+4,200+ tests covering unit, integration, and browser-based system tests.
 
 ```bash
 bundle exec rspec                              # Full suite

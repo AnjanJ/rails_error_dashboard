@@ -1160,7 +1160,7 @@ config.enable_source_code_integration = true # Source code viewer (NEW!)
 config.enable_git_blame = true               # Git blame integration (NEW!)
 ```
 
-*All code is complete and tested (2,600+ tests passing). These advanced features provide powerful insights for production debugging.*
+*All code is complete and tested (4,200+ tests passing). These advanced features provide powerful insights for production debugging.*
 
 ### Fuzzy Error Matching
 - **Find similar errors** even with different error hashes
