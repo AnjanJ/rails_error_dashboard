@@ -6,29 +6,46 @@ Gem::Specification.new do |spec|
   spec.authors     = [ "Anjan Jagirdar" ]
   spec.email       = [ "anjan.jagirdar@gmail.com" ]
   spec.homepage    = "https://AnjanJ.github.io/rails_error_dashboard"
-spec.summary     = "Rails-native, self-hosted error monitoring with exception-time Ruby state, " \
+  spec.summary     = "Rails-native, self-hosted error monitoring with exception-time Ruby state, " \
                    "runtime health, and storm-safe capture."
-spec.description = "Rails Error Dashboard (RED) is an open-source, self-hosted Rails engine for " \
-                   "investigating production exceptions without sending error data to a monitoring " \
-                   "vendor. It groups errors and records request context and cause chains and, when " \
-                   "enabled, breadcrumbs plus local and instance variables captured before Ruby " \
-                   "unwinds the stack. " \
-                   "RED attaches Rails and Ruby runtime health to the error record on every captured " \
-                   "occurrence, including Active Record pool, Puma, background jobs, GC, memory, " \
-                   "threads, file descriptors and system pressure. Built-in storm protection " \
-                   "progressively sheds expensive context and I/O during error floods while " \
-                   "retaining useful exemplars and exact occurrence counts. " \
-                   "Run RED with your application's database or an isolated error database. It " \
-                   "supports PostgreSQL, MySQL/Trilogy and SQLite, and includes workflow, " \
-                   "notifications (Slack, Email, Discord, PagerDuty, webhooks), two-way issue sync " \
-                   "with GitHub, GitLab, Codeberg and Linear, Copy as RSpec/curl/LLM, " \
-                   "swallowed-exception detection, LLM observability without prompt capture, " \
-                   "OpenTelemetry span export and Rails-specific operational views. The dashboard " \
-                   "is translated into 11 languages (machine-translated outside English, awaiting " \
-                   "native review). A self-hosted Sentry alternative that keeps error data in your " \
-                   "own database. The gem is MIT and free forever. Supports Rails 7.0-8.1 and " \
-                   "Ruby 3.2-4.0. Beta: APIs may change before 1.0. " \
-                   "Live demo: https://rails-error-dashboard.anjan.dev"
+  # RDoc: rubygems.org renders a description that contains a "== Heading" line
+  # as RDoc (headings, paragraphs, bullet lists); anything else collapses into
+  # a single unbroken paragraph.
+  spec.description = <<~DESC
+  == Rails-native failure investigation
+
+  Rails Error Dashboard (RED) is an open-source, self-hosted Rails engine for
+  investigating production exceptions without sending error data to a
+  monitoring vendor. It groups errors and records request context and cause
+  chains and, when enabled, breadcrumbs plus local and instance variables
+  captured before Ruby unwinds the stack.
+
+  == What it records
+
+  * Rails and Ruby runtime health on the error record, refreshed on every
+    captured occurrence: Active Record pool, Puma, background jobs, GC,
+    memory, threads, file descriptors and system pressure
+  * Built-in storm protection that progressively sheds expensive context and
+    I/O during error floods while retaining useful exemplars and exact
+    occurrence counts
+  * Copy as RSpec, curl or LLM prompt; swallowed-exception detection; LLM
+    observability without prompt capture; OpenTelemetry span export
+  * Workflow, notifications (Slack, Email, Discord, PagerDuty, webhooks) and
+    two-way issue sync with GitHub, GitLab, Codeberg and Linear
+  * Rails-specific operational views: jobs, database, cache, Action Cable,
+    Active Storage, Rack::Attack and deprecations
+
+  == Running it
+
+  Run RED with your application's database or an isolated error database, on
+  PostgreSQL, MySQL/Trilogy or SQLite. The dashboard is translated into 11
+  languages (machine-translated outside English, awaiting native review). A
+  self-hosted Sentry alternative that keeps error data in your own database.
+  The gem is MIT and free forever.
+
+  Supports Rails 7.0-8.1 and Ruby 3.2-4.0. Beta: APIs may change before 1.0.
+  Live demo: https://rails-error-dashboard.anjan.dev
+  DESC
   spec.license     = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
