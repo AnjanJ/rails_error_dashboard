@@ -205,7 +205,7 @@ Six independent passes on 2026-08-27:
 | **Overhead figure not reproducible** | — | README's 2.4 µs / 2.95 µs / 0.2 µs exists nowhere in `lib/`, `spec/`, `bin/` or CHANGELOG; only a "Benchmarked." comment in `gate.rb:21`. Add a benchmark script or label it as a single-machine maintainer measurement. |
 | **No health-check endpoint, no JSON API** | GlitchTip/Bugsink/Telebugs have APIs; ROADMAP 14 open, JSON API iceboxed. | Both come up in procurement questionnaires. |
 | **No lazy backtrace via `Thread.each_caller_location`** | Sentry ships it; Rails core uses it. | ROADMAP Y is not implemented (0 hits). Don't market. |
-| **Runtime snapshot is first-occurrence only** | Datadog runtime metrics are continuous. | `FindOrIncrementError#increment_existing` refreshes count/last_seen/user/request only; `system_health`, variables and breadcrumbs stay from the row's creation and `error_occurrences` holds no context. Say "captured when the error is first seen", never "each occurrence" (ROADMAP C2). |
+| **Runtime snapshot was first-occurrence only — FIXED on `fix/refresh-context-on-recurrence` (ROADMAP C2)** | Datadog runtime metrics are continuous. | Until that lands, `FindOrIncrementError#increment_existing` refreshed count/last_seen/user/request only; now `system_health`, variables, breadcrumbs and HTTP context are overwritten on every captured occurrence (storm-shed captures leave the previous payload). Per-occurrence history is still not stored — say "refreshed on every captured occurrence", not "history of every occurrence". |
 
 ---
 

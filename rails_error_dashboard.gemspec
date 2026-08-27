@@ -13,8 +13,8 @@ spec.description = "Rails Error Dashboard (RED) is an open-source, self-hosted R
                    "vendor. It groups errors and records request context and cause chains and, when " \
                    "enabled, breadcrumbs plus local and instance variables captured before Ruby " \
                    "unwinds the stack. " \
-                   "RED can attach Rails and Ruby runtime health to the error record when an error " \
-                   "is first seen, including Active Record pool, Puma, background jobs, GC, memory, " \
+                   "RED attaches Rails and Ruby runtime health to the error record on every captured " \
+                   "occurrence, including Active Record pool, Puma, background jobs, GC, memory, " \
                    "threads, file descriptors and system pressure. Built-in storm protection " \
                    "progressively sheds expensive context and I/O during error floods while " \
                    "retaining useful exemplars and exact occurrence counts. " \

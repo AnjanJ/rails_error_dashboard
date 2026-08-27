@@ -58,7 +58,7 @@ Optionally capture local variables and — something no other error tracker does
 
 ### Failure-time Rails health
 
-Attach connection-pool, Puma, background-job, GC, memory, file-descriptor, TCP, RubyVM and YJIT state to the error record when the error is first seen — not merely to a separate periodic metrics chart. Every APM has these as time-series; none attaches them to the error. Opt-in; the procfs-backed fields are Linux-only.
+Attach connection-pool, Puma, background-job, GC, memory, file-descriptor, TCP, RubyVM and YJIT state to the error record, refreshed on every captured occurrence — not merely to a separate periodic metrics chart. Every APM has these as time-series; none attaches them to the error. Opt-in; the procfs-backed fields are Linux-only.
 
 ### Monitoring that degrades safely
 

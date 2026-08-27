@@ -109,11 +109,19 @@ These features depend on running inside the process. Not all of them are unique 
 - **Impact:** Differentiation ++ (unique: stored on the error, not a graph beside it)
 - **Implemented:** Sub-millisecond capture, every metric individually rescue-wrapped, no ObjectSpace, no Thread backtraces, no subprocess. Displays GC stats, process memory, thread count, connection pool, and Puma stats on error detail page
 
-### C2. Refresh or version the runtime snapshot on recurrence — OPEN
+### C2. Refresh or version the runtime snapshot on recurrence — DONE (unreleased)
 - **What:** `FindOrIncrementError#increment_existing` (and `reopen_existing`) update only `occurrence_count`, `last_seen_at`, user/request fields and environment. `system_health`, local/instance variables and breadcrumbs are written once, when the grouped error row is created, and `error_occurrences` stores only user/request/session ids. For a 21-occurrence error the health snapshot is from occurrence #1
 - **Why:** The headline claim is "the state of the process at the moment of failure"; today that is true only for the first failure in a 24 h dedup window. Either overwrite the snapshot on each recurrence (cheap, keeps the row small, loses history) or persist it per occurrence (honest version of the claim, needs a column on `error_occurrences` and a UI to browse them)
 - **Effort:** Half a day (overwrite) / 2 days (per-occurrence + UI)
 - **Impact:** Credibility +++ — found 2026-08-27 while verifying README copy
+- **Implemented:** the overwrite option. `FindOrIncrementError::REFRESHED_CONTEXT` (breadcrumbs, system_health, local/instance variables, http_method, hostname, content_type, request_duration_ms) is copied onto the row on every increment, reopen and race-retry; keys the occurrence did not capture (storm :lite, feature off, column missing) leave the stored payload untouched, and app_version/git_sha/occurred_at are never refreshed because release tracking depends on first-seen. Per-occurrence history remains a follow-up
+
+### C3. Per-occurrence context history — PLANNED (v0.12)
+- **What:** Keep the moment-of-failure context for the last N occurrences of an error, not only the latest (C2). A 1:1 side table `rails_error_dashboard_error_occurrence_contexts` (`error_occurrence_id`, `payload`, `created_at`) written after the `ErrorOccurrence` insert whenever `FindOrIncrementError#latest_context` is non-empty; trimmed to `config.occurrence_context_limit` (default 25, matching the calm-weather sampling threshold) per error; retention cascades through the existing occurrence cleanup. The History tab links each occurrence that has a context row to `?occurrence=ID`, and the detail page renders the existing system-health, breadcrumb and variable cards from that payload instead of the row's latest
+- **Why:** C2 makes the error row show the *latest* failure; this is the honest long form of "the state of the process at the moment of failure" — every captured failure, browsable. A separate table (not a column on `error_occurrences`) keeps `CoOccurringErrors` and the cascade queries, which load occurrence rows with `SELECT *`, from paying for multi-KB blobs; a storm-shed capture simply has no row
+- **Constraints:** storage is bounded by the same storm ladder that limits full-context captures today; needs an incremental migration, so it is a minor release (feat), with the installer/upgrade-path test and the demo repo's schema dumps updated in step
+- **Effort:** 1–2 days incl. specs (command, model, request, one system spec)
+- **Impact:** Credibility +++ — completes C2; deferred from 0.11.1 on 2026-08-27
 
 ### D. Auto-Enriched User Context via CurrentAttributes — DONE
 - **What:** At error time, check `ActiveSupport::CurrentAttributes.subclasses` for the host app's `Current` class. If `Current.user` exists, auto-capture user email/name/id without requiring configuration

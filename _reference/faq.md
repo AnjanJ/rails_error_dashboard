@@ -19,7 +19,7 @@ This is currently in **beta** but covered by an RSpec suite that CI runs across 
 <details>
 <summary><strong>How does this compare to Sentry/Rollbar/Honeybadger?</strong></summary>
 
-**What RED records that they don't**: the state of the process at the moment of failure — GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM/YJIT — stored on the error record itself (captured when the error is first seen); a raise-vs-rescue aggregate of swallowed exceptions; Copy as RSpec; and a Storm History ledger of everything shed during an error flood.
+**What RED records that they don't**: the state of the process at the moment of failure — GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM/YJIT — stored on the error record itself and refreshed on every captured occurrence; a raise-vs-rescue aggregate of swallowed exceptions; Copy as RSpec; and a Storm History ledger of everything shed during an error flood.
 **Similar**: error capture and grouping, breadcrumbs, local variables, notifications, workflow, dashboards.
 **Also**: it runs inside your app and your data never leaves your infrastructure — a self-hosted Sentry alternative — and the gem is MIT and free forever, with no plan limits — your database is the only cap.
 **Trade-offs**: you manage hosting and backups; no mobile SDKs, no merge/split, no MCP server, and fewer integrations than commercial services.

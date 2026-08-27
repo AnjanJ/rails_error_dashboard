@@ -630,7 +630,7 @@ When async logging is enabled, breadcrumbs are harvested from the current thread
 
 ## System Health Snapshot (NEW!)
 
-**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics when an error is first seen (the snapshot is stored on the grouped error record and is not refreshed on recurrence — see the roadmap):
+**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at every captured occurrence (the snapshot is stored on the grouped error record and overwritten on recurrence, so the detail page always shows the latest failure; a storm-shed capture leaves the previous snapshot in place):
 
 ```ruby
 config.enable_system_health = true
