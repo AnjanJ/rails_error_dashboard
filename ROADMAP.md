@@ -544,6 +544,12 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ## Tier 4 — Differentiators (stand out from the crowd)
 
+### 15a. Ruby 4.0 in the CI test matrix — OPEN
+- **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1. Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
+- **Why:** The README beta note currently has to say "CI runs Ruby 3.2–3.4; Ruby 4.0 is verified by the maintainer" — an honest caveat, but one that should not need to exist. Known blockers to check first: `ostruct` is no longer a default gem on 4.0 and sqlite3 2.8.1 does not compile on macOS (see CLAUDE.md gotchas); the Linux runner may not hit the second
+- **Effort:** Half a day
+- **Impact:** Credibility ++ — found 2026-08-27 while verifying README compatibility claims
+
 ### 16. AI-Powered Error Summaries
 - **What:** Optional integration with OpenAI/Anthropic API to generate plain-English summaries of errors: "This NoMethodError on line 42 of users_controller.rb is likely caused by a nil user object when the session expires"
 - **Why:** Sentry launched "Seer" for AI-assisted grouping and it's their most talked-about feature. For a self-hosted gem, even a simple "summarize this error" button using the user's own API key would be genuinely useful and highly shareable
