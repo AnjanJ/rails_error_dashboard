@@ -359,7 +359,7 @@ Security vulnerability where unwanted attributes are updated. Rails protects wit
 ## Testing
 
 ### RSpec
-Ruby testing framework. Rails Error Dashboard has 4,200+ tests covering models, controllers, services, and integration.
+Ruby testing framework. Rails Error Dashboard has an RSpec suite covering models, controllers, services, and integration, run in CI on every supported Rails version.
 
 ### Factory Bot
 Test data generation. Creates realistic test records for errors, applications, and users.

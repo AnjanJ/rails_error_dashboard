@@ -764,7 +764,7 @@ Source code is loaded on-demand:
 
 ### Test Coverage
 
-- **Total Tests:** 4,200+ tests (as of v0.10.0)
+- **Total Tests:** see the CI run for the current count
 - **New Tests:** 150+ tests for source code integration
 - **Coverage:** 64.6% overall, 100% for all new services and helpers
 - **Status:** All tests passing ✅

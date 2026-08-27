@@ -13,15 +13,15 @@ Common questions about Rails Error Dashboard.
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 4,200+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](/rails_error_dashboard/docs/features/#production-ready).
+This is currently in **beta** but covered by an RSpec suite that CI runs across Rails 7.0-8.1 on Ruby 3.2-3.4 (Ruby 4.0 is verified by the maintainer). Many users are running it in production. See [production requirements](/rails_error_dashboard/docs/features/#production-ready).
 </details>
 
 <details>
 <summary><strong>How does this compare to Sentry/Rollbar/Honeybadger?</strong></summary>
 
-**What RED records that they don't**: the state of the process at the moment of failure — GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM/YJIT — stored on the error record itself; a raise-vs-rescue aggregate of swallowed exceptions; Copy as RSpec; and a Storm History ledger of everything shed during an error flood.
+**What RED records that they don't**: the state of the process at the moment of failure — GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM/YJIT — stored on the error record itself (captured when the error is first seen); a raise-vs-rescue aggregate of swallowed exceptions; Copy as RSpec; and a Storm History ledger of everything shed during an error flood.
 **Similar**: error capture and grouping, breadcrumbs, local variables, notifications, workflow, dashboards.
-**Also**: it runs inside your app and your data never leaves your infrastructure — a self-hosted Sentry alternative — and the gem is MIT and free forever, with no usage caps.
+**Also**: it runs inside your app and your data never leaves your infrastructure — a self-hosted Sentry alternative — and the gem is MIT and free forever, with no plan limits — your database is the only cap.
 **Trade-offs**: you manage hosting and backups; no mobile SDKs, no merge/split, no MCP server, and fewer integrations than commercial services.
 
 Every claim above was checked against 30+ products and gems in August 2026 — see [the verified ledger](https://github.com/AnjanJ/rails_error_dashboard/blob/main/.shipkit/research/red-unique-features-verified.md).
@@ -194,7 +194,7 @@ Yes. TracePoint(`:raise`) is the same mechanism Sentry uses in production. It on
 
 TracePoint(`:rescue`) (used for swallowed exception detection) is similarly lightweight. It was added in Ruby 3.3 (Feature #19572) and only fires on rescue events.
 
-Both are opt-in and disabled by default. See [Local Variable Capture](/rails_error_dashboard/docs/features/#local-variable-capture-v040) and [Host App Safety](../HOST_APP_SAFETY.md).
+Both are opt-in and disabled by default. See [Local Variable Capture](/rails_error_dashboard/docs/features/#local-variable-capture-v040) and the [safety guarantees](/rails_error_dashboard/docs/features/#safety-guarantees).
 </details>
 
 <details>

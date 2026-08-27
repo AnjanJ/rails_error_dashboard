@@ -289,7 +289,7 @@ Tool arguments / results are particularly worth scrubbing before they reach the 
 
 ## Host App Safety
 
-The three capture paths and the cost estimator are governed by the same rules as the rest of the gem. From `HOST_APP_SAFETY.md`:
+The three capture paths and the cost estimator are governed by the same rules as the rest of the gem. From the host-app safety rules:
 
 - **Rule 1 (never raise in capture):** every callback wraps its body in `rescue StandardError`. The Faraday middleware emits the breadcrumb inside an `ensure` block with its own inner rescue, so a failure during breadcrumb emission cannot interfere with the upstream call's exception propagation.
 - **Rule 2 (never block):** Config flags are re-read on every event. When disabled, the cost is one boolean read + an early return. A maintainer's single-machine measurement put the worst-case hot-path cost at **0.004 ms/op** — ~125× under the 0.5 ms-per-operation budget; no benchmark script ships with the gem.
@@ -381,4 +381,4 @@ Privacy. LLM prompts routinely include user PII (support chats, code, documents)
 
 ---
 
-[← Back to Features](FEATURES.md) · [Configuration reference](guides/CONFIGURATION.md) · [Host App Safety](https://github.com/AnjanJ/rails_error_dashboard/blob/main/HOST_APP_SAFETY.md)
+[← Back to Features](FEATURES.md) · [Configuration reference](guides/CONFIGURATION.md) · [Safety guarantees](FEATURES.md#safety-guarantees)

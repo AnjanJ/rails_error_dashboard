@@ -630,7 +630,7 @@ When async logging is enabled, breadcrumbs are harvested from the current thread
 
 ## System Health Snapshot (NEW!)
 
-**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at the moment of every error:
+**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics when an error is first seen (the snapshot is stored on the grouped error record and is not refreshed on recurrence — see the roadmap):
 
 ```ruby
 config.enable_system_health = true
@@ -1083,7 +1083,7 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **4,200+ RSpec tests** with high coverage
+- **RSpec suite** (unit, request and browser system specs) run in CI on every supported Rails version
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
@@ -1165,7 +1165,7 @@ config.enable_source_code_integration = true # Source code viewer (NEW!)
 config.enable_git_blame = true               # Git blame integration (NEW!)
 ```
 
-*All code is complete and tested (4,200+ tests passing). These advanced features provide powerful insights for production debugging.*
+*All code is complete and covered by the RSpec suite that runs in CI. These advanced features provide powerful insights for production debugging.*
 
 ### Fuzzy Error Matching
 - **Find similar errors** even with different error hashes
@@ -1181,8 +1181,8 @@ config.enable_git_blame = true               # Git blame integration (NEW!)
 - **Help identify cascading failures**
 
 ### Error Cascade Detection
-- **Identify parent → child error chains**
-- **Detect when one error causes another**
+- **Identify potential parent → child error chains**
+- **Detect when one error is followed by another** — temporal association, not proven causation
 - **Average delay calculation** between related errors
 - **Cascade probability scoring**
 - **Background analysis job** (runs hourly)

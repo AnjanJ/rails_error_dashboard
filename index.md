@@ -17,7 +17,7 @@ hero:
 features:
   - icon: "\U0001F52C"
     title: The Moment of Failure
-    details: GC, memory, file descriptors, load, DB pool, Puma, job queues and YJIT captured at the raise and stored on the error record — no other tracker attaches them to the error.
+    details: GC, memory, file descriptors, load, DB pool, Puma, job queues and YJIT captured when an error is first seen and stored on the error record — no other tracker attaches them to the error.
   - icon: "\U0001F4CA"
     title: Analytics
     details: Error trends, platform health, correlation insights, baseline monitoring, and occurrence patterns.
@@ -77,8 +77,8 @@ rails db:migrate
 - **Fully customizable** - Extend with plugins and custom handlers
 
 ### The gem is MIT and free forever
-- **$0/month** - No subscription fees for the gem
-- **Unlimited errors** - No caps, no tiers, no billing surprises
+- **No RED licence or event-ingestion fee** - the gem costs nothing to run
+- **No plan limits** - your database is the only cap; storm protection sheds context during floods by design
 
 Checked against Sentry, Honeybadger, AppSignal, Rollbar, Bugsnag, Airbrake, Raygun, New Relic, Datadog, Scout, Skylight and every self-hosted Rails tracker in August 2026 — [the verified ledger](https://github.com/AnjanJ/rails_error_dashboard/blob/main/.shipkit/research/red-unique-features-verified.md).
 

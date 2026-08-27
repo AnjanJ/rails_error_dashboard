@@ -33,7 +33,7 @@ Intelligent error grouping that goes beyond simple error type matching:
 
 - **Fuzzy Matching**: Find similar errors even when error_hash differs
 - **Co-occurring Errors**: Detect errors that happen together in time
-- **Cascade Detection**: Identify error chains (A causes B causes C)
+- **Cascade Detection**: Identify potential error cascades (A is followed by B is followed by C) — temporal association, not proven causation
 
 These features help you:
 - Reduce noise by grouping related errors
