@@ -6,12 +6,12 @@ permalink: /docs/guides/MOBILE_APP_INTEGRATION
 
 # Mobile App Error Reporting Integration
 
-This guide explains how to integrate the Rails Error Dashboard with your React Native/Expo mobile application.
+This guide shows how to report errors from a React Native/Expo app through an endpoint you add to your own Rails app — the gem itself ships no mobile SDK.
 
 ## Overview
 
-The gem provides a centralized error tracking system that works seamlessly with mobile apps. Mobile errors are:
-- Reported to the API via dedicated endpoints
+The gem does not ship a mobile SDK or an ingest endpoint. This guide shows how to add a small API endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, so that mobile errors are:
+- Reported to an endpoint you add to your app (example below)
 - Stored in the same database as server errors
 - Displayed in the same dashboard with platform detection (iOS/Android)
 - Trigger the same notification system (Slack + Email)

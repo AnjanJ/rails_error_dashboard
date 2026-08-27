@@ -30,7 +30,7 @@ Visual trend analysis helps you:
 - **Understand severity distribution** to prioritize fixes
 - **Track improvements** after deploying fixes
 
-All charts are interactive, update in real-time, and require zero configuration.
+All charts are interactive and require zero configuration.
 
 ---
 

@@ -15,12 +15,12 @@ Rails Error Dashboard uses an **opt-in architecture** with two categories of fea
 ### Tier 1 Features (Always ON)
 Core features that are always enabled - no configuration needed:
 - ✅ **Error Tracking & Capture** - Automatic error logging from controllers, jobs, middleware
-- ✅ **Dashboard & UI** - Modern interface with search, filtering, real-time updates
+- ✅ **Dashboard & UI** - Modern interface with search, filtering, and real-time updates (the latter with `turbo-rails` + ActionCable in the host)
 - ✅ **Analytics & Insights** - Trend charts, severity breakdown, spike detection
 - ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
 ### Optional Features (Opt-in)
-**24+ features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
+**More than 30 optional features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -62,8 +62,8 @@ All optional features are disabled by default and can be toggled on/off at any t
 
 ### Platform Detection
 - **Automatic platform identification** from User-Agent headers
-- Supports: **iOS**, **Android**, **Web**, **API**
-- **Custom platforms** via manual specification
+- Auto-detects **iOS**, **Android** (including Expo) and **API** — a desktop browser request is classed as API
+- **Custom platforms** (for example `Web`) via manual specification
 - **Browser detection** with device details (Chrome, Safari, Firefox, etc.)
 
 ### Error Context
@@ -98,12 +98,12 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Visual notifications** - Yellow highlight for new errors
 - **Pulsing animations** on updated metrics
 - **Turbo Streams** powered (WebSocket/SSE)
-- **Zero configuration** - Works out of the box
+- **Requires** `turbo-rails` and a working ActionCable adapter in the host app — no polling fallback
 - **Low bandwidth** - Only ~800 bytes per update
 
 ### Search & Filtering
 - **Text search** across error messages and types
-- **Filter by platform** (iOS, Android, Web, API)
+- **Filter by platform** (iOS, Android, API, plus any platform reported manually)
 - **Filter by environment** (production, staging, uat — whatever your deploys are called; v0.11.0)
 - **Filter by severity** (Critical, High, Medium, Low)
 - **Filter by status** (Resolved, Unresolved, All)
@@ -147,7 +147,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Contextual metrics** showing today vs. average with multiplier
 
 ### Platform Comparison
-- **Side-by-side metrics** for iOS vs Android vs Web vs API
+- **Side-by-side metrics** for iOS vs Android vs API (plus any platform you report manually)
 - **Platform-specific error rates**
 - **Cross-platform correlation** analysis
 - **Platform health scores** (0-100)
@@ -432,7 +432,7 @@ config.breadcrumb_buffer_size = 40  # Max events per request (default: 40)
 
 When an error occurs, you need to know **what happened before the crash**. Breadcrumbs capture a timeline of events during the request — SQL queries, controller actions, cache operations, background jobs, and mailer deliveries — stored alongside the error for instant debugging context.
 
-Unlike Sentry or Honeybadger (which require SDK configuration), Rails Error Dashboard captures breadcrumbs **automatically** from `ActiveSupport::Notifications` — zero configuration beyond the enable flag.
+Rails Error Dashboard captures breadcrumbs from `ActiveSupport::Notifications` with no configuration beyond the enable flag (`config.enable_breadcrumbs = true`). Honeybadger and Bugsnag enable breadcrumbs by default and Sentry needs one config line, so the mechanism is standard; what is specific to RED is the extra categories — deprecations, LLM calls and tool calls, Rack::Attack and ActiveStorage events — and that the trail is stored in your own database.
 
 ### Captured Event Categories
 
@@ -456,7 +456,9 @@ Each error's detail page shows a Breadcrumbs card with:
 
 ### Deprecation Warnings
 
-When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) are automatically captured as breadcrumbs. A dedicated red-bordered summary card appears on the error detail page when deprecations are detected, showing:
+When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) are captured as breadcrumbs.
+
+> **Requires** the host app's deprecation behavior to include `:notify` — for example `config.active_support.deprecation = [:log, :notify]`. Rails only emits `deprecation.rails` for that behavior, and the production default does not, so without it this page stays empty. Only deprecations that fired inside a request that later raised are recorded; for app-wide collection in healthy requests, see the `deprecation_collector` gem. A dedicated red-bordered summary card appears on the error detail page when deprecations are detected, showing:
 - The deprecation warning message
 - The source caller location (first frame of the callstack)
 
@@ -464,7 +466,7 @@ This helps you identify deprecated code paths that may be contributing to errors
 
 #### Deprecation Warnings Aggregate Page
 
-Beyond per-error display, the **Deprecations** page (`/errors/deprecations`) provides an app-wide view of all deprecation warnings across errors:
+Beyond per-error display, the **Deprecations** page (`/errors/deprecations`) provides a view of every deprecation warning seen across errors (it does not see deprecations in requests that did not error):
 
 - **Summary cards** — Unique warnings count, total occurrences, affected errors
 - **Sortable table** — Warning message, source caller, occurrence count, linked error IDs, last seen
@@ -567,7 +569,7 @@ When async logging is enabled, breadcrumbs are harvested from the current thread
 
 ## System Health Snapshot (NEW!)
 
-**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at the moment of every error:
+**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics when an error is first seen (the snapshot is stored on the grouped error record and is not refreshed on recurrence — see the roadmap):
 
 ```ruby
 config.enable_system_health = true
@@ -614,7 +616,7 @@ When async logging is enabled, system health is captured from the current thread
 
 ### Job Health Page
 
-The **Job Health** page (`/errors/job_health_summary`) provides an aggregate view of background job queue health across all errors:
+The **Job Health** page (`/errors/job_health_summary`) aggregates the job-queue statistics captured on each error. It is not a live queue monitor — for that use Sidekiq Web or Mission Control — and it needs `config.enable_system_health = true`:
 
 - **Auto-detection** — Automatically captures stats from Sidekiq, SolidQueue, or GoodJob at error time
 - **Per-error table** — Error link, adapter badge, failed count (color-coded), queued count, other stats (dead/retry/workers for Sidekiq, claimed/blocked/scheduled for SolidQueue), last seen
@@ -627,7 +629,7 @@ This page helps identify errors that coincide with job queue problems — a fail
 
 ### Database Health Page
 
-The **Database Health** page (`/errors/database_health_summary`) is a lightweight PgHero-style database health panel built into the dashboard. It has two sections:
+The **Database Health** page (`/errors/database_health_summary`) is a lightweight PgHero-style database health panel built into the dashboard. It has two sections. Section A is **PostgreSQL-only** (MySQL and SQLite show connection-pool statistics and hide the rest); Section B needs `config.enable_system_health = true`.
 
 #### Section A — Live Database Health
 
@@ -887,7 +889,7 @@ end
 
 ### Why This Matters
 
-This is a **self-hosted only feature** — impossible for SaaS error trackers. When a process crashes, SaaS tools lose the connection before they can report. Since this gem runs inside the process, it can write to disk as the last act before exit.
+Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is not unique to self-hosted tools. What differs is where the data goes: RED writes the crash to disk as the last act before exit — the database may already be unavailable — and imports it into your own database on the next boot. Segfaults and `kill -9` are never seen by `at_exit`, in any tool.
 
 ---
 
@@ -969,7 +971,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **2,600+ RSpec tests** with high coverage
+- **RSpec suite** (unit, request and browser system specs) run in CI on every supported Rails version
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
@@ -1001,7 +1003,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 ### Documentation
 - **Comprehensive guides** for every feature
 - **API reference** with examples
-- **Mobile integration guides** (React Native, Flutter)
+- **Mobile integration guide** (log mobile-originated errors through your own API endpoint)
 - **Plugin development guide**
 - **Troubleshooting guides**
 
@@ -1051,7 +1053,7 @@ config.enable_source_code_integration = true # Source code viewer (NEW!)
 config.enable_git_blame = true               # Git blame integration (NEW!)
 ```
 
-*All code is complete and tested (4,200+ tests passing). These advanced features provide powerful insights for production debugging.*
+*All code is complete and covered by the RSpec suite that runs in CI. These advanced features provide powerful insights for production debugging.*
 
 ### Fuzzy Error Matching
 - **Find similar errors** even with different error hashes
@@ -1067,8 +1069,8 @@ config.enable_git_blame = true               # Git blame integration (NEW!)
 - **Help identify cascading failures**
 
 ### Error Cascade Detection
-- **Identify parent → child error chains**
-- **Detect when one error causes another**
+- **Identify potential parent → child error chains**
+- **Detect when one error is followed by another** — temporal association, not proven causation
 - **Average delay calculation** between related errors
 - **Cascade probability scoring**
 - **Background analysis job** (runs hourly)
@@ -1235,7 +1237,7 @@ Core gem requires 4 runtime gems: `rails`, `pagy`, `groupdate`, and `concurrent-
 - `browser` — for User-Agent platform detection
 - `chartkick` — for chart helpers (falls back to CDN-only JS)
 - `httparty` — for webhook/notification HTTP calls (falls back to Net::HTTP)
-- `turbo-rails` — for real-time Turbo Stream updates (falls back to page refresh)
+- `turbo-rails` — for real-time Turbo Stream updates (without it the dashboard does not auto-refresh)
 
 ---
 

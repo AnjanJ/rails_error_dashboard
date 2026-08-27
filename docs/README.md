@@ -12,7 +12,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ### Getting Started
 - **[Quickstart Guide](QUICKSTART.md)** - Get up and running in 5 minutes
-- **[Installation](../README.md#installation)** - Detailed installation instructions
+- **[Installation](../README.md#quick-start)** - Detailed installation instructions
 - **[Configuration](guides/CONFIGURATION.md)** - Complete configuration reference
 - **[Migration & Upgrade Strategy](MIGRATION_STRATEGY.md)** - Squashed migrations and v0.2.0 upgrade guide
 - **[Uninstall Guide](UNINSTALL.md)** - Complete removal instructions (manual + automated)
@@ -26,10 +26,10 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Monitoring & Health (v0.3)
 - **[System Health Snapshots](FEATURES.md#system-health-snapshot)** - GC stats, threads, connection pool, memory, RubyVM cache, YJIT stats
 - **[N+1 Query Detection](FEATURES.md#n1-query-detection)** - Detect N+1 queries from breadcrumbs
-- **[Job Health](FEATURES.md#job-health)** - Background job queue stats (Sidekiq, SolidQueue, GoodJob)
-- **[Database Health](FEATURES.md#database-health)** - PgHero-style connection pool and table stats
+- **[Job Health](FEATURES.md#job-health)** - Job-queue stats captured at error time (Sidekiq, SolidQueue, GoodJob), aggregated across errors — not a live queue view
+- **[Database Health](FEATURES.md#database-health)** - PgHero-style live table and index stats (PostgreSQL-only) plus connection-pool state at error time
 - **[Cache Health](FEATURES.md#cache-health)** - Cache hit rates and miss patterns
-- **[Deprecation Tracking](FEATURES.md#deprecation-tracking)** - Track Rails deprecation warnings
+- **[Deprecation Tracking](FEATURES.md#deprecation-tracking)** - Track Rails deprecation warnings (the host's deprecation behaviour must include `:notify`)
 
 ### Deep Debugging (v0.4)
 - **[Local Variable Capture](FEATURES.md#local-variable-capture)** - Capture local variables at the point of exception via TracePoint
@@ -55,10 +55,10 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Database Options](guides/DATABASE_OPTIONS.md)** - Using a separate database
 
 ### Integration
-- **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Integrate with React Native, Flutter, etc.
+- **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
-- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams and live updates
+- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams live updates (requires `turbo-rails` + ActionCable in the host)
 - **[Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md)** - Configure Solid Queue for async logging
 
 ### Performance & Optimization
@@ -155,7 +155,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.4.0** (Latest).
+This documentation is for **Rails Error Dashboard v0.11.0** (Latest).
 
 For version history, see the [Changelog](../CHANGELOG.md).
 

@@ -41,7 +41,7 @@ The dashboard tracks errors across:
 - **iOS** - iPhone and iPad applications
 - **Android** - Android applications
 - **API** - Backend API errors
-- **Web** - Web application errors
+- **Web** - Web application errors — never auto-assigned: the User-Agent detector yields iOS, Android or API, so a desktop browser request lands in API; pass `platform: "Web"` when reporting manually
 - **Unknown** - Errors without platform metadata
 
 ## Platform Health Metrics

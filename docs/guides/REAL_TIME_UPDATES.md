@@ -23,7 +23,7 @@ This guide explains how Rails Error Dashboard uses Turbo Streams to provide real
 
 ## Overview
 
-Rails Error Dashboard now includes **real-time updates** powered by Turbo Streams. When errors occur in your application, the dashboard automatically updates without requiring a manual page refresh.
+Rails Error Dashboard now includes **real-time updates** powered by Turbo Streams. When errors occur in your application, the dashboard automatically updates without requiring a manual page refresh. This requires `turbo-rails` and a working ActionCable adapter in the host app; without them the dashboard does not auto-refresh — there is no polling fallback.
 
 ### What Gets Updated in Real-Time:
 
@@ -731,10 +731,10 @@ Dashboard continues to function normally with manual refresh.
 ✅ **Real-time error list updates** - New errors appear instantly
 ✅ **Live stats refresh** - Counts update automatically
 ✅ **Visual feedback** - Animations highlight changes
-✅ **Zero configuration** - Works out of the box
+✅ **Requirements** - `turbo-rails` plus a working ActionCable adapter in the host app; there is no polling fallback
 ✅ **High performance** - Minimal overhead (~800 bytes per error)
 ✅ **Browser compatible** - All modern browsers supported
-✅ **Production ready** - All 545 tests passing
+✅ **Production ready** - Covered by the request and system specs
 
 **Related Features:**
 - [Error Trend Visualizations](ERROR_TREND_VISUALIZATIONS.md) - Charts for 7-day trends
