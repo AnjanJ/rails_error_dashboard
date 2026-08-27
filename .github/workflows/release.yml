@@ -50,6 +50,11 @@ jobs:
 
       - name: Run tests before publishing
         if: ${{ steps.release.outputs.release_created }}
+        env:
+          # Same as test.yml: Ferrum defaults to 10s waiting for Chrome's websocket
+          # URL and a cold runner can exceed it. The 0.11.1 release run failed on
+          # exactly this (Ferrum::ProcessTimeoutError) with nothing wrong in the gem.
+          FERRUM_PROCESS_TIMEOUT: 30
         run: bundle exec rspec
 
       - name: Run RuboCop before publishing
@@ -98,6 +103,11 @@ jobs:
           bundler-cache: true
 
       - name: Run tests before publishing
+        env:
+          # Same as test.yml: Ferrum defaults to 10s waiting for Chrome's websocket
+          # URL and a cold runner can exceed it. The 0.11.1 release run failed on
+          # exactly this (Ferrum::ProcessTimeoutError) with nothing wrong in the gem.
+          FERRUM_PROCESS_TIMEOUT: 30
         run: bundle exec rspec
 
       - name: Run RuboCop before publishing
