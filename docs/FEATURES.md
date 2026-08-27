@@ -20,7 +20,7 @@ Core features that are always enabled - no configuration needed:
 - ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
 ### Optional Features (Opt-in)
-**24+ features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
+**More than 30 optional features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
 **📧 Notifications (5 features)**
 - Slack, Email, Discord, PagerDuty, Webhooks
@@ -430,7 +430,7 @@ config.breadcrumb_buffer_size = 40  # Max events per request (default: 40)
 
 When an error occurs, you need to know **what happened before the crash**. Breadcrumbs capture a timeline of events during the request — SQL queries, controller actions, cache operations, background jobs, and mailer deliveries — stored alongside the error for instant debugging context.
 
-Unlike Sentry or Honeybadger (which require SDK configuration), Rails Error Dashboard captures breadcrumbs **automatically** from `ActiveSupport::Notifications` — zero configuration beyond the enable flag.
+Rails Error Dashboard captures breadcrumbs from `ActiveSupport::Notifications` with no configuration beyond the enable flag (`config.enable_breadcrumbs = true`). Honeybadger and Bugsnag enable breadcrumbs by default and Sentry needs one config line, so the mechanism is standard; what is specific to RED is the extra categories — deprecations, LLM calls and tool calls, Rack::Attack and ActiveStorage events — and that the trail is stored in your own database.
 
 ### Captured Event Categories
 
@@ -456,7 +456,9 @@ Each error's detail page shows a Breadcrumbs card with:
 
 ### Deprecation Warnings
 
-When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) are automatically captured as breadcrumbs. A dedicated red-bordered summary card appears on the error detail page when deprecations are detected, showing:
+When breadcrumbs are enabled, Rails deprecation warnings (`deprecation.rails`) are captured as breadcrumbs.
+
+> **Requires** the host app's deprecation behavior to include `:notify` — for example `config.active_support.deprecation = [:log, :notify]`. Rails only emits `deprecation.rails` for that behavior, and the production default does not, so without it this page stays empty. Only deprecations that fired inside a request that later raised are recorded; for app-wide collection in healthy requests, see the `deprecation_collector` gem. A dedicated red-bordered summary card appears on the error detail page when deprecations are detected, showing:
 - The deprecation warning message
 - The source caller location (first frame of the callstack)
 
@@ -464,7 +466,7 @@ This helps you identify deprecated code paths that may be contributing to errors
 
 #### Deprecation Warnings Aggregate Page
 
-Beyond per-error display, the **Deprecations** page (`/errors/deprecations`) provides an app-wide view of all deprecation warnings across errors:
+Beyond per-error display, the **Deprecations** page (`/errors/deprecations`) provides a view of every deprecation warning seen across errors (it does not see deprecations in requests that did not error):
 
 - **Summary cards** — Unique warnings count, total occurrences, affected errors
 - **Sortable table** — Warning message, source caller, occurrence count, linked error IDs, last seen
@@ -680,7 +682,7 @@ When async logging is enabled, system health is captured from the current thread
 
 ### Job Health Page
 
-The **Job Health** page (`/errors/job_health_summary`) provides an aggregate view of background job queue health across all errors:
+The **Job Health** page (`/errors/job_health_summary`) aggregates the job-queue statistics captured on each error. It is not a live queue monitor — for that use Sidekiq Web or Mission Control — and it needs `config.enable_system_health = true`:
 
 - **Auto-detection** — Automatically captures stats from Sidekiq, SolidQueue, or GoodJob at error time
 - **Per-error table** — Error link, adapter badge, failed count (color-coded), queued count, other stats (dead/retry/workers for Sidekiq, claimed/blocked/scheduled for SolidQueue), last seen
@@ -693,7 +695,7 @@ This page helps identify errors that coincide with job queue problems — a fail
 
 ### Database Health Page
 
-The **Database Health** page (`/errors/database_health_summary`) is a lightweight PgHero-style database health panel built into the dashboard. It has two sections:
+The **Database Health** page (`/errors/database_health_summary`) is a lightweight PgHero-style database health panel built into the dashboard. It has two sections. Section A is **PostgreSQL-only** (MySQL and SQLite show connection-pool statistics and hide the rest); Section B needs `config.enable_system_health = true`.
 
 #### Section A — Live Database Health
 
@@ -955,7 +957,7 @@ The page at `/errors/actioncable_health_summary` shows channel breakdown with:
 
 ### Competitive Advantage
 
-No error tracker (Sentry, Honeybadger, Faultline) surfaces ActionCable health alongside HTTP errors. This is unique to Rails Error Dashboard.
+AppSignal instruments ActionCable channels out of the box and Sentry captures channel errors and transactions. What RED adds is per-channel subscription rejection counts and the live connection count stored on the error record, next to the HTTP errors — in your own database.
 
 ### Safety
 
@@ -1113,7 +1115,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 ### Documentation
 - **Comprehensive guides** for every feature
 - **API reference** with examples
-- **Mobile integration guides** (React Native, Flutter)
+- **Mobile integration guide** (log mobile-originated errors through your own API endpoint)
 - **Plugin development guide**
 - **Troubleshooting guides**
 
@@ -1347,7 +1349,7 @@ Core gem requires 4 runtime gems: `rails`, `pagy`, `groupdate`, and `concurrent-
 - `browser` — for User-Agent platform detection
 - `chartkick` — for chart helpers (falls back to CDN-only JS)
 - `httparty` — for webhook/notification HTTP calls (falls back to Net::HTTP)
-- `turbo-rails` — for real-time Turbo Stream updates (falls back to page refresh)
+- `turbo-rails` — for real-time Turbo Stream updates (without it the dashboard does not auto-refresh)
 
 ---
 

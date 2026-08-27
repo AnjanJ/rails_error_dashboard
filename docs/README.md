@@ -55,7 +55,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Database Options](guides/DATABASE_OPTIONS.md)** - Using a separate database
 
 ### Integration
-- **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Integrate with React Native, Flutter, etc.
+- **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
 - **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams and live updates

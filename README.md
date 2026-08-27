@@ -7,7 +7,7 @@
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/AnjanJ)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/anjanj)
 
-**Self-hosted Rails error monitoring — free, forever.**
+**Self-hosted Rails error tracking that records what your process looked like when it failed — inside your app, in your database. The gem is MIT and free forever.**
 
 ```ruby
 gem 'rails_error_dashboard'
@@ -55,19 +55,30 @@ gem 'rails_error_dashboard'
 - **Indie SaaS founders** building profitable apps on tight budgets
 - **Small dev teams** (2-5 people) who hate SaaS bloat
 - **Privacy-conscious apps** that need to keep error data on their own servers
+- **Rails shops and platform teams** that can't send error data to a third party and want the state of the process at the moment of failure, not just a stack trace
 - **Side projects** that might become real businesses
+
+## What Only RED Does
+
+Checked against Sentry, Honeybadger, AppSignal, Rollbar, Bugsnag, Airbrake, Raygun, New Relic, Datadog, Scout, Skylight and every self-hosted Rails tracker (August 2026):
+
+- **The state of the process at the moment of failure, kept with the error.** GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM and YJIT — captured when the exception is raised and stored on the error record, then correlated across errors on the Job Health and Database Health pages. Every APM has these as graphs; none attaches them to the error.
+- **It sees what error trackers don't.** Exceptions that were rescued and swallowed (with the raise-vs-rescue ratio per location), deprecations that fired in production, what Rack::Attack throttled and which AI crawlers it was, which lines of code actually ran.
+- **An error becomes something you can run.** Copy as RSpec, Copy as curl, Copy for LLM, or a two-way-synced issue in GitHub, GitLab, Codeberg or Linear.
+- **Storm-safe by default.** Per-fingerprint caps, an exact count-only circuit breaker and a Storm History ledger of everything it shed — a bad deploy can't amplify itself into your database.
+
+And everything you'd expect: local **and** instance variables at the raise point (scrubbed with your `filter_parameters`), cause chains, breadcrumbs, N+1 detection, five notification channels, assignment and workflow, analytics, and a dashboard in 11 languages.
 
 ## What It Replaces
 
 | Before | After |
 |--------|-------|
 | $29-99/month for error monitoring | $0/month — runs on your existing Rails server |
-| Sensitive error data sent to third parties | All data stays on your infrastructure |
-| SaaS pricing tiers and usage limits | Unlimited errors, unlimited projects |
-| Vendor lock-in with proprietary APIs | 100% open source, fully portable |
+| Sensitive error data sent to third parties | All data stays in your own database |
+| SaaS pricing tiers and usage limits | Unlimited errors, apps and users |
+| Vendor lock-in with proprietary APIs | MIT, fully portable |
 | Complex SDK setup and external services | 5-minute Rails Engine installation |
-| Pay extra for local variable capture (Sentry) | Local + instance variables included free |
-| No tool detects silently rescued exceptions | Swallowed exception detection built in |
+| A stack trace and a request | The stack trace, the request, the variables — and the state of the process |
 
 ---
 
@@ -98,7 +109,7 @@ config.storm_open_threshold_per_second = 50  # per process
 
 All thresholds are per process and individually configurable. Disable with one flag.
 
-**Measured overhead** (Apple Silicon, Ruby 4.0): 2.4µs/error with protection active and calm, 2.95µs in count-only mode, 0.2µs when disabled — against a 5µs budget. The check is a digest plus an atomic increment; there is no I/O on the hot path.
+**Overhead:** the check is a digest plus an atomic increment; there is no I/O on the hot path. The maintainer's single-machine measurement (Apple Silicon, Ruby 4.0) was 2.4µs/error with protection active and calm, 2.95µs in count-only mode and 0.2µs when disabled, against a 5µs budget — a reproducible benchmark script is not yet part of the gem.
 </details>
 
 <details>
@@ -437,7 +448,7 @@ config.enable_instance_variables = true
 <details>
 <summary><strong>Swallowed Exception Detection</strong></summary>
 
-Detect exceptions that are raised but silently rescued — the hardest bugs to find. No other error tracker does this.
+Detect exceptions that are raised but silently rescued — the hardest bugs to find. Only Datadog's paid APM detects rescued exceptions (Ruby 3.3+, and only inside a traced request); RED does it free, without an APM span, and aggregates the raise-vs-rescue ratio per location — no other tracker does that.
 
 - Uses TracePoint(`:raise`) + TracePoint(`:rescue`) to track exception lifecycle
 - Identifies code paths where exceptions are caught but never logged or re-raised
@@ -661,10 +672,10 @@ SQLite, PostgreSQL, and MySQL/Trilogy — in either shared or separate-database 
 Yes. It runs entirely inside your own Rails process — no external services, no SDK calling out, no per-event pricing. Error data never leaves your infrastructure.
 
 **Does it capture local variables like Sentry?**
-Yes — local **and** instance variables at the moment the exception is raised, via `TracePoint(:raise)`, with sensitive-data filtering and configurable limits. This is opt-in and a capability Sentry charges extra for.
+Yes — local **and** instance variables at the moment the exception is raised, via `TracePoint(:raise)`, with sensitive-data filtering and configurable limits. It is opt-in. (Sentry's SDK can also capture locals as an opt-in option; RED adds instance variables and applies your Rails `filter_parameters` automatically.)
 
 **Will a flood of errors take down my app?**
-No. Storm protection (a circuit breaker with adaptive sampling, **ON by default**) makes the gem degrade itself first during error floods — occurrence counts stay exact while it sheds the expensive work. Measured hot-path overhead is ~2.4µs/error.
+No. Storm protection (a circuit breaker with adaptive sampling, **ON by default**) makes the gem degrade itself first during error floods — occurrence counts stay exact while it sheds the expensive work, and a Storm History page shows exactly what was shed. There is no I/O on the hot path — the check is a digest and an atomic increment.
 
 **Does it work with my background jobs?**
 Yes — it auto-detects and supports Sidekiq, SolidQueue, and GoodJob, and can log errors asynchronously through any of them.
@@ -694,7 +705,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Batch Operations](docs/guides/BATCH_OPERATIONS.md)** — Bulk resolve/delete
 - **[Real-Time Updates](docs/guides/REAL_TIME_UPDATES.md)** — Live dashboard
 - **[Error Trends](docs/guides/ERROR_TREND_VISUALIZATIONS.md)** — Charts and analytics
-- **[Translations](docs/guides/TRANSLATIONS.md)** — Seven shipped locales, correcting a string, adding a language
+- **[Translations](docs/guides/TRANSLATIONS.md)** — Eleven shipped locales, correcting a string, adding a language
 
 ### Advanced
 - **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** — Track multiple applications
@@ -703,7 +714,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Customization](docs/CUSTOMIZATION.md)** — Customize everything
 - **[Database Options](docs/guides/DATABASE_OPTIONS.md)** — Separate database setup
 - **[Database Optimization](docs/guides/DATABASE_OPTIMIZATION.md)** — Performance tuning
-- **[Mobile App Integration](docs/guides/MOBILE_APP_INTEGRATION.md)** — React Native, Flutter, etc.
+- **[Mobile App Integration](docs/guides/MOBILE_APP_INTEGRATION.md)** — log mobile-originated errors through your own API endpoint, tagged by platform
 - **[FAQ](docs/FAQ.md)** — Common questions answered
 
 [View all documentation →](docs/README.md)

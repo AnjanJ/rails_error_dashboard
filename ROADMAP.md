@@ -30,10 +30,10 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | Notifications | Slack, Email, Discord, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
 | Issue Trackers | GitHub, GitLab, Codeberg, Linear | No | No | No | No |
 | i18n | 11 locales (v0.9.0) | No | No | No | No |
-| OpenTelemetry | In + out (v0.7.0/v0.8.0) | No | No | No | No |
+| OpenTelemetry | Exports its own spans; consumes GenAI spans (v0.7.0/v0.8.0) | No | No | No | No |
 | LLM Observability | Yes (v0.7.0) | No | No | No | No |
 | Rails Versions | 7.0 - 8.1 | 7.1+ | 8.0+ | 7.0+ | 7.1+ |
-| Dependencies | 2 required + optional | 0 extra | 0 extra | 7 (incl. Redis) | 2 |
+| Dependencies | 3 required (pagy, groupdate, concurrent-ruby) + optional | 0 extra | 0 extra | 7 (incl. Redis) | 2 |
 | Local Variables | Yes (TracePoint) | No | Yes (TracePoint) | No | No |
 | Auth | HTTP Basic + Custom Lambda | N/A | Devise/Warden/Lambda | ? | N/A |
 | Error Model | Single record + count | Single record | Group + Occurrences | Single record | N/A |
@@ -99,7 +99,7 @@ These features are impossible or impractical for SaaS error trackers. They repre
 - **What:** Subscribe to `sql.active_record`, count queries per request, detect repeated query patterns. When an error fires, attach: total query count, total DB time, and flagged N+1 patterns (same query fingerprint executed 3+ times)
 - **Why:** N+1 queries are the #1 Rails performance problem. The Bullet gem only works in development. Prosopite is typically disabled in production. We can do lightweight N+1 detection on every request that errors, for free
 - **Effort:** 1-2 days
-- **Impact:** Differentiation +++ (no error tracker does this)
+- **Impact:** Differentiation ++ (Sentry, AppSignal, Scout and Skylight detect N+1 with tracing on; RED does it on the errored request without tracing, self-hosted)
 - **Implemented:** Per-error N+1 detection card (display-time analysis, zero request overhead), smart SQL normalization, configurable threshold (default 3). v0.3.0 added: aggregate N+1 Queries page (`/errors/n_plus_one_summary`) grouped by SQL fingerprint across all errors, eager loading tips with extracted table names
 
 ### C. System Health Snapshot at Error Time — DONE
@@ -117,9 +117,9 @@ These features are impossible or impractical for SaaS error trackers. They repre
 
 ### E. Error Replay — "Copy as curl" / "Copy as RSpec" — DONE
 - **What:** Capture HTTP method, path, headers (filtered), params, and body at error time. Generate a one-click "Copy as curl" command and "Copy as RSpec request spec" on the error detail page
-- **Why:** The hardest part of fixing a production error is reproducing it. Handing the developer a ready-to-run curl command or test gets them from "I see the error" to "I can reproduce it" in seconds. **No competitor does this**
+- **Why:** The hardest part of fixing a production error is reproducing it. Handing the developer a ready-to-run curl command or test gets them from "I see the error" to "I can reproduce it" in seconds. **Sentry offers a curl view of the request; no competitor generates a runnable test**
 - **Effort:** 1-2 days
-- **Impact:** Novel +++ (genuinely unique differentiator)
+- **Impact:** Novel +++ (the RSpec generator is unique; curl is shared with Sentry)
 - **Implemented:** `CurlGenerator` service + "Copy as curl" button, `RspecGenerator` service + "Copy as RSpec" button. Both in Request Context card on error detail page. Shell-escaped, fail-safe, handles all HTTP methods and edge cases. 14 test cases for RSpec generator
 
 ### F. Deprecation Warning Tracker — DONE
@@ -273,9 +273,9 @@ Environment:
 - **Impact:** Reliability ++
 
 ### P. On-Demand Diagnostic Dump — DONE (v0.4.0)
-- **What:** `Signal.trap("USR1")` generates full diagnostic snapshot (threads, GC, memory, pools, recent errors) to `/tmp/`. Zero overhead until triggered
+- **What:** A dashboard button (`POST /errors/create_diagnostic_dump`) or `rake error_dashboard:diagnostic_dump` generates a full diagnostic snapshot (threads, GC, memory, pools, breadcrumbs) into the `diagnostic_dumps` table. Zero overhead until triggered. No `Signal.trap` — host-app safety rule #9
 - **Why:** Standard Unix practice (Puma, Sidekiq, Unicorn all do this). Operators send `kill -USR1 <pid>` during incidents
-- **Implementation:** Signal handler sets a flag, background thread collects and writes JSON. Dashboard can display the dump
+- **Implementation:** `DiagnosticDumpGenerator` composes the system-health snapshot, `Thread.list` (names and status only), `GC.stat` and `ObjectSpace.count_objects`; the dashboard lists and displays dumps
 - **Effort:** Half day
 - **Impact:** Operational value ++
 
@@ -320,7 +320,7 @@ Environment:
 - **Why:** Knowing exactly which lines ran before a crash narrows debugging scope dramatically. `oneshot_lines` mode fires each line callback only once, making it practical for production
 - **Implementation:** Enable in diagnostic mode only. Suspend/resume around error capture. Store as compact bitset per file. **Caveat:** Coverage is process-global (not thread-local), so results may blend in multi-threaded Puma. Best for diagnostic/single-threaded use
 - **Effort:** 2-3 days
-- **Impact:** Debugging ++ (unique, no competitor has this)
+- **Impact:** Debugging ++ (no error tracker integrates production coverage; Coverband does it standalone, with persistence)
 - **Implemented:** Diagnostic mode — `CoverageTracker` service wraps Ruby Coverage API. Enable/disable via dashboard button on error detail page. Source code viewer overlays green checkmarks (executed) / gray dots (not executed). Zero overhead when off. SimpleCov-compatible. No migration (live in-memory `Coverage.peek_result`). 19 service specs + 7 request specs
 
 ### W. YJIT Runtime Stats — DONE (v0.4.0)
@@ -333,7 +333,7 @@ Environment:
 ### X. RubyVM Cache Health — DONE (v0.4.0)
 - **What:** Capture `RubyVM.stat` — `global_method_state`, `global_constant_state`, `class_serial`. Detect rapidly incrementing counters that indicate hot-path monkey-patching invalidating all method/constant caches
 - **Why:** Method cache invalidation is a subtle performance killer. If `global_method_state` jumps rapidly, something is redefining methods in a hot path — this causes all cached method lookups to be re-resolved
-- **Implementation:** Read `RubyVM.stat` in system health snapshot. Track delta between captures to detect rapid invalidation
+- **Implementation:** Read `RubyVM.stat` in the system health snapshot (shipped). Delta tracking between captures is **not** implemented
 - **Effort:** Half day
 - **Impact:** Debugging + (niche but diagnostic)
 

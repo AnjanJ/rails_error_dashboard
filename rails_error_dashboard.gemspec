@@ -6,24 +6,26 @@ Gem::Specification.new do |spec|
   spec.authors     = [ "Anjan Jagirdar" ]
   spec.email       = [ "anjan.jagirdar@gmail.com" ]
   spec.homepage    = "https://AnjanJ.github.io/rails_error_dashboard"
-  spec.summary     = "Self-hosted error tracking for Rails — local variables, system health, " \
-                     "separate or shared database, dashboard in 11 languages. " \
-                     "A free, open-source Sentry alternative."
+  spec.summary     = "Self-hosted error tracking inside your Rails app. Captures GC, memory, DB-pool, " \
+                     "Puma and job-queue state on every error, plus local and instance variables, " \
+                     "swallowed exceptions and storm-safe accounting. No external service. MIT."
   spec.description = "Own your errors. Own your stack. A fully open-source, self-hosted error tracking " \
-                     "Rails engine — a free Sentry alternative that runs entirely inside your own " \
-                     "process, with no external services and zero recurring cost. " \
-                     "Captures what SaaS tools charge extra for: local and instance variables at the " \
-                     "moment of failure (via TracePoint), exception cause chains, swallowed-exception " \
-                     "detection, breadcrumbs, and system-health snapshots (GC, memory, threads, " \
-                     "connection pool, Puma). Plus N+1 query detection, storm protection (a circuit " \
-                     "breaker that shields your app from error floods, ON by default), multi-app " \
-                     "support, error sampling, and async logging via Sidekiq, SolidQueue, or GoodJob. " \
+                     "Rails engine that runs entirely inside your own process, with no external " \
+                     "services and zero recurring cost. " \
+                     "Captures what no other tracker attaches to the error: a snapshot of the process " \
+                     "at the moment of failure (GC, memory, threads, connection pool, Puma, job queues, " \
+                     "RubyVM/YJIT), plus local and instance variables (via TracePoint), exception cause " \
+                     "chains, swallowed-exception detection with raise-vs-rescue analysis, and breadcrumbs. " \
+                     "Turn an error into a runnable RSpec test, a curl command, an LLM prompt, or a " \
+                     "two-way-synced issue in GitHub, GitLab, Codeberg or Linear. " \
+                     "Plus N+1 query detection, storm protection (per-fingerprint caps, an exact " \
+                     "count-only circuit breaker and a storm ledger, ON by default), multi-app support, " \
+                     "error sampling, and async logging via Sidekiq or SolidQueue. " \
                      "Runs on SQLite, PostgreSQL, or MySQL/Trilogy — in your app's existing database " \
-                     "or an isolated separate error database. Beautiful dashboard UI (dark/light), " \
+                     "or an isolated separate error database. Dashboard UI (dark/light), " \
                      "multi-channel notifications (Slack, Email, Discord, PagerDuty, webhooks), " \
-                     "workflow management, advanced analytics, platform detection (iOS/Android/Web/API), " \
-                     "and two-way issue sync with GitHub, GitLab, Codeberg, and Linear. Also: LLM " \
-                     "observability, AI-powered debugging help, and OpenTelemetry span export. " \
+                     "workflow management, analytics, platform detection, LLM observability with no " \
+                     "prompt capture, bring-your-own-key AI help, and OpenTelemetry span export. " \
                      "The dashboard, mailers and notification payloads are translated into 11 " \
                      "languages: English, German, Spanish, French, Brazilian Portuguese, Italian, " \
                      "Polish, Russian, Ukrainian, Japanese, and Simplified Chinese — 1,515 source " \
@@ -88,7 +90,7 @@ Gem::Specification.new do |spec|
   # browser (~> 6.0)    — richer platform detection (falls back to regex)
   # chartkick (~> 5.0)  — chart helpers (falls back to CDN-only JS)
   # httparty (>= 0.24)  — Discord/PagerDuty/webhook notifications (falls back to Net::HTTP)
-  # turbo-rails (~> 2.0) — real-time Turbo Stream updates (falls back to page refresh)
+  # turbo-rails (~> 2.0) — real-time Turbo Stream updates (without it the dashboard does not auto-refresh)
 
   # concurrent-ruby powers the storm-protection primitives (AtomicReference,
   # AtomicFixnum, Map) — a real runtime dependency, not incidental.

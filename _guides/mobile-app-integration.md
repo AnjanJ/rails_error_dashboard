@@ -10,8 +10,8 @@ This guide explains how to integrate the Rails Error Dashboard with your React N
 
 ## Overview
 
-The gem provides a centralized error tracking system that works seamlessly with mobile apps. Mobile errors are:
-- Reported to the API via dedicated endpoints
+The gem does not ship a mobile SDK or an ingest endpoint. This guide shows how to add a small API endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, so that mobile errors are:
+- Reported to an endpoint you add to your app (example below)
 - Stored in the same database as server errors
 - Displayed in the same dashboard with platform detection (iOS/Android)
 - Trigger the same notification system (Slack + Email)
