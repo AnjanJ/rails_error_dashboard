@@ -17,7 +17,7 @@ hero:
 features:
   - icon: "\U0001F52C"
     title: The Moment of Failure
-    details: GC, memory, file descriptors, load, DB pool, Puma, job queues and YJIT captured when an error is first seen and stored on the error record — no other tracker attaches them to the error.
+    details: GC, memory, file descriptors, load, DB pool, Puma, job queues and YJIT captured at the latest occurrence and stored on the error record — no other tracker attaches them to the error.
   - icon: "\U0001F4CA"
     title: Analytics
     details: Error trends, platform health, correlation insights, baseline monitoring, and occurrence patterns.

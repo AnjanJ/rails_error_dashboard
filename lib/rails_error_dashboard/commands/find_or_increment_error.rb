@@ -16,6 +16,17 @@ module RailsErrorDashboard
     # stamped by the first occurrence that claims it, so history migrates
     # itself without a backfill. An exact match always wins over a NULL one.
     class FindOrIncrementError
+      # Context that describes THIS occurrence rather than the error as a
+      # group. It is refreshed on every recurrence so the row always shows the
+      # latest moment of failure, not the first one in the 24 h window. Keys
+      # absent from @attributes (feature disabled, column not migrated, or a
+      # storm :lite capture that shed context) leave the stored payload alone —
+      # a shed capture must never blank out a good snapshot.
+      REFRESHED_CONTEXT = %i[
+        breadcrumbs system_health local_variables instance_variables
+        http_method hostname content_type request_duration_ms
+      ].freeze
+
       def self.call(error_hash, attributes = {})
         new(error_hash, attributes).call
       end
@@ -69,6 +80,13 @@ module RailsErrorDashboard
              .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
       end
 
+      # The subset of REFRESHED_CONTEXT this occurrence actually captured.
+      def latest_context
+        REFRESHED_CONTEXT.each_with_object({}) do |key, refreshed|
+          refreshed[key] = @attributes[key] unless @attributes[key].nil?
+        end
+      end
+
       # {} unless this is a legacy NULL-environment row being claimed.
       def environment_adoption(error)
         return {} unless ErrorLog.column_names.include?("environment")
@@ -86,6 +104,7 @@ module RailsErrorDashboard
           request_params: @attributes[:request_params] || error.request_params,
           user_agent: @attributes[:user_agent] || error.user_agent,
           ip_address: @attributes[:ip_address] || error.ip_address,
+          **latest_context,
           **environment_adoption(error)
         )
         error
@@ -103,6 +122,7 @@ module RailsErrorDashboard
           request_params: @attributes[:request_params] || error.request_params,
           user_agent: @attributes[:user_agent] || error.user_agent,
           ip_address: @attributes[:ip_address] || error.ip_address,
+          **latest_context,
           **environment_adoption(error)
         }
         attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
@@ -126,6 +146,7 @@ module RailsErrorDashboard
           retry_existing.update!(
             occurrence_count: retry_existing.occurrence_count + 1,
             last_seen_at: Time.current,
+            **latest_context,
             **environment_adoption(retry_existing)
           )
           retry_existing

@@ -269,4 +269,91 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
       expect(prod.reload.occurrence_count).to eq(1)
     end
   end
+
+describe "occurrence context refresh (ROADMAP C2)" do
+  let(:first_context) do
+    {
+      system_health: { gc: { count: 1 }, captured_at: "2026-08-27T09:00:00Z" }.to_json,
+      breadcrumbs: [ { category: "sql", message: "SELECT 1" } ].to_json,
+      local_variables: { user_id: 1 }.to_json,
+      instance_variables: { "@order" => "#<Order 1>" }.to_json,
+      http_method: "GET",
+      hostname: "first.example.com",
+      content_type: "text/html",
+      request_duration_ms: 12,
+      app_version: "1.0.0",
+      git_sha: "aaaaaaa"
+    }
+  end
+  let(:second_context) do
+    {
+      system_health: { gc: { count: 99 }, captured_at: "2026-08-27T10:00:00Z" }.to_json,
+      breadcrumbs: [ { category: "cache", message: "cache read: users/42" } ].to_json,
+      local_variables: { user_id: 2 }.to_json,
+      instance_variables: { "@order" => "#<Order 2>" }.to_json,
+      http_method: "POST",
+      hostname: "second.example.com",
+      content_type: "application/json",
+      request_duration_ms: 340,
+      app_version: "1.1.0",
+      git_sha: "bbbbbbb"
+    }
+  end
+
+  let!(:existing) do
+    RailsErrorDashboard::ErrorLog.create!(
+      base_attributes.merge(first_context).merge(
+        resolved: false, occurrence_count: 1, first_seen_at: 2.hours.ago, last_seen_at: 1.hour.ago
+      )
+    )
+  end
+
+  it "overwrites the moment-of-failure payloads with the latest occurrence" do
+    result = described_class.call(error_hash, base_attributes.merge(second_context))
+
+    expect(result.id).to eq(existing.id)
+    expect(JSON.parse(result.system_health)["gc"]["count"]).to eq(99)
+    expect(JSON.parse(result.breadcrumbs).first["category"]).to eq("cache")
+    expect(JSON.parse(result.local_variables)["user_id"]).to eq(2)
+    expect(JSON.parse(result.instance_variables)["@order"]).to eq("#<Order 2>")
+  end
+
+  it "refreshes the HTTP context alongside request_url" do
+    result = described_class.call(error_hash, base_attributes.merge(second_context))
+
+    expect(result.http_method).to eq("POST")
+    expect(result.hostname).to eq("second.example.com")
+    expect(result.content_type).to eq("application/json")
+    expect(result.request_duration_ms).to eq(340)
+  end
+
+  it "keeps the stored payloads when the new occurrence carries none (storm :lite / feature off)" do
+    result = described_class.call(error_hash, base_attributes)
+
+    expect(result.occurrence_count).to eq(2)
+    expect(JSON.parse(result.system_health)["gc"]["count"]).to eq(1)
+    expect(JSON.parse(result.breadcrumbs).first["category"]).to eq("sql")
+    expect(JSON.parse(result.local_variables)["user_id"]).to eq(1)
+    expect(result.hostname).to eq("first.example.com")
+  end
+
+  it "does not touch release identity or first-occurrence timestamps" do
+    result = described_class.call(error_hash, base_attributes.merge(second_context))
+
+    expect(result.app_version).to eq("1.0.0")
+    expect(result.git_sha).to eq("aaaaaaa")
+    expect(result.occurred_at).to be_within(1.second).of(existing.occurred_at)
+    expect(result.first_seen_at).to be_within(1.second).of(existing.first_seen_at)
+  end
+
+  it "refreshes context when a resolved error is reopened" do
+    existing.update!(resolved: true, status: "resolved", resolved_at: 1.day.ago)
+
+    result = described_class.call(error_hash, base_attributes.merge(second_context))
+
+    expect(result.resolved).to be false
+    expect(JSON.parse(result.system_health)["gc"]["count"]).to eq(99)
+    expect(result.http_method).to eq("POST")
+  end
+end
 end
