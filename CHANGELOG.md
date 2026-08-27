@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.0...rails_error_dashboard/v0.11.1) (2026-08-27)
+
+
+### 🐛 Bug Fixes
+
+* **capture:** refresh moment-of-failure context on every recurrence ([#190](https://github.com/AnjanJ/rails_error_dashboard/issues/190)) ([7c56e57](https://github.com/AnjanJ/rails_error_dashboard/commit/7c56e57badba49fe8fe90a6a5d5f4cecabb8a399))
+
 ## [0.11.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.10.0...rails_error_dashboard/v0.11.0) (2026-08-26)
 
 
