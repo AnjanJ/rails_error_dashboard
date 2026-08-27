@@ -63,9 +63,9 @@ gem 'rails_error_dashboard'
 Checked against Sentry, Honeybadger, AppSignal, Rollbar, Bugsnag, Airbrake, Raygun, New Relic, Datadog, Scout, Skylight and every self-hosted Rails tracker (August 2026):
 
 - **The state of the process at the moment of failure, kept with the error.** GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM and YJIT — captured when the exception is raised and stored on the error record, then correlated across errors on the Job Health and Database Health pages. Every APM has these as graphs; none attaches them to the error.
-- **It sees what error trackers don't.** Exceptions that were rescued and swallowed (with the raise-vs-rescue ratio per location), deprecations that fired in production, what Rack::Attack throttled and which AI crawlers it was, which lines of code actually ran.
-- **An error becomes something you can run.** Copy as RSpec, Copy as curl, Copy for LLM, or a two-way-synced issue in GitHub, GitLab, Codeberg or Linear.
-- **Storm-safe by default.** Per-fingerprint caps, an exact count-only circuit breaker and a Storm History ledger of everything it shed — a bad deploy can't amplify itself into your database.
+- **It sees what error trackers don't.** Exceptions that were rescued and swallowed (with the raise-vs-rescue ratio per location), deprecations that fired in production, what Rack::Attack throttled and which AI crawlers it was, which lines of code actually ran. No error tracker integrates these; the nearest is Datadog's paid APM, which detects rescued exceptions inside a traced request but keeps no aggregate.
+- **An error becomes a runnable test.** Copy as RSpec generates a request spec from the captured request — no other tracker generates a test (Sentry offers curl only). Copy as curl and Copy for LLM sit beside it, and Codeberg issue tracking — next to GitHub, GitLab and Linear with two-way sync — exists nowhere else.
+- **Storm-safe by default.** Per-fingerprint caps, an exact count-only circuit breaker and a Storm History ledger of everything it shed — a bad deploy can't amplify itself into your database. (RailsNexus has a global breaker with random sampling and no ledger; Sentry's spike protection guards Sentry's quota, not your database.)
 
 And everything you'd expect: local **and** instance variables at the raise point (scrubbed with your `filter_parameters`), cause chains, breadcrumbs, N+1 detection, five notification channels, assignment and workflow, analytics, and a dashboard in 11 languages.
 
@@ -73,12 +73,12 @@ And everything you'd expect: local **and** instance variables at the raise point
 
 | Before | After |
 |--------|-------|
-| $29-99/month for error monitoring | $0/month — runs on your existing Rails server |
+| A stack trace and a request | The stack trace, the request, the variables — and the state of the process |
 | Sensitive error data sent to third parties | All data stays in your own database |
+| $29-99/month for error monitoring | $0/month — runs on your existing Rails server |
 | SaaS pricing tiers and usage limits | Unlimited errors, apps and users |
 | Vendor lock-in with proprietary APIs | MIT, fully portable |
 | Complex SDK setup and external services | 5-minute Rails Engine installation |
-| A stack trace and a request | The stack trace, the request, the variables — and the state of the process |
 
 ---
 
@@ -86,7 +86,7 @@ And everything you'd expect: local **and** instance variables at the raise point
 
 ### Core (Always Enabled)
 
-Error capture from controllers, jobs, and middleware. Custom-designed dashboard with dark/light mode, search, filtering, and real-time updates. Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
+Error capture from controllers, jobs, and middleware. Custom-designed dashboard with dark/light mode, search, filtering, and real-time updates (the latter with `turbo-rails` + ActionCable in the host). Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
 
 ### Optional Features
 
@@ -119,7 +119,7 @@ See exactly what happened before the crash — SQL queries, controller actions, 
 
 - Automatic capture — zero config beyond the enable flag
 - N+1 query detection with aggregate patterns page
-- Deprecation warnings with aggregate view
+- Deprecation warnings with aggregate view (needs the host's deprecation behaviour to include `:notify`; only requests that later raised are seen)
 - Custom breadcrumbs via `RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: 123 })`
 - Safe by design — fixed-size ring buffer, thread-local, every subscriber wrapped in rescue
 
@@ -157,7 +157,7 @@ Cross-error N+1 detection grouped by SQL fingerprint, and aggregate deprecation 
 
 ![N+1 Query Patterns](docs/images/n-plus-one-queries.png)
 
-Requires breadcrumbs to be enabled.
+Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `ActiveSupport::Deprecation` behaviour includes `:notify` (the production default does not) and only inside requests that later raised.
 
 [Complete documentation →](docs/FEATURES.md#n1-query-detection)
 </details>
@@ -165,7 +165,7 @@ Requires breadcrumbs to be enabled.
 <details>
 <summary><strong>Operational Health Panels — Jobs, Database, Cache, ActionCable</strong></summary>
 
-**Job Health** — Auto-detects Sidekiq, SolidQueue, or GoodJob. Per-error table with adapter badge, failed count (color-coded), sorted worst-first.
+**Job Health** — Aggregates the queue stats captured on each error (Sidekiq, SolidQueue or GoodJob auto-detected; needs `enable_system_health`). Not a live queue view — a per-error table with adapter badge, failed count (color-coded), sorted worst-first.
 
 ![Job Health](docs/images/job-health.png)
 
@@ -195,12 +195,12 @@ config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = tru
 <details>
 <summary><strong>LLM Observability — Calls, Tokens, Cost, Tool Use</strong></summary>
 
-Capture every LLM call your app makes — model, latency, token counts, estimated USD cost, and tool-use requests — as breadcrumbs on the error that follows. When a request crashes, you see the chat completion that preceded it: which model was called, how long it took, what it cost, and which tools it asked to invoke.
+Capture your app's LLM calls — through a Faraday middleware, OpenTelemetry GenAI spans or a manual notification; nothing is auto-instrumented — as breadcrumbs on the error that follows, with model, latency, token counts, estimated USD cost and tool-use requests. When a request crashes, you see the chat completion that preceded it: which model was called, how long it took, what it cost, and which tools it asked to invoke.
 
 - Three capture paths — pick whichever matches your stack
 - Cost estimated from a built-in pricing table (Claude 4.x, GPT-4o/o1, Gemini 2.5) — override per-model via `config.llm_pricing_overrides`
 - Tool-call requests summarized inline; tool *execution* spans captured separately via the OTel path
-- Content capture (prompts/completions) **OFF by default** — only token counts and metadata are recorded
+- Prompts and completions are **never recorded** — only token counts and metadata (the `llm_observability_content_capture` flag is reserved and currently a no-op)
 - Same host-app safety guarantees as the rest of the gem — never raises, never blocks the request, every callback rescue-wrapped
 
 ```ruby
@@ -354,7 +354,7 @@ config.enable_git_blame = true
 <details>
 <summary><strong>Code Path Coverage (Diagnostic Mode)</strong></summary>
 
-Enable coverage via a dashboard button to see which production code paths were executed. Source code viewer overlays green checkmarks on executed lines and gray dots on unexecuted lines. Uses Ruby's `Coverage.setup(oneshot_lines: true)` — near-zero overhead, each line fires once. Zero overhead when off.
+Enable coverage via a dashboard button to see which production code paths were executed. Source code viewer overlays green checkmarks on executed lines and gray dots on unexecuted lines. Uses Ruby's `Coverage.setup(oneshot_lines: true)` — near-zero overhead, each line fires once. Zero overhead when off. Diagnostic mode only: coverage is process-global (a multi-threaded Puma blends requests), held in memory and not persisted. No error tracker integrates this; Coverband does it standalone with persistence.
 
 ```ruby
 config.enable_coverage_tracking = true   # shows Enable/Disable buttons on error detail page
@@ -418,7 +418,7 @@ Seven analysis engines built in:
 3. **Co-occurring Errors** — Detect errors that happen together within configurable time windows
 4. **Error Cascade Detection** — Identify chains (A causes B causes C) with probability and delays
 5. **Error Correlation Analysis** — Correlate errors with app versions, git commits, and users
-6. **Platform Comparison** — iOS vs Android vs Web health metrics side-by-side
+6. **Platform Comparison** — iOS vs Android vs API health metrics side-by-side
 7. **Occurrence Pattern Detection** — Cyclical patterns (business hours, weekends) and burst detection
 
 [Complete documentation →](docs/FEATURES.md#advanced-analytics-features)
@@ -489,7 +489,8 @@ config.enable_diagnostic_dump = true
 Track Rack Attack security events (throttles, blocklists, tracks) as breadcrumbs attached to errors, with a dedicated summary page.
 
 - Captures throttle, blocklist, and track events automatically
-- Dashboard page at `/errors/rack_attack_summary` with event breakdown
+- Dashboard page at `/errors/rack_attack_summary` with event breakdown and per-rule stats — rack-attack ships no UI of its own
+- Classifies AI-agent user agents (GPTBot, ClaudeBot, …) on `track` events
 - Requires breadcrumbs to be enabled
 
 ```ruby
@@ -507,7 +508,7 @@ Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook �
 - Disk-based fallback: writes crash data to disk because the database may be unavailable during shutdown
 - Imported automatically on next boot
 - Captures exception details, backtrace, uptime, GC stats, thread count, and cause chain
-- A self-hosted only feature — impossible for SaaS tools
+- Honeybadger, Bugsnag and AppSignal have `at_exit` reporters too; RED's writes to disk and imports at next boot because the database may already be gone during shutdown
 
 ```ruby
 config.enable_crash_capture = true
@@ -678,7 +679,7 @@ Yes — local **and** instance variables at the moment the exception is raised, 
 No. Storm protection (a circuit breaker with adaptive sampling, **ON by default**) makes the gem degrade itself first during error floods — occurrence counts stay exact while it sheds the expensive work, and a Storm History page shows exactly what was shed. There is no I/O on the hot path — the check is a digest and an atomic increment.
 
 **Does it work with my background jobs?**
-Yes — it auto-detects and supports Sidekiq, SolidQueue, and GoodJob, and can log errors asynchronously through any of them.
+Yes — errors raised in jobs are captured, and it can log errors asynchronously through Sidekiq or SolidQueue (or the in-process `:async` adapter). Sidekiq, SolidQueue and GoodJob are all auto-detected for the job-queue stats stored on each error.
 
 **Does it work with my authentication?**
 Yes — HTTP Basic Auth out of the box, or a custom `authenticate_with` lambda that integrates with Devise, Warden, or session-based auth.

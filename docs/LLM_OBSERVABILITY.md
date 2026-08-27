@@ -6,7 +6,7 @@ permalink: /docs/LLM_OBSERVABILITY
 
 # LLM Observability Guide
 
-Capture every LLM call your application makes — model, latency, token counts, estimated USD cost, and tool-use requests — as breadcrumbs on the error that follows. When a request crashes, you see the chat completion that preceded it: which model was called, how long it took, what it cost, and which tools it asked to invoke.
+Capture your application's LLM calls — through a Faraday middleware, OpenTelemetry GenAI spans or a manual notification; nothing is auto-instrumented — as breadcrumbs on the error that follows, with model, latency, token counts, estimated USD cost, and tool-use requests. When a request crashes, you see the chat completion that preceded it: which model was called, how long it took, what it cost, and which tools it asked to invoke.
 
 **⚙️ Optional Feature** — disabled by default. Enable it in your initializer:
 
@@ -292,7 +292,7 @@ Tool arguments / results are particularly worth scrubbing before they reach the 
 The three capture paths and the cost estimator are governed by the same rules as the rest of the gem. From `HOST_APP_SAFETY.md`:
 
 - **Rule 1 (never raise in capture):** every callback wraps its body in `rescue StandardError`. The Faraday middleware emits the breadcrumb inside an `ensure` block with its own inner rescue, so a failure during breadcrumb emission cannot interfere with the upstream call's exception propagation.
-- **Rule 2 (never block):** Config flags are re-read on every event. When disabled, the cost is one boolean read + an early return. Benchmarks show worst-case hot-path cost of **0.004 ms/op** — ~125× under the 0.5 ms-per-operation budget.
+- **Rule 2 (never block):** Config flags are re-read on every event. When disabled, the cost is one boolean read + an early return. A maintainer's single-machine measurement put the worst-case hot-path cost at **0.004 ms/op** — ~125× under the 0.5 ms-per-operation budget; no benchmark script ships with the gem.
 - **Rule 5 (re-raise upstream exceptions):** the `LlmMiddleware` re-raises every exception thrown by the upstream Faraday app via a bare `raise` statement. Sentry's Issue #1173 lesson is respected — we will never swallow your app's exceptions to record a breadcrumb.
 - **Rule 6 (feature-detect):** the OTel processor is registered only if `OpenTelemetry::SDK` is loaded AND the active tracer provider supports `add_span_processor`. (A bare `OpenTelemetry.tracer_provider` returns a `ProxyTracerProvider` until `OpenTelemetry::SDK.configure` is called — it doesn't have `add_span_processor`. We check before calling.) The Faraday middleware loads without Faraday installed because it doesn't subclass `Faraday::Middleware`; it just exposes the duck-typed `initialize(app)` + `call(env)` interface.
 

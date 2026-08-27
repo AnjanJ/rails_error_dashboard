@@ -12,7 +12,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ### Getting Started
 - **[Quickstart Guide](/rails_error_dashboard/docs/quickstart/)** - Get up and running in 5 minutes
-- **[Installation](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#installation)** - Detailed installation instructions
+- **[Installation](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#quick-start)** - Detailed installation instructions
 - **[Configuration](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration reference
 - **[Migration & Upgrade Strategy](/rails_error_dashboard/docs/reference/migration-strategy/)** - Squashed migrations and v0.2.0 upgrade guide
 - **[Uninstall Guide](/rails_error_dashboard/docs/reference/uninstall/)** - Complete removal instructions (manual + automated)
@@ -26,10 +26,10 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Monitoring & Health (v0.3)
 - **[System Health Snapshots](/rails_error_dashboard/docs/features/#system-health-snapshot)** - GC stats, threads, connection pool, memory, RubyVM cache, YJIT stats
 - **[N+1 Query Detection](/rails_error_dashboard/docs/features/#n1-query-detection)** - Detect N+1 queries from breadcrumbs
-- **[Job Health](/rails_error_dashboard/docs/features/#job-health)** - Background job queue stats (Sidekiq, SolidQueue, GoodJob)
-- **[Database Health](/rails_error_dashboard/docs/features/#database-health)** - PgHero-style connection pool and table stats
+- **[Job Health](/rails_error_dashboard/docs/features/#job-health)** - Job-queue stats captured at error time (Sidekiq, SolidQueue, GoodJob), aggregated across errors — not a live queue view
+- **[Database Health](/rails_error_dashboard/docs/features/#database-health)** - PgHero-style live table and index stats (PostgreSQL-only) plus connection-pool state at error time
 - **[Cache Health](/rails_error_dashboard/docs/features/#cache-health)** - Cache hit rates and miss patterns
-- **[Deprecation Tracking](/rails_error_dashboard/docs/features/#deprecation-tracking)** - Track Rails deprecation warnings
+- **[Deprecation Tracking](/rails_error_dashboard/docs/features/#deprecation-tracking)** - Track Rails deprecation warnings (the host's deprecation behaviour must include `:notify`)
 
 ### Deep Debugging (v0.4)
 - **[Local Variable Capture](/rails_error_dashboard/docs/features/#local-variable-capture)** - Capture local variables at the point of exception via TracePoint
@@ -58,7 +58,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Mobile App Integration](/rails_error_dashboard/docs/guides/mobile-app-integration/)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](/rails_error_dashboard/docs/guides/batch-operations/)** - Bulk error management
 - **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - Complete API documentation
-- **[Real-Time Updates](/rails_error_dashboard/docs/guides/real-time-updates/)** - Turbo Streams and live updates
+- **[Real-Time Updates](/rails_error_dashboard/docs/guides/real-time-updates/)** - Turbo Streams live updates (requires `turbo-rails` + ActionCable in the host)
 - **[Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/)** - Configure Solid Queue for async logging
 
 ### Performance & Optimization
@@ -155,7 +155,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.4.0** (Latest).
+This documentation is for **Rails Error Dashboard v0.11.0** (Latest).
 
 For version history, see the [Changelog](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md).
 

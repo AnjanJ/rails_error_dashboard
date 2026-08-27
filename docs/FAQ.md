@@ -13,17 +13,18 @@ Common questions about Rails Error Dashboard.
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but actively tested with 2,600+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](FEATURES.md#production-ready).
+This is currently in **beta** but actively tested with 4,200+ passing tests across Rails 7.0-8.1 and Ruby 3.2-4.0. Many users are running it in production. See [production requirements](FEATURES.md#production-ready).
 </details>
 
 <details>
 <summary><strong>How does this compare to Sentry/Rollbar/Honeybadger?</strong></summary>
 
-**Similar**: Error tracking, grouping, notifications, dashboards
-**Better**: 100% free, self-hosted (your data stays with you), no usage limits, Rails-optimized
-**Trade-offs**: You manage hosting/backups, fewer integrations than commercial services
+**What RED records that they don't**: the state of the process at the moment of failure — GC, memory, file descriptors, load, the ActiveRecord pool, Puma, job queues, RubyVM/YJIT — stored on the error record itself; a raise-vs-rescue aggregate of swallowed exceptions; Copy as RSpec; and a Storm History ledger of everything shed during an error flood.
+**Similar**: error capture and grouping, breadcrumbs, local variables, notifications, workflow, dashboards.
+**Also**: it runs inside your app and your data never leaves your infrastructure — a self-hosted Sentry alternative — and the gem is MIT and free forever, with no usage caps.
+**Trade-offs**: you manage hosting and backups; no mobile SDKs, no merge/split, no MCP server, and fewer integrations than commercial services.
 
-See [full comparison](features/PLATFORM_COMPARISON.md).
+Every claim above was checked against 30+ products and gems in August 2026 — see [the verified ledger](../.shipkit/research/red-unique-features-verified.md).
 </details>
 
 <details>
@@ -141,17 +142,17 @@ Supports Slack, Discord, Email, PagerDuty, and custom webhooks. See [Notificatio
 <details>
 <summary><strong>Does it work with Turbo/Hotwire?</strong></summary>
 
-Yes! Includes Turbo Streams support for real-time updates. Errors appear in the dashboard instantly without page refresh.
+Yes — with `turbo-rails` and a working ActionCable adapter in the host app, new errors appear in the dashboard over Turbo Streams without a page refresh. Without them the dashboard does not auto-refresh; there is no polling fallback.
 </details>
 
 <details>
-<summary><strong>How do I report errors from mobile apps (React Native/Flutter)?</strong></summary>
+<summary><strong>How do I report errors from mobile apps?</strong></summary>
 
-Make HTTP POST requests to your Rails API:
+The gem ships no mobile SDK and no ingest endpoint. Add a small endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, then POST to it from the app; errors are tagged by platform from the User-Agent (iOS/Android) or from the `platform` you send:
 
 ```javascript
-// React Native example
-fetch('https://api.example.com/error_dashboard/api/v1/errors', {
+// React Native example — the endpoint is one you write (see the guide)
+fetch('https://api.example.com/api/v1/mobile_errors', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -224,7 +225,7 @@ Swallowed exceptions are exceptions that are `raise`d but then silently `rescue`
 
 Example: a `rescue => e` that does nothing silently corrupts state. The swallowed exception detector finds these code paths by comparing raise counts vs rescue counts per location.
 
-No other self-hosted error tracker offers this feature. See [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040).
+No self-hosted Rails tool has this. Only Datadog's paid APM detects rescued exceptions (Ruby 3.3+, inside a traced request); RED does it without an APM span and aggregates the raise-vs-rescue ratio per location, which nothing else does. See [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040).
 </details>
 
 <details>

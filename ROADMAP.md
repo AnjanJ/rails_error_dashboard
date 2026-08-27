@@ -85,7 +85,7 @@ Plus direct access to:
 
 ## Tier 0 — Insider Advantage Features (only possible because we're inside the process)
 
-These features are impossible or impractical for SaaS error trackers. They represent the gem's unique competitive moat.
+These features depend on running inside the process. Not all of them are unique — SaaS agents also ship breadcrumbs, `at_exit` capture and N+1 detection (see the verified ledger in `.shipkit/research/`) — but attaching runtime state to the error record is found nowhere else.
 
 ### A. Breadcrumbs via ActiveSupport::Notifications (zero config) — DONE
 - **What:** Subscribe to Rails instrumentation events, keep a rolling buffer per-request (last 25-50 events). When an error fires, attach the buffer as a timeline. The developer sees every SQL query, cache hit/miss, partial render, and job enqueue that happened before the crash
@@ -104,9 +104,9 @@ These features are impossible or impractical for SaaS error trackers. They repre
 
 ### C. System Health Snapshot at Error Time — DONE
 - **What:** At the moment an error is captured, snapshot: process RSS (memory), `GC.stat` (heap pressure, GC count), `Thread.list.count`, `ActiveRecord::Base.connection_pool.stat` (pool exhaustion), and `Puma.stats` if available (server capacity)
-- **Why:** Developers always ask "was the server under pressure when this happened?" Memory leaks, connection pool exhaustion, and thread starvation all cause errors that are impossible to diagnose without this context. No SaaS error tracker can capture in-process GC and connection pool stats
+- **Why:** Developers always ask "was the server under pressure when this happened?" Memory leaks, connection pool exhaustion, and thread starvation all cause errors that are impossible to diagnose without this context. Every APM has GC, pool and Puma metrics as time-series graphs; none attaches them to the error record
 - **Effort:** 1 day
-- **Impact:** Differentiation ++ (unique to in-process gems)
+- **Impact:** Differentiation ++ (unique: stored on the error, not a graph beside it)
 - **Implemented:** Sub-millisecond capture, every metric individually rescue-wrapped, no ObjectSpace, no Thread backtraces, no subprocess. Displays GC stats, process memory, thread count, connection pool, and Puma stats on error detail page
 
 ### D. Auto-Enriched User Context via CurrentAttributes — DONE
@@ -124,9 +124,9 @@ These features are impossible or impractical for SaaS error trackers. They repre
 
 ### F. Deprecation Warning Tracker — DONE
 - **What:** Subscribe to `deprecation.rails` notifications. Capture deprecation warnings with their callstack and display on a dedicated "Deprecations" tab. Group by warning type, show frequency, and flag which code paths trigger them
-- **Why:** Deprecation warnings are "future errors" — things that will break on the next Rails upgrade. No error tracker captures these. This turns the dashboard into a Rails upgrade planning tool
+- **Why:** Deprecation warnings are "future errors" — things that will break on the next Rails upgrade. No error tracker integrates these (deprecation_collector does it as a standalone gem). This turns the dashboard into a Rails upgrade planning tool. Needs the host's deprecation behaviour to include `:notify`, and only sees requests that later raised
 - **Effort:** 1 day
-- **Impact:** Unique ++ (no competitor has this)
+- **Impact:** Unique among error trackers ++ (no error tracker integrates this; deprecation_collector does it standalone)
 - **Implemented:** Per-error red summary card with warning message and caller location. v0.3.0 added: aggregate Deprecations page (`/errors/deprecations`) grouped by message+source across all errors, with occurrence counts, affected error links, and 7/30/90 day filtering. Rails Upgrade Guide link
 
 ### G. Background Job Health Panel — DONE
@@ -145,7 +145,7 @@ These features are impossible or impractical for SaaS error trackers. They repre
 
 ### I. Cache Health Monitoring — DONE
 - **What:** Subscribe to `cache_read.active_support`, track hit/miss ratio over time. Show cache effectiveness on the dashboard. Alert when hit rate drops below threshold
-- **Why:** A sudden cache hit rate drop often **precedes** error spikes (Redis went down, cache keys changed after deploy). Correlating cache health with error rate is unique context only an in-process gem can provide
+- **Why:** A sudden cache hit rate drop often **precedes** error spikes (Redis went down, cache keys changed after deploy). Sentry's Caches module reports miss rate and throughput with tracing; RED's aggregate is computed only from cache operations inside errored requests, without tracing
 - **Effort:** 1 day
 - **Impact:** Operational value + (useful correlation)
 - **Implemented:** Per-error cache card with reads, writes, hit rate (color-coded), total time, slowest operation. Hit rate advisories when below 80%. v0.3.0 added: aggregate Cache Health page (`/errors/cache_health_summary`) sorted worst-first across all errors. Rails Caching Guide link
@@ -171,7 +171,7 @@ These features are impossible or impractical for SaaS error trackers. They repre
 
 > The research behind this section — competitive analysis, implementation architecture, benchmarks and sources — lived in an uncommitted working doc. The conclusions that survived it are stated inline below, including the performance budget table at the end of this section.
 
-These features use Ruby's VM-level APIs and TracePoint to capture context that **no other error tracker** provides. The research validates that these are production-safe — Sentry ships TracePoint(:raise) globally, and all system health APIs are read-only with <1ms overhead.
+These features use Ruby's VM-level APIs and TracePoint to capture context that, taken together, **no other error tracker** provides (local variables alone are table stakes — Sentry, Honeybadger and Rollbar all capture them; instance variables of `self`, the runtime snapshot on the error and the swallowed-exception aggregate are the parts nobody else has). The research validates that these are production-safe — Sentry ships TracePoint(:raise) globally, and all system health APIs are read-only with <1ms overhead.
 
 ### The Killer Combination (Our Unique Differentiator)
 
@@ -255,7 +255,7 @@ Environment:
 
 ### N. Swallowed Exception Detection (TracePoint :rescue, Ruby 3.3+) — DONE (v0.4.0)
 - **What:** Subscribe to `:rescue` TracePoint to track silently rescued exceptions. Build a "Swallowed Exceptions" dashboard showing exceptions raised frequently but never reaching the error handler
-- **Why:** **No competitor detects this.** Silent `rescue => e; nil; end` hides real problems. Example output: "NoMethodError raised 500/hr, 497 silently rescued at `payment_processor.rb:89`"
+- **Why:** **Only Datadog's paid APM detects rescued exceptions** (dd-trace-rb ≥ 2.16, Ruby 3.3+, needs an active span) and it keeps no raise-vs-rescue aggregate; no free or self-hosted tracker does it at all. Silent `rescue => e; nil; end` hides real problems. Example output: "NoMethodError raised 500/hr, 497 silently rescued at `payment_processor.rb:89`"
 - **Implementation:**
   - `TracePoint.new(:rescue)` stores rescue location on exception via `@_red_rescues` instance variable
   - Compare raise vs rescue counts per exception class per location
@@ -263,7 +263,7 @@ Environment:
   - Requires Ruby 3.3+ (version gate with `RUBY_VERSION >= "3.3"`)
   - Note: Ruby uses `tp.raised_exception` (not `tp.rescued_exception`) for both events
 - **Effort:** 2-3 days (including dashboard UI)
-- **Impact:** Novel +++ (genuinely unique — no competitor has this)
+- **Impact:** Novel +++ (the per-location aggregate is unique; detection itself is shared with Datadog)
 
 ### O. Process Crash Capture (at_exit hook) — DONE (v0.4.0)
 - **What:** Register `at_exit` hook to capture fatal exception (`$!`), GC state, thread state. Write to disk synchronously (DB may be unavailable during crash). Import on next boot
@@ -546,8 +546,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ### 17. Error Replay (Request Reproduction) — DONE
 - **What:** Capture enough request context (method, path, headers, params, body) to generate a reproducible curl command or RSpec request spec. One-click "Copy as curl" or "Copy as test"
-- **Why:** The hardest part of fixing an error is reproducing it. If the dashboard can hand you a ready-to-run curl command, that's a massive time-saver. No competitor does this well
-- **Community impact:** Genuinely novel feature that would differentiate from every competitor
+- **Why:** The hardest part of fixing an error is reproducing it. If the dashboard can hand you a ready-to-run curl command, that's a massive time-saver. Sentry offers a curl view; no competitor generates a runnable test
+- **Community impact:** The RSpec half is genuinely novel; curl is shared with Sentry
 - **Effort:** 2 days
 - **Status:** Fully implemented — `CurlGenerator` + `RspecGenerator` services with copy-to-clipboard buttons on error detail page
 

@@ -52,7 +52,7 @@ The installer will guide you through **optional features** organized in 4 catego
 - Co-occurring Errors - Identify errors that happen together
 - Error Cascades - Track parent→child error relationships
 - Error Correlation - Correlate errors with versions and users
-- Platform Comparison - Compare iOS vs Android vs Web health
+- Platform Comparison - Compare iOS vs Android vs API health
 - Occurrence Patterns - Detect cyclical patterns and error bursts
 
 **Developer Tools (4 features)**
@@ -275,7 +275,7 @@ See the [Complete Configuration Guide](guides/CONFIGURATION.md) for all configur
 ### Filter Errors
 
 Use the sidebar filters:
-- **Platform**: iOS, Android, API, Web
+- **Platform**: iOS, Android, API (and any platform you report manually)
 - **Unresolved**: Show only unresolved errors
 - **Search**: Search by error message
 

@@ -15,7 +15,7 @@ Rails Error Dashboard uses an **opt-in architecture** with two categories of fea
 ### Tier 1 Features (Always ON)
 Core features that are always enabled - no configuration needed:
 - ✅ **Error Tracking & Capture** - Automatic error logging from controllers, jobs, middleware
-- ✅ **Dashboard & UI** - Modern interface with search, filtering, real-time updates
+- ✅ **Dashboard & UI** - Modern interface with search, filtering, and real-time updates (the latter with `turbo-rails` + ActionCable in the host)
 - ✅ **Analytics & Insights** - Trend charts, severity breakdown, spike detection
 - ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
@@ -60,8 +60,8 @@ All optional features are disabled by default and can be toggled on/off at any t
 
 ### Platform Detection
 - **Automatic platform identification** from User-Agent headers
-- Supports: **iOS**, **Android**, **Web**, **API**
-- **Custom platforms** via manual specification
+- Auto-detects **iOS**, **Android** (including Expo) and **API** — a desktop browser request is classed as API
+- **Custom platforms** (for example `Web`) via manual specification
 - **Browser detection** with device details (Chrome, Safari, Firefox, etc.)
 
 ### Error Context
@@ -96,12 +96,12 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Visual notifications** - Yellow highlight for new errors
 - **Pulsing animations** on updated metrics
 - **Turbo Streams** powered (WebSocket/SSE)
-- **Zero configuration** - Works out of the box
+- **Requires** `turbo-rails` and a working ActionCable adapter in the host app — no polling fallback
 - **Low bandwidth** - Only ~800 bytes per update
 
 ### Search & Filtering
 - **Text search** across error messages and types
-- **Filter by platform** (iOS, Android, Web, API)
+- **Filter by platform** (iOS, Android, API, plus any platform reported manually)
 - **Filter by environment** (production, staging, uat — whatever your deploys are called; v0.11.0)
 - **Filter by severity** (Critical, High, Medium, Low)
 - **Filter by status** (Resolved, Unresolved, All)
@@ -145,7 +145,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Contextual metrics** showing today vs. average with multiplier
 
 ### Platform Comparison
-- **Side-by-side metrics** for iOS vs Android vs Web vs API
+- **Side-by-side metrics** for iOS vs Android vs API (plus any platform you report manually)
 - **Platform-specific error rates**
 - **Cross-platform correlation** analysis
 - **Platform health scores** (0-100)
@@ -528,7 +528,7 @@ This page helps identify errors associated with poor cache performance across yo
 
 ### LLM Observability — Calls, Tokens, Cost, Tool Use
 
-LLM breadcrumbs (`llm` for chat completions, `llm_tool` for tool execution) capture every LLM call your application makes — model, latency, token counts, estimated USD cost, and tool-use requests:
+LLM breadcrumbs (`llm` for chat completions, `llm_tool` for tool execution) capture your application's LLM calls — through a Faraday middleware, OTel GenAI spans or a manual notification; nothing is auto-instrumented — with model, latency, token counts, estimated USD cost, and tool-use requests:
 
 ```ruby
 config.enable_breadcrumbs        = true   # required
@@ -553,11 +553,11 @@ Three capture paths, all additive:
 
 Captured: provider, model, input/output tokens, duration, cost (auto-estimated from a built-in pricing table covering Claude 4.x / GPT-4o / o1 / Gemini 2.5), status (success/error/timeout), tool names + counts.
 
-**NOT captured by default**: prompt content, completion text, conversation history. Privacy by design — LLM prompts routinely contain user PII, and recording them by default would silently exfiltrate sensitive data into error reports.
+**Never captured**: prompt content, completion text, conversation history — the `llm_observability_content_capture` flag is reserved and currently a no-op. Privacy by design — LLM prompts routinely contain user PII, and recording them by default would silently exfiltrate sensitive data into error reports.
 
 #### Host App Safety
 
-Same guarantees as the rest of the gem. Worst-case hot-path cost is **~4 microseconds per breadcrumb** (benchmarked at 125× under the 0.5ms-per-op budget). The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
+Same guarantees as the rest of the gem. Worst-case hot-path cost was **~4 microseconds per breadcrumb** in a maintainer's single-machine measurement (~125× under the 0.5ms-per-op budget); no benchmark script ships with the gem. The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
 
 ### AI Help — Ask an LLM About the Current Error
 
@@ -1000,7 +1000,7 @@ end
 
 ### Why This Matters
 
-This is a **self-hosted only feature** — impossible for SaaS error trackers. When a process crashes, SaaS tools lose the connection before they can report. Since this gem runs inside the process, it can write to disk as the last act before exit.
+Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is not unique to self-hosted tools. What differs is where the data goes: RED writes the crash to disk as the last act before exit — the database may already be unavailable — and imports it into your own database on the next boot. Segfaults and `kill -9` are never seen by `at_exit`, in any tool.
 
 ---
 
@@ -1083,7 +1083,7 @@ This is a **self-hosted only feature** — impossible for SaaS error trackers. W
 - **Repository pattern** via Query Objects
 
 ### Code Quality
-- **2,600+ RSpec tests** with high coverage
+- **4,200+ RSpec tests** with high coverage
 - **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
 - **Ruby 3.2, 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**

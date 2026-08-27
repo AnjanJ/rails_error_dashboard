@@ -159,7 +159,7 @@ recycled Puma thread would render in whatever language the host app last used.
 | `enable_co_occurring_errors` | Boolean | `false` | Detect errors happening together |
 | `enable_error_cascades` | Boolean | `false` | Detect parent→child error relationships |
 | `enable_error_correlation` | Boolean | `false` | Version/user/time correlation analysis |
-| `enable_platform_comparison` | Boolean | `false` | iOS vs Android vs Web health comparison |
+| `enable_platform_comparison` | Boolean | `false` | iOS vs Android vs API health comparison |
 | `enable_occurrence_patterns` | Boolean | `false` | Cyclical and burst pattern detection |
 
 ### Advanced Analytics - Baseline Monitoring
@@ -638,7 +638,7 @@ See [Error Correlation Guide](../features/ERROR_CORRELATION.md) for details.
 
 ### Platform Comparison
 
-Compare iOS vs Android vs Web health metrics and platform-specific error rates.
+Compare iOS vs Android vs API health metrics and platform-specific error rates (a desktop browser request is classed as API; `Web` only appears when you report it manually).
 
 ```ruby
 RailsErrorDashboard.configure do |config|
@@ -1013,7 +1013,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-Writes crash data to JSON on disk (database may be unavailable during shutdown). Imported automatically on next boot. A self-hosted only feature — impossible for SaaS tools.
+Writes crash data to JSON on disk (database may be unavailable during shutdown). Imported automatically on next boot. Honeybadger, Bugsnag and AppSignal have `at_exit` reporters too; RED's difference is that the crash lands in your own database rather than a SaaS.
 
 ---
 

@@ -731,10 +731,10 @@ Dashboard continues to function normally with manual refresh.
 ✅ **Real-time error list updates** - New errors appear instantly
 ✅ **Live stats refresh** - Counts update automatically
 ✅ **Visual feedback** - Animations highlight changes
-✅ **Zero configuration** - Works out of the box
+✅ **Requirements** - `turbo-rails` plus a working ActionCable adapter in the host app; there is no polling fallback
 ✅ **High performance** - Minimal overhead (~800 bytes per error)
 ✅ **Browser compatible** - All modern browsers supported
-✅ **Production ready** - All 545 tests passing
+✅ **Production ready** - Covered by the request and system specs
 
 **Related Features:**
 - [Error Trend Visualizations](ERROR_TREND_VISUALIZATIONS.md) - Charts for 7-day trends
