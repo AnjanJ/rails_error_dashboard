@@ -151,11 +151,18 @@ RSpec.describe "Rack::Attack real middleware integration", type: :request do
   end
 
   describe "aggregation under repeated traffic" do
+    # Rows are bucketed by Time.current.beginning_of_hour, so a run that
+    # straddles the top of an hour legitimately produces two rows — which is
+    # correct behaviour, not a regression. Pinning the clock keeps the example
+    # about aggregation instead of about what time CI happens to run: this
+    # failed on Ruby 3.2 / Rails 7.1 in a suite that ran 12:58:57 -> 13:01:09.
     it "collapses many requests from one client into a single counted row" do
       install_markdown_track_rule!
       stack = rack_stack
 
-      20.times { get_with_accept(stack, accept: "text/markdown") }
+      travel_to(Time.current.beginning_of_hour + 5.minutes) do
+        20.times { get_with_accept(stack, accept: "text/markdown") }
+      end
 
       expect(event_model.count).to eq(1)
       expect(event_model.first.event_count).to eq(20)
