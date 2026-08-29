@@ -31,7 +31,26 @@ module RailsErrorDashboard
         "Claude-User" => /Claude-User/i,
         "Claude Code" => /Claude-?Code/i,
         "Perplexity-User" => /Perplexity-User/i,
-        "Gemini-User" => /Gemini-User/i
+        "Gemini-User" => /Gemini-User/i,
+        # Observed in production traffic by the reporter of #170:
+        # "GitHubCopilotRuntime-WebFetch", 7 requests from 5 IPs. Classified as
+        # an assistant rather than a crawler because it fetches a specific URL a
+        # developer's Copilot session asked for, one page at a time — not a bulk
+        # corpus crawl.
+        #
+        # The pattern is deliberately anchored on "GitHubCopilot" rather than a
+        # bare /Copilot/i. Microsoft applies the Copilot brand very broadly, and
+        # its Copilot features are documented as riding Bingbot infrastructure or
+        # sending ordinary Edge/Chromium user agents with no bot signal — so a
+        # loose pattern would mislabel plain browser traffic as an AI agent,
+        # which is exactly the wrong-attribution failure this class avoids.
+        #
+        # No authoritative UA documentation exists for this agent: it is absent
+        # from GitHub's own docs, from ai-robots-txt/ai.robots.txt, and from the
+        # Dark Visitors catalogue as of 2026-08-29. The pattern therefore matches
+        # only what has actually been observed, plus the "-WebFetch" sibling
+        # suffix, instead of guessing at variants.
+        "GitHub Copilot" => /GitHubCopilot/i
       }.freeze
 
       AI_CRAWLERS = {
