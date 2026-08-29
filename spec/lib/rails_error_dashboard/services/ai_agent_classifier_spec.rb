@@ -9,6 +9,7 @@ RSpec.describe RailsErrorDashboard::Services::AiAgentClassifier do
     {
       "ChatGPT-User/1.0; +https://openai.com/bot" => :ai_assistant,
       "Claude-User/1.0" => :ai_assistant,
+      "GitHubCopilotRuntime-WebFetch" => :ai_assistant,
       "Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)" => :ai_crawler,
       "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)" => :ai_crawler,
       "PerplexityBot/1.0" => :ai_crawler,
@@ -79,6 +80,36 @@ RSpec.describe RailsErrorDashboard::Services::AiAgentClassifier do
     it "never raises on a non-string input" do
       expect { described_class.kind(Object.new) }.not_to raise_error
       expect(described_class.kind(Object.new)).to eq(:other)
+    end
+  end
+
+  # Reported from production traffic on issue #170: 7 requests from 5 IPs.
+  # Absent from GitHub's docs, ai-robots-txt/ai.robots.txt and Dark Visitors as
+  # of 2026-08-29, so the pattern matches observed reality rather than a guess.
+  describe "GitHub Copilot" do
+    it "names the observed runtime agent and counts it as AI" do
+      ua = "GitHubCopilotRuntime-WebFetch"
+
+      expect(described_class.name(ua)).to eq("GitHub Copilot")
+      expect(described_class.kind(ua)).to eq(:ai_assistant)
+      expect(described_class.ai?(ua)).to be true
+    end
+
+    it "matches other GitHubCopilotRuntime suffixes" do
+      expect(described_class.name("GitHubCopilotRuntime/1.0")).to eq("GitHub Copilot")
+    end
+
+    # A bare /Copilot/i would swallow ordinary browser traffic: Microsoft applies
+    # the Copilot brand broadly, and its agentic features are documented as
+    # sending plain Edge/Chromium user agents with no bot signal. Mislabelling a
+    # human's browser as an AI agent is exactly the wrong-attribution failure the
+    # classifier exists to avoid.
+    it "does not claim unrelated Copilot-branded browser traffic" do
+      edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Edg/120.0"
+
+      expect(described_class.ai?(edge)).to be false
+      expect(described_class.kind(edge)).to eq(:browser)
+      expect(described_class.ai?("Mozilla/5.0 Copilot")).to be false
     end
   end
 end

@@ -972,7 +972,7 @@ If `rack-attack` is not loaded, a startup warning is logged and no events are re
 
 ### Measuring AI crawler traffic (v0.10.0)
 
-Events record the client's user agent, and known AI agents are named on the dashboard — `GPTBot`, `ChatGPT-User`, `OAI-SearchBot`, `ClaudeBot`, `Claude-User`, `Claude Code`, `PerplexityBot`, `Bytespider`, `CCBot` and others, alongside ordinary crawlers such as Googlebot so the two can be told apart. The page shows an **AI Agent Requests** total and a **Top Agent** column per rule.
+Events record the client's user agent, and known AI agents are named on the dashboard — `GPTBot`, `ChatGPT-User`, `OAI-SearchBot`, `ClaudeBot`, `Claude-User`, `Claude Code`, `PerplexityBot`, `GitHub Copilot`, `Bytespider`, `CCBot` and others, alongside ordinary crawlers such as Googlebot so the two can be told apart. The page shows an **AI Agent Requests** total and a **Top Agent** column per rule.
 
 `Rack::Attack.track` rules are the way to feed it. They count matching requests without blocking or throttling anything:
 
@@ -980,7 +980,7 @@ Events record the client's user agent, and known AI agents are named on the dash
 # Who is reading the site, regardless of the format they ask for
 Rack::Attack.track("ai agents") do |req|
   ua = req.user_agent.to_s
-  req.ip if ua.match?(/GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|Claude-Code|PerplexityBot/i)
+  req.ip if ua.match?(/GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|Claude-Code|PerplexityBot|GitHubCopilot/i)
 end
 
 # Who specifically wants Markdown
