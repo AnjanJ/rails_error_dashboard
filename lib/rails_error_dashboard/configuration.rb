@@ -205,7 +205,7 @@ module RailsErrorDashboard
     # their own table, independent of error capture (breadcrumbs optional).
     attr_accessor :enable_rack_attack_tracking          # Master switch (default: false)
     attr_accessor :rack_attack_max_cache_size           # Max buffered keys per thread (default: 1000)
-    attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 60)
+    attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 5)
 
     # ActionCable event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
@@ -429,7 +429,12 @@ module RailsErrorDashboard
       # Persists to its own table; does NOT require breadcrumbs.
       @enable_rack_attack_tracking = false
       @rack_attack_max_cache_size = 1000 # Max buffered keys per thread (LRU eviction)
-      @rack_attack_flush_interval = 60   # Seconds between DB flushes
+      # Max age of buffered events before they are written out. Lowered from 60
+      # to 5 alongside the end-of-request drain (issue #170): the executor hook
+      # gates on this interval, so it is the upper bound on how stale the Rate
+      # Limits page can be, not a per-request cost. A flood still collapses to
+      # roughly one write per thread per interval.
+      @rack_attack_flush_interval = 5    # Seconds between DB flushes
 
       # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_actioncable_tracking = false
@@ -628,7 +633,7 @@ module RailsErrorDashboard
         # Rack::Attack initializer has loaded, so a missing constant here does
         # not prove it will still be missing at after_initialize (when the
         # subscriber actually registers). Auto-disabling would break that case.
-        unless defined?(::Rack::Attack)
+        unless rack_attack_defined?
           warnings << "enable_rack_attack_tracking is enabled but the rack-attack gem " \
                       "does not appear to be loaded. No events will be recorded until " \
                       "Rack::Attack is installed and configured."
@@ -1033,6 +1038,14 @@ module RailsErrorDashboard
 
     # Detect where the engine is mounted in the host app's routes.
     # @return [String] mount path (default: "/red")
+    # Extracted so specs can simulate the gem's absence. rack-attack is in the
+    # dev bundle (so specs can drive the real middleware), which means
+    # ::Rack::Attack is always defined during the suite and absence can no
+    # longer be produced by simply not requiring it.
+    def rack_attack_defined?
+      defined?(::Rack::Attack) ? true : false
+    end
+
     def detect_engine_mount_path
       return "/red" unless defined?(Rails) && Rails.application
 

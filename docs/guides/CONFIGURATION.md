@@ -240,7 +240,7 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `enable_rack_attack_tracking` | Boolean | `false` | Record Rack::Attack throttle/blocklist/track events to their own table |
 | `rack_attack_max_cache_size` | Integer | `1000` | Max buffered event keys per thread before LRU eviction |
-| `rack_attack_flush_interval` | Integer | `60` | Seconds between background flushes of buffered events |
+| `rack_attack_flush_interval` | Integer | `5` | Maximum age of buffered events before they are written to the database |
 
 ### ActionCable Connection Monitoring (v0.5.0)
 
@@ -957,9 +957,16 @@ Record Rack::Attack throttle, blocklist, and track events to their own table, ag
 RailsErrorDashboard.configure do |config|
   config.enable_rack_attack_tracking = true
   config.rack_attack_max_cache_size = 1000      # Buffered keys per thread (LRU)
-  config.rack_attack_flush_interval = 60        # Seconds between DB flushes
+  config.rack_attack_flush_interval = 5         # Max age of buffered events before a write
 end
 ```
+
+Buffered events are written out at the end of the request or job that fills the
+buffer once `rack_attack_flush_interval` has elapsed, and again when the process
+exits. The interval is therefore an upper bound on how stale the Rate Limits page
+can be, not a delay you have to wait out — a rule that matches once still appears.
+Raising it reduces write volume under sustained rate-limiting; lowering it makes
+the page more immediate.
 
 If `rack-attack` is not loaded, a startup warning is logged and no events are recorded. Enabling breadcrumbs as well adds the event to the activity trail on error detail pages. Dashboard page at `/errors/rack_attack_summary`.
 

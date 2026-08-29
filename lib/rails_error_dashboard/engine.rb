@@ -86,6 +86,21 @@ module RailsErrorDashboard
          defined?(Rack::Attack)
         RailsErrorDashboard::Subscribers::RackAttackSubscriber.subscribe!
 
+        # Drain buffered counts at the end of every request and job.
+        #
+        # Without this the buffer is only ever drained by a LATER event arriving
+        # on the SAME thread (see RackAttackTracker#flush_if_due!), so a rule that
+        # matches once stays invisible until the process exits, and counts on a
+        # Puma thread that retires are lost outright rather than delayed.
+        #
+        # to_complete fires after the response body is closed, so the client
+        # already has its bytes — this never delays a request (safety rule 2).
+        # It also fires when the app raised, and is re-entrant, so nested
+        # executor blocks do not double-flush.
+        Rails.application.executor.to_complete do
+          RailsErrorDashboard::Services::RackAttackTracker.flush_if_due!
+        end
+
         # Buffered counts live on the Puma threads that served the requests and
         # are only written out on the flush interval, which a low-traffic rule
         # may never reach. Without this, everything still buffered at SIGTERM

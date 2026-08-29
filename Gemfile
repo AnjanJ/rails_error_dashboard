@@ -35,6 +35,12 @@ gem "bundler-audit", require: false
 gem "browser", "~> 6.0"
 gem "chartkick", "~> 5.0"
 gem "httparty", ">= 0.24"
+# rack-attack is an OPTIONAL runtime dependency (the tracker is gated on
+# defined?(Rack::Attack)), but it must be in the dev bundle so specs can drive
+# the real middleware. Two rack-attack bugs shipped green (#170's blank
+# discriminator, and the flush-visibility bug) precisely because no spec could
+# exercise the gem itself and the fixtures had to guess at its behaviour.
+gem "rack-attack", "~> 6.7"
 gem "turbo-rails", "~> 2.0"
 
 # Start debugger with binding.b [https://github.com/ruby/debug]

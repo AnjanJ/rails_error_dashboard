@@ -6,11 +6,17 @@ module RailsErrorDashboard
   # Two usage modes:
   # 1. With a counts hash — dispatched by RackAttackTracker's periodic flush.
   #    Zero I/O in the request path; all DB writes happen here.
-  # 2. Without arguments — scheduled periodic sweep that flushes the current
-  #    thread's buffer (useful as a cron safety net for low-traffic apps where
-  #    the flush interval may not be reached during a request).
+  # 2. Without arguments — sweeps EVERY live thread's buffer.
   #
-  # Example cron (via solid_queue or whenever):
+  # Mode 2 is now a belt-and-braces backstop, not the primary drain. Buffers are
+  # drained at the end of each request and job by the executor hook registered in
+  # the engine (see RackAttackTracker#flush_if_due!), and again at process exit.
+  # Scheduling this job is therefore optional; it only ever finds counts on
+  # threads that are still alive but have not completed a unit of work since
+  # their deadline elapsed. It CANNOT recover counts from a thread that has
+  # already died — Thread.list does not include it.
+  #
+  # Optional cron (via solid_queue or whenever):
   #   every 5.minutes { RailsErrorDashboard::RackAttackFlushJob.perform_later }
   class RackAttackFlushJob < ApplicationJob
     queue_as :default

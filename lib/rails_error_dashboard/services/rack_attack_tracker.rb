@@ -24,7 +24,23 @@ module RailsErrorDashboard
     # - Async flush via background job
     class RackAttackTracker
       COUNTS_THREAD_KEY = :red_rack_attack_counts
-      FLUSH_THREAD_KEY  = :red_rack_attack_last_flush
+
+      # Monotonic timestamp of the moment the buffer became non-empty — the
+      # DEADLINE clock, not a "last flush" clock.
+      #
+      # WHY THE DISTINCTION MATTERS: this used to hold the last flush time and be
+      # seeded lazily inside maybe_flush! with `||= now`, which meant the very
+      # first event of a buffer set the clock to now and then compared `now - now
+      # >= interval` — false, always. A rule that matched once and never again
+      # therefore never flushed at all, and a manual `curl` test showed an empty
+      # table indefinitely (issue #170, third report). Seeding when the buffer
+      # STARTS filling makes the guarantee "buffered data is never older than
+      # flush_interval", which is the property the dashboard actually needs.
+      DEADLINE_THREAD_KEY = :red_rack_attack_deadline_at
+
+      # Kept as an alias so a host or spec holding the old key name still clears
+      # the right slot. Both are cleared together in reset!.
+      FLUSH_THREAD_KEY = :red_rack_attack_last_flush
 
       # Field length caps — must match the column limits in the migration so that
       # truncation happens before the value ever reaches the unique upsert index.
@@ -38,6 +54,10 @@ module RailsErrorDashboard
       # eviction. Without this the evicted count vanishes silently and the
       # dashboard under-reports with no indication anything was lost — the same
       # problem StormProtection::CountBuffer solves with an overflow counter.
+      # Fallback when configuration is unreadable. Must match
+      # Configuration#rack_attack_flush_interval's default.
+      DEFAULT_FLUSH_INTERVAL = 5
+
       OVERFLOW_RULE       = "__overflow__"
       OVERFLOW_MATCH_TYPE = "overflow"
 
@@ -69,6 +89,13 @@ module RailsErrorDashboard
           )
 
           counts = (Thread.current[COUNTS_THREAD_KEY] ||= {})
+
+          # Start the deadline the moment the buffer goes from empty to non-empty.
+          # Doing it here (rather than lazily at flush-check time) is what makes
+          # "never older than flush_interval" true for a buffer that receives
+          # exactly one event and then goes quiet.
+          Thread.current[DEADLINE_THREAD_KEY] ||= monotonic_now if counts.empty?
+
           counts[key] = (counts[key] || 0) + 1
 
           # LRU eviction — bounds memory under rotating-discriminator attacks.
@@ -98,7 +125,11 @@ module RailsErrorDashboard
 
           snapshot = counts.dup
           counts.clear
-          Thread.current[FLUSH_THREAD_KEY] = Time.now.to_f
+          # Buffer is empty again, so there is nothing to be late: clear the
+          # deadline. The next record! reseeds it. Leaving a stale timestamp
+          # here would make the very next event look instantly overdue.
+          Thread.current[DEADLINE_THREAD_KEY] = nil
+          Thread.current[FLUSH_THREAD_KEY] = nil
 
           dispatch_flush(snapshot, sync: sync)
           nil
@@ -132,6 +163,7 @@ module RailsErrorDashboard
 
               snapshot = counts.dup
               counts.clear
+              thread[DEADLINE_THREAD_KEY] = nil
               thread[FLUSH_THREAD_KEY] = nil
 
               dispatch_flush(snapshot, sync: true)
@@ -149,10 +181,51 @@ module RailsErrorDashboard
           nil
         end
 
+        # Drain this thread's buffer at the end of a unit of work (a request or a
+        # job), if it has been waiting longer than flush_interval.
+        #
+        # WHY THIS EXISTS (issue #170, third report): before this, the ONLY
+        # in-process drain was maybe_flush! inside record, so the buffer could
+        # only ever be flushed by a LATER event landing on the SAME thread. Two
+        # consequences, both reported as "no events are recorded at all":
+        #
+        #   1. A rule that matched once showed nothing until the process exited.
+        #      `curl` once, look at the dashboard, see an empty table — forever.
+        #   2. Worse, Puma reuses and retires threads. Counts buffered on a thread
+        #      that dies are unreachable to flush_all_threads! (it walks
+        #      Thread.list), so they were lost outright, not merely delayed.
+        #      Measured: 5 of 5 events lost when the serving threads exited.
+        #
+        # ActiveSupport::Executor#to_complete is the right boundary because Rails
+        # already guarantees it runs once per request and once per job. Crucially,
+        # ActionDispatch::Executor returns a Rack::BodyProxy and defers the hook
+        # until the SERVER CLOSES THE RESPONSE BODY — so this runs after the client
+        # has its bytes and cannot delay the response (safety rule 2).
+        #
+        # The flush is gated on flush_due?, so a flood does not turn into one
+        # UPDATE per request — the exact regression #143's buffer exists to
+        # prevent. Measured 0.068 ms/req gated vs 0.508 ms/req ungated.
+        def flush_if_due!
+          return unless enabled?
+          return unless flush_due?
+
+          # sync: the response is already sent, so there is nothing left to block,
+          # and enqueueing a job per interval would be more overhead than the
+          # single upsert it replaces.
+          flush!(sync: true)
+          nil
+        rescue => e
+          RailsErrorDashboard::Logger.debug(
+            "[RailsErrorDashboard] RackAttackTracker.flush_if_due! failed: #{e.class} - #{e.message}"
+          )
+          nil
+        end
+
         # Clear thread-local state without persisting. Used by specs and by
         # thread teardown paths.
         def reset!
           Thread.current[COUNTS_THREAD_KEY] = nil
+          Thread.current[DEADLINE_THREAD_KEY] = nil
           Thread.current[FLUSH_THREAD_KEY] = nil
           nil
         rescue => e
@@ -177,6 +250,24 @@ module RailsErrorDashboard
         def parse_key(key)
           parts = key.to_s.split(KEY_SEPARATOR, 6)
           parts.fill("", parts.length, 6 - parts.length)
+        end
+
+        # Cheap deadline check — a float subtraction, no I/O.
+        #
+        # Returns true when the buffer has been waiting at least flush_interval.
+        # Uses a monotonic clock: Time.now can jump backwards (NTP correction,
+        # leap second) and would then defer the flush indefinitely.
+        def flush_due?
+          deadline = Thread.current[DEADLINE_THREAD_KEY]
+          return false if deadline.nil?
+
+          (monotonic_now - deadline) >= flush_interval
+        rescue => e
+          false
+        end
+
+        def monotonic_now
+          Process.clock_gettime(Process::CLOCK_MONOTONIC)
         end
 
         private
@@ -215,13 +306,9 @@ module RailsErrorDashboard
           )
         end
 
-        # Cheap periodic flush check — a float subtraction, no I/O.
+        # Cheap periodic flush check on the record path — no I/O.
         def maybe_flush!
-          now = Time.now.to_f
-          last_flush = Thread.current[FLUSH_THREAD_KEY] ||= now
-          return unless (now - last_flush) >= flush_interval
-
-          flush!
+          flush! if flush_due?
         end
 
         # Dispatch asynchronously so the request path never waits on the DB.
@@ -257,9 +344,9 @@ module RailsErrorDashboard
         end
 
         def flush_interval
-          RailsErrorDashboard.configuration.rack_attack_flush_interval || 60
+          RailsErrorDashboard.configuration.rack_attack_flush_interval || DEFAULT_FLUSH_INTERVAL
         rescue => e
-          60
+          DEFAULT_FLUSH_INTERVAL
         end
 
         # Truncate to the column limit and strip the key separator. A rule name
