@@ -80,6 +80,10 @@ RSpec.describe "Rack Attack Summary page", type: :request do
       # no rules matched" — both otherwise render an identical blank page,
       # which is the ambiguity that made issue #143 hard to diagnose.
       context "when the rack-attack gem is not loaded" do
+        # rack-attack is in the dev bundle now (so specs can drive the real
+        # middleware), so absence has to be simulated rather than assumed.
+        before { hide_const("Rack::Attack") }
+
         it "says the gem is missing rather than reporting no events" do
           get "/error_dashboard/errors/rack_attack_summary"
 

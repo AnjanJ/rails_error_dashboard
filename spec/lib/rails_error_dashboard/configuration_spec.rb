@@ -501,9 +501,15 @@ RSpec.describe RailsErrorDashboard::Configuration do
       expect { config.validate! }.not_to raise_error
     end
 
-    # The rack-attack gem is not a dependency and is not loaded in the suite,
-    # so ::Rack::Attack is genuinely undefined here.
+    # rack-attack IS in the dev bundle now, so that specs can drive the real
+    # middleware (issue #170 shipped two bugs that doubles could not catch).
+    # ::Rack::Attack is therefore defined here and absence must be simulated,
+    # rather than relying on the gem happening to be missing.
     context "when the rack-attack gem is not loaded" do
+      before do
+        allow(config).to receive(:rack_attack_defined?).and_return(false)
+      end
+
       it "logs a warning without raising" do
         config.enable_rack_attack_tracking = true
 
@@ -532,7 +538,7 @@ RSpec.describe RailsErrorDashboard::Configuration do
   describe "rack_attack tracking defaults" do
     it { expect(config.enable_rack_attack_tracking).to be false }
     it { expect(config.rack_attack_max_cache_size).to eq(1000) }
-    it { expect(config.rack_attack_flush_interval).to eq(60) }
+    it { expect(config.rack_attack_flush_interval).to eq(5) }
   end
 
   describe "instance variable capture defaults" do

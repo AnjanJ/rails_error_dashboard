@@ -168,8 +168,11 @@ RSpec.describe RailsErrorDashboard::Services::RackAttackTracker do
       RailsErrorDashboard.configuration.rack_attack_flush_interval = 1
 
       described_class.record(rule: "logins/ip", match_type: "throttle")
-      # Simulate the interval having passed without sleeping.
-      Thread.current[described_class::FLUSH_THREAD_KEY] = Time.now.to_f - 5
+      # Simulate the interval having passed without sleeping. The deadline is a
+      # MONOTONIC timestamp (Process::CLOCK_MONOTONIC), not a wall clock, so it
+      # must be rolled back with the same clock the tracker reads.
+      Thread.current[described_class::DEADLINE_THREAD_KEY] =
+        described_class.monotonic_now - 5
 
       expect(RailsErrorDashboard::RackAttackFlushJob).to receive(:perform_later).once
       described_class.record(rule: "logins/ip", match_type: "throttle")
