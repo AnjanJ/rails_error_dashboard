@@ -59,7 +59,7 @@ fr:
       activestorage: ActiveStorage
       llm: LLM
       n_plus_one: Requêtes N+1
-      deprecations: Deprecations
+      deprecations: Dépréciations
       swallowed: Avalées
       diagnostic_dumps: Diagnostics
       storms: Tempêtes
@@ -265,7 +265,7 @@ fr:
           analytics: Analyse
       variables:
         local_title: Variables locales
-        local_hint: Variables de la frame de pile où l'exception a été levée
+        local_hint: Variables de la stack frame où l'exception a été levée
         instance_title: Variables d'instance
         instance_hint_html: Variables d'instance de %{klass}, là où l'exception a
           été levée
@@ -281,11 +281,11 @@ fr:
         filtered: "[FILTRÉE]"
         truncated: tronquée
       deprecations:
-        title: Avertissements de deprecation
-        hint: Avertissements de deprecation Rails détectés pendant cette requête
+        title: Avertissements de dépréciation
+        hint: Avertissements de dépréciation Rails détectés pendant cette requête
         column_warning: Avertissement
         column_source: Source
-        footer_tip: Corrigez les deprecations avant de mettre Rails à jour pour éviter
+        footer_tip: Corrigez les dépréciations avant de mettre Rails à jour pour éviter
           les changements incompatibles.
         upgrade_guide: Guide de mise à jour de Rails
       n_plus_one:
@@ -789,17 +789,17 @@ fr:
           jours.
         how_breadcrumbs_html: Les breadcrumbs doivent être activés (%{option})
       deprecations_page:
-        title: Avertissements de deprecation
-        empty_title: Aucun avertissement de deprecation trouvé
-        empty_body: Aucun avertissement de deprecation n'a été détecté dans les breadcrumbs
+        title: Avertissements de dépréciation
+        empty_title: Aucun avertissement de dépréciation trouvé
+        empty_body: Aucun avertissement de dépréciation n'a été détecté dans les breadcrumbs
           d'erreur des %{days} derniers jours.
-        how_title: 'Comment les deprecations sont capturées :'
-        how_captured: Les avertissements de deprecation de Rails sont capturés automatiquement
+        how_title: 'Comment les dépréciations sont capturées :'
+        how_captured: Les avertissements de dépréciation de Rails sont capturés automatiquement
           comme breadcrumbs
-        how_appear: Les deprecations apparaissent ici lorsqu'une erreur survient pendant
-          une requête comportant des avertissements de deprecation
+        how_appear: Les dépréciations apparaissent ici lorsqu'une erreur survient pendant
+          une requête comportant des avertissements de dépréciation
         unique_warnings: Avertissements uniques
-        all_title: Tous les avertissements de deprecation
+        all_title: Tous les avertissements de dépréciation
         column_warning: Avertissement
         column_source: Source
       n_plus_one_page:
@@ -885,7 +885,7 @@ fr:
         docs: Documentation de Rack Attack
       diagnostic_dumps_page:
         title: Dumps de diagnostic
-        capture: Créer un dump
+        capture: Prendre un dump
         empty_title: Aucun dump de diagnostic pour l'instant
         empty_body: Créez à la demande un instantané de l'état de votre système à
           des fins de débogage.
@@ -1147,7 +1147,7 @@ fr:
           via SolidQueue, Sidekiq ou cron
         digest_frequency: Fréquence d'envoi des e-mails de résumé
         digest_recipients: Adresses e-mail (à défaut, les destinataires des notifications)
-        enable_similar_errors: Trouver les erreurs proches par similarité
+        enable_similar_errors: Trouver les erreurs similaires
         enable_co_occurring_errors: Erreurs survenant conjointement
         enable_error_cascades: Chaînes d'erreurs parent → enfant
         enable_error_correlation: Analyse par version, utilisateur et heure
@@ -1158,7 +1158,7 @@ fr:
         baseline_alert_severities: Gravités donnant lieu à une alerte
         baseline_alert_cooldown_minutes: Minutes entre deux alertes pour le même type
           d'erreur
-        enable_source_code_integration: Afficher le code dans le backtrace
+        enable_source_code_integration: Afficher le code dans la backtrace
         source_code_context_lines: Lignes avant et après la ligne ciblée
         enable_git_blame: Afficher les informations git blame
         source_code_cache_ttl: Durée de mise en cache du code source
@@ -1754,7 +1754,7 @@ fr:
           age_days: "%{days} jours"
           view: Voir
         releases:
-          version_chart_title: Erreurs par version de release
+          version_chart_title: Erreurs par version
           comparison_title: Dernière par rapport à la précédente
           latest_version: Dernière version
           latest_errors:
@@ -1775,9 +1775,9 @@ fr:
             other: "%{count} critiques"
             many: "%{count} critiques"
           change: Variation
-          empty: Données de release insuffisantes pour une comparaison.
-          problematic_title: Releases problématiques détectées
-          problematic_hint_html: 'Les releases suivantes présentent des taux d''erreur
+          empty: Données de version insuffisantes pour une comparaison.
+          problematic_title: Versions problématiques détectées
+          problematic_hint_html: 'Les versions suivantes présentent des taux d''erreur
             nettement plus élevés (&gt;%{multiplier}x la moyenne) :'
           problematic_entry: "%{count} erreurs (%{critical} critiques, +%{deviation}
             % par rapport à la moyenne)"
@@ -1903,10 +1903,10 @@ fr:
       releases:
         title: Releases
         empty:
-          title: Aucune donnée de release trouvée
+          title: Aucune donnée de version trouvée
           message: Aucune donnée de version n'a été détectée dans les erreurs des
             %{days} derniers jours.
-          how_to_title: 'Comment activer le suivi des releases :'
+          how_to_title: 'Comment activer le suivi des versions :'
           step_config_html: Définissez %{option} dans votre initializer
           step_env_html: Ou définissez la variable d'environnement %{env_var}
           step_git_sha_html: Le SHA Git est détecté automatiquement depuis %{git_sha},
@@ -1914,12 +1914,12 @@ fr:
           step_captured: La version et le SHA sont capturés automatiquement lorsque
             des erreurs surviennent
         summary:
-          releases: Releases
-          current_release: Release actuelle
-          avg_errors: Erreurs moy. par release
-          problematic: Releases problématiques
+          releases: Versions
+          current_release: Version actuelle
+          avg_errors: Erreurs moy. par version
+          problematic: Versions problématiques
         current_card:
-          title: 'Release actuelle :'
+          title: 'Version actuelle :'
           live_badge: En ligne
           errors: Erreurs
           error_types: Types d'erreurs
@@ -1928,7 +1928,7 @@ fr:
           git_sha: SHA Git
           vs_previous: Par rapport à la précédente
         timeline:
-          title: Chronologie des releases
+          title: Chronologie des versions
           column_version: Version
           column_git_sha: SHA Git
           column_time_range: Période
@@ -1948,7 +1948,7 @@ fr:
             moyenne des erreurs, <span class="badge bg-warning">Jaune</span> 1 à 2x
             la moyenne, <span class="badge bg-danger">Rouge</span> &gt; 2x la moyenne.
             Les « nouvelles » erreurs sont les types d''erreurs apparus pour la première
-            fois dans cette release.'
+            fois dans cette version.'
       user_impact:
         title: Impact utilisateur
         empty:
@@ -2081,7 +2081,7 @@ fr:
       sections:
         error: Erreur
         request: Requête
-        deprecations: Deprecations
+        deprecations: Dépréciations
         n_plus_one: N+1
         cache: Cache
         breadcrumbs: Breadcrumbs
