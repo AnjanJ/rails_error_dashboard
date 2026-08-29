@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.2...rails_error_dashboard/v0.11.3) (2026-08-29)
+
+
+### 🐛 Bug Fixes
+
+* classify GitHub Copilot, and render the RubyGems description as RDoc ([#197](https://github.com/AnjanJ/rails_error_dashboard/issues/197)) ([10d13b6](https://github.com/AnjanJ/rails_error_dashboard/commit/10d13b6a892a64336bd37881703904cd2fbd833a))
+
 ## [0.11.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.1...rails_error_dashboard/v0.11.2) (2026-08-29)
 
 
