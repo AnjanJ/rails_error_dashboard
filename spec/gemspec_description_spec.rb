@@ -31,8 +31,31 @@ RSpec.describe "gemspec description rendering on rubygems.org" do
 
   let(:description) { spec.description }
 
+  # RDoc's ToHtml constructor changed shape across the versions this gem supports.
+  # Modern RDoc (8.x) takes keywords (pipe:, output_decoration:) — the form
+  # rubygems.org itself calls. RDoc 6.x, which resolves alongside Rails 7.0, takes
+  # a positional RDoc::Options.
+  #
+  # The trap: on RDoc 6.x the keyword call does NOT raise. `pipe: true` is
+  # accepted as a positional Hash and stored as @options, and the failure only
+  # surfaces later, mid-conversion, as
+  #   NoMethodError: undefined method 'output_decoration' for an instance of Hash
+  # So rescuing around the constructor alone is useless — the rescue has to wrap
+  # the CONVERSION. That is what broke this spec on all three Rails 7.0 jobs.
   let(:rendered) do
+    convert_with_keywords
+  rescue ArgumentError, NoMethodError, TypeError
+    convert_with_options_object
+  end
+
+  def convert_with_keywords
     RDoc::Markup.new.convert(description, RDoc::Markup::ToHtml.new(pipe: true))
+  end
+
+  def convert_with_options_object
+    options = RDoc::Options.new
+    options.pipe = true if options.respond_to?(:pipe=)
+    RDoc::Markup.new.convert(description, RDoc::Markup::ToHtml.new(options))
   end
 
   it "loads the gemspec" do
@@ -76,7 +99,10 @@ RSpec.describe "gemspec description rendering on rubygems.org" do
 
     # The reported symptom: "the live demo link is not clickable at all".
     it "renders the live demo URL as a real anchor" do
-      expect(rendered).to include('<a href="https://rails-error-dashboard.anjan.dev">')
+      # Match the href only. RDoc versions differ in the anchor's link TEXT
+      # (6.x strips the scheme), so asserting on the full tag would pass on one
+      # supported Rails and fail on another without the link being any less real.
+      expect(rendered).to match(%r{<a href="https://rails-error-dashboard\.anjan\.dev"})
     end
 
     it "renders the documentation URL as a real anchor" do
