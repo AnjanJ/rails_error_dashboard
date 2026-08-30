@@ -1590,7 +1590,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  document.addEventListener('chartkick:load', function() { applyChartTheme(); });
+  // On window, not document: Chartkick dispatches `new Event("chartkick:load")`
+  // on window, and a bare Event does not bubble — so a document listener here
+  // never ran, and the theme was never re-applied when charts finished loading.
+  window.addEventListener('chartkick:load', function() { applyChartTheme(); });
 
   // Force-apply a few times on page load for lazy-loaded charts
   var attempts = 0;
@@ -1794,10 +1797,27 @@ document.addEventListener('DOMContentLoaded', function() {
   //   week "PP"  month "MMM yyyy"  quarter "qqq - yyyy"  year "yyyy"
   // Anything else — a caller-supplied pattern, a future adapter version — is
   // handed back to the original implementation rather than half-translated.
+  //
+  // redChartDateWrapper holds the function installed below, so a re-assert can
+  // tell "already ours" from "ours was overwritten". A boolean flag cannot:
+  // chartjs-adapter-date-fns installs itself with
+  //
+  //   Chart._adapters._date.override(t) { Object.assign(En.prototype, t) }
+  //
+  // which REPLACES format() while leaving any separate flag property standing.
+  // So whenever this ran before the adapter script — three CDN scripts, three
+  // chances to lose that race — the patch was silently wiped and the flag then
+  // reported "already patched" forever, which is why #178 came back reading
+  // "Aug 21" on some loads and "août 21" on others.
+  var redChartDateWrapper = null;
+
   function installRedChartDateAdapter() {
     if (typeof Chart === 'undefined' || !Chart._adapters || !Chart._adapters._date) return;
     var proto = Chart._adapters._date.prototype;
-    if (!proto || typeof proto.format !== 'function' || proto._redPatched) return;
+    if (!proto || typeof proto.format !== 'function') return;
+    // Identity, not a flag: this is a no-op when the live format() is still the
+    // wrapper, and reinstalls when something has replaced it.
+    if (proto.format === redChartDateWrapper) return;
 
     // date-fns token -> strftime, for the patterns the adapter actually uses.
     var TOKENS = {
@@ -1812,8 +1832,13 @@ document.addEventListener('DOMContentLoaded', function() {
       'yyyy': '%Y'
     };
 
+    // Read afresh on every install, never from a previous call: after the
+    // adapter has overwritten format(), the current value IS the adapter's real
+    // implementation. Capturing a stale wrapper here would nest wrappers on
+    // each re-assert and, worse, delegate to a function that no longer exists
+    // on the prototype.
     var original = proto.format;
-    proto.format = function(time, fmt) {
+    redChartDateWrapper = function(time, fmt) {
       try {
         var strf = TOKENS[fmt];
         if (strf) return formatDateTime(new Date(time), strf);
@@ -1822,7 +1847,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       return original.call(this, time, fmt);
     };
-    proto._redPatched = true;
+    proto.format = redChartDateWrapper;
   }
 
 
@@ -1882,9 +1907,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // `document` is a stub, so it must contain definitions only — no top-level
   // browser calls. The adapter is patched on the prototype, so charts drawn
   // later pick it up; chartkick:load re-asserts for page scripts whose own
-  // DOMContentLoaded handler beat this one, and _redPatched makes that a no-op.
+  // DOMContentLoaded handler beat this one, and the identity check inside
+  // makes that a no-op unless the patch has actually been overwritten.
+  //
+  // That re-assert is what repairs the lost race described above, so it has to
+  // be reachable: Chartkick dispatches `new Event("chartkick:load")` on window,
+  // and a bare Event has bubbles:false, so a document listener never sees it.
+  // Registered on document — as it was — this never ran at all.
+  //
+  // Ordering is on our side. Chartkick dispatches from a setTimeout(…, 0)
+  // scheduled while it parses, which runs after every DOMContentLoaded handler,
+  // and Chart.js draws on a requestAnimationFrame after that. So the re-assert
+  // lands after any possible clobber and before the first paint.
   installRedChartDateAdapter();
-  document.addEventListener('chartkick:load', installRedChartDateAdapter);
+  window.addEventListener('chartkick:load', installRedChartDateAdapter);
 
   if (typeof Turbo !== 'undefined') {
     document.addEventListener('turbo:load', convertToLocalTime);
