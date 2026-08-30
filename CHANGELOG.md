@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.3...rails_error_dashboard/v0.11.4) (2026-08-30)
+
+
+### 🐛 Bug Fixes
+
+* **i18n:** repair and reorder chart date axes, and match the server's plural rules ([#199](https://github.com/AnjanJ/rails_error_dashboard/issues/199)) ([0067967](https://github.com/AnjanJ/rails_error_dashboard/commit/0067967b27b8f97389b65b275ec7c4a36c808774))
+
 ## [0.11.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.2...rails_error_dashboard/v0.11.3) (2026-08-29)
 
 
