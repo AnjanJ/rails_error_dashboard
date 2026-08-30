@@ -358,7 +358,7 @@
     new Chart(dailyTrendCtx, {
       type: 'line',
       data: {
-        labels: <%= raw @daily_trends.values.first&.keys&.map { |d| red_chart_date(d, '%b %d') }&.to_json || [].to_json %>,
+        labels: <%= raw @daily_trends.values.first&.keys&.map { |d| red_chart_date(d) }&.to_json || [].to_json %>,
         datasets: datasets
       },
       options: {

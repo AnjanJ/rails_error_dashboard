@@ -41,16 +41,40 @@ RSpec.describe "red_chart_date", type: :helper do
   end
 
   # The bug gmarziou reported: "Aug 6" on a French dashboard.
+  #
+  # Asserted against a literal, not against LocalizedTimeFormatter's own output
+  # for the same pattern. That earlier form was tautological — it restated the
+  # implementation, so it passed just as happily when French read "août 06".
   it "renders a localized month name rather than the English one" do
     with_locale("fr") do
       result = view_context.red_chart_date(Time.utc(2026, 8, 6), "%b %d")
 
-      expect(result).not_to include("Aug")
-      expect(result).to eq(
-        RailsErrorDashboard::Services::LocalizedTimeFormatter.call(
-          Time.utc(2026, 8, 6), pattern: "%b %d", locale: "fr"
-        )
-      )
+      expect(result).to eq("août 06")
+    end
+  end
+
+  # #178 round 2. The default pattern comes from the locale, so the words AND
+  # their order are the locale's own: French puts the day first, German adds
+  # the ordinal dot, and ja/zh-CN are year-month-day with CJK separators. Every
+  # caller used to hardcode "%b %d", which is US ordering, so ten of eleven
+  # locales rendered a correctly-translated month in the wrong place.
+  {
+    "en" => "Aug 6",
+    "fr" => "6 août",
+    "de" => "6. Aug.",
+    "es" => "6 ago",
+    "it" => "6 ago",
+    "pt-BR" => "6 ago",
+    "pl" => "6 sie",
+    "ru" => "6 авг.",
+    "uk" => "6 серп.",
+    "ja" => "8月6日",
+    "zh-CN" => "8月6日"
+  }.each do |locale, expected|
+    it "orders the default chart date the way #{locale} writes it" do
+      with_locale(locale) do
+        expect(view_context.red_chart_date(Time.utc(2026, 8, 6))).to eq(expected)
+      end
     end
   end
 

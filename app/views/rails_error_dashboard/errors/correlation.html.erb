@@ -36,8 +36,8 @@
             <div class="display-6"><%= @period_comparison[:current_period][:count] %></div>
             <small class="text-muted">
               <%= red_t("red.analytics.correlation.trend_analysis.period_range",
-                         start: red_chart_date(@period_comparison[:current_period][:start], "%b %d"),
-                         end: red_chart_date(@period_comparison[:current_period][:end], "%b %d")) %>
+                         start: red_chart_date(@period_comparison[:current_period][:start]),
+                         end: red_chart_date(@period_comparison[:current_period][:end])) %>
             </small>
           </div>
           <div class="col-md-4">
@@ -45,8 +45,8 @@
             <div class="display-6"><%= @period_comparison[:previous_period][:count] %></div>
             <small class="text-muted">
               <%= red_t("red.analytics.correlation.trend_analysis.period_range",
-                         start: red_chart_date(@period_comparison[:previous_period][:start], "%b %d"),
-                         end: red_chart_date(@period_comparison[:previous_period][:end], "%b %d")) %>
+                         start: red_chart_date(@period_comparison[:previous_period][:start]),
+                         end: red_chart_date(@period_comparison[:previous_period][:end])) %>
             </small>
           </div>
           <div class="col-md-4">

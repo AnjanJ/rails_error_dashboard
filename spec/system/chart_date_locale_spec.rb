@@ -72,6 +72,24 @@ RSpec.describe "Chart date axes follow the dashboard locale", type: :system do
     expect(label).not_to include("Aug")
     expect(label).to include(expected)
     expect(label).not_to include("undefined")
+
+    # #178 round 2: the words alone are not enough. "août 06" satisfies every
+    # assertion above and is still wrong — French writes the day first.
+    expect(label).to eq("6 août")
+  end
+
+  # The same axis in a locale whose date order is not merely reversed but
+  # structurally different, so a fix that only swapped two fields would fail.
+  it "renders the day axis in year-month-day order for Japanese" do
+    RailsErrorDashboard.configuration.dashboard_locale = "ja"
+
+    visit_dashboard("/errors/analytics")
+    wait_for_page_load
+
+    label = adapter_day_label
+    skip "Chart.js not loaded on this page" if label.nil?
+
+    expect(label).to eq("8月6日")
   end
 
   it "leaves a pattern it does not recognize to the original adapter" do

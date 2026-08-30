@@ -1779,9 +1779,78 @@ document.addEventListener('DOMContentLoaded', function() {
     var am = typeof meridian.am === 'string' ? meridian.am : RED_DATE_EN.meridian.am;
     var h12 = h % 12 || 12, ampm = h >= 12 ? pm : am;
     var pad = function(n) { return n.toString().padStart(2, '0'); };
-    return fmt.replace('%Y',y).replace('%y',y.toString().substr(2)).replace('%B',months[mo]).replace('%b',monthsShort[mo])
-      .replace('%m',pad(mo+1)).replace('%d',pad(d)).replace('%e',d).replace('%A',days[dow]).replace('%a',daysShort[dow])
-      .replace('%H',pad(h)).replace('%I',pad(h12)).replace('%M',pad(mi)).replace('%S',pad(s)).replace('%p',ampm).replace('%P',ampm.toLowerCase());
+
+    // One regex pass, not a chain of .replace('%d', …). Two reasons:
+    //
+    //   * String-argument replace() substitutes only the FIRST match, so a
+    //     pattern that repeats a directive — "%d/%m/%d" — left the second one
+    //     as literal text.
+    //   * The chain is order-sensitive in a way that breaks %-d: '%d' matches
+    //     inside '%-d', so "%-d %b" became "%-<day> %b".
+    //
+    // %-d and %-m (unpadded day and month) are needed because a chart axis
+    // reads "6 août", not "06 août". Ruby's strftime already supports them, so
+    // this also closes a gap between the two formatters — a locale's pattern
+    // must mean the same thing server-side and in the browser.
+    var TABLE = {
+      '%Y': y,
+      '%y': y.toString().substr(2),
+      '%B': months[mo],
+      '%b': monthsShort[mo],
+      '%m': pad(mo + 1),
+      '%-m': mo + 1,
+      '%d': pad(d),
+      '%-d': d,
+      '%e': d,
+      '%A': days[dow],
+      '%a': daysShort[dow],
+      '%H': pad(h),
+      '%I': pad(h12),
+      '%M': pad(mi),
+      '%S': pad(s),
+      '%p': ampm,
+      '%P': ampm.toLowerCase()
+    };
+
+    // %-? before the letter so '%-d' wins over '%d'. An unknown directive is
+    // left verbatim rather than becoming "undefined", matching the old chain's
+    // behaviour for anything it did not list.
+    return fmt.replace(/%-?[A-Za-z]/g, function(token) {
+      var value = TABLE[token];
+      return value === undefined ? token : String(value);
+    });
+  }
+
+  // English chart-axis patterns, and the shape every locale must match.
+  // Deliberately not the same strings as red.time.formats' other presets: an
+  // axis needs month+day with no year, and a year cannot simply be stripped
+  // from "%Y年%m月%d日" or "%d de %B de %Y" without leaving a dangling word.
+  var RED_AXIS_EN = {
+    axis_day: '%b %-d',
+    axis_month: '%b %Y',
+    axis_datetime: '%b %-d, %-I:%M %p',
+    axis_full: '%b %-d, %Y'
+  };
+
+  // The locale's chart-axis patterns, falling back per key. Same total-lookup
+  // discipline as redDate(): a locale missing one key still gets a usable axis
+  // rather than "undefined" drawn across the bottom of the chart.
+  function axisFormats() {
+    var out = {};
+    var source;
+    try {
+      source = (window.RED_I18N && window.RED_I18N.formats) ? window.RED_I18N.formats : null;
+    } catch (e) {
+      source = null;
+    }
+    for (var key in RED_AXIS_EN) {
+      if (!Object.prototype.hasOwnProperty.call(RED_AXIS_EN, key)) continue;
+      var value = source ? source[key] : undefined;
+      // A pattern with no % directive is not a pattern — most likely i18n
+      // returned humanized key text for a miss.
+      out[key] = (typeof value === 'string' && value.indexOf('%') !== -1) ? value : RED_AXIS_EN[key];
+    }
+    return out;
   }
 
   // Chart.js renders date axes through chartjs-adapter-date-fns, whose bundle
@@ -1820,15 +1889,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (proto.format === redChartDateWrapper) return;
 
     // date-fns token -> strftime, for the patterns the adapter actually uses.
+    //
+    // Read from the locale rather than hardcoded, because these patterns carry
+    // ORDER as well as vocabulary. The literals here used to be US English —
+    // 'MMM d' -> '%b %d' — and formatDateTime only swaps words, so French
+    // rendered "août 06" instead of "6 août" and ja/zh-CN "8月 06" instead of
+    // "8月6日". Ten of eleven locales were wrong on every chart, deterministically,
+    // and the correct ordering already existed in red.time.formats.
+    var AXIS = axisFormats();
     var TOKENS = {
-      'MMM d, yyyy, h:mm:ss aaaa': '%b %d, %Y, %I:%M:%S %p',
+      'MMM d, yyyy, h:mm:ss aaaa': AXIS.axis_datetime,
       'h:mm:ss.SSS aaaa': '%I:%M:%S %p',
       'h:mm:ss aaaa': '%I:%M:%S %p',
       'h:mm aaaa': '%I:%M %p',
       'ha': '%I %p',
-      'MMM d': '%b %d',
-      'PP': '%b %d, %Y',
-      'MMM yyyy': '%b %Y',
+      'MMM d': AXIS.axis_day,
+      'PP': AXIS.axis_full,
+      'MMM yyyy': AXIS.axis_month,
       'yyyy': '%Y'
     };
 
