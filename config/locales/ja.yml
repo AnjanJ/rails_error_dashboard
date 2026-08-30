@@ -1218,6 +1218,12 @@ ja:
         date_only: "%Y年%m月%d日"
         time_only: "%H:%M:%S"
         datetime: "%Y年%m月%d日 %H:%M"
+        axis_day: "%-m月%-d日"
+        axis_month: "%Y年%-m月"
+        axis_datetime: "%-m月%-d日 %H:%M"
+        axis_full: "%Y年%-m月%-d日"
+        axis_time: "%H:%M"
+        axis_hour: "%-H時"
     health:
       columns:
         error: エラー

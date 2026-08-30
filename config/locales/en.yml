@@ -1897,6 +1897,12 @@ en:
         date_only: "%B %d, %Y"
         time_only: "%I:%M:%S %p"
         datetime: "%b %d, %Y %H:%M"
+        axis_day: "%b %-d"
+        axis_month: "%b %Y"
+        axis_datetime: "%b %-d, %-I:%M %p"
+        axis_full: "%b %-d, %Y"
+        axis_time: "%-I:%M %p"
+        axis_hour: "%-I %p"
 
     health:
       # Table column headers repeated on more than one health page.

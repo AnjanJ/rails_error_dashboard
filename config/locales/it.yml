@@ -1412,6 +1412,12 @@ it:
         date_only: "%d %B %Y"
         time_only: "%H:%M:%S"
         datetime: "%d %b %Y %H:%M"
+        axis_day: "%-d %b"
+        axis_month: "%b %Y"
+        axis_datetime: "%-d %b %H:%M"
+        axis_full: "%-d %b %Y"
+        axis_time: "%H:%M"
+        axis_hour: "%H:00"
     health:
       columns:
         error: Errore

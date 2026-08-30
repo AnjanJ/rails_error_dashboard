@@ -164,17 +164,30 @@ module RailsErrorDashboard
     # Same formatter the mailers and the Slack/Discord payloads use, so a chart
     # axis and an email agree about what a date looks like.
     #
+    # The pattern defaults to the locale's own axis_day rather than being passed
+    # in. Every caller used to hardcode "%b %d", which is US ordering: the
+    # formatter translates the WORDS but never reorders, so French read
+    # "août 06" where it should read "6 août", and ja/zh-CN read "8月 06"
+    # instead of "8月6日". Ten of eleven locales were wrong, and the ordering
+    # each one needs already lives in red.time.formats.
+    #
     # @param time [Time, Date, nil]
-    # @param pattern [String] a strftime pattern
+    # @param pattern [String, Symbol] a strftime pattern, or one of
+    #   red.time.formats' presets — defaults to :axis_day
     # @return [String] "" for nil — an axis label must never read "undefined"
-    def red_chart_date(time, pattern)
+    def red_chart_date(time, pattern = :axis_day)
       return "" if time.nil?
 
+      pattern = red_time_format(pattern) if pattern.is_a?(Symbol)
       time = time.to_time if time.respond_to?(:to_time) && !time.is_a?(Time)
       Services::LocalizedTimeFormatter.call(time, pattern: pattern, locale: red_locale)
     rescue StandardError
-      # A chart with an English axis beats a chart that fails to render.
-      time.respond_to?(:strftime) ? time.strftime(pattern) : time.to_s
+      # A chart with an English axis beats a chart that fails to render. If the
+      # failure was red_time_format itself, `pattern` is still the Symbol, and
+      # strftime(":axis_day") would print that verbatim on the axis — so fall
+      # back to a real pattern rather than to the preset's name.
+      fallback = pattern.is_a?(Symbol) ? "%b %-d" : pattern.to_s
+      time.respond_to?(:strftime) ? time.strftime(fallback) : time.to_s
     end
   end
 end
