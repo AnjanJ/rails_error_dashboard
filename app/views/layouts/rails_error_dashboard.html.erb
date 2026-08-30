@@ -1965,10 +1965,76 @@ document.addEventListener('DOMContentLoaded', function() {
   // Plural selection. English needs one/other; other languages need more, and
   // some need only one form. Falling back to 'other' means a locale that ships
   // a partial set still renders rather than showing "undefined".
+  // CLDR plural category for a count, mirroring PrivateBackend::PLURAL_RULES.
+  // Kept as a parallel implementation on purpose: the server picks the form for
+  // strings it renders, and this picks it for strings JS renders, so the two
+  // must agree about what "5 seconds ago" is in Russian.
+  //
+  // The %100 guards are the part that is easy to get wrong: 11 is `many`, not
+  // `one`, and 12-14 are `many`, not `few`, even though 1 and 2-4 are. And
+  // Polish is NOT Russian — pl `one` is exactly 1, so 21 takes `many` where
+  // ru/uk take `one`. Copying one rule to the other language is the specific
+  // mistake the server's table documents.
+  function redPluralCategory(locale, count) {
+    if (typeof count !== 'number' || !isFinite(count) || Math.floor(count) !== count) return 'other';
+    var i = Math.abs(count), mod10 = i % 10, mod100 = i % 100;
+
+    switch (locale) {
+      case 'ja':
+      case 'zh-CN':
+        return 'other';
+      case 'fr':
+      case 'pt-BR':
+        return i < 2 ? 'one' : 'other';
+      case 'es':
+      case 'it':
+        return count === 1 ? 'one' : 'other';
+      case 'ru':
+      case 'uk':
+        if (mod10 === 1 && mod100 !== 11) return 'one';
+        if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return 'few';
+        return 'many';
+      case 'pl':
+        if (i === 1) return 'one';
+        if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return 'few';
+        return 'many';
+      default:
+        // en, de and anything unlisted keep the English one/other split, which
+        // is also upstream i18n's behaviour for a locale it has no rule for.
+        return count === 1 ? 'one' : 'other';
+    }
+  }
+
+  // Plural selection. English needs one/other; ru/uk/pl need four categories
+  // and ship them, but this only ever read `one` and `other` — so Russian
+  // rendered "5 секунды" (few) where it should read "5 секунд" (many), using a
+  // form the locale file had supplied all along.
+  //
+  // Falls back through the categories rather than to `other` alone, because for
+  // ru/uk/pl CLDR assigns `other` to fractional counts only: a locale that
+  // ships one/few/many and no `other` must still render.
   function redPluralize(forms, count) {
     if (!forms || typeof forms !== 'object') return String(count);
-    var form = (count === 1 && typeof forms.one === 'string') ? forms.one : forms.other;
-    if (typeof form !== 'string') form = forms.one;
+
+    var locale;
+    try {
+      locale = (window.RED_I18N && typeof window.RED_I18N.locale === 'string') ? window.RED_I18N.locale : 'en';
+    } catch (e) {
+      locale = 'en';
+    }
+
+    var category = redPluralCategory(locale, count);
+    var form = forms[category];
+
+    // Ordered fallback: the requested category, then the ones most likely to
+    // carry a usable string, and finally anything the entry does supply.
+    if (typeof form !== 'string') {
+      var order = [ category, 'other', 'many', 'few', 'one' ];
+      for (var i = 0; i < order.length; i++) {
+        if (typeof forms[order[i]] === 'string') { form = forms[order[i]]; break; }
+      }
+    }
+
     if (typeof form !== 'string') return String(count);
     return form.replace(/%\{count\}/g, String(count));
   }
