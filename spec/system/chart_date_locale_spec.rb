@@ -92,6 +92,60 @@ RSpec.describe "Chart date axes follow the dashboard locale", type: :system do
     expect(label).to eq("8月6日")
   end
 
+  # Chartkick does not use the adapter's format table as-is: for hour and minute
+  # granularity it overrides displayFormats and tooltipFormat with patterns of
+  # its own. Those were absent from TOKENS, so an hour axis and every tooltip on
+  # it stayed English even once the day axis had been translated — the gap that
+  # survived the first fix.
+  def adapter_label(pattern, at: Date.new(2026, 8, 6))
+    page.evaluate_script(<<~JS)
+      (function() {
+        if (typeof Chart === 'undefined' || !Chart._adapters || !Chart._adapters._date) return null;
+        var a = new Chart._adapters._date({});
+        return a.format(Date.UTC(#{at.year}, #{at.month - 1}, #{at.day}, 15, 4), '#{pattern}');
+      })();
+    JS
+  end
+
+  {
+    "MMM d, h a" => "hour tick and tooltip",
+    "h:mm a" => "minute tick and tooltip"
+  }.each do |pattern, what|
+    it "localizes Chartkick's own #{what} pattern" do
+      RailsErrorDashboard.configuration.dashboard_locale = "fr"
+
+      visit_dashboard("/errors/analytics")
+      wait_for_page_load
+
+      label = adapter_label(pattern)
+      skip "Chart.js not loaded on this page" if label.nil?
+
+      # French declares a 24-hour clock in its own time_only, so an axis must
+      # not read "3 PM" — and must certainly not carry an English meridian.
+      #
+      # The hour itself is deliberately not asserted: formatDateTime reads local
+      # time, so the value depends on the machine's zone. What matters is the
+      # shape — 24-hour, no meridian.
+      expect(label).not_to include("PM")
+      expect(label).not_to include("AM")
+      expect(label).to match(/\d{2}:\d{2}/)
+    end
+  end
+
+  it "uses the locale's own hour format rather than a 12-hour clock" do
+    RailsErrorDashboard.configuration.dashboard_locale = "fr"
+
+    visit_dashboard("/errors/analytics")
+    wait_for_page_load
+
+    label = adapter_label("ha")
+    skip "Chart.js not loaded on this page" if label.nil?
+
+    # fr's axis_hour is "%Hh" — a 24-hour number and the French hour suffix,
+    # never "3 PM".
+    expect(label).to match(/\A\d{2}h\z/)
+  end
+
   it "leaves a pattern it does not recognize to the original adapter" do
     RailsErrorDashboard.configuration.dashboard_locale = "fr"
 

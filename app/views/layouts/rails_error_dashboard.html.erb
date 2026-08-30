@@ -1805,7 +1805,9 @@ document.addEventListener('DOMContentLoaded', function() {
       '%A': days[dow],
       '%a': daysShort[dow],
       '%H': pad(h),
+      '%-H': h,
       '%I': pad(h12),
+      '%-I': h12,
       '%M': pad(mi),
       '%S': pad(s),
       '%p': ampm,
@@ -1829,7 +1831,9 @@ document.addEventListener('DOMContentLoaded', function() {
     axis_day: '%b %-d',
     axis_month: '%b %Y',
     axis_datetime: '%b %-d, %-I:%M %p',
-    axis_full: '%b %-d, %Y'
+    axis_full: '%b %-d, %Y',
+    axis_time: '%-I:%M %p',
+    axis_hour: '%-I %p'
   };
 
   // The locale's chart-axis patterns, falling back per key. Same total-lookup
@@ -1896,17 +1900,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // rendered "août 06" instead of "6 août" and ja/zh-CN "8月 06" instead of
     // "8月6日". Ten of eleven locales were wrong on every chart, deterministically,
     // and the correct ordering already existed in red.time.formats.
+    // The time-of-day patterns are the locale's too. They used to be hardcoded
+    // %I:%M %p, which put "03 PM" on a French hour axis — a 12-hour clock with
+    // an English meridian, contradicting that same locale's own time_only
+    // ("%H:%M:%S") elsewhere on the page. Only en declares a 12-hour clock;
+    // seven of the other ten never translated meridian at all, so AM/PM was
+    // being drawn on charts in languages that do not use it.
     var AXIS = axisFormats();
     var TOKENS = {
+      // chartjs-adapter-date-fns' own format table.
       'MMM d, yyyy, h:mm:ss aaaa': AXIS.axis_datetime,
-      'h:mm:ss.SSS aaaa': '%I:%M:%S %p',
-      'h:mm:ss aaaa': '%I:%M:%S %p',
-      'h:mm aaaa': '%I:%M %p',
-      'ha': '%I %p',
+      'h:mm:ss.SSS aaaa': AXIS.axis_time,
+      'h:mm:ss aaaa': AXIS.axis_time,
+      'h:mm aaaa': AXIS.axis_time,
+      'ha': AXIS.axis_hour,
       'MMM d': AXIS.axis_day,
       'PP': AXIS.axis_full,
       'MMM yyyy': AXIS.axis_month,
-      'yyyy': '%Y'
+      'qqq - yyyy': AXIS.axis_month,
+      'yyyy': '%Y',
+
+      // Chartkick overrides displayFormats and tooltipFormat with patterns of
+      // its own, which the adapter's table never mentions. Missing them meant
+      // hour-granularity axes and their tooltips stayed English even in a
+      // locale whose day axis was already translated.
+      'MMM d, h a': AXIS.axis_datetime,
+      'h:mm a': AXIS.axis_time
     };
 
     // Read afresh on every install, never from a previous call: after the

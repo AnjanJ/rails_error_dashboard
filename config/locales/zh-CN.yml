@@ -1214,6 +1214,8 @@ zh-CN:
         axis_month: "%Y年%-m月"
         axis_datetime: "%-m月%-d日 %H:%M"
         axis_full: "%Y年%-m月%-d日"
+        axis_time: "%H:%M"
+        axis_hour: "%-H时"
     health:
       columns:
         error: 错误

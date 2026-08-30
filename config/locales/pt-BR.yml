@@ -1417,6 +1417,8 @@ pt-BR:
         axis_month: "%b %Y"
         axis_datetime: "%-d %b %H:%M"
         axis_full: "%-d %b %Y"
+        axis_time: "%H:%M"
+        axis_hour: "%H:00"
     health:
       columns:
         error: Erro
