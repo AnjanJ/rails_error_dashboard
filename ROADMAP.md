@@ -109,7 +109,7 @@ These features depend on running inside the process. Not all of them are unique 
 - **Impact:** Differentiation ++ (unique: stored on the error, not a graph beside it)
 - **Implemented:** Sub-millisecond capture, every metric individually rescue-wrapped, no ObjectSpace, no Thread backtraces, no subprocess. Displays GC stats, process memory, thread count, connection pool, and Puma stats on error detail page
 
-### C2. Refresh or version the runtime snapshot on recurrence — DONE (unreleased)
+### C2. Refresh or version the runtime snapshot on recurrence — DONE (v0.11.1)
 - **What:** `FindOrIncrementError#increment_existing` (and `reopen_existing`) update only `occurrence_count`, `last_seen_at`, user/request fields and environment. `system_health`, local/instance variables and breadcrumbs are written once, when the grouped error row is created, and `error_occurrences` stores only user/request/session ids. For a 21-occurrence error the health snapshot is from occurrence #1
 - **Why:** The headline claim is "the state of the process at the moment of failure"; today that is true only for the first failure in a 24 h dedup window. Either overwrite the snapshot on each recurrence (cheap, keeps the row small, loses history) or persist it per occurrence (honest version of the claim, needs a column on `error_occurrences` and a UI to browse them)
 - **Effort:** Half a day (overwrite) / 2 days (per-occurrence + UI)
