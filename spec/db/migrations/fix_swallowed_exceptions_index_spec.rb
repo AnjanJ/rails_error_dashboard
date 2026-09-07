@@ -12,6 +12,10 @@ require Rails.root.join("../../db/migrate/20260325000001_fix_swallowed_exception
 # without the column argument it requires. That raises ArgumentError on Rails 8
 # and is invisible to any spec that only inspects the resulting schema.
 RSpec.describe FixSwallowedExceptionsIndexForMysql, type: :migration do
+  # DDL and transactions do not mix on MySQL (implicit commit); spec/support/
+  # database_cleaner.rb runs :migration examples outside a transaction.
+  self.use_transactional_tests = false
+
   let(:connection) { ActiveRecord::Base.connection }
   let(:table) { :rails_error_dashboard_swallowed_exceptions }
   let(:index_name) { "index_swallowed_exceptions_upsert_key" }
@@ -42,20 +46,20 @@ RSpec.describe FixSwallowedExceptionsIndexForMysql, type: :migration do
     connection.indexes(table).find { |i| i.name == index_name }
   end
 
-  # Restore the table exactly as db/schema.rb defines it — pre-migration column
-  # limits and all four indexes. Rebuilding it as the post-migration shape would
-  # leave the schema subtly wrong for any spec that runs after this file.
+  # Restore the table exactly as db/schema.rb defines it (which matches the
+  # migrated shape: 250-char strings, bigint application_id) with all four
+  # indexes, so the schema is right for any spec that runs after this file.
   def restore_schema_table
     connection.drop_table(table, if_exists: true)
     connection.create_table(table, force: :cascade) do |t|
-      t.string   :exception_class, null: false
-      t.string   :raise_location,  null: false, limit: 500
-      t.string   :rescue_location, limit: 500
+      t.string   :exception_class, null: false, limit: 250
+      t.string   :raise_location,  null: false, limit: 250
+      t.string   :rescue_location, limit: 250
       t.datetime :period_hour,     null: false
       t.integer  :raise_count,     null: false, default: 0
       t.integer  :rescue_count,    null: false, default: 0
       t.datetime :last_seen_at
-      t.integer  :application_id
+      t.bigint   :application_id
       t.timestamps
     end
     connection.add_index table, %w[application_id period_hour],

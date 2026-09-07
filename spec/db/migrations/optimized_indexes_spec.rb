@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe "Optimized Indexes Migration", type: :migration do
+  # :migration examples run outside the transactional wrapper (DDL + MySQL),
+  # see spec/support/database_cleaner.rb.
+  self.use_transactional_tests = false
+
   let(:connection) { ActiveRecord::Base.connection }
   let(:table_name) { :rails_error_dashboard_error_logs }
 
@@ -130,7 +134,6 @@ RSpec.describe "Optimized Indexes Migration", type: :migration do
       # PostgreSQL and predates that validation)
       create(:error_log, error_type: "StandardError",
                          message: "Payment processing failed for transaction", occurred_at: Time.current)
-
 
       # This query should use the GIN index
       result = connection.execute(<<-SQL)
