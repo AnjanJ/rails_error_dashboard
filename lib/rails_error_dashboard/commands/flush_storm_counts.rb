@@ -107,12 +107,17 @@ module RailsErrorDashboard
 
         # Priority 3: first seen during count-only mode — minimal ErrorLog
         # from the exemplar (no backtrace/context was captured; the next
-        # occurrence after the storm fills in detail via the normal path)
+        # occurrence after the storm fills in detail via the normal path).
+        #
+        # The exemplar message is RAW — the gate stores what the exception
+        # said so the canonical hash (computed above, from the raw message,
+        # exactly as the full path does) still lands on the same row. It must
+        # therefore go through the same redaction as LogError before it is
+        # persisted; storm protection and sensitive filtering are both on by
+        # default, and an incident is exactly when a password in a message
+        # must not reach the database.
         create_attrs = {
-          environment: env
-        }.compact
-        ErrorLog.create!(
-          **create_attrs,
+          environment: env,
           application_id: application.id,
           error_type: entry["error_class"],
           message: entry["message"],
@@ -124,9 +129,20 @@ module RailsErrorDashboard
           occurrence_count: count,
           error_hash: error_hash,
           resolved: false
-        )
+        }.compact
+        ErrorLog.create!(**Services::SensitiveDataFilter.filter_attributes(create_attrs))
         count
       end
+
+
+      # The redaction LogError applies to a message, for exemplars that reach
+      # the database by any other route (first-seen rows, the storm ledger).
+      def redact_message(message)
+        return message if message.blank?
+
+        Services::SensitiveDataFilter.filter_attributes({ message: message.to_s })[:message]
+      end
+
 
       # Mirrors ErrorHashGenerator.call exactly: same fields, same order,
       # same normalization — so counts land on the same ErrorLog the full
@@ -196,7 +212,7 @@ module RailsErrorDashboard
         existing = event.top_fingerprints_list
         fresh = @entries.map { |e|
           e = e.with_indifferent_access if e.respond_to?(:with_indifferent_access)
-          { "class" => e["error_class"], "message" => e["message"].to_s[0, 120], "count" => e["count"].to_i }
+          { "class" => e["error_class"], "message" => redact_message(e["message"]).to_s[0, 120], "count" => e["count"].to_i }
         }
 
         merged = (existing + fresh)

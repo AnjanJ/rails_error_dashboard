@@ -100,6 +100,44 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
     end
   end
 
+  describe "sensitive data redaction at the persistence boundary" do
+    before do
+      RailsErrorDashboard.configuration.filter_sensitive_data = true
+      RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+    end
+    after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+    it "redacts a first-seen row's exemplar message exactly as the full path would" do
+      described_class.call(entries: [ entry_for(message: "login failed password=hunter2-storm", count: 4) ])
+
+      row = RailsErrorDashboard::ErrorLog.find_by(error_type: "StandardError")
+      expect(row.message).to eq("login failed password=[FILTERED]")
+      expect(row.message).not_to include("hunter2")
+    end
+
+    it "still lands a later full capture on the redacted storm-created row (hash is from the raw message)" do
+      described_class.call(entries: [ entry_for(message: "login failed password=hunter2-storm", count: 4) ])
+
+      error = StandardError.new("login failed password=hunter2-storm")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+      }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+
+      expect(RailsErrorDashboard::ErrorLog.first.occurrence_count).to eq(5)
+    end
+
+    it "redacts exemplar messages in the storm ledger's top fingerprints" do
+      described_class.call(
+        entries: [ entry_for(message: "token=abc123secret expired", count: 9) ],
+        episode: { "started_at" => 2.minutes.ago.iso8601, "peak_rate_per_minute" => 100, "reached_open" => true }
+      )
+
+      fingerprints = RailsErrorDashboard::StormEvent.last.top_fingerprints_list
+      expect(fingerprints.first["message"]).to eq("token=[FILTERED] expired")
+    end
+  end
+
   describe "storm_events lifecycle" do
     let(:episode) do
       { "started_at" => 2.minutes.ago.iso8601, "ended_at" => nil,
