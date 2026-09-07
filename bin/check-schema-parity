@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Compares spec/dummy/db/schema.rb with the gem's migrations (db/migrate), on
+# SQLite: tables, columns (type, limit, null, default) and indexes (columns,
+# unique, where). Exits 1 and prints every difference when they drift.
+#
+# schema.rb is what the SQLite test rows load; the migrations are what a host
+# installs (and what the CI PostgreSQL/MySQL rows build from). They must agree.
+#
+#   bundle exec bin/check-schema-parity
+
+require "bundler/setup"
+require "tmpdir"
+
+ROOT = File.expand_path("..", __dir__)
+tmpdir = Dir.mktmpdir("red-schema-parity")
+ENV["RAILS_ENV"] = "test"
+ENV["DATABASE_URL"] = "sqlite3:#{File.join(tmpdir, 'from_schema.sqlite3')}"
+
+require File.join(ROOT, "spec/dummy/config/environment")
+
+def snapshot(connection)
+  connection.tables.reject { |t| t.start_with?("ar_internal_metadata", "schema_migrations") }.sort.to_h do |table|
+    columns = connection.columns(table).sort_by(&:name).to_h do |c|
+      [ c.name, { type: c.type, limit: c.limit, null: c.null, default: c.default } ]
+    end
+    indexes = connection.indexes(table).map { |i| [ Array(i.columns), i.unique, i.where ] }.sort_by(&:inspect)
+    [ table, { columns: columns, indexes: indexes } ]
+  end
+end
+
+def connect(path)
+  ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: path)
+  ActiveRecord::Base.connection
+end
+
+ActiveRecord::Migration.verbose = false
+ActiveRecord::Schema.verbose = false
+
+# 1. schema.rb
+from_schema = snapshot(connect(File.join(tmpdir, "from_schema.sqlite3")).tap { |_|
+  ActiveRecord::Tasks::DatabaseTasks.load_schema_current
+  ActiveRecord::Base.connection
+})
+
+# 2. migrations
+conn = connect(File.join(tmpdir, "from_migrations.sqlite3"))
+require File.join(ROOT, "spec/support/test_schema")
+RailsErrorDashboard::TestSchema.migration_context.migrate
+from_migrations = snapshot(conn)
+
+differences = []
+(from_schema.keys | from_migrations.keys).sort.each do |table|
+  a = from_schema[table]
+  b = from_migrations[table]
+  if a.nil? || b.nil?
+    differences << "table #{table}: #{a ? 'in schema.rb only' : 'in migrations only'}"
+    next
+  end
+  (a[:columns].keys | b[:columns].keys).sort.each do |col|
+    next if a[:columns][col] == b[:columns][col]
+
+    differences << "#{table}.#{col}: schema.rb=#{a[:columns][col].inspect} migrations=#{b[:columns][col].inspect}"
+  end
+  (a[:indexes] - b[:indexes]).each { |i| differences << "#{table}: index #{i.inspect} in schema.rb only" }
+  (b[:indexes] - a[:indexes]).each { |i| differences << "#{table}: index #{i.inspect} in migrations only" }
+end
+
+FileUtils.remove_entry(tmpdir)
+
+if differences.empty?
+  puts "schema.rb and db/migrate agree (#{from_schema.size} tables)"
+else
+  puts "schema.rb and db/migrate differ:"
+  differences.each { |d| puts "  - #{d}" }
+  exit 1
+end

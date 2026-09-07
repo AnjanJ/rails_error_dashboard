@@ -10,6 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
+# Hand-maintained mirror of db/migrate for the SQLite test database (the CI
+# PostgreSQL/MySQL rows build from the migrations instead). Kept loadable on
+# every adapter: foreign-key columns are bigint like the ids they reference
+# (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
+# carry the 250 limit the MySQL index-key migration leaves them with.
+# bin/check-schema-parity compares this file with the migrations.
 ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
@@ -55,7 +61,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   end
 
   create_table "rails_error_dashboard_diagnostic_dumps", force: :cascade do |t|
-    t.integer "application_id", null: false
+    t.bigint "application_id", null: false
     t.text "dump_data", null: false
     t.string "note"
     t.datetime "captured_at", null: false
@@ -66,8 +72,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   end
 
   create_table "rails_error_dashboard_cascade_patterns", force: :cascade do |t|
-    t.integer "parent_error_id", null: false
-    t.integer "child_error_id", null: false
+    t.bigint "parent_error_id", null: false
+    t.bigint "child_error_id", null: false
     t.integer "frequency", default: 1, null: false
     t.float "avg_delay_seconds"
     t.float "cascade_probability"
@@ -100,7 +106,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   end
 
   create_table "rails_error_dashboard_error_comments", force: :cascade do |t|
-    t.integer "error_log_id", null: false
+    t.bigint "error_log_id", null: false
     t.string "author_name", null: false
     t.text "body", null: false
     t.datetime "created_at", null: false
@@ -120,7 +126,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.string "ip_address"
     t.string "platform"
     t.string "environment", limit: 64
-    t.boolean "resolved", null: false
+    t.boolean "resolved", default: false, null: false
     t.text "resolution_comment"
     t.string "resolution_reference"
     t.string "resolved_by_name"
@@ -151,7 +157,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.string "external_issue_url"
     t.integer "external_issue_number"
     t.string "external_issue_provider", limit: 20
-    t.integer "application_id", null: false
+    t.bigint "application_id", null: false
     t.text "exception_cause"
     t.string "http_method", limit: 10
     t.string "hostname", limit: 255
@@ -182,6 +188,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.index [ "environment", "occurred_at" ], name: "index_error_logs_on_environment_and_occurred_at"
     t.index [ "platform" ], name: "index_rails_error_dashboard_error_logs_on_platform"
     t.index [ "priority_score" ], name: "index_rails_error_dashboard_error_logs_on_priority_score"
+    t.index [ "app_version", "resolved", "occurred_at" ], name: "index_error_logs_on_version_resolution_time"
+    t.index [ "assigned_to", "status", "occurred_at" ], name: "index_error_logs_on_assignment_workflow"
+    t.index [ "muted" ], name: "index_rails_error_dashboard_error_logs_on_muted"
+    t.index [ "platform", "status", "occurred_at" ], name: "index_error_logs_on_platform_status_time"
+    t.index [ "priority_level", "resolved", "occurred_at" ], name: "index_error_logs_on_priority_resolution"
     t.index [ "resolved", "occurred_at" ], name: "index_error_logs_on_resolved_and_occurred_at"
     t.index [ "resolved" ], name: "index_rails_error_dashboard_error_logs_on_resolved"
     t.index [ "similarity_score" ], name: "index_rails_error_dashboard_error_logs_on_similarity_score"
@@ -189,14 +200,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   end
 
   create_table "rails_error_dashboard_swallowed_exceptions", force: :cascade do |t|
-    t.string "exception_class", null: false
-    t.string "raise_location", limit: 500, null: false
-    t.string "rescue_location", limit: 500
+    t.string "exception_class", limit: 250, null: false
+    t.string "raise_location", limit: 250, null: false
+    t.string "rescue_location", limit: 250
     t.datetime "period_hour", null: false
     t.integer "raise_count", default: 0, null: false
     t.integer "rescue_count", default: 0, null: false
     t.datetime "last_seen_at"
-    t.integer "application_id"
+    t.bigint "application_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index [ "application_id", "period_hour" ], name: "index_swallowed_exceptions_on_app_and_hour"
@@ -206,7 +217,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   end
 
   create_table "rails_error_dashboard_error_occurrences", force: :cascade do |t|
-    t.integer "error_log_id", null: false
+    t.bigint "error_log_id", null: false
     t.datetime "occurred_at", null: false
     t.integer "user_id"
     t.string "request_id"

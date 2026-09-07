@@ -58,6 +58,35 @@ jobs:
         files: ./coverage/coverage.xml
         fail_ci_if_error: false
 
+  # spec/dummy/db/schema.rb is hand-maintained; the gem's migrations are what
+  # hosts run. This keeps the two from drifting apart (columns, types, limits,
+  # indexes) on the adapter the schema file is written for.
+  schema-parity:
+    runs-on: ubuntu-latest
+    name: Schema parity (schema.rb vs db/migrate)
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+
+    - name: Install dependencies
+      env:
+        RAILS_VERSION: '8.1'
+      run: |
+        rm -f Gemfile.lock
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3
+
+    - name: Compare schema.rb with the migrations
+      env:
+        RAILS_VERSION: '8.1'
+      run: bundle exec bin/check-schema-parity
+
   system-test:
     runs-on: ubuntu-latest
     name: System Tests (Chrome)
