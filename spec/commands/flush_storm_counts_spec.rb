@@ -43,6 +43,22 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(RailsErrorDashboard::ErrorLog.where(message: "storm boom").count).to eq(1) # no duplicate row
     end
 
+    it "lands a long-message error on the same row (both paths hash the same 500-char prefix)" do
+      long_message = ("x" * 501) + " trailing detail that only the full path ever saw"
+      error = StandardError.new(long_message)
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      log = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+
+      gate_parts = RailsErrorDashboard::Services::StormProtection::Gate.send(:gate_parts, error,
+        { controller_name: "widgets", action_name: "show" })
+      expect(gate_parts[:message].length).to eq(500)
+
+      expect {
+        described_class.call(entries: [ entry_for(message: gate_parts[:message], count: 3) ])
+      }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+      expect(log.reload.occurrence_count).to eq(4)
+    end
+
     it "reconciles by custom hash directly when present" do
       # Pin the same application the flush command will resolve
       app = RailsErrorDashboard::Application.find_or_create_by_name(

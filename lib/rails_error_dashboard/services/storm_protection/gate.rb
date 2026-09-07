@@ -165,7 +165,7 @@ module RailsErrorDashboard
           def gate_parts(exception, context)
             {
               error_class: exception.class.name,
-              message: exception.message.to_s[0, 500],
+              message: exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT],
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,

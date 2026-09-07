@@ -160,6 +160,20 @@ RSpec.describe RailsErrorDashboard::Services::ErrorHashGenerator do
     end
   end
 
+  describe ".normalize_message" do
+    it "hashes only the first HASH_MESSAGE_LIMIT raw characters, so long messages keep one identity" do
+      prefix = "a" * described_class::HASH_MESSAGE_LIMIT
+      expect(described_class.normalize_message(prefix + " one")).to eq(described_class.normalize_message(prefix + " two"))
+    end
+
+    it "truncates before normalizing, matching what the storm gate stores" do
+      raw = ("word " * 120) + "id=12345"
+      expect(described_class.normalize_message(raw)).to eq(
+        described_class.normalize_message(raw[0, described_class::HASH_MESSAGE_LIMIT])
+      )
+    end
+  end
+
   describe ".extract_app_frame_from_locations" do
     it "extracts the first non-gem frame from backtrace_locations" do
       exception = begin
