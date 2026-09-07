@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.4...rails_error_dashboard/v0.11.5) (2026-09-07)
+
+
+### 🐛 Bug Fixes
+
+* **i18n:** native-speaker review of the French translation ([#201](https://github.com/AnjanJ/rails_error_dashboard/issues/201)) ([377131f](https://github.com/AnjanJ/rails_error_dashboard/commit/377131fc73d70a434863b7b0db653048d0b6086c)), closes [#158](https://github.com/AnjanJ/rails_error_dashboard/issues/158)
+
 ## [0.11.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.3...rails_error_dashboard/v0.11.4) (2026-08-30)
 
 
