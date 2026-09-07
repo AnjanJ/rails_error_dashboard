@@ -184,7 +184,7 @@ config.enable_breadcrumbs = true
 
 Know your app's runtime state at the moment of failure — GC stats, process memory, thread count, connection pool utilization, Puma thread stats, RubyVM cache health, YJIT compilation stats, and deep runtime insights captured automatically.
 
-- Sub-millisecond total snapshot, every metric individually rescue-wrapped
+- Sub-millisecond for the in-process metrics, every metric individually rescue-wrapped. The one exception is job-queue depth (five `COUNT`s for Solid Queue, a Redis round-trip for Sidekiq): those are queries against your queue store, cached for 10 s per process and switchable off with `config.system_health_queue_stats = false`
 - No ObjectSpace scanning, no Thread backtraces, no subprocess calls
 - RubyVM.stat: constant cache invalidations, shape cache stats
 - YJIT runtime stats: compiled iseqs, invalidation count, code region sizes

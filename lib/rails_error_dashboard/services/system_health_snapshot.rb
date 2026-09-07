@@ -8,11 +8,17 @@ module RailsErrorDashboard
     # Puma stats, job queue, RubyVM/YJIT, ActionCable, file descriptors, system load,
     # system memory pressure, GC context, and TCP connection states.
     #
-    # NOT memoized — fresh data every call (unlike EnvironmentSnapshot).
+    # NOT memoized — fresh data every call (unlike EnvironmentSnapshot), with
+    # one exception: job-queue depth counts are queries against the queue
+    # store, so they are cached per process for
+    # config.system_health_queue_stats_cache_seconds (and can be switched off
+    # with config.system_health_queue_stats = false).
     # Every metric call individually wrapped in rescue => nil.
     #
     # Safety contract (from HOST_APP_SAFETY.md):
-    # - Total snapshot < 1ms budget (~0.3ms typical on Linux)
+    # - In-process metrics < 1ms budget (~0.3ms typical on Linux). The
+    #   queue-depth counts are the documented exception: their latency is
+    #   the queue store's, which is why they are cached and optional.
     # - NEVER ObjectSpace.each_object or ObjectSpace.count_objects (heap scan)
     # - NEVER Thread.list.map(&:backtrace) (GVL hold)
     # - Thread.list.count only (O(1), safe)
@@ -133,7 +139,37 @@ module RailsErrorDashboard
 
       # Auto-detect and capture job queue stats
       # @return [Hash, nil] Job queue stats with :adapter key, or nil
+      # Process-wide cache for the queue-depth counts: { at: monotonic, stats: Hash }.
+      # Lock-free; a race between two request threads at most runs the counts twice.
+      def self.queue_stats_cache
+        @queue_stats_cache ||= Concurrent::AtomicReference.new(nil)
+      end
+
+      def self.reset_queue_stats_cache!
+        queue_stats_cache.set(nil)
+      end
+
       def job_queue_stats
+        config = RailsErrorDashboard.configuration
+        return nil unless config.system_health_queue_stats
+
+        ttl = config.system_health_queue_stats_cache_seconds.to_f
+        return collect_job_queue_stats if ttl <= 0
+
+        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        cached = self.class.queue_stats_cache.get
+        if cached && (now - cached[:at]) < ttl
+          return cached[:stats].merge(cached_age_seconds: (now - cached[:at]).round(1))
+        end
+
+        stats = collect_job_queue_stats
+        self.class.queue_stats_cache.set({ at: now, stats: stats }) if stats
+        stats
+      rescue => e
+        nil
+      end
+
+      def collect_job_queue_stats
         if defined?(::Sidekiq::Stats)
           sidekiq_stats
         elsif defined?(::SolidQueue)

@@ -3,6 +3,57 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
+  before { described_class.reset_queue_stats_cache! }
+  after { RailsErrorDashboard.reset_configuration! }
+
+  describe "job-queue count caching" do
+    let(:counter) { Class.new { @calls = 0; class << self; attr_accessor :calls; end } }
+
+    before do
+      stub_const("SolidQueue", Module.new)
+      klass = counter
+      %w[ReadyExecution ScheduledExecution ClaimedExecution FailedExecution BlockedExecution].each do |name|
+        stub_const("SolidQueue::#{name}", Class.new { define_singleton_method(:count) { klass.calls += 1; 0 } })
+      end
+    end
+
+    it "runs the queue counts once per cache interval, not once per error" do
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 10
+
+      first = described_class.capture
+      second = described_class.capture
+
+      expect(counter.calls).to eq(5)
+      expect(first[:job_queue][:adapter]).to eq("solid_queue")
+      expect(second[:job_queue][:adapter]).to eq("solid_queue")
+      expect(second[:job_queue][:cached_age_seconds]).to be_a(Float)
+      expect(first[:job_queue]).not_to have_key(:cached_age_seconds)
+    end
+
+    it "re-runs the counts once the interval has passed" do
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 10
+      described_class.capture
+      stale = described_class.queue_stats_cache.get
+      described_class.queue_stats_cache.set(stale.merge(at: stale[:at] - 11))
+
+      described_class.capture
+      expect(counter.calls).to eq(10)
+    end
+
+    it "runs the counts every time when caching is set to 0" do
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 0
+      described_class.capture
+      described_class.capture
+      expect(counter.calls).to eq(10)
+    end
+
+    it "skips the queue counts entirely when system_health_queue_stats is off" do
+      RailsErrorDashboard.configuration.system_health_queue_stats = false
+      expect(described_class.capture[:job_queue]).to be_nil
+      expect(counter.calls).to eq(0)
+    end
+  end
+
   describe ".capture" do
     subject(:snapshot) { described_class.capture }
 
