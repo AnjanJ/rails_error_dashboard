@@ -4,7 +4,18 @@ module RailsErrorDashboard
   module Queries
     # Query: Build a release timeline from error data, showing per-version health stats,
     # "new in this release" error detection, stability indicators, and release-over-release deltas.
-    # Uses existing app_version and git_sha columns on error_logs — no new migration needed.
+    #
+    # Counting unit: OCCURRENCES. An ErrorLog row is a group that keeps the
+    # release of its first capture, so counting rows attributed every later
+    # recurrence to that first release. Each occurrence carries the release it
+    # happened under (since the add_release_to_error_occurrences migration);
+    # before that migration is applied the query falls back to counting group
+    # rows as it always did. "New in this release" stays group-based on
+    # purpose: a group's first release IS where the error was new.
+    #
+    # Storm count-only events create no occurrence rows, so a release's total
+    # here is the number of captured events, which storm shedding can leave
+    # below the group's occurrence_count.
     class ReleaseTimeline
       def self.call(days = 30, application_id: nil)
         new(days, application_id: application_id).call
@@ -77,6 +88,8 @@ module RailsErrorDashboard
 
       # Single GROUP BY query for per-version aggregates
       def aggregate_version_stats
+        return aggregate_occurrence_stats if occurrences_carry_release?
+
         rows = base_scope
           .group(:app_version)
           .select(
@@ -116,6 +129,64 @@ module RailsErrorDashboard
         end
       rescue => e
         Rails.logger.error("[RailsErrorDashboard] ReleaseTimeline aggregate failed: #{e.class}: #{e.message}")
+        {}
+      end
+
+      def occurrences_carry_release?
+        defined?(ErrorOccurrence) && ErrorOccurrence.table_exists? &&
+          ErrorOccurrence.column_names.include?("app_version")
+      rescue
+        false
+      end
+
+      def occurrence_scope
+        occurrences = ErrorOccurrence.table_name
+        scope = ErrorOccurrence.joins(:error_log)
+                               .where("#{occurrences}.occurred_at >= ?", @start_date)
+                               .where.not(occurrences => { app_version: [ nil, "" ] })
+        scope = scope.where(ErrorLog.table_name => { application_id: @application_id }) if @application_id.present?
+        scope
+      end
+
+      def aggregate_occurrence_stats
+        occurrences = ErrorOccurrence.table_name
+        logs = ErrorLog.table_name
+
+        rows = occurrence_scope
+          .group("#{occurrences}.app_version")
+          .select(
+            "#{occurrences}.app_version AS app_version",
+            "COUNT(*) AS total_count",
+            "COUNT(DISTINCT #{logs}.error_type) AS unique_types",
+            "MIN(#{occurrences}.occurred_at) AS first_seen_at",
+            "MAX(#{occurrences}.occurred_at) AS last_seen_at"
+          )
+
+        sha_map = {}
+        occurrence_scope.where.not(occurrences => { git_sha: [ nil, "" ] })
+                        .group("#{occurrences}.app_version", "#{occurrences}.git_sha")
+                        .pluck("#{occurrences}.app_version", "#{occurrences}.git_sha")
+                        .each do |version, sha|
+                          (sha_map[version] ||= []) << sha
+                        end
+        sha_map.each_value(&:uniq!)
+
+        rows.each_with_object({}) do |row, result|
+          first_seen = row.first_seen_at
+          last_seen = row.last_seen_at
+          first_seen = Time.zone.parse(first_seen) if first_seen.is_a?(String)
+          last_seen = Time.zone.parse(last_seen) if last_seen.is_a?(String)
+
+          result[row.app_version] = {
+            total_errors: row.total_count.to_i,
+            unique_error_types: row.unique_types.to_i,
+            first_seen: first_seen,
+            last_seen: last_seen,
+            git_shas: sha_map[row.app_version] || []
+          }
+        end
+      rescue => e
+        Rails.logger.error("[RailsErrorDashboard] ReleaseTimeline occurrence aggregate failed: #{e.class}: #{e.message}")
         {}
       end
 

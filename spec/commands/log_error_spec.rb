@@ -1146,4 +1146,28 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       expect(log.environment).to be_nil
     end
   end
+  describe "release attribution on occurrences" do
+    before do
+      RailsErrorDashboard.configuration.async_logging = false
+      RailsErrorDashboard.configuration.app_version = "9.9.9"
+      RailsErrorDashboard.configuration.git_sha = "deadbeef"
+    end
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "records the release each occurrence happened under, while the group keeps its first release" do
+      error = StandardError.new("release attribution")
+      error.set_backtrace([ "app/models/widget.rb:10:in 'explode'" ])
+      log = described_class.call(error)
+      expect(log.app_version).to eq("9.9.9")
+
+      RailsErrorDashboard.configuration.app_version = "10.0.0"
+      RailsErrorDashboard.configuration.git_sha = "cafebabe"
+      again = described_class.call(error)
+      expect(again.id).to eq(log.id)
+      expect(again.reload.app_version).to eq("9.9.9")
+
+      versions = RailsErrorDashboard::ErrorOccurrence.where(error_log: log).order(:id).pluck(:app_version, :git_sha)
+      expect(versions).to eq([ [ "9.9.9", "deadbeef" ], [ "10.0.0", "cafebabe" ] ])
+    end
+  end
 end

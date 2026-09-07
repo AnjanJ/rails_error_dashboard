@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_26_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_08_000001) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -213,6 +213,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_26_000001) do
     t.string "session_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "app_version"
+    t.string "git_sha"
+    t.index [ "app_version", "occurred_at" ], name: "index_error_occurrences_on_version_and_time"
     t.index [ "error_log_id" ], name: "index_error_occurrences_on_error_log"
     t.index [ "occurred_at", "error_log_id" ], name: "index_error_occurrences_on_time_and_error"
     t.index [ "request_id" ], name: "index_error_occurrences_on_request"

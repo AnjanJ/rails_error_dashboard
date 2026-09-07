@@ -47,9 +47,17 @@ FactoryBot.define do
       reopened_at { Time.current }
     end
 
+    # A versioned capture: the group row plus the occurrence that carries the
+    # release it happened under, which is what LogError writes and what
+    # ReleaseTimeline counts.
     trait :with_version do
       app_version { "1.0.0" }
       git_sha { SecureRandom.hex(20) }
+
+      after(:create) do |log|
+        create(:error_occurrence, error_log: log, occurred_at: log.occurred_at,
+                                  app_version: log.app_version, git_sha: log.git_sha)
+      end
     end
 
     trait :with_backtrace do
