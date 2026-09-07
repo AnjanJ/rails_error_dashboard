@@ -37,8 +37,16 @@ module RailsErrorDashboard
     # Reconstruct exception from serialized data
     # @param data [Hash] Serialized exception data
     # @return [Exception] Reconstructed exception object
+    #
+    # Never relies on the subclass constructor: many real exception classes
+    # take something other than a message (ActiveRecord::RecordInvalid wants
+    # the record, custom errors take keywords), and `Klass.new(message)` on
+    # those raised inside the job, which rescued it and dropped the capture.
+    # Allocate the right class so error_type/fingerprint stay correct, then
+    # set the message with Exception's own initializer, bypassing whatever
+    # the subclass expects. Fall back to the constructor for classes whose
+    # `message` needs state their initializer sets.
     def reconstruct_exception(data)
-      # Get or create the exception class
       exception_class = begin
         data[:class_name].constantize
       rescue NameError
@@ -46,13 +54,33 @@ module RailsErrorDashboard
         StandardError
       end
 
-      # Create new exception with the original message
-      exception = exception_class.new(data[:message])
+      exception = allocate_exception(exception_class, data[:message]) ||
+                  construct_exception(exception_class, data[:message]) ||
+                  StandardError.new(data[:message])
 
       # Restore the backtrace
       exception.set_backtrace(data[:backtrace]) if data[:backtrace]
 
       exception
+    end
+
+    def allocate_exception(exception_class, message)
+      return nil unless exception_class < Exception
+
+      exception = exception_class.allocate
+      Exception.instance_method(:initialize).bind_call(exception, message)
+      exception.message # a subclass `message` that needs constructor state raises here
+      exception
+    rescue StandardError, NoMemoryError
+      nil
+    end
+
+    def construct_exception(exception_class, message)
+      exception = exception_class.new(message)
+      exception.message
+      exception
+    rescue StandardError
+      nil
     end
   end
 end
