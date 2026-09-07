@@ -28,7 +28,10 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       expect(gate.count_buffer.any?).to be(true)
     end
 
-    it "retains the batch when the real queue adapter raises ActiveJob::EnqueueError (which Active Job swallows)" do
+    it "retains the batch when the real queue adapter raises ActiveJob::EnqueueError" do
+      # Rails 7.2+ swallows EnqueueError inside perform_later and returns
+      # false; 7.0/7.1 let it propagate. The gate must retain the batch
+      # either way, so no assumption about perform_later's return here.
       adapter = Object.new
       adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
       adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
@@ -37,7 +40,6 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       original = RailsErrorDashboard::StormFlushJob.queue_adapter
       begin
         RailsErrorDashboard::StormFlushJob.queue_adapter = adapter
-        expect(RailsErrorDashboard::StormFlushJob.perform_later(entries: [])).to be(false)
 
         gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
         gate.instance_variable_set(:@last_flush, 0)
