@@ -76,12 +76,19 @@ module RailsErrorDashboard
       # this platform (one row per captured event) when the occurrences table
       # exists, else the group rows themselves. Public so the anomaly check
       # counts the current period in exactly the same units.
-      def self.counting_relation(error_type, platform)
+      #
+      # @param application_id [Integer, nil] restrict to one application's
+      #   events (the baselines themselves have no application dimension;
+      #   the current-period observation must still be scoped, or one app's
+      #   spike shows up as an anomaly on another app's dashboard)
+      def self.counting_relation(error_type, platform, application_id: nil)
+        conditions = { error_type: error_type, platform: platform }
+        conditions[:application_id] = application_id if application_id.present?
+
         if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
-          ErrorOccurrence.joins(:error_log)
-                         .where(ErrorLog.table_name => { error_type: error_type, platform: platform })
+          ErrorOccurrence.joins(:error_log).where(ErrorLog.table_name => conditions)
         else
-          ErrorLog.where(error_type: error_type, platform: platform)
+          ErrorLog.where(conditions)
         end
       end
 
@@ -140,9 +147,18 @@ module RailsErrorDashboard
       end
 
       # @return [Array<Integer>] one count per bucket in [period_start, period_end)
+      #
+      # Week boundaries and time zone are passed explicitly so the buckets
+      # line up with the Rails `beginning_of_week` / `Time.current` calls the
+      # period bounds and the anomaly check use. Groupdate's own default week
+      # starts on Sunday; Rails' starts on Monday, and with the two disagreeing
+      # a Sunday event and a Monday event landed in one bucket instead of two.
       def bucket_counts(error_type, platform, period, period_start, period_end)
+        options = { range: period_start...period_end, time_zone: Time.zone }
+        options[:week_start] = Date.beginning_of_week if period == :week # groupdate rejects it for other periods
+
         self.class.counting_relation(error_type, platform)
-            .group_by_period(period, self.class.time_column, range: period_start...period_end)
+            .group_by_period(period, self.class.time_column, **options)
             .count
             .values
       end

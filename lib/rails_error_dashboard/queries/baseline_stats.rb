@@ -121,8 +121,8 @@ module RailsErrorDashboard
       # Events so far in the current hour / day / week, counted in the same
       # units the baselines were built from (Services::BaselineCalculator).
       # @return [Hash] { hourly: Integer, daily: Integer, weekly: Integer }
-      def current_counts
-        relation = Services::BaselineCalculator.counting_relation(@error_type, @platform)
+      def current_counts(application_id: nil)
+        relation = Services::BaselineCalculator.counting_relation(@error_type, @platform, application_id: application_id)
         column = Services::BaselineCalculator.time_column
         now = Time.current
         {
@@ -133,8 +133,9 @@ module RailsErrorDashboard
       end
 
       # The anomaly check for right now: current counts against their baselines.
-      def check_current_anomaly(sensitivity: 2)
-        check_anomaly(sensitivity: sensitivity, **current_counts)
+      # @param application_id [Integer, nil] scope the current counts to one application
+      def check_current_anomaly(sensitivity: 2, application_id: nil)
+        check_anomaly(sensitivity: sensitivity, **current_counts(application_id: application_id))
       end
     end
   end

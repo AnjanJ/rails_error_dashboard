@@ -71,6 +71,30 @@ RSpec.describe RailsErrorDashboard::Services::BaselineCalculator do
       expect(daily.count).to eq(7)
     end
 
+    it "buckets weeks on the same day Rails does, so a Sunday and a Monday event land in different weeks" do
+      Time.use_zone("UTC") do
+        log = create(:error_log, error_type: error_type, platform: platform, occurred_at: 1.day.ago)
+        create(:error_occurrence, error_log: log, occurred_at: Time.zone.parse("2026-08-09 12:00")) # Sunday
+        create(:error_occurrence, error_log: log, occurred_at: Time.zone.parse("2026-08-10 12:00")) # Monday
+        start_at = Time.zone.parse("2026-08-03 00:00") # a Monday, as Rails' beginning_of_week gives
+        end_at = Time.zone.parse("2026-08-17 00:00")
+
+        counts = described_class.new.send(:bucket_counts, error_type, platform, :week, start_at, end_at)
+        expect(counts).to eq([ 1, 1 ])
+      end
+    end
+
+    it "scopes the counting relation to one application when asked" do
+      quiet = create(:application, name: "Quiet baseline app")
+      busy = create(:application, name: "Busy baseline app")
+      log = create(:error_log, application: busy, error_type: error_type, platform: platform)
+      3.times { create(:error_occurrence, error_log: log, occurred_at: Time.current) }
+
+      expect(described_class.counting_relation(error_type, platform, application_id: quiet.id).count).to eq(0)
+      expect(described_class.counting_relation(error_type, platform, application_id: busy.id).count).to eq(3)
+      expect(described_class.counting_relation(error_type, platform).count).to eq(3)
+    end
+
     it "counts occurrences, not group rows" do
       log = create(:error_log, error_type: error_type, platform: platform, occurred_at: 1.day.ago)
       3.times { create(:error_occurrence, error_log: log, occurred_at: 1.day.ago.noon) }

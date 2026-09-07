@@ -181,7 +181,8 @@ module RailsErrorDashboard
 
         # Check most common error types for anomalies
         base_scope.distinct.pluck(:error_type, :platform).compact.any? do |(error_type, platform)|
-          Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: 2)[:anomaly]
+          Queries::BaselineStats.new(error_type, platform)
+                                .check_current_anomaly(sensitivity: 2, application_id: @application_id)[:anomaly]
         end
       end
 
@@ -191,7 +192,8 @@ module RailsErrorDashboard
 
         # Find the most anomalous error type
         anomalies = base_scope.distinct.pluck(:error_type, :platform).compact.map do |(error_type, platform)|
-          result = Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: 2)
+          result = Queries::BaselineStats.new(error_type, platform)
+                                         .check_current_anomaly(sensitivity: 2, application_id: @application_id)
           next unless result[:anomaly]
 
           {

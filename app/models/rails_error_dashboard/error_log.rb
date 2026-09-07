@@ -341,7 +341,8 @@ module RailsErrorDashboard
 
       # Current hour / day / week counted in the baselines' own units — a
       # day's count against an hourly baseline flagged everything.
-      Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: sensitivity)
+      Queries::BaselineStats.new(error_type, platform)
+                            .check_current_anomaly(sensitivity: sensitivity, application_id: application_id)
     end
 
     # Detect cyclical occurrence patterns (daily/weekly rhythms)

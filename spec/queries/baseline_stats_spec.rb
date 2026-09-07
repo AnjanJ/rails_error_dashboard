@@ -75,6 +75,17 @@ RSpec.describe RailsErrorDashboard::Queries::BaselineStats do
       expect(counts[:weekly]).to eq(3)
     end
 
+    it "does not report another application's spike on a quiet application" do
+      create(:error_baseline, :hourly, error_type: error_type, platform: platform, mean: 0.1, std_dev: 0.1)
+      quiet = create(:application, name: "Quiet app")
+      busy = create(:application, name: "Busy app")
+      log = create(:error_log, application: busy, error_type: error_type, platform: platform)
+      5.times { create(:error_occurrence, error_log: log, occurred_at: Time.current) }
+
+      expect(stats.check_current_anomaly(application_id: quiet.id)[:anomaly]).to be false
+      expect(stats.check_current_anomaly(application_id: busy.id)[:anomaly]).to be true
+    end
+
     it "feeds those counts to the matching baseline" do
       create(:error_baseline, :hourly, error_type: error_type, platform: platform, mean: 0.1, std_dev: 0.1)
       log = create(:error_log, error_type: error_type, platform: platform)
