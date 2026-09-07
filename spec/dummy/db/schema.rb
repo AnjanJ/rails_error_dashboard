@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_08_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false

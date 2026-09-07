@@ -125,12 +125,12 @@ RSpec.describe "Optimized Indexes Migration", type: :migration do
     end
 
     it "improves full-text search performance" do
-      # Create test errors with searchable text
-      RailsErrorDashboard::ErrorLog.create!(
-        error_type: "StandardError",
-        message: "Payment processing failed for transaction",
-        occurred_at: Time.current
-      )
+      # Create test errors with searchable text (the factory supplies the
+      # application the model requires; this example only ever ran on
+      # PostgreSQL and predates that validation)
+      create(:error_log, error_type: "StandardError",
+                         message: "Payment processing failed for transaction", occurred_at: Time.current)
+
 
       # This query should use the GIN index
       result = connection.execute(<<-SQL)
