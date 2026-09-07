@@ -32,6 +32,8 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       adapter = Object.new
       adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
       adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
+      # Rails 7.x asks the adapter this before enqueuing; Rails 8 does not.
+      adapter.define_singleton_method(:enqueue_after_transaction_commit?) { false }
       original = RailsErrorDashboard::StormFlushJob.queue_adapter
       begin
         RailsErrorDashboard::StormFlushJob.queue_adapter = adapter
