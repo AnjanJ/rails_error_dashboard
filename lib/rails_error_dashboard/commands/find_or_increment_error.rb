@@ -4,6 +4,10 @@ module RailsErrorDashboard
   module Commands
     # Command: Find an existing error by hash or create a new one
     # Uses pessimistic locking to prevent race conditions in multi-app scenarios.
+    # The whole find-and-write runs inside ONE transaction: a row lock taken
+    # by SELECT ... FOR UPDATE lives only as long as the transaction that took
+    # it, so a lock on a standalone SELECT was released before the UPDATE ran
+    # and two concurrent captures could both read count N and both write N+1.
     #
     # Search order:
     # 1. Unresolved errors with same hash within 24 hours → increment occurrence count
@@ -37,16 +41,18 @@ module RailsErrorDashboard
       end
 
       def call
-        # Priority 1: Find unresolved match (existing behavior)
-        existing = find_unresolved
-        return increment_existing(existing) if existing
+        ErrorLog.transaction do
+          # Priority 1: Find unresolved match (existing behavior)
+          existing = find_unresolved
+          next increment_existing(existing) if existing
 
-        # Priority 2: Find resolved/wont_fix match → reopen
-        resolved = find_resolved
-        return reopen_existing(resolved) if resolved
+          # Priority 2: Find resolved/wont_fix match → reopen
+          resolved = find_resolved
+          next reopen_existing(resolved) if resolved
 
-        # Priority 3: Create new record
-        create_new_or_retry
+          # Priority 3: Create new record
+          create_new_or_retry
+        end
       end
 
       private
@@ -132,7 +138,12 @@ module RailsErrorDashboard
       end
 
       def create_new_or_retry
-        ErrorLog.create!(@attributes.reverse_merge(resolved: false))
+        # Savepoint: on PostgreSQL a unique-violation poisons the enclosing
+        # transaction, and the retry lookups below would fail with "current
+        # transaction is aborted" instead of finding the winner's row.
+        ErrorLog.transaction(requires_new: true) do
+          ErrorLog.create!(@attributes.reverse_merge(resolved: false))
+        end
       rescue ActiveRecord::RecordNotUnique
         # Race condition: another process created the same error
         retry_existing = with_environment(
