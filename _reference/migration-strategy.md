@@ -667,6 +667,43 @@ config.enable_crash_capture = true
 
 ---
 
+## Upgrading to v0.11.6
+
+v0.11.6 adds one migration and changes how one class of error is grouped.
+
+### Migration: release attribution on occurrences
+
+`add_release_to_error_occurrences` adds `app_version` and `git_sha` to
+`rails_error_dashboard_error_occurrences` and backfills existing rows from
+their group. The Releases page counts occurrences per release from now on.
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+rails db:migrate
+```
+
+Separate database: move `*_add_release_to_error_occurrences.rb` to
+`db/error_dashboard_migrate/` before migrating, as in the sections above.
+
+### Behaviour change: fingerprints for messages longer than 500 characters
+
+The error fingerprint now hashes only the first 500 characters of the raw
+message, on both the normal capture path and the storm-protection path. Before
+0.11.6 the normal path hashed the whole message while storm reconciliation
+hashed a 500-character exemplar, so a long-message error changed identity
+whenever the circuit breaker changed state and its counts landed on two rows.
+
+Consequence on upgrade: an error whose message runs past 500 characters gets a
+**new group** on its next occurrence. The pre-0.11.6 group is not reopened or
+merged; it keeps its status and history and simply stops receiving counts.
+Errors with messages of 500 characters or fewer, and errors using a custom
+fingerprint, are unaffected. No data migration is provided because the old
+hash was derived from the full message and a first application frame that is
+not stored in a form the migration could recompute reliably.
+
+---
+
 ## Conclusion
 
 The hybrid squashed + incremental strategy provides the best of both worlds:
