@@ -92,6 +92,11 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
   end
 
   describe "fingerprints first seen during count-only mode" do
+    it "fits over-long string metadata to its columns" do
+      described_class.call(entries: [ entry_for(error_class: "E" * 300, message: "long class", count: 1) ])
+      expect(RailsErrorDashboard::ErrorLog.find_by(message: "long class").error_type.length).to eq(255)
+    end
+
     it "creates a minimal ErrorLog from the exemplar with the exact count" do
       expect {
         described_class.call(entries: [ entry_for(message: "never stored before", count: 99) ])

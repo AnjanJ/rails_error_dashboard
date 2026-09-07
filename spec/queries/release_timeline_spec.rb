@@ -344,7 +344,7 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       end
 
       it "handles very long version strings" do
-        long_version = "v" * 500
+        long_version = "v" * 200 # within the 255 clamp on every adapter
         versioned_error(application: app,
           app_version: long_version, occurred_at: 5.days.ago)
 

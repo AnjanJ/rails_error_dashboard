@@ -138,7 +138,7 @@ module RailsErrorDashboard
           error_hash: error_hash,
           resolved: false
         }.compact
-        ErrorLog.create!(**Services::SensitiveDataFilter.filter_attributes(create_attrs))
+        ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
         count
       end
 

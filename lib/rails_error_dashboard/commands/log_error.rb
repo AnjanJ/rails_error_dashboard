@@ -299,6 +299,9 @@ module RailsErrorDashboard
         # Apply sensitive data filtering (on by default)
         attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
 
+        # Fit string metadata to its columns (after hashing, before writing)
+        attributes = ErrorLog.clamp_string_attributes(attributes)
+
         # Harvest breadcrumbs (if enabled and column exists)
         if !storm_lite && ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
           # Sync path: harvest from current thread
@@ -389,7 +392,7 @@ module RailsErrorDashboard
             occurrence_columns = ErrorOccurrence.column_names
             occurrence_attrs[:app_version] = attributes[:app_version] if occurrence_columns.include?("app_version")
             occurrence_attrs[:git_sha] = attributes[:git_sha] if occurrence_columns.include?("git_sha")
-            ErrorOccurrence.create(occurrence_attrs)
+            ErrorOccurrence.create(ErrorOccurrence.clamp_string_attributes(occurrence_attrs))
           rescue => e
             RailsErrorDashboard::Logger.error("Failed to create error occurrence: #{e.message}")
           end
