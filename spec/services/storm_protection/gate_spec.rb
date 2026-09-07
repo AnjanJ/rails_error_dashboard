@@ -14,6 +14,29 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     error
   end
 
+  describe ".maybe_flush! when the queue is unavailable" do
+    before { gate.reset! }
+    after { gate.reset! }
+
+    it "retains the batch and the episode, then hands both off on the next interval" do
+      gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_raise(IOError, "queue unavailable")
+
+      expect { gate.send(:maybe_flush!) }.not_to raise_error
+      expect(RailsErrorDashboard::StormFlushJob).to have_received(:perform_later).once
+      expect(gate.count_buffer.any?).to be(true)
+
+      handed_off = nil
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later) { |**kwargs| handed_off = kwargs }
+      gate.instance_variable_set(:@last_flush, 0)
+      gate.send(:maybe_flush!)
+
+      expect(handed_off[:entries].sum { |e| e["count"] }).to eq(1)
+      expect(gate.count_buffer.any?).to be(false)
+    end
+  end
+
   describe ".admit!" do
     it "returns :full when storm protection is disabled" do
       RailsErrorDashboard.configuration.enable_storm_protection = false

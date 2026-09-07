@@ -203,16 +203,29 @@ module RailsErrorDashboard
             @last_flush = now
             snapshot = count_buffer.snapshot!
             episode = breaker.episode_snapshot
-            breaker.clear_closed_episode!
 
-            StormFlushJob.perform_later(
-              entries: snapshot[:entries],
-              overflow: snapshot[:overflow],
-              episode: serialize_episode(episode)
-            )
+            begin
+              StormFlushJob.perform_later(
+                entries: snapshot[:entries],
+                overflow: snapshot[:overflow],
+                episode: serialize_episode(episode)
+              )
+            rescue => e
+              # The queue is often the very thing that is down during a storm
+              # (a SolidQueue enqueue is a DB write). The batch is not gone:
+              # put it back so the next interval retries, and leave the
+              # closed episode in place so it is persisted by that retry.
+              count_buffer.restore(snapshot[:entries], snapshot[:overflow])
+              RailsErrorDashboard::Logger.error(
+                "[RailsErrorDashboard] Storm flush enqueue failed (batch retained for retry): #{e.class} - #{e.message}"
+              )
+              return
+            end
+
+            breaker.clear_closed_episode!
           rescue => e
             RailsErrorDashboard::Logger.error(
-              "[RailsErrorDashboard] Storm flush enqueue failed: #{e.class} - #{e.message}"
+              "[RailsErrorDashboard] Storm flush failed: #{e.class} - #{e.message}"
             )
           end
 
