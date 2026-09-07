@@ -37,9 +37,15 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
       # Rails 7.x asks the adapter this before enqueuing; Rails 8 does not.
       adapter.define_singleton_method(:enqueue_after_transaction_commit?) { false }
-      original = RailsErrorDashboard::StormFlushJob.queue_adapter
+      job_class = RailsErrorDashboard::StormFlushJob
+      original = job_class.queue_adapter
+      # Rails 7.0/7.1 keep answering with the test adapter while one is
+      # enabled, whatever queue_adapter= was given; 7.2+ honour the
+      # assignment. Disable it for the duration so the fake is really used.
+      test_adapter = job_class.respond_to?(:_test_adapter) ? job_class._test_adapter : nil
       begin
-        RailsErrorDashboard::StormFlushJob.queue_adapter = adapter
+        job_class.disable_test_adapter if job_class.respond_to?(:disable_test_adapter)
+        job_class.queue_adapter = adapter
 
         gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
         gate.instance_variable_set(:@last_flush, 0)
@@ -47,7 +53,8 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
 
         expect(gate.count_buffer.any?).to be(true)
       ensure
-        RailsErrorDashboard::StormFlushJob.queue_adapter = original
+        job_class.queue_adapter = original
+        job_class.enable_test_adapter(test_adapter) if test_adapter && job_class.respond_to?(:enable_test_adapter)
       end
     end
 
