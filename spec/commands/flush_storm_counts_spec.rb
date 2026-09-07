@@ -138,6 +138,40 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
     end
   end
 
+  describe "single-row reconciliation (mirrors FindOrIncrementError's 24 h window)" do
+    def capture
+      error = StandardError.new("storm boom")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+    end
+
+    it "increments only the current group when older unresolved groups share the hash" do
+      old_group = capture
+      old_group.update!(occurred_at: 2.days.ago, first_seen_at: 2.days.ago, last_seen_at: 2.days.ago)
+      current_group = capture
+      expect(current_group.id).not_to eq(old_group.id)
+
+      described_class.call(entries: [ entry_for(count: 5) ])
+
+      expect(current_group.reload.occurrence_count).to eq(6)
+      expect(old_group.reload.occurrence_count).to eq(1)
+      # Seven real events, seven counted occurrences.
+      expect(RailsErrorDashboard::ErrorLog.sum(:occurrence_count)).to eq(7)
+    end
+
+    it "opens a new group when every unresolved match is outside the 24 h window, like the full path" do
+      stale = capture
+      stale.update!(occurred_at: 2.days.ago, first_seen_at: 2.days.ago, last_seen_at: 2.days.ago)
+
+      expect {
+        described_class.call(entries: [ entry_for(count: 5) ])
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+
+      expect(stale.reload.occurrence_count).to eq(1)
+      expect(RailsErrorDashboard::ErrorLog.where.not(id: stale.id).first.occurrence_count).to eq(5)
+    end
+  end
+
   describe "storm_events lifecycle" do
     let(:episode) do
       { "started_at" => 2.minutes.ago.iso8601, "ended_at" => nil,
