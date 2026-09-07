@@ -731,7 +731,7 @@ This page helps identify errors associated with connection pool exhaustion or da
 
 ## Local Variable Capture (v0.4.0)
 
-**⚙️ Optional Feature** - Local variable capture is disabled by default. Enable it to see the exact values of local variables at the moment an exception was raised:
+**⚙️ Optional Feature** - Local variable capture is disabled by default. Enable it to see the values of local variables at the moment an exception was raised (strings, arrays and hashes are snapshotted one level deep at raise time; other objects are kept by reference):
 
 ```ruby
 config.enable_local_variables = true

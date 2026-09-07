@@ -476,9 +476,10 @@ Seven analysis engines built in:
 <details>
 <summary><strong>Local Variable + Instance Variable Capture</strong></summary>
 
-See the exact values of local variables and instance variables at the moment an exception was raised — the most valuable debugging context possible.
+See the values of local variables and instance variables at the moment an exception was raised — the most valuable debugging context possible.
 
 - TracePoint(`:raise`) captures locals and ivars before the stack unwinds
+- Strings, arrays and hashes are snapshotted at raise time (one level deep, bounded by the limits below), so an `ensure` block that cleans up state does not overwrite what you see. Other objects are kept by reference and show their state at serialization time
 - Configurable limits: max variable count, nesting depth, string truncation length
 - Sensitive data auto-filtered via Rails `filter_parameters` — passwords, tokens, and PII never stored
 - Never stores Binding objects — values extracted immediately, Binding is GC'd
