@@ -72,52 +72,65 @@ module RailsErrorDashboard
         defined?(ErrorBaseline) && ErrorBaseline.table_exists?
       end
 
-      # Calculate hourly baseline (last 4 weeks, by hour of day)
+      # The events a baseline is built from: occurrences of this error type on
+      # this platform (one row per captured event) when the occurrences table
+      # exists, else the group rows themselves. Public so the anomaly check
+      # counts the current period in exactly the same units.
+      def self.counting_relation(error_type, platform)
+        if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
+          ErrorOccurrence.joins(:error_log)
+                         .where(ErrorLog.table_name => { error_type: error_type, platform: platform })
+        else
+          ErrorLog.where(error_type: error_type, platform: platform)
+        end
+      end
+
+      # The timestamp column of #counting_relation, qualified for the join.
+      def self.time_column
+        if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
+          "#{ErrorOccurrence.table_name}.occurred_at"
+        else
+          "occurred_at"
+        end
+      end
+
+      # Calculate hourly baseline (last 4 weeks, one sample per calendar hour)
       def calculate_hourly_baseline(error_type, platform)
-        period_start = HOURLY_LOOKBACK.ago.beginning_of_hour
-        period_end = Time.current.beginning_of_hour
-
-        # Get error counts grouped by hour
-        hourly_counts = ErrorLog
-          .where(error_type: error_type, platform: platform)
-          .where("occurred_at >= ?", period_start)
-          .group("strftime('%H', occurred_at)")
-          .count
-
-        return nil if hourly_counts.empty?
-
-        counts = hourly_counts.values
-        stats = calculate_statistics(counts)
-
-        baseline = Commands::UpsertBaseline.call(
-          error_type: error_type, platform: platform, baseline_type: "hourly",
-          period_start: period_start, period_end: period_end,
-          stats: stats, count: counts.sum, sample_size: counts.size
-        )
-
-        @calculated_count += 1
-        baseline
+        calculate_baseline(error_type, platform, "hourly", :hour,
+                           HOURLY_LOOKBACK.ago.beginning_of_hour, Time.current.beginning_of_hour)
       end
 
-      # Calculate daily baseline (last 12 weeks, by day of week)
+      # Calculate daily baseline (last 12 weeks, one sample per calendar day)
       def calculate_daily_baseline(error_type, platform)
-        period_start = DAILY_LOOKBACK.ago.beginning_of_day
-        period_end = Time.current.beginning_of_day
+        calculate_baseline(error_type, platform, "daily", :day,
+                           DAILY_LOOKBACK.ago.beginning_of_day, Time.current.beginning_of_day)
+      end
 
-        # Get error counts grouped by day
-        daily_counts = ErrorLog
-          .where(error_type: error_type, platform: platform)
-          .where("occurred_at >= ?", period_start)
-          .group("DATE(occurred_at)")
-          .count
+      # Calculate weekly baseline (last 1 year, one sample per calendar week)
+      def calculate_weekly_baseline(error_type, platform)
+        calculate_baseline(error_type, platform, "weekly", :week,
+                           WEEKLY_LOOKBACK.ago.beginning_of_week, Time.current.beginning_of_week)
+      end
 
-        return nil if daily_counts.empty?
+      # One sample per DATED bucket across the whole lookback, zero buckets
+      # included, so the statistics describe "how many events in an hour /
+      # day / week" — the unit the anomaly check compares against.
+      #
+      # The previous implementation grouped four weeks by hour-of-day, which
+      # summed 28 days into at most 24 totals (seven noon failures on seven
+      # days: mean 7, sample size 1), dropped quiet periods, and embedded a
+      # SQLite-only date function so it could not run on PostgreSQL or MySQL
+      # at all. Groupdate does the bucketing per adapter.
+      def calculate_baseline(error_type, platform, baseline_type, period, period_start, period_end)
+        return nil if period_end <= period_start
 
-        counts = daily_counts.values
+        counts = bucket_counts(error_type, platform, period, period_start, period_end)
+        return nil if counts.sum.zero?
+
         stats = calculate_statistics(counts)
 
         baseline = Commands::UpsertBaseline.call(
-          error_type: error_type, platform: platform, baseline_type: "daily",
+          error_type: error_type, platform: platform, baseline_type: baseline_type,
           period_start: period_start, period_end: period_end,
           stats: stats, count: counts.sum, sample_size: counts.size
         )
@@ -126,31 +139,12 @@ module RailsErrorDashboard
         baseline
       end
 
-      # Calculate weekly baseline (last 1 year, by week)
-      def calculate_weekly_baseline(error_type, platform)
-        period_start = WEEKLY_LOOKBACK.ago.beginning_of_week
-        period_end = Time.current.beginning_of_week
-
-        # Get error counts grouped by week
-        weekly_counts = ErrorLog
-          .where(error_type: error_type, platform: platform)
-          .where("occurred_at >= ?", period_start)
-          .group("strftime('%Y-%W', occurred_at)")
-          .count
-
-        return nil if weekly_counts.empty?
-
-        counts = weekly_counts.values
-        stats = calculate_statistics(counts)
-
-        baseline = Commands::UpsertBaseline.call(
-          error_type: error_type, platform: platform, baseline_type: "weekly",
-          period_start: period_start, period_end: period_end,
-          stats: stats, count: counts.sum, sample_size: counts.size
-        )
-
-        @calculated_count += 1
-        baseline
+      # @return [Array<Integer>] one count per bucket in [period_start, period_end)
+      def bucket_counts(error_type, platform, period, period_start, period_end)
+        self.class.counting_relation(error_type, platform)
+            .group_by_period(period, self.class.time_column, range: period_start...period_end)
+            .count
+            .values
       end
 
       # === Pure algorithm methods (no database access) ===
@@ -168,9 +162,12 @@ module RailsErrorDashboard
       def self.calculate_statistics(counts)
         return default_stats if counts.empty?
 
-        # Remove outliers
+        # Remove outliers (a storm hour must not become the baseline) — but
+        # never the whole signal: for a rare error most zero-filled buckets
+        # are 0, the few 1s sit many sigmas out, and trimming them would
+        # leave a baseline that says the error never happens.
         clean_counts = remove_outliers(counts)
-        return default_stats if clean_counts.empty?
+        clean_counts = counts if clean_counts.empty? || (clean_counts.sum.zero? && counts.sum.positive?)
 
         mean = clean_counts.sum.to_f / clean_counts.size
         variance = clean_counts.map { |c| (c - mean)**2 }.sum / clean_counts.size

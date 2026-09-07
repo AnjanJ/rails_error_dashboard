@@ -339,13 +339,9 @@ module RailsErrorDashboard
       return { anomaly: false, message: "Feature disabled" } unless RailsErrorDashboard.configuration.enable_baseline_alerts
       return { anomaly: false, message: "No baseline available" } unless defined?(Queries::BaselineStats)
 
-      # Get count of this error type today
-      today_count = ErrorLog.where(
-        error_type: error_type,
-        platform: platform
-      ).where("occurred_at >= ?", Time.current.beginning_of_day).count
-
-      Queries::BaselineStats.new(error_type, platform).check_anomaly(today_count, sensitivity: sensitivity)
+      # Current hour / day / week counted in the baselines' own units — a
+      # day's count against an hourly baseline flagged everything.
+      Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: sensitivity)
     end
 
     # Detect cyclical occurrence patterns (daily/weekly rhythms)

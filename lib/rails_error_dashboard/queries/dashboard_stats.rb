@@ -181,14 +181,7 @@ module RailsErrorDashboard
 
         # Check most common error types for anomalies
         base_scope.distinct.pluck(:error_type, :platform).compact.any? do |(error_type, platform)|
-          stats = Queries::BaselineStats.new(error_type, platform)
-          error_count = base_scope.where(
-            error_type: error_type,
-            platform: platform
-          ).where("occurred_at >= ?", Time.current.beginning_of_day).count
-
-          result = stats.check_anomaly(error_count, sensitivity: 2)
-          result[:anomaly]
+          Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: 2)[:anomaly]
         end
       end
 
@@ -198,19 +191,13 @@ module RailsErrorDashboard
 
         # Find the most anomalous error type
         anomalies = base_scope.distinct.pluck(:error_type, :platform).compact.map do |(error_type, platform)|
-          stats = Queries::BaselineStats.new(error_type, platform)
-          error_count = base_scope.where(
-            error_type: error_type,
-            platform: platform
-          ).where("occurred_at >= ?", Time.current.beginning_of_day).count
-
-          result = stats.check_anomaly(error_count, sensitivity: 2)
+          result = Queries::BaselineStats.new(error_type, platform).check_current_anomaly(sensitivity: 2)
           next unless result[:anomaly]
 
           {
             error_type: error_type,
             platform: platform,
-            count: error_count,
+            count: result[:current_count],
             level: result[:level],
             std_devs_above: result[:std_devs_above]
           }

@@ -869,9 +869,11 @@ RSpec.describe "Query Integration", type: :system do
       # Create errors so BaselineCalculator has data to work with
       error = create(:error_log, error_type: "Phase12CalcError", platform: "Web",
                                  occurred_at: 1.day.ago)
+      create(:error_occurrence, error_log: error, occurred_at: 1.day.ago)
       3.times do |i|
-        create(:error_log, error_type: "Phase12CalcError", platform: "Web",
-                           occurred_at: (i + 2).days.ago)
+        log = create(:error_log, error_type: "Phase12CalcError", platform: "Web",
+                                 occurred_at: (i + 2).days.ago)
+        create(:error_occurrence, error_log: log, occurred_at: (i + 2).days.ago)
       end
 
       # Run the calculator — it should delegate to UpsertBaseline
