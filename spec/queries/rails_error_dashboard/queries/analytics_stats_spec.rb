@@ -21,6 +21,18 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
       )
     end
 
+    describe "application-scoped resolution rate" do
+      it "counts resolved errors from the same application only, so the rate stays within 0..100" do
+        target = create(:application, name: "Target scoped app")
+        other = create(:application, name: "Other scoped app")
+        create(:error_log, application: target, resolved: false, occurred_at: 1.day.ago)
+        create_list(:error_log, 3, application: other, resolved: true, status: "resolved", occurred_at: 1.day.ago)
+
+        expect(described_class.call(30, application_id: target.id)[:resolution_rate]).to eq(0)
+        expect(described_class.call(30, application_id: other.id)[:resolution_rate]).to eq(100.0)
+      end
+    end
+
     it "includes the number of days" do
       result = described_class.call(30)
 

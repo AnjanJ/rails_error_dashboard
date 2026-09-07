@@ -667,14 +667,14 @@ end
 
 System health snapshots are designed with host app safety as the top priority:
 
-- **Sub-millisecond** — Total snapshot completes in < 1ms
+- **Sub-millisecond in-process metrics** — GC, memory, threads, pool, VM stats complete in < 1ms. Job-queue depth counts are the documented exception: they query the queue store, so they are cached per process (`system_health_queue_stats_cache_seconds`, default 10) and can be disabled (`system_health_queue_stats = false`)
 - **Every metric individually wrapped** in `rescue => nil` — one failure doesn't affect others
 - **Top-level rescue** — If everything fails, returns `{ captured_at: ... }` (never raises)
 - **No ObjectSpace** — Never calls `ObjectSpace.each_object` or `ObjectSpace.count_objects` (heap scan)
 - **No Thread backtraces** — Only `Thread.list.count` (O(1)), never `.map(&:backtrace)` (GVL hold)
 - **No subprocess** — Process memory uses Linux procfs only, no `ps`, no fork, no backtick
 - **No new gems** — Uses only Ruby stdlib (`Etc`) and ActiveRecord
-- **No global state** — No Thread.current, no mutex, no memoization
+- **No global state** — No Thread.current, no mutex; the only memoization is the lock-free per-process cache of the queue-depth counts
 
 ### Async Logging Compatibility
 
@@ -731,7 +731,7 @@ This page helps identify errors associated with connection pool exhaustion or da
 
 ## Local Variable Capture (v0.4.0)
 
-**⚙️ Optional Feature** - Local variable capture is disabled by default. Enable it to see the exact values of local variables at the moment an exception was raised:
+**⚙️ Optional Feature** - Local variable capture is disabled by default. Enable it to see the values of local variables at the moment an exception was raised (strings, arrays and hashes are snapshotted one level deep at raise time; other objects are kept by reference):
 
 ```ruby
 config.enable_local_variables = true

@@ -8,7 +8,8 @@ module RailsErrorDashboard
     # Runs in a background job (DB allowed). For each counted fingerprint:
     #   1. Recompute the canonical error_hash from the stored identity parts
     #      (the gate's key deliberately omits application_id — resolved here)
-    #   2. Unresolved match  → single UPDATE: occurrence_count += N
+    #   2. Unresolved match  → the ONE row FindOrIncrementError would pick
+    #      (24 h window, exact environment first): occurrence_count += N
     #   3. Resolved match    → reopen (mirrors FindOrIncrementError semantics)
     #   4. No match          → create a minimal ErrorLog from the exemplar
     #
@@ -59,26 +60,33 @@ module RailsErrorDashboard
 
         error_hash = canonical_hash(entry, application)
         last_seen = parse_time(entry["last_seen_at"]) || Time.current
-        env = current_environment
+        # An explicit environment captured at the gate wins over the worker's
+        # own, mirroring LogError#resolve_environment for full captures.
+        env = current_environment && (entry["environment"].presence || current_environment)
 
-        # Priority 1: unresolved match — one UPDATE, no row instantiation.
-        # Environment mirrors FindOrIncrementError: exact row first, then a
-        # legacy NULL row which is stamped as it is claimed. Two statements
-        # rather than one IN (env, NULL), because update_all would hit BOTH
-        # rows when they coexist and double-count.
-        unresolved = ErrorLog.unresolved.where(error_hash: error_hash, application_id: application.id)
-        if env
-          updated = unresolved.where(environment: env)
-            .update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen ])
-          return count if updated.positive?
-
-          updated = unresolved.where(environment: nil)
-            .update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?, environment = ?",
-                          count, last_seen, env ])
-          return count if updated.positive?
-        else
-          updated = unresolved.update_all([ "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen ])
-          return count if updated.positive?
+        # Priority 1: unresolved match — ONE row, chosen exactly as
+        # FindOrIncrementError chooses it (same hash + application, occurred
+        # within 24 h, exact environment before a legacy NULL row, most
+        # recently seen first), then a single atomic UPDATE on that id.
+        #
+        # It must be one row: the normal path opens a fresh group once the
+        # previous one's occurred_at falls outside the 24 h window, so a
+        # long-running unresolved error legitimately owns several unresolved
+        # rows. An update_all across the whole hash would add N to every one
+        # of them — seven real events becoming twelve counted occurrences.
+        target = unresolved_target(error_hash, application, env)
+        if target
+          if env && target.environment.blank?
+            ErrorLog.where(id: target.id).update_all([
+              "occurrence_count = occurrence_count + ?, last_seen_at = ?, environment = ?",
+              count, last_seen, env
+            ])
+          else
+            ErrorLog.where(id: target.id).update_all([
+              "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
+            ])
+          end
+          return count
         end
 
         # Priority 2: resolved/wont_fix match — reopen, mirroring
@@ -107,12 +115,17 @@ module RailsErrorDashboard
 
         # Priority 3: first seen during count-only mode — minimal ErrorLog
         # from the exemplar (no backtrace/context was captured; the next
-        # occurrence after the storm fills in detail via the normal path)
+        # occurrence after the storm fills in detail via the normal path).
+        #
+        # The exemplar message is RAW — the gate stores what the exception
+        # said so the canonical hash (computed above, from the raw message,
+        # exactly as the full path does) still lands on the same row. It must
+        # therefore go through the same redaction as LogError before it is
+        # persisted; storm protection and sensitive filtering are both on by
+        # default, and an incident is exactly when a password in a message
+        # must not reach the database.
         create_attrs = {
-          environment: env
-        }.compact
-        ErrorLog.create!(
-          **create_attrs,
+          environment: env,
           application_id: application.id,
           error_type: entry["error_class"],
           message: entry["message"],
@@ -124,8 +137,30 @@ module RailsErrorDashboard
           occurrence_count: count,
           error_hash: error_hash,
           resolved: false
-        )
+        }.compact
+        ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
         count
+      end
+
+
+      # The unresolved row the full capture path would increment right now.
+      def unresolved_target(error_hash, application, env)
+        scope = ErrorLog.unresolved
+          .where(error_hash: error_hash, application_id: application.id)
+          .where("occurred_at >= ?", 24.hours.ago)
+        if env
+          scope = scope.where(environment: [ env, nil ])
+            .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
+        end
+        scope.order(last_seen_at: :desc).select(:id, :environment).first
+      end
+
+      # The redaction LogError applies to a message, for exemplars that reach
+      # the database by any other route (first-seen rows, the storm ledger).
+      def redact_message(message)
+        return message if message.blank?
+
+        Services::SensitiveDataFilter.filter_attributes({ message: message.to_s })[:message]
       end
 
       # Mirrors ErrorHashGenerator.call exactly: same fields, same order,
@@ -196,7 +231,7 @@ module RailsErrorDashboard
         existing = event.top_fingerprints_list
         fresh = @entries.map { |e|
           e = e.with_indifferent_access if e.respond_to?(:with_indifferent_access)
-          { "class" => e["error_class"], "message" => e["message"].to_s[0, 120], "count" => e["count"].to_i }
+          { "class" => e["error_class"], "message" => redact_message(e["message"]).to_s[0, 120], "count" => e["count"].to_i }
         }
 
         merged = (existing + fresh)

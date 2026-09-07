@@ -184,7 +184,7 @@ config.enable_breadcrumbs = true
 
 Know your app's runtime state at the moment of failure — GC stats, process memory, thread count, connection pool utilization, Puma thread stats, RubyVM cache health, YJIT compilation stats, and deep runtime insights captured automatically.
 
-- Sub-millisecond total snapshot, every metric individually rescue-wrapped
+- Sub-millisecond for the in-process metrics, every metric individually rescue-wrapped. The one exception is job-queue depth (five `COUNT`s for Solid Queue, a Redis round-trip for Sidekiq): those are queries against your queue store, cached for 10 s per process and switchable off with `config.system_health_queue_stats = false`
 - No ObjectSpace scanning, no Thread backtraces, no subprocess calls
 - RubyVM.stat: constant cache invalidations, shape cache stats
 - YJIT runtime stats: compiled iseqs, invalidation count, code region sizes
@@ -476,9 +476,10 @@ Seven analysis engines built in:
 <details>
 <summary><strong>Local Variable + Instance Variable Capture</strong></summary>
 
-See the exact values of local variables and instance variables at the moment an exception was raised — the most valuable debugging context possible.
+See the values of local variables and instance variables at the moment an exception was raised — the most valuable debugging context possible.
 
 - TracePoint(`:raise`) captures locals and ivars before the stack unwinds
+- Strings, arrays and hashes are snapshotted at raise time (one level deep, bounded by the limits below), so an `ensure` block that cleans up state does not overwrite what you see. Other objects are kept by reference and show their state at serialization time
 - Configurable limits: max variable count, nesting depth, string truncation length
 - Sensitive data auto-filtered via Rails `filter_parameters` — passwords, tokens, and PII never stored
 - Never stores Binding objects — values extracted immediately, Binding is GC'd

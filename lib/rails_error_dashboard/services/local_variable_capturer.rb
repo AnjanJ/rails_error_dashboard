@@ -10,7 +10,10 @@ module RailsErrorDashboard
     #
     # Safety contract:
     # - Default OFF (opt-in via config.enable_local_variables / enable_instance_variables)
-    # - Never stores Binding objects or object references — extracts vars immediately in callback
+    # - Never stores Binding objects — extracts vars immediately in callback
+    # - Strings, arrays and hashes are snapshotted (shallow copy, bounded by the
+    #   serializer's limits) at raise time; other objects are kept by reference,
+    #   so their state is whatever it is when the error is serialized
     # - Every callback wrapped in rescue => e (never raises)
     # - Per-variable rescue in extraction
     # - Skips SystemExit, SignalException, Interrupt
@@ -117,6 +120,33 @@ module RailsErrorDashboard
           end
         end
 
+        # A value as it is NOW, for the kinds of value that are cheap to copy.
+        #
+        # The exception is serialized later, after the stack has unwound —
+        # and ensure blocks and rescue handlers run in between, mutating the
+        # very state worth seeing (`state["phase"] = "cleanup"`, `@conn = nil`).
+        # A reference would show the post-cleanup value and call it the value
+        # "at raise". Strings, arrays and hashes get a one-level copy, bounded
+        # by what the serializer will keep anyway (+1 so it still knows the
+        # original was longer). Anything else is left as a reference: copying
+        # arbitrary application objects is neither safe nor cheap. Nested
+        # containers inside the copy are therefore still references.
+        def snapshot_value(value)
+          config = RailsErrorDashboard.configuration
+          case value
+          when String
+            value.frozen? ? value : value[0, (config.local_variable_max_string_length || 200) + 1]
+          when Array
+            value.first((config.local_variable_max_array_items || 10) + 1)
+          when Hash
+            value.first((config.local_variable_max_hash_items || 20) + 1).to_h
+          else
+            value
+          end
+        rescue
+          value
+        end
+
         # Check if the path should be skipped (gem code, vendor, stdlib, this gem)
         def skip_path?(path)
           path.include?("/gems/") ||
@@ -142,7 +172,7 @@ module RailsErrorDashboard
 
           locals = {}
           var_names.each do |name|
-            locals[name] = binding_obj.local_variable_get(name)
+            locals[name] = snapshot_value(binding_obj.local_variable_get(name))
           rescue => e
             locals[name] = "(extraction error: #{e.class.name})"
           end
@@ -189,7 +219,7 @@ module RailsErrorDashboard
 
           # Extract each instance variable (per-variable rescue)
           ivar_names.each do |name|
-            result[name] = obj.instance_variable_get(name)
+            result[name] = snapshot_value(obj.instance_variable_get(name))
           rescue => e
             result[name] = "(extraction error: #{e.class.name})"
           end

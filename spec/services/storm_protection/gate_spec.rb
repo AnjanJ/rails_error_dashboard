@@ -14,6 +14,81 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     error
   end
 
+  describe ".maybe_flush! when the queue is unavailable" do
+    before { gate.reset! }
+    after { gate.reset! }
+
+    it "retains the batch when perform_later returns false instead of raising" do
+      gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_return(false)
+
+      gate.send(:maybe_flush!)
+
+      expect(gate.count_buffer.any?).to be(true)
+    end
+
+    it "retains the batch when the real queue adapter raises ActiveJob::EnqueueError" do
+      # Rails 7.2+ swallows EnqueueError inside perform_later and returns
+      # false; 7.0/7.1 let it propagate. The gate must retain the batch
+      # either way, so no assumption about perform_later's return here.
+      adapter = Object.new
+      adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
+      adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
+      # Rails 7.x asks the adapter this before enqueuing; Rails 8 does not.
+      adapter.define_singleton_method(:enqueue_after_transaction_commit?) { false }
+      job_class = RailsErrorDashboard::StormFlushJob
+      original = job_class.queue_adapter
+      # Rails 7.0/7.1 keep answering with the test adapter while one is
+      # enabled, whatever queue_adapter= was given; 7.2+ honour the
+      # assignment. Disable it for the duration so the fake is really used.
+      test_adapter = job_class.respond_to?(:_test_adapter) ? job_class._test_adapter : nil
+      begin
+        job_class.disable_test_adapter if job_class.respond_to?(:disable_test_adapter)
+        job_class.queue_adapter = adapter
+
+        gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+        gate.instance_variable_set(:@last_flush, 0)
+        gate.send(:maybe_flush!)
+
+        expect(gate.count_buffer.any?).to be(true)
+      ensure
+        job_class.queue_adapter = original
+        job_class.enable_test_adapter(test_adapter) if test_adapter && job_class.respond_to?(:enable_test_adapter)
+      end
+    end
+
+    it "retains the batch and the episode, then hands both off on the next interval" do
+      gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_raise(IOError, "queue unavailable")
+
+      expect { gate.send(:maybe_flush!) }.not_to raise_error
+      expect(RailsErrorDashboard::StormFlushJob).to have_received(:perform_later).once
+      expect(gate.count_buffer.any?).to be(true)
+
+      handed_off = nil
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later) { |**kwargs| handed_off = kwargs }
+      gate.instance_variable_set(:@last_flush, 0)
+      gate.send(:maybe_flush!)
+
+      expect(handed_off[:entries].sum { |e| e["count"] }).to eq(1)
+      expect(gate.count_buffer.any?).to be(false)
+    end
+  end
+
+  describe ".gate_key" do
+    it "separates the same error in different environments so they reconcile onto their own rows" do
+      staging = gate.send(:gate_parts, boom, { environment: "staging" })
+      production = gate.send(:gate_parts, boom, { environment: "production" })
+      implicit = gate.send(:gate_parts, boom, {})
+
+      expect(gate.send(:gate_key, staging)).not_to eq(gate.send(:gate_key, production))
+      expect(gate.send(:gate_key, implicit)).not_to eq(gate.send(:gate_key, staging))
+      expect(implicit[:environment]).to be_nil
+    end
+  end
+
   describe ".admit!" do
     it "returns :full when storm protection is disabled" do
       RailsErrorDashboard.configuration.enable_storm_protection = false

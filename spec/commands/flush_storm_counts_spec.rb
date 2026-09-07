@@ -43,6 +43,22 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(RailsErrorDashboard::ErrorLog.where(message: "storm boom").count).to eq(1) # no duplicate row
     end
 
+    it "lands a long-message error on the same row (both paths hash the same 500-char prefix)" do
+      long_message = ("x" * 501) + " trailing detail that only the full path ever saw"
+      error = StandardError.new(long_message)
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      log = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+
+      gate_parts = RailsErrorDashboard::Services::StormProtection::Gate.send(:gate_parts, error,
+        { controller_name: "widgets", action_name: "show" })
+      expect(gate_parts[:message].length).to eq(500)
+
+      expect {
+        described_class.call(entries: [ entry_for(message: gate_parts[:message], count: 3) ])
+      }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+      expect(log.reload.occurrence_count).to eq(4)
+    end
+
     it "reconciles by custom hash directly when present" do
       # Pin the same application the flush command will resolve
       app = RailsErrorDashboard::Application.find_or_create_by_name(
@@ -76,6 +92,11 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
   end
 
   describe "fingerprints first seen during count-only mode" do
+    it "fits over-long string metadata to its columns" do
+      described_class.call(entries: [ entry_for(error_class: "E" * 300, message: "long class", count: 1) ])
+      expect(RailsErrorDashboard::ErrorLog.find_by(message: "long class").error_type.length).to eq(255)
+    end
+
     it "creates a minimal ErrorLog from the exemplar with the exact count" do
       expect {
         described_class.call(entries: [ entry_for(message: "never stored before", count: 99) ])
@@ -97,6 +118,78 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       }.not_to change(RailsErrorDashboard::ErrorLog, :count)
 
       expect(RailsErrorDashboard::ErrorLog.find_by(message: "storm boom").occurrence_count).to eq(51)
+    end
+  end
+
+  describe "sensitive data redaction at the persistence boundary" do
+    before do
+      RailsErrorDashboard.configuration.filter_sensitive_data = true
+      RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+    end
+    after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+    it "redacts a first-seen row's exemplar message exactly as the full path would" do
+      described_class.call(entries: [ entry_for(message: "login failed password=hunter2-storm", count: 4) ])
+
+      row = RailsErrorDashboard::ErrorLog.find_by(error_type: "StandardError")
+      expect(row.message).to eq("login failed password=[FILTERED]")
+      expect(row.message).not_to include("hunter2")
+    end
+
+    it "still lands a later full capture on the redacted storm-created row (hash is from the raw message)" do
+      described_class.call(entries: [ entry_for(message: "login failed password=hunter2-storm", count: 4) ])
+
+      error = StandardError.new("login failed password=hunter2-storm")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+      }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+
+      expect(RailsErrorDashboard::ErrorLog.first.occurrence_count).to eq(5)
+    end
+
+    it "redacts exemplar messages in the storm ledger's top fingerprints" do
+      described_class.call(
+        entries: [ entry_for(message: "token=abc123secret expired", count: 9) ],
+        episode: { "started_at" => 2.minutes.ago.iso8601, "peak_rate_per_minute" => 100, "reached_open" => true }
+      )
+
+      fingerprints = RailsErrorDashboard::StormEvent.last.top_fingerprints_list
+      expect(fingerprints.first["message"]).to eq("token=[FILTERED] expired")
+    end
+  end
+
+  describe "single-row reconciliation (mirrors FindOrIncrementError's 24 h window)" do
+    def capture
+      error = StandardError.new("storm boom")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show" })
+    end
+
+    it "increments only the current group when older unresolved groups share the hash" do
+      old_group = capture
+      old_group.update!(occurred_at: 2.days.ago, first_seen_at: 2.days.ago, last_seen_at: 2.days.ago)
+      current_group = capture
+      expect(current_group.id).not_to eq(old_group.id)
+
+      described_class.call(entries: [ entry_for(count: 5) ])
+
+      expect(current_group.reload.occurrence_count).to eq(6)
+      expect(old_group.reload.occurrence_count).to eq(1)
+      # Seven real events, seven counted occurrences.
+      expect(RailsErrorDashboard::ErrorLog.sum(:occurrence_count)).to eq(7)
+    end
+
+    it "opens a new group when every unresolved match is outside the 24 h window, like the full path" do
+      stale = capture
+      stale.update!(occurred_at: 2.days.ago, first_seen_at: 2.days.ago, last_seen_at: 2.days.ago)
+
+      expect {
+        described_class.call(entries: [ entry_for(count: 5) ])
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+
+      expect(stale.reload.occurrence_count).to eq(1)
+      expect(RailsErrorDashboard::ErrorLog.where.not(id: stale.id).first.occurrence_count).to eq(5)
     end
   end
 
@@ -243,6 +336,24 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(legacy.reload.occurrence_count).to eq(4)
       expect(legacy.environment).to eq("production")
       expect(RailsErrorDashboard::ErrorLog.where(message: "storm boom").count).to eq(1)
+    end
+
+    it "keeps an explicit staging event on the staging row even when the worker runs as production" do
+      RailsErrorDashboard.configuration.environment = "production"
+      error = StandardError.new("storm boom")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      staging = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show", environment: "staging" })
+      expect(staging.environment).to eq("staging")
+
+      gate = RailsErrorDashboard::Services::StormProtection::Gate
+      parts = gate.send(:gate_parts, error, { controller_name: "widgets", action_name: "show", environment: "staging" })
+      buffer = RailsErrorDashboard::Services::StormProtection::CountBuffer.new
+      3.times { buffer.record(gate.send(:gate_key, parts), parts) }
+
+      described_class.call(entries: buffer.snapshot![:entries])
+
+      expect(staging.reload.occurrence_count).to eq(4)
+      expect(RailsErrorDashboard::ErrorLog.where(error_hash: staging.error_hash).pluck(:environment)).to eq([ "staging" ])
     end
 
     it "creates a first-seen row carrying the environment" do

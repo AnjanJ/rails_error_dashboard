@@ -1146,4 +1146,44 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       expect(log.environment).to be_nil
     end
   end
+  describe "release attribution on occurrences" do
+    before do
+      RailsErrorDashboard.configuration.async_logging = false
+      RailsErrorDashboard.configuration.app_version = "9.9.9"
+      RailsErrorDashboard.configuration.git_sha = "deadbeef"
+    end
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "fits over-long string metadata to its columns so the capture is never lost to a length error" do
+      RailsErrorDashboard.configuration.app_version = "v" * 400
+      RailsErrorDashboard.configuration.git_sha = "s" * 300
+      error = StandardError.new("length clamp")
+      error.set_backtrace([ "app/models/widget.rb:10:in 'explode'" ])
+
+      log = described_class.call(error)
+
+      expect(log).to be_persisted
+      expect(log.app_version.length).to eq(255)
+      expect(log.git_sha.length).to eq(255)
+      occurrence = RailsErrorDashboard::ErrorOccurrence.where(error_log: log).last
+      expect(occurrence.app_version.length).to eq(255)
+      expect(occurrence.git_sha.length).to eq(255)
+    end
+
+    it "records the release each occurrence happened under, while the group keeps its first release" do
+      error = StandardError.new("release attribution")
+      error.set_backtrace([ "app/models/widget.rb:10:in 'explode'" ])
+      log = described_class.call(error)
+      expect(log.app_version).to eq("9.9.9")
+
+      RailsErrorDashboard.configuration.app_version = "10.0.0"
+      RailsErrorDashboard.configuration.git_sha = "cafebabe"
+      again = described_class.call(error)
+      expect(again.id).to eq(log.id)
+      expect(again.reload.app_version).to eq("9.9.9")
+
+      versions = RailsErrorDashboard::ErrorOccurrence.where(error_log: log).order(:id).pluck(:app_version, :git_sha)
+      expect(versions).to eq([ [ "9.9.9", "deadbeef" ], [ "10.0.0", "cafebabe" ] ])
+    end
+  end
 end

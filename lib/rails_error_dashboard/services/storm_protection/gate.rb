@@ -155,22 +155,35 @@ module RailsErrorDashboard
           # Cheap in-process bucketing key. Deliberately NOT the canonical
           # error_hash (that needs application_id = DB); the flush job
           # recomputes the canonical hash from the stored parts.
+          # Environment is a MATCH dimension (one row per environment), so it
+          # is part of the in-process key too: a staging event and a
+          # production event of the same error must not share one entry, or
+          # the flush job would reconcile both into whichever environment
+          # the worker runs in.
           def gate_key(parts)
-            parts[:gate_key] ||= parts[:custom_hash] || Digest::SHA256.hexdigest(
-              "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
-              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
+            parts[:gate_key] ||= Digest::SHA256.hexdigest(
+              "#{parts[:custom_hash] || identity_key(parts)}|#{parts[:environment]}"
             )[0..15]
+          end
+
+          def identity_key(parts)
+            "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
+              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
           end
 
           def gate_parts(exception, context)
             {
               error_class: exception.class.name,
-              message: exception.message.to_s[0, 500],
+              message: exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT],
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
               action_name: context[:action_name]&.to_s,
-              custom_hash: custom_hash_for(exception, context)
+              custom_hash: custom_hash_for(exception, context),
+              # Only an EXPLICIT environment from the caller. nil means "the
+              # worker's own environment", resolved at flush time exactly as
+              # LogError resolves it for a full capture.
+              environment: context[:environment].to_s.strip.presence&.[](0, 64)
             }
           end
 
@@ -203,17 +216,44 @@ module RailsErrorDashboard
             @last_flush = now
             snapshot = count_buffer.snapshot!
             episode = breaker.episode_snapshot
-            breaker.clear_closed_episode!
 
-            StormFlushJob.perform_later(
-              entries: snapshot[:entries],
-              overflow: snapshot[:overflow],
-              episode: serialize_episode(episode)
-            )
+            begin
+              job = StormFlushJob.perform_later(
+                entries: snapshot[:entries],
+                overflow: snapshot[:overflow],
+                episode: serialize_episode(episode)
+              )
+              # Active Job swallows ActiveJob::EnqueueError and returns false
+              # (and a job that was not enqueued says so) — a failed handoff
+              # that never raises.
+              unless enqueued?(job)
+                reason = (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) || "enqueue returned #{job.inspect}"
+                raise "StormFlushJob was not enqueued: #{reason}"
+              end
+            rescue => e
+              # The queue is often the very thing that is down during a storm
+              # (a SolidQueue enqueue is a DB write). The batch is not gone:
+              # put it back so the next interval retries, and leave the
+              # closed episode in place so it is persisted by that retry.
+              count_buffer.restore(snapshot[:entries], snapshot[:overflow])
+              RailsErrorDashboard::Logger.error(
+                "[RailsErrorDashboard] Storm flush enqueue failed (batch retained for retry): #{e.class} - #{e.message}"
+              )
+              return
+            end
+
+            breaker.clear_closed_episode!
           rescue => e
             RailsErrorDashboard::Logger.error(
-              "[RailsErrorDashboard] Storm flush enqueue failed: #{e.class} - #{e.message}"
+              "[RailsErrorDashboard] Storm flush failed: #{e.class} - #{e.message}"
             )
+          end
+
+          def enqueued?(job)
+            return false unless job
+            return job.successfully_enqueued? if job.respond_to?(:successfully_enqueued?)
+
+            true
           end
 
           def serialize_episode(episode)

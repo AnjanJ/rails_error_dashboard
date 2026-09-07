@@ -667,6 +667,66 @@ config.enable_crash_capture = true
 
 ---
 
+## Upgrading to v0.11.6
+
+v0.11.6 adds one migration and changes how one class of error is grouped.
+
+### Migration: release attribution on occurrences
+
+`add_release_to_error_occurrences` adds `app_version` and `git_sha` to
+`rails_error_dashboard_error_occurrences` and backfills existing rows from
+their group. The Releases page counts occurrences per release from now on.
+
+```bash
+bundle update rails_error_dashboard
+rails rails_error_dashboard:install:migrations
+rails db:migrate
+```
+
+Separate database: move `*_add_release_to_error_occurrences.rb` to
+`db/error_dashboard_migrate/` before migrating, as in the sections above.
+
+### Behaviour change: fingerprints for messages longer than 500 characters
+
+The error fingerprint now hashes only the first 500 characters of the raw
+message, on both the normal capture path and the storm-protection path. Before
+0.11.6 the normal path hashed the whole message while storm reconciliation
+hashed a 500-character exemplar, so a long-message error changed identity
+whenever the circuit breaker changed state and its counts landed on two rows.
+
+Consequence on upgrade: an error whose message runs past 500 characters gets a
+**new group** on its next occurrence. The pre-0.11.6 group is not reopened or
+merged; it keeps its status and history and simply stops receiving counts.
+Errors with messages of 500 characters or fewer, and errors using a custom
+fingerprint, are unaffected. No data migration is provided because the old
+hash was derived from the full message and a first application frame that is
+not stored in a form the migration could recompute reliably.
+
+### Behaviour change: string metadata is fitted to its columns
+
+Before 0.11.6 an over-long string value (a 300-character `app_version`, say)
+made the insert fail on MySQL in strict mode, the capture path rescued the
+failure, and the error was silently lost. String-typed columns are now
+truncated to their column limit before writing, on every adapter, using the
+Rails default of 255 characters where the adapter declares no limit.
+
+Consequence: on PostgreSQL and SQLite, which previously stored such values in
+full, `app_version`, `git_sha`, `error_type`, `controller_name`,
+`action_name` and the other string columns are now capped at 255 characters.
+Two release identifiers that differ only after their first 255 characters
+become indistinguishable on the Releases page. Error grouping is unaffected:
+the fingerprint is computed from the raw values before truncation.
+
+### Baseline scoping
+
+The current-period count in a baseline anomaly check is now scoped to the
+application being viewed, so one application's spike no longer shows as an
+anomaly on another application's dashboard. The baselines themselves are
+still calculated per error type and platform across all applications;
+fully application-specific baselines are follow-up work.
+
+---
+
 ## Conclusion
 
 The hybrid squashed + incremental strategy provides the best of both worlds:

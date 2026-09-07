@@ -91,6 +91,92 @@ RSpec.describe RailsErrorDashboard::Services::LocalVariableCapturer do
     end
   end
 
+  describe "raise-time snapshots" do
+    before do
+      RailsErrorDashboard.configuration.enable_local_variables = true
+      RailsErrorDashboard.configuration.enable_instance_variables = true
+      described_class.enable!
+    end
+    after { RailsErrorDashboard.reset_configuration! }
+
+    # eval with an app-looking path so the capturer does not skip the frame as gem/spec code
+    def raise_in_app(code)
+      eval(code, TOPLEVEL_BINDING, "/app/services/snapshot_probe.rb", 1) # rubocop:disable Security/Eval
+    end
+
+    it "keeps the hash values from the moment of the raise, not after an ensure block mutated them" do
+      exception = raise_in_app(<<~RUBY)
+        begin
+          state = { "phase" => "at raise" }
+          begin
+            raise StandardError, "snapshot probe"
+          ensure
+            state["phase"] = "after unwind"
+          end
+        rescue StandardError => caught
+          caught
+        end
+      RUBY
+
+      expect(described_class.extract(exception)[:state]["phase"]).to eq("at raise")
+    end
+
+    it "keeps string and array values from the moment of the raise" do
+      exception = raise_in_app(<<~RUBY)
+        begin
+          label = +"pending"
+          items = [ 1, 2 ]
+          begin
+            raise StandardError, "snapshot probe"
+          ensure
+            label << " (cleaned up)"
+            items << 3
+          end
+        rescue StandardError => caught
+          caught
+        end
+      RUBY
+
+      locals = described_class.extract(exception)
+      expect(locals[:label]).to eq("pending")
+      expect(locals[:items]).to eq([ 1, 2 ])
+    end
+
+    it "snapshots instance variables the same way" do
+      # The class must live at an app-looking path too: the raise happens
+      # inside #run, and a frame in this spec file is skipped as gem code.
+      exception = raise_in_app(<<~RUBY)
+        snapshot_probe_service = Class.new do
+          def run
+            @status = { "conn" => "open" }
+            raise StandardError, "snapshot probe"
+          ensure
+            @status["conn"] = "closed"
+          end
+        end
+        begin
+          snapshot_probe_service.new.run
+        rescue StandardError => caught
+          caught
+        end
+      RUBY
+
+      ivars = described_class.extract_instance_vars(exception)
+      expect(ivars[:@status]["conn"]).to eq("open")
+    end
+
+    it "bounds the copy by the serializer's limits so a huge collection is not duplicated" do
+      RailsErrorDashboard.configuration.local_variable_max_array_items = 3
+      expect(described_class.send(:snapshot_value, (1..1000).to_a).size).to eq(4)
+      expect(described_class.send(:snapshot_value, "x" * 5000).size).to eq(201)
+    end
+
+    it "leaves other objects as references" do
+      obj = Object.new
+      expect(described_class.send(:snapshot_value, obj)).to equal(obj)
+    end
+  end
+
   describe ".extract" do
     it "returns nil for nil input" do
       expect(described_class.extract(nil)).to be_nil

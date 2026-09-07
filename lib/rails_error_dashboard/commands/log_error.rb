@@ -299,6 +299,9 @@ module RailsErrorDashboard
         # Apply sensitive data filtering (on by default)
         attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
 
+        # Fit string metadata to its columns (after hashing, before writing)
+        attributes = ErrorLog.clamp_string_attributes(attributes)
+
         # Harvest breadcrumbs (if enabled and column exists)
         if !storm_lite && ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
           # Sync path: harvest from current thread
@@ -377,13 +380,19 @@ module RailsErrorDashboard
         #  Track individual error occurrence for co-occurrence analysis (if table exists)
         if defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
           begin
-            ErrorOccurrence.create(
+            occurrence_attrs = {
               error_log: error_log,
               occurred_at: attributes[:occurred_at],
               user_id: attributes[:user_id],
               request_id: error_context.request_id,
               session_id: error_context.session_id
-            )
+            }
+            # The release THIS event happened under. The group keeps its first
+            # release; per-release counts come from here (ReleaseTimeline).
+            occurrence_columns = ErrorOccurrence.column_names
+            occurrence_attrs[:app_version] = attributes[:app_version] if occurrence_columns.include?("app_version")
+            occurrence_attrs[:git_sha] = attributes[:git_sha] if occurrence_columns.include?("git_sha")
+            ErrorOccurrence.create(ErrorOccurrence.clamp_string_attributes(occurrence_attrs))
           rescue => e
             RailsErrorDashboard::Logger.error("Failed to create error occurrence: #{e.message}")
           end

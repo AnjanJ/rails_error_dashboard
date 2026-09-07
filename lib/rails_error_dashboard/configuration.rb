@@ -169,6 +169,8 @@ module RailsErrorDashboard
 
     # System health snapshot (GC, memory, threads, connection pool at error time)
     attr_accessor :enable_system_health            # Master switch (default: false)
+    attr_accessor :system_health_queue_stats       # Include job-queue depth counts (default: true)
+    attr_accessor :system_health_queue_stats_cache_seconds # Reuse queue counts this long per process (default: 10)
 
     # Local variable capture via TracePoint(:raise)
     attr_accessor :enable_local_variables            # Master switch (default: false)
@@ -393,6 +395,11 @@ module RailsErrorDashboard
 
       # System health snapshot defaults - OFF by default (opt-in)
       @enable_system_health = false  # Capture GC, memory, threads, connection pool at error time
+      # Queue-depth counts are queries against the queue store (five COUNTs
+      # for Solid Queue), the one part of the snapshot that is not sub-ms.
+      # Cached per process so an error burst runs them once per interval.
+      @system_health_queue_stats = true
+      @system_health_queue_stats_cache_seconds = 10
 
       # Local variable capture defaults - OFF by default (opt-in)
       @enable_local_variables = false           # TracePoint(:raise) for local var capture

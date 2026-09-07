@@ -5,6 +5,13 @@ require "rails_helper"
 RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
   let!(:app) { create(:application) }
 
+  # A captured error: the group row plus the occurrence that carries the
+  # release it happened under (the :with_version trait creates both, as
+  # LogError does for every capture).
+  def versioned_error(**attrs)
+    create(:error_log, :with_version, **attrs)
+  end
+
   describe ".call" do
     it "returns releases and summary keys" do
       result = described_class.call(30)
@@ -23,26 +30,26 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
     context "with versioned error data" do
       before do
         # v1.0.0: 3 errors, 2 unique types, oldest release
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", git_sha: "aaa111", error_type: "NoMethodError",
           error_hash: "hash_a", occurred_at: 20.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", git_sha: "aaa111", error_type: "NoMethodError",
           error_hash: "hash_a", occurred_at: 18.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", git_sha: "aaa111", error_type: "TypeError",
           error_hash: "hash_b", occurred_at: 15.days.ago)
 
         # v1.1.0: 2 errors, 1 new type + 1 from v1.0.0
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.1.0", git_sha: "bbb222", error_type: "NoMethodError",
           error_hash: "hash_a", occurred_at: 10.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.1.0", git_sha: "bbb222", error_type: "RuntimeError",
           error_hash: "hash_c", occurred_at: 8.days.ago)
 
         # v1.2.0: 1 error, 1 new type — most recent release
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.2.0", git_sha: "ccc333", error_type: "ArgumentError",
           error_hash: "hash_d", occurred_at: 2.days.ago)
       end
@@ -98,20 +105,50 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       end
     end
 
+    context "recurrence after a deploy" do
+      it "attributes each occurrence to the release it happened under, not the group's first release" do
+        group = versioned_error(application: app, app_version: "1.0.0", git_sha: "aaa111",
+                                error_type: "NoMethodError", error_hash: "hash_a", occurred_at: 3.days.ago)
+        # The same group recurs after the 2.0.0 deploy: LogError increments the
+        # group (which keeps 1.0.0) and records an occurrence under 2.0.0.
+        create(:error_occurrence, error_log: group, occurred_at: 1.day.ago, app_version: "2.0.0", git_sha: "bbb222")
+        create(:error_occurrence, error_log: group, occurred_at: 1.hour.ago, app_version: "2.0.0", git_sha: "bbb222")
+        expect(group.reload.app_version).to eq("1.0.0")
+
+        releases = described_class.call(30, application_id: app.id)[:releases]
+        by_version = releases.to_h { |r| [ r[:version], r ] }
+
+        expect(by_version.keys).to contain_exactly("1.0.0", "2.0.0")
+        expect(by_version["1.0.0"][:total_errors]).to eq(1)
+        expect(by_version["2.0.0"][:total_errors]).to eq(2)
+        expect(by_version["2.0.0"][:git_shas]).to eq([ "bbb222" ])
+        expect(by_version["2.0.0"][:new_error_count]).to eq(0) # hash_a was new in 1.0.0
+        expect(releases.first[:version]).to eq("2.0.0")
+      end
+
+      it "falls back to counting group rows when occurrences do not carry a release" do
+        create(:error_log, :with_version, application: app, app_version: "1.0.0", occurred_at: 2.days.ago)
+        allow(RailsErrorDashboard::ErrorOccurrence).to receive(:column_names).and_return(%w[id error_log_id occurred_at])
+
+        releases = described_class.call(30, application_id: app.id)[:releases]
+        expect(releases.map { |r| [ r[:version], r[:total_errors] ] }).to eq([ [ "1.0.0", 1 ] ])
+      end
+    end
+
     context "new errors detection" do
       before do
         # hash_a first appears in v1.0.0
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", error_type: "NoMethodError",
           error_hash: "hash_a", occurred_at: 20.days.ago)
 
         # hash_a also appears in v1.1.0 — NOT new
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.1.0", error_type: "NoMethodError",
           error_hash: "hash_a", occurred_at: 10.days.ago)
 
         # hash_c first appears in v1.1.0 — NEW
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.1.0", error_type: "RuntimeError",
           error_hash: "hash_c", occurred_at: 8.days.ago)
       end
@@ -133,21 +170,21 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       before do
         # v1.0.0: 2 errors (average)
         2.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.0.0", error_hash: "hash_#{i}",
             occurred_at: 20.days.ago)
         end
 
         # v1.1.0: 2 errors (average)
         2.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.1.0", error_hash: "hash_10#{i}",
             occurred_at: 10.days.ago)
         end
 
         # v1.2.0: 10 errors (5x average — red)
         10.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.2.0", error_hash: "hash_20#{i}",
             occurred_at: 2.days.ago)
         end
@@ -170,13 +207,13 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
     context "release comparison (delta)" do
       before do
         3.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.0.0", error_hash: "hash_#{i}",
             occurred_at: 20.days.ago)
         end
 
         5.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.1.0", error_hash: "hash_10#{i}",
             occurred_at: 10.days.ago)
         end
@@ -203,9 +240,9 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
     context "filters" do
       it "respects the days parameter" do
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", occurred_at: 40.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.1.0", occurred_at: 5.days.ago)
 
         result = described_class.call(30, application_id: app.id)
@@ -216,9 +253,9 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
       it "filters by application_id" do
         other_app = create(:application, name: "other-app")
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", occurred_at: 5.days.ago)
-        create(:error_log, :with_version, application: other_app,
+        versioned_error(application: other_app,
           app_version: "2.0.0", occurred_at: 5.days.ago)
 
         result = described_class.call(30, application_id: app.id)
@@ -230,7 +267,7 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
     context "edge cases" do
       it "handles a single release" do
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", error_hash: "hash_a", occurred_at: 5.days.ago)
 
         result = described_class.call(30, application_id: app.id)
@@ -242,9 +279,9 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       end
 
       it "counts all distinct hashes as new when all errors are the same version" do
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", error_hash: "hash_a", occurred_at: 5.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", error_hash: "hash_b", occurred_at: 4.days.ago)
 
         result = described_class.call(30, application_id: app.id)
@@ -253,7 +290,7 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
       it "excludes errors with empty string app_version" do
         create(:error_log, application: app, app_version: "", occurred_at: 5.days.ago)
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", occurred_at: 5.days.ago)
 
         result = described_class.call(30, application_id: app.id)
@@ -262,7 +299,7 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       end
 
       it "handles days=0 without error" do
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", occurred_at: Time.current)
 
         result = described_class.call(0, application_id: app.id)
@@ -278,11 +315,11 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
       it "returns zero delta when consecutive releases have equal error counts" do
         2.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.0.0", error_hash: "hash_#{i}", occurred_at: 20.days.ago)
         end
         2.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.1.0", error_hash: "hash_10#{i}", occurred_at: 10.days.ago)
         end
 
@@ -294,10 +331,10 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
 
       it "assigns yellow stability for releases between 1x and 2x average" do
         # v1.0.0: 1 error, v1.1.0: 3 errors — avg = 2, v1.1.0 is 1.5x avg → yellow
-        create(:error_log, :with_version, application: app,
+        versioned_error(application: app,
           app_version: "1.0.0", error_hash: "hash_a", occurred_at: 20.days.ago)
         3.times do |i|
-          create(:error_log, :with_version, application: app,
+          versioned_error(application: app,
             app_version: "1.1.0", error_hash: "hash_1#{i}", occurred_at: 10.days.ago)
         end
 
@@ -307,8 +344,8 @@ RSpec.describe RailsErrorDashboard::Queries::ReleaseTimeline do
       end
 
       it "handles very long version strings" do
-        long_version = "v" * 500
-        create(:error_log, :with_version, application: app,
+        long_version = "v" * 200 # within the 255 clamp on every adapter
+        versioned_error(application: app,
           app_version: long_version, occurred_at: 5.days.ago)
 
         result = described_class.call(30, application_id: app.id)

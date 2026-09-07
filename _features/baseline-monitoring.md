@@ -112,10 +112,17 @@ end
 
 ### How Baselines are Calculated
 
-The `BaselineCalculator` service runs daily via background job:
+The gem does **not** schedule the calculation itself. Run `BaselineCalculationJob`
+from your own scheduler, roughly once a day; until it has run there are no
+baselines and no baseline alerts.
 
 ```ruby
-# Triggered automatically
+# Solid Queue — config/recurring.yml
+# baseline_calculation:
+#   class: RailsErrorDashboard::BaselineCalculationJob
+#   schedule: every day at 3am
+
+# sidekiq-cron / whenever / cron
 RailsErrorDashboard::BaselineCalculationJob.perform_later
 
 # Or manually via console
@@ -124,11 +131,26 @@ RailsErrorDashboard::Services::BaselineCalculator.calculate_all_baselines
 
 **Process**:
 1. For each unique (error_type, platform) pair:
-2. Fetch error counts for lookback period
-3. Group by time unit (hour/day/week)
-4. Calculate statistics (mean, std_dev, percentiles)
+2. Count occurrences (individual captured events, not error groups) over the lookback period
+3. Bucket them into calendar hours / days / weeks, including buckets with zero events
+4. Calculate statistics (mean, std_dev, percentiles) over those buckets
 5. Store in `error_baselines` table
 6. Update existing baselines or create new ones
+
+**Units**: an hourly baseline is a distribution of per-hour event counts over
+the last four weeks (672 samples), a daily baseline is per-day counts over
+twelve weeks (84 samples), a weekly baseline is per-week counts over a year
+(52 samples). The anomaly check compares the current hour, today, and this
+week against the matching baseline.
+
+**Scope**: baselines are keyed by error type and platform and pooled across
+all applications. The current-period count that is compared against them is
+scoped to the application being viewed (or the application an error belongs
+to), so one application's spike is not reported on another's dashboard. The
+baseline itself is not application-specific yet.
+
+Bucketing goes through [groupdate](https://github.com/ankane/groupdate), so
+the same calculation runs on SQLite, PostgreSQL and MySQL.
 
 **Performance**: Full recalculation takes ~5-10 minutes for 10,000 errors.
 
@@ -552,8 +574,9 @@ config.baseline_alert_severities = [:critical, :high, :elevated]
 
 3. **Recalculate baselines**:
 ```ruby
-# Force recalculation
-RailsErrorDashboard::Services::BaselineCalculator.calculate_all_baselines(force: true)
+RailsErrorDashboard::BaselineCalculationJob.perform_now
+# or, without the job wrapper
+RailsErrorDashboard::Services::BaselineCalculator.calculate_all_baselines
 ```
 
 4. **Monitor trends manually**:

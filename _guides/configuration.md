@@ -197,6 +197,8 @@ recycled Puma thread would render in whatever language the host app last used.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_system_health` | Boolean | `false` | Capture GC, memory, threads, connection pool, RubyVM cache, YJIT stats at error time |
+| `system_health_queue_stats` | Boolean | `true` | Include job-queue depth counts (Sidekiq/Solid Queue/GoodJob) in the snapshot. These are queries against the queue store, not in-process reads |
+| `system_health_queue_stats_cache_seconds` | Integer | `10` | Reuse the queue counts for this long per process, so an error burst runs them once per interval. `0` runs them on every error |
 
 ### Local Variable Capture (v0.4.0)
 

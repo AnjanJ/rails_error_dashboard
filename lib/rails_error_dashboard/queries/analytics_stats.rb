@@ -126,7 +126,10 @@ module RailsErrorDashboard
         total = error_statistics[:total]
         return 0 if total.zero?
 
-        resolved_count = ErrorLog.resolved.where("occurred_at >= ?", @start_date).count
+        # Same scoped relation as the denominator: an unscoped numerator
+        # counted every application's resolved errors against one
+        # application's total, and the "rate" went past 100%.
+        resolved_count = base_query.resolved.count
         ((resolved_count.to_f / total) * 100).round(1)
       end
 

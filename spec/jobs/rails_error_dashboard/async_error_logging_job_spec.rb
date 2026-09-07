@@ -40,6 +40,50 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
       expect(error_log.backtrace).to include("app/controllers/test_controller.rb:10:in `index'")
     end
 
+    context "with exception classes whose constructors do not take a message" do
+      it "keeps ActiveRecord::RecordInvalid (constructor wants a record) with its class and message" do
+        data = { class_name: "ActiveRecord::RecordInvalid", message: "Validation failed: Name can't be blank",
+                 backtrace: [ "app/models/user.rb:10" ] }
+
+        expect { described_class.new.perform(data, context) }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+        log = RailsErrorDashboard::ErrorLog.last
+        expect(log.error_type).to eq("ActiveRecord::RecordInvalid")
+        expect(log.message).to eq("Validation failed: Name can't be blank")
+      end
+
+      it "keeps a custom exception with a required keyword argument" do
+        stub_const("KeywordError", Class.new(StandardError) do
+          def initialize(message, code:)
+            @code = code
+            super(message)
+          end
+        end)
+        data = { class_name: "KeywordError", message: "failed with code", backtrace: [] }
+
+        expect { described_class.new.perform(data, context) }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+        expect(RailsErrorDashboard::ErrorLog.last.error_type).to eq("KeywordError")
+      end
+
+      it "falls back to the constructor when the subclass builds its message from constructor state" do
+        stub_const("StatefulMessageError", Class.new(StandardError) do
+          def initialize(detail)
+            @detail = detail
+            super("stateful: #{detail}")
+          end
+
+          def message
+            "stateful: #{@detail.upcase}"
+          end
+        end)
+        data = { class_name: "StatefulMessageError", message: "boom", backtrace: [] }
+
+        expect { described_class.new.perform(data, context) }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+        log = RailsErrorDashboard::ErrorLog.last
+        expect(log.error_type).to eq("StatefulMessageError")
+        expect(log.message).to eq("stateful: BOOM")
+      end
+    end
+
     it "preserves context data" do
       described_class.new.perform(exception_data, context)
       error_log = RailsErrorDashboard::ErrorLog.last

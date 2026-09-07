@@ -67,11 +67,20 @@ module RailsErrorDashboard
         Digest::SHA256.hexdigest(digest_input)[0..15]
       end
 
+      # Only this many leading characters of the RAW message take part in the
+      # hash. The storm gate stores a bounded exemplar (it must stay cheap and
+      # memory-bounded per fingerprint), so the full path has to hash the same
+      # prefix or a long-message error would change identity the moment the
+      # breaker changed state. Truncation happens BEFORE normalization so both
+      # paths see byte-identical input.
+      HASH_MESSAGE_LIMIT = 500
+
       # Normalize dynamic values in error messages for consistent hashing
       # @param message [String, nil] The error message
       # @return [String, nil] Normalized message
       def self.normalize_message(message)
         message
+          &.[](0, HASH_MESSAGE_LIMIT)
           &.gsub(/0x[0-9a-f]+/i, "HEX")          # Replace hex addresses (before numbers)
           &.gsub(/#<[^>]+>/, "#<OBJ>")           # Replace object inspections
           &.gsub(/\d+/, "N")                     # Replace numbers

@@ -205,6 +205,28 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
     end
   end
 
+  describe "locking" do
+    it "runs the lookup and the write inside one transaction so the row lock is held across both" do
+      RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, occurrence_count: 1))
+
+      transaction_open_during_update = nil
+      allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:update!).and_wrap_original do |m, *args|
+        transaction_open_during_update = RailsErrorDashboard::ErrorLog.connection.transaction_open?
+        m.call(*args)
+      end
+
+      described_class.call(error_hash, base_attributes)
+      expect(transaction_open_during_update).to be(true)
+    end
+
+    it "issues the lookup with a row lock" do
+      RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, occurrence_count: 1))
+      relation = RailsErrorDashboard::ErrorLog.unresolved.where(error_hash: error_hash).lock
+      expect(relation.lock_value).to be(true)
+      expect(described_class.new(error_hash, base_attributes).send(:find_unresolved)).to be_present
+    end
+  end
+
   describe "environment matching" do
     let(:production) { base_attributes.merge(environment: "production") }
     let(:staging) { base_attributes.merge(environment: "staging") }
