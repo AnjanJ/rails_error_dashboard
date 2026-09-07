@@ -702,6 +702,29 @@ fingerprint, are unaffected. No data migration is provided because the old
 hash was derived from the full message and a first application frame that is
 not stored in a form the migration could recompute reliably.
 
+### Behaviour change: string metadata is fitted to its columns
+
+Before 0.11.6 an over-long string value (a 300-character `app_version`, say)
+made the insert fail on MySQL in strict mode, the capture path rescued the
+failure, and the error was silently lost. String-typed columns are now
+truncated to their column limit before writing, on every adapter, using the
+Rails default of 255 characters where the adapter declares no limit.
+
+Consequence: on PostgreSQL and SQLite, which previously stored such values in
+full, `app_version`, `git_sha`, `error_type`, `controller_name`,
+`action_name` and the other string columns are now capped at 255 characters.
+Two release identifiers that differ only after their first 255 characters
+become indistinguishable on the Releases page. Error grouping is unaffected:
+the fingerprint is computed from the raw values before truncation.
+
+### Baseline scoping
+
+The current-period count in a baseline anomaly check is now scoped to the
+application being viewed, so one application's spike no longer shows as an
+anomaly on another application's dashboard. The baselines themselves are
+still calculated per error type and platform across all applications;
+fully application-specific baselines are follow-up work.
+
 ---
 
 ## Conclusion

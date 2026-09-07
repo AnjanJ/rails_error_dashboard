@@ -143,6 +143,12 @@ twelve weeks (84 samples), a weekly baseline is per-week counts over a year
 (52 samples). The anomaly check compares the current hour, today, and this
 week against the matching baseline.
 
+**Scope**: baselines are keyed by error type and platform and pooled across
+all applications. The current-period count that is compared against them is
+scoped to the application being viewed (or the application an error belongs
+to), so one application's spike is not reported on another's dashboard. The
+baseline itself is not application-specific yet.
+
 Bucketing goes through [groupdate](https://github.com/ankane/groupdate), so
 the same calculation runs on SQLite, PostgreSQL and MySQL.
 
