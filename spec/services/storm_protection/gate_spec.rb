@@ -18,6 +18,35 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     before { gate.reset! }
     after { gate.reset! }
 
+    it "retains the batch when perform_later returns false instead of raising" do
+      gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_return(false)
+
+      gate.send(:maybe_flush!)
+
+      expect(gate.count_buffer.any?).to be(true)
+    end
+
+    it "retains the batch when the real queue adapter raises ActiveJob::EnqueueError (which Active Job swallows)" do
+      adapter = Object.new
+      adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
+      adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
+      original = RailsErrorDashboard::StormFlushJob.queue_adapter
+      begin
+        RailsErrorDashboard::StormFlushJob.queue_adapter = adapter
+        expect(RailsErrorDashboard::StormFlushJob.perform_later(entries: [])).to be(false)
+
+        gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
+        gate.instance_variable_set(:@last_flush, 0)
+        gate.send(:maybe_flush!)
+
+        expect(gate.count_buffer.any?).to be(true)
+      ensure
+        RailsErrorDashboard::StormFlushJob.queue_adapter = original
+      end
+    end
+
     it "retains the batch and the episode, then hands both off on the next interval" do
       gate.count_buffer.record("key", gate.send(:gate_parts, boom, {}))
       gate.instance_variable_set(:@last_flush, 0)
