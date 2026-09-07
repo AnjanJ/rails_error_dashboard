@@ -9,6 +9,14 @@ rails_version = ENV["RAILS_VERSION"] || "~> 8.1.0"
 rails_version = "~> #{rails_version}.0" if rails_version =~ /^\d+\.\d+$/
 gem "rails", rails_version
 
+# json 3.0 (2026-09-07) raises ArgumentError on options that released Rails
+# versions still pass: `quirks_mode` on 7.0-8.0, and a positional options hash
+# in ActiveSupport::JSON.decode on 8.1 (breaks every session/flash read).
+# Fixed on rails main and backported (rails/rails#58601, #58685), but no 8.x
+# release carries it yet and 7.x never will. CI deletes Gemfile.lock, so
+# without this pin every run resolves json 3 and the whole matrix goes red.
+gem "json", "< 3"
+
 gem "puma"
 
 gem "pg"

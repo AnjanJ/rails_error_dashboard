@@ -87,6 +87,9 @@ create_app() {
 
   echo "" >> "$app_dir/Gemfile"
   echo "gem 'rails_error_dashboard', path: '$GEM_DIR'" >> "$app_dir/Gemfile"
+  # Same pin as the gem's Gemfile: released Rails 8.1 cannot decode the
+  # session cookie under json 3.0, so every dashboard page would 500.
+  echo "gem 'json', '< 3'" >> "$app_dir/Gemfile"
 
   log_step "Running bundle install..."
   (cd "$app_dir" && bundle install 2>&1 | tail -3)
