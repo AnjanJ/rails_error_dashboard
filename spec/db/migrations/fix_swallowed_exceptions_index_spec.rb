@@ -128,7 +128,9 @@ RSpec.describe FixSwallowedExceptionsIndexForMysql, type: :migration do
   end
 
   describe "#down" do
-    it "reverses without raising and restores the index" do
+    mysql = ActiveRecord::Base.connection.adapter_name.match?(/mysql|trilogy/i)
+
+    it "reverses without raising and restores the index", unless: mysql do
       build_table(index_columns: upsert_columns)
       migration = described_class.new
       migration.up
@@ -137,6 +139,15 @@ RSpec.describe FixSwallowedExceptionsIndexForMysql, type: :migration do
 
       expect(upsert_index).to be_present
       expect(upsert_index.columns).to eq(upsert_columns)
+    end
+
+    it "is explicitly irreversible on MySQL, whose key limit the old index exceeds", if: mysql do
+      build_table(index_columns: upsert_columns)
+      migration = described_class.new
+      migration.up
+
+      expect { migration.down }.to raise_error(ActiveRecord::IrreversibleMigration, /3072/)
+      expect(upsert_index).to be_present # nothing half-applied
     end
   end
 

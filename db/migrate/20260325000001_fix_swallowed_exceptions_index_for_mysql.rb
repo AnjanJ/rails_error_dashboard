@@ -38,6 +38,13 @@ class FixSwallowedExceptionsIndexForMysql < ActiveRecord::Migration[7.0]
 
   def down
     return unless table_exists?(:rails_error_dashboard_swallowed_exceptions)
+    # The pre-migration shape (500-char locations under a five-column unique
+    # index) is exactly what MySQL cannot create — that is why this migration
+    # exists — so there is nothing valid to roll back to there.
+    if connection.adapter_name.match?(/mysql|trilogy/i)
+      raise ActiveRecord::IrreversibleMigration,
+            "the previous swallowed_exceptions index exceeds MySQL's 3072-byte key limit; this migration cannot be reversed on MySQL"
+    end
 
     if index_name_exists?(:rails_error_dashboard_swallowed_exceptions, "index_swallowed_exceptions_upsert_key")
       remove_index :rails_error_dashboard_swallowed_exceptions, name: "index_swallowed_exceptions_upsert_key"
