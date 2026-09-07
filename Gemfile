@@ -19,7 +19,10 @@ gem "json", "< 3"
 
 gem "puma"
 
+# Adapters for the databases the README advertises. Neither is loaded by the
+# dummy app unless DATABASE_URL points at one (see DEVELOPMENT.md).
 gem "pg"
+gem "trilogy"
 
 # SQLite3 - version depends on Rails version
 # Rails 7.0-7.2 require ~> 1.4, Rails 8.0+ requires >= 2.1
