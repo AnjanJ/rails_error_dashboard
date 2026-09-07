@@ -333,6 +333,24 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(RailsErrorDashboard::ErrorLog.where(message: "storm boom").count).to eq(1)
     end
 
+    it "keeps an explicit staging event on the staging row even when the worker runs as production" do
+      RailsErrorDashboard.configuration.environment = "production"
+      error = StandardError.new("storm boom")
+      error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+      staging = RailsErrorDashboard::Commands::LogError.call(error, { controller_name: "widgets", action_name: "show", environment: "staging" })
+      expect(staging.environment).to eq("staging")
+
+      gate = RailsErrorDashboard::Services::StormProtection::Gate
+      parts = gate.send(:gate_parts, error, { controller_name: "widgets", action_name: "show", environment: "staging" })
+      buffer = RailsErrorDashboard::Services::StormProtection::CountBuffer.new
+      3.times { buffer.record(gate.send(:gate_key, parts), parts) }
+
+      described_class.call(entries: buffer.snapshot![:entries])
+
+      expect(staging.reload.occurrence_count).to eq(4)
+      expect(RailsErrorDashboard::ErrorLog.where(error_hash: staging.error_hash).pluck(:environment)).to eq([ "staging" ])
+    end
+
     it "creates a first-seen row carrying the environment" do
       RailsErrorDashboard.configuration.environment = "uat"
       described_class.call(entries: [ entry_for(message: "never seen before", count: 2) ])

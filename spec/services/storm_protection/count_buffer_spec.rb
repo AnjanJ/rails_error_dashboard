@@ -78,6 +78,15 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::CountBuffer do
       expect(entry["last_seen_at"]).to be_present
     end
 
+    it "carries an explicit environment through snapshot and restore" do
+      buffer.record("key-staging", parts.merge(environment: "staging"))
+      lost = buffer.snapshot!
+      expect(lost[:entries].first["environment"]).to eq("staging")
+
+      buffer.restore(lost[:entries], 0)
+      expect(buffer.snapshot![:entries].first["environment"]).to eq("staging")
+    end
+
     it "carries the custom hash when present" do
       buffer.record("custom123", parts.merge(custom_hash: "custom123"))
       expect(buffer.snapshot![:entries].first["custom_hash"]).to eq("custom123")

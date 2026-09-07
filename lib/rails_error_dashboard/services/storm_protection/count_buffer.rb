@@ -28,7 +28,7 @@ module RailsErrorDashboard
       class CountBuffer
         Entry = Struct.new(
           :error_class, :message, :first_app_frame,
-          :controller_name, :action_name, :custom_hash,
+          :controller_name, :action_name, :custom_hash, :environment,
           :count, :first_seen_at, :last_seen_at
         )
 
@@ -96,6 +96,7 @@ module RailsErrorDashboard
               "controller_name" => entry.controller_name,
               "action_name" => entry.action_name,
               "custom_hash" => entry.custom_hash,
+              "environment" => entry.environment,
               "count" => entry.count.value,
               "first_seen_at" => entry.first_seen_at.iso8601,
               "last_seen_at" => entry.last_seen_at.iso8601
@@ -122,7 +123,7 @@ module RailsErrorDashboard
             entry = map.compute_if_absent(gate_key) do
               Entry.new(
                 parts[:error_class], parts[:message], parts[:first_app_frame],
-                parts[:controller_name], parts[:action_name], parts[:custom_hash],
+                parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
                 Concurrent::AtomicFixnum.new(0), first_seen_at || Time.current, last_seen_at || Time.current
               )
             end
@@ -137,7 +138,8 @@ module RailsErrorDashboard
           {
             error_class: entry["error_class"], message: entry["message"],
             first_app_frame: entry["first_app_frame"], controller_name: entry["controller_name"],
-            action_name: entry["action_name"], custom_hash: entry["custom_hash"]
+            action_name: entry["action_name"], custom_hash: entry["custom_hash"],
+            environment: entry["environment"]
           }
         end
 

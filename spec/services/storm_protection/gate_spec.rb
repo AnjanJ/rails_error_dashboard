@@ -66,6 +66,18 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     end
   end
 
+  describe ".gate_key" do
+    it "separates the same error in different environments so they reconcile onto their own rows" do
+      staging = gate.send(:gate_parts, boom, { environment: "staging" })
+      production = gate.send(:gate_parts, boom, { environment: "production" })
+      implicit = gate.send(:gate_parts, boom, {})
+
+      expect(gate.send(:gate_key, staging)).not_to eq(gate.send(:gate_key, production))
+      expect(gate.send(:gate_key, implicit)).not_to eq(gate.send(:gate_key, staging))
+      expect(implicit[:environment]).to be_nil
+    end
+  end
+
   describe ".admit!" do
     it "returns :full when storm protection is disabled" do
       RailsErrorDashboard.configuration.enable_storm_protection = false

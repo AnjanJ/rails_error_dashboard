@@ -60,7 +60,9 @@ module RailsErrorDashboard
 
         error_hash = canonical_hash(entry, application)
         last_seen = parse_time(entry["last_seen_at"]) || Time.current
-        env = current_environment
+        # An explicit environment captured at the gate wins over the worker's
+        # own, mirroring LogError#resolve_environment for full captures.
+        env = current_environment && (entry["environment"].presence || current_environment)
 
         # Priority 1: unresolved match — ONE row, chosen exactly as
         # FindOrIncrementError chooses it (same hash + application, occurred

@@ -155,11 +155,20 @@ module RailsErrorDashboard
           # Cheap in-process bucketing key. Deliberately NOT the canonical
           # error_hash (that needs application_id = DB); the flush job
           # recomputes the canonical hash from the stored parts.
+          # Environment is a MATCH dimension (one row per environment), so it
+          # is part of the in-process key too: a staging event and a
+          # production event of the same error must not share one entry, or
+          # the flush job would reconcile both into whichever environment
+          # the worker runs in.
           def gate_key(parts)
-            parts[:gate_key] ||= parts[:custom_hash] || Digest::SHA256.hexdigest(
-              "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
-              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
+            parts[:gate_key] ||= Digest::SHA256.hexdigest(
+              "#{parts[:custom_hash] || identity_key(parts)}|#{parts[:environment]}"
             )[0..15]
+          end
+
+          def identity_key(parts)
+            "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
+              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
           end
 
           def gate_parts(exception, context)
@@ -170,7 +179,11 @@ module RailsErrorDashboard
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
               action_name: context[:action_name]&.to_s,
-              custom_hash: custom_hash_for(exception, context)
+              custom_hash: custom_hash_for(exception, context),
+              # Only an EXPLICIT environment from the caller. nil means "the
+              # worker's own environment", resolved at flush time exactly as
+              # LogError resolves it for a full capture.
+              environment: context[:environment].to_s.strip.presence&.[](0, 64)
             }
           end
 
