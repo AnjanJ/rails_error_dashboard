@@ -47,6 +47,57 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
       expect(counter.calls).to eq(10)
     end
 
+    it "runs one refresh for a burst of cold-cache readers; the others get nil rather than a second refresh" do
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 10
+      started = Queue.new
+      finish = Queue.new
+      collections = Concurrent::AtomicFixnum.new(0)
+      instances = Array.new(8) do
+        described_class.new.tap do |instance|
+          instance.define_singleton_method(:collect_job_queue_stats) do
+            collections.increment
+            started << true
+            finish.pop
+            { adapter: "synthetic", ready: 0 }
+          end
+        end
+      end
+
+      threads = instances.map { |i| Thread.new { i.send(:job_queue_stats) } }
+      Timeout.timeout(5) { started.pop } # exactly one collector is inside
+      sleep 0.05
+      finish << true
+      results = threads.map(&:value)
+
+      expect(collections.value).to eq(1)
+      expect(results.count { |r| r&.dig(:adapter) == "synthetic" }).to eq(1)
+      expect(results.count(&:nil?)).to eq(7)
+    end
+
+    it "caches a failed collection for the interval instead of retrying on every error" do
+      RailsErrorDashboard::Services::SystemHealthSnapshot.reset_queue_stats_cache!
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 10
+      calls = 0
+      instance = described_class.new
+      instance.define_singleton_method(:collect_job_queue_stats) { calls += 1; nil }
+
+      3.times { expect(instance.send(:job_queue_stats)).to be_nil }
+      expect(calls).to eq(1)
+    end
+
+    it "marks a stale entry served while a refresh is in flight" do
+      RailsErrorDashboard.configuration.system_health_queue_stats_cache_seconds = 10
+      described_class.queue_stats_cache.set({ at: Process.clock_gettime(Process::CLOCK_MONOTONIC) - 60, stats: { adapter: "old" } })
+      described_class.queue_stats_refresh_lock.lock
+      begin
+        served = described_class.new.send(:job_queue_stats)
+        expect(served[:adapter]).to eq("old")
+        expect(served[:stale]).to be(true)
+      ensure
+        described_class.queue_stats_refresh_lock.unlock
+      end
+    end
+
     it "skips the queue counts entirely when system_health_queue_stats is off" do
       RailsErrorDashboard.configuration.system_health_queue_stats = false
       expect(described_class.capture[:job_queue]).to be_nil

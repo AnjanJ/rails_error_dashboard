@@ -11,8 +11,9 @@ module RailsErrorDashboard
     # NOT memoized — fresh data every call (unlike EnvironmentSnapshot), with
     # one exception: job-queue depth counts are queries against the queue
     # store, so they are cached per process for
-    # config.system_health_queue_stats_cache_seconds (and can be switched off
-    # with config.system_health_queue_stats = false).
+    # config.system_health_queue_stats_cache_seconds (failures included), with
+    # one refresh in flight at a time (and can be switched off with
+    # config.system_health_queue_stats = false).
     # Every metric call individually wrapped in rescue => nil.
     #
     # Safety contract (from HOST_APP_SAFETY.md):
@@ -139,10 +140,19 @@ module RailsErrorDashboard
 
       # Auto-detect and capture job queue stats
       # @return [Hash, nil] Job queue stats with :adapter key, or nil
-      # Process-wide cache for the queue-depth counts: { at: monotonic, stats: Hash }.
-      # Lock-free; a race between two request threads at most runs the counts twice.
+      # Process-wide cache for the queue-depth counts: { at: monotonic, stats: Hash|nil }.
+      # A nil stats entry is a FAILED collection, cached for the same interval
+      # so a broken queue store is not re-queried on every error.
       def self.queue_stats_cache
         @queue_stats_cache ||= Concurrent::AtomicReference.new(nil)
+      end
+
+      # Single-flight guard for the refresh. Never blocks: a thread that finds
+      # a refresh already running serves the stale entry (or nil) instead of
+      # starting a second one, so a burst of errors on a cold cache runs the
+      # queue counts once, not once per thread.
+      def self.queue_stats_refresh_lock
+        @queue_stats_refresh_lock ||= Mutex.new
       end
 
       def self.reset_queue_stats_cache!
@@ -158,15 +168,28 @@ module RailsErrorDashboard
 
         now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         cached = self.class.queue_stats_cache.get
-        if cached && (now - cached[:at]) < ttl
-          return cached[:stats].merge(cached_age_seconds: (now - cached[:at]).round(1))
-        end
+        return present_cached(cached, now) if cached && (now - cached[:at]) < ttl
 
-        stats = collect_job_queue_stats
-        self.class.queue_stats_cache.set({ at: now, stats: stats }) if stats
-        stats
+        lock = self.class.queue_stats_refresh_lock
+        return present_cached(cached, now, stale: true) unless lock.try_lock
+
+        begin
+          stats = collect_job_queue_stats
+          self.class.queue_stats_cache.set({ at: now, stats: stats })
+          stats
+        ensure
+          lock.unlock
+        end
       rescue => e
         nil
+      end
+
+      def present_cached(cached, now, stale: false)
+        return nil unless cached && cached[:stats]
+
+        presented = cached[:stats].merge(cached_age_seconds: (now - cached[:at]).round(1))
+        presented[:stale] = true if stale
+        presented
       end
 
       def collect_job_queue_stats
