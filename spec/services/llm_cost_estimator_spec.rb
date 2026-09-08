@@ -4,7 +4,12 @@ require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Services::LlmCostEstimator do
   describe ".estimate" do
+    # Reset in `after` as well as `before`: the override examples below leave
+    # claude-sonnet-4-6 priced at 99/99, and llm_middleware_spec asserts the
+    # built-in rate for that model. With a `before` alone the leak depends on
+    # example order (seed 65083 hit it on Ruby 3.3 / Rails 8.0 in CI).
     before { RailsErrorDashboard.configuration.llm_pricing_overrides = {} }
+    after { RailsErrorDashboard.configuration.llm_pricing_overrides = {} }
 
     context "known models" do
       it "estimates cost for claude-sonnet-4-6" do
