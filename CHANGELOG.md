@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.7](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.6...rails_error_dashboard/v0.11.7) (2026-09-08)
+
+
+### 🐛 Bug Fixes
+
+* **migrations:** PostgreSQL indexes fresh installs never got; CI on PostgreSQL and MySQL built from the migrations ([#206](https://github.com/AnjanJ/rails_error_dashboard/issues/206)) ([9a383bd](https://github.com/AnjanJ/rails_error_dashboard/commit/9a383bd2dd2b3eb47b001c4d82a0af0439cc6e63))
+
 ## [0.11.6](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.5...rails_error_dashboard/v0.11.6) (2026-09-07)
 
 
