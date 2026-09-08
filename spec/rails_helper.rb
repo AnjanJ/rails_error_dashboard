@@ -2,10 +2,18 @@
 
 require 'spec_helper'
 
-# Load the database schema if the database doesn't have tables yet
-# Use schema.rb instead of maintaining migrations to avoid conflicts
-# between gem migrations and dummy app migrations
-ActiveRecord::Tasks::DatabaseTasks.load_schema_current
+# Build the test schema. Two sources, chosen with RED_TEST_SCHEMA:
+#
+#   schema      (default on SQLite) load spec/dummy/db/schema.rb — fast, and
+#               the file is written for SQLite
+#   migrations  (default on every other adapter) run the gem's OWN migrations
+#               from db/migrate, which is what a host installs; the CI
+#               PostgreSQL/MySQL rows use this so adapter-specific DDL (key
+#               limits, FK types, partial and GIN indexes) is exercised
+#
+# bin/check-schema-parity keeps the two in step.
+require_relative "support/test_schema"
+RailsErrorDashboard::TestSchema.build!
 
 RSpec.configure do |config|
   # Enable transactional fixtures

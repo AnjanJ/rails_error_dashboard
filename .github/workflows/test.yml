@@ -58,6 +58,106 @@ jobs:
         files: ./coverage/coverage.xml
         fail_ci_if_error: false
 
+  # The databases the README advertises, on the newest Ruby/Rails only: adapter
+  # differences do not change with the Ruby version, so one row each is the
+  # signal we need. The test schema is built from the gem's OWN migrations here
+  # (RED_TEST_SCHEMA=migrations), which is what a host installs, rather than the
+  # SQLite-shaped spec/dummy/db/schema.rb.
+  adapter-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [ postgresql, mysql ]
+
+    name: ${{ matrix.adapter }} / Ruby 3.4 / Rails 8.1
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: red
+          POSTGRES_PASSWORD: red
+          POSTGRES_DB: red_test
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: red
+          MYSQL_DATABASE: red_test
+        ports: [ "3306:3306" ]
+        options: >-
+          --name red-mysql
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pred" --health-interval 5s
+          --health-timeout 5s --health-retries 20
+
+    env:
+      RAILS_VERSION: '8.1'
+      RED_TEST_SCHEMA: migrations
+      DATABASE_URL: ${{ matrix.adapter == 'postgresql' && 'postgres://red:red@127.0.0.1:5432/red_test?pool=10' || 'trilogy://root:red@127.0.0.1:3306/red_test?pool=10' }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+
+    - name: Install dependencies
+      run: |
+        rm -f Gemfile.lock
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3
+
+    # groupdate bucketing on MySQL uses CONVERT_TZ with named zones, which
+    # returns NULL (and groupdate raises) until the server's time zone tables
+    # are loaded. Same prerequisite as for a host app — see
+    # docs/guides/DATABASE_OPTIONS.md.
+    - name: Load MySQL time zone tables
+      if: matrix.adapter == 'mysql'
+      run: |
+        docker exec red-mysql sh -c "mysql_tzinfo_to_sql /usr/share/zoneinfo 2>/dev/null | mysql -uroot -pred mysql"
+        mysql -h 127.0.0.1 -uroot -pred -e "SELECT CONVERT_TZ(NOW(), '+00:00', 'Etc/UTC') AS converted"
+
+    - name: Run unit and integration tests (schema built from db/migrate)
+      env:
+        COVERAGE: false
+      run: bundle exec rspec --exclude-pattern "spec/system/**/*"
+
+  # spec/dummy/db/schema.rb is hand-maintained; the gem's migrations are what
+  # hosts run. This keeps the two from drifting apart (columns, types, limits,
+  # indexes) on the adapter the schema file is written for.
+  schema-parity:
+    runs-on: ubuntu-latest
+    name: Schema parity (schema.rb vs db/migrate)
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+
+    - name: Install dependencies
+      env:
+        RAILS_VERSION: '8.1'
+      run: |
+        rm -f Gemfile.lock
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3
+
+    - name: Compare schema.rb with the migrations
+      env:
+        RAILS_VERSION: '8.1'
+      run: bundle exec bin/check-schema-parity
+
   system-test:
     runs-on: ubuntu-latest
     name: System Tests (Chrome)

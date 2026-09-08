@@ -94,6 +94,26 @@ COVERAGE=true bundle exec rspec
 open coverage/index.html
 ```
 
+### Testing on PostgreSQL or MySQL
+
+The dummy app is configured for SQLite; `DATABASE_URL` overrides that, and on
+any non-SQLite adapter the test schema is built from the gem's own migrations
+(`RED_TEST_SCHEMA=migrations`, the default there) rather than from
+`spec/dummy/db/schema.rb`:
+
+```bash
+createdb red_test
+DATABASE_URL="postgres://localhost/red_test?pool=10" bundle exec rspec --exclude-pattern "spec/system/**/*"
+
+mysql -uroot -e "create database red_test character set utf8mb4"
+mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -uroot mysql   # once per server; groupdate needs it
+DATABASE_URL="trilogy://root@localhost/red_test?pool=10" bundle exec rspec --exclude-pattern "spec/system/**/*"
+```
+
+Migration specs (`spec/db/migrations`) run DDL, so they execute outside the
+transactional wrapper and clean up by deletion. `bin/check-schema-parity`
+compares `schema.rb` with the migrations on SQLite; CI runs it on every PR.
+
 ### Multi-Version Testing
 ```bash
 # Test against specific Rails version

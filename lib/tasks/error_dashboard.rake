@@ -52,6 +52,30 @@ namespace :error_dashboard do
       checks_failed += 1
     end
 
+    # 3b. MySQL only: named-zone conversion needs the server's time zone
+    # tables; without them groupdate (charts, baselines) raises.
+    begin
+      conn = RailsErrorDashboard::ErrorLogsRecord.connection
+      if conn.adapter_name.match?(/mysql|trilogy/i)
+        print "  MySQL time zone tables... "
+        zone = (Time.zone || ActiveSupport::TimeZone["UTC"]).tzinfo.name
+        converted = conn.select_value("SELECT CONVERT_TZ(NOW(), '+00:00', #{conn.quote(zone)})")
+        if converted.nil?
+          puts "MISSING"
+          puts "    CONVERT_TZ to '#{zone}' returned NULL: the server has no time zone tables,"
+          puts "    so the dashboard's time-bucketed charts and baselines will raise."
+          puts "    Fix (on the MySQL server): mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql"
+          puts "    See docs/guides/DATABASE_OPTIONS.md (MySQL)."
+          warnings += 1
+        else
+          puts "OK (#{zone})"
+          checks_passed += 1
+        end
+      end
+    rescue => e
+      puts "SKIPPED (#{e.message.truncate(60)})"
+    end
+
     # 4. Tables check
     print "  Required tables... "
     required_tables = %w[

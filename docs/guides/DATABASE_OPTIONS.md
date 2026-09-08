@@ -281,6 +281,23 @@ rails db:migrate:error_dashboard
 
 ---
 
+## MySQL: time zone tables are required
+
+The dashboard buckets time series (charts, baselines) with
+[groupdate](https://github.com/ankane/groupdate), which on MySQL converts
+timestamps with `CONVERT_TZ(..., '+00:00', '<zone name>')`. That function
+returns `NULL` for a named zone until the server's time zone tables are loaded,
+and groupdate then raises `Groupdate::Error: Database missing time zone
+support`. Load them once on the server:
+
+```bash
+mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
+```
+
+Managed MySQL (RDS, Cloud SQL, PlanetScale) ships with the tables loaded.
+`rails error_dashboard:verify` checks the conversion against your app's
+configured time zone and prints the fix when it is missing.
+
 ## Using a Different Database Server
 
 You can host the error database on a completely separate server:

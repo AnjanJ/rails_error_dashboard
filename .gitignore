@@ -61,7 +61,7 @@ seo/
 blog/
 
 # Task management (local working files)
-tasks/
+/tasks/
 
 # Jekyll docs build
 _site/
