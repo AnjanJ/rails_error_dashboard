@@ -118,30 +118,36 @@ add_index :error_logs, :occurred_at, where: "resolved = false"
 
 #### 2. **GIN Full-Text Search Index**
 ```sql
-CREATE INDEX index_error_logs_on_message_gin
+CREATE INDEX index_error_logs_on_searchable_text
 ON rails_error_dashboard_error_logs
-USING gin(to_tsvector('english', message))
+USING gin(to_tsvector('english',
+  COALESCE(message, '') || ' ' || COALESCE(backtrace, '') || ' ' || COALESCE(error_type, '')
+))
 ```
 
 **What is GIN?** Generalized Inverted Index for full-text search
-- **100-1000x faster** than LIKE queries on large datasets
 - **Supports ranking** by relevance
 - **Case-insensitive** by default
 - **Handles word stemming** (searching "fail" finds "failed", "failing")
 
-**Use case:** Search functionality in error dashboard
+**Use case:** the dashboard's search box. On PostgreSQL it matches against
+message, backtrace and error type together, and PostgreSQL uses an expression
+index only when the query's expression is identical to the index's — which is
+why the index covers exactly that concatenation and nothing else.
 ```ruby
-# Automatically uses GIN index on PostgreSQL:
+# Uses index_error_logs_on_searchable_text on PostgreSQL:
 ErrorsList.call(search: "payment failed")
 ```
 
-**Performance comparison:**
-| Records | LIKE Query | GIN Index | Speedup |
-|---------|-----------|-----------|---------|
-| 10K     | 50ms      | 2ms       | 25x     |
-| 100K    | 500ms     | 5ms       | 100x    |
-| 1M      | 5000ms    | 10ms      | 500x    |
-| 10M     | 50000ms   | 20ms      | 2500x   |
+**Measured** (PostgreSQL 16, 200,000 error logs, a term present in one row,
+searching all errors): 992 ms without the index, 0.012 ms with it. A common
+term looks fast either way because the query stops at the first page of hits.
+
+**Upgrading:** installs created from the squashed migration before 0.11.8 had
+no usable search index (0.11.7 added one on `message` alone, which the search
+never matches). Run `rails rails_error_dashboard:install:migrations db:migrate`
+to get `index_error_logs_on_searchable_text`; the migration also drops the
+unused `message`-only index.
 
 ---
 
