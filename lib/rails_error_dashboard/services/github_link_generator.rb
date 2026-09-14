@@ -15,6 +15,11 @@ module RailsErrorDashboard
     #   generator.generate_link
     #   # => "https://github.com/user/repo/blob/abc123def456/app/models/user.rb#L42"
     class GithubLinkGenerator
+      # The generated link is an href handed to every dashboard user, so only
+      # web URLs are ever linked. javascript:, data: and scp-style git@ forms
+      # produce no link even though the value comes from deployer configuration.
+      ALLOWED_SCHEMES = %w[http https].freeze
+
       attr_reader :repository_url, :file_path, :line_number, :commit_sha, :branch, :error
 
       # Initialize a new link generator
@@ -41,6 +46,11 @@ module RailsErrorDashboard
 
         # Normalize repository URL
         normalized_repo = normalize_repository_url
+
+        unless repository_host
+          @error = "Unsupported repository URL scheme: only http and https URLs are linked"
+          return nil
+        end
 
         # Determine reference (commit SHA or branch)
         reference = determine_reference
@@ -77,16 +87,33 @@ module RailsErrorDashboard
         url
       end
 
-      # Detect repository type from URL
+      # Host of the repository URL, downcased, or nil when the value is not an
+      # http(s) URL with a host.
+      #
+      # @return [String, nil]
+      def repository_host
+        uri = URI.parse(normalize_repository_url)
+        return nil unless ALLOWED_SCHEMES.include?(uri.scheme.to_s.downcase) && uri.host.present?
+
+        uri.host.downcase
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      # Detect repository type from the URL's host. Only the host is consulted,
+      # so "github.com" appearing in a path, query string or userinfo does not
+      # count. Self-hosted GitLab, Bitbucket, Gitea and Forgejo instances are
+      # recognised by their conventional subdomain ("gitlab.example.com").
       #
       # @return [Symbol] :github, :gitlab, :bitbucket, :codeberg, or :unknown
       def detect_repository_type
-        normalized = normalize_repository_url.downcase
+        host = repository_host
+        return :unknown unless host
 
-        return :github if normalized.include?("github.com")
-        return :gitlab if normalized.include?("gitlab.com") || normalized.include?("gitlab.")
-        return :bitbucket if normalized.include?("bitbucket.org") || normalized.include?("bitbucket.")
-        return :codeberg if normalized.include?("codeberg.org") || normalized.include?("gitea.") || normalized.include?("forgejo.")
+        return :github if host == "github.com" || host.end_with?(".github.com")
+        return :gitlab if host == "gitlab.com" || host.include?("gitlab.")
+        return :bitbucket if host == "bitbucket.org" || host.include?("bitbucket.")
+        return :codeberg if host == "codeberg.org" || host.include?("gitea.") || host.include?("forgejo.")
 
         :unknown
       end

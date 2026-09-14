@@ -258,6 +258,72 @@ RSpec.describe RailsErrorDashboard::Services::GithubLinkGenerator do
         expect(generator.error).to eq("Unsupported repository type")
       end
 
+      it "returns nil for a javascript: URL instead of producing a javascript href" do
+        generator = described_class.new(
+          repository_url: "javascript:alert(1)//github.com",
+          file_path: "app/models/user.rb",
+          line_number: 42
+        )
+
+        expect(generator.generate_link).to be_nil
+        expect(generator.error).to eq("Unsupported repository URL scheme: only http and https URLs are linked")
+      end
+
+      it "returns nil for an scp-style git@ URL, which can never be a web link" do
+        generator = described_class.new(
+          repository_url: "git@github.com:user/repo.git",
+          file_path: "app/models/user.rb",
+          line_number: 42
+        )
+
+        expect(generator.generate_link).to be_nil
+        expect(generator.error).to match(/only http and https/)
+      end
+
+      it "does not treat a host that merely ends in github.com as GitHub" do
+        generator = described_class.new(
+          repository_url: "https://github.com.example.net/user/repo",
+          file_path: "app/models/user.rb",
+          line_number: 42
+        )
+
+        expect(generator.generate_link).to be_nil
+        expect(generator.error).to eq("Unsupported repository type")
+      end
+
+      it "does not treat github.com in the path as GitHub" do
+        generator = described_class.new(
+          repository_url: "https://example.net/github.com/user/repo",
+          file_path: "app/models/user.rb",
+          line_number: 42
+        )
+
+        expect(generator.generate_link).to be_nil
+        expect(generator.error).to eq("Unsupported repository type")
+      end
+
+      it "does not treat github.com in the userinfo as GitHub" do
+        generator = described_class.new(
+          repository_url: "https://github.com@example.net/user/repo",
+          file_path: "app/models/user.rb",
+          line_number: 42
+        )
+
+        expect(generator.generate_link).to be_nil
+        expect(generator.error).to eq("Unsupported repository type")
+      end
+
+      it "still links self-hosted GitLab by its host" do
+        generator = described_class.new(
+          repository_url: "https://gitlab.example.net/team/app",
+          file_path: "app/models/user.rb",
+          line_number: 42,
+          commit_sha: "abc123"
+        )
+
+        expect(generator.generate_link).to eq("https://gitlab.example.net/team/app/-/blob/abc123/app/models/user.rb#L42")
+      end
+
       it "handles exceptions gracefully" do
         generator = described_class.new(
           repository_url: "https://github.com/user/repo",
