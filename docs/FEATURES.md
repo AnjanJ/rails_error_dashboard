@@ -381,9 +381,9 @@ config.enable_source_code_integration = true
 # Optional: Enable git blame
 config.enable_git_blame = true
 
-# Repository settings (auto-detected from git)
-config.repository_url = ENV["REPOSITORY_URL"]  # Optional: Override auto-detection
-config.repository_branch = ENV["REPOSITORY_BRANCH"] || "main"  # Default branch
+# Repository links (required for "View Source" links; nothing is auto-detected)
+config.git_repository_url = ENV["GIT_REPOSITORY_URL"]  # e.g. "https://github.com/user/repo"
+config.git_branch_strategy = :commit_sha  # :commit_sha (default), :current_branch, or :main
 ```
 
 ### How It Works

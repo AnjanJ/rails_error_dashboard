@@ -420,9 +420,10 @@ RailsErrorDashboard.configure do |config|
   # config.crash_capture_path = "/tmp/my_app_crashes"
 
 <% end -%>
-  # Repository settings (auto-detected from git remote, optional override)
-  # config.repository_url = ENV["REPOSITORY_URL"]  # e.g., "https://github.com/user/repo"
-  # config.repository_branch = ENV.fetch("REPOSITORY_BRANCH", "main")  # Default branch
+  # "View Source" links need config.git_repository_url (set under Enhanced
+  # metrics below); nothing is auto-detected from the git remote.
+  # Which ref the links point at:
+  # config.git_branch_strategy = :commit_sha  # :commit_sha (default), :current_branch, or :main
 
   # ============================================================================
   # INTERNAL LOGGING (Silent by Default)
