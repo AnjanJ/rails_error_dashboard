@@ -283,7 +283,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    ```ruby
    # Sidekiq example
    class YourJob < ApplicationJob
-     retry_on StandardError, wait: :exponentially_longer
+     retry_on StandardError, wait: :polynomially_longer
 
      def perform
        # Your code
