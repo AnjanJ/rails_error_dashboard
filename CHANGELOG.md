@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.9](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.8...rails_error_dashboard/v0.11.9) (2026-09-14)
+
+
+### 🐛 Bug Fixes
+
+* **jobs:** use the Active Job retry backoff Rails 7.2+ still accepts ([#211](https://github.com/AnjanJ/rails_error_dashboard/issues/211)) ([b84a6a8](https://github.com/AnjanJ/rails_error_dashboard/commit/b84a6a805f3516521bd3dfb71f0e480a141691fc))
+* **source-links:** only link http(s) repository URLs, detect the forge by host; document the real config options ([#214](https://github.com/AnjanJ/rails_error_dashboard/issues/214)) ([eb9fc84](https://github.com/AnjanJ/rails_error_dashboard/commit/eb9fc84d80ff2bb28ac4c73c45c669c3b16578c1))
+
 ## [0.11.8](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.7...rails_error_dashboard/v0.11.8) (2026-09-08)
 
 
