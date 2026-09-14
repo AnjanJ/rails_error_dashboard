@@ -66,6 +66,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Barnabé ([@BarnabeD](https://github.com/BarnabeD))
+
+- 🐛 [#211](https://github.com/AnjanJ/rails_error_dashboard/pull/211) - Replaced the `:exponentially_longer` retry backoff, removed in Rails 7.2, with `:polynomially_longer` in the base job and the troubleshooting docs (v0.11.9)
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -136,8 +142,8 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 8 (including maintainer)
-**External Contributors:** 7
+**Total Contributors:** 9 (including maintainer)
+**External Contributors:** 8
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
@@ -158,6 +164,7 @@ When you contribute to Rails Error Dashboard, you get:
 - [@bonniesimon](https://github.com/bonniesimon) - Turbo helpers production fix
 - [@gundestrup](https://github.com/gundestrup) - Security vulnerabilities
 - [@gmarziou](https://github.com/gmarziou) - Curl loopback address fix
+- [@BarnabeD](https://github.com/BarnabeD) - Active Job retry backoff removed in Rails 7.2
 
 ### 🧹 Code Quality Contributors
 - [@gundestrup](https://github.com/gundestrup) - RuboCop lint corrections
@@ -187,4 +194,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: May 31, 2026*
+*This page is updated with each release. Last updated: September 14, 2026*
