@@ -295,6 +295,12 @@
         <div class="card">
           <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-people"></i> <%= red_t("red.analytics.overview.top_users.title") %></h5>
+            <%# Storm protection sheds per-event rows, and this table is built
+                from them, so the counts are a floor when that happened. The
+                Overview labels the same condition with the same key. %>
+            <% if @error_stats[:affected_users_incomplete] %>
+              <small style="display: block; color: var(--text-tertiary);"><%= red_t("red.errors.overview_page.affected_users_incomplete") %></small>
+            <% end %>
           </div>
           <div class="card-body p-0">
             <%= render partial: 'user_errors_table',
