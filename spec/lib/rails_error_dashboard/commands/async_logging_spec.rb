@@ -120,6 +120,87 @@ RSpec.describe "Async Error Logging", type: :integration do
     end
   end
 
+  describe "when the handoff to the queue fails" do
+    # Regression: perform_later does not always raise. From Rails 7.2 an
+    # ActiveJob::EnqueueError raised by the adapter is caught inside
+    # perform_later, which returns false and sets enqueue_error on the job.
+    # call_async only rescued, so on 7.2+ the capture was dropped silently:
+    # nothing queued, nothing stored, and LogError.call returned that false.
+    # The storm gate had always checked this; ordinary capture had not.
+    before do
+      RailsErrorDashboard.configure { |config| config.async_logging = true }
+    end
+
+    # Mirrors spec/services/storm_protection/gate_spec.rb: Rails 7.0/7.1 keep
+    # answering with the test adapter whatever queue_adapter= is given, so it
+    # has to be disabled for the fake to really be used.
+    def with_failing_adapter(job_class)
+      adapter = Object.new
+      adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
+      adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
+      # Rails 7.x asks the adapter this before enqueuing; Rails 8 does not.
+      adapter.define_singleton_method(:enqueue_after_transaction_commit?) { false }
+
+      original = job_class.queue_adapter
+      test_adapter = job_class.respond_to?(:_test_adapter) ? job_class._test_adapter : nil
+      begin
+        job_class.disable_test_adapter if job_class.respond_to?(:disable_test_adapter)
+        job_class.queue_adapter = adapter
+        yield
+      ensure
+        job_class.queue_adapter = original
+        job_class.enable_test_adapter(test_adapter) if test_adapter && job_class.respond_to?(:enable_test_adapter)
+      end
+    end
+
+    it "falls back to synchronous capture rather than losing the error" do
+      error = StandardError.new("enqueue failure")
+      error.set_backtrace([ "test.rb:1" ])
+
+      with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
+        expect {
+          RailsErrorDashboard::Commands::LogError.call(error, {})
+        }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+      end
+
+      expect(RailsErrorDashboard::ErrorLog.last.message).to eq("enqueue failure")
+    end
+
+    it "returns the persisted record, not the falsy perform_later result" do
+      error = StandardError.new("enqueue failure return value")
+      error.set_backtrace([ "test.rb:1" ])
+
+      result = with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      end
+
+      expect(result).to be_a(RailsErrorDashboard::ErrorLog)
+      expect(result).to be_persisted
+    end
+
+    it "reports the failed handoff instead of dropping it silently" do
+      error = StandardError.new("enqueue failure logging")
+      error.set_backtrace([ "test.rb:1" ])
+
+      expect(RailsErrorDashboard::Logger)
+        .to receive(:error).with(/Async enqueue failed/).at_least(:once)
+
+      with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      end
+    end
+
+    it "falls back when perform_later merely returns false (no exception raised)" do
+      error = StandardError.new("silent false return")
+      error.set_backtrace([ "test.rb:1" ])
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob).to receive(:perform_later).and_return(false)
+
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+    end
+  end
+
   describe "end-to-end async logging" do
     before do
       RailsErrorDashboard.configure do |config|

@@ -5,6 +5,10 @@ module RailsErrorDashboard
     # Command: Log an error to the database
     # This is a write operation that creates an ErrorLog record
     class LogError
+      # Raised internally when perform_later did not reach the queue, so the
+      # one rescue below covers both failure shapes. Never escapes this class.
+      class EnqueueFailed < StandardError; end
+
       def self.call(exception, context = {})
         # Filter FIRST (ignore list + static sampling) so ignored exceptions
         # never count toward storm state. _pre_filtered prevents the sync path
@@ -140,13 +144,23 @@ module RailsErrorDashboard
             kind: :capture,
             attributes: build_capture_span_attributes(exception, was_async: true)
           ) do |_span|
-            AsyncErrorLoggingJob.perform_later(exception_data, context)
+            job = AsyncErrorLoggingJob.perform_later(exception_data, context)
+
+            # A raise is not the only way a handoff fails. From Rails 7.2
+            # perform_later swallows ActiveJob::EnqueueError and returns false
+            # (an aborting enqueue callback does the same), so without this
+            # check the capture is dropped silently: no queued job, no row.
+            # The storm gate has always checked this; ordinary capture did not.
+            unless ApplicationJob.enqueued?(job)
+              raise EnqueueFailed, ApplicationJob.enqueue_failure_reason(job)
+            end
           end
         rescue => e
-          # Queue adapter failed (e.g., Redis down for Sidekiq). Fall back to
-          # sync logging so the error is still captured. Without this rescue,
-          # the exception propagates back to ErrorReporter, which re-reports it
-          # via Rails.error.report → infinite recursion (issue #114).
+          # Queue adapter failed (e.g., Redis down for Sidekiq), or the job
+          # never reached the queue. Fall back to sync logging so the error is
+          # still captured. Without this rescue, the exception propagates back
+          # to ErrorReporter, which re-reports it via Rails.error.report →
+          # infinite recursion (issue #114).
           RailsErrorDashboard::Logger.error(
             "[RailsErrorDashboard] Async enqueue failed (#{e.class}: #{e.message}), falling back to sync logging"
           )

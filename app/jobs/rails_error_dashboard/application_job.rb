@@ -9,6 +9,35 @@ module RailsErrorDashboard
     # Retry failed jobs with polynomial backoff, but limit attempts
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
 
+    # Did this perform_later actually reach the queue?
+    #
+    # Active Job does NOT raise on every failed handoff: from Rails 7.2 an
+    # ActiveJob::EnqueueError raised by the adapter is caught inside
+    # perform_later, which then returns false and leaves enqueue_error set on
+    # the job. A caller that only rescues therefore treats a dropped job as a
+    # successful one. Callbacks that abort the enqueue behave the same way.
+    #
+    # Returns true for adapters/versions that predate successfully_enqueued?
+    # (Rails 7.0/7.1 let the error propagate instead, so the caller's rescue
+    # is what catches it there).
+    #
+    # @param job [ActiveJob::Base, false, nil] whatever perform_later returned
+    # @return [Boolean]
+    def self.enqueued?(job)
+      return false unless job
+      return job.successfully_enqueued? if job.respond_to?(:successfully_enqueued?)
+
+      true
+    end
+
+    # Why a handoff failed, for the log line that reports it.
+    # @param job [ActiveJob::Base, false, nil]
+    # @return [String]
+    def self.enqueue_failure_reason(job)
+      (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) ||
+        "perform_later returned #{job.inspect}"
+    end
+
     # Global exception handling for all dashboard jobs
     rescue_from StandardError do |exception|
       # Log the error for debugging but don't propagate

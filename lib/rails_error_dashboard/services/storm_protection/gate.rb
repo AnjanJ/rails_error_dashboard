@@ -226,9 +226,8 @@ module RailsErrorDashboard
               # Active Job swallows ActiveJob::EnqueueError and returns false
               # (and a job that was not enqueued says so) — a failed handoff
               # that never raises.
-              unless enqueued?(job)
-                reason = (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) || "enqueue returned #{job.inspect}"
-                raise "StormFlushJob was not enqueued: #{reason}"
+              unless ApplicationJob.enqueued?(job)
+                raise "StormFlushJob was not enqueued: #{ApplicationJob.enqueue_failure_reason(job)}"
               end
             rescue => e
               # The queue is often the very thing that is down during a storm
@@ -247,13 +246,6 @@ module RailsErrorDashboard
             RailsErrorDashboard::Logger.error(
               "[RailsErrorDashboard] Storm flush failed: #{e.class} - #{e.message}"
             )
-          end
-
-          def enqueued?(job)
-            return false unless job
-            return job.successfully_enqueued? if job.respond_to?(:successfully_enqueued?)
-
-            true
           end
 
           def serialize_episode(episode)
