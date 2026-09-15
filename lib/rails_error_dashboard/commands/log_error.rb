@@ -196,10 +196,11 @@ module RailsErrorDashboard
         # tracing pipeline. Child spans (breadcrumbs, health, notifications)
         # nest under this one automatically via OTel context propagation.
         #
-        # The span lives INSIDE the rescue clause — if the span itself raises
-        # somehow, the outer rescue still catches it and returns nil. Defense
-        # in depth. When the block raises, the Tracer façade records the
-        # exception on the span and re-raises so the rescue can swallow it.
+        # The span lives INSIDE the rescue clause — if span setup itself fails,
+        # the Tracer runs this block once with a no-op span, and anything that
+        # still escapes is caught by the outer rescue below. Defense in depth.
+        # When this block raises, the façade records the exception on the span
+        # and re-raises it exactly once; it never re-runs the block.
         Integrations::Tracer.in_span(
           "capture_error",
           kind: :capture,
@@ -444,6 +445,14 @@ module RailsErrorDashboard
 
         Services::ErrorNotificationDispatcher.call(error_log)
         Services::NotificationThrottler.record_notification(error_log)
+      rescue => e
+        # The error row is already written by the time we get here. A channel
+        # that cannot be reached (Redis down for the Slack job's enqueue, a
+        # broken webhook config) must not take the capture down with it: the
+        # caller asked us to record an error, and we did. Log, don't raise.
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] Failed to dispatch notification for error #{error_log&.id}: #{e.class} - #{e.message}"
+        )
       end
 
       # The environment this error is attributed to: an explicit context value
@@ -508,6 +517,14 @@ module RailsErrorDashboard
         if error_log.critical?
           ActiveSupport::Notifications.instrument("critical_error.rails_error_dashboard", payload)
         end
+      rescue => e
+        # AS::Notifications re-raises subscriber exceptions to the instrumenting
+        # caller (fanout.rb#iterate_guarding_exceptions), so a host subscriber
+        # on error_logged.rails_error_dashboard would otherwise abort a capture
+        # whose row is already persisted.
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] Failed to emit instrumentation events for error #{error_log&.id}: #{e.class} - #{e.message}"
+        )
       end
 
       #  Check if error exceeds baseline and send alert if needed

@@ -253,6 +253,65 @@ RSpec.describe RailsErrorDashboard::Integrations::Tracer do
     end
   end
 
+  describe ".in_span — executes the work block at most once" do
+    # Regression: the rescue that recovers from tracer failures used to wrap
+    # the yield itself, so an exception raised by the block re-ran the block
+    # with a no-op span. In the capture path that turned one exception into
+    # two ErrorLog occurrences whenever any post-persistence step failed —
+    # and because the tracing-disabled early return sat inside the same
+    # rescue, it happened with enable_otel_export = false too.
+    it "does not re-run the block when the block raises and tracing is OFF" do
+      RailsErrorDashboard.configuration.enable_otel_export = false
+      runs = 0
+
+      expect {
+        described_class.in_span("foo", kind: :capture) do
+          runs += 1
+          raise IOError, "downstream failure after the work completed"
+        end
+      }.to raise_error(IOError)
+
+      expect(runs).to eq(1)
+    end
+
+    it "does not re-run the block when the block raises and tracing is ON" do
+      RailsErrorDashboard.configuration.enable_otel_export = true
+      install_otel(tracer: TracerFakeTracer.new)
+      runs = 0
+
+      expect {
+        described_class.in_span("foo", kind: :capture) do
+          runs += 1
+          raise IOError, "downstream failure"
+        end
+      }.to raise_error(IOError)
+
+      expect(runs).to eq(1)
+    end
+
+    it "runs the block exactly once when span setup fails (host safety fallback)" do
+      RailsErrorDashboard.configuration.enable_otel_export = true
+      tr = TracerFakeTracer.new
+      install_otel(tracer: tr)
+      allow(tr).to receive(:in_span).and_raise(StandardError, "tracer broken")
+      runs = 0
+
+      result = described_class.in_span("foo", kind: :capture) { runs += 1; :ok }
+
+      expect(runs).to eq(1)
+      expect(result).to eq(:ok)
+    end
+
+    it "propagates the block's exception rather than swallowing it into a retry" do
+      RailsErrorDashboard.configuration.enable_otel_export = true
+      install_otel(tracer: TracerFakeTracer.new)
+
+      expect {
+        described_class.in_span("foo", kind: :capture) { raise ArgumentError, "block problem" }
+      }.to raise_error(ArgumentError, "block problem")
+    end
+  end
+
   describe ".in_span — exception handling" do
     before do
       RailsErrorDashboard.configuration.enable_otel_export = true
