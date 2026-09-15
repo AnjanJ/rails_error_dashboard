@@ -974,6 +974,9 @@ pl:
         alert_view: Zobacz
         error_rate: Wskaźnik błędów
         error_rate_hint: Błędów na godzinę dzisiaj
+        rate_per_hour: "%{value}/godz."
+        affected_users_incomplete: co najmniej — ochrona przed storm odrzuciła szczegóły poszczególnych zdarzeń
+        data_unavailable: Statystyki są obecnie niedostępne — poniższe liczby nie są pomiarem.
         unresolved: Nierozwiązane
         unresolved_hint: Oczekują na rozwiązanie
         resolution_rate: Wskaźnik rozwiązań

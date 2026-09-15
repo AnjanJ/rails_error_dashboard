@@ -1078,6 +1078,8 @@ en:
       # Each is a bare noun phrase standing over a number, not a sentence
       # fragment to be joined to one.
       stats:
+        # These count EVENTS (every occurrence), not error groups. A single
+        # group that happened 500 times contributes 500 here.
         today: "Today"
         this_week: "This Week"
         unresolved: "Unresolved"
@@ -1314,6 +1316,19 @@ en:
         alert_view: "View"
         error_rate: "Error Rate"
         error_rate_hint: "Errors per hour today"
+        # The error rate is a RATE, not a percentage. It used to render with a
+        # "%" against a scale that called one error per hour "1%", capped at
+        # 100 -- so 4,000 errors/hour showed as "100%". There is no request
+        # denominator to build a real failure percentage from, so the honest
+        # figure is the rate itself. %{value} is the already-formatted number.
+        rate_per_hour: "%{value}/hr"
+        # Shown beside the affected-user figure when storm protection shed
+        # per-event rows in the window: the count is a floor, not a total.
+        # "storm" is RED's term and stays verbatim (see TRANSLATIONS.md).
+        affected_users_incomplete: "at least — storm protection shed per-event detail"
+        # Zero errors and "the dashboard could not read its data" are
+        # different states. This banner says which one you are looking at.
+        data_unavailable: "Statistics are currently unavailable — the figures below are not a measurement."
         unresolved: "Unresolved"
         unresolved_hint: "Pending resolution"
         resolution_rate: "Resolution Rate"

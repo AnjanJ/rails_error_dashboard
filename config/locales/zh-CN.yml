@@ -838,6 +838,9 @@ zh-CN:
         alert_view: 查看
         error_rate: 错误率
         error_rate_hint: 今日每小时错误数
+        rate_per_hour: "%{value}/小时"
+        affected_users_incomplete: 至少 — storm 保护丢弃了逐事件的明细
+        data_unavailable: 统计数据当前不可用 — 下方数字并非测量结果。
         unresolved: 未解决
         unresolved_hint: 等待处理
         resolution_rate: 解决率

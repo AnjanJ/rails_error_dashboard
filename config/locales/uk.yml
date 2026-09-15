@@ -974,6 +974,9 @@ uk:
         alert_view: Переглянути
         error_rate: Частота помилок
         error_rate_hint: Помилок за годину сьогодні
+        rate_per_hour: "%{value}/год"
+        affected_users_incomplete: щонайменше — захист від storm відкинув деталізацію за подіями
+        data_unavailable: Статистика зараз недоступна — наведені нижче числа не є вимірюванням.
         unresolved: Не вирішено
         unresolved_hint: Очікують вирішення
         resolution_rate: Частка вирішених

@@ -7,6 +7,15 @@
     </span>
   </div>
 
+  <%# Zero errors and a failed query look identical on a dashboard that
+      rescues to zeros. Say which one this is. %>
+  <% if @stats[:data_unavailable] %>
+    <div class="alert-warning" style="display: flex; align-items: center; gap: 10px; padding: 10px var(--space-5); background: var(--status-warning-bg); border-radius: var(--radius-md); border: 1px solid var(--status-warning); margin-bottom: var(--space-6); font-size: 13px; color: var(--status-warning);">
+      <i class="bi bi-exclamation-triangle"></i>
+      <strong><%= red_t("red.errors.overview_page.data_unavailable") %></strong>
+    </div>
+  <% end %>
+
   <!-- Spike / Critical Alerts Banner -->
   <% if @critical_alerts.any? %>
     <%
@@ -37,7 +46,7 @@
     <div class="card stat-card" style="border-left: 3px solid var(--status-critical); padding: var(--space-5) var(--space-6);">
       <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.error_rate") %></div>
       <div style="display: flex; align-items: baseline; gap: 8px;">
-        <span class="stat-value" style="color: var(--status-critical);"><%= red_t("red.errors.pages.percent", value: @stats[:error_rate]) %></span>
+        <span class="stat-value" style="color: var(--status-critical);"><%= red_t("red.errors.overview_page.rate_per_hour", value: @stats[:error_rate]) %></span>
         <% if @stats[:trend_percentage].present? && @stats[:trend_percentage] != 0 %>
           <span style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: <%= @stats[:trend_percentage] > 0 ? 'var(--status-critical)' : 'var(--status-success)' %>;">
             <i class="bi <%= @stats[:trend_percentage] > 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right' %>" style="font-size: 10px;"></i>
@@ -93,6 +102,9 @@
     <!-- Affected Users -->
     <div class="card stat-card" style="padding: var(--space-5) var(--space-6);">
       <div class="stat-label" style="margin-bottom: 4px;"><%= red_t("red.errors.overview_page.affected_users") %></div>
+      <% if @stats[:affected_users_incomplete] %>
+        <small style="display: block; color: var(--text-tertiary); margin-bottom: 4px;"><%= red_t("red.errors.overview_page.affected_users_incomplete") %></small>
+      <% end %>
       <div style="display: flex; align-items: baseline; gap: 8px;">
         <span class="stat-value"><%= @stats[:affected_users_today] %></span>
         <% if @stats[:affected_users_change] != 0 %>

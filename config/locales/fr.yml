@@ -967,6 +967,9 @@ fr:
         alert_view: Voir
         error_rate: Taux d'erreur
         error_rate_hint: Erreurs par heure aujourd'hui
+        rate_per_hour: "%{value}/h"
+        affected_users_incomplete: au moins — la protection contre les storms a écarté le détail par événement
+        data_unavailable: Les statistiques sont indisponibles pour le moment — les chiffres ci-dessous ne sont pas une mesure.
         unresolved: Non résolues
         unresolved_hint: En attente de résolution
         resolution_rate: Taux de résolution

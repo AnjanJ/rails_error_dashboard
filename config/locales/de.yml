@@ -936,6 +936,9 @@ de:
         alert_view: Ansehen
         error_rate: Fehlerrate
         error_rate_hint: Fehler pro Stunde heute
+        rate_per_hour: "%{value}/Std."
+        affected_users_incomplete: mindestens — der Storm-Schutz hat Detaildaten pro Ereignis verworfen
+        data_unavailable: Statistiken sind derzeit nicht verfügbar — die Zahlen unten sind keine Messung.
         unresolved: Offen
         unresolved_hint: Behebung ausstehend
         resolution_rate: Behebungsquote

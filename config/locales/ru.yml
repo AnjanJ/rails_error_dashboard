@@ -977,6 +977,9 @@ ru:
         alert_view: Открыть
         error_rate: Частота ошибок
         error_rate_hint: Ошибок в час за сегодня
+        rate_per_hour: "%{value}/ч"
+        affected_users_incomplete: не менее — защита от storm отбросила детализацию по событиям
+        data_unavailable: Статистика сейчас недоступна — приведённые ниже числа не являются измерением.
         unresolved: Не решено
         unresolved_hint: Ожидают решения
         resolution_rate: Доля решённых

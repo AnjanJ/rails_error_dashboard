@@ -842,6 +842,9 @@ ja:
         alert_view: 表示
         error_rate: エラー率
         error_rate_hint: 本日の1時間あたりのエラー数
+        rate_per_hour: "%{value}/時"
+        affected_users_incomplete: 最少値 — storm 保護によりイベントごとの詳細が破棄されました
+        data_unavailable: 統計は現在利用できません — 以下の数値は計測値ではありません。
         unresolved: 未解決
         unresolved_hint: 解決待ち
         resolution_rate: 解決率

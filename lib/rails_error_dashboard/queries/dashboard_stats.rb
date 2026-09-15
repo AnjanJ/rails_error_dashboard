@@ -19,9 +19,14 @@ module RailsErrorDashboard
         begin
           Rails.cache.fetch(cache_key, expires_in: 1.minute) do
             {
-              total_today: base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count,
-              total_week: base_scope.where("occurred_at >= ?", 7.days.ago).count,
-              total_month: base_scope.where("occurred_at >= ?", 30.days.ago).count,
+              # EVENTS, not groups. An ErrorLog row is a group whose
+              # occurrence_count says how many times it happened, so counting
+              # rows reported five users hitting one error as "1 error today".
+              # Summing is also exact during a storm: counted-only events never
+              # create occurrence rows, but they DO raise occurrence_count.
+              total_today: event_count_since(Time.current.beginning_of_day),
+              total_week: event_count_since(7.days.ago),
+              total_month: event_count_since(30.days.ago),
               unresolved: base_scope.unresolved.count,
               resolved: base_scope.resolved.count,
               reopened: reopened_count,
@@ -40,7 +45,13 @@ module RailsErrorDashboard
               trend_percentage: trend_percentage,
               trend_direction: trend_direction,
               top_errors_by_impact: top_errors_by_impact,
-              average_resolution_time: average_resolution_time
+              average_resolution_time: average_resolution_time,
+              # Affected-user figures come from occurrence rows, which storm
+              # count-only events never create. When that happened in the
+              # window, the dimension is incomplete and the page says so
+              # rather than presenting an undercount as fact.
+              affected_users_incomplete: affected_users_incomplete?,
+              data_unavailable: false
             }
           end
         rescue => e
@@ -50,7 +61,13 @@ module RailsErrorDashboard
           RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
 
           # Return minimal stats hash to prevent nil errors in views
+          # Zero errors and "we could not read the data" are different states.
+          # Reporting healthy-looking zeros made a failed dashboard query
+          # indistinguishable from a quiet day; data_unavailable lets the page
+          # say which it is.
           {
+            data_unavailable: true,
+            affected_users_incomplete: false,
             total_today: 0,
             total_week: 0,
             total_month: 0,
@@ -95,6 +112,46 @@ module RailsErrorDashboard
         scope
       end
 
+      # Total EVENTS in a window: the sum of every matching group's
+      # occurrence_count. platform_comparison.rb counts the same way.
+      def event_count_since(since)
+        base_scope.where("occurred_at >= ?", since).sum(:occurrence_count)
+      end
+
+      def event_count_between(from, to)
+        base_scope.where("occurred_at >= ? AND occurred_at < ?", from, to).sum(:occurrence_count)
+      end
+
+      # Occurrence rows carry the user of EACH event. The group's user_id is
+      # mutable -- refreshed by the latest occurrence -- so counting it
+      # distinct over groups can only ever yield zero or one per group.
+      def occurrence_scope
+        occurrences = ErrorOccurrence.table_name
+        scope = ErrorOccurrence.joins(:error_log)
+        scope = scope.where(ErrorLog.table_name => { application_id: @application_id }) if @application_id.present?
+        scope
+      end
+
+      def occurrences_available?
+        defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
+      rescue StandardError
+        false
+      end
+
+      # True when the window contains more events than recorded occurrences --
+      # i.e. storm shedding dropped per-event rows, so any occurrence-derived
+      # dimension (affected users) is a floor, not a total.
+      def affected_users_incomplete?
+        return false unless occurrences_available?
+
+        recorded = occurrence_scope
+                     .where("#{ErrorOccurrence.table_name}.occurred_at >= ?", Time.current.beginning_of_day)
+                     .count
+        recorded < event_count_since(Time.current.beginning_of_day)
+      rescue StandardError
+        false
+      end
+
       def reopened_count
         return 0 unless ErrorLog.column_names.include?("reopened_at")
 
@@ -104,7 +161,7 @@ module RailsErrorDashboard
       def top_errors
         base_scope.where("occurred_at >= ?", 7.days.ago)
                   .group(:error_type)
-                  .count
+                  .sum(:occurrence_count)
                   .sort_by { |_, count| -count }
                   .first(10)
                   .to_h
@@ -114,7 +171,7 @@ module RailsErrorDashboard
       def errors_trend_7d
         base_scope.where("occurred_at >= ?", 7.days.ago)
                   .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
-                  .count
+                  .sum(:occurrence_count)
       end
 
       # Get error counts by severity for last 7 days
@@ -123,14 +180,14 @@ module RailsErrorDashboard
         scoped_errors = base_scope.where("occurred_at >= ?", 7.days.ago)
 
         {
-          critical: scoped_errors.where(error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES).count,
-          high: scoped_errors.where(error_type: Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES).count,
-          medium: scoped_errors.where(error_type: Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES).count,
+          critical: scoped_errors.where(error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES).sum(:occurrence_count),
+          high: scoped_errors.where(error_type: Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES).sum(:occurrence_count),
+          medium: scoped_errors.where(error_type: Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES).sum(:occurrence_count),
           low: scoped_errors.where.not(
             error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
                        Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES +
                        Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
-          ).count
+          ).sum(:occurrence_count)
         }
       end
 
@@ -139,7 +196,7 @@ module RailsErrorDashboard
       def spike_detected?
         return false if errors_trend_7d.empty?
 
-        today_count = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        today_count = event_count_since(Time.current.beginning_of_day)
 
         # Try baseline-based detection first
         if baseline_anomaly_detected?(today_count)
@@ -158,7 +215,7 @@ module RailsErrorDashboard
       def spike_info
         return nil unless spike_detected?
 
-        today_count = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
+        today_count = event_count_since(Time.current.beginning_of_day)
         avg_count = (errors_trend_7d.values.sum / 7.0).round(1)
 
         info = {
@@ -218,42 +275,50 @@ module RailsErrorDashboard
         }
       end
 
-      # Calculate error rate as a percentage
-      # Since we don't track total requests, we'll use error count as proxy
-      # In the future, this could be: (errors / total_requests) * 100
+      # Errors per hour so far today. NOT a percentage.
+      #
+      # This value was rendered with a "%" sign against a scale that mapped
+      # one error per hour to "1%", and was capped at 100 -- a rate of 4,000
+      # errors/hour displayed as "100%". There is no request denominator to
+      # make a real failure percentage from, so the honest figure is the rate
+      # itself, uncapped, labelled with its unit.
       def error_rate
-        today_errors = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
-        return 0.0 if today_errors.zero?
+        today_events = event_count_since(Time.current.beginning_of_day)
+        return 0.0 if today_events.zero?
 
-        # For now, use a simple heuristic: errors per hour today
-        # Assume we want < 1 error per hour = good (< 1%)
-        # 1-5 errors per hour = warning (1-5%)
-        # > 5 errors per hour = critical (> 5%)
         hours_today = ((Time.current - Time.current.beginning_of_day) / 1.hour).round(1)
-        hours_today = 1.0 if hours_today < 1.0 # Avoid division by zero in early morning
+        hours_today = 1.0 if hours_today < 1.0 # Avoid dividing by ~0 just after midnight
 
-        errors_per_hour = today_errors / hours_today
-        # Convert to percentage scale (0-100)
-        # Scale: 0 errors/hr = 0%, 1 error/hr = 1%, 10 errors/hr = 10%, etc.
-        [ errors_per_hour, 100.0 ].min.round(1)
+        (today_events / hours_today).round(1)
       end
 
-      # Count distinct users affected by errors today
+      # Distinct users affected today, counted from OCCURRENCE rows.
+      #
+      # The group's user_id is overwritten by each new occurrence, so counting
+      # it distinct across groups reported five users hitting one error as one
+      # affected user. Storm count-only events create no occurrence row, so
+      # this is a floor during a storm -- affected_users_incomplete? says when.
       def affected_users_today
-        base_scope.where("occurred_at >= ?", Time.current.beginning_of_day)
-                  .where.not(user_id: nil)
-                  .distinct
-                  .count(:user_id)
+        distinct_affected_users(Time.current.beginning_of_day, nil)
       end
 
-      # Count distinct users affected by errors yesterday
       def affected_users_yesterday
-        base_scope.where("occurred_at >= ? AND occurred_at < ?",
-                        1.day.ago.beginning_of_day,
-                        Time.current.beginning_of_day)
-                  .where.not(user_id: nil)
-                  .distinct
-                  .count(:user_id)
+        distinct_affected_users(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
+      end
+
+      def distinct_affected_users(from, to)
+        unless occurrences_available?
+          scope = base_scope.where("occurred_at >= ?", from)
+          scope = scope.where("occurred_at < ?", to) if to
+          return scope.where.not(user_id: nil).distinct.count(:user_id)
+        end
+
+        occurrences = ErrorOccurrence.table_name
+        scope = occurrence_scope.where("#{occurrences}.occurred_at >= ?", from)
+        scope = scope.where("#{occurrences}.occurred_at < ?", to) if to
+        scope.where.not(occurrences => { user_id: nil }).distinct.count("#{occurrences}.user_id")
+      rescue StandardError
+        0
       end
 
       # Calculate change in affected users (today vs yesterday)
@@ -269,10 +334,8 @@ module RailsErrorDashboard
 
       # Calculate percentage change in errors (today vs yesterday)
       def trend_percentage
-        today = base_scope.where("occurred_at >= ?", Time.current.beginning_of_day).count
-        yesterday = base_scope.where("occurred_at >= ? AND occurred_at < ?",
-                                     1.day.ago.beginning_of_day,
-                                     Time.current.beginning_of_day).count
+        today = event_count_since(Time.current.beginning_of_day)
+        yesterday = event_count_between(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
 
         return 0.0 if today.zero? && yesterday.zero?
         return 100.0 if yesterday.zero? && today.positive?
@@ -295,26 +358,49 @@ module RailsErrorDashboard
 
       # Get top 6 errors ranked by impact score
       # Impact = affected_users_count × occurrence_count
+      # Top errors by impact = distinct affected users x events.
+      #
+      # This grouped by each row's own id and counted DISTINCT user_id within
+      # that single row, which can only be zero or one -- so every error's
+      # "affected users" was 1 and the impact score was just its occurrence
+      # count. The user count comes from occurrence rows, where each event
+      # carries its own user.
       def top_errors_by_impact
-        base_scope.where("occurred_at >= ?", 7.days.ago)
-                .group(:error_type, :id)
-                .select("error_type, id, message, occurred_at, occurrence_count,
-                        COUNT(DISTINCT user_id) as affected_users,
-                        COUNT(DISTINCT user_id) * occurrence_count as impact_score")
-                .order("impact_score DESC")
-                .limit(6)
-                .map do |error|
-                  {
-                    id: error.id,
-                    error_type: error.error_type,
-                    message: error.message&.truncate(80),
-                    severity: Services::SeverityClassifier.classify(error.error_type),
-                    occurrence_count: error.occurrence_count,
-                    affected_users: error.affected_users.to_i,
-                    impact_score: error.impact_score.to_i,
-                    occurred_at: error.occurred_at
-                  }
-                end
+        errors = base_scope.where("occurred_at >= ?", 7.days.ago)
+                           .order(occurrence_count: :desc)
+                           .limit(50)
+                           .to_a
+        return [] if errors.empty?
+
+        users_by_error = distinct_users_by_error_log(errors.map(&:id))
+
+        errors.map { |error|
+          affected = users_by_error.fetch(error.id, error.user_id.present? ? 1 : 0)
+          {
+            id: error.id,
+            error_type: error.error_type,
+            message: error.message&.truncate(80),
+            severity: Services::SeverityClassifier.classify(error.error_type),
+            occurrence_count: error.occurrence_count,
+            affected_users: affected,
+            impact_score: affected * error.occurrence_count.to_i,
+            occurred_at: error.occurred_at
+          }
+        }.sort_by { |entry| -entry[:impact_score] }.first(6)
+      end
+
+      # error_log_id => distinct users with a recorded occurrence.
+      def distinct_users_by_error_log(error_log_ids)
+        return {} unless occurrences_available?
+        return {} if error_log_ids.empty?
+
+        ErrorOccurrence.where(error_log_id: error_log_ids)
+                       .where.not(user_id: nil)
+                       .group(:error_log_id)
+                       .distinct
+                       .count(:user_id)
+      rescue StandardError
+        {}
       end
 
       # Calculate average resolution time (MTTR) in hours for the last 30 days

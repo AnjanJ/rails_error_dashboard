@@ -958,6 +958,9 @@ it:
         alert_view: Vedi
         error_rate: Tasso di errore
         error_rate_hint: Errori all'ora oggi
+        rate_per_hour: "%{value}/h"
+        affected_users_incomplete: almeno — la protezione dagli storm ha scartato il dettaglio per evento
+        data_unavailable: Le statistiche non sono al momento disponibili — i valori seguenti non sono una misurazione.
         unresolved: Non risolti
         unresolved_hint: In attesa di risoluzione
         resolution_rate: Tasso di risoluzione
