@@ -79,6 +79,7 @@ module RailsErrorDashboard
     # Set defaults and tracking
     before_validation :set_defaults, on: :create
     before_create :set_tracking_fields
+    before_save :sync_group_window
     before_create :set_priority_score
 
     # Turbo Stream broadcasting
@@ -98,6 +99,52 @@ module RailsErrorDashboard
       self.first_seen_at ||= Time.current
       self.last_seen_at ||= Time.current
       self.occurrence_count ||= 1
+      set_group_window
+    end
+
+    # The immutable bucket that completes an unresolved group's database
+    # identity (see 20260915000001). Stamped once, at creation, and never
+    # rewritten -- not on increment, not on reopen: the row keeps the identity
+    # it was created with for its whole life, which is exactly what makes it
+    # usable as an index key.
+    #
+    # Two captures racing to create the same group are milliseconds apart and
+    # therefore share a bucket, so one of them loses on the unique index and
+    # takes the existing RecordNotUnique retry path. A capture that arrives
+    # after the previous group's 24 h window has rolled over lands in a
+    # different bucket and is allowed to open a new group, which is intended
+    # behaviour.
+    def set_group_window
+      return unless respond_to?(:group_window=)
+      return if group_window.present?
+
+      self.group_window = computed_group_window
+    rescue StandardError
+      # A bad occurred_at must never block a capture; a NULL bucket simply
+      # falls back to the pre-migration behaviour for this one row.
+      nil
+    end
+
+    # The bucket is DERIVED from occurred_at, so it must follow it. In
+    # production occurred_at is written once, at creation, and never rewritten
+    # -- so this is a no-op there and the bucket is immutable in practice.
+    # But anything that does move occurred_at (a fixture ageing a row, a
+    # backfill, a data repair) would otherwise leave the bucket pointing at the
+    # old window, and the row would sit in an index slot that no longer matches
+    # its own timestamp: a later capture computing the correct bucket would
+    # collide with a row the 24 h lookup had already excluded.
+    def sync_group_window
+      return unless respond_to?(:group_window=)
+      return unless has_attribute?(:occurred_at) && will_save_change_to_attribute?(:occurred_at)
+
+      self.group_window = computed_group_window
+    rescue StandardError
+      nil
+    end
+
+    def computed_group_window
+      basis = occurred_at || first_seen_at || Time.current
+      basis.utc.strftime("%Y-%m-%d")
     end
 
     def set_priority_score

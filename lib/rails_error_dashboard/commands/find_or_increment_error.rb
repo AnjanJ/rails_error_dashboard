@@ -173,9 +173,50 @@ module RailsErrorDashboard
           if retry_resolved
             reopen_existing(retry_resolved)
           else
-            raise
+            # A RecordNotUnique means a row with this exact group identity
+            # exists right now, so the only way to get here is for the two
+            # lookups above to disagree with the index: the colliding row sits
+            # outside the 24 h window (its occurred_at was moved, or the clock
+            # skewed) yet still holds this identity. Raising here would abort a
+            # capture whose group demonstrably exists -- LogError's blanket
+            # rescue turns that into a silently dropped error. Match the row
+            # the index actually objected to and increment it instead.
+            claim_conflicting_row || raise
           end
         end
+      end
+
+      # The unresolved row that owns this group identity, matched exactly as
+      # the unique index defines it (application, hash, environment and the
+      # immutable group_window bucket) with no time window of its own.
+      def claim_conflicting_row
+        return nil unless ErrorLog.column_names.include?("group_window")
+
+        scope = ErrorLog.unresolved
+          .where(error_hash: @error_hash)
+          .where(application_id: @attributes[:application_id])
+        scope = scope.where(environment: @attributes[:environment]) if ErrorLog.column_names.include?("environment")
+        scope = scope.where(group_window: window_for_attributes)
+
+        conflicting = scope.lock.first
+        return nil unless conflicting
+
+        conflicting.update!(
+          occurrence_count: conflicting.occurrence_count + 1,
+          last_seen_at: Time.current,
+          **latest_context,
+          **environment_adoption(conflicting)
+        )
+        conflicting
+      end
+
+      # The bucket this capture would have been stamped with -- the same value
+      # ErrorLog#set_group_window computes.
+      def window_for_attributes
+        basis = @attributes[:occurred_at] || Time.current
+        basis.utc.strftime("%Y-%m-%d")
+      rescue StandardError
+        nil
       end
     end
   end

@@ -16,7 +16,7 @@
 # (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
 # carry the 250 limit the MySQL index-key migration leaves them with.
 # bin/check-schema-parity compares this file with the migrations.
-ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_15_000001) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -169,6 +169,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.text "system_health"
     t.text "local_variables"
     t.text "instance_variables"
+    t.string "group_window", limit: 10
     t.index [ "app_version" ], name: "index_rails_error_dashboard_error_logs_on_app_version"
     t.index [ "application_id", "occurred_at" ], name: "index_error_logs_on_app_occurred"
     t.index [ "application_id", "resolved" ], name: "index_error_logs_on_app_resolved"
@@ -197,6 +198,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.index [ "resolved" ], name: "index_rails_error_dashboard_error_logs_on_resolved"
     t.index [ "similarity_score" ], name: "index_rails_error_dashboard_error_logs_on_similarity_score"
     t.index [ "user_id" ], name: "index_rails_error_dashboard_error_logs_on_user_id"
+    t.index "application_id, error_hash, COALESCE(environment,''), COALESCE(group_window,'')", name: "index_error_logs_on_group_identity", unique: true, where: "resolved = false"
   end
 
   create_table "rails_error_dashboard_swallowed_exceptions", force: :cascade do |t|
