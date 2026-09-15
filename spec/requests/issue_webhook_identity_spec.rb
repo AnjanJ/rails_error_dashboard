@@ -70,17 +70,55 @@ RSpec.describe "issue webhook identity", type: :request do
     expect(api.reload).not_to be_resolved
   end
 
-  # Rows linked before the repository was recorded have NULL there. They must
-  # keep working -- and the first webhook that names a repository fills the
-  # identity in, so the row is precise from then on.
-  it "still matches a row linked before repositories were recorded, and adopts its identity" do
-    legacy = linked(repo: nil, number: 77)
+  # Rows linked before the repository was recorded have NULL there. Their
+  # stored URL is corroborating evidence for which repository the link was
+  # made against.
+  describe "rows linked before repositories were recorded" do
+    it "matches when the stored URL agrees with the payload, and adopts the identity" do
+      legacy = create(:error_log, occurred_at: 1.hour.ago,
+        external_issue_provider: "github", external_issue_number: 77,
+        external_issue_repo: nil,
+        external_issue_url: "https://github.com/acme/api/issues/77",
+        resolved: false, status: "new")
 
-    post_github(close_payload(repo: "acme/api", number: 77))
+      post_github(close_payload(repo: "acme/api", number: 77))
 
-    legacy.reload
-    expect(legacy).to be_resolved
-    expect(legacy.external_issue_repo).to eq("acme/api")
+      legacy.reload
+      expect(legacy).to be_resolved
+      expect(legacy.external_issue_repo).to eq("acme/api")
+    end
+
+    # The residual of the original defect if adoption were unconditional: the
+    # first webhook to name ANY repository would claim the row.
+    it "does NOT match when the stored URL names a different repository" do
+      legacy = create(:error_log, occurred_at: 1.hour.ago,
+        external_issue_provider: "github", external_issue_number: 77,
+        external_issue_repo: nil,
+        external_issue_url: "https://github.com/acme/api/issues/77",
+        resolved: false, status: "new")
+
+      post_github(close_payload(repo: "acme/web", number: 77))
+
+      legacy.reload
+      expect(legacy).not_to be_resolved
+      expect(legacy.external_issue_repo).to be_nil
+    end
+
+    # An unrecognised forge leaves no evidence either way; dropping the event
+    # would break a link that works today.
+    it "still matches leniently when the stored URL cannot be parsed" do
+      legacy = create(:error_log, occurred_at: 1.hour.ago,
+        external_issue_provider: "github", external_issue_number: 77,
+        external_issue_repo: nil,
+        external_issue_url: "https://git.internal.example/odd/shape/77",
+        resolved: false, status: "new")
+
+      post_github(close_payload(repo: "acme/api", number: 77))
+
+      legacy.reload
+      expect(legacy).to be_resolved
+      expect(legacy.external_issue_repo).to eq("acme/api")
+    end
   end
 
   describe "Linear, where numbers are scoped per team" do

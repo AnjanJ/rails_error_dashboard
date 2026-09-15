@@ -225,10 +225,19 @@ module RailsErrorDashboard
     # on the wrong error, which matters for shared databases, several linked
     # repositories, a repository rename, and Linear's team-scoped numbering.
     #
-    # Rows linked before the repository was recorded have NULL there. They are
-    # still matched on provider + number, exactly as before, and the identity
-    # is filled in from this payload so the row is precise from then on. A row
-    # that DOES record a repository is never matched by a different one.
+    # A row that DOES record a repository is never matched by a different one.
+    #
+    # Rows linked before the repository was recorded have NULL there, and
+    # cannot simply be adopted by whoever asks first -- that would leave the
+    # original defect intact for exactly the rows most likely to be affected.
+    # Their stored issue URL is corroborating evidence: it names the repository
+    # the link was made against. If it disagrees with the payload, this webhook
+    # is about a different issue that merely shares a number.
+    #
+    # Only a legacy row whose URL cannot be parsed at all (an unrecognised
+    # forge) falls back to matching on provider + number, as before -- there is
+    # no evidence either way there, and dropping the event would break a
+    # working link.
     def find_error_by_issue(issue_number, provider, repo = nil)
       scope = ErrorLog.where(
         external_issue_number: issue_number,
@@ -236,19 +245,35 @@ module RailsErrorDashboard
       )
       return scope.first unless ErrorLog.column_names.include?("external_issue_repo")
 
-      if repo.present?
-        exact = scope.where(external_issue_repo: repo).first
-        return exact if exact
+      return scope.first if repo.blank?
 
-        # Legacy row with no recorded repository: adopt this identity.
-        legacy = scope.where(external_issue_repo: nil).first
-        legacy&.update_columns(external_issue_repo: repo)
-        return legacy
-      end
+      exact = scope.where(external_issue_repo: repo).first
+      return exact if exact
 
-      # The payload carried no repository at all (an unusual provider shape).
-      # Fall back to the old behaviour rather than dropping the event.
-      scope.first
+      legacy = scope.where(external_issue_repo: nil).find { |error|
+        url_repo = repo_from_issue_url(provider, error.external_issue_url)
+        url_repo.nil? || url_repo.casecmp?(repo.to_s)
+      }
+      # The identity is now established, so the row is precise from here on.
+      legacy&.update_columns(external_issue_repo: repo)
+      legacy
+    end
+
+    # The repository a stored issue URL was linked against, using the same
+    # patterns LinkExistingIssue parses links with -- one definition, so the
+    # two can never disagree about what a URL means.
+    #
+    # nil when the URL is absent or from an unrecognised forge.
+    def repo_from_issue_url(provider, url)
+      return nil if url.blank?
+
+      pattern = Commands::LinkExistingIssue::PROVIDER_PATTERNS[provider.to_s.to_sym]
+      return nil unless pattern
+
+      match = url.match(pattern)
+      return nil unless match
+
+      provider.to_s == "linear" ? match[1].upcase : match[1]
     end
 
     def resolve_error(error, message)
