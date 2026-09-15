@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.9...rails_error_dashboard/v0.12.0) (2026-09-15)
+
+
+### 🐛 Bug Fixes
+
+* repair the nine verified correctness findings from the 0.11.9 review ([#215](https://github.com/AnjanJ/rails_error_dashboard/issues/215)) ([8d43eeb](https://github.com/AnjanJ/rails_error_dashboard/commit/8d43eeb2972d8b35a36be18f38b6b2ecada83531))
+
+
+### 📚 Documentation
+
+* **changelog:** write the 0.12.0 release notes and release as a minor ([#217](https://github.com/AnjanJ/rails_error_dashboard/issues/217)) ([b56afce](https://github.com/AnjanJ/rails_error_dashboard/commit/b56afce58462137fc8bbd47aeb3ab48130eeb38a))
+
 ### 0.12.0 highlights — nine correctness findings from an independent review
 
 > Detail for the `fix` entry above. RED 0.11.9 was reviewed independently; the
