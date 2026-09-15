@@ -16,7 +16,7 @@
 # (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
 # carry the 250 limit the MySQL index-key migration leaves them with.
 # bin/check-schema-parity compares this file with the migrations.
-ActiveRecord::Schema[7.0].define(version: 2026_09_15_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_15_000002) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -157,6 +157,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_15_000001) do
     t.string "external_issue_url"
     t.integer "external_issue_number"
     t.string "external_issue_provider", limit: 20
+    t.string "external_issue_repo", limit: 255
     t.bigint "application_id", null: false
     t.text "exception_cause"
     t.string "http_method", limit: 10
@@ -177,6 +178,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_15_000001) do
     t.index [ "backtrace_signature" ], name: "index_rails_error_dashboard_error_logs_on_backtrace_signature"
     t.index [ "controller_name", "action_name", "error_hash" ], name: "index_error_logs_on_controller_action_hash"
     t.index [ "error_hash", "resolved", "occurred_at" ], name: "index_error_logs_on_hash_resolved_occurred"
+    t.index [ "external_issue_provider", "external_issue_number", "external_issue_repo" ], name: "index_error_logs_on_issue_identity"
     t.index [ "error_hash" ], name: "index_rails_error_dashboard_error_logs_on_error_hash"
     t.index [ "error_type", "occurred_at" ], name: "index_error_logs_on_error_type_and_occurred_at"
     t.index [ "error_type" ], name: "index_rails_error_dashboard_error_logs_on_error_type"

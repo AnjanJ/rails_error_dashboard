@@ -36,11 +36,20 @@ module RailsErrorDashboard
         error = ErrorLog.find(@error_id)
         parsed = parse_issue_url(@issue_url)
 
-        error.update!(
+        attrs = {
           external_issue_url: @issue_url,
           external_issue_number: parsed[:number],
           external_issue_provider: parsed[:provider]&.to_s
-        )
+        }
+        # The repository is half the issue's identity: issue 42 in acme/api and
+        # issue 42 in acme/web are different issues. It was parsed here and
+        # thrown away, so a webhook from either repository resolved whichever
+        # error happened to match on provider + number alone.
+        if ErrorLog.column_names.include?("external_issue_repo")
+          attrs[:external_issue_repo] = normalize_repo(parsed[:provider], parsed[:repo])
+        end
+
+        error.update!(attrs)
 
         { success: true, issue_url: @issue_url, provider: parsed[:provider] }
       rescue ActiveRecord::RecordNotFound
@@ -50,6 +59,15 @@ module RailsErrorDashboard
       end
 
       private
+
+      # Linear has no repository -- `repo` is the team key, and Linear renders
+      # it upper-case ("ENG-123"), so it is stored upper-case to match what a
+      # webhook reports. Git forge paths are case-sensitive and kept verbatim.
+      def normalize_repo(provider, repo)
+        return nil if repo.blank?
+
+        provider.to_s == "linear" ? repo.to_s.upcase : repo.to_s
+      end
 
       def parse_issue_url(url)
         PROVIDER_PATTERNS.each do |provider, pattern|

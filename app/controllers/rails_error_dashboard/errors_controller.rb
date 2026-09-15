@@ -769,13 +769,23 @@ module RailsErrorDashboard
       @current_application_id.present? ? { application_id: @current_application_id } : {}
     end
 
+    # Cache key for one linked issue's platform data. Includes the repository
+    # (or Linear team), because provider + number alone is not unique: issue 42
+    # exists in every repository, and Linear numbers issues per team.
+    def issue_cache_key(kind, error)
+      repo = error.respond_to?(:external_issue_repo) ? error.external_issue_repo : nil
+      [ "red", kind, error.external_issue_provider, repo.presence || "-", error.external_issue_number ].join("/")
+    end
+
     def fetch_platform_issue(error)
       return nil unless error.external_issue_url.present? && error.external_issue_number.present?
       return nil unless RailsErrorDashboard.configuration.enable_issue_tracking
 
-      cache_key = "red/issue_state/#{error.external_issue_provider}/#{error.external_issue_number}"
+      # The repository belongs in the key: two repositories sharing an issue
+      # number would otherwise read each other's cached state.
+      cache_key = issue_cache_key("issue_state", error)
       Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.from_config
+        client = Services::IssueTrackerClient.for_error(error)
         return nil unless client
 
         result = client.fetch_issue(number: error.external_issue_number)
@@ -790,9 +800,9 @@ module RailsErrorDashboard
       return [] unless RailsErrorDashboard.configuration.enable_issue_tracking
 
       # Cache for 60 seconds to avoid API hammering on page refreshes
-      cache_key = "red/issue_comments/#{error.external_issue_provider}/#{error.external_issue_number}"
+      cache_key = issue_cache_key("issue_comments", error)
       Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.from_config
+        client = Services::IssueTrackerClient.for_error(error)
         return [] unless client
 
         result = client.fetch_comments(number: error.external_issue_number, per_page: 20)

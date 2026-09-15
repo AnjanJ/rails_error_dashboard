@@ -27,7 +27,9 @@ module RailsErrorDashboard
       error = ErrorLog.find(error_log_id)
       return unless error.external_issue_url.present? && error.external_issue_number.present?
 
-      client = Services::IssueTrackerClient.from_config
+      # The repository this issue was actually opened in, not whatever the
+      # global configuration currently points at.
+      client = Services::IssueTrackerClient.for_error(error)
       return unless client
 
       comment = "Error occurred again (#{error.occurrence_count} total occurrences).\n\n"

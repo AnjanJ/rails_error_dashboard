@@ -127,7 +127,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("issue", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "github")
+      error = find_error_by_issue(issue_number, "github", repo_from_payload("github", payload))
       return unless error
 
       case payload["action"]
@@ -146,7 +146,7 @@ module RailsErrorDashboard
       issue_iid = payload.dig("object_attributes", "iid")
       return unless issue_iid
 
-      error = find_error_by_issue(issue_iid, "gitlab")
+      error = find_error_by_issue(issue_iid, "gitlab", repo_from_payload("gitlab", payload))
       return unless error
 
       case action
@@ -164,7 +164,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("issue", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "codeberg")
+      error = find_error_by_issue(issue_number, "codeberg", repo_from_payload("codeberg", payload))
       return unless error
 
       case payload["action"]
@@ -185,7 +185,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("data", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "linear")
+      error = find_error_by_issue(issue_number, "linear", repo_from_payload("linear", payload))
       return unless error
 
       state_type = payload.dig("data", "state", "type")
@@ -196,11 +196,59 @@ module RailsErrorDashboard
       end
     end
 
-    def find_error_by_issue(issue_number, provider)
-      ErrorLog.find_by(
+    # The repository (or Linear team) this payload is about.
+    #
+    # Every provider already sends it and RED already parses the rest of the
+    # payload around it; it was simply never read. Linear has no repository --
+    # issue numbers are scoped to a team, which is exactly why it needs this
+    # most -- so the team key is taken from the issue identifier ("ENG-123")
+    # or the team object.
+    def repo_from_payload(provider, payload)
+      case provider
+      when "github", "codeberg"
+        payload.dig("repository", "full_name")
+      when "gitlab"
+        payload.dig("project", "path_with_namespace") ||
+          payload.dig("object_attributes", "project", "path_with_namespace")
+      when "linear"
+        key = payload.dig("data", "team", "key")
+        key ||= payload.dig("data", "identifier").to_s[/\A([A-Za-z][A-Za-z0-9]*)-\d+\z/, 1]
+        key&.upcase
+      end
+    end
+
+    # Match the FULL issue identity: provider, number and repository.
+    #
+    # A validly signed webhook from one repository used to resolve an error
+    # linked to a different repository that happened to share an issue number.
+    # That is not a signature bypass -- the request is genuine -- but it acts
+    # on the wrong error, which matters for shared databases, several linked
+    # repositories, a repository rename, and Linear's team-scoped numbering.
+    #
+    # Rows linked before the repository was recorded have NULL there. They are
+    # still matched on provider + number, exactly as before, and the identity
+    # is filled in from this payload so the row is precise from then on. A row
+    # that DOES record a repository is never matched by a different one.
+    def find_error_by_issue(issue_number, provider, repo = nil)
+      scope = ErrorLog.where(
         external_issue_number: issue_number,
         external_issue_provider: provider
       )
+      return scope.first unless ErrorLog.column_names.include?("external_issue_repo")
+
+      if repo.present?
+        exact = scope.where(external_issue_repo: repo).first
+        return exact if exact
+
+        # Legacy row with no recorded repository: adopt this identity.
+        legacy = scope.where(external_issue_repo: nil).first
+        legacy&.update_columns(external_issue_repo: repo)
+        return legacy
+      end
+
+      # The payload carried no repository at all (an unusual provider shape).
+      # Fall back to the old behaviour rather than dropping the event.
+      scope.first
     end
 
     def resolve_error(error, message)
