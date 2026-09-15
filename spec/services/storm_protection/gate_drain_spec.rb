@@ -20,6 +20,16 @@ RSpec.describe "storm count drain" do
   let(:gate) { RailsErrorDashboard::Services::StormProtection::Gate }
   let(:logs) { RailsErrorDashboard::ErrorLog }
 
+  # StormFlushJob's OWN queue, which is what the gate enqueues onto. Reading
+  # ActiveJob::Base's queue instead makes these assertions depend on whether
+  # another spec has detached this job class from it.
+  def storm_flush_jobs
+    RailsErrorDashboard::StormFlushJob.queue_adapter.enqueued_jobs
+      .select { |job| job[:job] == RailsErrorDashboard::StormFlushJob }
+  rescue StandardError
+    []
+  end
+
   def boom(message = "drain boom")
     StandardError.new(message).tap do |error|
       error.set_backtrace([ "#{Rails.root}/app/models/audit.rb:12:in 'run'" ])
@@ -54,8 +64,14 @@ RSpec.describe "storm count drain" do
 
       allow(gate).to receive(:monotonic_now).and_return(131.0)
 
+      # Assert on the JOB CLASS's own adapter, not the global matcher.
+      #
+      # have_enqueued_job reads ActiveJob::Base.queue_adapter, but gate_spec
+      # calls disable_test_adapter on StormFlushJob to install a fake, which
+      # detaches that class from the queue the matcher watches. The job really
+      # is enqueued (verified directly); the matcher simply looks elsewhere.
       expect { gate.flush_if_due! }
-        .to have_enqueued_job(RailsErrorDashboard::StormFlushJob)
+        .to change { storm_flush_jobs.size }.by(1)
       expect(gate.count_buffer.any?).to be false
     end
 
@@ -66,7 +82,7 @@ RSpec.describe "storm count drain" do
       3.times { gate.admit!(boom) }
 
       expect { gate.flush_if_due! }
-        .not_to have_enqueued_job(RailsErrorDashboard::StormFlushJob)
+        .not_to change { storm_flush_jobs.size }
       expect(gate.count_buffer.any?).to be true
     end
 
@@ -96,7 +112,7 @@ RSpec.describe "storm count drain" do
       4.times { gate.admit!(boom) }
 
       expect { gate.drain! }
-        .not_to have_enqueued_job(RailsErrorDashboard::StormFlushJob)
+        .not_to change { storm_flush_jobs.size }
       expect(logs.sum(:occurrence_count)).to eq(4)
     end
 
