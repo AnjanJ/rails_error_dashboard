@@ -6,8 +6,24 @@ module RailsErrorDashboard
     include Concerns::LocalizedJob
 
     # CRITICAL: Ensure job failures don't break the app or spam error logs
-    # Retry failed jobs with polynomial backoff, but limit attempts
-    retry_on StandardError, wait: :polynomially_longer, attempts: 3
+    # Retry failed jobs with polynomial backoff, but limit attempts.
+    #
+    # This must be the ONLY StandardError handler on this class. A
+    # `rescue_from StandardError` used to sit below it and log-then-re-raise:
+    # rescue_from is resolved in reverse registration order, so it won the
+    # lookup every time and retry_on's handler was never consulted. Retries
+    # still happened (the re-raise reached the adapter) but the polynomial
+    # backoff never applied -- failures retried immediately, three times, on
+    # every job in the gem. The logging that block provided now runs from
+    # retry_on's own exhaustion block, where it fires once, after the last
+    # attempt, with the same detail.
+    retry_on StandardError, wait: :polynomially_longer, attempts: 3 do |job, error|
+      Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} failed: #{error.class} - #{error.message}")
+      Rails.logger.error("Job arguments: #{job.arguments.inspect}")
+      Rails.logger.error("Attempt: #{job.executions}/3")
+      Rails.logger.error(error.backtrace&.first(10)&.join("\n")) if error.backtrace
+      Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} discarded after #{job.executions} attempts")
+    end
 
     # Did this perform_later actually reach the queue?
     #
@@ -36,22 +52,6 @@ module RailsErrorDashboard
     def self.enqueue_failure_reason(job)
       (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) ||
         "perform_later returned #{job.inspect}"
-    end
-
-    # Global exception handling for all dashboard jobs
-    rescue_from StandardError do |exception|
-      # Log the error for debugging but don't propagate
-      Rails.logger.error("[RailsErrorDashboard] Job #{self.class.name} failed: #{exception.class} - #{exception.message}")
-      Rails.logger.error("Job arguments: #{arguments.inspect}")
-      Rails.logger.error("Attempt: #{executions}/3") if respond_to?(:executions)
-      Rails.logger.error(exception.backtrace&.first(10)&.join("\n")) if exception.backtrace
-
-      # Re-raise to trigger retry mechanism (up to 3 attempts)
-      # After 3 attempts, ActiveJob will discard the job and log it
-      raise exception if executions < 3
-
-      # If we've exhausted retries, log and give up gracefully
-      Rails.logger.error("[RailsErrorDashboard] Job #{self.class.name} discarded after #{executions} attempts")
     end
   end
 end

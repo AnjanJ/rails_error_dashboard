@@ -146,7 +146,9 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
       end
     end
 
-    context "when job execution fails" do
+    context "when the payload cannot be processed" do
+      # A bad payload fails identically on every attempt, so retrying just
+      # replays it three times before discarding. Swallow and log.
       it "logs the error and doesn't raise" do
         # Mock the instance method, not the class method
         allow_any_instance_of(RailsErrorDashboard::Commands::LogError).to receive(:call).and_raise("Job error")
@@ -157,6 +159,52 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
         expect {
           described_class.new.perform(exception_data, context)
         }.not_to raise_error
+      end
+    end
+
+    context "when the error store is unreachable" do
+      # The opposite contract: nothing was written, so the job did NOT deliver
+      # this capture. Acknowledging it discards the payload for good. Fail, so
+      # retry_on schedules another attempt.
+      before do
+        allow(RailsErrorDashboard::ErrorLog).to receive(:transaction)
+          .and_raise(ActiveRecord::ConnectionNotEstablished, "db down")
+      end
+
+      # Two layers, asserted separately on purpose: #perform is where the
+      # failure is raised, and perform_now is where retry_on catches it and
+      # schedules another attempt.
+      it "raises out of #perform rather than reporting a delivery it never made" do
+        expect {
+          described_class.new.perform(exception_data, context)
+        }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+      end
+
+      it "schedules a retry rather than acknowledging the capture" do
+        expect {
+          described_class.perform_now(exception_data, context)
+        }.to change { described_class.queue_adapter.enqueued_jobs.count { |j| j[:job] == described_class } }.by(1)
+      end
+
+      it "writes no error log" do
+        expect {
+          begin
+            described_class.new.perform(exception_data, context)
+          rescue ActiveRecord::ConnectionNotEstablished
+            nil
+          end
+        }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+      end
+
+      it "says why it is failing rather than dropping the capture silently" do
+        expect(Rails.logger).to receive(:error).with(/error storage unavailable/).at_least(:once)
+        allow(Rails.logger).to receive(:error)
+
+        begin
+          described_class.new.perform(exception_data, context)
+        rescue ActiveRecord::ConnectionNotEstablished
+          nil
+        end
       end
     end
   end

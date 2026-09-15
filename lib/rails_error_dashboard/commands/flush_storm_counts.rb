@@ -29,6 +29,7 @@ module RailsErrorDashboard
       def call
         application = resolve_application
         counted = 0
+        failed = 0
 
         @entries.each do |entry|
           entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
@@ -37,14 +38,25 @@ module RailsErrorDashboard
           # A corrupt (non-Hash) entry must not abort the whole batch — and the
           # log line itself must not assume `entry` is subscriptable (an Integer
           # from a broken serializer would raise again here, escaping this rescue).
+          failed += 1
           error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
           RailsErrorDashboard::Logger.error(
             "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
           )
         end
 
+        # Every entry failed and none was written. Reporting success with
+        # reconciled: 0 made a total loss indistinguishable from an empty
+        # batch, so the job acknowledged counts that never reached the
+        # database. Partial success stays successful: the entries that were
+        # written are written, and replaying the batch would double them.
+        if failed.positive? && counted.zero?
+          return { success: false, reconciled: 0, failed: failed, overflow: @overflow,
+                   error: "all #{failed} entries failed to reconcile" }
+        end
+
         upsert_storm_event(counted)
-        { success: true, reconciled: counted, overflow: @overflow }
+        { success: true, reconciled: counted, failed: failed, overflow: @overflow }
       rescue => e
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] FlushStormCounts failed: #{e.class} - #{e.message}"

@@ -9,6 +9,16 @@ module RailsErrorDashboard
       # one rescue below covers both failure shapes. Never escapes this class.
       class EnqueueFailed < StandardError; end
 
+      # The error store is down right now and may be up in a moment. Worth
+      # another attempt from a background worker; indistinguishable from any
+      # other failure on a user's request, where nothing is ever re-raised.
+      RETRYABLE_STORE_ERRORS = [
+        ActiveRecord::ConnectionNotEstablished,
+        ActiveRecord::StatementInvalid,
+        ActiveRecord::LockWaitTimeout,
+        ActiveRecord::Deadlocked
+      ].freeze
+
       def self.call(exception, context = {})
         # Filter FIRST (ignore list + static sampling) so ignored exceptions
         # never count toward storm state. _pre_filtered prevents the sync path
@@ -199,9 +209,19 @@ module RailsErrorDashboard
       end
       private_class_method :serialize_cause_chain
 
-      def initialize(exception, context = {})
+      # @param exception [Exception] the exception to capture
+      # @param context [Hash] request/job context
+      # @param worker [Boolean] true when a background job is the caller.
+      #   The capture path's blanket rescue exists so a failing capture can
+      #   never break a user's request (safety rule 1). A worker has the
+      #   opposite obligation: if the error store was unreachable, the job did
+      #   NOT deliver the capture, and saying otherwise discards the payload.
+      #   In worker mode an unreachable-store failure is re-raised so Active
+      #   Job can retry it; every other failure is still swallowed.
+      def initialize(exception, context = {}, worker: false)
         @exception = exception
         @context = context
+        @worker = worker
       end
 
       def call
@@ -442,6 +462,13 @@ module RailsErrorDashboard
         RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
         RailsErrorDashboard::Logger.error("Context: #{@context.inspect.truncate(500)}") if @context
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+
+        # A worker must not report a delivery it did not make. Only the
+        # store-unavailable failures are re-raised (they are worth another
+        # attempt); a payload problem would fail identically on every retry,
+        # so it stays swallowed here as it always has.
+        raise if @worker && RETRYABLE_STORE_ERRORS.any? { |klass| e.is_a?(klass) }
+
         nil # Explicitly return nil, never raise
       end
 

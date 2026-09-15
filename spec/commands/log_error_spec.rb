@@ -1271,3 +1271,57 @@ RSpec.describe "LogError — one capture, one occurrence" do
     end
   end
 end
+
+RSpec.describe "LogError — worker vs request failure contracts" do
+  # The capture path's blanket rescue exists so a failing capture can never
+  # break a user's request (safety rule 1). A background worker has the
+  # opposite obligation: if the store was unreachable, it did NOT deliver the
+  # capture, and returning normally discards the payload. Same command, two
+  # contracts, selected by the `worker:` flag.
+  before do
+    RailsErrorDashboard.reset_configuration!
+    RailsErrorDashboard.configuration.enable_storm_protection = false
+    RailsErrorDashboard.configuration.async_logging = false
+    allow(RailsErrorDashboard::Services::ErrorBroadcaster).to receive(:available?).and_return(false)
+  end
+
+  after { RailsErrorDashboard.reset_configuration! }
+
+  def boom
+    StandardError.new("contract boom").tap { |e| e.set_backtrace([ "#{Rails.root}/app/models/widget.rb:1:in 'go'" ]) }
+  end
+
+  context "when the error store is unreachable" do
+    before do
+      allow(RailsErrorDashboard::ErrorLog).to receive(:transaction)
+        .and_raise(ActiveRecord::ConnectionNotEstablished, "db down")
+    end
+
+    it "never raises on the request path" do
+      expect { RailsErrorDashboard::Commands::LogError.call(boom) }.not_to raise_error
+    end
+
+    it "returns nil on the request path" do
+      expect(RailsErrorDashboard::Commands::LogError.call(boom)).to be_nil
+    end
+
+    it "raises in worker mode so the job can be retried" do
+      expect {
+        RailsErrorDashboard::Commands::LogError.new(boom, {}, worker: true).call
+      }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+    end
+  end
+
+  context "when the failure is not about reaching the store" do
+    before do
+      allow(RailsErrorDashboard::Services::ErrorHashGenerator)
+        .to receive(:call).and_raise(ArgumentError, "bad payload")
+    end
+
+    it "stays swallowed even in worker mode — a retry would fail identically" do
+      expect {
+        RailsErrorDashboard::Commands::LogError.new(boom, {}, worker: true).call
+      }.not_to raise_error
+    end
+  end
+end

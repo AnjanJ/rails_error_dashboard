@@ -131,37 +131,21 @@ RSpec.describe "Async Error Logging", type: :integration do
       RailsErrorDashboard.configure { |config| config.async_logging = true }
     end
 
-    # Mirrors spec/services/storm_protection/gate_spec.rb: Rails 7.0/7.1 keep
-    # answering with the test adapter whatever queue_adapter= is given, so it
-    # has to be disabled for the fake to really be used.
-    def with_failing_adapter(job_class)
-      adapter = Object.new
-      adapter.define_singleton_method(:enqueue) { |_job| raise ActiveJob::EnqueueError, "queue store down" }
-      adapter.define_singleton_method(:enqueue_at) { |*_| raise ActiveJob::EnqueueError, "queue store down" }
-      # Rails 7.x asks the adapter this before enqueuing; Rails 8 does not.
-      adapter.define_singleton_method(:enqueue_after_transaction_commit?) { false }
-
-      original = job_class.queue_adapter
-      test_adapter = job_class.respond_to?(:_test_adapter) ? job_class._test_adapter : nil
-      begin
-        job_class.disable_test_adapter if job_class.respond_to?(:disable_test_adapter)
-        job_class.queue_adapter = adapter
-        yield
-      ensure
-        job_class.queue_adapter = original
-        job_class.enable_test_adapter(test_adapter) if test_adapter && job_class.respond_to?(:enable_test_adapter)
-      end
-    end
-
+    # No adapter swapping here. Installing a per-class adapter (or calling
+    # disable_test_adapter) detaches this job from ActiveJob::Base's test
+    # adapter, and ActiveJob::TestHelper#perform_enqueued_jobs only ever
+    # drains ActiveJob::Base's -- so a later spec's job sits in a queue the
+    # helper cannot see and never runs. Both failure shapes call_async
+    # branches on are reachable by stubbing perform_later directly.
     it "falls back to synchronous capture rather than losing the error" do
       error = StandardError.new("enqueue failure")
       error.set_backtrace([ "test.rb:1" ])
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob)
+        .to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue store down")
 
-      with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
-        expect {
-          RailsErrorDashboard::Commands::LogError.call(error, {})
-        }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
-      end
+      expect {
+        RailsErrorDashboard::Commands::LogError.call(error, {})
+      }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
 
       expect(RailsErrorDashboard::ErrorLog.last.message).to eq("enqueue failure")
     end
@@ -169,10 +153,10 @@ RSpec.describe "Async Error Logging", type: :integration do
     it "returns the persisted record, not the falsy perform_later result" do
       error = StandardError.new("enqueue failure return value")
       error.set_backtrace([ "test.rb:1" ])
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob)
+        .to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue store down")
 
-      result = with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
-        RailsErrorDashboard::Commands::LogError.call(error, {})
-      end
+      result = RailsErrorDashboard::Commands::LogError.call(error, {})
 
       expect(result).to be_a(RailsErrorDashboard::ErrorLog)
       expect(result).to be_persisted
@@ -181,13 +165,13 @@ RSpec.describe "Async Error Logging", type: :integration do
     it "reports the failed handoff instead of dropping it silently" do
       error = StandardError.new("enqueue failure logging")
       error.set_backtrace([ "test.rb:1" ])
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob)
+        .to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue store down")
 
       expect(RailsErrorDashboard::Logger)
         .to receive(:error).with(/Async enqueue failed/).at_least(:once)
 
-      with_failing_adapter(RailsErrorDashboard::AsyncErrorLoggingJob) do
-        RailsErrorDashboard::Commands::LogError.call(error, {})
-      end
+      RailsErrorDashboard::Commands::LogError.call(error, {})
     end
 
     it "falls back when perform_later merely returns false (no exception raised)" do

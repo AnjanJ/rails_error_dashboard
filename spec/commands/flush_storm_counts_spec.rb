@@ -274,6 +274,30 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(RailsErrorDashboard::ErrorLog.find_by(message: "good entry")).to be_present
     end
 
+    it "reports failure when every entry failed to reconcile" do
+      # reconciled: 0 with success: true made a total loss look like an empty
+      # batch, so the job acknowledged counts that never reached the database.
+      allow(RailsErrorDashboard::ErrorLog).to receive(:unresolved)
+        .and_raise(ActiveRecord::ConnectionNotEstablished, "db down")
+
+      result = described_class.call(entries: [ entry_for(count: 5) ])
+
+      expect(result[:success]).to be false
+      expect(result[:reconciled]).to eq(0)
+      expect(result[:failed]).to eq(1)
+    end
+
+    it "still reports success when some entries reconciled — replay would double those" do
+      good = entry_for(message: "partly good", count: 5)
+      bad = { "count" => 5 } # missing identity
+
+      result = described_class.call(entries: [ bad, good ])
+
+      expect(result[:success]).to be true
+      expect(result[:reconciled]).to eq(5)
+      expect(result[:failed]).to eq(1)
+    end
+
     it "never raises" do
       expect { described_class.call(entries: nil) }.not_to raise_error
     end
