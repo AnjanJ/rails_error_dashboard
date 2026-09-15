@@ -7,7 +7,8 @@ a locale.
 > **Status:** the dashboard, mailers and notifications are extracted and
 > translatable. **Eleven locales ship: `en`, `de`, `es`, `fr`, `pt-BR`, `ja`,
 > `ru`, `uk`, `pl`, `it` and `zh-CN`.**
-> Everything but English is machine-translated and unreviewed — see
+> French is community-reviewed by a native speaker; everything but English and
+> French is machine-translated and unreviewed — see
 > [Review status](#review-status).
 
 ## How it works
@@ -266,10 +267,11 @@ instead of guessing.
 ## Review status
 
 **German, Spanish, French, Brazilian Portuguese, Japanese, Russian, Ukrainian,
-Polish, Italian and Simplified Chinese ship alongside English. All ten are
-machine-translated and have not been reviewed by a native speaker.**
-RED's maintainer reads only English, so this is stated plainly rather than
-described as "beta", which would imply a review process that has not happened.
+Polish, Italian and Simplified Chinese ship alongside English. French has been
+reviewed by a native speaker; the other nine are machine-translated and have
+not been.** RED's maintainer reads only English, so this is stated plainly
+rather than described as "beta", which would imply a review process that has
+not happened.
 
 What this does and does not mean:
 
@@ -277,14 +279,14 @@ What this does and does not mean:
   lookup falls back, and nothing in the i18n path raises.
 - Key structure, interpolation variables and plural categories **are** verified
   mechanically by `bin/i18n-check` in every locale.
-- Wording, register and idiom are **not** verified by anyone.
+- Wording, register and idiom are **not** verified by anyone, outside French.
 
 | Locale | Status |
 |---|---|
 | `en` | Source language |
 | `de` | **Shipped — machine-translated, unreviewed.** [Review wanted →][de-issue] |
 | `es` | **Shipped — machine-translated, unreviewed.** [Review wanted →][es-issue] |
-| `fr` | **Shipped — machine-translated, unreviewed.** [Review wanted →][fr-issue] |
+| `fr` | **Shipped — community-reviewed by a native speaker** (v0.11.5, [#201][fr-review]; issue [#158][fr-issue]). |
 | `pt-BR` | **Shipped — machine-translated, unreviewed.** [Review wanted →][pt-BR-issue] |
 | `ja` | **Shipped — machine-translated, unreviewed.** [Review wanted →][ja-issue] |
 | `ru` | **Shipped — machine-translated, unreviewed.** [Review wanted →][ru-issue] |
@@ -297,15 +299,17 @@ What this does and does not mean:
 string reads wrong to you, change that string — you are not expected to review
 the whole file. Run `bin/i18n-check` before opening the PR and it will catch
 the structural mistakes for you. As locales get real attention, this table is
-updated and the "unreviewed" qualifier drops from the README.
+updated and the "unreviewed" qualifier drops from the README — as it has for
+French.
 
-Each language has an open issue tracking its review — that is where to comment
-if you can read it, and they are labelled `good first issue` because they are.
-See [Contributing a translation fix](#contributing-a-translation-fix).
+Each unreviewed language has an open issue tracking its review — that is where
+to comment if you can read it, and they are labelled `good first issue` because
+they are. See [Contributing a translation fix](#contributing-a-translation-fix).
 
 [de-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/156
 [es-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/157
 [fr-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/158
+[fr-review]: https://github.com/AnjanJ/rails_error_dashboard/pull/201
 [pt-BR-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/159
 [ja-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/160
 [ru-issue]: https://github.com/AnjanJ/rails_error_dashboard/issues/161

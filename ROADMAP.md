@@ -361,8 +361,8 @@ Environment:
 ### AA. Dashboard Internationalization — DONE (v0.9.0)
 - **Status:** Shipped 2026-08-24 in v0.9.0. All 7 phases of `tasks/i18n-sprint-plan.md` are complete and merged (#155)
 - **What shipped:** A private I18n backend isolated from the host app, request-scoped locale state, the `red_t` helper family, plural/relative-time/date-format helpers, a dynamic `<html lang>`, the full ~1,500-key extraction across views, inline JS, mailers and notification payloads, a JS translation payload, a session-persisted language picker, and `bin/i18n-check` to verify locale files mechanically. **Eleven locales ship** — `en` (source) plus `de`, `es`, `fr`, `pt-BR`, `ja`, `ru`, `uk`, `pl`, `it` and `zh-CN`
-- **Translation quality is explicitly unreviewed.** Every non-English locale is machine-translated, because the maintainer reads only English. `bin/i18n-check` enforces what a script can verify — key parity, interpolation variables, CLDR plural categories — and the English fallback means a wrong translation degrades to English rather than a broken page. Wording, register and idiom are labelled unreviewed rather than pretended away
-- **Open follow-up:** issues [#156–#165](https://github.com/AnjanJ/rails_error_dashboard/issues/156) — one per locale, tagged `good first issue` / `translation:needs-review`, inviting native speakers to correct wording. These stay open by design; they are the contribution path, not a backlog
+- **Translation quality is explicitly unreviewed outside French.** Every non-English locale shipped machine-translated, because the maintainer reads only English; French has since been reviewed by a native speaker (v0.11.5, #201, closing #158), leaving nine of the ten unreviewed. `bin/i18n-check` enforces what a script can verify — key parity, interpolation variables, CLDR plural categories — and the English fallback means a wrong translation degrades to English rather than a broken page. Wording, register and idiom are labelled unreviewed rather than pretended away
+- **Open follow-up:** issues [#156–#165](https://github.com/AnjanJ/rails_error_dashboard/issues/156) — one per locale, tagged `good first issue` / `translation:needs-review`, inviting native speakers to correct wording. #158 (French) is closed, reviewed in v0.11.5 via #201; the remaining nine stay open by design; they are the contribution path, not a backlog
 - **That path has already paid for itself.** The first reviewer to take one up (@gmarziou, French, #158) reported not a wording problem but two real bugs: chart date axes rendering in English in every locale, and inverted axis titles on the horizontal bar chart — plus a latent third (issue #178, fixed in #179, shipped in v0.10.0). Worth stating plainly, because `bin/i18n-check` could not have caught any of it: it verifies key structure, interpolation variables and plural categories, not what reaches a `<canvas>`. **A locale can pass every mechanical check and still render English on every chart.** When auditing i18n coverage, grep for `strftime` and `to_json` in views, not only for missing `red_t` calls — data serialized to JS is the blind spot
 - **Two follow-up fixes landed after the release:** pagination rendering in the dashboard's own locale (v0.8.4, #152) and authenticating every dashboard controller rather than only `ErrorsController` (v0.9.0, #167)
 - **Demand signal:** still no user request and zero i18n issues filed before the work started. It proceeded because the foundation made it incremental, not because demand appeared
@@ -661,7 +661,7 @@ and nine releases). That shift is deliberate. Depth before breadth.
 | **Demo** | Live demo on v0.11.0 with seeded staging errors so the environment filter, badges and chart are visible | Done 2026-08-26; demo CI fully green for the first time since July (Brakeman 8.0.6, sqlite3 2.9.6). Not yet refreshed onto v0.11.1–v0.11.4 |
 | **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open |
 | **Waiting** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Reporter owed an email once assigned |
-| **Community-owned** | Native-speaker review of 10 locales (#156–#165) | Open by design — the contribution path, not a backlog. First one in flight: @gmarziou on French (#201, draft) |
+| **Community-owned** | Native-speaker review of the remaining 9 locales (#156–#165 less #158) | Open by design — the contribution path, not a backlog. First one landed: @gmarziou on French (#201, shipped in v0.11.5, closing #158) |
 
 ### Open, uncommitted
 
@@ -710,7 +710,7 @@ principle (see its entry above).
 - LLM observability (9/10) — call breadcrumbs, tool-call tracking, per-model health page, OTel span ingestion
 - OpenTelemetry (9/10) — inbound (spans → breadcrumbs) and outbound (gem operations → spans), plus self-instrumentation so users can verify the overhead budget themselves
 - Storm protection (9/10) — circuit breaker + adaptive sampling for error floods (v0.8.2)
-- Internationalization (7.5/10) — eleven locales, isolated private backend, mechanical verification via `bin/i18n-check`. Held back from higher only because ten of the eleven are machine-translated and unreviewed
+- Internationalization (7.5/10) — eleven locales, isolated private backend, mechanical verification via `bin/i18n-check`. Held back from higher only because nine of the eleven are machine-translated and unreviewed
 - Search & filtering (8/10) — 11 filters, PostgreSQL full-text search, pagination
 - Source code integration (8/10) — source reader, git blame, GitHub links
 - Multi-tenancy (8/10) — per-app isolation, auto-detection, shared DB
@@ -723,7 +723,7 @@ principle (see its entry above).
 - API (3/10) — no JSON endpoints at all (ICEBOX)
 - User management (7/10) — HTTP Basic Auth + custom lambda (Devise/Warden/session), no RBAC yet
 - Integrations (8.5/10) — four issue trackers (GitHub/GitLab/Codeberg/Linear) with manual + auto-create + lifecycle sync + webhooks. **No Telegram** — the one competitive gap vs Faultline that still stands
-- Translation quality (unscored) — ten locales are machine-translated and unreviewed. Mechanically verified, honestly labelled, but a native speaker has reviewed none of them. Issues #156–#165 are the open invitation
+- Translation quality (unscored) — nine locales are machine-translated and unreviewed. Mechanically verified, honestly labelled, but a native speaker has reviewed only French (v0.11.5, #201). Issues #156–#165, less the closed #158, are the open invitation
 - Performance monitoring (0/10) — no request timing or slow query tracking. Deferred on principle, not backlog (see Z)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN + functional indexes added
 - Environment awareness (9/10) — shipped in v0.11.0: first-class column, filter, badges, chart and a notification allowlist. What is left is per-channel routing (Slack everywhere, PagerDuty production-only), which today needs a callback lambda
