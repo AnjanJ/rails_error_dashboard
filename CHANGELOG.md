@@ -5,6 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.12.0 highlights — nine correctness findings from an independent review
+
+> Detail for the `fix` entry above. RED 0.11.9 was reviewed independently; the
+> review filed nine verified findings, reproduced each with a probe, and all
+> nine are fixed here. The reviewer's probes assert the OLD behaviour, so
+> eleven of the twelve now fail — which is the intended inversion.
+
+**Capture correctness.** One exception could become two occurrences: the tracing
+wrapper rescued around its own `yield` and yielded again on failure, which hit
+every install regardless of OpenTelemetry configuration. A capture handed to a
+queue that refused it was treated as delivered, because from Rails 7.2
+`perform_later` returns `false` rather than raising. A worker that could not
+write reported success instead of letting the job retry — and the `retry_on`
+that should have applied polynomial backoff was dead code on all 19 jobs,
+shadowed by a `rescue_from` registered below it.
+
+**Counting.** Five users hitting one exception was reported as "1 error today,
+1 affected user". An `ErrorLog` row is a *group*; its `occurrence_count` says
+how many times it happened. Headline metrics now count events, and affected
+users come from occurrence rows rather than the group's own mutable `user_id`.
+The error rate is errors per hour, not a percentage against an invented scale.
+When a failed query means the dashboard cannot read its data, it says so
+instead of rendering healthy-looking zeros.
+
+**Storm accounting.** Counted-only events were written out only when a later
+error arrived, so the tail of a burst sat in memory until a deploy dropped it;
+the engine now drains at the end of every request and job, and again at exit.
+Replaying a batch counted it twice; each batch now has an identity recorded in
+the same transaction as its counts.
+
+**Identity and evidence.** Concurrent first captures could create two groups
+for one fingerprint. A signed issue webhook from one repository could resolve
+an error linked to a different repository sharing an issue number. A group
+displayed diagnostic evidence without saying which occurrence supplied it, and
+a group first seen during a storm kept a single bare file path as its backtrace
+forever.
+
+**Privacy.** Sensitive values reached the queue before redaction — with a
+durable adapter that put secrets in its backing store, its backups and any
+job-argument logging, even though the error row itself was redacted. The
+payload is now redacted before it is enqueued, on the async path and the storm
+path alike.
+
+French is marked community-reviewed: it was reviewed by a native speaker and
+shipped in 0.11.5, but every surface still called it machine-translated.
+
+#### ⚠️ Fingerprints are rebuilt once on upgrade
+
+Grouping identity must be computed from the raw error message, but the async
+and storm paths compute it on the request thread and hand it to a worker over
+a queue — which is how the message text was reaching the queue. The fingerprint
+is now two-stage: the request thread hashes the identity parts into an opaque
+digest, and the worker completes it with the application. No message text
+crosses the queue.
+
+The consequence is a **one-time regrouping**. An unresolved group that is in
+flight when you upgrade will open a *new* group on its next occurrence; its
+history, counts and workflow state are untouched, and everything captured after
+the upgrade deduplicates normally. Resolved history keeps its stored hash.
+
+#### ⚠️ This release has four migrations
+
+```
+rails rails_error_dashboard:install:migrations && rails db:migrate
+```
+
+| Migration | What it does |
+|---|---|
+| group identity | A unique index over unresolved groups, plus the `group_window` bucket it needs. **Merges any duplicate groups a host already holds**, summing their counts and keeping the widest time range. |
+| issue repository | Records which repository or Linear team a linked issue belongs to, backfilled from stored issue URLs. |
+| snapshot provenance | Records when the displayed diagnostic snapshot was captured, and at what fidelity. |
+| storm flush batches | A small ledger that makes a replayed storm batch a no-op. Pruned by `RetentionCleanupJob`. |
+
+The gem keeps capturing normally before the migrations run.
+
+**MySQL** has no partial indexes, so the group-identity constraint is skipped
+there and the existing retry path stays dormant, exactly as it is today. The
+other three migrations apply on every adapter.
+
 ## [0.11.9](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.11.8...rails_error_dashboard/v0.11.9) (2026-09-14)
 
 
