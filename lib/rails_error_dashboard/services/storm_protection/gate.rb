@@ -167,14 +167,37 @@ module RailsErrorDashboard
           end
 
           def identity_key(parts)
-            "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
-              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
+            parts[:opaque_identity] || ErrorHashGenerator.opaque_identity(
+              error_class: parts[:error_class],
+              normalized_message: ErrorHashGenerator.normalize_message(parts[:message]),
+              frames: parts[:first_app_frame],
+              controller_name: parts[:controller_name],
+              action_name: parts[:action_name]
+            )
           end
 
           def gate_parts(exception, context)
+            raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
+
             {
               error_class: exception.class.name,
-              message: exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT],
+              # The identity is hashed from the RAW message here, on the hot
+              # path, and only the digest is buffered. The message itself is
+              # redacted before it goes in the buffer, because the buffer is
+              # shipped to StormFlushJob -- a durable queue on Sidekiq or Solid
+              # Queue. It survives as an exemplar for the minimal ErrorLog row
+              # a first-seen fingerprint gets, which FlushStormCounts would
+              # redact at INSERT anyway; doing it here means the secret never
+              # reaches the queue's backing store at all.
+              opaque_identity: ErrorHashGenerator.opaque_identity(
+                error_class: exception.class.name,
+                normalized_message: ErrorHashGenerator.normalize_message(raw_message),
+                frames: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                        ErrorHashGenerator.extract_app_frame(exception.backtrace),
+                controller_name: context[:controller_name]&.to_s,
+                action_name: context[:action_name]&.to_s
+              ),
+              message: redact(raw_message),
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
@@ -199,6 +222,18 @@ module RailsErrorDashboard
             Digest::SHA256.hexdigest(result)[0..15]
           rescue
             nil
+          end
+
+          # Memoized ActiveSupport::ParameterFilter, no I/O -- safe on the hot
+          # path. Fails open to the raw message only if filtering itself
+          # breaks, which FlushStormCounts would then still redact at INSERT.
+          def redact(message)
+            return message if message.blank?
+            return message unless RailsErrorDashboard.configuration.filter_sensitive_data
+
+            SensitiveDataFilter.filter_attributes({ message: message })[:message] || message
+          rescue StandardError
+            message
           end
 
           def probe_counter

@@ -93,12 +93,39 @@ module RailsErrorDashboard
       # Queue error logging as a background job
       def self.call_async(exception, context = {})
         # Serialize exception data for the job
+        # Grouping identity is computed from the RAW message, BEFORE redaction
+        # below. ErrorHashGenerator hashes a 500-char prefix of the unredacted
+        # message, so redacting first would silently re-group every error whose
+        # message contains a filtered key: "password=hunter2" and
+        # "password=[FILTERED]" are different fingerprints.
+        #
+        # application_id is deliberately absent. Resolving it means
+        # Application.find_or_create_by_name -- a DB write -- and this runs on
+        # the request thread, where the gem promises no I/O. The worker
+        # completes the hash with the application resolved, exactly as
+        # FlushStormCounts#canonical_hash does for storm counts.
+        identity_parts = capture_identity_parts(exception, context)
+
         exception_data = {
           class_name: exception.class.name,
           message: exception.message,
           backtrace: exception.backtrace,
           cause_chain: serialize_cause_chain(exception)
         }
+
+        # Redact BEFORE the payload crosses the queue boundary. Until now the
+        # filter ran only just before the INSERT, so a durable adapter
+        # (Sidekiq/Redis, Solid Queue) persisted the raw secret in its own
+        # store, its backups, and any job-argument logging -- even though the
+        # error row itself was correctly redacted.
+        #
+        # Breadcrumbs, locals and instance variables are already filtered by
+        # their own collectors (BreadcrumbCollector.filter_sensitive,
+        # VariableSerializer.filter_serialized) before they are put in the
+        # context above, so this covers the rest: message, cause chain, request
+        # params and request URL -- the four keys filter_attributes touches.
+        exception_data, context = redact_async_payload(exception_data, context)
+        context = context.merge(_identity: identity_parts) if identity_parts
 
         # Storm shedding: :lite captures skip ALL pre-enqueue context harvest —
         # this is request-thread CPU, the most valuable thing to shed.
@@ -176,6 +203,76 @@ module RailsErrorDashboard
           )
           new(exception, context).call
         end
+      end
+
+      # The opaque half of the canonical fingerprint, computed from the RAW
+      # exception before the payload is redacted for the queue.
+      #
+      # This is a digest, not the identity parts themselves: an earlier version
+      # shipped `normalized_message` and put the very secret the redaction had
+      # just removed straight back on the queue. normalize_message replaces
+      # hex, digits and quoted strings -- it has no notion of secrets.
+      #
+      # A custom fingerprint lambda already yields a complete, message-free
+      # value, so it is passed through unchanged.
+      def self.capture_identity_parts(exception, context)
+        custom = Services::ErrorHashGenerator.send(:try_custom_fingerprint, exception, context)
+        return custom if custom
+
+        Services::ErrorHashGenerator.opaque_identity(
+          error_class: exception.class.name,
+          normalized_message: Services::ErrorHashGenerator.normalize_message(exception.message),
+          frames: Services::ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                  Services::ErrorHashGenerator.extract_app_frame(exception.backtrace),
+          controller_name: context[:controller_name]&.to_s,
+          action_name: context[:action_name]&.to_s
+        )
+      rescue => e
+        # No identity parts simply means the worker recomputes the hash from
+        # the (redacted) payload, which is the pre-existing behaviour.
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] capture_identity_parts failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      # Apply the storage filter to everything secret-bearing that crosses the
+      # queue, reusing SensitiveDataFilter so the queue and the database are
+      # redacted by ONE policy rather than two that can drift.
+      def self.redact_async_payload(exception_data, context)
+        return [ exception_data, context ] unless RailsErrorDashboard.configuration.filter_sensitive_data
+
+        filtered = Services::SensitiveDataFilter.filter_attributes(
+          message: exception_data[:message],
+          request_params: context[:request_params],
+          request_url: context[:request_url],
+          exception_cause: exception_data[:cause_chain]&.to_json
+        )
+
+        exception_data = exception_data.merge(message: filtered[:message])
+        if exception_data[:cause_chain] && filtered[:exception_cause]
+          begin
+            exception_data = exception_data.merge(
+              cause_chain: JSON.parse(filtered[:exception_cause], symbolize_names: true)
+            )
+          rescue JSON::ParserError
+            # Keep the filtered-but-unparsed chain out of the payload entirely
+            # rather than shipping the raw one.
+            exception_data = exception_data.merge(cause_chain: nil)
+          end
+        end
+
+        context = context.merge(request_params: filtered[:request_params]) if context.key?(:request_params)
+        context = context.merge(request_url: filtered[:request_url]) if context.key?(:request_url)
+
+        [ exception_data, context ]
+      rescue => e
+        # Never fail a capture over redaction. Fall back to the previous
+        # behaviour: the row itself is still filtered before the INSERT.
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] Async payload redaction failed: #{e.class} - #{e.message}"
+        )
+        [ exception_data, context ]
       end
 
       # Serialize cause chain for async job serialization
@@ -289,13 +386,19 @@ module RailsErrorDashboard
         end
 
         # Generate error hash for deduplication (including controller/action context and application)
-        error_hash = Services::ErrorHashGenerator.call(
-          @exception,
-          controller_name: error_context.controller_name,
-          action_name: error_context.action_name,
-          application_id: application.id,
-          context: @context
-        )
+        #
+        # On the async path the identity was captured from the RAW exception
+        # before the payload was redacted for the queue; completing it here
+        # with application_id keeps grouping identical to the sync path, where
+        # the hash is taken before filter_attributes runs.
+        error_hash = canonical_hash_from_identity(application) ||
+                     Services::ErrorHashGenerator.call(
+                       @exception,
+                       controller_name: error_context.controller_name,
+                       action_name: error_context.action_name,
+                       application_id: application.id,
+                       context: @context
+                     )
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
@@ -506,6 +609,23 @@ module RailsErrorDashboard
       end
 
       # Find or create application for multi-app support
+      # Complete the fingerprint the request thread started, if it sent one.
+      # The request thread hashed the identity parts into an opaque value (no
+      # message text crosses the queue); this adds the application, which only
+      # a worker can resolve. Same two stages as the sync path, so a capture
+      # groups onto the same row whether it travelled through the queue or not.
+      def canonical_hash_from_identity(application)
+        opaque = @context[:_identity]
+        return nil unless opaque.is_a?(String) && opaque.present?
+
+        Services::ErrorHashGenerator.complete(opaque, application.id)
+      rescue => e
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] canonical_hash_from_identity failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
       def find_or_create_application
         app_name = RailsErrorDashboard.configuration.application_name ||
                    ENV["APPLICATION_NAME"] ||

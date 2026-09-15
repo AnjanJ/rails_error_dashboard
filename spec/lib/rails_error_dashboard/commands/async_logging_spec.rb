@@ -66,7 +66,11 @@ RSpec.describe "Async Error Logging", type: :integration do
           backtrace: [ "test.rb:1" ],
           cause_chain: nil
         ),
-        hash_including(_pre_filtered: true)
+        # _identity carries the fingerprint as an OPAQUE 16-char digest,
+        # hashed from the raw message on the request thread. No message text
+        # crosses the queue -- the payload above is redacted -- and the worker
+        # completes the hash by adding application_id.
+        hash_including(_pre_filtered: true, _identity: match(/\A[0-9a-f]{16}\z/))
       )
 
       RailsErrorDashboard::Commands::LogError.call(error, {})

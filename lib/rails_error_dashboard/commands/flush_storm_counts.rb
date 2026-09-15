@@ -129,13 +129,13 @@ module RailsErrorDashboard
         # from the exemplar (no backtrace/context was captured; the next
         # occurrence after the storm fills in detail via the normal path).
         #
-        # The exemplar message is RAW — the gate stores what the exception
-        # said so the canonical hash (computed above, from the raw message,
-        # exactly as the full path does) still lands on the same row. It must
-        # therefore go through the same redaction as LogError before it is
-        # persisted; storm protection and sensitive filtering are both on by
-        # default, and an incident is exactly when a password in a message
-        # must not reach the database.
+        # The exemplar message arrives ALREADY REDACTED: the gate filters it
+        # before buffering, because the buffer is shipped to StormFlushJob over
+        # a durable queue. Grouping does not depend on the raw text -- the gate
+        # hashed the identity from it and sent the digest along
+        # (opaque_identity) -- so this row still lands where the full capture
+        # path would put it. The filter below stays as a second line of
+        # defence for entries from an older release still in flight.
         create_attrs = {
           environment: env,
           application_id: application.id,
@@ -175,22 +175,24 @@ module RailsErrorDashboard
         Services::SensitiveDataFilter.filter_attributes({ message: message.to_s })[:message]
       end
 
-      # Mirrors ErrorHashGenerator.call exactly: same fields, same order,
-      # same normalization — so counts land on the same ErrorLog the full
-      # capture path would have used.
+      # Finishes the same two-stage fingerprint the full capture path uses, so
+      # counts land on the ErrorLog that path would have chosen.
       def canonical_hash(entry, application)
         return entry["custom_hash"] if entry["custom_hash"].present?
 
-        digest_input = [
-          entry["error_class"],
-          Services::ErrorHashGenerator.normalize_message(entry["message"]),
-          entry["first_app_frame"],
-          entry["controller_name"],
-          entry["action_name"],
-          application.id.to_s
-        ].compact.join("|")
+        # The gate hashed the identity from the RAW message and buffered only
+        # the digest; the buffered "message" is redacted, so recomputing from
+        # it here would produce a DIFFERENT fingerprint and storm counts would
+        # land on a different row than the full capture path.
+        opaque = entry["opaque_identity"].presence || Services::ErrorHashGenerator.opaque_identity(
+          error_class: entry["error_class"],
+          normalized_message: Services::ErrorHashGenerator.normalize_message(entry["message"]),
+          frames: entry["first_app_frame"],
+          controller_name: entry["controller_name"],
+          action_name: entry["action_name"]
+        )
 
-        Digest::SHA256.hexdigest(digest_input)[0..15]
+        Services::ErrorHashGenerator.complete(opaque, application.id)
       end
 
       # nil when the column is not migrated yet, so every environment clause
