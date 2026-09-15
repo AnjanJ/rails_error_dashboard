@@ -5,6 +5,19 @@ module RailsErrorDashboard
     # the request-scoped locale directly — see Concerns::LocalizedJob for why.
     include Concerns::LocalizedJob
 
+    # Polynomial backoff, as a Proc rather than the :polynomially_longer
+    # symbol.
+    #
+    # That symbol arrived in Rails 7.1; on 7.0 -- which this gem still
+    # supports -- retry_on raises "Couldn't determine a delay based on
+    # :polynomially_longer" the moment a retry is actually scheduled. The
+    # symbol therefore passed every 7.1+ CI row and failed every 7.0 one.
+    #
+    # This is the same formula Rails uses: (executions ** 4) + 2, with jitter.
+    POLYNOMIAL_BACKOFF = ->(executions) {
+      ((executions**4) + 2) + (Kernel.rand * (executions**4) * 0.15)
+    }
+
     # CRITICAL: Ensure job failures don't break the app or spam error logs
     # Retry failed jobs with polynomial backoff, but limit attempts.
     #
@@ -17,7 +30,7 @@ module RailsErrorDashboard
     # every job in the gem. The logging that block provided now runs from
     # retry_on's own exhaustion block, where it fires once, after the last
     # attempt, with the same detail.
-    retry_on StandardError, wait: :polynomially_longer, attempts: 3 do |job, error|
+    retry_on StandardError, wait: RailsErrorDashboard::ApplicationJob::POLYNOMIAL_BACKOFF, attempts: 3 do |job, error|
       Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} failed: #{error.class} - #{error.message}")
       Rails.logger.error("Job arguments: #{job.arguments.inspect}")
       Rails.logger.error("Attempt: #{job.executions}/3")

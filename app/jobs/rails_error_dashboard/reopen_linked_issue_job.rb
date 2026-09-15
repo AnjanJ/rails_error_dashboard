@@ -8,7 +8,7 @@ module RailsErrorDashboard
   class ReopenLinkedIssueJob < ApplicationJob
     queue_as :error_notifications
 
-    retry_on StandardError, wait: :polynomially_longer, attempts: 2
+    retry_on StandardError, wait: RailsErrorDashboard::ApplicationJob::POLYNOMIAL_BACKOFF, attempts: 2
     discard_on ActiveRecord::RecordNotFound
 
     def perform(error_log_id)

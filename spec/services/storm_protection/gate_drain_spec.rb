@@ -45,6 +45,9 @@ RSpec.describe "storm count drain" do
 
   describe ".flush_if_due! (end of every request and job)" do
     it "drains the buffer once the interval has elapsed" do
+      # Pin the interval: another spec leaves it at 3600 and only restores it
+      # in its own after-hook, so this example was order-dependent.
+      RailsErrorDashboard.configuration.storm_flush_interval_seconds = 30
       allow(gate).to receive(:monotonic_now).and_return(100.0)
       3.times { gate.admit!(boom) }
       expect(gate.count_buffer.any?).to be true

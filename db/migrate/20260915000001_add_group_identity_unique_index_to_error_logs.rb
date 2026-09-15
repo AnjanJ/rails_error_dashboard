@@ -122,7 +122,11 @@ class AddGroupIdentityUniqueIndexToErrorLogs < ActiveRecord::Migration[7.0]
   end
 
   def deduplicate_existing_groups!
-    duplicate_keys.each do |application_id, error_hash, environment, group_window|
+    duplicate_keys.each do |application_id, error_hash, env_key, window_key|
+      # '' is the COALESCE stand-in for NULL (see duplicate_keys).
+      environment = env_key.presence
+      group_window = window_key.presence
+
       scope = ErrorLogRow.where(application_id: application_id, error_hash: error_hash, resolved: false)
       scope = environment.nil? ? scope.where(environment: nil) : scope.where(environment: environment)
       scope = group_window.nil? ? scope.where(group_window: nil) : scope.where(group_window: group_window)
@@ -155,8 +159,16 @@ class AddGroupIdentityUniqueIndexToErrorLogs < ActiveRecord::Migration[7.0]
   # COALESCE mirrors the index expression, so a set of NULL-environment rows
   # counts as one group rather than as N distinct ones.
   def duplicate_keys
+    # PostgreSQL requires every selected column to appear in GROUP BY or an
+    # aggregate, so the COALESCE expressions are selected rather than the bare
+    # columns (SQLite tolerates the bare form; PG raises GroupingError).
+    # '' therefore means NULL here, which deduplicate_existing_groups! maps
+    # back when it scopes each group.
     connection.select_rows(<<~SQL)
-      SELECT application_id, error_hash, environment, group_window
+      SELECT application_id,
+             error_hash,
+             COALESCE(environment, '') AS env_key,
+             COALESCE(group_window, '') AS window_key
       FROM #{connection.quote_table_name(TABLE.to_s)}
       WHERE resolved = #{quoted_false}
       GROUP BY application_id, error_hash, COALESCE(environment, ''), COALESCE(group_window, '')
