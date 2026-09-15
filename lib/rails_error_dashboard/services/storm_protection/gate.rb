@@ -94,6 +94,64 @@ module RailsErrorDashboard
             @fingerprint_buckets ||= FingerprintBuckets.new
           end
 
+          # Drain the count buffer if the flush interval has elapsed.
+          #
+          # Wired to Rails.application.executor.to_complete, so it runs at the
+          # end of every request and every job. Without it the buffer is only
+          # ever drained by a LATER admit! on this process (see maybe_flush!),
+          # and the tail of a burst sits in memory indefinitely: when the
+          # errors stop, so does the only thing that would write them out.
+          #
+          # Interval-gated, so a flood does not turn into one enqueue per
+          # request -- the cost per call is a monotonic clock read and a
+          # comparison.
+          def flush_if_due!
+            return unless enabled?
+
+            maybe_flush!
+            nil
+          rescue => e
+            RailsErrorDashboard::Logger.debug(
+              "[RailsErrorDashboard] Gate.flush_if_due! failed: #{e.class} - #{e.message}"
+            )
+            nil
+          end
+
+          # Drain everything still buffered, NOW, whatever the interval says.
+          #
+          # Wired to at_exit. Everything counted since the last flush lives in
+          # this process's memory, so without this every deploy (SIGTERM) drops
+          # the tail of whatever was in flight.
+          #
+          # Writes SYNCHRONOUSLY rather than enqueueing: at process exit a job
+          # handed to the queue may never be picked up, and on an in-process
+          # adapter it certainly will not. This is the same choice
+          # RackAttackTracker#flush_all_threads! makes for the same reason.
+          #
+          # at_exit, not Signal.trap -- trapping would clobber Puma's USR1/USR2
+          # handlers (safety rule 9).
+          def drain!
+            return unless enabled?
+            return unless count_buffer.any? || breaker.episode_snapshot
+
+            snapshot = count_buffer.snapshot!
+            episode = breaker.episode_snapshot
+
+            Commands::FlushStormCounts.call(
+              entries: snapshot[:entries],
+              overflow: snapshot[:overflow],
+              episode: serialize_episode(episode)
+            )
+            breaker.clear_closed_episode!
+            nil
+          rescue => e
+            # A drain at shutdown must never raise into whatever is exiting.
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Gate.drain! failed: #{e.class} - #{e.message}"
+            )
+            nil
+          end
+
           # Test hook + fork hygiene: fresh state, no leftover episodes.
           def reset!
             @breaker = nil

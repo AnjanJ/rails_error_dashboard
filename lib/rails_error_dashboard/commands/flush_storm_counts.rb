@@ -31,18 +31,42 @@ module RailsErrorDashboard
         counted = 0
         failed = 0
 
-        @entries.each do |entry|
-          entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
-          counted += reconcile_entry(entry, application)
-        rescue => e
-          # A corrupt (non-Hash) entry must not abort the whole batch — and the
-          # log line itself must not assume `entry` is subscriptable (an Integer
-          # from a broken serializer would raise again here, escaping this rescue).
-          failed += 1
-          error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
-          RailsErrorDashboard::Logger.error(
-            "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
-          )
+        # Counts are applied additively (occurrence_count + N), which is not
+        # idempotent: delivering the same snapshot twice counted it twice. The
+        # realistic replay is this job's own retry -- StormFlushJob raises when
+        # a batch reconciles nothing, and ApplicationJob retries it three times
+        # with the identical payload -- and a queue that redelivers does the
+        # same.
+        #
+        # The batch digest is inserted in the SAME transaction as the
+        # increments, so either both land or neither does. A replay violates
+        # the unique index and is reported as already applied rather than
+        # counted again.
+        ledger = batch_ledger_entry
+        return already_applied_result if ledger == :already_applied
+
+        ErrorLog.transaction do
+          claim_batch!(ledger)
+
+          @entries.each do |entry|
+            entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
+            counted += reconcile_entry(entry, application)
+          rescue => e
+            # A corrupt (non-Hash) entry must not abort the whole batch — and the
+            # log line itself must not assume `entry` is subscriptable (an Integer
+            # from a broken serializer would raise again here, escaping this rescue).
+            failed += 1
+            error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
+            )
+          end
+
+          # Nothing was written, so there is nothing to protect from a replay:
+          # roll the claim back and let the job retry the whole batch.
+          raise ActiveRecord::Rollback if failed.positive? && counted.zero?
+
+          finalize_batch!(ledger, counted)
         end
 
         # Every entry failed and none was written. Reporting success with
@@ -65,6 +89,60 @@ module RailsErrorDashboard
       end
 
       private
+
+      # nil when the ledger is unavailable (table not migrated yet -- the
+      # command then behaves exactly as it did before), :already_applied when
+      # this exact batch is already recorded, otherwise the digest to claim.
+      def batch_ledger_entry
+        return nil unless ledger_available?
+
+        digest = StormFlushBatch.digest_for(
+          entries: @entries, overflow: @overflow, episode: @episode
+        )
+        return :already_applied if StormFlushBatch.exists?(digest: digest)
+
+        digest
+      rescue => e
+        # The ledger is a safety net, not a gate: if it cannot be consulted,
+        # reconcile anyway rather than dropping counts that exist nowhere else.
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] Storm batch ledger unavailable: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      def claim_batch!(digest)
+        return unless digest.is_a?(String)
+
+        StormFlushBatch.create!(
+          digest: digest,
+          entry_count: @entries.size,
+          occurrences_applied: 0,
+          applied_at: Time.current
+        )
+      end
+
+      # Record what the batch actually applied, for an operator reading the
+      # ledger. The row already exists; this only fills in the total.
+      def finalize_batch!(digest, counted)
+        return unless digest.is_a?(String)
+
+        StormFlushBatch.where(digest: digest).update_all(occurrences_applied: counted)
+      end
+
+      def already_applied_result
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Storm flush batch already applied — skipping replay"
+        )
+        { success: true, reconciled: 0, failed: 0, overflow: @overflow, already_applied: true }
+      end
+
+      def ledger_available?
+        defined?(StormFlushBatch) && StormFlushBatch.table_exists?
+      rescue StandardError
+        false
+      end
+
 
       def reconcile_entry(entry, application)
         count = entry["count"].to_i

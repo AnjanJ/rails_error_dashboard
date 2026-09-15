@@ -25,6 +25,7 @@ module RailsErrorDashboard
       # errors — clean them up BEFORE the early return below, which fires
       # whenever no error logs happen to be expired.
       cleanup_rack_attack_events(cutoff)
+      cleanup_storm_flush_batches(cutoff)
 
       expired_scope = ErrorLog.where("occurred_at < ?", cutoff)
       return 0 if expired_scope.none?
@@ -60,6 +61,30 @@ module RailsErrorDashboard
     end
 
     private
+
+    # Expire the storm batch ledger. Its only job is to make a replayed batch
+    # a no-op, and a replay arrives within the job's retry window (minutes),
+    # so rows well past the retention cutoff protect nothing. Own rescue, like
+    # the rack-attack cleanup: a failure here must never block error cleanup.
+    def cleanup_storm_flush_batches(cutoff)
+      return unless RailsErrorDashboard.configuration.enable_storm_protection
+      return unless StormFlushBatch.table_exists?
+
+      deleted = 0
+      StormFlushBatch.where("applied_at < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} storm flush batch records"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Storm flush batch retention cleanup failed: #{e.class} - #{e.message}"
+      )
+    end
 
     # Expire aggregated Rack Attack event rows. Isolated in its own rescue so a
     # failure here (e.g. table not yet migrated) never blocks error cleanup.
