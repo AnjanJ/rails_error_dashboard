@@ -601,6 +601,12 @@ fr:
         copy_curl_title: Copier la commande curl dans le presse-papiers
         copy_rspec: Copier en RSpec
         copy_rspec_title: Copier le request spec RSpec dans le presse-papiers
+        snapshot: 'Instantané :'
+        snapshot_captured_html: Capturé %{time}
+        snapshot_stale: issu d'une occurrence antérieure — les suivantes n'ont apporté aucun contexte
+        snapshot_fidelity_lite: capture réduite (la protection contre les storms a écarté les payloads de contexte)
+        snapshot_fidelity_minimal: comptabilisé pendant un storm — aucun contexte n'a été capturé
+        snapshot_unknown: capturé avant que RED n'enregistre la provenance des instantanés
       similar_errors:
         title: Erreurs similaires
         badge: Correspondance approximative

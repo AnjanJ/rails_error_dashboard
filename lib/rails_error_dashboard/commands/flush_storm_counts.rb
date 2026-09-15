@@ -150,6 +150,18 @@ module RailsErrorDashboard
           error_hash: error_hash,
           resolved: false
         }.compact
+
+        # This row is reconstructed from a counted-only exemplar: there is no
+        # backtrace beyond the first app frame and no context at all. Saying so
+        # is what lets the dashboard distinguish "nothing was captured" from
+        # "nothing happened", and what lets the next full capture upgrade the
+        # backtrace instead of leaving a bare path forever.
+        if ErrorLog.column_names.include?("context_fidelity")
+          create_attrs[:context_fidelity] = "minimal"
+        end
+        if ErrorLog.column_names.include?("context_captured_at")
+          create_attrs[:context_captured_at] = create_attrs[:occurred_at]
+        end
         ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
         count
       end

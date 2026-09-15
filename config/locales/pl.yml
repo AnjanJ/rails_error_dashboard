@@ -605,6 +605,12 @@ pl:
         copy_curl_title: Skopiuj polecenie curl do schowka
         copy_rspec: Skopiuj jako RSpec
         copy_rspec_title: Skopiuj request spec RSpec do schowka
+        snapshot: 'Migawka:'
+        snapshot_captured_html: Przechwycono %{time}
+        snapshot_stale: z wcześniejszego wystąpienia — późniejsze nie przyniosły kontekstu
+        snapshot_fidelity_lite: ograniczone przechwytywanie (ochrona przed storm odrzuciła payloady kontekstu)
+        snapshot_fidelity_minimal: zliczone podczas storm — nie przechwycono żadnego kontekstu
+        snapshot_unknown: przechwycono, zanim RED zaczął zapisywać pochodzenie migawek
       similar_errors:
         title: Podobne błędy
         badge: Dopasowanie rozmyte

@@ -526,6 +526,12 @@ ja:
         copy_curl_title: curl コマンドをクリップボードにコピー
         copy_rspec: RSpec としてコピー
         copy_rspec_title: RSpec のリクエストスペックをクリップボードにコピー
+        snapshot: 'スナップショット:'
+        snapshot_captured_html: '%{time} に取得'
+        snapshot_stale: より前の発生から取得 — それ以降の発生はコンテキストを伴いませんでした
+        snapshot_fidelity_lite: 縮小された取得 (storm 保護によりコンテキストの payload が破棄されました)
+        snapshot_fidelity_minimal: storm 中にカウントされました — コンテキストは取得されていません
+        snapshot_unknown: RED がスナップショットの出所を記録する前に取得されました
       similar_errors:
         title: 類似エラー
         badge: あいまい一致

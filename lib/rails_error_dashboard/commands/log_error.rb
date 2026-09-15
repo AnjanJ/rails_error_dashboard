@@ -504,8 +504,17 @@ module RailsErrorDashboard
         end
 
         # Find existing error or create new one
-        # This ensures accurate occurrence tracking
-        error_log = ErrorLog.find_or_increment_by_hash(error_hash, attributes.merge(error_hash: error_hash))
+        # This ensures accurate occurrence tracking.
+        #
+        # _context_fidelity travels with the attributes so the grouping command
+        # can tell a full capture from a shed one. A :lite capture carries no
+        # context payloads by design, and must not be recorded as though it
+        # refreshed the snapshot -- nor allowed to overwrite a good backtrace.
+        # It is stripped before the INSERT (it is a signal, not a column).
+        error_log = ErrorLog.find_or_increment_by_hash(
+          error_hash,
+          attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : "full")
+        )
 
         # OTel: now that the error_log exists, attach its id + dedup flag + severity
         # to the parent capture span so operators can correlate to dashboard URLs.

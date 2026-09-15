@@ -802,6 +802,26 @@ en:
         copy_rspec: "Copy as RSpec"
         copy_rspec_title: "Copy RSpec request spec to clipboard"
 
+        # Provenance for the diagnostic snapshot this page shows.
+        #
+        # An ErrorLog row is a GROUP, but its request context, breadcrumbs,
+        # locals and health describe ONE moment of failure -- refreshed by each
+        # occurrence that carried them, and deliberately left alone by one that
+        # did not. Without these labels the page presented that collection as
+        # "the error's context" with no way to tell which event supplied it.
+        snapshot: "Snapshot:"
+        # %{time} is a <span class="local-time"> element, hence _html.
+        snapshot_captured_html: "Captured %{time}"
+        # Shown when the snapshot predates the most recent occurrence: the
+        # counts moved on, this evidence did not.
+        snapshot_stale: "from an earlier occurrence — later ones carried no context"
+        # Capture fidelity. "minimal" rows are reconstructed by the storm flush
+        # from a counted-only event: the group is real and its count is exact,
+        # but no backtrace or context was ever captured for it.
+        snapshot_fidelity_lite: "reduced capture (storm protection shed the context payloads)"
+        snapshot_fidelity_minimal: "counted during a storm — no context was captured"
+        snapshot_unknown: "captured before RED recorded snapshot provenance"
+
       similar_errors:
         title: "Similar Errors"
         badge: "Fuzzy Matching"

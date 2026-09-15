@@ -600,6 +600,12 @@ pt-BR:
         copy_curl_title: Copiar o comando curl para a área de transferência
         copy_rspec: Copiar como RSpec
         copy_rspec_title: Copiar o request spec do RSpec para a área de transferência
+        snapshot: 'Instantâneo:'
+        snapshot_captured_html: Capturado %{time}
+        snapshot_stale: de uma ocorrência anterior — as posteriores não trouxeram contexto
+        snapshot_fidelity_lite: captura reduzida (a proteção contra storms descartou os payloads de contexto)
+        snapshot_fidelity_minimal: contabilizado durante um storm — nenhum contexto foi capturado
+        snapshot_unknown: capturado antes de o RED registrar a procedência dos instantâneos
       similar_errors:
         title: Erros semelhantes
         badge: Correspondência aproximada
