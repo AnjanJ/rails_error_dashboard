@@ -16,14 +16,15 @@ module RailsErrorDashboard
     # Counts are exact. Notifications are NOT dispatched from here — during a
     # storm they're suppressed by design; the storm notification covers it.
     class FlushStormCounts
-      def self.call(entries:, overflow: 0, episode: nil)
-        new(entries: entries, overflow: overflow, episode: episode).call
+      def self.call(entries:, overflow: 0, episode: nil, batch_id: nil)
+        new(entries: entries, overflow: overflow, episode: episode, batch_id: batch_id).call
       end
 
-      def initialize(entries:, overflow: 0, episode: nil)
+      def initialize(entries:, overflow: 0, episode: nil, batch_id: nil)
         @entries = Array(entries)
         @overflow = overflow.to_i
         @episode = episode
+        @batch_id = batch_id
       end
 
       def call
@@ -97,7 +98,7 @@ module RailsErrorDashboard
         return nil unless ledger_available?
 
         digest = StormFlushBatch.digest_for(
-          entries: @entries, overflow: @overflow, episode: @episode
+          entries: @entries, overflow: @overflow, episode: @episode, batch_id: @batch_id
         )
         return :already_applied if StormFlushBatch.exists?(digest: digest)
 

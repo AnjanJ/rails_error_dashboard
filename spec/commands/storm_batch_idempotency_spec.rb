@@ -85,6 +85,47 @@ RSpec.describe "storm batch idempotency" do
     expect(row.applied_at).to be_present
   end
 
+  # A content digest alone cannot tell two SEPARATE batches apart when they
+  # carry identical counts for the same fingerprints inside one second
+  # (snapshot timestamps are second-granular). The second would be dropped as
+  # a replay, losing real counts. CountBuffer#snapshot! therefore mints an id
+  # for each swap of the buffer: every entry in that batch left the buffer in
+  # that swap and appears in no other batch, while a retry carries the id
+  # unchanged.
+  describe "batch identity" do
+    it "applies two separate batches that happen to carry identical counts" do
+      first = flush.call(entries: [ entry ], batch_id: SecureRandom.uuid)
+      second = flush.call(entries: [ entry ], batch_id: SecureRandom.uuid)
+
+      expect(first).to include(reconciled: 5)
+      expect(second).to include(reconciled: 5)
+      expect(logs.sum(:occurrence_count)).to eq(10)
+    end
+
+    it "suppresses a replay of the same batch id" do
+      batch_id = SecureRandom.uuid
+
+      flush.call(entries: [ entry ], batch_id: batch_id)
+      replay = flush.call(entries: [ entry ], batch_id: batch_id)
+
+      expect(replay).to include(reconciled: 0, already_applied: true)
+      expect(logs.sum(:occurrence_count)).to eq(5)
+    end
+
+    it "mints a distinct id for every swap of the buffer" do
+      buffer = RailsErrorDashboard::Services::StormProtection::CountBuffer.new
+      parts = { error_class: "StandardError", message: "boom", first_app_frame: "/app/w.rb" }
+
+      buffer.record("k", parts)
+      first = buffer.snapshot!
+      buffer.record("k", parts)
+      second = buffer.snapshot!
+
+      expect(first[:batch_id]).to be_present
+      expect(second[:batch_id]).not_to eq(first[:batch_id])
+    end
+  end
+
   # A host upgrades the gem before it runs the migration. The ledger is a
   # safety net, not a gate: counts exist nowhere else, so reconcile anyway.
   it "reconciles normally when the ledger table has not been migrated yet" do

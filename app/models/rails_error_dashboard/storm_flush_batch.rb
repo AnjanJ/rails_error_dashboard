@@ -24,7 +24,13 @@ module RailsErrorDashboard
     # @param overflow [Integer]
     # @param episode [Hash, nil]
     # @return [String] 64-character hex digest
-    def self.digest_for(entries:, overflow: 0, episode: nil)
+    def self.digest_for(entries:, overflow: 0, episode: nil, batch_id: nil)
+      # A batch id minted when the buffer was swapped identifies this batch
+      # exactly: a retry carries the same one, and two separate batches never
+      # share one. The content digest below is the fallback for a caller that
+      # has none (an older in-flight job, or a direct call).
+      return Digest::SHA256.hexdigest("batch:#{batch_id}") if batch_id.present?
+
       parts = Array(entries).map { |entry|
         entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
         next nil unless entry.is_a?(Hash)

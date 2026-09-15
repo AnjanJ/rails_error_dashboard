@@ -140,7 +140,8 @@ module RailsErrorDashboard
             Commands::FlushStormCounts.call(
               entries: snapshot[:entries],
               overflow: snapshot[:overflow],
-              episode: serialize_episode(episode)
+              episode: serialize_episode(episode),
+              batch_id: snapshot[:batch_id]
             )
             breaker.clear_closed_episode!
             nil
@@ -314,7 +315,8 @@ module RailsErrorDashboard
               job = StormFlushJob.perform_later(
                 entries: snapshot[:entries],
                 overflow: snapshot[:overflow],
-                episode: serialize_episode(episode)
+                episode: serialize_episode(episode),
+                batch_id: snapshot[:batch_id]
               )
               # Active Job swallows ActiveJob::EnqueueError and returns false
               # (and a job that was not enqueued says so) — a failed handoff

@@ -11,11 +11,15 @@ module RailsErrorDashboard
 
     queue_as :default
 
-    def perform(entries: [], overflow: 0, episode: nil)
+    def perform(entries: [], overflow: 0, episode: nil, batch_id: nil)
       entries = entries.map { |e| e.respond_to?(:stringify_keys) ? e.stringify_keys : e }
       episode = episode.stringify_keys if episode.respond_to?(:stringify_keys)
 
-      result = Commands::FlushStormCounts.call(entries: entries, overflow: overflow, episode: episode)
+      # batch_id identifies THIS batch across retries: ApplicationJob replays
+      # the identical payload, and the ledger has to recognise it.
+      result = Commands::FlushStormCounts.call(
+        entries: entries, overflow: overflow, episode: episode, batch_id: batch_id
+      )
 
       # A batch that reconciled nothing because every write failed is not a
       # delivered batch. Fail the job so Active Job retries it rather than

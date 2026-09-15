@@ -108,7 +108,20 @@ module RailsErrorDashboard
             }
           end
 
-          { entries: entries, overflow: overflow }
+          # A unique identity for THIS swap of the buffer.
+          #
+          # The batch digest is built from the entries and their counts, which
+          # makes a replay recognisable -- but it also makes two SEPARATE
+          # batches indistinguishable when they happen to carry identical
+          # counts for the same fingerprints (timestamps are second-granular,
+          # so a storm flushing twice inside one second collides). The second
+          # batch would then be dropped as a replay, losing real counts.
+          #
+          # Minted here because this is the moment a batch comes into
+          # existence: every entry in it was removed from the buffer by this
+          # swap and appears in no other batch. A retry of the same batch
+          # carries the same id, which is exactly what the ledger must catch.
+          { entries: entries, overflow: overflow, batch_id: SecureRandom.uuid }
         end
 
         private
