@@ -8,10 +8,10 @@ body:
       value: |
         Thanks — this is genuinely useful.
 
-        Every language except English is **machine-translated and has not been
-        reviewed by a native speaker**. RED's maintainer reads only English, so
-        the people best placed to catch a wrong translation are the people
-        annoyed by it. That is you, right now.
+        French has been **reviewed by a native speaker**; every language except
+        English and French is **machine-translated and has not been**. RED's
+        maintainer reads only English, so the people best placed to catch a
+        wrong translation are the people annoyed by it. That is you, right now.
 
         **A one-key fix is a perfectly good contribution.** You are not
         expected to review the whole file, and you do not need to open a PR —

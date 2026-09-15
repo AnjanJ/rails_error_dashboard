@@ -23,11 +23,29 @@ module RailsErrorDashboard
         context[:_serialized_cause_chain] = exception_data[:cause_chain]
       end
 
-      # Log the error synchronously in the background job
-      # Call .new().call to bypass async check (we're already async)
-      Commands::LogError.new(exception, context).call
+      # Log the error synchronously in the background job.
+      # .new(...).call bypasses the async check (we're already async);
+      # worker: true makes an unreachable error store raise instead of being
+      # swallowed, so this job fails and retries rather than acknowledging a
+      # capture it never wrote.
+      Commands::LogError.new(exception, context, worker: true).call
+    rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
+      # The error database is unreachable. Protecting a user request and
+      # deciding whether a background job succeeded are different contracts:
+      # swallowing here told Active Job the capture was delivered when nothing
+      # was written, so the payload was gone for good. Let it fail instead and
+      # let retry_on schedule another attempt.
+      #
+      # Rails reports this job failure to Rails.error, so RED will try to
+      # capture it too; that capture fails the same way and is swallowed by
+      # LogError's own rescue. ErrorReporter's recursion guard (issue #114)
+      # plus the attempt cap bound this to a few wasted attempts, not a loop.
+      Rails.logger.error("AsyncErrorLoggingJob: error storage unavailable (#{e.class}: #{e.message}) — will retry")
+      raise
     rescue => e
-      # Don't let async job errors break the job queue
+      # A payload problem (unparseable arguments, a class that cannot be
+      # reconstructed). Retrying replays the identical payload, so it would
+      # fail identically three times and still be discarded. Log and drop.
       Rails.logger.error("AsyncErrorLoggingJob failed: #{e.message}")
       Rails.logger.error("Backtrace: #{e.backtrace&.first(5)&.join("\n")}")
     end

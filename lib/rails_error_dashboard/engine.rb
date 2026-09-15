@@ -109,6 +109,34 @@ module RailsErrorDashboard
         at_exit { RailsErrorDashboard::Services::RackAttackTracker.flush_all_threads! }
       end
 
+      # Drain the storm count buffer at the end of every request and job, and
+      # again at process exit.
+      #
+      # Counted-only events accumulate in this process's memory and were only
+      # ever written out by a LATER admit! reaching the flush interval (see
+      # Gate#maybe_flush!). That makes the drain conditional on the flood
+      # continuing: when the errors stop -- which is exactly when an operator
+      # starts looking -- the tail of the burst stays in memory indefinitely,
+      # and a deploy drops it.
+      #
+      # to_complete fires after the response body is closed, so the client
+      # already has its bytes and this never delays a request (safety rule 2).
+      # It also fires when the app raised, and is re-entrant, so nested
+      # executor blocks do not double-flush. The call is interval-gated, so a
+      # flood costs a clock read per request rather than an enqueue.
+      #
+      # at_exit drains unconditionally and writes synchronously: at shutdown a
+      # job handed to the queue may never be picked up. at_exit, not
+      # Signal.trap -- trapping would clobber Puma's USR1/USR2 handlers
+      # (safety rule 9).
+      if RailsErrorDashboard.configuration.enable_storm_protection
+        Rails.application.executor.to_complete do
+          RailsErrorDashboard::Services::StormProtection::Gate.flush_if_due!
+        end
+
+        at_exit { RailsErrorDashboard::Services::StormProtection::Gate.drain! }
+      end
+
       # Subscribe to ActionCable AS::Notifications events (requires breadcrumbs + ActionCable)
       if RailsErrorDashboard.configuration.enable_actioncable_tracking &&
          RailsErrorDashboard.configuration.enable_breadcrumbs &&

@@ -127,7 +127,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("issue", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "github")
+      error = find_error_by_issue(issue_number, "github", repo_from_payload("github", payload))
       return unless error
 
       case payload["action"]
@@ -146,7 +146,7 @@ module RailsErrorDashboard
       issue_iid = payload.dig("object_attributes", "iid")
       return unless issue_iid
 
-      error = find_error_by_issue(issue_iid, "gitlab")
+      error = find_error_by_issue(issue_iid, "gitlab", repo_from_payload("gitlab", payload))
       return unless error
 
       case action
@@ -164,7 +164,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("issue", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "codeberg")
+      error = find_error_by_issue(issue_number, "codeberg", repo_from_payload("codeberg", payload))
       return unless error
 
       case payload["action"]
@@ -185,7 +185,7 @@ module RailsErrorDashboard
       issue_number = payload.dig("data", "number")
       return unless issue_number
 
-      error = find_error_by_issue(issue_number, "linear")
+      error = find_error_by_issue(issue_number, "linear", repo_from_payload("linear", payload))
       return unless error
 
       state_type = payload.dig("data", "state", "type")
@@ -196,11 +196,84 @@ module RailsErrorDashboard
       end
     end
 
-    def find_error_by_issue(issue_number, provider)
-      ErrorLog.find_by(
+    # The repository (or Linear team) this payload is about.
+    #
+    # Every provider already sends it and RED already parses the rest of the
+    # payload around it; it was simply never read. Linear has no repository --
+    # issue numbers are scoped to a team, which is exactly why it needs this
+    # most -- so the team key is taken from the issue identifier ("ENG-123")
+    # or the team object.
+    def repo_from_payload(provider, payload)
+      case provider
+      when "github", "codeberg"
+        payload.dig("repository", "full_name")
+      when "gitlab"
+        payload.dig("project", "path_with_namespace") ||
+          payload.dig("object_attributes", "project", "path_with_namespace")
+      when "linear"
+        key = payload.dig("data", "team", "key")
+        key ||= payload.dig("data", "identifier").to_s[/\A([A-Za-z][A-Za-z0-9]*)-\d+\z/, 1]
+        key&.upcase
+      end
+    end
+
+    # Match the FULL issue identity: provider, number and repository.
+    #
+    # A validly signed webhook from one repository used to resolve an error
+    # linked to a different repository that happened to share an issue number.
+    # That is not a signature bypass -- the request is genuine -- but it acts
+    # on the wrong error, which matters for shared databases, several linked
+    # repositories, a repository rename, and Linear's team-scoped numbering.
+    #
+    # A row that DOES record a repository is never matched by a different one.
+    #
+    # Rows linked before the repository was recorded have NULL there, and
+    # cannot simply be adopted by whoever asks first -- that would leave the
+    # original defect intact for exactly the rows most likely to be affected.
+    # Their stored issue URL is corroborating evidence: it names the repository
+    # the link was made against. If it disagrees with the payload, this webhook
+    # is about a different issue that merely shares a number.
+    #
+    # Only a legacy row whose URL cannot be parsed at all (an unrecognised
+    # forge) falls back to matching on provider + number, as before -- there is
+    # no evidence either way there, and dropping the event would break a
+    # working link.
+    def find_error_by_issue(issue_number, provider, repo = nil)
+      scope = ErrorLog.where(
         external_issue_number: issue_number,
         external_issue_provider: provider
       )
+      return scope.first unless ErrorLog.column_names.include?("external_issue_repo")
+
+      return scope.first if repo.blank?
+
+      exact = scope.where(external_issue_repo: repo).first
+      return exact if exact
+
+      legacy = scope.where(external_issue_repo: nil).find { |error|
+        url_repo = repo_from_issue_url(provider, error.external_issue_url)
+        url_repo.nil? || url_repo.casecmp?(repo.to_s)
+      }
+      # The identity is now established, so the row is precise from here on.
+      legacy&.update_columns(external_issue_repo: repo)
+      legacy
+    end
+
+    # The repository a stored issue URL was linked against, using the same
+    # patterns LinkExistingIssue parses links with -- one definition, so the
+    # two can never disagree about what a URL means.
+    #
+    # nil when the URL is absent or from an unrecognised forge.
+    def repo_from_issue_url(provider, url)
+      return nil if url.blank?
+
+      pattern = Commands::LinkExistingIssue::PROVIDER_PATTERNS[provider.to_s.to_sym]
+      return nil unless pattern
+
+      match = url.match(pattern)
+      return nil unless match
+
+      provider.to_s == "linear" ? match[1].upcase : match[1]
     end
 
     def resolve_error(error, message)

@@ -16,35 +16,72 @@ module RailsErrorDashboard
     # Counts are exact. Notifications are NOT dispatched from here — during a
     # storm they're suppressed by design; the storm notification covers it.
     class FlushStormCounts
-      def self.call(entries:, overflow: 0, episode: nil)
-        new(entries: entries, overflow: overflow, episode: episode).call
+      def self.call(entries:, overflow: 0, episode: nil, batch_id: nil)
+        new(entries: entries, overflow: overflow, episode: episode, batch_id: batch_id).call
       end
 
-      def initialize(entries:, overflow: 0, episode: nil)
+      def initialize(entries:, overflow: 0, episode: nil, batch_id: nil)
         @entries = Array(entries)
         @overflow = overflow.to_i
         @episode = episode
+        @batch_id = batch_id
       end
 
       def call
         application = resolve_application
         counted = 0
+        failed = 0
 
-        @entries.each do |entry|
-          entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
-          counted += reconcile_entry(entry, application)
-        rescue => e
-          # A corrupt (non-Hash) entry must not abort the whole batch — and the
-          # log line itself must not assume `entry` is subscriptable (an Integer
-          # from a broken serializer would raise again here, escaping this rescue).
-          error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
-          RailsErrorDashboard::Logger.error(
-            "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
-          )
+        # Counts are applied additively (occurrence_count + N), which is not
+        # idempotent: delivering the same snapshot twice counted it twice. The
+        # realistic replay is this job's own retry -- StormFlushJob raises when
+        # a batch reconciles nothing, and ApplicationJob retries it three times
+        # with the identical payload -- and a queue that redelivers does the
+        # same.
+        #
+        # The batch digest is inserted in the SAME transaction as the
+        # increments, so either both land or neither does. A replay violates
+        # the unique index and is reported as already applied rather than
+        # counted again.
+        ledger = batch_ledger_entry
+        return already_applied_result if ledger == :already_applied
+
+        ErrorLog.transaction do
+          claim_batch!(ledger)
+
+          @entries.each do |entry|
+            entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
+            counted += reconcile_entry(entry, application)
+          rescue => e
+            # A corrupt (non-Hash) entry must not abort the whole batch — and the
+            # log line itself must not assume `entry` is subscriptable (an Integer
+            # from a broken serializer would raise again here, escaping this rescue).
+            failed += 1
+            error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
+            )
+          end
+
+          # Nothing was written, so there is nothing to protect from a replay:
+          # roll the claim back and let the job retry the whole batch.
+          raise ActiveRecord::Rollback if failed.positive? && counted.zero?
+
+          finalize_batch!(ledger, counted)
+        end
+
+        # Every entry failed and none was written. Reporting success with
+        # reconciled: 0 made a total loss indistinguishable from an empty
+        # batch, so the job acknowledged counts that never reached the
+        # database. Partial success stays successful: the entries that were
+        # written are written, and replaying the batch would double them.
+        if failed.positive? && counted.zero?
+          return { success: false, reconciled: 0, failed: failed, overflow: @overflow,
+                   error: "all #{failed} entries failed to reconcile" }
         end
 
         upsert_storm_event(counted)
-        { success: true, reconciled: counted, overflow: @overflow }
+        { success: true, reconciled: counted, failed: failed, overflow: @overflow }
       rescue => e
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] FlushStormCounts failed: #{e.class} - #{e.message}"
@@ -53,6 +90,60 @@ module RailsErrorDashboard
       end
 
       private
+
+      # nil when the ledger is unavailable (table not migrated yet -- the
+      # command then behaves exactly as it did before), :already_applied when
+      # this exact batch is already recorded, otherwise the digest to claim.
+      def batch_ledger_entry
+        return nil unless ledger_available?
+
+        digest = StormFlushBatch.digest_for(
+          entries: @entries, overflow: @overflow, episode: @episode, batch_id: @batch_id
+        )
+        return :already_applied if StormFlushBatch.exists?(digest: digest)
+
+        digest
+      rescue => e
+        # The ledger is a safety net, not a gate: if it cannot be consulted,
+        # reconcile anyway rather than dropping counts that exist nowhere else.
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] Storm batch ledger unavailable: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      def claim_batch!(digest)
+        return unless digest.is_a?(String)
+
+        StormFlushBatch.create!(
+          digest: digest,
+          entry_count: @entries.size,
+          occurrences_applied: 0,
+          applied_at: Time.current
+        )
+      end
+
+      # Record what the batch actually applied, for an operator reading the
+      # ledger. The row already exists; this only fills in the total.
+      def finalize_batch!(digest, counted)
+        return unless digest.is_a?(String)
+
+        StormFlushBatch.where(digest: digest).update_all(occurrences_applied: counted)
+      end
+
+      def already_applied_result
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Storm flush batch already applied — skipping replay"
+        )
+        { success: true, reconciled: 0, failed: 0, overflow: @overflow, already_applied: true }
+      end
+
+      def ledger_available?
+        defined?(StormFlushBatch) && StormFlushBatch.table_exists?
+      rescue StandardError
+        false
+      end
+
 
       def reconcile_entry(entry, application)
         count = entry["count"].to_i
@@ -117,13 +208,13 @@ module RailsErrorDashboard
         # from the exemplar (no backtrace/context was captured; the next
         # occurrence after the storm fills in detail via the normal path).
         #
-        # The exemplar message is RAW — the gate stores what the exception
-        # said so the canonical hash (computed above, from the raw message,
-        # exactly as the full path does) still lands on the same row. It must
-        # therefore go through the same redaction as LogError before it is
-        # persisted; storm protection and sensitive filtering are both on by
-        # default, and an incident is exactly when a password in a message
-        # must not reach the database.
+        # The exemplar message arrives ALREADY REDACTED: the gate filters it
+        # before buffering, because the buffer is shipped to StormFlushJob over
+        # a durable queue. Grouping does not depend on the raw text -- the gate
+        # hashed the identity from it and sent the digest along
+        # (opaque_identity) -- so this row still lands where the full capture
+        # path would put it. The filter below stays as a second line of
+        # defence for entries from an older release still in flight.
         create_attrs = {
           environment: env,
           application_id: application.id,
@@ -138,6 +229,18 @@ module RailsErrorDashboard
           error_hash: error_hash,
           resolved: false
         }.compact
+
+        # This row is reconstructed from a counted-only exemplar: there is no
+        # backtrace beyond the first app frame and no context at all. Saying so
+        # is what lets the dashboard distinguish "nothing was captured" from
+        # "nothing happened", and what lets the next full capture upgrade the
+        # backtrace instead of leaving a bare path forever.
+        if ErrorLog.column_names.include?("context_fidelity")
+          create_attrs[:context_fidelity] = "minimal"
+        end
+        if ErrorLog.column_names.include?("context_captured_at")
+          create_attrs[:context_captured_at] = create_attrs[:occurred_at]
+        end
         ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
         count
       end
@@ -163,22 +266,24 @@ module RailsErrorDashboard
         Services::SensitiveDataFilter.filter_attributes({ message: message.to_s })[:message]
       end
 
-      # Mirrors ErrorHashGenerator.call exactly: same fields, same order,
-      # same normalization — so counts land on the same ErrorLog the full
-      # capture path would have used.
+      # Finishes the same two-stage fingerprint the full capture path uses, so
+      # counts land on the ErrorLog that path would have chosen.
       def canonical_hash(entry, application)
         return entry["custom_hash"] if entry["custom_hash"].present?
 
-        digest_input = [
-          entry["error_class"],
-          Services::ErrorHashGenerator.normalize_message(entry["message"]),
-          entry["first_app_frame"],
-          entry["controller_name"],
-          entry["action_name"],
-          application.id.to_s
-        ].compact.join("|")
+        # The gate hashed the identity from the RAW message and buffered only
+        # the digest; the buffered "message" is redacted, so recomputing from
+        # it here would produce a DIFFERENT fingerprint and storm counts would
+        # land on a different row than the full capture path.
+        opaque = entry["opaque_identity"].presence || Services::ErrorHashGenerator.opaque_identity(
+          error_class: entry["error_class"],
+          normalized_message: Services::ErrorHashGenerator.normalize_message(entry["message"]),
+          frames: entry["first_app_frame"],
+          controller_name: entry["controller_name"],
+          action_name: entry["action_name"]
+        )
 
-        Digest::SHA256.hexdigest(digest_input)[0..15]
+        Services::ErrorHashGenerator.complete(opaque, application.id)
       end
 
       # nil when the column is not migrated yet, so every environment clause

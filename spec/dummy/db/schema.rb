@@ -16,7 +16,7 @@
 # (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
 # carry the 250 limit the MySQL index-key migration leaves them with.
 # bin/check-schema-parity compares this file with the migrations.
-ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_15_000004) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -34,6 +34,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.index [ "period_hour" ], name: "index_rack_attack_events_on_period_hour"
     t.index [ "rule", "match_type", "discriminator", "path", "period_hour", "application_id" ], name: "index_rack_attack_events_upsert_key", unique: true
     t.index [ "rule", "period_hour" ], name: "index_rack_attack_events_on_rule_and_hour"
+  end
+
+  create_table "rails_error_dashboard_storm_flush_batches", force: :cascade do |t|
+    t.string "digest", limit: 64, null: false
+    t.integer "entry_count", default: 0, null: false
+    t.bigint "occurrences_applied", default: 0, null: false
+    t.datetime "applied_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "applied_at" ], name: "index_storm_flush_batches_on_applied_at"
+    t.index [ "digest" ], name: "index_storm_flush_batches_on_digest", unique: true
   end
 
   create_table "rails_error_dashboard_storm_events", force: :cascade do |t|
@@ -157,6 +168,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.string "external_issue_url"
     t.integer "external_issue_number"
     t.string "external_issue_provider", limit: 20
+    t.string "external_issue_repo", limit: 255
     t.bigint "application_id", null: false
     t.text "exception_cause"
     t.string "http_method", limit: 10
@@ -169,6 +181,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.text "system_health"
     t.text "local_variables"
     t.text "instance_variables"
+    t.string "group_window", limit: 10
+    t.datetime "context_captured_at"
+    t.string "context_fidelity", limit: 10
     t.index [ "app_version" ], name: "index_rails_error_dashboard_error_logs_on_app_version"
     t.index [ "application_id", "occurred_at" ], name: "index_error_logs_on_app_occurred"
     t.index [ "application_id", "resolved" ], name: "index_error_logs_on_app_resolved"
@@ -176,6 +191,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.index [ "backtrace_signature" ], name: "index_rails_error_dashboard_error_logs_on_backtrace_signature"
     t.index [ "controller_name", "action_name", "error_hash" ], name: "index_error_logs_on_controller_action_hash"
     t.index [ "error_hash", "resolved", "occurred_at" ], name: "index_error_logs_on_hash_resolved_occurred"
+    t.index [ "external_issue_provider", "external_issue_number", "external_issue_repo" ], name: "index_error_logs_on_issue_identity"
     t.index [ "error_hash" ], name: "index_rails_error_dashboard_error_logs_on_error_hash"
     t.index [ "error_type", "occurred_at" ], name: "index_error_logs_on_error_type_and_occurred_at"
     t.index [ "error_type" ], name: "index_rails_error_dashboard_error_logs_on_error_type"
@@ -197,6 +213,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_08_220001) do
     t.index [ "resolved" ], name: "index_rails_error_dashboard_error_logs_on_resolved"
     t.index [ "similarity_score" ], name: "index_rails_error_dashboard_error_logs_on_similarity_score"
     t.index [ "user_id" ], name: "index_rails_error_dashboard_error_logs_on_user_id"
+    t.index "application_id, error_hash, COALESCE(environment,''), COALESCE(group_window,'')", name: "index_error_logs_on_group_identity", unique: true, where: "resolved = false"
   end
 
   create_table "rails_error_dashboard_swallowed_exceptions", force: :cascade do |t|

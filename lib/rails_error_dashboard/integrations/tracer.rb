@@ -65,15 +65,33 @@ module RailsErrorDashboard
         # @yieldparam span [NoopSpan, ::OpenTelemetry::Trace::Span] real or no-op
         # @return [Object] whatever the block returns
         def in_span(name, kind: :capture, attributes: {})
-          return yield(NOOP_SPAN) unless emit?(kind)
+          # The work block must run AT MOST ONCE. Everything that can fail
+          # before it is entered (emit? checks, tracer construction, attribute
+          # merging, the SDK's own span setup) falls back to a no-op span and
+          # runs the block once, here. Once the block has been entered, its
+          # own exceptions belong to the caller and propagate untouched —
+          # they must never re-enter the block.
+          #
+          # This method previously wrapped the yield in a rescue that yielded
+          # again on failure. A downstream failure AFTER the work completed
+          # (a notification dispatcher raising, say) therefore re-ran the whole
+          # capture: one exception became two occurrences and two count
+          # increments, with OTel disabled, for every user. The `entered` flag
+          # is what makes "at most once" structural rather than incidental.
+          entered = false
 
-          tr = tracer
-          return yield(NOOP_SPAN) unless tr
+          tr = (tracer if emit?(kind))
+
+          unless tr
+            entered = true
+            return yield(NOOP_SPAN)
+          end
 
           full_name = "#{INSTRUMENTATION_NAME}.#{name}"
           merged = base_attributes.merge(safe_stringify(attributes))
 
           tr.in_span(full_name, attributes: merged) do |span|
+            entered = true
             begin
               yield span
             rescue StandardError => e
@@ -82,9 +100,10 @@ module RailsErrorDashboard
             end
           end
         rescue StandardError => e
-          # Tracer internals failed (e.g. OTel SDK threw on add_span). Fall back
-          # to running the block with a no-op so the host app never sees a crash
-          # caused by the tracer.
+          # Only reachable while the block has NOT run: tracer internals failed
+          # during setup. Re-raise anything that escaped the block itself.
+          raise if entered
+
           Logger.debug("[RailsErrorDashboard] Tracer.in_span(#{name.inspect}) failed: #{e.class}: #{e.message}")
           yield NOOP_SPAN
         end

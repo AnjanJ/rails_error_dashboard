@@ -56,7 +56,8 @@ unwinds the stack.
 
 Run RED with your application's database or an isolated error database, on
 PostgreSQL, MySQL/Trilogy or SQLite. The dashboard is translated into 11
-languages (machine-translated outside English, awaiting native review). A
+languages (French native-reviewed; the rest machine-translated and awaiting
+native review). A
 self-hosted Sentry alternative that keeps error data in your own database. The
 gem is MIT and free forever.
 

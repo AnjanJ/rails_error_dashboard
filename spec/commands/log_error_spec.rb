@@ -1187,3 +1187,141 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
     end
   end
 end
+
+RSpec.describe "LogError — one capture, one occurrence" do
+  # Regression cluster for the capture-path "execute at most once" invariant.
+  #
+  # Before this was fixed, Tracer.in_span rescued around its own yield: any
+  # exception raised AFTER the row was persisted (notification dispatch, a host
+  # subscriber on our AS::Notifications event) re-ran the entire capture block,
+  # so one exception became two occurrences and two count increments. Making the
+  # block run once then exposed the other half of the problem — the failure
+  # escaped to LogError's outer rescue, which returned nil for a capture that
+  # had in fact succeeded. Both halves are asserted here.
+  before do
+    RailsErrorDashboard.reset_configuration!
+    RailsErrorDashboard.configuration.enable_storm_protection = false
+    RailsErrorDashboard.configuration.async_logging = false
+    RailsErrorDashboard.configuration.enable_otel_export = false
+    allow(RailsErrorDashboard::Services::ErrorBroadcaster).to receive(:available?).and_return(false)
+  end
+
+  after { RailsErrorDashboard.reset_configuration! }
+
+  def boom
+    StandardError.new("capture-once boom").tap do |e|
+      e.set_backtrace([ "#{Rails.root}/app/models/widget.rb:12:in 'explode'" ])
+    end
+  end
+
+  context "when the notification dispatcher raises after persistence" do
+    before do
+      allow(RailsErrorDashboard::Services::ErrorNotificationDispatcher)
+        .to receive(:call).and_raise(IOError, "notification channel down")
+    end
+
+    it "creates exactly one error log" do
+      expect { RailsErrorDashboard::Commands::LogError.call(boom) }
+        .to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+    end
+
+    it "counts the event exactly once" do
+      RailsErrorDashboard::Commands::LogError.call(boom)
+      expect(RailsErrorDashboard::ErrorLog.sole.occurrence_count).to eq(1)
+    end
+
+    it "records exactly one occurrence row" do
+      RailsErrorDashboard::Commands::LogError.call(boom)
+      expect(RailsErrorDashboard::ErrorOccurrence.count).to eq(1)
+    end
+
+    it "still returns the persisted record — the capture succeeded" do
+      result = RailsErrorDashboard::Commands::LogError.call(boom)
+
+      expect(result).to be_a(RailsErrorDashboard::ErrorLog)
+      expect(result).to be_persisted
+    end
+
+    it "logs the dispatch failure instead of swallowing it silently" do
+      expect(RailsErrorDashboard::Logger)
+        .to receive(:error).with(/Failed to dispatch notification/).at_least(:once)
+
+      RailsErrorDashboard::Commands::LogError.call(boom)
+    end
+  end
+
+  context "when a host instrumentation subscriber raises" do
+    # AS::Notifications re-raises subscriber exceptions to the instrumenting
+    # caller, so a buggy host subscriber must not abort an persisted capture.
+    around do |example|
+      subscription = ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do |*|
+        raise IOError, "host subscriber blew up"
+      end
+      example.run
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+
+    it "creates exactly one error log with a count of one" do
+      result = RailsErrorDashboard::Commands::LogError.call(boom)
+
+      expect(RailsErrorDashboard::ErrorLog.count).to eq(1)
+      expect(RailsErrorDashboard::ErrorLog.sole.occurrence_count).to eq(1)
+      expect(result).to be_a(RailsErrorDashboard::ErrorLog)
+    end
+  end
+end
+
+RSpec.describe "LogError — worker vs request failure contracts" do
+  # The capture path's blanket rescue exists so a failing capture can never
+  # break a user's request (safety rule 1). A background worker has the
+  # opposite obligation: if the store was unreachable, it did NOT deliver the
+  # capture, and returning normally discards the payload. Same command, two
+  # contracts, selected by the `worker:` flag.
+  before do
+    RailsErrorDashboard.reset_configuration!
+    RailsErrorDashboard.configuration.enable_storm_protection = false
+    RailsErrorDashboard.configuration.async_logging = false
+    allow(RailsErrorDashboard::Services::ErrorBroadcaster).to receive(:available?).and_return(false)
+  end
+
+  after { RailsErrorDashboard.reset_configuration! }
+
+  def boom
+    StandardError.new("contract boom").tap { |e| e.set_backtrace([ "#{Rails.root}/app/models/widget.rb:1:in 'go'" ]) }
+  end
+
+  context "when the error store is unreachable" do
+    before do
+      allow(RailsErrorDashboard::ErrorLog).to receive(:transaction)
+        .and_raise(ActiveRecord::ConnectionNotEstablished, "db down")
+    end
+
+    it "never raises on the request path" do
+      expect { RailsErrorDashboard::Commands::LogError.call(boom) }.not_to raise_error
+    end
+
+    it "returns nil on the request path" do
+      expect(RailsErrorDashboard::Commands::LogError.call(boom)).to be_nil
+    end
+
+    it "raises in worker mode so the job can be retried" do
+      expect {
+        RailsErrorDashboard::Commands::LogError.new(boom, {}, worker: true).call
+      }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+    end
+  end
+
+  context "when the failure is not about reaching the store" do
+    before do
+      allow(RailsErrorDashboard::Services::ErrorHashGenerator)
+        .to receive(:call).and_raise(ArgumentError, "bad payload")
+    end
+
+    it "stays swallowed even in worker mode — a retry would fail identically" do
+      expect {
+        RailsErrorDashboard::Commands::LogError.new(boom, {}, worker: true).call
+      }.not_to raise_error
+    end
+  end
+end

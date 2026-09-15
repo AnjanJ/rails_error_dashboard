@@ -61,19 +61,20 @@ When suggesting a feature, please use our [feature request template](.github/ISS
 
 **This is the easiest way to help, and the one we most need.**
 
-RED's dashboard ships in eleven languages. Every one except English is
-machine-translated and **has not been reviewed by a native speaker** — the
-maintainer reads only English. Structure and plural rules are verified
-mechanically; wording, register and idiom are verified by nobody.
+RED's dashboard ships in eleven languages. French has been **reviewed by a
+native speaker**; every one except English and French is machine-translated and
+**has not been** — the maintainer reads only English. Structure and plural
+rules are verified mechanically; wording, register and idiom are verified by
+nobody.
 
-If you read any of German, Spanish, French, Brazilian Portuguese, Japanese,
-Russian, Ukrainian, Polish, Italian or Simplified Chinese, you can fix that:
+If you read any of German, Spanish, Brazilian Portuguese, Japanese, Russian,
+Ukrainian, Polish, Italian or Simplified Chinese, you can fix that:
 
 - **Just report it** — [open a translation correction issue](.github/ISSUE_TEMPLATE/translation_report.yml).
   No Ruby, no PR, no need to find the key.
 - **Or fix it yourself** — every string is one value in one YAML file under
   `config/locales/`. Change the value, run `bin/i18n-check`, open the PR.
-- **Or take a whole language** — [each locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review)
+- **Or take a whole language** — [each unreviewed locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review)
   tracking its review, labelled `good first issue`.
 
 **A one-key PR is a perfectly good PR.** You are not expected to review a whole

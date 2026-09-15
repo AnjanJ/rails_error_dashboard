@@ -1,6 +1,6 @@
 # RED dashboard translations — fr
 #
-# MACHINE-TRANSLATED AND NOT REVIEWED BY A NATIVE SPEAKER.
+# COMMUNITY-REVIEWED BY A NATIVE SPEAKER (v0.11.5, #201, issue #158).
 # See docs/guides/TRANSLATIONS.md. Corrections are welcome, and a one-key
 # pull request is a perfectly good pull request.
 #
@@ -601,6 +601,12 @@ fr:
         copy_curl_title: Copier la commande curl dans le presse-papiers
         copy_rspec: Copier en RSpec
         copy_rspec_title: Copier le request spec RSpec dans le presse-papiers
+        snapshot: 'Instantané :'
+        snapshot_captured_html: Capturé %{time}
+        snapshot_stale: issu d'une occurrence antérieure — les suivantes n'ont apporté aucun contexte
+        snapshot_fidelity_lite: capture réduite (la protection contre les storms a écarté les payloads de contexte)
+        snapshot_fidelity_minimal: comptabilisé pendant un storm — aucun contexte n'a été capturé
+        snapshot_unknown: capturé avant que RED n'enregistre la provenance des instantanés
       similar_errors:
         title: Erreurs similaires
         badge: Correspondance approximative
@@ -961,6 +967,9 @@ fr:
         alert_view: Voir
         error_rate: Taux d'erreur
         error_rate_hint: Erreurs par heure aujourd'hui
+        rate_per_hour: "%{value}/h"
+        affected_users_incomplete: au moins — la protection contre les storms a écarté le détail par événement
+        data_unavailable: Les statistiques sont indisponibles pour le moment — les chiffres ci-dessous ne sont pas une mesure.
         unresolved: Non résolues
         unresolved_hint: En attente de résolution
         resolution_rate: Taux de résolution

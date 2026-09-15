@@ -679,14 +679,14 @@ end
 
 ## Languages
 
-RED ships in English with machine-translated previews for ten additional languages, covering the dashboard, its emails and its notification payloads. Native-speaking Rails developers are invited to review and improve them; once a locale has been reviewed it will be marked individually as community-reviewed. Eleven locales ship:
+RED ships in English, with French reviewed by a native speaker and machine-translated previews for nine further languages, covering the dashboard, its emails and its notification payloads. Native-speaking Rails developers are invited to review and improve them; once a locale has been reviewed it is marked individually as community-reviewed, as French now is. Eleven locales ship:
 
 | Locale | Language | Status |
 |---|---|---|
 | `en` | English | Source language |
 | `de` | Deutsch | Machine-translated, unreviewed |
 | `es` | Español | Machine-translated, unreviewed |
-| `fr` | Français | Machine-translated, unreviewed |
+| `fr` | Français | Community-reviewed by a native speaker |
 | `pt-BR` | Português (Brasil) | Machine-translated, unreviewed |
 | `ja` | 日本語 | Machine-translated, unreviewed |
 | `ru` | Русский | Machine-translated, unreviewed |
@@ -701,9 +701,9 @@ config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it, zh-
 
 Users can also switch language per-session from the picker in the dashboard navbar, which overrides the configured default for them alone.
 
-**Everything but English is machine-translated and has not been reviewed by a native speaker.** That is stated plainly rather than as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
+**French has been reviewed by a native speaker; everything but English and French is machine-translated and has not been.** That is stated plainly rather than as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; outside French, wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
 
-**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
+**Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every unreviewed locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
 
 RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
 

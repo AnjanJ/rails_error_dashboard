@@ -13,8 +13,22 @@ RSpec.describe RailsErrorDashboard::BaselineCalculationJob, type: :job do
     expect(RailsErrorDashboard::ErrorBaseline.where(error_type: "NoMethodError", platform: "API").count).to be > 0
   end
 
-  it "re-raises so the queue's retry policy applies" do
+  # Two layers: #perform is where the failure is raised, perform_now is where
+  # ApplicationJob's retry_on catches it and schedules another attempt. This
+  # used to be one assertion on perform_now, which passed only because
+  # retry_on was shadowed by a rescue_from that re-raised past it -- so "the
+  # queue's retry policy" never actually ran. Pin both layers so a shadowed
+  # retry handler fails the suite instead of going unnoticed.
+  it "raises out of #perform so the failure is not silently swallowed" do
     allow(RailsErrorDashboard::Services::BaselineCalculator).to receive(:calculate_all_baselines).and_raise(RuntimeError, "db gone")
-    expect { described_class.perform_now }.to raise_error(RuntimeError, "db gone")
+    expect { described_class.new.perform }.to raise_error(RuntimeError, "db gone")
+  end
+
+  it "schedules a retry rather than reporting success" do
+    allow(RailsErrorDashboard::Services::BaselineCalculator).to receive(:calculate_all_baselines).and_raise(RuntimeError, "db gone")
+
+    expect {
+      described_class.perform_now
+    }.to change { described_class.queue_adapter.enqueued_jobs.count { |j| j[:job] == described_class } }.by(1)
   end
 end

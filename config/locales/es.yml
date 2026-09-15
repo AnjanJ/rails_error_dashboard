@@ -602,6 +602,12 @@ es:
         copy_curl_title: Copiar el comando curl al portapapeles
         copy_rspec: Copiar como RSpec
         copy_rspec_title: Copiar el request spec de RSpec al portapapeles
+        snapshot: 'Instantánea:'
+        snapshot_captured_html: Capturada %{time}
+        snapshot_stale: de una aparición anterior — las posteriores no aportaron contexto
+        snapshot_fidelity_lite: captura reducida (la protección ante storms descartó los payloads de contexto)
+        snapshot_fidelity_minimal: contabilizado durante un storm — no se capturó ningún contexto
+        snapshot_unknown: capturada antes de que RED registrara la procedencia de las instantáneas
       similar_errors:
         title: Errores similares
         badge: Coincidencia aproximada
@@ -960,6 +966,9 @@ es:
         alert_view: Ver
         error_rate: Tasa de error
         error_rate_hint: Errores por hora hoy
+        rate_per_hour: "%{value}/h"
+        affected_users_incomplete: al menos — la protección ante storms descartó el detalle por evento
+        data_unavailable: Las estadísticas no están disponibles por ahora — las cifras siguientes no son una medición.
         unresolved: Sin resolver
         unresolved_hint: Pendientes de resolución
         resolution_rate: Tasa de resolución

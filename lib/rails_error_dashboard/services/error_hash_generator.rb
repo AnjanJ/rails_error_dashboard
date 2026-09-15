@@ -27,19 +27,59 @@ module RailsErrorDashboard
         custom = try_custom_fingerprint(exception, context)
         return custom if custom
 
-        normalized_message = normalize_message(exception.message)
-        file_path = extract_app_frame_from_locations(exception) || extract_app_frame(exception.backtrace)
+        complete(
+          opaque_identity(
+            error_class: exception.class.name,
+            normalized_message: normalize_message(exception.message),
+            frames: extract_app_frame_from_locations(exception) || extract_app_frame(exception.backtrace),
+            controller_name: controller_name,
+            action_name: action_name
+          ),
+          application_id
+        )
+      end
 
+      # The half of the fingerprint that needs no database.
+      #
+      # WHY THE HASH IS TWO-STAGE: capture identity has to be computed from the
+      # RAW message (redacting first would re-group every error whose message
+      # contains a filtered key), but the async and storm paths compute it on
+      # the request thread and hand it to a worker over a queue. Shipping the
+      # raw message to do that put secrets in the queue's backing store, its
+      # backups and any job-argument logging -- the error row was redacted, the
+      # payload was not.
+      #
+      # Hashing the identity parts here makes the value that crosses the queue
+      # opaque and irreversible, so no message text needs to travel for
+      # grouping to work. The worker calls .complete with application_id, which
+      # it can resolve because it is allowed to touch the database.
+      #
+      # application_id is NOT part of this digest: resolving it means
+      # Application.find_or_create_by_name, a write, and the capture path
+      # promises no I/O on the request thread.
+      #
+      # @return [String] 16-character hex digest of the non-application parts
+      def self.opaque_identity(error_class:, normalized_message:, frames:, controller_name: nil, action_name: nil)
         digest_input = [
-          exception.class.name,
+          error_class,
           normalized_message,
-          file_path,
+          frames,
           controller_name,
-          action_name,
-          application_id.to_s
+          action_name
         ].compact.join("|")
 
         Digest::SHA256.hexdigest(digest_input)[0..15]
+      end
+
+      # Combine an opaque identity with the application to get the canonical
+      # error_hash. Every path -- sync capture, async worker, storm flush --
+      # finishes here, so a fingerprint is the same value however it travelled.
+      #
+      # @param opaque [String] from .opaque_identity (or a custom fingerprint)
+      # @param application_id [Integer, nil]
+      # @return [String] 16-character hex hash
+      def self.complete(opaque, application_id)
+        Digest::SHA256.hexdigest("#{opaque}|#{application_id}")[0..15]
       end
 
       # Generate hash from error attributes (used by ErrorLog model callback)
@@ -52,19 +92,21 @@ module RailsErrorDashboard
       # @param application_id [Integer, nil] Application for per-app deduplication
       # @return [String] 16-character hex hash
       def self.from_attributes(error_type:, message: nil, backtrace: nil, controller_name: nil, action_name: nil, application_id: nil)
-        normalized_message = ErrorNormalizer.normalize(message)
-        significant_frames = ErrorNormalizer.extract_significant_frames(backtrace, count: 3)
-
-        digest_input = [
-          error_type,
-          normalized_message,
-          significant_frames,
-          controller_name,
-          action_name,
-          application_id.to_s
-        ].compact.join("|")
-
-        Digest::SHA256.hexdigest(digest_input)[0..15]
+        # Deliberately a DIFFERENT recipe from .call: ErrorNormalizer's smarter
+        # normalization and three significant frames, rather than a prefix of
+        # the message and one app frame. The two entry points have always
+        # produced different hashes for the same error; unifying them would
+        # re-group every existing row. They share only the two-stage shape.
+        complete(
+          opaque_identity(
+            error_class: error_type,
+            normalized_message: ErrorNormalizer.normalize(message),
+            frames: ErrorNormalizer.extract_significant_frames(backtrace, count: 3),
+            controller_name: controller_name,
+            action_name: action_name
+          ),
+          application_id
+        )
       end
 
       # Only this many leading characters of the RAW message take part in the

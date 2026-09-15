@@ -577,6 +577,12 @@ de:
         copy_curl_title: curl-Befehl in die Zwischenablage kopieren
         copy_rspec: Als RSpec kopieren
         copy_rspec_title: RSpec-Request-Spec in die Zwischenablage kopieren
+        snapshot: 'Momentaufnahme:'
+        snapshot_captured_html: Erfasst %{time}
+        snapshot_stale: aus einem früheren Auftreten — spätere lieferten keinen Kontext
+        snapshot_fidelity_lite: reduzierte Erfassung (der Storm-Schutz hat die Kontext-Payloads verworfen)
+        snapshot_fidelity_minimal: während eines Storms gezählt — es wurde kein Kontext erfasst
+        snapshot_unknown: erfasst, bevor RED die Herkunft von Momentaufnahmen aufzeichnete
       similar_errors:
         title: Ähnliche Fehler
         badge: Unscharfer Abgleich
@@ -930,6 +936,9 @@ de:
         alert_view: Ansehen
         error_rate: Fehlerrate
         error_rate_hint: Fehler pro Stunde heute
+        rate_per_hour: "%{value}/Std."
+        affected_users_incomplete: mindestens — der Storm-Schutz hat Detaildaten pro Ereignis verworfen
+        data_unavailable: Statistiken sind derzeit nicht verfügbar — die Zahlen unten sind keine Messung.
         unresolved: Offen
         unresolved_hint: Behebung ausstehend
         resolution_rate: Behebungsquote

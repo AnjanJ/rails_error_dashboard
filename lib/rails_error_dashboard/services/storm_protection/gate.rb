@@ -94,6 +94,65 @@ module RailsErrorDashboard
             @fingerprint_buckets ||= FingerprintBuckets.new
           end
 
+          # Drain the count buffer if the flush interval has elapsed.
+          #
+          # Wired to Rails.application.executor.to_complete, so it runs at the
+          # end of every request and every job. Without it the buffer is only
+          # ever drained by a LATER admit! on this process (see maybe_flush!),
+          # and the tail of a burst sits in memory indefinitely: when the
+          # errors stop, so does the only thing that would write them out.
+          #
+          # Interval-gated, so a flood does not turn into one enqueue per
+          # request -- the cost per call is a monotonic clock read and a
+          # comparison.
+          def flush_if_due!
+            return unless enabled?
+
+            maybe_flush!
+            nil
+          rescue => e
+            RailsErrorDashboard::Logger.debug(
+              "[RailsErrorDashboard] Gate.flush_if_due! failed: #{e.class} - #{e.message}"
+            )
+            nil
+          end
+
+          # Drain everything still buffered, NOW, whatever the interval says.
+          #
+          # Wired to at_exit. Everything counted since the last flush lives in
+          # this process's memory, so without this every deploy (SIGTERM) drops
+          # the tail of whatever was in flight.
+          #
+          # Writes SYNCHRONOUSLY rather than enqueueing: at process exit a job
+          # handed to the queue may never be picked up, and on an in-process
+          # adapter it certainly will not. This is the same choice
+          # RackAttackTracker#flush_all_threads! makes for the same reason.
+          #
+          # at_exit, not Signal.trap -- trapping would clobber Puma's USR1/USR2
+          # handlers (safety rule 9).
+          def drain!
+            return unless enabled?
+            return unless count_buffer.any? || breaker.episode_snapshot
+
+            snapshot = count_buffer.snapshot!
+            episode = breaker.episode_snapshot
+
+            Commands::FlushStormCounts.call(
+              entries: snapshot[:entries],
+              overflow: snapshot[:overflow],
+              episode: serialize_episode(episode),
+              batch_id: snapshot[:batch_id]
+            )
+            breaker.clear_closed_episode!
+            nil
+          rescue => e
+            # A drain at shutdown must never raise into whatever is exiting.
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Gate.drain! failed: #{e.class} - #{e.message}"
+            )
+            nil
+          end
+
           # Test hook + fork hygiene: fresh state, no leftover episodes.
           def reset!
             @breaker = nil
@@ -167,14 +226,37 @@ module RailsErrorDashboard
           end
 
           def identity_key(parts)
-            "#{parts[:error_class]}|#{ErrorHashGenerator.normalize_message(parts[:message])}|" \
-              "#{parts[:first_app_frame]}|#{parts[:controller_name]}|#{parts[:action_name]}"
+            parts[:opaque_identity] || ErrorHashGenerator.opaque_identity(
+              error_class: parts[:error_class],
+              normalized_message: ErrorHashGenerator.normalize_message(parts[:message]),
+              frames: parts[:first_app_frame],
+              controller_name: parts[:controller_name],
+              action_name: parts[:action_name]
+            )
           end
 
           def gate_parts(exception, context)
+            raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
+
             {
               error_class: exception.class.name,
-              message: exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT],
+              # The identity is hashed from the RAW message here, on the hot
+              # path, and only the digest is buffered. The message itself is
+              # redacted before it goes in the buffer, because the buffer is
+              # shipped to StormFlushJob -- a durable queue on Sidekiq or Solid
+              # Queue. It survives as an exemplar for the minimal ErrorLog row
+              # a first-seen fingerprint gets, which FlushStormCounts would
+              # redact at INSERT anyway; doing it here means the secret never
+              # reaches the queue's backing store at all.
+              opaque_identity: ErrorHashGenerator.opaque_identity(
+                error_class: exception.class.name,
+                normalized_message: ErrorHashGenerator.normalize_message(raw_message),
+                frames: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                        ErrorHashGenerator.extract_app_frame(exception.backtrace),
+                controller_name: context[:controller_name]&.to_s,
+                action_name: context[:action_name]&.to_s
+              ),
+              message: redact(raw_message),
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
@@ -201,6 +283,18 @@ module RailsErrorDashboard
             nil
           end
 
+          # Memoized ActiveSupport::ParameterFilter, no I/O -- safe on the hot
+          # path. Fails open to the raw message only if filtering itself
+          # breaks, which FlushStormCounts would then still redact at INSERT.
+          def redact(message)
+            return message if message.blank?
+            return message unless RailsErrorDashboard.configuration.filter_sensitive_data
+
+            SensitiveDataFilter.filter_attributes({ message: message })[:message] || message
+          rescue StandardError
+            message
+          end
+
           def probe_counter
             @probe_counter ||= Concurrent::AtomicFixnum.new(0)
           end
@@ -221,14 +315,14 @@ module RailsErrorDashboard
               job = StormFlushJob.perform_later(
                 entries: snapshot[:entries],
                 overflow: snapshot[:overflow],
-                episode: serialize_episode(episode)
+                episode: serialize_episode(episode),
+                batch_id: snapshot[:batch_id]
               )
               # Active Job swallows ActiveJob::EnqueueError and returns false
               # (and a job that was not enqueued says so) — a failed handoff
               # that never raises.
-              unless enqueued?(job)
-                reason = (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) || "enqueue returned #{job.inspect}"
-                raise "StormFlushJob was not enqueued: #{reason}"
+              unless ApplicationJob.enqueued?(job)
+                raise "StormFlushJob was not enqueued: #{ApplicationJob.enqueue_failure_reason(job)}"
               end
             rescue => e
               # The queue is often the very thing that is down during a storm
@@ -247,13 +341,6 @@ module RailsErrorDashboard
             RailsErrorDashboard::Logger.error(
               "[RailsErrorDashboard] Storm flush failed: #{e.class} - #{e.message}"
             )
-          end
-
-          def enqueued?(job)
-            return false unless job
-            return job.successfully_enqueued? if job.respond_to?(:successfully_enqueued?)
-
-            true
           end
 
           def serialize_episode(episode)

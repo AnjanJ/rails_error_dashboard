@@ -608,6 +608,12 @@ ru:
         copy_curl_title: Скопировать команду curl в буфер обмена
         copy_rspec: Скопировать как RSpec
         copy_rspec_title: Скопировать request-спеку RSpec в буфер обмена
+        snapshot: 'Снимок:'
+        snapshot_captured_html: 'Получен %{time}'
+        snapshot_stale: из более раннего появления — последующие не содержали контекста
+        snapshot_fidelity_lite: сокращённый сбор (защита от storm отбросила payload контекста)
+        snapshot_fidelity_minimal: учтено во время storm — контекст не собирался
+        snapshot_unknown: получен до того, как RED начал записывать происхождение снимков
       similar_errors:
         title: Похожие ошибки
         badge: Нечёткое совпадение
@@ -971,6 +977,9 @@ ru:
         alert_view: Открыть
         error_rate: Частота ошибок
         error_rate_hint: Ошибок в час за сегодня
+        rate_per_hour: "%{value}/ч"
+        affected_users_incomplete: не менее — защита от storm отбросила детализацию по событиям
+        data_unavailable: Статистика сейчас недоступна — приведённые ниже числа не являются измерением.
         unresolved: Не решено
         unresolved_hint: Ожидают решения
         resolution_rate: Доля решённых

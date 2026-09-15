@@ -606,6 +606,12 @@ uk:
         copy_curl_title: Скопіювати команду curl у буфер обміну
         copy_rspec: Скопіювати як RSpec
         copy_rspec_title: Скопіювати request spec RSpec у буфер обміну
+        snapshot: 'Знімок:'
+        snapshot_captured_html: 'Отримано %{time}'
+        snapshot_stale: з ранішого випадку — подальші не містили контексту
+        snapshot_fidelity_lite: скорочений збір (захист від storm відкинув payload контексту)
+        snapshot_fidelity_minimal: враховано під час storm — контекст не збирався
+        snapshot_unknown: отримано до того, як RED почав записувати походження знімків
       similar_errors:
         title: Схожі помилки
         badge: Нечітке зіставлення
@@ -968,6 +974,9 @@ uk:
         alert_view: Переглянути
         error_rate: Частота помилок
         error_rate_hint: Помилок за годину сьогодні
+        rate_per_hour: "%{value}/год"
+        affected_users_incomplete: щонайменше — захист від storm відкинув деталізацію за подіями
+        data_unavailable: Статистика зараз недоступна — наведені нижче числа не є вимірюванням.
         unresolved: Не вирішено
         unresolved_hint: Очікують вирішення
         resolution_rate: Частка вирішених

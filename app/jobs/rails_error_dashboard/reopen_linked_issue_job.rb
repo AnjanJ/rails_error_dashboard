@@ -8,14 +8,16 @@ module RailsErrorDashboard
   class ReopenLinkedIssueJob < ApplicationJob
     queue_as :error_notifications
 
-    retry_on StandardError, wait: :polynomially_longer, attempts: 2
+    retry_on StandardError, wait: RailsErrorDashboard::ApplicationJob::POLYNOMIAL_BACKOFF, attempts: 2
     discard_on ActiveRecord::RecordNotFound
 
     def perform(error_log_id)
       error = ErrorLog.find(error_log_id)
       return unless error.external_issue_url.present? && error.external_issue_number.present?
 
-      client = Services::IssueTrackerClient.from_config
+      # The repository this issue was actually opened in, not whatever the
+      # global configuration currently points at.
+      client = Services::IssueTrackerClient.for_error(error)
       return unless client
 
       # Reopen the issue

@@ -173,7 +173,20 @@ end
 puts ""
 
 # ---------------------------------------------------------------------------
-# J7: Deduplication works across upgrade boundary
+# J7: Deduplication across the upgrade boundary
+#
+# The fingerprint recipe changed in this release: error_hash is now computed in
+# two stages, so that the async and storm paths can send an opaque identity
+# over the queue instead of the raw error message (which carried secrets into
+# the queue's backing store). A row written by the PUBLISHED gem therefore
+# carries an old-format hash that a post-upgrade capture cannot match.
+#
+# That is a deliberate, documented one-time regrouping, so what this phase
+# verifies is that it happens CLEANLY:
+#
+#   - the old group keeps its own count and history (nothing is rewritten)
+#   - the recurrence opens a NEW group rather than being lost
+#   - from then on, dedup works normally against that new group
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("J7: Deduplication across upgrade boundary")
 
@@ -184,9 +197,10 @@ old_dedup = RailsErrorDashboard::ErrorLog
 
 if old_dedup
   old_count = old_dedup.occurrence_count
+  old_hash = old_dedup.error_hash
+  old_id = old_dedup.id
 
-  # Log the same error again — should dedup into existing record
-  begin
+  capture_old_dedup = lambda do
     error = RuntimeError.new(old_dedup.message)
     error.set_backtrace(old_dedup.backtrace.to_s.split("\n"))
     raise error
@@ -198,14 +212,46 @@ if old_dedup
     })
   end
 
+  first_after_upgrade = capture_old_dedup.call
+
   old_dedup.reload
-  assert "J7: occurrence_count incremented", old_dedup.occurrence_count > old_count,
+  assert "J7: the pre-upgrade group keeps its own count",
+    old_dedup.occurrence_count == old_count,
     "was #{old_count}, now #{old_dedup.occurrence_count}"
+  assert "J7: the pre-upgrade group keeps its history", old_dedup.id == old_id
+
+  assert "J7: the recurrence was captured, not lost", first_after_upgrade.present?
+
+  if first_after_upgrade
+    assert "J7: the recurrence opened a new group (fingerprints were rebuilt)",
+      first_after_upgrade.id != old_id
+    assert "J7: the new group carries a new-format hash",
+      first_after_upgrade.error_hash != old_hash
+
+    # The regrouping is ONE time. Everything captured after the upgrade must
+    # dedupe onto the new group exactly as it always did.
+    second_after_upgrade = capture_old_dedup.call
+
+    assert "J7: a later capture dedupes onto the new group",
+      second_after_upgrade&.id == first_after_upgrade.id
+    assert "J7: occurrence_count increments on the new group",
+      first_after_upgrade.reload.occurrence_count >= 2,
+      "got #{first_after_upgrade.occurrence_count}"
+  end
 end
 puts ""
 
 # ---------------------------------------------------------------------------
-# J8: Auto-reopen works on old resolved errors
+# J8: Auto-reopen across the upgrade boundary
+#
+# Same cause as J7: a row resolved under the published gem carries an
+# old-format hash, so a recurrence after the upgrade cannot match it and
+# cannot reopen it. The resolved row stays resolved and keeps its resolution
+# metadata; the recurrence opens a new unresolved group.
+#
+# Reopen itself is NOT broken -- phase_j verifies it within one version, and
+# the unit suite covers it directly. What is verified here is that the
+# regrouping neither loses the recurrence nor corrupts the resolved record.
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("J8: Auto-reopen on old resolved errors")
 
@@ -213,9 +259,10 @@ old_resolved = RailsErrorDashboard::ErrorLog.where(resolved: true).first
 
 if old_resolved
   old_id = old_resolved.id
+  old_hash = old_resolved.error_hash
+  resolved_by = old_resolved.resolved_by_name
 
-  # Re-raise the same error — should reopen the resolved record
-  begin
+  recurrence = begin
     error = old_resolved.error_type.constantize.new(old_resolved.message)
     error.set_backtrace(old_resolved.backtrace.to_s.split("\n"))
     raise error
@@ -228,12 +275,44 @@ if old_resolved
   end
 
   old_resolved.reload
-  assert "J8: resolved error reopened", old_resolved.resolved == false
-  assert "J8: status back to new", old_resolved.status == "new"
+  assert "J8: the pre-upgrade resolved row stays resolved", old_resolved.resolved == true
+  assert "J8: it keeps its resolution metadata", old_resolved.resolved_by_name == resolved_by
   assert "J8: same record ID", old_resolved.id == old_id
 
-  if columns.include?("reopened_at")
-    assert "J8: reopened_at set", old_resolved.reopened_at.present?
+  assert "J8: the recurrence was captured, not lost", recurrence.present?
+
+  if recurrence
+    assert "J8: the recurrence opened a new unresolved group",
+      recurrence.id != old_id && recurrence.resolved == false
+    assert "J8: the new group carries a new-format hash",
+      recurrence.error_hash != old_hash
+
+    # Reopen still works -- against a group whose hash this version wrote.
+    resolved_again = RailsErrorDashboard::Commands::ResolveError.call(
+      recurrence.id, resolved_by_name: "NewGandalf", resolution_comment: "Fixed after upgrade"
+    )
+    assert "J8: the new group can be resolved", resolved_again.present?
+
+    reopened = begin
+      error = recurrence.error_type.constantize.new(recurrence.message)
+      error.set_backtrace(recurrence.backtrace.to_s.split("\n"))
+      raise error
+    rescue => e
+      log_error_and_find(e, {
+        controller_name: "old_controller",
+        action_name: "index",
+        platform: "Web"
+      })
+    end
+
+    recurrence.reload
+    assert "J8: reopen works within this version", recurrence.resolved == false
+    assert "J8: status back to new", recurrence.status == "new"
+    assert "J8: same record reopened", reopened&.id == recurrence.id
+
+    if columns.include?("reopened_at")
+      assert "J8: reopened_at set", recurrence.reopened_at.present?
+    end
   end
 end
 puts ""

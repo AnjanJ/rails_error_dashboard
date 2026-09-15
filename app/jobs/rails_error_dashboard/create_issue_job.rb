@@ -12,7 +12,7 @@ module RailsErrorDashboard
   class CreateIssueJob < ApplicationJob
     queue_as :error_notifications
 
-    retry_on StandardError, wait: :polynomially_longer, attempts: 3
+    retry_on StandardError, wait: RailsErrorDashboard::ApplicationJob::POLYNOMIAL_BACKOFF, attempts: 3
     discard_on ActiveRecord::RecordNotFound
 
     # Simple circuit breaker — class-level failure tracking

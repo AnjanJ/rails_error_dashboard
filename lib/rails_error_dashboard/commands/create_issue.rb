@@ -42,11 +42,19 @@ module RailsErrorDashboard
         result = client.create_issue(title: title, body: body, labels: labels)
 
         if result[:success]
-          error.update!(
+          attrs = {
             external_issue_url: result[:url],
             external_issue_number: result[:number],
             external_issue_provider: config.effective_issue_tracker_provider.to_s
-          )
+          }
+          # Record WHICH repository (or Linear team) this issue was opened in,
+          # so a later webhook, comment or close targets that one rather than
+          # whatever the global configuration happens to say at the time.
+          if ErrorLog.column_names.include?("external_issue_repo")
+            attrs[:external_issue_repo] = config.effective_issue_tracker_repo
+          end
+
+          error.update!(attrs)
           { success: true, issue_url: result[:url], issue_number: result[:number] }
         else
           { success: false, error: result[:error] }

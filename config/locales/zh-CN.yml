@@ -523,6 +523,12 @@ zh-CN:
         copy_curl_title: 复制 curl 命令到剪贴板
         copy_rspec: 复制为 RSpec
         copy_rspec_title: 复制 RSpec request spec 到剪贴板
+        snapshot: '快照:'
+        snapshot_captured_html: 捕获于 %{time}
+        snapshot_stale: 来自更早的一次发生 — 之后的发生未携带上下文
+        snapshot_fidelity_lite: 已精简的捕获（storm 保护丢弃了上下文 payload）
+        snapshot_fidelity_minimal: 在 storm 期间计数 — 未捕获任何上下文
+        snapshot_unknown: 在 RED 记录快照来源之前捕获
       similar_errors:
         title: 相似错误
         badge: 模糊匹配
@@ -832,6 +838,9 @@ zh-CN:
         alert_view: 查看
         error_rate: 错误率
         error_rate_hint: 今日每小时错误数
+        rate_per_hour: "%{value}/小时"
+        affected_users_incomplete: 至少 — storm 保护丢弃了逐事件的明细
+        data_unavailable: 统计数据当前不可用 — 下方数字并非测量结果。
         unresolved: 未解决
         unresolved_hint: 等待处理
         resolution_rate: 解决率

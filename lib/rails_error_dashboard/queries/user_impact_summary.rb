@@ -37,15 +37,16 @@ module RailsErrorDashboard
       end
 
       def build_entries
-        # Group by error_type, count distinct users and total occurrences
-        user_counts = base_scope
-          .group(:error_type)
-          .distinct
-          .count(:user_id)
+        # Distinct users per error type, from OCCURRENCE rows: the group's
+        # user_id is overwritten by each new occurrence, so counting it
+        # distinct across groups reported five users hitting one error as one.
+        user_counts = distinct_users_by_type
 
+        # EVENTS per type, not groups. occurrence_count is exact and includes
+        # storm-shed events, which create no occurrence row.
         occurrence_counts = base_scope
           .group(:error_type)
-          .count
+          .sum(:occurrence_count)
 
         total_users = effective_total_users
 
@@ -73,10 +74,59 @@ module RailsErrorDashboard
       def build_summary(entries)
         {
           total_error_types_with_users: entries.size,
-          total_unique_users_affected: entries.sum { |e| e[:unique_users] },
+          # Summing per-type distinct counts counted one user once per type
+          # they hit. One distinct count across the whole window is the actual
+          # number of people affected.
+          total_unique_users_affected: total_distinct_users(entries),
           most_impactful: entries.first&.dig(:error_type),
           total_users: effective_total_users
         }
+      end
+
+      def occurrences_available?
+        defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
+      rescue StandardError
+        false
+      end
+
+      # error_type => distinct users who actually experienced it.
+      def distinct_users_by_type
+        unless occurrences_available?
+          return base_scope.group(:error_type).distinct.count(:user_id)
+        end
+
+        occurrences = ErrorOccurrence.table_name
+        logs = ErrorLog.table_name
+        scope = ErrorOccurrence.joins(:error_log)
+                               .where("#{occurrences}.occurred_at >= ?", @start_date)
+                               .where.not(occurrences => { user_id: nil })
+        scope = scope.where(logs => { application_id: @application_id }) if @application_id.present?
+
+        counts = scope.group("#{logs}.error_type").distinct.count("#{occurrences}.user_id")
+        # An error whose events predate occurrence tracking still belongs in
+        # the list; fall back to the group's own user for those types.
+        fallback = base_scope.group(:error_type).distinct.count(:user_id)
+        fallback.merge(counts) { |_type, old_count, new_count| [ old_count, new_count ].max }
+      rescue StandardError
+        base_scope.group(:error_type).distinct.count(:user_id)
+      end
+
+      # One distinct count over the whole window, not a sum of per-type counts.
+      def total_distinct_users(entries)
+        unless occurrences_available?
+          return base_scope.distinct.count(:user_id)
+        end
+
+        occurrences = ErrorOccurrence.table_name
+        logs = ErrorLog.table_name
+        scope = ErrorOccurrence.joins(:error_log)
+                               .where("#{occurrences}.occurred_at >= ?", @start_date)
+                               .where.not(occurrences => { user_id: nil })
+        scope = scope.where(logs => { application_id: @application_id }) if @application_id.present?
+
+        [ scope.distinct.count("#{occurrences}.user_id"), entries.map { |e| e[:unique_users] }.max.to_i ].max
+      rescue StandardError
+        entries.sum { |e| e[:unique_users] }
       end
 
       def effective_total_users

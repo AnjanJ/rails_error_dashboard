@@ -63,6 +63,44 @@ module RailsErrorDashboard
         nil
       end
 
+      # Build a client for the identity an ERROR is actually linked to, rather
+      # than whatever the global configuration currently points at.
+      #
+      # An outbound comment or close must reach the repository the issue was
+      # opened in. With the repo taken from configuration, re-pointing
+      # issue_tracker_repo (or running one database across several apps) sent
+      # those calls to the wrong repository -- against an issue number that
+      # exists in both.
+      #
+      # Falls back to the configured repo when the error predates the recorded
+      # identity, which is the previous behaviour.
+      #
+      # @param error [ErrorLog]
+      # @return [IssueTrackerClient, nil]
+      def self.for_error(error)
+        config = RailsErrorDashboard.configuration
+        return nil unless config.enable_issue_tracking
+
+        provider = error.external_issue_provider.presence || config.effective_issue_tracker_provider
+        return nil unless provider
+
+        repo = nil
+        if error.respond_to?(:external_issue_repo)
+          repo = error.external_issue_repo.presence
+        end
+        repo ||= config.effective_issue_tracker_repo
+
+        token = config.effective_issue_tracker_token
+        return nil unless token && repo
+
+        self.for(provider, token: token, repo: repo, api_url: config.effective_issue_tracker_api_url)
+      rescue => e
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] IssueTrackerClient.for_error failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
       def initialize(token:, repo:, api_url: nil)
         @token = token
         @repo = repo
