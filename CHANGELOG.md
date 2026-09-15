@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
-* repair the nine verified correctness findings from the 0.11.9 review ([#215](https://github.com/AnjanJ/rails_error_dashboard/issues/215)) ([8d43eeb](https://github.com/AnjanJ/rails_error_dashboard/commit/8d43eeb2972d8b35a36be18f38b6b2ecada83531)), closes [#218](https://github.com/AnjanJ/rails_error_dashboard/issues/218)
+* repair the nine verified correctness findings from the 0.11.9 review ([#215](https://github.com/AnjanJ/rails_error_dashboard/issues/215)) ([8d43eeb](https://github.com/AnjanJ/rails_error_dashboard/commit/8d43eeb2972d8b35a36be18f38b6b2ecada83531))
 
 
 ### 📚 Documentation
