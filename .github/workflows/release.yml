@@ -69,6 +69,29 @@ jobs:
         uses: rubygems/release-gem@v1
         # No API key needed! Trusted publishing handles authentication via OIDC
 
+    outputs:
+      # Consumed by the smoke-test job below, which cannot detect a release on
+      # its own -- see the comment on that job.
+      release_created: ${{ steps.release.outputs.release_created }}
+
+  # Smoke-test the live demo once a release has actually published.
+  #
+  # smoke-test-demo.yml declares `on: release: [published]` as well, and that
+  # trigger has never once fired: release-please creates the release with the
+  # default GITHUB_TOKEN, and GitHub does not raise workflow events for
+  # anything that token creates (it is the standard guard against recursive
+  # workflow runs). Calling the workflow from here is what makes the
+  # post-release check actually run, without introducing a PAT whose only
+  # purpose would be to defeat that guard.
+  #
+  # The demo deploys from its own repository on push, so this is a check that
+  # the released gem works against the deployed site -- not a deploy gate.
+  smoke-test:
+    needs: release
+    if: ${{ github.event_name == 'push' && needs.release.outputs.release_created }}
+    uses: ./.github/workflows/smoke-test-demo.yml
+    secrets: inherit
+
   # Manual escape hatch: republishes the gem at the current version on main
   # WITHOUT going through release-please. Use this when:
   #   - The automated `release` job above created a tag + GitHub release but

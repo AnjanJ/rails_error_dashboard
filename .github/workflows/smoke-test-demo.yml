@@ -4,9 +4,22 @@ name: Smoke Test Demo Site
 # and on a regular schedule to ensure demo stays healthy
 
 on:
-  # Run after successful releases
-  release:
-    types: [published]
+  # Called by release.yml once a release is actually published.
+  #
+  # This does NOT use `on: release`. release-please creates the release with
+  # the default GITHUB_TOKEN, and GitHub deliberately does not raise workflow
+  # triggers for events created by that token -- it is how recursive workflow
+  # loops are prevented. So `release: [published]` is syntactically valid,
+  # silently never fires, and this workflow ran on its schedule only: 15 runs,
+  # every one of them `schedule`, none on a release. The fix is to have the
+  # workflow that DOES know a release happened call this one directly.
+  workflow_call:
+    inputs:
+      dashboard_url:
+        description: 'Dashboard URL to test'
+        required: false
+        type: string
+        default: 'https://rails-error-dashboard.anjan.dev'
 
   # Run daily at 6am UTC to monitor demo health
   schedule:
@@ -18,11 +31,22 @@ on:
       dashboard_url:
         description: 'Dashboard URL to test'
         required: false
+        type: string
         default: 'https://rails-error-dashboard.anjan.dev'
 
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
+
+    # Declared here rather than left to the caller. A called workflow inherits
+    # the CALLER's permissions, and release.yml grants only contents,
+    # pull-requests and id-token -- so the failure-notification step below
+    # (issues.create) would 403 when this runs from a release, while working
+    # fine on the schedule, where the repo default applies. Stating what this
+    # workflow needs keeps both entry points working.
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout code
@@ -30,7 +54,7 @@ jobs:
 
       - name: Run smoke tests against demo site
         env:
-          DASHBOARD_URL: ${{ github.event.inputs.dashboard_url || 'https://rails-error-dashboard.anjan.dev' }}
+          DASHBOARD_URL: ${{ inputs.dashboard_url || 'https://rails-error-dashboard.anjan.dev' }}
           DASHBOARD_USER: ${{ secrets.DEMO_USER || 'gandalf' }}
           DASHBOARD_PASSWORD: ${{ secrets.DEMO_PASSWORD || 'youshallnotpass' }}
         run: |
