@@ -16,20 +16,28 @@ RSpec.describe RailsErrorDashboard::Commands::ScrubInvalidEncoding do
     connection.execute("UPDATE #{table} SET #{column} = CAST(X'#{hex}' AS TEXT) WHERE id = #{id.to_i}")
   end
 
+  # The bytes as the database holds them. The model scrubs on load, so reading
+  # through it can no longer show whether a row is still bad on disk.
+  def stored(table, column, id)
+    connection.select_value("SELECT #{column} FROM #{table} WHERE id = #{id.to_i}")
+  end
+
   before { skip "raw invalid bytes can only be stored on SQLite here" unless sqlite }
 
   it "repairs an invalid error log and reports the counts" do
     clean = create(:error_log, application: application, message: "fine")
     dirty = create(:error_log, application: application, message: "placeholder")
     poison("rails_error_dashboard_error_logs", "message", dirty.id)
-    expect(RailsErrorDashboard::ErrorLog.find(dirty.id).message).not_to be_valid_encoding
+    expect(stored("rails_error_dashboard_error_logs", "message", dirty.id)).not_to be_valid_encoding
+    # Readable straight away, before any repair: the model scrubs on load.
+    expect(RailsErrorDashboard::ErrorLog.find(dirty.id).message).to eq("bad ?? row")
 
     result = described_class.call
 
     expect(result[:repaired]).to eq(1)
     expect(result[:scanned]).to be >= 2
     expect(result[:unreadable]).to eq([])
-    expect(RailsErrorDashboard::ErrorLog.find(dirty.id).message).to eq("bad ?? row")
+    expect(stored("rails_error_dashboard_error_logs", "message", dirty.id)).to eq("bad ?? row")
     expect(RailsErrorDashboard::ErrorLog.find(clean.id).message).to eq("fine")
   end
 
@@ -92,14 +100,17 @@ RSpec.describe RailsErrorDashboard::Commands::ScrubInvalidEncoding do
   describe "rake error_dashboard:scrub_invalid_encoding", type: :request do
     before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("error_dashboard:scrub_invalid_encoding") }
 
-    it "prints the counts and makes the error's page render again" do
+    it "prints the counts and repairs what is stored" do
       RailsErrorDashboard.configuration.authenticate_with = -> { true }
       dirty = create(:error_log, application: application)
       poison("rails_error_dashboard_error_logs", "message", dirty.id)
 
-      # The before-picture: the stored bytes take the error's own page down.
+      # The page renders even before the repair, because the model scrubs on
+      # load. What the task fixes is the bytes on disk, which anything that
+      # does not go through the model (raw SQL, exports, other tools) still sees.
       get "/error_dashboard/errors/#{dirty.id}"
-      expect(response).to have_http_status(:internal_server_error)
+      expect(response).to have_http_status(:ok)
+      expect(stored("rails_error_dashboard_error_logs", "message", dirty.id)).not_to be_valid_encoding
 
       task = Rake::Task["error_dashboard:scrub_invalid_encoding"]
       task.reenable
@@ -107,6 +118,7 @@ RSpec.describe RailsErrorDashboard::Commands::ScrubInvalidEncoding do
 
       get "/error_dashboard/errors/#{dirty.id}"
       expect(response).to have_http_status(:ok)
+      expect(stored("rails_error_dashboard_error_logs", "message", dirty.id)).to be_valid_encoding
     ensure
       RailsErrorDashboard.configuration.authenticate_with = nil
     end

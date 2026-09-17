@@ -791,7 +791,9 @@ module RailsErrorDashboard
     # a request like ?days=99999999 would scan the full table on every health
     # query, defeating index pruning and burning CPU.
     def days_param(default:)
-      raw = params[:days].presence || default
+      # days[x]=1 and days[]=7 are not numbers; to_i on them raised.
+      raw = params[:days]
+      raw = default unless raw.is_a?(String) && raw.present?
       raw.to_i.clamp(1, 365)
     end
 
