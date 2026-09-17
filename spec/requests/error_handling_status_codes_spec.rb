@@ -111,6 +111,26 @@ RSpec.describe "Dashboard error handling status codes", type: :request do
       expect(response.body).to include(I18n.t("red.errors_page.not_acceptable.title"))
     end
 
+    # No dashboard page has a JSON (or XML, CSV...) template. Asking for one is
+    # the client asking for something that does not exist, not a dashboard bug.
+    %w[json xml csv].each do |format|
+      it "answers 406, not 500, for ?format=#{format}" do
+        get "/error_dashboard/errors", params: { format: format }
+        expect(response).to have_http_status(:not_acceptable)
+
+        get "/error_dashboard/overview", params: { format: format }
+        expect(response).to have_http_status(:not_acceptable)
+      end
+    end
+
+    it "still answers 500 when an HTML template is genuinely missing" do
+      raise_in_index(ActionView::MissingTemplate.new([], "errors/nope", [], false, "template"))
+
+      get "/error_dashboard/errors"
+
+      expect(response).to have_http_status(:internal_server_error)
+    end
+
     it "still answers 500 with the generic page for an unexpected error" do
       raise_in_index(RuntimeError.new("boom"))
 
