@@ -27,6 +27,11 @@ module RailsErrorDashboard
         # the process sat idle.
         MAX_CATCH_UP_BUCKETS = 7
 
+        # Incremented every time the breaker ENTERS :half_open. The gate compares
+        # it with the last value it saw to restart its probe counter, so each
+        # recovery attempt probes with its first event.
+        attr_reader :half_open_epoch
+
         # @param clock [#call] returns monotonic seconds; injectable for tests
         def initialize(clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
           @clock = clock
@@ -42,6 +47,7 @@ module RailsErrorDashboard
             @calm_buckets = 0
             @opened_at = nil
             @episode = nil
+            @half_open_epoch = 0
           end
         end
 
@@ -160,6 +166,7 @@ module RailsErrorDashboard
             if now - @opened_at >= cooldown_seconds && rate < shedding_threshold
               @state = :half_open
               @calm_buckets = 0
+              @half_open_epoch += 1
             end
           when :half_open
             if rate >= shedding_threshold
