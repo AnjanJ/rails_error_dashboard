@@ -121,8 +121,13 @@ module RailsErrorDashboard
       # @param message [String, nil] The error message
       # @return [String, nil] Normalized message
       def self.normalize_message(message)
-        message
-          &.[](0, HASH_MESSAGE_LIMIT)
+        # Slice, THEN scrub, then match: every path (sync, async, storm gate)
+        # goes through here, so they all hash the same text. gsub raises on a
+        # string with invalid bytes; a valid message is returned by scrub as-is,
+        # so no existing fingerprint changes.
+        prefix = message&.[](0, HASH_MESSAGE_LIMIT)
+
+        EncodingSanitizer.scrub(prefix)
           &.gsub(/0x[0-9a-f]+/i, "HEX")          # Replace hex addresses (before numbers)
           &.gsub(/#<[^>]+>/, "#<OBJ>")           # Replace object inspections
           &.gsub(/\d+/, "N")                     # Replace numbers
@@ -161,7 +166,8 @@ module RailsErrorDashboard
           !frame.include?("/gems/")
         }
 
-        first_app_frame&.split(":")&.first
+        # split raises on a frame with invalid bytes (a method name can hold any).
+        EncodingSanitizer.scrub(first_app_frame)&.split(":")&.first
       end
 
       # Try custom fingerprint lambda if configured
