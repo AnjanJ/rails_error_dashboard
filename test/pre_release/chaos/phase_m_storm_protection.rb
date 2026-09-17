@@ -10,6 +10,7 @@
 #   M3: count reconciliation      → stored + counted == fired, storm_event row
 #   M4: capture latency under storm stays sub-5ms
 #   M5: recovery                  → breaker closes after calm, episode finalized
+#   M6: silent recovery           → breaker closes with NO traffic; next error notifies
 #
 # Storm protection is OFF in the app initializer (other phases fire errors in
 # tight loops); this phase enables and tunes it at runtime — config is
@@ -170,6 +171,49 @@ drain_and_flush!
 
 final_event = RailsErrorDashboard::StormEvent.order(:id).last
 assert "M5: storm_event row has ended_at after recovery flush", final_event&.ended_at.present?
+
+# ---------------------------------------------------------------------------
+# M6: Recovery with NO traffic — the storm simply stops
+# ---------------------------------------------------------------------------
+# M5 closes the breaker with a trickle of events, because record! used to be
+# the only thing that rolled buckets. A storm that just ENDS produced no
+# events, so the breaker stayed :open, per-error notifications stayed
+# suppressed, and the first real error afterwards was judged by stale state.
+PreReleaseTestHarness.section("M6: Silent recovery (waits ~31s, fires nothing)")
+
+GATE.reset!
+500.times { fire_error("silent recovery storm epsilon") } # open
+assert "M6: breaker open at storm peak", GATE.state == :open
+
+# Nothing at all for cooldown (5s) + the half-open bucket + two calm buckets.
+sleep 31
+
+assert "M6: breaker closed by elapsed time alone", GATE.state == :closed, "state=#{GATE.state}"
+assert "M6: notifications no longer suppressed", GATE.notifications_suppressed? == false
+
+m6_episode = GATE.breaker.episode_snapshot
+assert "M6: episode finalized with ended_at", m6_episode && m6_episode[:ended_at].present?
+
+# The first NEW error after the quiet period must reach the dispatcher.
+m6_dispatched = []
+dispatcher = RailsErrorDashboard::Services::ErrorNotificationDispatcher.singleton_class
+dispatcher.send(:alias_method, :__m6_original_call, :call)
+dispatcher.send(:define_method, :call) do |error_log|
+  m6_dispatched << error_log.error_type
+  __m6_original_call(error_log)
+end
+begin
+  RailsErrorDashboard::Services::NotificationThrottler.clear!
+  fire_error("first error after the storm zeta #{SecureRandom.hex(4)}", klass: ArgumentError)
+ensure
+  dispatcher.send(:alias_method, :call, :__m6_original_call)
+  dispatcher.send(:remove_method, :__m6_original_call)
+end
+
+assert "M6: a notification fires for the first error after the storm",
+       m6_dispatched == [ "ArgumentError" ], "dispatched=#{m6_dispatched.inspect}"
+assert "M6: that error was captured at full fidelity, not counted",
+       RailsErrorDashboard::ErrorLog.where(error_type: "ArgumentError").where("message LIKE ?", "first error after the storm zeta%").exists?
 
 CONFIG.enable_storm_protection = false
 exit_code = PreReleaseTestHarness.summary("PHASE M")
