@@ -91,7 +91,16 @@ RSpec.describe "Issue tracker fetch caching", type: :request do
     expect(response.body).to include(I18n.t("red.errors.discussion.title"))
   end
 
+  # With source code integration and git blame on, the backtrace helper reads
+  # the cache too. Enabled here explicitly: this example used to pass or fail
+  # depending on whether an earlier spec had left those flags on.
   it "does not raise when the cache store itself fails" do
+    config = RailsErrorDashboard.configuration
+    was = [ config.enable_source_code_integration, config.enable_git_blame ]
+    config.enable_source_code_integration = true
+    config.enable_git_blame = true
+    error.update_columns(backtrace: "#{Rails.root}/app/models/widget.rb:12:in 'run'")
+
     broken = instance_double(ActiveSupport::Cache::MemoryStore)
     allow(broken).to receive(:fetch).and_raise(RuntimeError, "cache down")
     allow(Rails).to receive(:cache).and_return(broken)
@@ -99,5 +108,7 @@ RSpec.describe "Issue tracker fetch caching", type: :request do
     get "/error_dashboard/errors/#{error.id}"
 
     expect(response).to have_http_status(:ok)
+  ensure
+    config.enable_source_code_integration, config.enable_git_blame = was if was
   end
 end
