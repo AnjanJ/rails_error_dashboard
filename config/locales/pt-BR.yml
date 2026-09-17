@@ -1232,6 +1232,10 @@ pt-BR:
         linked: Issue vinculada com sucesso
         create_failed: 'Não foi possível criar a issue: %{reason}'
         link_failed: 'Não foi possível vincular a issue: %{reason}'
+      status:
+        updated: "Status alterado para %{status}"
+        invalid_transition: "Não é possível alterar o status de %{from} para %{to}"
+        unknown: "Esse status não existe"
       not_enabled: "%{feature} não está ativado. Ative em %{file}"
       not_enabled_plural: "%{feature} não estão ativados. Ative-os em %{file}"
       not_enabled_options: "%{feature} não está ativado. Ative %{options} em %{file}"

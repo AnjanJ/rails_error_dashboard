@@ -271,7 +271,13 @@ module RailsErrorDashboard
       end
     end
 
+    # The five workflow statuses. One list, so that a command can tell
+    # "unknown status" from "known, but not reachable from here".
+    STATUSES = %w[new in_progress investigating resolved wont_fix].freeze
+
     def can_transition_to?(new_status)
+      return false unless STATUSES.include?(new_status)
+
       # Define valid status transitions
       valid_transitions = {
         "new" => [ "in_progress", "investigating", "wont_fix" ],

@@ -1261,6 +1261,10 @@ ru:
         linked: Задача успешно привязана
         create_failed: 'Не удалось создать задачу: %{reason}'
         link_failed: 'Не удалось привязать задачу: %{reason}'
+      status:
+        updated: "Статус изменён на %{status}"
+        invalid_transition: "Нельзя изменить статус с %{from} на %{to}"
+        unknown: "Такого статуса не существует"
       not_enabled: "%{feature} не включено. Включите в %{file}"
       not_enabled_plural: "%{feature} не включены. Включите их в %{file}"
       not_enabled_options: "%{feature} не включено. Включите %{options} в %{file}"

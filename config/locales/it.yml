@@ -1231,6 +1231,10 @@ it:
         linked: Segnalazione collegata correttamente
         create_failed: 'Impossibile creare la segnalazione: %{reason}'
         link_failed: 'Impossibile collegare la segnalazione: %{reason}'
+      status:
+        updated: "Stato modificato in %{status}"
+        invalid_transition: "Impossibile cambiare lo stato da %{from} a %{to}"
+        unknown: "Questo stato non esiste"
       not_enabled: "%{feature} non è abilitato. Abilitalo in %{file}"
       not_enabled_plural: "%{feature} non sono abilitati. Abilitali in %{file}"
       not_enabled_options: "%{feature} non è abilitato. Abilita %{options} in %{file}"

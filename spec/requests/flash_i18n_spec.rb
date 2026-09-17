@@ -150,6 +150,49 @@ RSpec.describe "Flash message translations", type: :request do
     end
   end
 
+  describe "status workflow result" do
+    it "reports an invalid transition and leaves the row unchanged" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "resolved" }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:notice]).to be_nil
+      expect(flash[:alert]).to include("new").and include("resolved")
+      expect(error.reload.status).to eq("new")
+      expect(error.resolved).to be_falsey
+    end
+
+    it "confirms a valid transition" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "in_progress" }
+
+      expect(flash[:alert]).to be_nil
+      expect(flash[:notice]).to include("in progress")
+      expect(error.reload.status).to eq("in_progress")
+    end
+
+    it "rejects an unknown status" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "banana" }
+
+      expect(flash[:alert]).to eq(I18n.t("red.flash.status.unknown"))
+      expect(error.reload.status).to eq("new")
+    end
+
+    it "rejects a status that arrives as a nested parameter" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: { "x" => "resolved" } }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq(I18n.t("red.flash.status.unknown"))
+      expect(error.reload.status).to eq("new")
+    end
+  end
+
   describe "AI help JSON errors" do
     let(:error) { create(:error_log, application: application) }
 

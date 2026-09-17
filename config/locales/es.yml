@@ -1241,6 +1241,10 @@ es:
         linked: Issue vinculada correctamente
         create_failed: 'No se pudo crear la issue: %{reason}'
         link_failed: 'No se pudo vincular la issue: %{reason}'
+      status:
+        updated: "Estado cambiado a %{status}"
+        invalid_transition: "No se puede cambiar el estado de %{from} a %{to}"
+        unknown: "Ese estado no existe"
       not_enabled: "%{feature} no está activado. Actívelo en %{file}"
       not_enabled_plural: "%{feature} no están activados. Actívelos en %{file}"
       not_enabled_options: "%{feature} no está activado. Active %{options} en %{file}"

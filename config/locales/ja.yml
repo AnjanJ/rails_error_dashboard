@@ -1055,6 +1055,10 @@ ja:
         linked: イシューを連携しました
         create_failed: 'イシューの作成に失敗しました: %{reason}'
         link_failed: 'イシューの連携に失敗しました: %{reason}'
+      status:
+        updated: "ステータスを %{status} に変更しました"
+        invalid_transition: "ステータスを %{from} から %{to} に変更することはできません"
+        unknown: "そのステータスは存在しません"
       not_enabled: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_plural: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_options: "%{feature}は有効になっていません。%{file}で%{options}を有効にしてください"

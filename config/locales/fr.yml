@@ -1241,6 +1241,10 @@ fr:
         linked: Issue liée avec succès
         create_failed: 'Échec de la création de l''issue : %{reason}'
         link_failed: 'Échec de la liaison de l''issue : %{reason}'
+      status:
+        updated: "Statut changé en %{status}"
+        invalid_transition: "Impossible de passer le statut de %{from} à %{to}"
+        unknown: "Ce statut n'existe pas"
       not_enabled: "%{feature} n'est pas activé. Activez-le dans %{file}"
       not_enabled_plural: "%{feature} ne sont pas activés. Activez-les dans %{file}"
       not_enabled_options: "%{feature} n'est pas activé. Activez %{options} dans %{file}"

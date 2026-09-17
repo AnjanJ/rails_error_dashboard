@@ -1193,6 +1193,10 @@ de:
         linked: Issue erfolgreich verknüpft
         create_failed: 'Issue konnte nicht erstellt werden: %{reason}'
         link_failed: 'Issue konnte nicht verknüpft werden: %{reason}'
+      status:
+        updated: "Status geändert zu %{status}"
+        invalid_transition: "Der Status kann nicht von %{from} zu %{to} geändert werden"
+        unknown: "Diesen Status gibt es nicht"
       not_enabled: "%{feature} ist nicht aktiviert. Aktivieren Sie es in %{file}"
       not_enabled_plural: "%{feature} sind nicht aktiviert. Aktivieren Sie sie in
         %{file}"

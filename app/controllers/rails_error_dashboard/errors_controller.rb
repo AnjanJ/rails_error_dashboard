@@ -166,7 +166,19 @@ module RailsErrorDashboard
 
     def update_status
       result = Commands::UpdateErrorStatus.call(params[:id], status: params[:status], comment: params[:comment])
-      redirect_to error_path(result[:error], **app_context_params)
+      error = result[:error]
+
+      # The command refuses some transitions; saying nothing made a refused
+      # change look like a successful one.
+      if result[:success]
+        flash[:notice] = red_t("red.flash.status.updated", status: status_flash_label(error.status))
+      elsif result[:reason] == :invalid_transition
+        flash[:alert] = red_t("red.flash.status.invalid_transition",
+                              from: status_flash_label(error.status), to: status_flash_label(params[:status]))
+      else
+        flash[:alert] = red_t("red.flash.status.unknown")
+      end
+      redirect_to error_path(error, **app_context_params)
     end
 
     def create_issue
@@ -775,6 +787,12 @@ module RailsErrorDashboard
     def issue_cache_key(kind, error)
       repo = error.respond_to?(:external_issue_repo) ? error.external_issue_repo : nil
       [ "red", kind, error.external_issue_provider, repo.presence || "-", error.external_issue_number ].join("/")
+    end
+
+    # The status labels the index and show pages already use; an unlabelled
+    # value ("new" has no key) falls back to the raw text.
+    def status_flash_label(status)
+      red_t("red.errors.row.status.#{status}", default: status.to_s.tr("_", " "))
     end
 
     def fetch_platform_issue(error)

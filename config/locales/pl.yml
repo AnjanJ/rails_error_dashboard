@@ -1262,6 +1262,10 @@ pl:
         linked: Zgłoszenie zostało powiązane
         create_failed: 'Nie udało się utworzyć zgłoszenia: %{reason}'
         link_failed: 'Nie udało się powiązać zgłoszenia: %{reason}'
+      status:
+        updated: "Status zmieniono na %{status}"
+        invalid_transition: "Nie można zmienić statusu z %{from} na %{to}"
+        unknown: "Taki status nie istnieje"
       not_enabled: "%{feature} nie jest włączone. Włącz w %{file}"
       not_enabled_plural: "%{feature} nie są włączone. Włącz je w %{file}"
       not_enabled_options: "%{feature} nie jest włączone. Włącz %{options} w %{file}"
