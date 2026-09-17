@@ -22,8 +22,15 @@ module RailsErrorDashboard
       class CircuitBreaker
         BUCKET_SECONDS = 10
         CALM_BUCKETS_TO_CLOSE = 2
+        # Empty buckets replayed after a silence. Seven is enough to walk
+        # :open -> :half_open -> :closed; the cap keeps a roll O(1) however long
+        # the process sat idle.
+        MAX_CATCH_UP_BUCKETS = 7
 
-        attr_reader :state
+        # Incremented every time the breaker ENTERS :half_open. The gate compares
+        # it with the last value it saw to restart its probe counter, so each
+        # recovery attempt probes with its first event.
+        attr_reader :half_open_epoch
 
         # @param clock [#call] returns monotonic seconds; injectable for tests
         def initialize(clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
@@ -40,6 +47,7 @@ module RailsErrorDashboard
             @calm_buckets = 0
             @opened_at = nil
             @episode = nil
+            @half_open_epoch = 0
           end
         end
 
@@ -59,6 +67,25 @@ module RailsErrorDashboard
           end
 
           @state
+        end
+
+        # Current state, advanced by elapsed TIME as well as by events. Without the
+        # tick a storm that simply stopped left the breaker open for ever: only
+        # record! rolled buckets, and nothing calls record! when errors stop.
+        def state
+          tick!
+          @state
+        end
+
+        # Roll the bucket if one is due. Cheap when it is not: one clock read and
+        # a comparison, no lock. Safe to call from anywhere, any number of times.
+        def tick!
+          now = @clock.call
+          roll!(now) if now - @bucket_start >= BUCKET_SECONDS
+          nil
+        rescue => e
+          RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] CircuitBreaker#tick! failed: #{e.class}: #{e.message}")
+          nil
         end
 
         # Episode metadata for the honesty layer (storm_events row).
@@ -81,10 +108,38 @@ module RailsErrorDashboard
             elapsed = now - @bucket_start
             return if elapsed < BUCKET_SECONDS # another thread already rolled
 
-            rate = @bucket_count.value / elapsed.to_f
+            count = @bucket_count.value
+            bucket_start = @bucket_start
             @bucket_start = now
             @bucket_count = Concurrent::AtomicFixnum.new(0)
-            transition!(rate, now)
+
+            buckets = (elapsed / BUCKET_SECONDS).floor
+            if buckets <= 1
+              transition!(count / elapsed.to_f, now)
+            else
+              catch_up!(count, elapsed, bucket_start, now, buckets)
+            end
+          end
+        end
+
+        # More than one bucket of wall time has passed since the last roll, so
+        # nobody called in between: replay the gap instead of treating it as one
+        # long bucket. Each step carries the time its bucket ENDED, which is what
+        # keeps the cooldown and the two-calm-bucket rule honest (10s past the
+        # cooldown is :half_open, not :closed).
+        #
+        # The measured bucket keeps the diluted rate (count / elapsed) it has
+        # always had, so a burst followed by silence never escalates a closed
+        # breaker after the fact. Only the most recent MAX_CATCH_UP_BUCKETS empty
+        # buckets are replayed; older ones could not change the outcome.
+        def catch_up!(count, elapsed, bucket_start, now, buckets)
+          transition!(count / elapsed.to_f, bucket_start + BUCKET_SECONDS)
+
+          empty = [ buckets - 1, MAX_CATCH_UP_BUCKETS ].min
+          (empty - 1).downto(0) do |back|
+            break if @state == :closed
+
+            transition!(0.0, now - (back * BUCKET_SECONDS))
           end
         end
 
@@ -111,6 +166,7 @@ module RailsErrorDashboard
             if now - @opened_at >= cooldown_seconds && rate < shedding_threshold
               @state = :half_open
               @calm_buckets = 0
+              @half_open_epoch += 1
             end
           when :half_open
             if rate >= shedding_threshold

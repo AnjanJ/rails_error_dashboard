@@ -1127,6 +1127,8 @@ es:
         application_name: Nombre de esta aplicación (se detecta automáticamente si
           no se define)
         environment: Entorno al que se atribuyen los errores (Rails.env si no se define)
+        notification_burst_limit: "Notificaciones de errores nuevos por intervalo y por proceso (0 = sin límite)"
+        notification_burst_window_seconds: "Duración del intervalo de notificaciones de errores nuevos"
         notification_environments: Notificar solo para estos entornos (todos si no
           se define)
         database: Base de datos activa para los registros de errores
@@ -1415,6 +1417,10 @@ es:
           other: "%{value} errores"
           many: "%{value} errores"
         view_in_dashboard: Ver en el panel
+      burst:
+        suppressed: "Se han registrado más de %{limit} errores nuevos en %{application} en %{window} segundos."
+        still_recorded: "Las notificaciones de nuevos errores adicionales quedan en pausa hasta que termine ese intervalo; todos los errores se siguen registrando."
+        dashboard: "Panel: %{url}"
       storm:
         detected: Se detectó una tormenta de errores en %{application} a las %{started_at}.
         mode:

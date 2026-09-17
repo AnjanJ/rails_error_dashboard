@@ -48,17 +48,20 @@ module RailsErrorDashboard
       return nil if mean.nil? || std_dev.nil?
       return nil if current_count <= mean
 
-      std_devs_above = (current_count - mean) / std_dev
+      # nil when std_dev is zero: a perfectly flat history has no spread to
+      # measure against, and dividing by it made every count :critical.
+      sigma = std_devs_above_mean(current_count)
+      return nil if sigma.nil?
 
-      case std_devs_above
-      when sensitivity..(sensitivity + 1)
-        :elevated
-      when (sensitivity + 1)..(sensitivity + 2)
-        :high
-      when (sensitivity + 2)..Float::INFINITY
+      # Half-open bands, highest first: a boundary value belongs to the band it
+      # opens (3.0 is :high, 4.0 is :critical). Inclusive ranges matched
+      # top-down gave each boundary to the band below it.
+      if sigma >= sensitivity + 2
         :critical
-      else
-        nil
+      elsif sigma >= sensitivity + 1
+        :high
+      elsif sigma >= sensitivity
+        :elevated
       end
     end
 

@@ -273,11 +273,19 @@ assert_no_crash("G6: threshold_reached? works") do
   assert "G6: low occurrence -> threshold not reached", result == false
 end
 
-# Clear and verify fresh state
+# The cooldown lives on the row (last_notified_at) since 0.13.0, so that it is
+# shared by every process and survives restarts. clear! only empties the
+# in-process fallback; it must NOT be able to lift a cooldown another process
+# is relying on.
 throttler.clear!
-assert_no_crash("G6: after clear, should_notify? returns true") do
-  result = throttler.should_notify?(throttle_error)
-  assert "G6: after clear -> should_notify? true", result == true
+assert_no_crash("G6: clear! does not lift a database-held cooldown") do
+  assert "G6: after clear! -> still in cooldown", throttler.should_notify?(throttle_error) == false
+end
+
+assert_no_crash("G6: the cooldown ends when the window has passed") do
+  window = RailsErrorDashboard.configuration.notification_cooldown_minutes.to_i
+  RailsErrorDashboard::ErrorLog.where(id: throttle_error.id).update_all(last_notified_at: (window + 1).minutes.ago)
+  assert "G6: window passed -> should_notify? true", throttler.should_notify?(throttle_error) == true
 end
 puts ""
 

@@ -423,7 +423,7 @@ module RailsErrorDashboard
                                   ENV["GIT_SHA"] ||
                                   ENV["HEROKU_SLUG_COMMIT"] ||
                                   ENV["RENDER_GIT_COMMIT"] ||
-                                  detect_git_sha_from_command
+                                  RailsErrorDashboard.detected_git_sha
         end
 
         if ErrorLog.column_names.include?("app_version")
@@ -562,12 +562,12 @@ module RailsErrorDashboard
         # Send notifications for new errors and reopened errors (with throttling).
         # Muted errors skip notification dispatch but still fire plugin events.
         if error_log.occurrence_count == 1
-          maybe_notify(error_log) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
+          maybe_notify(error_log, first_occurrence: true) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
           PluginRegistry.dispatch(:on_error_logged, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         elsif error_log.just_reopened
-          maybe_notify(error_log) { Services::NotificationThrottler.should_notify?(error_log) }
+          maybe_notify(error_log, respect_cooldown: true) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
           PluginRegistry.dispatch(:on_error_reopened, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
@@ -604,7 +604,12 @@ module RailsErrorDashboard
       # Muted errors skip notifications but still fire plugin events/callbacks.
       # During a storm (breaker not closed) per-error notifications are
       # suppressed — a single storm notification replaces them.
-      def maybe_notify(error_log)
+      #
+      # respect_cooldown is true only for the reopened path, which is the only one
+      # the cooldown has ever applied to: a first occurrence and a threshold
+      # milestone always notify. They still stamp the row, so an error reopened
+      # minutes after its first notification is throttled.
+      def maybe_notify(error_log, respect_cooldown: false, first_occurrence: false)
         return if error_log.muted?
         # wont_fix: the team has decided not to act on this error, so its
         # recurrences are counted and nothing else. Plugin events still fire,
@@ -613,9 +618,16 @@ module RailsErrorDashboard
         return if Services::StormProtection::Gate.notifications_suppressed?
         return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless yield
+        return if first_occurrence && burst_capped?
+
+        # Claim, THEN send. The claim is a conditional UPDATE only one process can
+        # win, so N workers reopening the same error send one notification, not
+        # N. The price: if the send below fails, this error is not retried inside
+        # the cooldown window. Recording after sending is what let every process
+        # through.
+        return unless Services::NotificationThrottler.claim!(error_log, respect_cooldown: respect_cooldown)
 
         Services::ErrorNotificationDispatcher.call(error_log)
-        Services::NotificationThrottler.record_notification(error_log)
       rescue => e
         # The error row is already written by the time we get here. A channel
         # that cannot be reached (Redis down for the Slack job's enqueue, a
@@ -624,6 +636,37 @@ module RailsErrorDashboard
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] Failed to dispatch notification for error #{error_log&.id}: #{e.class} - #{e.message}"
         )
+      end
+
+      # A bad deploy can produce hundreds of DISTINCT new errors, each a first
+      # occurrence the per-error cooldown never sees. Past
+      # config.notification_burst_limit per window, new-error notifications are
+      # held back and ONE summary says so. Asked only for first occurrences that
+      # were otherwise going to notify, and before the cooldown claim, so a
+      # suppressed error is not stamped as notified. The error itself is already
+      # stored; only the notification is dropped.
+      def burst_capped?
+        # Nothing can notify, so there is nothing to cap, and no summary to enqueue.
+        return false unless Services::ErrorNotificationDispatcher.any_channel?
+
+        case Services::NotificationThrottler.burst_decision
+        when :summarize
+          config = RailsErrorDashboard.configuration
+          NotificationBurstSummaryJob.perform_later(
+            limit: config.notification_burst_limit.to_i,
+            window_seconds: config.notification_burst_window_seconds.to_i,
+            locale: ApplicationJob.enqueue_locale
+          )
+          true
+        when :suppress
+          true
+        else
+          false
+        end
+      rescue => e
+        # Fail-open: a cap that cannot decide must not cost a notification.
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] burst cap check failed: #{e.class}: #{e.message}")
+        false
       end
 
       # The environment this error is attributed to: an explicit context value
@@ -776,15 +819,6 @@ module RailsErrorDashboard
         chain.to_json
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Failed to build cause JSON from context: #{e.message}")
-        nil
-      end
-
-      # Detect git SHA from git command (fallback)
-      def detect_git_sha_from_command
-        return nil unless File.exist?(Rails.root.join(".git"))
-        `git rev-parse --short HEAD 2>/dev/null`.strip.presence
-      rescue => e
-        RailsErrorDashboard::Logger.debug("Could not detect git SHA: #{e.message}")
         nil
       end
 

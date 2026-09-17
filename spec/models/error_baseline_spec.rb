@@ -91,6 +91,53 @@ RSpec.describe RailsErrorDashboard::ErrorBaseline, type: :model do
       # With sensitivity=3, need 3 std devs for elevated
       expect(baseline.anomaly_level(17, sensitivity: 3)).to eq(:elevated)
     end
+
+    # A flat history has no spread to measure a spike against. Dividing by a
+    # zero std_dev gave Infinity, so ANY count above a perfectly steady mean
+    # was reported as :critical.
+    it "returns nil when std_dev is zero, however far above the mean" do
+      flat = build(:error_baseline, mean: 3.0, std_dev: 0.0)
+
+      expect(flat.anomaly_level(10)).to be_nil
+      expect(flat.anomaly_level(10_000)).to be_nil
+    end
+
+    it "returns nil when mean or std_dev is missing" do
+      expect(build(:error_baseline, mean: nil, std_dev: 1.0).anomaly_level(10)).to be_nil
+      expect(build(:error_baseline, mean: 1.0, std_dev: nil).anomaly_level(10)).to be_nil
+    end
+
+    # mean 0, std_dev 1: the count IS the number of standard deviations. Each
+    # band is half-open, [lower, upper): a boundary value belongs to the band
+    # it opens. Inclusive ranges tried top-down used to give 3.0 to :elevated
+    # and 4.0 to :high.
+    describe "band boundaries" do
+      let(:unit) { build(:error_baseline, mean: 0.0, std_dev: 1.0) }
+
+      {
+        1.99 => nil, 2.0 => :elevated, 2.99 => :elevated,
+        3.0 => :high, 3.5 => :high, 3.99 => :high,
+        4.0 => :critical, 4.5 => :critical, 1_000_000 => :critical
+      }.each do |sigma, level|
+        it "maps #{sigma} sigma to #{level.inspect} at the default sensitivity" do
+          expect(unit.anomaly_level(sigma)).to eq(level)
+        end
+      end
+
+      {
+        2.99 => nil, 3.0 => :elevated, 3.99 => :elevated,
+        4.0 => :high, 4.99 => :high, 5.0 => :critical
+      }.each do |sigma, level|
+        it "maps #{sigma} sigma to #{level.inspect} at sensitivity 3" do
+          expect(unit.anomaly_level(sigma, sensitivity: 3)).to eq(level)
+        end
+      end
+
+      it "returns nil at or below the mean" do
+        expect(unit.anomaly_level(0)).to be_nil
+        expect(unit.anomaly_level(-5)).to be_nil
+      end
+    end
   end
 
   describe "#exceeds_baseline?" do

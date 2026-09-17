@@ -10,6 +10,19 @@ module RailsErrorDashboard
     # @example
     #   ErrorNotificationDispatcher.call(error_log)
     class ErrorNotificationDispatcher
+      # Is any channel configured to the point where .call would enqueue
+      # something? The same conditions as below, without the side effects.
+      # @return [Boolean]
+      def self.any_channel?
+        config = RailsErrorDashboard.configuration
+
+        (config.enable_slack_notifications && config.slack_webhook_url.present?) ||
+          (config.enable_email_notifications && config.notification_email_recipients.present?) ||
+          (config.enable_discord_notifications && config.discord_webhook_url.present?) ||
+          (config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?) ||
+          (config.enable_webhook_notifications && config.webhook_urls.present?) || false
+      end
+
       # @param error_log [ErrorLog] The error to notify about
       def self.call(error_log)
         # OTel: emit a child span around the dispatch so operators can see

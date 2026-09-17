@@ -963,6 +963,8 @@ zh-CN:
         sampling_rate: 错误捕获的采样比例
         application_name: 本应用的名称（未设置时自动检测）
         environment: 错误所属的环境（未设置时为 Rails.env）
+        notification_burst_limit: "每个时间窗口、每个进程的新错误通知数（0 = 不限制）"
+        notification_burst_window_seconds: "新错误通知时间窗口的长度"
         notification_environments: 仅对这些环境发送通知（未设置时为全部）
         database: 错误日志使用的数据库
         use_separate_database: 为错误日志使用独立数据库
@@ -1203,6 +1205,10 @@ zh-CN:
         threshold_errors:
           other: "%{value} 个错误"
         view_in_dashboard: 在面板中查看
+      burst:
+        suppressed: "%{application} 在 %{window} 秒内报告了超过 %{limit} 个新错误。"
+        still_recorded: "在该时间窗口结束之前，后续新错误的通知将暂停；所有错误仍会被记录。"
+        dashboard: "面板：%{url}"
       storm:
         detected: 在 %{application} 于 %{started_at} 检测到错误风暴。
         mode:

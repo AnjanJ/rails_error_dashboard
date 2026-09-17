@@ -128,6 +128,33 @@ RSpec.describe "LogError storm protection integration", type: :job do
       }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
     end
 
+    # Storm, then a quiet hour with no errors at all, then one new error. The
+    # breaker used to be advanced only by events, so that error arrived to a
+    # breaker still :open from an hour ago and nobody was told about it.
+    it "notifies for the first new error after a storm has gone quiet" do
+      clock = Class.new {
+        def initialize = @now = 1000.0
+        def call = @now
+        def advance(seconds) = @now += seconds
+      }.new
+      gate.reset!
+      gate.instance_variable_set(
+        :@breaker, RailsErrorDashboard::Services::StormProtection::CircuitBreaker.new(clock: clock)
+      )
+      RailsErrorDashboard.configuration.storm_open_threshold_per_second = 2
+      50.times { |i| RailsErrorDashboard::Commands::LogError.call(boom("storm #{i}"), {}) }
+      expect(gate.state).to eq(:open)
+
+      clock.advance(3600)
+      dispatched = []
+      allow(RailsErrorDashboard::Services::ErrorNotificationDispatcher).to receive(:call) { |error| dispatched << error }
+
+      RailsErrorDashboard::Commands::LogError.call(boom("after the storm", klass: SecurityError), {})
+
+      expect(dispatched.map(&:error_type)).to eq([ "SecurityError" ])
+      expect(gate.state).to eq(:closed)
+    end
+
     it "enqueues one storm notification when a storm begins" do
       RailsErrorDashboard.configuration.storm_open_threshold_per_second = 2
 

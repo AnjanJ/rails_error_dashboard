@@ -1119,6 +1119,8 @@ it:
           non impostato)
         environment: Ambiente a cui vengono attribuiti gli errori (Rails.env se non
           impostato)
+        notification_burst_limit: "Notifiche di nuovi errori per intervallo e per processo (0 = nessun limite)"
+        notification_burst_window_seconds: "Durata dell'intervallo delle notifiche di nuovi errori"
         notification_environments: Notifica solo per questi ambienti (tutti se non
           impostato)
         database: Database attivo per i registri degli errori
@@ -1404,6 +1406,10 @@ it:
           other: "%{value} errori"
           many: "%{value} errori"
         view_in_dashboard: Vedi nel pannello
+      burst:
+        suppressed: "In %{application} sono stati segnalati più di %{limit} nuovi errori in %{window} secondi."
+        still_recorded: "Le notifiche per ulteriori nuovi errori sono sospese fino al termine di questo intervallo; ogni errore viene comunque registrato."
+        dashboard: "Pannello: %{url}"
       storm:
         detected: Rilevata tempesta di errori in %{application} alle %{started_at}.
         mode:

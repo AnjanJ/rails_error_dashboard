@@ -1129,6 +1129,8 @@ fr:
           défini)
         environment: Environnement auquel les erreurs sont attribuées (Rails.env si
           non défini)
+        notification_burst_limit: "Notifications de nouvelles erreurs par intervalle et par processus (0 = sans limite)"
+        notification_burst_window_seconds: "Durée de l'intervalle des notifications de nouvelles erreurs"
         notification_environments: Ne notifier que pour ces environnements (tous si
           non défini)
         database: Base de données active pour les journaux d'erreurs
@@ -1415,6 +1417,10 @@ fr:
           other: "%{value} erreurs"
           many: "%{value} erreurs"
         view_in_dashboard: Voir dans le tableau de bord
+      burst:
+        suppressed: "Plus de %{limit} nouvelles erreurs ont été signalées dans %{application} en %{window} secondes."
+        still_recorded: "Les notifications pour les nouvelles erreurs suivantes sont suspendues jusqu'à la fin de cet intervalle ; chaque erreur reste enregistrée."
+        dashboard: "Tableau de bord : %{url}"
       storm:
         detected: Tempête d'erreurs détectée dans %{application} à %{started_at}.
         mode:
