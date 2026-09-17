@@ -1059,6 +1059,12 @@ ja:
         updated: "ステータスを %{status} に変更しました"
         invalid_transition: "ステータスを %{from} から %{to} に変更することはできません"
         unknown: "そのステータスは存在しません"
+      snooze:
+        invalid_hours: "スヌーズ時間は 1 から %{max} までの整数（時間単位）で指定してください"
+      priority:
+        invalid: "その優先度は存在しません"
+      assign:
+        blank: "このエラーの担当者の名前を入力してください"
       not_enabled: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_plural: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_options: "%{feature}は有効になっていません。%{file}で%{options}を有効にしてください"

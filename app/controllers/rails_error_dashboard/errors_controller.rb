@@ -130,8 +130,9 @@ module RailsErrorDashboard
     # Phase 3: Workflow Integration Actions (via Commands)
 
     def assign
-      @error = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
-      redirect_to error_path(@error, **app_context_params)
+      result = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
+      flash[:alert] = red_t("red.flash.assign.blank") unless result[:success]
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def unassign
@@ -140,13 +141,19 @@ module RailsErrorDashboard
     end
 
     def update_priority
-      @error = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
-      redirect_to error_path(@error, **app_context_params)
+      result = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
+      flash[:alert] = red_t("red.flash.priority.invalid") unless result[:success]
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def snooze
-      @error = Commands::SnoozeError.call(params[:id], hours: params[:hours].to_i, reason: params[:reason])
-      redirect_to error_path(@error, **app_context_params)
+      # The raw value, not to_i: "abc".to_i is 0 and a nested parameter has no
+      # to_i at all. The command decides what a number of hours is.
+      result = Commands::SnoozeError.call(params[:id], hours: params[:hours], reason: params[:reason])
+      unless result[:success]
+        flash[:alert] = red_t("red.flash.snooze.invalid_hours", max: Commands::SnoozeError::MAX_SNOOZE_HOURS)
+      end
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def unsnooze

@@ -1639,6 +1639,12 @@ en:
         updated: "Status changed to %{status}"
         invalid_transition: "Cannot change status from %{from} to %{to}"
         unknown: "That status does not exist"
+      snooze:
+        invalid_hours: "Snooze time must be a whole number of hours between 1 and %{max}"
+      priority:
+        invalid: "That priority level does not exist"
+      assign:
+        blank: "Enter a name to assign this error to"
 
       # The "X is not enabled" notice was written out eleven times with only
       # the feature name changing. Two keys rather than one because English

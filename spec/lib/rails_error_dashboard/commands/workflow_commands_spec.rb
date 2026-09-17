@@ -19,20 +19,20 @@ RSpec.describe "Workflow Commands" do
   describe RailsErrorDashboard::Commands::AssignError do
     describe ".call" do
       it "assigns the error to the given user" do
-        result = described_class.call(error_log.id, assigned_to: "gandalf")
+        result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
 
         expect(result.assigned_to).to eq("gandalf")
         expect(result.assigned_at).to be_within(1.second).of(Time.current)
       end
 
       it "auto-transitions status to in_progress" do
-        result = described_class.call(error_log.id, assigned_to: "gandalf")
+        result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
 
         expect(result.status).to eq("in_progress")
       end
 
       it "returns the updated error" do
-        result = described_class.call(error_log.id, assigned_to: "gandalf")
+        result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
 
         expect(result).to be_a(RailsErrorDashboard::ErrorLog)
         expect(result.id).to eq(error_log.id)
@@ -92,7 +92,7 @@ RSpec.describe "Workflow Commands" do
     describe ".call" do
       it "sets snoozed_until to the correct future time" do
         freeze_time do
-          result = described_class.call(error_log.id, hours: 4)
+          result = described_class.call(error_log.id, hours: 4)[:error]
 
           expect(result.snoozed_until).to be_within(1.second).of(4.hours.from_now)
         end
@@ -137,7 +137,7 @@ RSpec.describe "Workflow Commands" do
       end
 
       it "returns the updated error" do
-        result = described_class.call(error_log.id, hours: 8)
+        result = described_class.call(error_log.id, hours: 8)[:error]
 
         expect(result).to be_a(RailsErrorDashboard::ErrorLog)
         expect(result.snoozed_until).to be_present

@@ -1236,6 +1236,12 @@ pt-BR:
         updated: "Status alterado para %{status}"
         invalid_transition: "Não é possível alterar o status de %{from} para %{to}"
         unknown: "Esse status não existe"
+      snooze:
+        invalid_hours: "O tempo de adiamento deve ser um número inteiro de horas entre 1 e %{max}"
+      priority:
+        invalid: "Esse nível de prioridade não existe"
+      assign:
+        blank: "Informe um nome para atribuir este erro"
       not_enabled: "%{feature} não está ativado. Ative em %{file}"
       not_enabled_plural: "%{feature} não estão ativados. Ative-os em %{file}"
       not_enabled_options: "%{feature} não está ativado. Ative %{options} em %{file}"

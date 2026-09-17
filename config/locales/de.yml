@@ -1197,6 +1197,12 @@ de:
         updated: "Status geändert zu %{status}"
         invalid_transition: "Der Status kann nicht von %{from} zu %{to} geändert werden"
         unknown: "Diesen Status gibt es nicht"
+      snooze:
+        invalid_hours: "Die Zurückstelldauer muss eine ganze Zahl von Stunden zwischen 1 und %{max} sein"
+      priority:
+        invalid: "Diese Prioritätsstufe gibt es nicht"
+      assign:
+        blank: "Geben Sie einen Namen ein, dem dieser Fehler zugewiesen werden soll"
       not_enabled: "%{feature} ist nicht aktiviert. Aktivieren Sie es in %{file}"
       not_enabled_plural: "%{feature} sind nicht aktiviert. Aktivieren Sie sie in
         %{file}"

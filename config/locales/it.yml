@@ -1235,6 +1235,12 @@ it:
         updated: "Stato modificato in %{status}"
         invalid_transition: "Impossibile cambiare lo stato da %{from} a %{to}"
         unknown: "Questo stato non esiste"
+      snooze:
+        invalid_hours: "La durata del rinvio deve essere un numero intero di ore compreso tra 1 e %{max}"
+      priority:
+        invalid: "Questo livello di priorità non esiste"
+      assign:
+        blank: "Inserisci un nome a cui assegnare questo errore"
       not_enabled: "%{feature} non è abilitato. Abilitalo in %{file}"
       not_enabled_plural: "%{feature} non sono abilitati. Abilitali in %{file}"
       not_enabled_options: "%{feature} non è abilitato. Abilita %{options} in %{file}"

@@ -1266,6 +1266,12 @@ pl:
         updated: "Status zmieniono na %{status}"
         invalid_transition: "Nie można zmienić statusu z %{from} na %{to}"
         unknown: "Taki status nie istnieje"
+      snooze:
+        invalid_hours: "Czas odłożenia musi być całkowitą liczbą godzin od 1 do %{max}"
+      priority:
+        invalid: "Taki poziom priorytetu nie istnieje"
+      assign:
+        blank: "Podaj nazwę osoby, do której chcesz przypisać ten błąd"
       not_enabled: "%{feature} nie jest włączone. Włącz w %{file}"
       not_enabled_plural: "%{feature} nie są włączone. Włącz je w %{file}"
       not_enabled_options: "%{feature} nie jest włączone. Włącz %{options} w %{file}"

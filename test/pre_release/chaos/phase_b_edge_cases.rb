@@ -235,7 +235,8 @@ end
 eid = test_error.id
 
 assert_no_crash("AssignError with empty string") do
-  RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "")
+  result = RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "")
+  assert "blank assignee is refused", result[:success] == false && result[:reason] == :blank_assignee
 end
 
 assert_no_crash("AssignError with very long name") do
@@ -244,7 +245,8 @@ end
 
 assert_no_crash("UpdateErrorPriority with invalid level") do
   begin
-    RailsErrorDashboard::Commands::UpdateErrorPriority.call(eid, priority_level: "P99")
+    result = RailsErrorDashboard::Commands::UpdateErrorPriority.call(eid, priority_level: "P99")
+    assert "invalid priority is refused", result[:success] == false && result[:reason] == :invalid_priority
   rescue => e
     assert "invalid priority raises validation", e.is_a?(StandardError)
   end
@@ -258,11 +260,13 @@ end
 snooze_eid = snooze_error.id
 
 assert_no_crash("SnoozeError with 0 hours") do
-  RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: 0, reason: "zero hours")
+  result = RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: 0, reason: "zero hours")
+  assert "0 hours is refused", result[:success] == false && result[:reason] == :invalid_hours
 end
 
 assert_no_crash("SnoozeError with negative hours") do
-  RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: -1, reason: "negative")
+  result = RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: -1, reason: "negative")
+  assert "negative hours is refused", result[:success] == false && result[:reason] == :invalid_hours
 end
 
 assert_no_crash("AddErrorComment with empty body raises validation") do
