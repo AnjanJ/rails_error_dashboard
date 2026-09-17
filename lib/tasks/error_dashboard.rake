@@ -502,7 +502,7 @@ namespace :error_dashboard do
     puts "\n" + "=" * 70 + "\n"
   end
 
-  desc "Run retention cleanup (delete errors older than retention_days)"
+  desc "Run retention cleanup (delete errors not seen for retention_days)"
   task retention_cleanup: :environment do
     config = RailsErrorDashboard.configuration
 
@@ -517,14 +517,15 @@ namespace :error_dashboard do
     end
 
     cutoff = config.retention_days.days.ago
-    count = RailsErrorDashboard::ErrorLog.where("occurred_at < ?", cutoff).count
+    # The job's own selection, so the number shown is the number deleted.
+    count = RailsErrorDashboard::RetentionCleanupJob.expired_scope(cutoff).count
 
     puts "\n  Retention policy: #{config.retention_days} days"
     puts "  Cutoff date: #{cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
     puts "  Errors to delete: #{count}"
 
     if count.zero?
-      puts "\n  No errors older than #{config.retention_days} days"
+      puts "\n  No errors unseen for more than #{config.retention_days} days"
       puts "\n" + "=" * 80 + "\n"
       next
     end

@@ -193,6 +193,100 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
         expect(RailsErrorDashboard::ErrorLog.first).to eq(keep)
       end
     end
+
+    # occurred_at is when a group was FIRST seen and never moves. Expiring by
+    # it deleted errors that were still happening today, together with their
+    # comments and triage history, the day they turned retention_days old.
+    context "an error that is still occurring" do
+      before { RailsErrorDashboard.configuration.retention_days = 90 }
+
+      it "is kept, with its occurrences and comments, however old its first occurrence is" do
+        live = create(:error_log, occurred_at: 120.days.ago, last_seen_at: Time.current)
+        occurrence = create(:error_occurrence, error_log: live, occurred_at: 1.hour.ago)
+        comment = RailsErrorDashboard::ErrorComment.create!(error_log: live, author_name: "ann", body: "known issue")
+
+        expect(described_class.new.perform).to eq(0)
+
+        expect(RailsErrorDashboard::ErrorLog.exists?(live.id)).to be true
+        expect(RailsErrorDashboard::ErrorOccurrence.exists?(occurrence.id)).to be true
+        expect(RailsErrorDashboard::ErrorComment.exists?(comment.id)).to be true
+      end
+
+      it "is deleted once it has not been seen for retention_days" do
+        stale = create(:error_log, occurred_at: 120.days.ago, last_seen_at: 100.days.ago)
+
+        expect(described_class.new.perform).to eq(1)
+        expect(RailsErrorDashboard::ErrorLog.exists?(stale.id)).to be false
+      end
+
+      it "falls back to occurred_at for a legacy row with no last_seen_at" do
+        legacy_old = create(:error_log, occurred_at: 120.days.ago)
+        legacy_old.update_columns(last_seen_at: nil)
+        legacy_recent = create(:error_log, occurred_at: 10.days.ago)
+        legacy_recent.update_columns(last_seen_at: nil)
+
+        described_class.new.perform
+
+        expect(RailsErrorDashboard::ErrorLog.exists?(legacy_old.id)).to be false
+        expect(RailsErrorDashboard::ErrorLog.exists?(legacy_recent.id)).to be true
+      end
+    end
+
+    # Both tables are written independently of error logs, and nothing else
+    # ever deletes from them.
+    context "diagnostic dumps and swallowed exceptions" do
+      before { RailsErrorDashboard.configuration.retention_days = 90 }
+
+      let(:application) { create(:application) }
+
+      def dump(captured_at)
+        RailsErrorDashboard::DiagnosticDump.create!(
+          application_id: application.id, dump_data: "{}", captured_at: captured_at
+        )
+      end
+
+      it "prunes expired rows even when no error log is expired" do
+        create(:error_log, occurred_at: 1.day.ago)
+        old_dump = dump(120.days.ago)
+        new_dump = dump(1.day.ago)
+        old_swallowed = create(:swallowed_exception, application: application, period_hour: 120.days.ago.beginning_of_hour)
+        new_swallowed = create(:swallowed_exception, application: application, period_hour: 1.day.ago.beginning_of_hour)
+
+        expect(described_class.new.perform).to eq(0)
+
+        expect(RailsErrorDashboard::DiagnosticDump.exists?(old_dump.id)).to be false
+        expect(RailsErrorDashboard::DiagnosticDump.exists?(new_dump.id)).to be true
+        expect(RailsErrorDashboard::SwallowedException.exists?(old_swallowed.id)).to be false
+        expect(RailsErrorDashboard::SwallowedException.exists?(new_swallowed.id)).to be true
+      end
+
+      it "prunes them whether or not the feature that wrote them is still enabled" do
+        RailsErrorDashboard.configuration.enable_swallowed_exception_tracking = false if
+          RailsErrorDashboard.configuration.respond_to?(:enable_swallowed_exception_tracking=)
+        old_swallowed = create(:swallowed_exception, application: application, period_hour: 120.days.ago.beginning_of_hour)
+
+        described_class.new.perform
+
+        expect(RailsErrorDashboard::SwallowedException.exists?(old_swallowed.id)).to be false
+      end
+
+      it "still cleans up error logs when pruning one of these tables fails" do
+        allow(RailsErrorDashboard::DiagnosticDump).to receive(:where).and_raise(ActiveRecord::StatementInvalid, "boom")
+        expired = create(:error_log, occurred_at: 120.days.ago, last_seen_at: 120.days.ago)
+
+        expect(described_class.new.perform).to eq(1)
+        expect(RailsErrorDashboard::ErrorLog.exists?(expired.id)).to be false
+      end
+
+      it "does nothing to them when retention is disabled" do
+        RailsErrorDashboard.configuration.retention_days = nil
+        old_dump = dump(120.days.ago)
+
+        described_class.new.perform
+
+        expect(RailsErrorDashboard::DiagnosticDump.exists?(old_dump.id)).to be true
+      end
+    end
   end
 
   describe "job configuration" do
