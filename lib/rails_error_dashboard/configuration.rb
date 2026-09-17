@@ -157,6 +157,8 @@ module RailsErrorDashboard
     attr_accessor :notification_minimum_severity   # Minimum severity to notify (default: :low = notify all)
     attr_accessor :notification_cooldown_minutes    # Per-error cooldown in minutes (default: 5, 0 = disabled)
     attr_accessor :notification_threshold_alerts    # Occurrence milestones that trigger notification (default: [10, 50, 100, 500, 1000])
+    attr_accessor :notification_burst_limit          # Max FIRST-OCCURRENCE notifications per window, per process (default: 10, 0 = no cap)
+    attr_accessor :notification_burst_window_seconds # Length of that window in seconds (default: 60)
 
     # Breadcrumbs (request activity trail)
     attr_accessor :enable_breadcrumbs              # Master switch (default: false)
@@ -302,7 +304,8 @@ module RailsErrorDashboard
 
       @use_separate_database = ENV.fetch("USE_SEPARATE_ERROR_DB", "false") == "true"
 
-      # Retention policy - days to keep errors before automatic deletion (default: 90)
+      # Retention policy - days an error may go unseen (last_seen_at) before it is
+      # deleted automatically (default: 90). An error still occurring is kept.
       # Set to nil to keep errors forever (not recommended for production)
       # Schedule cleanup: RailsErrorDashboard::RetentionCleanupJob.perform_later
       @retention_days = 90
@@ -384,6 +387,8 @@ module RailsErrorDashboard
       @notification_minimum_severity = :low  # Notify on all severities (current behavior)
       @notification_cooldown_minutes = 5     # 5 min cooldown per error_hash (0 = disabled)
       @notification_threshold_alerts = [ 10, 50, 100, 500, 1000 ] # Occurrence milestones
+      @notification_burst_limit = 10          # New-error notifications per window, per process (0 = no cap)
+      @notification_burst_window_seconds = 60 # One summary message replaces the rest of the window
 
       # Breadcrumbs defaults - OFF by default (opt-in)
       @enable_breadcrumbs = false         # Master switch
@@ -852,6 +857,19 @@ module RailsErrorDashboard
       # Validate notification_threshold_alerts (must be array of positive integers if set)
       if notification_threshold_alerts && !notification_threshold_alerts.is_a?(Array)
         errors << "notification_threshold_alerts must be an Array (got: #{notification_threshold_alerts.class})"
+      end
+
+      # Validate the first-occurrence burst cap (non-negative integers; 0 or nil
+      # turns the cap off)
+      {
+        notification_burst_limit: notification_burst_limit,
+        notification_burst_window_seconds: notification_burst_window_seconds
+      }.each do |name, value|
+        next if value.nil?
+
+        unless value.is_a?(Integer) && value >= 0
+          errors << "#{name} must be a non-negative Integer (got: #{value.inspect})"
+        end
       end
 
       # Log warnings (non-fatal issues)

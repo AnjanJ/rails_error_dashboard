@@ -121,6 +121,72 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::CircuitBreaker do
     end
   end
 
+  # The breaker used to advance only inside record!, so a storm that simply
+  # STOPPED left it open for ever: no events, no roll, no close.
+  describe "time-driven recovery (no events after the storm)" do
+    before { fire(500) } # fast-trip open at t0; cooldown 60s
+
+    it "closes once cooldown plus two calm buckets have elapsed, with no record!" do
+      clock.advance(60 + 40)
+      expect(breaker.state).to eq(:closed)
+    end
+
+    it "returns :closed from the first record! after the quiet period" do
+      clock.advance(60 + 40)
+      expect(breaker.record!).to eq(:closed)
+    end
+
+    it "is only half_open 10s past the cooldown (two calm buckets still required)" do
+      clock.advance(60 + 10)
+      expect(breaker.state).to eq(:half_open)
+    end
+
+    it "is still open inside the cooldown" do
+      clock.advance(50)
+      expect(breaker.state).to eq(:open)
+    end
+
+    it "closes after an hour of silence in a bounded number of transitions" do
+      transitions = 0
+      allow(breaker).to receive(:transition!).and_wrap_original do |original, *args|
+        transitions += 1
+        original.call(*args)
+      end
+
+      clock.advance(3600)
+
+      expect(breaker.state).to eq(:closed)
+      expect(transitions).to be <= 8
+    end
+
+    it "stamps ended_at when a catch-up closes the episode" do
+      clock.advance(3600)
+      breaker.state
+      expect(breaker.episode_snapshot[:ended_at]).to be_present
+    end
+
+    it "tick! is a no-op inside the current bucket" do
+      clock.advance(5)
+      expect { breaker.tick! }.not_to(change { breaker.episode_snapshot })
+      expect(breaker.state).to eq(:open)
+    end
+
+    it "does not escalate a closed breaker retroactively after a long silence" do
+      breaker.reset!
+      fire(150) # 15/s for one bucket, then nothing for an hour
+      clock.advance(3600)
+      expect(breaker.state).to eq(:closed)
+      expect(breaker.episode_snapshot).to be_nil
+    end
+
+    it "closes a shedding breaker after silence" do
+      breaker.reset!
+      run_bucket(150) # -> :shedding
+      clock.advance(3600)
+      expect(breaker.state).to eq(:closed)
+    end
+  end
+
   describe "episode tracking" do
     it "has no episode while closed and calm" do
       fire(10)

@@ -1086,6 +1086,8 @@ de:
           gesetzt)
         environment: Umgebung, der Fehler zugeordnet werden (Rails.env, falls nicht
           gesetzt)
+        notification_burst_limit: "Benachrichtigungen über neue Fehler pro Zeitfenster und Prozess (0 = keine Obergrenze)"
+        notification_burst_window_seconds: "Länge des Zeitfensters für Benachrichtigungen über neue Fehler"
         notification_environments: Nur für diese Umgebungen benachrichtigen (alle,
           falls nicht gesetzt)
         database: Aktive Datenbank für Fehlerprotokolle
@@ -1372,6 +1374,10 @@ de:
           one: "%{value} Fehler"
           other: "%{value} Fehler"
         view_in_dashboard: Im Dashboard ansehen
+      burst:
+        suppressed: "In %{application} wurden innerhalb von %{window} Sekunden mehr als %{limit} neue Fehler gemeldet."
+        still_recorded: "Benachrichtigungen über weitere neue Fehler sind bis zum Ende dieses Zeitfensters pausiert; jeder Fehler wird weiterhin erfasst."
+        dashboard: "Dashboard: %{url}"
       storm:
         detected: Fehlersturm in %{application} um %{started_at} erkannt.
         mode:

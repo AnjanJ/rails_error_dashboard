@@ -395,6 +395,55 @@ assert "50 errors created in < 5 seconds", elapsed < 5, "took #{elapsed.round(2)
 puts ""
 
 # ---------------------------------------------------------------------------
+# B11: Invalid bytes anywhere in a captured error
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("B11: Errors containing invalid UTF-8 and NUL bytes")
+
+# The error you most need to see is often the one carrying garbage: a binary
+# payload in the message, a mangled URL, a NUL from a C extension. It has to
+# be stored, and every stored string has to be valid so its page renders.
+hostile = "binary payload caf\xC3 \xFF\xFE end".b
+hostile_error = begin
+  error = RuntimeError.new(hostile)
+  error.set_backtrace([ "#{Rails.root}/app/models/bin\xFFary.rb:1:in 'run'".b, "lib/ok.rb:2:in 'ok'" ])
+  raise error
+rescue => e
+  log_error_and_find(e, {
+    platform: "Web",
+    request_url: "/upload?name=\xFF\xFEfile".b,
+    user_agent: "Agent\x00With\xFFNul".b,
+    request_params: { "blob" => "\xC3\x28".b }
+  })
+end
+
+assert "B11: an error with invalid bytes is stored, not lost", hostile_error.is_a?(RailsErrorDashboard::ErrorLog)
+
+if hostile_error
+  hostile_error.reload
+  bad = hostile_error.attributes.select { |_k, v| v.is_a?(String) && (!v.valid_encoding? || v.include?("\0")) }.keys
+  assert "B11: every stored string is valid UTF-8 without NULs", bad.empty?, "invalid: #{bad.inspect}"
+  assert "B11: the readable part of the message survives", hostile_error.message.include?("binary payload")
+
+  occurrence = RailsErrorDashboard::ErrorOccurrence.where(error_log_id: hostile_error.id).last
+  if occurrence
+    bad_occ = occurrence.attributes.select { |_k, v| v.is_a?(String) && !v.valid_encoding? }.keys
+    assert "B11: the occurrence row is valid too", bad_occ.empty?, "invalid: #{bad_occ.inspect}"
+  end
+
+  assert_no_crash("B11: the same hostile error a second time increments, not raises") do
+    again = begin
+      error = RuntimeError.new(hostile)
+      error.set_backtrace([ "#{Rails.root}/app/models/bin\xFFary.rb:1:in 'run'".b, "lib/ok.rb:2:in 'ok'" ])
+      raise error
+    rescue => e
+      log_error_and_find(e, { platform: "Web" })
+    end
+    assert "B11: the recurrence lands on the same row", again && again.id == hostile_error.id
+  end
+end
+puts ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 exit_code = PreReleaseTestHarness.summary("PHASE B")

@@ -30,10 +30,7 @@ module RailsErrorDashboard
         end
 
         error.transaction do
-          error.update!(status: @status)
-
-          # Auto-resolve if status is "resolved"
-          error.update!(resolved: true) if @status == "resolved"
+          error.update!(status_attributes(error))
 
           # Add comment about status change
           if @comment.present?
@@ -44,7 +41,31 @@ module RailsErrorDashboard
           end
         end
 
+        # The stat cards are cached; a user action must show up at once.
+        Services::AnalyticsCacheManager.clear
+
         { success: true, error: error }
+      end
+
+      private
+
+      # One write, so the three columns can never disagree. resolved_at is what
+      # MTTR is computed from: leaving it nil (as this command used to) dropped
+      # every error resolved through the status workflow from the MTTR figures,
+      # and leaving it set on a reopened error kept a stale resolution time.
+      # Only "resolved" sets the flag -- wont_fix stays resolved: false.
+      def status_attributes(error)
+        attrs = { status: @status }
+
+        if @status == "resolved"
+          attrs[:resolved] = true
+          attrs[:resolved_at] = Time.current
+        elsif error.status == "resolved" || error.resolved?
+          attrs[:resolved] = false
+          attrs[:resolved_at] = nil
+        end
+
+        attrs
       end
     end
   end

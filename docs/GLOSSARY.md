@@ -110,11 +110,15 @@ Error has been fixed. Removed from main list but still searchable. If the error 
 **Valid transitions**: Can reopen to `new` if error recurs.
 
 ### Won't Fix
-Error is intentionally not being fixed. Removed from main list. Can be reopened if needed.
+Error is intentionally not being fixed: the team knows it recurs and has decided not to act on it. Removed from main list.
 
 **Status**: `wont_fix`
 
-**Valid transitions**: Can reopen to `new`.
+**On recurrence**: the status is sticky. Every recurrence is counted on the same row (`occurrence_count`, `last_seen_at`) however long ago the error was first seen. It is **not** reopened, no `reopened_at` is recorded, no notification or baseline alert is sent, and no new error row is created. This is the difference from `resolved`, which reopens on the next occurrence. (Before 0.13.0 a `wont_fix` error was counted silently for 24 hours and then reopened to `new`.)
+
+Because nothing resurfaces it automatically, check the occurrence count of `wont_fix` errors from time to time, and move one back to `new` by hand if it has become worth fixing.
+
+**Valid transitions**: Can be moved back to `new` manually. It never moves there by itself.
 
 ### ActionCable Tracking
 Monitors WebSocket channel activity via ActiveSupport::Notifications events. Captures channel actions (`perform_action`), data transmissions (`transmit`), subscription confirmations, and subscription rejections as breadcrumbs. Requires `enable_breadcrumbs = true` and `enable_actioncable_tracking = true`. Dashboard page at `/errors/actioncable_health_summary`.

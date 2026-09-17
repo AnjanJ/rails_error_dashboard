@@ -47,6 +47,8 @@
       color: "info",
       settings: {
         notification_environments: { type: :array },
+        notification_burst_limit: { type: :integer },
+        notification_burst_window_seconds: { type: :integer, unit: :seconds },
         enable_slack_notifications: { type: :boolean },
         slack_webhook_url: { type: :url, show_if: :enable_slack_notifications },
         enable_email_notifications: { type: :boolean },

@@ -1149,6 +1149,8 @@ pl:
           ustawiono)
         environment: Środowisko, do którego przypisywane są błędy (Rails.env, jeśli
           nie ustawiono)
+        notification_burst_limit: "Powiadomienia o nowych błędach na okno czasowe i proces (0 = bez limitu)"
+        notification_burst_window_seconds: "Długość okna czasowego powiadomień o nowych błędach"
         notification_environments: Powiadamiaj tylko dla tych środowisk (wszystkie,
           jeśli nie ustawiono)
         database: Aktywna baza danych dla dzienników błędów
@@ -1451,6 +1453,10 @@ pl:
           few: "%{value} błędy"
           many: "%{value} błędów"
         view_in_dashboard: Zobacz w panelu
+      burst:
+        suppressed: "W aplikacji %{application} zgłoszono ponad %{limit} nowych błędów w ciągu %{window} sekund."
+        still_recorded: "Powiadomienia o kolejnych nowych błędach są wstrzymane do końca tego okna czasowego; każdy błąd jest nadal zapisywany."
+        dashboard: "Panel: %{url}"
       storm:
         detected: Wykryto sztorm błędów w %{application} o %{started_at}.
         mode:

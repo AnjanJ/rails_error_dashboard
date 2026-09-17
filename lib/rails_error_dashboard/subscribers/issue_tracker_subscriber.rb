@@ -78,11 +78,20 @@ module RailsErrorDashboard
 
           if existing
             # Link this record to the existing issue instead of creating a new one
-            error_log.update_columns(
+            link = {
               external_issue_url: existing.external_issue_url,
               external_issue_number: existing.external_issue_number,
               external_issue_provider: existing.external_issue_provider
-            )
+            }
+            # The repository is half the issue's identity. Without it
+            # IssueTrackerClient.for_error falls back to the CONFIGURED repo,
+            # and every later comment/close/reopen for this row would hit
+            # whatever issue has that number there. Same column guard as
+            # LinkExistingIssue.
+            if ErrorLog.column_names.include?("external_issue_repo")
+              link[:external_issue_repo] = existing.external_issue_repo
+            end
+            error_log.update_columns(link)
             return false
           end
 

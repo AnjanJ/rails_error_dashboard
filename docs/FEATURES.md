@@ -224,14 +224,17 @@ config.enable_webhook_notifications = true
 
 ### Notification Throttling 🆕
 - **Severity filter** — `config.notification_minimum_severity` skips notifications for low-priority errors
-- **Per-error cooldown** — `config.notification_cooldown_minutes` (default: 5) prevents duplicate notifications for the same error
+- **Per-error cooldown** — `config.notification_cooldown_minutes` (default: 5) prevents duplicate notifications for the same error. Held in the database, so it applies across all workers and survives restarts
 - **Threshold alerts** — `config.notification_threshold_alerts` (default: `[10, 50, 100, 500, 1000]`) sends milestone notifications when errors hit occurrence thresholds
+- **New-error burst cap** — `config.notification_burst_limit` (default: 10) per `config.notification_burst_window_seconds` (default: 60), per process. A deploy that throws 200 distinct new errors sends 10 notifications and one summary, not 200; every error is still recorded
 - **Environment allowlist** — `config.notification_environments` (default: `nil` = all) keeps staging out of your pager; applies to every channel plus storm and baseline alerts (v0.11.0)
 
 ```ruby
 config.notification_minimum_severity = :medium  # Skip :low severity
 config.notification_cooldown_minutes = 10       # 10-minute cooldown per error
 config.notification_threshold_alerts = [10, 50, 100, 500, 1000]  # Milestone alerts
+config.notification_burst_limit = 10            # New-error notifications per window, per process (0 = no cap)
+config.notification_burst_window_seconds = 60   # ...then one summary replaces the rest
 config.notification_environments = %w[production]  # Staging never pages
 ```
 
@@ -1321,6 +1324,8 @@ When a resolved error occurs again, it automatically:
 2. Records `reopened_at` timestamp
 3. Increments `occurrence_count`
 4. Shows a "Reopened" badge in the dashboard
+
+This applies to `resolved` errors only. A **Won't Fix** error is sticky: its recurrences are counted on the same row, at any age, and it is never reopened or notified about — see the [glossary](GLOSSARY.md#wont-fix).
 
 ### Notification Throttling
 

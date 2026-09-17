@@ -32,7 +32,7 @@ Shows the status of fundamental dashboard features:
 - **Error Middleware**: Whether the error-catching middleware is active
 - **Rails.error Subscriber**: Whether Rails 7+ error reporter integration is active
 - **Authentication**: Confirms authentication is always enforced (HTTP Basic Auth or custom lambda)
-- **Data Retention**: Number of days errors are kept before auto-deletion
+- **Data Retention**: Number of days an error may go unseen before it is auto-deleted (an error that keeps occurring is kept)
 - **Max Backtrace Lines**: Stack trace depth limit
 - **Sampling Rate**: Percentage of errors being logged (100% = all errors)
 

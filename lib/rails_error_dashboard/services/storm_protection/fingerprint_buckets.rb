@@ -39,6 +39,7 @@ module RailsErrorDashboard
 
         def reset!
           @entries = Concurrent::Map.new
+          @last_sweep = nil
         end
 
         # Decide capture fidelity for one event of this fingerprint.
@@ -68,10 +69,32 @@ module RailsErrorDashboard
           return existing if existing
 
           # Bounded: never insert past the cap (size check is approximate
-          # under concurrency — a few entries over the cap is fine)
-          return nil if @entries.size >= max_tracked
+          # under concurrency — a few entries over the cap is fine). Before
+          # declining, make room by dropping fingerprints that have gone quiet:
+          # without that the map filled once and stayed full for the life of
+          # the process, so the first N fingerprints a worker ever saw were the
+          # only ones it would ever rate-limit. If every tracked entry is still
+          # live, a new key is still declined — a storm of unique fingerprints
+          # is the global breaker's job (Layer 2), not this map's.
+          if @entries.size >= max_tracked
+            sweep_expired!(now)
+            return nil if @entries.size >= max_tracked
+          end
 
           @entries.compute_if_absent(gate_key) { Entry.new(now, 0, now, 0) }
+        end
+
+        # Drop entries whose minute window has ended. At most once per window:
+        # while the map is full every unseen key lands here, and a full scan per
+        # miss would put an O(n) walk on the capture path. Racy by design (two
+        # threads may both sweep); deleting an expired entry twice is harmless.
+        def sweep_expired!(now)
+          return if @last_sweep && now - @last_sweep < WINDOW_SECONDS
+
+          @last_sweep = now
+          @entries.each_pair do |key, entry|
+            @entries.delete(key) if now - entry.window_start >= WINDOW_SECONDS
+          end
         end
 
         def roll_windows(entry, now)
