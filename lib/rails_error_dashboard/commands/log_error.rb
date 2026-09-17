@@ -414,7 +414,7 @@ module RailsErrorDashboard
                                   ENV["GIT_SHA"] ||
                                   ENV["HEROKU_SLUG_COMMIT"] ||
                                   ENV["RENDER_GIT_COMMIT"] ||
-                                  detect_git_sha_from_command
+                                  RailsErrorDashboard.detected_git_sha
         end
 
         if ErrorLog.column_names.include?("app_version")
@@ -793,15 +793,6 @@ module RailsErrorDashboard
         chain.to_json
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Failed to build cause JSON from context: #{e.message}")
-        nil
-      end
-
-      # Detect git SHA from git command (fallback)
-      def detect_git_sha_from_command
-        return nil unless File.exist?(Rails.root.join(".git"))
-        `git rev-parse --short HEAD 2>/dev/null`.strip.presence
-      rescue => e
-        RailsErrorDashboard::Logger.debug("Could not detect git SHA: #{e.message}")
         nil
       end
 

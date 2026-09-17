@@ -71,6 +71,11 @@ module RailsErrorDashboard
         next
       end
 
+      # Resolve the running commit now (three small file reads, memoised, never
+      # raises) so that no capture ever pays for it. Skipped when the SHA is
+      # configured: then it is never consulted.
+      RailsErrorDashboard.detected_git_sha if RailsErrorDashboard.configuration.git_sha.blank?
+
       if RailsErrorDashboard.configuration.enable_error_subscriber
         Rails.error.subscribe(RailsErrorDashboard::ErrorReporter.new)
       end
