@@ -229,14 +229,22 @@ module RailsErrorDashboard
 
     def authenticate_with_basic_auth
       authenticate_or_request_with_http_basic do |username, password|
-        ActiveSupport::SecurityUtils.secure_compare(
-          username,
-          RailsErrorDashboard.configuration.dashboard_username
-        ) &
-        ActiveSupport::SecurityUtils.secure_compare(
-          password,
-          RailsErrorDashboard.configuration.dashboard_password
-        )
+        # A Basic header need not decode to "user:pass": with no colon the
+        # password is nil, with nothing decodable both are. secure_compare
+        # raises on nil, which used to surface as a 500 rendered by the
+        # dashboard's own error page. A malformed header is a failed login.
+        next false if username.nil? || password.nil?
+
+        # A credential configured as nil must deny everyone. Coercing it with
+        # to_s would make it equal to an empty login ("Basic Og==" is ":").
+        expected_username = RailsErrorDashboard.configuration.dashboard_username
+        expected_password = RailsErrorDashboard.configuration.dashboard_password
+        next false if expected_username.nil? || expected_password.nil?
+
+        # Non-short-circuit & on purpose: both comparisons always run, so the
+        # response time does not reveal which half was wrong.
+        ActiveSupport::SecurityUtils.secure_compare(username.to_s, expected_username.to_s) &
+          ActiveSupport::SecurityUtils.secure_compare(password.to_s, expected_password.to_s)
       end
     end
   end

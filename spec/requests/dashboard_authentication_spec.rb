@@ -107,4 +107,67 @@ RSpec.describe "Dashboard authentication", type: :request do
       expect(session[:red_locale]).to be_nil
     end
   end
+
+  # A Basic header does not have to decode to "user:pass". Without a colon the
+  # password is nil, with nothing to decode both are. Those are failed logins
+  # like any other: a 401 with a challenge, decided before any query runs.
+  describe "with a malformed Basic header" do
+    def count_queries
+      count = 0
+      counter = lambda do |_name, _start, _finish, _id, payload|
+        count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+      end
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
+      count
+    end
+
+    {
+      "no colon (username only)" => "Basic #{Base64.strict_encode64('useronly')}",
+      "the right username and no colon" => "Basic #{Base64.strict_encode64('admin')}",
+      "an empty value" => "Basic ",
+      "no value at all" => "Basic",
+      "a value that is not base64" => "Basic !!!notbase64",
+      "only a colon" => "Basic #{Base64.strict_encode64(':')}"
+    }.each do |label, header|
+      it "answers 401 with a challenge and runs no queries for #{label}" do
+        queries = count_queries do
+          get "/error_dashboard/errors", headers: { "HTTP_AUTHORIZATION" => header }
+        end
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.headers["WWW-Authenticate"]).to include("Basic")
+        expect(response.body).not_to include("bytesize")
+        expect(response.body).not_to include("Something went wrong")
+        expect(queries).to eq(0)
+      end
+    end
+
+    it "still lets valid credentials through after the nil guard" do
+      get "/error_dashboard/errors", headers: auth_header
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    # Fail closed: nil must never be coerced to "" and matched by an empty login.
+    it "denies everyone when a credential is configured as nil, including an empty login" do
+      RailsErrorDashboard.configuration.dashboard_username = nil
+      RailsErrorDashboard.configuration.dashboard_password = nil
+
+      [ auth_header("", ""), auth_header("admin", "secret123"),
+        { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64('admin')}" } ].each do |headers|
+        get "/error_dashboard/errors", headers: headers
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    it "refuses a nil-password header even when the configured password is blank" do
+      RailsErrorDashboard.configuration.dashboard_password = ""
+
+      get "/error_dashboard/errors",
+          headers: { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64('admin')}" }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
 end
