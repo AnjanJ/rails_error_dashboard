@@ -382,4 +382,40 @@ RSpec.describe RailsErrorDashboard::Services::NotificationThrottler do
       expect(described_class.environment_allowed?(staging_error)).to be true
     end
   end
+  # should_notify? is a question about the ROW, not about the Ruby object the
+  # caller happens to hold: claim! stamps the row with update_all, so the
+  # caller's copy (and every other process's copy) still says "never notified".
+  describe ".should_notify? with a persisted row" do
+    let(:row) { create(:error_log, error_type: "NoMethodError") }
+
+    before do
+      allow(RailsErrorDashboard::Services::SeverityClassifier).to receive(:classify).and_return(:high)
+    end
+
+    it "is false right after record_notification on the same object" do
+      described_class.record_notification(row)
+
+      expect(described_class.should_notify?(row)).to be false
+    end
+
+    it "is false when another process claimed the row" do
+      stale_copy = RailsErrorDashboard::ErrorLog.find(row.id)
+      described_class.claim!(RailsErrorDashboard::ErrorLog.find(row.id))
+
+      expect(described_class.should_notify?(stale_copy)).to be false
+    end
+
+    it "is true again once the cooldown has passed" do
+      described_class.record_notification(row)
+      row.class.where(id: row.id).update_all(last_notified_at: 6.minutes.ago)
+
+      expect(described_class.should_notify?(row)).to be true
+    end
+
+    it "is true for a row that was deleted (nothing to throttle against)" do
+      row.destroy
+
+      expect(described_class.should_notify?(row)).to be true
+    end
+  end
 end

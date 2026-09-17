@@ -179,14 +179,17 @@ assert "M5: storm_event row has ended_at after recovery flush", final_event&.end
 # the only thing that rolled buckets. A storm that just ENDS produced no
 # events, so the breaker stayed :open, per-error notifications stayed
 # suppressed, and the first real error afterwards was judged by stale state.
-PreReleaseTestHarness.section("M6: Silent recovery (waits ~31s, fires nothing)")
+PreReleaseTestHarness.section("M6: Silent recovery (waits ~45s, fires nothing)")
 
 GATE.reset!
 500.times { fire_error("silent recovery storm epsilon") } # open
 assert "M6: breaker open at storm peak", GATE.state == :open
 
-# Nothing at all for cooldown (5s) + the half-open bucket + two calm buckets.
-sleep 31
+# Nothing at all. With 10s buckets and a 5s cooldown the breaker needs the rest
+# of the storm bucket (up to 10s), one bucket to go half-open and two calm
+# buckets to close: about 40s. 31s, the first value tried here, left it
+# half-open -- correctly.
+sleep 45
 
 assert "M6: breaker closed by elapsed time alone", GATE.state == :closed, "state=#{GATE.state}"
 assert "M6: notifications no longer suppressed", GATE.notifications_suppressed? == false

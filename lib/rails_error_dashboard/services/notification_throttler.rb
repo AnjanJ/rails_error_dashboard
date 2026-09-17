@@ -260,7 +260,9 @@ module RailsErrorDashboard
 
           last_time =
             if database_claim?(error_log)
-              error_log[COOLDOWN_COLUMN]
+              # Read the ROW, not the object: claim! stamps it with update_all,
+              # so the caller's copy -- and every other process's -- is stale.
+              ErrorLog.where(id: error_log.id).pick(COOLDOWN_COLUMN)
             else
               @mutex.synchronize { @last_notification_times[error_log.error_hash] }
             end
