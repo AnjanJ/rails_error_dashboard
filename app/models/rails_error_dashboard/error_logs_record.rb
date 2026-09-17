@@ -35,6 +35,23 @@ module RailsErrorDashboard
     # after the user's configuration is loaded
     # See lib/rails_error_dashboard/engine.rb
 
+    # Read-side half of the invalid-bytes defence. Capture scrubs what it
+    # writes, but SQLite and MySQL will happily hold a row written before that
+    # (or by anything else), and one such string takes down every page that
+    # renders it: ERB raises "invalid byte sequence in UTF-8". Scrubbing on load
+    # makes the page render whether or not the operator has run
+    # error_dashboard:scrub_invalid_encoding yet. In memory only: nothing is
+    # written, and the record is not left dirty.
+    after_find :scrub_invalid_strings
+
+    # Names of the attributes the load-time scrub had to repair, so that
+    # Commands::ScrubInvalidEncoding can persist the repair: once the values
+    # are clean in memory, re-reading them can no longer tell a bad row apart.
+    # @return [Array<String>]
+    def invalid_encoding_attributes
+      @invalid_encoding_attributes || []
+    end
+
     # Rails' default for a string column when the adapter has one (MySQL).
     DEFAULT_STRING_LIMIT = 255
 
@@ -67,6 +84,23 @@ module RailsErrorDashboard
       @string_column_limits ||= columns_hash.each_with_object({}) do |(name, column), limits|
         limits[name] = column.limit || DEFAULT_STRING_LIMIT if column.type == :string
       end
+    end
+
+    private
+
+    def scrub_invalid_strings
+      @attributes.each_value do |attribute|
+        value = attribute.value_before_type_cast
+        next unless value.is_a?(String)
+        next if value.encoding == Encoding::UTF_8 && value.valid_encoding? && !value.include?("\0")
+
+        name = attribute.name
+        self[name] = Services::EncodingSanitizer.scrub(value)
+        clear_attribute_changes([ name ])
+        (@invalid_encoding_attributes ||= []) << name
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] scrub on load failed: #{e.class}: #{e.message}")
     end
   end
 end

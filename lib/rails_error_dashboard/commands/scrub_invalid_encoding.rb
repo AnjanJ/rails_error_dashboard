@@ -85,6 +85,11 @@ module RailsErrorDashboard
           clean = Services::EncodingSanitizer.scrub(value)
           fixed[column] = clean unless clean.equal?(value) || clean == value
         end
+        # The model scrubs invalid strings as it loads a row, so by now they
+        # read as clean. It remembers which ones it had to repair.
+        row.invalid_encoding_attributes.each do |column|
+          changes[column] = row.read_attribute(column) if columns.include?(column)
+        end
         return if changes.empty?
 
         # update_columns: no callbacks, no validations, no updated_at bump. This
