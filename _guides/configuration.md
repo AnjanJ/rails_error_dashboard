@@ -117,7 +117,7 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `enable_middleware` | Boolean | `true` | Enable error catching middleware |
 | `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
-| `retention_days` | Integer | `90` | Days to keep errors before auto-deletion |
+| `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too |
 
 ### Error Classification
 

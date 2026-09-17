@@ -22,7 +22,9 @@ module RailsErrorDashboard
 
         max_lines ||= RailsErrorDashboard.configuration.max_backtrace_lines
 
-        limited_backtrace = backtrace.first(max_lines).map { |line| shorten_gem_path(line) }
+        # Scrubbed per line: a frame label can hold any bytes, and both the sub
+        # below and the join (mixed encodings) raise on an invalid one.
+        limited_backtrace = backtrace.first(max_lines).map { |line| shorten_gem_path(EncodingSanitizer.scrub(line)) }
         result = limited_backtrace.join("\n")
 
         if backtrace.length > max_lines

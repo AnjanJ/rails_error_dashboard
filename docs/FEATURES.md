@@ -1322,6 +1322,8 @@ When a resolved error occurs again, it automatically:
 3. Increments `occurrence_count`
 4. Shows a "Reopened" badge in the dashboard
 
+This applies to `resolved` errors only. A **Won't Fix** error is sticky: its recurrences are counted on the same row, at any age, and it is never reopened or notified about — see the [glossary](GLOSSARY.md#wont-fix).
+
 ### Notification Throttling
 
 Three layers to prevent alert fatigue:

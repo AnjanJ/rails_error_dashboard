@@ -14,6 +14,25 @@ module RailsErrorDashboard
   class RetentionCleanupJob < ApplicationJob
     queue_as :default
 
+    # The errors retention applies to: "not seen for retention_days", not
+    # "first seen retention_days ago". occurred_at is stamped when a group is
+    # created and never moves, so expiring by it deleted errors that were still
+    # happening today -- with their comments and triage history -- the day
+    # they turned N days old.
+    #
+    # Equivalent to COALESCE(last_seen_at, occurred_at) < cutoff (the NULL arm
+    # covers rows from before last_seen_at existed), but written so that each
+    # arm can use its own index; wrapping the columns in COALESCE would force a
+    # full scan of the largest table on every run.
+    #
+    # Public because the rake task previews the same selection before it asks
+    # for confirmation.
+    def self.expired_scope(cutoff)
+      ErrorLog.where(
+        "last_seen_at < :cutoff OR (last_seen_at IS NULL AND occurred_at < :cutoff)", cutoff: cutoff
+      )
+    end
+
     # @return [Integer] number of errors deleted
     def perform
       retention_days = RailsErrorDashboard.configuration.retention_days
@@ -26,8 +45,10 @@ module RailsErrorDashboard
       # whenever no error logs happen to be expired.
       cleanup_rack_attack_events(cutoff)
       cleanup_storm_flush_batches(cutoff)
+      cleanup_diagnostic_dumps(cutoff)
+      cleanup_swallowed_exceptions(cutoff)
 
-      expired_scope = ErrorLog.where("occurred_at < ?", cutoff)
+      expired_scope = self.class.expired_scope(cutoff)
       return 0 if expired_scope.none?
 
       deleted_count = 0
@@ -86,6 +107,49 @@ module RailsErrorDashboard
     rescue => e
       RailsErrorDashboard::Logger.debug(
         "[RailsErrorDashboard] Storm flush batch retention cleanup failed: #{e.class} - #{e.message}"
+      )
+    end
+
+    # Diagnostic dumps and swallowed-exception aggregates are written
+    # independently of error logs and nothing else ever deletes them, so they
+    # grew without bound. Not gated on their feature flags: rows written while
+    # a feature was on must still expire after it is switched off. Own rescue
+    # each, like the cleanups around them.
+    def cleanup_diagnostic_dumps(cutoff)
+      return unless DiagnosticDump.table_exists?
+
+      deleted = 0
+      DiagnosticDump.where("captured_at < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} diagnostic dumps"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Diagnostic dump retention cleanup failed: #{e.class} - #{e.message}"
+      )
+    end
+
+    def cleanup_swallowed_exceptions(cutoff)
+      return unless SwallowedException.table_exists?
+
+      deleted = 0
+      SwallowedException.where("period_hour < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} swallowed exception records"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Swallowed exception retention cleanup failed: #{e.class} - #{e.message}"
       )
     end
 

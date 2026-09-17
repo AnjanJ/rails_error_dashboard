@@ -238,7 +238,11 @@ module RailsErrorDashboard
           def gate_parts(exception, context)
             raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
 
-            {
+            # Everything below is buffered, JSON-encoded for StormFlushJob and
+            # later INSERTed, so no String may keep an invalid byte. The identity
+            # digest is computed from the raw message first (it is hex, and must
+            # match what the sync and async paths hash).
+            EncodingSanitizer.scrub_deep(
               error_class: exception.class.name,
               # The identity is hashed from the RAW message here, on the hot
               # path, and only the digest is buffered. The message itself is
@@ -256,7 +260,8 @@ module RailsErrorDashboard
                 controller_name: context[:controller_name]&.to_s,
                 action_name: context[:action_name]&.to_s
               ),
-              message: redact(raw_message),
+              # Scrubbed before redaction: the filter's regexes raise on invalid bytes.
+              message: redact(EncodingSanitizer.scrub(raw_message)),
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
@@ -266,7 +271,7 @@ module RailsErrorDashboard
               # worker's own environment", resolved at flush time exactly as
               # LogError resolves it for a full capture.
               environment: context[:environment].to_s.strip.presence&.[](0, 64)
-            }
+            )
           end
 
           # When a custom fingerprint lambda is configured the canonical hash
