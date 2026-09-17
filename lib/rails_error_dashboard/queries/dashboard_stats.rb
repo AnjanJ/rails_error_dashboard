@@ -93,13 +93,14 @@ module RailsErrorDashboard
       end
 
       def cache_key
-        # Cache key includes last error update timestamp for auto-invalidation
-        # Also includes current hour to ensure fresh data
-        # Uses base_scope to respect application_id filter for proper cache isolation
+        # The cache GENERATION, not maximum(:updated_at): the timestamp cost a
+        # query per key build and changed on every capture, so the cache never
+        # hit while errors were arriving. Freshness after a capture is the
+        # 1-minute TTL; user actions bump the generation (AnalyticsCacheManager).
         [
           "dashboard_stats",
           @application_id || "all",
-          base_scope.maximum(:updated_at)&.to_i || 0,
+          Services::AnalyticsCacheManager.generation,
           Time.current.hour
         ].join("/")
       end

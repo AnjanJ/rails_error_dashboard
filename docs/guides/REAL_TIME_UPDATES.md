@@ -28,7 +28,7 @@ Rails Error Dashboard now includes **real-time updates** powered by Turbo Stream
 ### What Gets Updated in Real-Time:
 
 1. **Error List** - New errors appear instantly at the top of the list
-2. **Dashboard Stats** - Error counts update automatically (Today, This Week, Unresolved, Resolved)
+2. **Dashboard Stats** - Error counts update automatically (Today, This Week, Unresolved, Resolved). The figures are cached, so after a newly captured error the stat cards can lag by up to 60 seconds (analytics by up to 5 minutes); resolving, muting, batch actions and the retention job refresh them immediately.
 3. **Visual Indicators** - New errors are highlighted with animations
 4. **Live Status** - A pulsing "Live" indicator shows the connection is active
 

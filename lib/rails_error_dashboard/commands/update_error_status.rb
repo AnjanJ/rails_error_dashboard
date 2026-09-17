@@ -38,6 +38,9 @@ module RailsErrorDashboard
           end
         end
 
+        # The stat cards are cached; a user action must show up at once.
+        Services::AnalyticsCacheManager.clear
+
         { success: true, error: error }
       end
     end

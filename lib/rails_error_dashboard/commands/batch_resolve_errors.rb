@@ -45,6 +45,8 @@ module RailsErrorDashboard
         end
 
         # Dispatch plugin event for batch resolved errors
+        Services::AnalyticsCacheManager.clear if resolved_count.positive?
+
         PluginRegistry.dispatch(:on_errors_batch_resolved, resolved_errors) if resolved_errors.any?
 
         {

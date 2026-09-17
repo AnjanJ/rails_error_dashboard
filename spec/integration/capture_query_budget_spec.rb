@@ -63,6 +63,10 @@ RSpec.describe "Capture query budget" do
     # First capture creates the group; the measured one takes the update path.
     RailsErrorDashboard::Commands::LogError.call(exception, {})
 
+    # Worst case: the stats cache is cold (it expires every minute), so this
+    # capture pays for the whole stats broadcast, spike detection included.
+    cache.clear
+
     statements = count_queries { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
 
     expect(statements.size).to be < 40,
@@ -70,8 +74,6 @@ RSpec.describe "Capture query budget" do
   end
 
   it "never sweeps the host's cache keyspace during a capture" do
-    pending "delete_matched runs from after_save at 39f281a; removed with the generation-keyed caches"
-
     RailsErrorDashboard::Commands::LogError.call(exception, {})
     allow(cache).to receive(:delete_matched).and_call_original
 
