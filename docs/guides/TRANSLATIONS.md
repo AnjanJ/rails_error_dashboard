@@ -417,7 +417,10 @@ bin/i18n-check --quiet   # failures only, no advisory warnings
 
 It **fails** on a missing key, an orphaned key, an interpolation variable that
 does not match English, a plural category your locale's CLDR rules do not
-allow (or requires and you omitted), and unparseable YAML.
+allow (or requires and you omitted), and unparseable YAML. It also fails when a
+view or helper translates a *namespace* — `red_t("red.errors.sidebar.environment")`
+where that key has children — because the fallback humanizes the key, which reads
+correctly in English and is untranslated everywhere else.
 
 It **warns**, without failing, on keys nothing appears to reference, a glossary
 term that vanished in translation, and English-looking text left in a view.
