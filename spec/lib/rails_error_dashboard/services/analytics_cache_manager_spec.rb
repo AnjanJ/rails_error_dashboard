@@ -28,7 +28,24 @@ RSpec.describe RailsErrorDashboard::Services::AnalyticsCacheManager do
       with_cache(ActiveSupport::Cache::MemoryStore.new)
 
       expect { described_class.clear }.to change(described_class, :generation)
-      expect { described_class.clear }.to change(described_class, :generation).by(1)
+
+      # Strictly increasing, not "+1": the new value is max(old + 1, epoch-ms),
+      # so it jumps by however many milliseconds have passed. Asserting by(1)
+      # held only when two clears landed in the same millisecond.
+      before = described_class.generation
+      described_class.clear
+      expect(described_class.generation).to be > before
+    end
+
+    it "still increases when two clears land in the same millisecond" do
+      with_cache(ActiveSupport::Cache::MemoryStore.new)
+      allow(Time).to receive(:now).and_return(Time.at(1_800_000_000))
+
+      described_class.clear
+      first = described_class.generation
+      described_class.clear
+
+      expect(described_class.generation).to eq(first + 1)
     end
 
     # A generation bump is O(1) on every store. delete_matched is a SCAN of the
