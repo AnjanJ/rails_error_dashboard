@@ -139,6 +139,66 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     end
   end
 
+  # The breaker only used to move when an error arrived. With a fake clock in
+  # the real breaker these prove the gate notices that a storm has ENDED.
+  describe "recovery driven by time" do
+    let(:clock) do
+      Class.new {
+        def initialize = @now = 1000.0
+        def call = @now
+        def advance(seconds) = @now += seconds
+      }.new
+    end
+    let(:breaker) { RailsErrorDashboard::Services::StormProtection::CircuitBreaker.new(clock: clock) }
+
+    before do
+      gate.reset!
+      gate.instance_variable_set(:@breaker, breaker)
+      allow(RailsErrorDashboard::StormNotificationJob).to receive(:perform_later)
+    end
+    after { gate.reset! }
+
+    def open_the_breaker
+      500.times { gate.admit!(boom) }
+      expect(breaker.state).to eq(:open)
+    end
+
+    it "stops suppressing notifications an hour after the storm, with no further errors" do
+      open_the_breaker
+      expect(gate.notifications_suppressed?).to be true
+
+      clock.advance(3600)
+
+      expect(gate.notifications_suppressed?).to be false
+      expect(gate.state).to eq(:closed)
+    end
+
+    it "flush_if_due! ticks the breaker even when the count buffer is empty" do
+      expect(breaker).to receive(:tick!).at_least(:once).and_call_original
+
+      gate.flush_if_due!
+    end
+
+    it "flush_if_due! closes the episode after a quiet period and hands it to the flush job" do
+      open_the_breaker
+      clock.advance(3600)
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_call_original
+
+      gate.flush_if_due!
+
+      expect(RailsErrorDashboard::StormFlushJob).to have_received(:perform_later)
+        .with(hash_including(episode: hash_including("ended_at" => a_string_matching(/\d{4}-\d{2}-\d{2}T/))))
+    end
+
+    it "admits the first error after a quiet hour at full fidelity" do
+      open_the_breaker
+      clock.advance(3600)
+
+      expect(gate.admit!(boom("a different error entirely"))).to eq(:full)
+    end
+  end
+
   describe ".notifications_suppressed?" do
     it "is false when closed" do
       expect(gate.notifications_suppressed?).to be false

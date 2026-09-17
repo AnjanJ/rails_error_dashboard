@@ -108,6 +108,11 @@ module RailsErrorDashboard
           def flush_if_due!
             return unless enabled?
 
+            # Advance the breaker by the clock before flushing. When errors
+            # stop, this (end of every request and job) is the only thing left
+            # that can move it out of :open, and doing it first means an
+            # episode that has just ended is persisted by this very flush.
+            breaker.tick!
             maybe_flush!
             nil
           rescue => e
