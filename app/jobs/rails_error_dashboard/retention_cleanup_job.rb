@@ -69,6 +69,9 @@ module RailsErrorDashboard
         deleted_count += batch_size
       end
 
+      # delete_all skips callbacks, and the stat cards are cached.
+      Services::AnalyticsCacheManager.clear if deleted_count > 0
+
       if deleted_count > 0
         RailsErrorDashboard::Logger.info(
           "[RailsErrorDashboard] Retention cleanup: deleted #{deleted_count} errors older than #{retention_days} days"

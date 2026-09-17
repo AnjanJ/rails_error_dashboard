@@ -24,6 +24,12 @@ RSpec.describe "storm batch idempotency" do
 
   after { RailsErrorDashboard.reset_configuration! }
 
+  # One clock reading per example. entry is called once per "delivery", and the
+  # batch digest covers last_seen_at: reading the clock inside entry meant that
+  # a second boundary between two calls turned the SAME batch into a different
+  # one, and the redelivery examples failed intermittently.
+  let(:now) { Time.current.change(usec: 0) }
+
   def entry(count: 5, gate_key: "gk-1", message: "storm boom")
     {
       "gate_key" => gate_key,
@@ -31,8 +37,8 @@ RSpec.describe "storm batch idempotency" do
       "message" => message,
       "first_app_frame" => "#{Rails.root}/app/models/widget.rb",
       "count" => count,
-      "first_seen_at" => 5.minutes.ago.iso8601,
-      "last_seen_at" => Time.current.iso8601
+      "first_seen_at" => (now - 5.minutes).iso8601,
+      "last_seen_at" => now.iso8601
     }
   end
 

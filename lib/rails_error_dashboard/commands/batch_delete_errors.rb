@@ -23,6 +23,7 @@ module RailsErrorDashboard
         error_ids_to_delete = errors.pluck(:id)
 
         errors.destroy_all
+        Services::AnalyticsCacheManager.clear
 
         # Dispatch plugin event for batch deleted errors
         PluginRegistry.dispatch(:on_errors_batch_deleted, error_ids_to_delete) if error_ids_to_delete.any?

@@ -86,9 +86,9 @@ module RailsErrorDashboard
     after_create_commit -> { Services::ErrorBroadcaster.broadcast_new(self) }
     after_update_commit -> { Services::ErrorBroadcaster.broadcast_update(self) }
 
-    # Cache invalidation - clear analytics caches when errors are created/updated/deleted
-    after_save -> { Services::AnalyticsCacheManager.clear }
-    after_destroy -> { Services::AnalyticsCacheManager.clear }
+    # No cache invalidation here, on purpose. A save is what a CAPTURE does, in
+    # the host app's request thread; the stats caches expire by TTL instead, and
+    # the commands behind user actions call AnalyticsCacheManager.clear themselves.
 
     def set_defaults
       self.platform ||= "API"
