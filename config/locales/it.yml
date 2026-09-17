@@ -1130,6 +1130,8 @@ it:
           non impostato)
         environment: Ambiente a cui vengono attribuiti gli errori (Rails.env se non
           impostato)
+        notification_burst_limit: "Notifiche di nuovi errori per intervallo e per processo (0 = nessun limite)"
+        notification_burst_window_seconds: "Durata dell'intervallo delle notifiche di nuovi errori"
         notification_environments: Notifica solo per questi ambienti (tutti se non
           impostato)
         database: Database attivo per i registri degli errori
@@ -1242,6 +1244,16 @@ it:
         linked: Segnalazione collegata correttamente
         create_failed: 'Impossibile creare la segnalazione: %{reason}'
         link_failed: 'Impossibile collegare la segnalazione: %{reason}'
+      status:
+        updated: "Stato modificato in %{status}"
+        invalid_transition: "Impossibile cambiare lo stato da %{from} a %{to}"
+        unknown: "Questo stato non esiste"
+      snooze:
+        invalid_hours: "La durata del rinvio deve essere un numero intero di ore compreso tra 1 e %{max}"
+      priority:
+        invalid: "Questo livello di priorità non esiste"
+      assign:
+        blank: "Inserisci un nome a cui assegnare questo errore"
       not_enabled: "%{feature} non è abilitato. Abilitalo in %{file}"
       not_enabled_plural: "%{feature} non sono abilitati. Abilitali in %{file}"
       not_enabled_options: "%{feature} non è abilitato. Abilita %{options} in %{file}"
@@ -1416,6 +1428,10 @@ it:
           other: "%{value} errori"
           many: "%{value} errori"
         view_in_dashboard: Vedi nel pannello
+      burst:
+        suppressed: "In %{application} sono stati segnalati più di %{limit} nuovi errori in %{window} secondi."
+        still_recorded: "Le notifiche per ulteriori nuovi errori sono sospese fino al termine di questo intervallo; ogni errore viene comunque registrato."
+        dashboard: "Pannello: %{url}"
       storm:
         detected: Rilevata tempesta di errori in %{application} alle %{started_at}.
         mode:

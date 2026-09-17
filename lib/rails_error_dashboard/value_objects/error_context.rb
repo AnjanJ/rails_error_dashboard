@@ -125,7 +125,9 @@ module RailsErrorDashboard
         # has :request_params as a JSON string but no :request object.
         return @context[:request_params] if params.empty? && @context[:request_params].present?
 
-        params.to_json
+        # Params read off a live request or job object never passed through the
+        # context scrub LogError does, and to_json raises on an invalid byte.
+        Services::EncodingSanitizer.scrub_deep(params).to_json
       end
 
       def extract_user_agent

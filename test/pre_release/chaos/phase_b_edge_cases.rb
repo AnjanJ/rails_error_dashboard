@@ -235,7 +235,8 @@ end
 eid = test_error.id
 
 assert_no_crash("AssignError with empty string") do
-  RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "")
+  result = RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "")
+  assert "blank assignee is refused", result[:success] == false && result[:reason] == :blank_assignee
 end
 
 assert_no_crash("AssignError with very long name") do
@@ -244,7 +245,8 @@ end
 
 assert_no_crash("UpdateErrorPriority with invalid level") do
   begin
-    RailsErrorDashboard::Commands::UpdateErrorPriority.call(eid, priority_level: "P99")
+    result = RailsErrorDashboard::Commands::UpdateErrorPriority.call(eid, priority_level: "P99")
+    assert "invalid priority is refused", result[:success] == false && result[:reason] == :invalid_priority
   rescue => e
     assert "invalid priority raises validation", e.is_a?(StandardError)
   end
@@ -258,11 +260,13 @@ end
 snooze_eid = snooze_error.id
 
 assert_no_crash("SnoozeError with 0 hours") do
-  RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: 0, reason: "zero hours")
+  result = RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: 0, reason: "zero hours")
+  assert "0 hours is refused", result[:success] == false && result[:reason] == :invalid_hours
 end
 
 assert_no_crash("SnoozeError with negative hours") do
-  RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: -1, reason: "negative")
+  result = RailsErrorDashboard::Commands::SnoozeError.call(snooze_eid, hours: -1, reason: "negative")
+  assert "negative hours is refused", result[:success] == false && result[:reason] == :invalid_hours
 end
 
 assert_no_crash("AddErrorComment with empty body raises validation") do
@@ -388,6 +392,55 @@ end
 elapsed = Time.now - start_time
 assert "50 errors created in < 10 seconds", elapsed < 10, "took #{elapsed.round(2)}s"
 assert "50 errors created in < 5 seconds", elapsed < 5, "took #{elapsed.round(2)}s"
+puts ""
+
+# ---------------------------------------------------------------------------
+# B11: Invalid bytes anywhere in a captured error
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("B11: Errors containing invalid UTF-8 and NUL bytes")
+
+# The error you most need to see is often the one carrying garbage: a binary
+# payload in the message, a mangled URL, a NUL from a C extension. It has to
+# be stored, and every stored string has to be valid so its page renders.
+hostile = "binary payload caf\xC3 \xFF\xFE end".b
+hostile_error = begin
+  error = RuntimeError.new(hostile)
+  error.set_backtrace([ "#{Rails.root}/app/models/bin\xFFary.rb:1:in 'run'".b, "lib/ok.rb:2:in 'ok'" ])
+  raise error
+rescue => e
+  log_error_and_find(e, {
+    platform: "Web",
+    request_url: "/upload?name=\xFF\xFEfile".b,
+    user_agent: "Agent\x00With\xFFNul".b,
+    request_params: { "blob" => "\xC3\x28".b }
+  })
+end
+
+assert "B11: an error with invalid bytes is stored, not lost", hostile_error.is_a?(RailsErrorDashboard::ErrorLog)
+
+if hostile_error
+  hostile_error.reload
+  bad = hostile_error.attributes.select { |_k, v| v.is_a?(String) && (!v.valid_encoding? || v.include?("\0")) }.keys
+  assert "B11: every stored string is valid UTF-8 without NULs", bad.empty?, "invalid: #{bad.inspect}"
+  assert "B11: the readable part of the message survives", hostile_error.message.include?("binary payload")
+
+  occurrence = RailsErrorDashboard::ErrorOccurrence.where(error_log_id: hostile_error.id).last
+  if occurrence
+    bad_occ = occurrence.attributes.select { |_k, v| v.is_a?(String) && !v.valid_encoding? }.keys
+    assert "B11: the occurrence row is valid too", bad_occ.empty?, "invalid: #{bad_occ.inspect}"
+  end
+
+  assert_no_crash("B11: the same hostile error a second time increments, not raises") do
+    again = begin
+      error = RuntimeError.new(hostile)
+      error.set_backtrace([ "#{Rails.root}/app/models/bin\xFFary.rb:1:in 'run'".b, "lib/ok.rb:2:in 'ok'" ])
+      raise error
+    rescue => e
+      log_error_and_find(e, { platform: "Web" })
+    end
+    assert "B11: the recurrence lands on the same row", again && again.id == hostile_error.id
+  end
+end
 puts ""
 
 # ---------------------------------------------------------------------------

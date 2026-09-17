@@ -43,7 +43,9 @@ module RailsErrorDashboard
           depth += 1
         end
 
-        chain.empty? ? nil : chain.to_json
+        # to_json raises on a cause message or frame with invalid bytes, which
+        # used to drop the whole chain.
+        chain.empty? ? nil : EncodingSanitizer.scrub_deep(chain).to_json
       rescue => e
         # SAFETY: Never let cause chain extraction break error logging
         RailsErrorDashboard::Logger.debug(

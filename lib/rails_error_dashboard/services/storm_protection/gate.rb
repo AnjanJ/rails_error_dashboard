@@ -108,6 +108,11 @@ module RailsErrorDashboard
           def flush_if_due!
             return unless enabled?
 
+            # Advance the breaker by the clock before flushing. When errors
+            # stop, this (end of every request and job) is the only thing left
+            # that can move it out of :open, and doing it first means an
+            # episode that has just ended is persisted by this very flush.
+            breaker.tick!
             maybe_flush!
             nil
           rescue => e
@@ -159,6 +164,7 @@ module RailsErrorDashboard
             @count_buffer = nil
             @fingerprint_buckets = nil
             @probe_counter = nil
+            @probe_epoch = nil
             @issue_window_start = nil
             @issue_window_count = nil
             @last_flush = nil
@@ -180,8 +186,11 @@ module RailsErrorDashboard
               :count_only
             when :half_open
               # Probe: a trickle of :lite captures tells us whether the storm
-              # has actually subsided; everything else stays counted.
-              if (probe_counter.increment % 10).zero?
+              # has actually subsided; everything else stays counted. The FIRST
+              # event of each half-open period is the probe (then every tenth):
+              # a recovering app with a slow trickle must not wait nine errors
+              # before we look at one.
+              if next_probe_index % 10 == 1
                 :lite
               else
                 count!(exception, context)
@@ -238,7 +247,11 @@ module RailsErrorDashboard
           def gate_parts(exception, context)
             raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
 
-            {
+            # Everything below is buffered, JSON-encoded for StormFlushJob and
+            # later INSERTed, so no String may keep an invalid byte. The identity
+            # digest is computed from the raw message first (it is hex, and must
+            # match what the sync and async paths hash).
+            EncodingSanitizer.scrub_deep(
               error_class: exception.class.name,
               # The identity is hashed from the RAW message here, on the hot
               # path, and only the digest is buffered. The message itself is
@@ -256,7 +269,8 @@ module RailsErrorDashboard
                 controller_name: context[:controller_name]&.to_s,
                 action_name: context[:action_name]&.to_s
               ),
-              message: redact(raw_message),
+              # Scrubbed before redaction: the filter's regexes raise on invalid bytes.
+              message: redact(EncodingSanitizer.scrub(raw_message)),
               first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
                                ErrorHashGenerator.extract_app_frame(exception.backtrace),
               controller_name: context[:controller_name]&.to_s,
@@ -266,7 +280,7 @@ module RailsErrorDashboard
               # worker's own environment", resolved at flush time exactly as
               # LogError resolves it for a full capture.
               environment: context[:environment].to_s.strip.presence&.[](0, 64)
-            }
+            )
           end
 
           # When a custom fingerprint lambda is configured the canonical hash
@@ -297,6 +311,19 @@ module RailsErrorDashboard
 
           def probe_counter
             @probe_counter ||= Concurrent::AtomicFixnum.new(0)
+          end
+
+          # 1-based index of this event within the current half-open period.
+          # The reset is deliberately lock-free: two threads racing on a fresh
+          # epoch can at worst both start from a new counter, which admits one
+          # extra :lite probe. Nothing is lost and nothing can raise.
+          def next_probe_index
+            epoch = breaker.half_open_epoch
+            if @probe_epoch != epoch
+              @probe_epoch = epoch
+              @probe_counter = Concurrent::AtomicFixnum.new(0)
+            end
+            probe_counter.increment
           end
 
           # Piggyback flush (SwallowedExceptionTracker pattern): cheap

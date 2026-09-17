@@ -36,6 +36,24 @@ RSpec.describe "Diagnostic Dumps page", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
+      # "Latest" means the newest dump there is, not the newest on this page.
+      it "reads the latest-dump cards from the newest dump overall on page 2" do
+        30.times do |i|
+          RailsErrorDashboard::DiagnosticDump.create!(
+            application: application,
+            dump_data: { system_health: { thread_count: 1000 + i, process_memory_mb: 5000 + i } }.to_json,
+            captured_at: (i + 1).hours.ago
+          )
+        end
+
+        get "/error_dashboard/errors/diagnostic_dumps", params: { page: 2 }
+
+        expect(response).to have_http_status(:ok)
+        # i = 0 is the newest dump; page 2 holds i = 25..29.
+        expect(response.body).to match(%r{<div class="display-6 text-secondary">1000</div>})
+        expect(response.body).not_to match(%r{<div class="display-6 text-secondary">1025</div>})
+      end
+
       it "shows empty state when no dumps exist" do
         get "/error_dashboard/errors/diagnostic_dumps"
         expect(response.body).to include("No Diagnostic Dumps Yet")

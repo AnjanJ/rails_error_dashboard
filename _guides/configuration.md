@@ -111,13 +111,25 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `notification_environments` | Array | `nil` (all) | Only notify for these environments; applies to every channel plus storm and baseline alerts (ENV: `ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS`, comma-separated) |
 
+### Notifications - Throttling
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `notification_minimum_severity` | Symbol | `:low` | Skip notifications below this severity (`:low`, `:medium`, `:high`, `:critical`) |
+| `notification_cooldown_minutes` | Integer | `5` | Minimum gap between notifications for one error that keeps being reopened. Claimed in the database (`error_logs.last_notified_at`), so it holds across every worker and job process. `0` disables it. First occurrences and threshold milestones are never held back by it |
+| `notification_threshold_alerts` | Array | `[10, 50, 100, 500, 1000]` | Occurrence counts that send a milestone notification |
+| `notification_burst_limit` | Integer | `10` | Most notifications for **new** errors per window, **per process**. When it is exceeded, one summary message replaces the rest of the window. Every error is still recorded. `0` disables the cap |
+| `notification_burst_window_seconds` | Integer | `60` | Length of that window |
+
+The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
+
 ### Core Features
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_middleware` | Boolean | `true` | Enable error catching middleware |
 | `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
-| `retention_days` | Integer | `90` | Days to keep errors before auto-deletion |
+| `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too |
 
 ### Error Classification
 

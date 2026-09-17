@@ -22,6 +22,7 @@ module RailsErrorDashboard
           muted_reason: nil
         )
 
+        Services::AnalyticsCacheManager.clear
         PluginRegistry.dispatch(:on_error_unmuted, error)
         error
       end

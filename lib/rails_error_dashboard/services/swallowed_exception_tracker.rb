@@ -25,6 +25,17 @@ module RailsErrorDashboard
       RAISE_THREAD_KEY  = :red_swallowed_raises
       RESCUE_THREAD_KEY = :red_swallowed_rescues
       FLUSH_THREAD_KEY  = :red_swallowed_last_flush
+      # Monotonic time at which this thread's buffer stopped being empty. The
+      # flush is due one interval after THAT, whether or not anything else
+      # happens on the thread.
+      DEADLINE_THREAD_KEY = :red_swallowed_armed_at
+
+      # Where evicted counts go, so eviction bounds memory without losing the
+      # total. The flush command splits keys on "|" and "->", so these persist as
+      # ordinary rows under the class name "[overflow]".
+      OVERFLOW_LABEL      = "[overflow]"
+      RAISE_OVERFLOW_KEY  = "#{OVERFLOW_LABEL}|#{OVERFLOW_LABEL}".freeze
+      RESCUE_OVERFLOW_KEY = "#{OVERFLOW_LABEL}|#{OVERFLOW_LABEL}->#{OVERFLOW_LABEL}".freeze
       RAISE_LOC_IVAR    = :@_red_raise_loc
 
       # Flow-control exceptions that are commonly raised/rescued in normal Rails operation.
@@ -95,7 +106,7 @@ module RailsErrorDashboard
         end
 
         # Force flush the current thread's counters (used by job and tests)
-        def flush!
+        def flush!(sync: false)
           raises = Thread.current[RAISE_THREAD_KEY]
           rescues = Thread.current[RESCUE_THREAD_KEY]
           return if raises.nil? && rescues.nil?
@@ -107,12 +118,40 @@ module RailsErrorDashboard
           raises&.clear
           rescues&.clear
           Thread.current[FLUSH_THREAD_KEY] = Time.now.to_f
+          Thread.current[DEADLINE_THREAD_KEY] = nil
 
-          dispatch_flush(raise_snapshot, rescue_snapshot)
+          dispatch_flush(raise_snapshot, rescue_snapshot, sync: sync)
         rescue => e
           RailsErrorDashboard::Logger.debug(
             "[RailsErrorDashboard] SwallowedExceptionTracker.flush! failed: #{e.class} - #{e.message}"
           )
+        end
+
+        # Drain this thread's buffer at the end of a unit of work (a request or a
+        # job) once it has been waiting for flush_interval.
+        #
+        # Without this the ONLY in-process drain was maybe_flush! inside the
+        # :rescue callback, so a buffer could only ever be flushed by a LATER
+        # rescue on the SAME thread: a swallowed exception that happened once
+        # stayed invisible until the process exited, and counts on a Puma thread
+        # that retired were lost. Same defect, same fix, as
+        # RackAttackTracker#flush_if_due!.
+        #
+        # Wired to Rails.application.executor.to_complete, which fires after the
+        # response body is closed, so this never delays a request. Deadline-gated:
+        # the usual cost is one thread-local read.
+        def flush_if_due!
+          return unless flush_due?
+
+          # sync: the response is already sent, and one upsert per interval is
+          # cheaper than enqueueing a job to do it.
+          flush!(sync: true)
+          nil
+        rescue => e
+          RailsErrorDashboard::Logger.debug(
+            "[RailsErrorDashboard] SwallowedExceptionTracker.flush_if_due! failed: #{e.class} - #{e.message}"
+          )
+          nil
         end
 
         # Read current thread's counters (for testing/inspection)
@@ -129,6 +168,7 @@ module RailsErrorDashboard
           Thread.current[RAISE_THREAD_KEY] = nil
           Thread.current[RESCUE_THREAD_KEY] = nil
           Thread.current[FLUSH_THREAD_KEY] = nil
+          Thread.current[DEADLINE_THREAD_KEY] = nil
         end
 
         private
@@ -152,11 +192,9 @@ module RailsErrorDashboard
           class_name = exception.class.name || exception.class.to_s
           key = "#{class_name}|#{location}"
 
-          raises = (Thread.current[RAISE_THREAD_KEY] ||= {})
-          raises[key] = (raises[key] || 0) + 1
-
-          # 5. LRU eviction if over capacity
-          evict_oldest!(raises) if raises.size > max_cache_size
+          # 4b/5. Count it, most-recent-last, evicting into the overflow bucket
+          increment!((Thread.current[RAISE_THREAD_KEY] ||= {}), key, RAISE_OVERFLOW_KEY)
+          arm_deadline!
         end
 
         # TracePoint(:rescue) callback
@@ -181,11 +219,9 @@ module RailsErrorDashboard
           class_name = exception.class.name || exception.class.to_s
           key = "#{class_name}|#{raise_loc}->#{rescue_loc}"
 
-          rescues = (Thread.current[RESCUE_THREAD_KEY] ||= {})
-          rescues[key] = (rescues[key] || 0) + 1
-
-          # 5. LRU eviction if over capacity
-          evict_oldest!(rescues) if rescues.size > max_cache_size
+          # 4b/5. Count it, most-recent-last, evicting into the overflow bucket
+          increment!((Thread.current[RESCUE_THREAD_KEY] ||= {}), key, RESCUE_OVERFLOW_KEY)
+          arm_deadline!
 
           # 6. Maybe flush
           maybe_flush!
@@ -210,21 +246,60 @@ module RailsErrorDashboard
           false
         end
 
-        # LRU eviction: delete the oldest key (Ruby hashes maintain insertion order)
-        def evict_oldest!(hash)
-          oldest_key = hash.each_key.first
-          hash.delete(oldest_key) if oldest_key
+        # Count one event. delete-and-reinsert moves the key to the END of the
+        # Hash, so insertion order IS recency order and "oldest" below means least
+        # recently UPDATED. A plain `hash[key] += 1` leaves a key where it was
+        # first inserted, which made the busiest key in the process the first one
+        # evicted.
+        def increment!(hash, key, overflow_key)
+          hash[key] = hash.delete(key).to_i + 1
+
+          # Loops because the overflow bucket takes a slot of its own once it
+          # exists. evict_oldest! returns false when only that bucket is left,
+          # which terminates the loop even with max_cache_size misconfigured to 0.
+          while hash.size > max_cache_size
+            break unless evict_oldest!(hash, overflow_key)
+          end
         end
 
-        # Cheap periodic flush check
+        # Evict the least recently updated key, folding its count into the
+        # overflow bucket so the total is conserved. The overflow bucket itself is
+        # never the victim. Mirrors RackAttackTracker#evict_oldest!.
+        # @return [Boolean] false once only the overflow bucket remains
+        def evict_oldest!(hash, overflow_key)
+          oldest_key = hash.each_key.find { |k| k != overflow_key }
+          return false unless oldest_key
+
+          dropped = hash.delete(oldest_key).to_i
+          hash[overflow_key] = hash[overflow_key].to_i + dropped if dropped.positive?
+          true
+        end
+
+        # Start the flush clock when the buffer becomes non-empty; a later event
+        # never pushes it out. The old guard (`last_flush ||= now`) was first
+        # evaluated by the SECOND event on a thread, so a lone event had no
+        # deadline at all.
+        def arm_deadline!
+          Thread.current[DEADLINE_THREAD_KEY] ||= monotonic_now
+        end
+
+        # Monotonic: Time.now can jump backwards and would defer the flush.
+        def flush_due?
+          armed_at = Thread.current[DEADLINE_THREAD_KEY]
+          return false if armed_at.nil?
+
+          (monotonic_now - armed_at) >= RailsErrorDashboard.configuration.swallowed_exception_flush_interval.to_f
+        rescue => e
+          false
+        end
+
+        def monotonic_now
+          Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        end
+
+        # Cheap periodic flush check on the :rescue path
         def maybe_flush!
-          now = Time.now.to_f
-          last_flush = Thread.current[FLUSH_THREAD_KEY] ||= now
-          interval = RailsErrorDashboard.configuration.swallowed_exception_flush_interval
-
-          return unless (now - last_flush) >= interval
-
-          flush!
+          flush! if flush_due?
         end
 
         # Dispatch flush asynchronously via background job (zero I/O in request path).
@@ -263,6 +338,7 @@ module RailsErrorDashboard
             thread[RAISE_THREAD_KEY] = nil
             thread[RESCUE_THREAD_KEY] = nil
             thread[FLUSH_THREAD_KEY] = nil
+            thread[DEADLINE_THREAD_KEY] = nil
 
             dispatch_flush(raise_snapshot, rescue_snapshot, sync: true)
           end

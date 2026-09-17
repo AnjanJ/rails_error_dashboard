@@ -224,7 +224,7 @@ assert_http "POST resolve blocked by CSRF", post_status("/errors/#{eid}/resolve"
 puts "  (POST actions require CSRF token — correct Rails security behavior)"
 
 # Verify workflow commands still work directly
-assigned = RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "Gandalf")
+assigned = RailsErrorDashboard::Commands::AssignError.call(eid, assigned_to: "Gandalf")[:error]
 assert_http "direct assign works", (assigned.assigned_to == "Gandalf" ? 200 : 500)
 
 resolved = RailsErrorDashboard::Commands::ResolveError.call(eid, resolved_by_name: "Aragorn")

@@ -86,9 +86,9 @@ module RailsErrorDashboard
     after_create_commit -> { Services::ErrorBroadcaster.broadcast_new(self) }
     after_update_commit -> { Services::ErrorBroadcaster.broadcast_update(self) }
 
-    # Cache invalidation - clear analytics caches when errors are created/updated/deleted
-    after_save -> { Services::AnalyticsCacheManager.clear }
-    after_destroy -> { Services::AnalyticsCacheManager.clear }
+    # No cache invalidation here, on purpose. A save is what a CAPTURE does, in
+    # the host app's request thread; the stats caches expire by TTL instead, and
+    # the commands behind user actions call AnalyticsCacheManager.clear themselves.
 
     def set_defaults
       self.platform ||= "API"
@@ -271,7 +271,13 @@ module RailsErrorDashboard
       end
     end
 
+    # The five workflow statuses. One list, so that a command can tell
+    # "unknown status" from "known, but not reachable from here".
+    STATUSES = %w[new in_progress investigating resolved wont_fix].freeze
+
     def can_transition_to?(new_status)
+      return false unless STATUSES.include?(new_status)
+
       # Define valid status transitions
       valid_transitions = {
         "new" => [ "in_progress", "investigating", "wont_fix" ],

@@ -28,8 +28,10 @@ module RailsErrorDashboard
         app_id = current_application_id
 
         @counts.each do |key, count|
+          # Path and user agent are attacker-supplied, so invalid bytes are the
+          # expected case here. Scrub the whole key before it is split.
           rule, match_type, discriminator, path, http_method, user_agent =
-            Services::RackAttackTracker.parse_key(key)
+            Services::RackAttackTracker.parse_key(Services::EncodingSanitizer.scrub(key.to_s))
 
           next if rule.blank? || match_type.blank?
 

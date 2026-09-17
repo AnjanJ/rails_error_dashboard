@@ -139,6 +139,94 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     end
   end
 
+  # The breaker only used to move when an error arrived. With a fake clock in
+  # the real breaker these prove the gate notices that a storm has ENDED.
+  describe "recovery driven by time" do
+    let(:clock) do
+      Class.new {
+        def initialize = @now = 1000.0
+        def call = @now
+        def advance(seconds) = @now += seconds
+      }.new
+    end
+    let(:breaker) { RailsErrorDashboard::Services::StormProtection::CircuitBreaker.new(clock: clock) }
+
+    before do
+      gate.reset!
+      gate.instance_variable_set(:@breaker, breaker)
+      allow(RailsErrorDashboard::StormNotificationJob).to receive(:perform_later)
+    end
+    after { gate.reset! }
+
+    def open_the_breaker
+      500.times { gate.admit!(boom) }
+      expect(breaker.state).to eq(:open)
+    end
+
+    it "stops suppressing notifications an hour after the storm, with no further errors" do
+      open_the_breaker
+      expect(gate.notifications_suppressed?).to be true
+
+      clock.advance(3600)
+
+      expect(gate.notifications_suppressed?).to be false
+      expect(gate.state).to eq(:closed)
+    end
+
+    it "flush_if_due! ticks the breaker even when the count buffer is empty" do
+      expect(breaker).to receive(:tick!).at_least(:once).and_call_original
+
+      gate.flush_if_due!
+    end
+
+    it "flush_if_due! closes the episode after a quiet period and hands it to the flush job" do
+      open_the_breaker
+      clock.advance(3600)
+      gate.instance_variable_set(:@last_flush, 0)
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later).and_call_original
+
+      gate.flush_if_due!
+
+      expect(RailsErrorDashboard::StormFlushJob).to have_received(:perform_later)
+        .with(hash_including(episode: hash_including("ended_at" => a_string_matching(/\d{4}-\d{2}-\d{2}T/))))
+    end
+
+    # The probe exists to find out whether the storm is over. Admitting the
+    # TENTH half-open event first meant a recovering app with a slow trickle of
+    # errors told us nothing for nine events.
+    it "admits the first half_open event as the probe, then every tenth after it" do
+      open_the_breaker
+      clock.advance(70) # past the 60s cooldown: :half_open
+      expect(breaker.state).to eq(:half_open)
+
+      decisions = Array.new(21) { gate.admit!(boom) }
+
+      expect(decisions.each_index.select { |i| decisions[i] == :lite }).to eq([ 0, 10, 20 ])
+      expect(decisions.count(:count_only)).to eq(18)
+    end
+
+    it "probes with the first event again on each new half_open entry" do
+      open_the_breaker
+      clock.advance(70)
+      4.times { gate.admit!(boom) } # probe spent, counter at 4
+      clock.advance(10) # roll the bucket so the probe count and the bucket count diverge
+
+      500.times { gate.admit!(boom) } # storm resumes: back to :open
+      expect(breaker.state).to eq(:open)
+      clock.advance(70)
+      expect(breaker.state).to eq(:half_open)
+
+      expect(gate.admit!(boom)).to eq(:lite)
+    end
+
+    it "admits the first error after a quiet hour at full fidelity" do
+      open_the_breaker
+      clock.advance(3600)
+
+      expect(gate.admit!(boom("a different error entirely"))).to eq(:full)
+    end
+  end
+
   describe ".notifications_suppressed?" do
     it "is false when closed" do
       expect(gate.notifications_suppressed?).to be false

@@ -224,12 +224,15 @@ module RailsErrorDashboard
         previous_start = @start_date
         previous_end = current_start
 
-        current_errors = ErrorLog
+        # Both periods come from base_query, which carries the application
+        # filter (and the window start). Querying ErrorLog directly made this
+        # the one panel on an application-filtered page that counted every app.
+        current_errors = base_query
           .where("occurred_at >= ?", current_start)
           .count
 
-        previous_errors = ErrorLog
-          .where("occurred_at >= ? AND occurred_at < ?", previous_start, previous_end)
+        previous_errors = base_query
+          .where("occurred_at < ?", previous_end)
           .count
 
         change_percentage = if previous_errors > 0

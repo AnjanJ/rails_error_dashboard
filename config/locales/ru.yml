@@ -1162,6 +1162,8 @@ ru:
         application_name: Имя этого приложения (определяется автоматически, если не
           задано)
         environment: Окружение, к которому относятся ошибки (Rails.env, если не задано)
+        notification_burst_limit: "Уведомления о новых ошибках за интервал на процесс (0 = без ограничения)"
+        notification_burst_window_seconds: "Длительность интервала уведомлений о новых ошибках"
         notification_environments: Уведомлять только для этих окружений (все, если
           не задано)
         database: Активная база данных для журнала ошибок
@@ -1272,6 +1274,16 @@ ru:
         linked: Задача успешно привязана
         create_failed: 'Не удалось создать задачу: %{reason}'
         link_failed: 'Не удалось привязать задачу: %{reason}'
+      status:
+        updated: "Статус изменён на %{status}"
+        invalid_transition: "Нельзя изменить статус с %{from} на %{to}"
+        unknown: "Такого статуса не существует"
+      snooze:
+        invalid_hours: "Время откладывания должно быть целым числом часов от 1 до %{max}"
+      priority:
+        invalid: "Такого уровня приоритета не существует"
+      assign:
+        blank: "Введите имя того, кому назначить эту ошибку"
       not_enabled: "%{feature} не включено. Включите в %{file}"
       not_enabled_plural: "%{feature} не включены. Включите их в %{file}"
       not_enabled_options: "%{feature} не включено. Включите %{options} в %{file}"
@@ -1453,6 +1465,10 @@ ru:
           few: "%{value} ошибки"
           many: "%{value} ошибок"
         view_in_dashboard: Открыть в панели
+      burst:
+        suppressed: "В приложении %{application} за %{window} секунд зафиксировано более %{limit} новых ошибок."
+        still_recorded: "Уведомления о дальнейших новых ошибках приостановлены до конца этого интервала; каждая ошибка по-прежнему записывается."
+        dashboard: "Панель: %{url}"
       storm:
         detected: Обнаружен шторм ошибок в %{application} в %{started_at}.
         mode:

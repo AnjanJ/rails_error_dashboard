@@ -56,10 +56,12 @@ require "rails_error_dashboard/services/pearson_correlation"
 require "rails_error_dashboard/services/statistical_classifier"
 require "rails_error_dashboard/services/source_code_reader"
 require "rails_error_dashboard/services/git_blame_reader"
+require "rails_error_dashboard/services/git_head_reader"
 require "rails_error_dashboard/services/github_link_generator"
 require "rails_error_dashboard/services/cause_chain_extractor"
 require "rails_error_dashboard/services/environment_snapshot"
 require "rails_error_dashboard/services/system_health_snapshot"
+require "rails_error_dashboard/services/encoding_sanitizer"
 require "rails_error_dashboard/services/sensitive_data_filter"
 require "rails_error_dashboard/services/url_safety"
 require "rails_error_dashboard/services/notification_throttler"
@@ -133,6 +135,8 @@ require "rails_error_dashboard/commands/upsert_cascade_pattern"
 require "rails_error_dashboard/commands/upsert_baseline"
 require "rails_error_dashboard/commands/flush_swallowed_exceptions"
 require "rails_error_dashboard/commands/flush_rack_attack_events"
+require "rails_error_dashboard/commands/scrub_invalid_encoding"
+require "rails_error_dashboard/commands/backfill_resolved_at"
 require "rails_error_dashboard/queries/errors_list"
 require "rails_error_dashboard/queries/dashboard_stats"
 require "rails_error_dashboard/queries/analytics_stats"
@@ -176,6 +180,32 @@ module RailsErrorDashboard
     def reset_configuration!
       @configuration = Configuration.new
     end
+  end
+
+  # The commit this process is running, read from .git once and remembered.
+  #
+  # LogError stamps every error with a SHA. When neither config.git_sha nor a
+  # platform ENV variable supplies one it used to run `git rev-parse` in a
+  # subprocess PER CAPTURED ERROR. The answer cannot change while the process
+  # lives, so it is resolved once (the engine does it at boot, so normally
+  # not even the first capture pays for it) and nil is remembered too: an app
+  # with no repository must not go looking again for every error.
+  #
+  # @return [String, nil] short SHA
+  def self.detected_git_sha
+    return @detected_git_sha if defined?(@detected_git_sha)
+
+    @detected_git_sha = begin
+      Services::GitHeadReader.call(defined?(Rails) && Rails.respond_to?(:root) ? Rails.root : nil)
+    rescue => e
+      RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Could not detect git SHA: #{e.class}: #{e.message}")
+      nil
+    end
+  end
+
+  # Forget the memo (specs).
+  def self.reset_detected_git_sha!
+    remove_instance_variable(:@detected_git_sha) if defined?(@detected_git_sha)
   end
 
   # Register a plugin

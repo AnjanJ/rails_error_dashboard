@@ -1158,6 +1158,8 @@ uk:
         application_name: Назва цього застосунку (визначається автоматично, якщо не
           задано)
         environment: Середовище, до якого належать помилки (Rails.env, якщо не задано)
+        notification_burst_limit: "Сповіщення про нові помилки за інтервал на процес (0 = без обмеження)"
+        notification_burst_window_seconds: "Тривалість інтервалу сповіщень про нові помилки"
         notification_environments: Сповіщати лише для цих середовищ (усі, якщо не
           задано)
         database: Активна база даних для журналів помилок
@@ -1271,6 +1273,16 @@ uk:
         linked: Задачу успішно приєднано
         create_failed: 'Не вдалося створити задачу: %{reason}'
         link_failed: 'Не вдалося приєднати задачу: %{reason}'
+      status:
+        updated: "Статус змінено на %{status}"
+        invalid_transition: "Неможливо змінити статус з %{from} на %{to}"
+        unknown: "Такого статусу не існує"
+      snooze:
+        invalid_hours: "Час відкладення має бути цілим числом годин від 1 до %{max}"
+      priority:
+        invalid: "Такого рівня пріоритету не існує"
+      assign:
+        blank: "Введіть ім'я того, кому призначити цю помилку"
       not_enabled: "%{feature} не увімкнено. Увімкніть у %{file}"
       not_enabled_plural: "%{feature} не увімкнено. Увімкніть їх у %{file}"
       not_enabled_options: "%{feature} не увімкнено. Увімкніть %{options} у %{file}"
@@ -1451,6 +1463,10 @@ uk:
           few: "%{value} помилки"
           many: "%{value} помилок"
         view_in_dashboard: Переглянути в панелі
+      burst:
+        suppressed: "У застосунку %{application} за %{window} секунд зафіксовано понад %{limit} нових помилок."
+        still_recorded: "Сповіщення про подальші нові помилки призупинено до кінця цього інтервалу; кожна помилка, як і раніше, записується."
+        dashboard: "Панель: %{url}"
       storm:
         detected: Виявлено шторм помилок у %{application} о %{started_at}.
         mode:

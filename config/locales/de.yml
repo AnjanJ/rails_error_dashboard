@@ -1097,6 +1097,8 @@ de:
           gesetzt)
         environment: Umgebung, der Fehler zugeordnet werden (Rails.env, falls nicht
           gesetzt)
+        notification_burst_limit: "Benachrichtigungen über neue Fehler pro Zeitfenster und Prozess (0 = keine Obergrenze)"
+        notification_burst_window_seconds: "Länge des Zeitfensters für Benachrichtigungen über neue Fehler"
         notification_environments: Nur für diese Umgebungen benachrichtigen (alle,
           falls nicht gesetzt)
         database: Aktive Datenbank für Fehlerprotokolle
@@ -1204,6 +1206,16 @@ de:
         linked: Issue erfolgreich verknüpft
         create_failed: 'Issue konnte nicht erstellt werden: %{reason}'
         link_failed: 'Issue konnte nicht verknüpft werden: %{reason}'
+      status:
+        updated: "Status geändert zu %{status}"
+        invalid_transition: "Der Status kann nicht von %{from} zu %{to} geändert werden"
+        unknown: "Diesen Status gibt es nicht"
+      snooze:
+        invalid_hours: "Die Zurückstelldauer muss eine ganze Zahl von Stunden zwischen 1 und %{max} sein"
+      priority:
+        invalid: "Diese Prioritätsstufe gibt es nicht"
+      assign:
+        blank: "Geben Sie einen Namen ein, dem dieser Fehler zugewiesen werden soll"
       not_enabled: "%{feature} ist nicht aktiviert. Aktivieren Sie es in %{file}"
       not_enabled_plural: "%{feature} sind nicht aktiviert. Aktivieren Sie sie in
         %{file}"
@@ -1374,6 +1386,10 @@ de:
           one: "%{value} Fehler"
           other: "%{value} Fehler"
         view_in_dashboard: Im Dashboard ansehen
+      burst:
+        suppressed: "In %{application} wurden innerhalb von %{window} Sekunden mehr als %{limit} neue Fehler gemeldet."
+        still_recorded: "Benachrichtigungen über weitere neue Fehler sind bis zum Ende dieses Zeitfensters pausiert; jeder Fehler wird weiterhin erfasst."
+        dashboard: "Dashboard: %{url}"
       storm:
         detected: Fehlersturm in %{application} um %{started_at} erkannt.
         mode:

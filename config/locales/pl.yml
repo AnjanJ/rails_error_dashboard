@@ -1160,6 +1160,8 @@ pl:
           ustawiono)
         environment: Środowisko, do którego przypisywane są błędy (Rails.env, jeśli
           nie ustawiono)
+        notification_burst_limit: "Powiadomienia o nowych błędach na okno czasowe i proces (0 = bez limitu)"
+        notification_burst_window_seconds: "Długość okna czasowego powiadomień o nowych błędach"
         notification_environments: Powiadamiaj tylko dla tych środowisk (wszystkie,
           jeśli nie ustawiono)
         database: Aktywna baza danych dla dzienników błędów
@@ -1273,6 +1275,16 @@ pl:
         linked: Zgłoszenie zostało powiązane
         create_failed: 'Nie udało się utworzyć zgłoszenia: %{reason}'
         link_failed: 'Nie udało się powiązać zgłoszenia: %{reason}'
+      status:
+        updated: "Status zmieniono na %{status}"
+        invalid_transition: "Nie można zmienić statusu z %{from} na %{to}"
+        unknown: "Taki status nie istnieje"
+      snooze:
+        invalid_hours: "Czas odłożenia musi być całkowitą liczbą godzin od 1 do %{max}"
+      priority:
+        invalid: "Taki poziom priorytetu nie istnieje"
+      assign:
+        blank: "Podaj nazwę osoby, do której chcesz przypisać ten błąd"
       not_enabled: "%{feature} nie jest włączone. Włącz w %{file}"
       not_enabled_plural: "%{feature} nie są włączone. Włącz je w %{file}"
       not_enabled_options: "%{feature} nie jest włączone. Włącz %{options} w %{file}"
@@ -1453,6 +1465,10 @@ pl:
           few: "%{value} błędy"
           many: "%{value} błędów"
         view_in_dashboard: Zobacz w panelu
+      burst:
+        suppressed: "W aplikacji %{application} zgłoszono ponad %{limit} nowych błędów w ciągu %{window} sekund."
+        still_recorded: "Powiadomienia o kolejnych nowych błędach są wstrzymane do końca tego okna czasowego; każdy błąd jest nadal zapisywany."
+        dashboard: "Panel: %{url}"
       storm:
         detected: Wykryto sztorm błędów w %{application} o %{started_at}.
         mode:

@@ -5,6 +5,9 @@ module RailsErrorDashboard
     # Query: Fetch errors with filtering and pagination
     # This is a read operation that returns a filtered collection of errors
     class ErrorsList
+      # Escape character for LIKE patterns; see filter_by_search.
+      LIKE_ESCAPE = "!"
+
       def self.call(filters = {})
         new(filters).call
       end
@@ -129,9 +132,19 @@ module RailsErrorDashboard
         else
           # Fall back to LIKE for SQLite/MySQL - search across all relevant fields
           # Use LOWER() for case-insensitive search
-          search_pattern = "%#{@filters[:search]}%"
+          #
+          # % and _ in the term are escaped so they match themselves: a search
+          # for "snake_case" must not match "snakeXcase", and "%" must not
+          # match every row. The escape character is named explicitly because
+          # SQLite has no default one, and it is "!" rather than a backslash
+          # because a backslash inside a quoted SQL literal means different
+          # things to MySQL and to everyone else.
+          escaped = ActiveRecord::Base.sanitize_sql_like(@filters[:search].to_s, LIKE_ESCAPE)
+          search_pattern = "%#{escaped}%"
           query.where(
-            "LOWER(message) LIKE LOWER(?) OR LOWER(COALESCE(backtrace, '')) LIKE LOWER(?) OR LOWER(error_type) LIKE LOWER(?)",
+            "LOWER(message) LIKE LOWER(?) ESCAPE '#{LIKE_ESCAPE}' " \
+            "OR LOWER(COALESCE(backtrace, '')) LIKE LOWER(?) ESCAPE '#{LIKE_ESCAPE}' " \
+            "OR LOWER(error_type) LIKE LOWER(?) ESCAPE '#{LIKE_ESCAPE}'",
             search_pattern, search_pattern, search_pattern
           )
         end

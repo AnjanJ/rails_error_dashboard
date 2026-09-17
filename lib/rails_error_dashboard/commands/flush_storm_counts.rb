@@ -21,7 +21,10 @@ module RailsErrorDashboard
       end
 
       def initialize(entries:, overflow: 0, episode: nil, batch_id: nil)
-        @entries = Array(entries)
+        # The gate scrubs what it buffers, so this is normally a no-op scan. It
+        # covers entries buffered by an older release and direct callers: the
+        # exemplar becomes an ErrorLog row, and its message is matched by regex.
+        @entries = Array(Services::EncodingSanitizer.scrub_deep(entries))
         @overflow = overflow.to_i
         @episode = episode
         @batch_id = batch_id
@@ -165,7 +168,12 @@ module RailsErrorDashboard
         # long-running unresolved error legitimately owns several unresolved
         # rows. An update_all across the whole hash would add N to every one
         # of them — seven real events becoming twelve counted occurrences.
-        target = unresolved_target(error_hash, application, env)
+        #
+        # Priority 0, tried first: a wont_fix row absorbs its recurrences at any
+        # age and keeps its status (FindOrIncrementError#find_wont_fix). Same
+        # atomic increment, so it shares the branch below.
+        target = wont_fix_target(error_hash, application, env) ||
+                 unresolved_target(error_hash, application, env)
         if target
           if env && target.environment.blank?
             ErrorLog.where(id: target.id).update_all([
@@ -180,11 +188,11 @@ module RailsErrorDashboard
           return count
         end
 
-        # Priority 2: resolved/wont_fix match — reopen, mirroring
+        # Priority 2: resolved match — reopen, mirroring
         # FindOrIncrementError so storm recurrences don't stay buried
         resolved_scope = ErrorLog
           .where(error_hash: error_hash, application_id: application.id)
-          .where(status: %w[resolved wont_fix])
+          .where(status: "resolved")
         if env
           resolved_scope = resolved_scope.where(environment: [ env, nil ])
             .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
@@ -247,8 +255,23 @@ module RailsErrorDashboard
 
 
       # The unresolved row the full capture path would increment right now.
+      # No time window: "won't fix" holds for as long as the row keeps the status.
+      def wont_fix_target(error_hash, application, env)
+        scope = ErrorLog
+          .where(error_hash: error_hash, application_id: application.id)
+          .where(status: "wont_fix")
+        if env
+          scope = scope.where(environment: [ env, nil ])
+            .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
+        end
+        scope.order(last_seen_at: :desc).select(:id, :environment).first
+      end
+
       def unresolved_target(error_hash, application, env)
+        # Disjoint from wont_fix_target. Not where.not(...): that would also
+        # drop rows whose status is NULL.
         scope = ErrorLog.unresolved
+          .where("status IS NULL OR status <> ?", "wont_fix")
           .where(error_hash: error_hash, application_id: application.id)
           .where("occurred_at >= ?", 24.hours.ago)
         if env

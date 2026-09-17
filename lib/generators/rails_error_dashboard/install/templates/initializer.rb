@@ -21,6 +21,16 @@ RailsErrorDashboard.configure do |config|
   # Only notify (Slack, email, Discord, PagerDuty, webhooks, storm and
   # baseline alerts) for these environments. nil = every environment.
   # config.notification_environments = %w[production]
+  #
+  # Notification throttling. The per-error cooldown stops one error that keeps
+  # being reopened from paging repeatedly; it is held in the database, so it
+  # applies across every worker. The burst cap is for the deploy that throws
+  # hundreds of DIFFERENT new errors: after N new-error notifications in a
+  # window (per process) one summary message replaces the rest. Every error
+  # is still recorded.
+  # config.notification_cooldown_minutes = 5          # 0 = no cooldown
+  # config.notification_burst_limit = 10              # 0 = no cap
+  # config.notification_burst_window_seconds = 60
 
   # === Custom Authentication (optional) ===
   # Use your app's existing auth instead of HTTP Basic Auth.
@@ -61,7 +71,8 @@ RailsErrorDashboard.configure do |config|
   # User model for error associations
   config.user_model = "User"
 
-  # Error retention policy (days to keep errors before automatic deletion)
+  # Error retention policy: an error is deleted once it has not been seen for
+  # this many days (an error that is still occurring is never deleted)
   # Set to nil to keep errors forever (not recommended for production)
   # Run cleanup manually: rails error_dashboard:retention_cleanup
   # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later

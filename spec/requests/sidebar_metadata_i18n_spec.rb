@@ -179,4 +179,42 @@ RSpec.describe "Sidebar metadata translations", type: :request do
       expect(response.body).to include("(Ruby: 8)")
     end
   end
+  # Two labels that looked translated only because the dashboard was being read
+  # in English: one named a namespace (a Hash is a miss, and the fallback
+  # humanizes the key into "Environment"), the other was never a key at all.
+  describe "labels in a non-English locale" do
+    let(:de) { YAML.load_file(RailsErrorDashboard::Engine.root.join("config/locales/de.yml")).dig("de", "red", "errors", "sidebar") }
+
+    around do |example|
+      was = RailsErrorDashboard.configuration.enable_system_health
+      forgery = ActionController::Base.allow_forgery_protection
+      RailsErrorDashboard.configuration.enable_system_health = true
+      ActionController::Base.allow_forgery_protection = false
+      example.run
+    ensure
+      RailsErrorDashboard.configuration.enable_system_health = was
+      ActionController::Base.allow_forgery_protection = forgery
+    end
+
+    before do
+      error.update_columns(environment: "staging",
+                           system_health: { job_queue: { adapter: "sidekiq", enqueued: 3 } }.to_json)
+      post "/error_dashboard/locale", params: { locale: "de" }
+    end
+
+    it "uses the locale's own word for the environment label" do
+      get "/error_dashboard/errors/#{error.id}"
+
+      label = Nokogiri::HTML(response.body).at_css("[data-environment-badge]").ancestors("div.mb-3").first.at_css(".metadata-label")
+      expect(de.dig("environment", "title")).to eq("Umgebung")
+      expect(label.text.strip).to eq("Umgebung")
+    end
+
+    it "uses the locale's job queue label with the adapter interpolated" do
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response.body).to include(de.dig("health", "job_queue") % { adapter: "sidekiq" })
+      expect(response.body).not_to include("Job Queue (sidekiq)")
+    end
+  end
 end

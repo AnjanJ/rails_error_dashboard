@@ -14,11 +14,6 @@ module RailsErrorDashboard
     scope :recent_first, -> { order(created_at: :desc) }
     scope :oldest_first, -> { order(created_at: :asc) }
 
-    # Get formatted timestamp for display
-    def formatted_time
-      created_at.strftime("%b %d, %Y at %I:%M %p")
-    end
-
     # Check if comment was created recently (within last hour)
     def recent?
       created_at > 1.hour.ago

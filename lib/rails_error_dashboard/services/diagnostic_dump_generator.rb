@@ -27,7 +27,9 @@ module RailsErrorDashboard
       end
 
       def call
-        {
+        # Thread names and breadcrumb text are arbitrary bytes; both callers
+        # immediately to_json this, which raises on an invalid one.
+        EncodingSanitizer.scrub_deep(
           captured_at: Time.current.iso8601,
           pid: Process.pid,
           uptime_seconds: process_uptime,
@@ -37,9 +39,9 @@ module RailsErrorDashboard
           threads: thread_info,
           gc: gc_info,
           object_counts: object_counts
-        }
+        )
       rescue => e
-        { captured_at: Time.current.iso8601, error: e.message }
+        { captured_at: Time.current.iso8601, error: EncodingSanitizer.scrub(e.message) }
       end
 
       private

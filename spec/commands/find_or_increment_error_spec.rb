@@ -148,25 +148,110 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
       end
     end
 
+    # "Won't fix" means "we know it recurs and have decided not to act". It
+    # used to hold for 24 hours (while the row still matched as unresolved) and
+    # was then thrown away by a reopen. It is now sticky: recurrences are
+    # counted on the row, at any age, and nothing else about it changes.
     context "when a wont_fix match exists" do
-      let!(:wont_fix_error) do
+      def wont_fix_row(**overrides)
         RailsErrorDashboard::ErrorLog.create!(
           base_attributes.merge(
-            resolved: true,
-            status: "wont_fix",
-            resolved_at: 1.day.ago,
-            occurrence_count: 2,
-            first_seen_at: 1.week.ago,
-            last_seen_at: 1.day.ago
+            { resolved: false, status: "wont_fix", occurrence_count: 2,
+              first_seen_at: 1.week.ago, last_seen_at: 1.hour.ago, occurred_at: 1.hour.ago }.merge(overrides)
           )
         )
       end
 
-      it "reopens the wont_fix error" do
+      it "absorbs a recurrence an hour later without changing the status" do
+        row = wont_fix_row
+
         result = described_class.call(error_hash, base_attributes)
-        expect(result.id).to eq(wont_fix_error.id)
-        expect(result.resolved).to be false
+
+        expect(result.id).to eq(row.id)
+        expect(result.occurrence_count).to eq(3)
+        expect(result.status).to eq("wont_fix")
+        expect(result.reopened_at).to be_nil
+        expect(result.just_reopened).to be_falsey
+        expect(result.last_seen_at).to be_within(2.seconds).of(Time.current)
+      end
+
+      # The group identity index is present in the dummy schema, so this also
+      # proves the absorbing row does not collide with it.
+      it "still absorbs a recurrence three days later, with no new row" do
+        row = wont_fix_row(occurred_at: 3.days.ago, last_seen_at: 3.days.ago)
+
+        expect {
+          result = described_class.call(error_hash, base_attributes)
+          expect(result.id).to eq(row.id)
+          expect(result.status).to eq("wont_fix")
+          expect(result.reopened_at).to be_nil
+          expect(result.just_reopened).to be_falsey
+        }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+
+        expect(row.reload.occurrence_count).to eq(3)
+      end
+
+      it "absorbs a legacy wont_fix row that was stored with resolved: true" do
+        row = wont_fix_row(resolved: true, resolved_at: 1.day.ago, occurred_at: 3.days.ago)
+
+        result = described_class.call(error_hash, base_attributes)
+
+        expect(result.id).to eq(row.id)
+        expect(result.status).to eq("wont_fix")
+        expect(result.occurrence_count).to eq(3)
+      end
+
+      it "prefers the wont_fix row over an unresolved sibling" do
+        sticky = wont_fix_row(occurred_at: 3.days.ago)
+        sibling = RailsErrorDashboard::ErrorLog.create!(
+          base_attributes.merge(resolved: false, status: "new", occurrence_count: 1, occurred_at: 10.minutes.ago)
+        )
+
+        result = described_class.call(error_hash, base_attributes)
+
+        expect(result.id).to eq(sticky.id)
+        expect(sibling.reload.occurrence_count).to eq(1)
+      end
+
+      it "does not absorb another application's error" do
+        wont_fix_row
+        other = RailsErrorDashboard::Application.find_or_create_by_name("Other App")
+
+        expect {
+          described_class.call(error_hash, base_attributes.merge(application_id: other.id))
+        }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+      end
+
+      it "matches the environment exactly first, and adopts a legacy NULL-environment row" do
+        skip "environment column not migrated" unless RailsErrorDashboard::ErrorLog.column_names.include?("environment")
+
+        legacy = wont_fix_row(environment: nil, occurred_at: 3.days.ago)
+        production = wont_fix_row(environment: "production", occurred_at: 2.days.ago)
+
+        hit = described_class.call(error_hash, base_attributes.merge(environment: "production"))
+        expect(hit.id).to eq(production.id)
+
+        expect {
+          described_class.call(error_hash, base_attributes.merge(environment: "staging"))
+        }.not_to change(RailsErrorDashboard::ErrorLog, :count)
+        expect(legacy.reload.environment).to eq("staging")
+        expect(legacy.status).to eq("wont_fix")
+      end
+    end
+
+    context "when a resolved match exists next to the wont_fix rule" do
+      it "still reopens a resolved error (regression pin)" do
+        resolved = RailsErrorDashboard::ErrorLog.create!(
+          base_attributes.merge(resolved: true, status: "resolved", resolved_at: 1.day.ago,
+                                occurrence_count: 2, occurred_at: 3.days.ago)
+        )
+
+        result = described_class.call(error_hash, base_attributes)
+
+        expect(result.id).to eq(resolved.id)
         expect(result.status).to eq("new")
+        expect(result.resolved).to be false
+        expect(result.just_reopened).to be true
       end
     end
 

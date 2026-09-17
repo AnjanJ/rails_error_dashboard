@@ -28,6 +28,11 @@ FactoryBot.define do
     platform { 'Web' }
     resolved { false }
     occurred_at { Time.current }
+    # A freshly captured group was last seen when it occurred. Without this the
+    # model stamps last_seen_at with "now", so a row back-dated through
+    # occurred_at would look like an error that is still happening today.
+    first_seen_at { occurred_at }
+    last_seen_at { occurred_at }
 
     trait :resolved do
       resolved { true }

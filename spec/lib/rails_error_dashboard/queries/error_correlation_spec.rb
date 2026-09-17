@@ -410,6 +410,45 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorCorrelation do
     end
   end
 
+  describe "#period_comparison scoped to an application" do
+    it "counts only that application in BOTH periods" do
+      freeze_time do
+        web = create(:application, name: "shop-web")
+        api = create(:application, name: "shop-api")
+        8.times { create(:error_log, application: web, occurred_at: 5.days.ago) }
+        2.times { create(:error_log, application: api, occurred_at: 5.days.ago) }
+        3.times { create(:error_log, application: web, occurred_at: 20.days.ago) }
+        4.times { create(:error_log, application: api, occurred_at: 20.days.ago) }
+
+        result = described_class.new(days: 30, application_id: web.id).period_comparison
+
+        expect(result[:current_period][:count]).to eq(8)
+        expect(result[:previous_period][:count]).to eq(3)
+        expect(result[:change]).to eq(5)
+      end
+    end
+
+    it "still counts every application when none is given" do
+      freeze_time do
+        web = create(:application, name: "shop-web")
+        api = create(:application, name: "shop-api")
+        8.times { create(:error_log, application: web, occurred_at: 5.days.ago) }
+        2.times { create(:error_log, application: api, occurred_at: 5.days.ago) }
+
+        expect(described_class.new(days: 30).period_comparison[:current_period][:count]).to eq(10)
+      end
+    end
+
+    it "does not count anything older than the window" do
+      freeze_time do
+        create(:error_log, occurred_at: 45.days.ago)
+        create(:error_log, occurred_at: 20.days.ago)
+
+        expect(described_class.new(days: 30).period_comparison[:previous_period][:count]).to eq(1)
+      end
+    end
+  end
+
   describe "#platform_specific_errors" do
     it "identifies platform-specific vs cross-platform errors" do
       # iOS-only error

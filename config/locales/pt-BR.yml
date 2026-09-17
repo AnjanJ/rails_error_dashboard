@@ -1133,6 +1133,8 @@ pt-BR:
         application_name: Nome desta aplicação (detectado automaticamente se não for
           definido)
         environment: Ambiente ao qual os erros são atribuídos (Rails.env se não definido)
+        notification_burst_limit: "Notificações de novos erros por intervalo e por processo (0 = sem limite)"
+        notification_burst_window_seconds: "Duração do intervalo de notificações de novos erros"
         notification_environments: Notificar apenas para estes ambientes (todos se
           não definido)
         database: Banco de dados ativo para os logs de erros
@@ -1243,6 +1245,16 @@ pt-BR:
         linked: Issue vinculada com sucesso
         create_failed: 'Não foi possível criar a issue: %{reason}'
         link_failed: 'Não foi possível vincular a issue: %{reason}'
+      status:
+        updated: "Status alterado para %{status}"
+        invalid_transition: "Não é possível alterar o status de %{from} para %{to}"
+        unknown: "Esse status não existe"
+      snooze:
+        invalid_hours: "O tempo de adiamento deve ser um número inteiro de horas entre 1 e %{max}"
+      priority:
+        invalid: "Esse nível de prioridade não existe"
+      assign:
+        blank: "Informe um nome para atribuir este erro"
       not_enabled: "%{feature} não está ativado. Ative em %{file}"
       not_enabled_plural: "%{feature} não estão ativados. Ative-os em %{file}"
       not_enabled_options: "%{feature} não está ativado. Ative %{options} em %{file}"
@@ -1417,6 +1429,10 @@ pt-BR:
           other: "%{value} erros"
           many: "%{value} erros"
         view_in_dashboard: Ver no painel
+      burst:
+        suppressed: "Mais de %{limit} novos erros foram registrados em %{application} em %{window} segundos."
+        still_recorded: "As notificações de outros novos erros ficam pausadas até o fim desse intervalo; todos os erros continuam sendo registrados."
+        dashboard: "Painel: %{url}"
       storm:
         detected: Tempestade de erros detectada em %{application} às %{started_at}.
         mode:

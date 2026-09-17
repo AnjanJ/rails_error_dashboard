@@ -169,6 +169,126 @@ RSpec.describe "Flash message translations", type: :request do
     end
   end
 
+  describe "status workflow result" do
+    it "reports an invalid transition and leaves the row unchanged" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "resolved" }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:notice]).to be_nil
+      expect(flash[:alert]).to include("new").and include("resolved")
+      expect(error.reload.status).to eq("new")
+      expect(error.resolved).to be_falsey
+    end
+
+    it "confirms a valid transition" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "in_progress" }
+
+      expect(flash[:alert]).to be_nil
+      expect(flash[:notice]).to include("in progress")
+      expect(error.reload.status).to eq("in_progress")
+    end
+
+    it "rejects an unknown status" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: "banana" }
+
+      expect(flash[:alert]).to eq(I18n.t("red.flash.status.unknown"))
+      expect(error.reload.status).to eq("new")
+    end
+
+    it "rejects a status that arrives as a nested parameter" do
+      error = create(:error_log, application: application, status: "new")
+
+      post "/error_dashboard/errors/#{error.id}/update_status", params: { status: { "x" => "resolved" } }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq(I18n.t("red.flash.status.unknown"))
+      expect(error.reload.status).to eq("new")
+    end
+  end
+
+  describe "workflow input validation" do
+    let(:error) { create(:error_log, application: application, status: "new", priority_level: 2) }
+
+    [ "-100000", "0", "721", "abc", "", "1.5" ].each do |hours|
+      it "refuses to snooze for #{hours.inspect} hours" do
+        post "/error_dashboard/errors/#{error.id}/snooze", params: { hours: hours }
+
+        expect(response).to have_http_status(:redirect)
+        expect(flash[:alert]).to eq(I18n.t("red.flash.snooze.invalid_hours", max: 720))
+        expect(error.reload.snoozed_until).to be_nil
+      end
+    end
+
+    it "refuses snooze hours sent as a nested parameter" do
+      post "/error_dashboard/errors/#{error.id}/snooze", params: { hours: { "a" => "24" } }
+
+      expect(flash[:alert]).to eq(I18n.t("red.flash.snooze.invalid_hours", max: 720))
+      expect(error.reload.snoozed_until).to be_nil
+    end
+
+    it "snoozes for a valid number of hours" do
+      post "/error_dashboard/errors/#{error.id}/snooze", params: { hours: "24" }
+
+      expect(flash[:alert]).to be_nil
+      expect(error.reload.snoozed_until).to be_within(1.minute).of(24.hours.from_now)
+    end
+
+    [ "99", "-1", "x", "", "1.5" ].each do |level|
+      it "refuses priority #{level.inspect} and keeps the existing priority" do
+        post "/error_dashboard/errors/#{error.id}/update_priority", params: { priority_level: level }
+
+        expect(flash[:alert]).to eq(I18n.t("red.flash.priority.invalid"))
+        expect(error.reload.priority_level).to eq(2)
+      end
+    end
+
+    it "refuses a priority sent as a nested parameter" do
+      post "/error_dashboard/errors/#{error.id}/update_priority", params: { priority_level: { "foo" => "bar" } }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq(I18n.t("red.flash.priority.invalid"))
+      expect(error.reload.priority_level).to eq(2)
+    end
+
+    it "accepts a valid priority" do
+      post "/error_dashboard/errors/#{error.id}/update_priority", params: { priority_level: "3" }
+
+      expect(flash[:alert]).to be_nil
+      expect(error.reload.priority_level).to eq(3)
+    end
+
+    [ "", "   ", nil ].each do |name|
+      it "refuses to assign to #{name.inspect}" do
+        post "/error_dashboard/errors/#{error.id}/assign", params: { assigned_to: name }
+
+        expect(flash[:alert]).to eq(I18n.t("red.flash.assign.blank"))
+        expect(error.reload.assigned_to).to be_nil
+        expect(error.status).to eq("new")
+      end
+    end
+
+    it "refuses an assignee sent as a nested parameter" do
+      post "/error_dashboard/errors/#{error.id}/assign", params: { assigned_to: { "a" => "b" } }
+
+      expect(flash[:alert]).to eq(I18n.t("red.flash.assign.blank"))
+      expect(error.reload.assigned_to).to be_nil
+    end
+
+    it "assigns to a trimmed name" do
+      post "/error_dashboard/errors/#{error.id}/assign", params: { assigned_to: "  gandalf " }
+
+      expect(flash[:alert]).to be_nil
+      expect(error.reload.assigned_to).to eq("gandalf")
+      expect(error.status).to eq("in_progress")
+    end
+  end
+
   describe "AI help JSON errors" do
     let(:error) { create(:error_log, application: application) }
 

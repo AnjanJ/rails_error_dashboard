@@ -170,30 +170,151 @@ RSpec.describe RailsErrorDashboard::Services::NotificationThrottler do
     end
   end
 
-  describe ".cleanup!" do
-    it "removes entries older than max_age_hours" do
-      allow(RailsErrorDashboard::Services::SeverityClassifier).to receive(:classify)
-        .with("NoMethodError").and_return(:high)
+  # The cooldown used to live only in a per-process Hash: every Puma worker and
+  # every job process notified independently, and a restart forgot it. claim!
+  # takes it in the database, where exactly one process can win.
+  describe ".claim!" do
+    let(:row) { create(:error_log) }
 
-      # Record a notification "25 hours ago"
-      travel_to(25.hours.ago) do
-        described_class.record_notification(error_log)
-      end
+    before { RailsErrorDashboard.configuration.notification_cooldown_minutes = 5 }
 
-      # After cleanup, it should allow notifications again
-      described_class.cleanup!(max_age_hours: 24)
-      expect(described_class.should_notify?(error_log)).to be true
+    # "Another process" = the same row, but none of this process's memory.
+    def as_another_process
+      described_class.clear!
+      yield
     end
 
-    it "preserves recent entries" do
-      allow(RailsErrorDashboard::Services::SeverityClassifier).to receive(:classify)
-        .with("NoMethodError").and_return(:high)
+    it "grants the first claim and stamps the row" do
+      freeze_time do
+        expect(described_class.claim!(row)).to be true
+        expect(row.reload.last_notified_at).to eq(Time.current)
+      end
+    end
 
-      described_class.record_notification(error_log)
-      described_class.cleanup!(max_age_hours: 24)
+    it "refuses a second claim inside the cooldown, even from another process" do
+      expect(described_class.claim!(row)).to be true
 
-      # Recent entry should still be in cooldown
-      expect(described_class.should_notify?(error_log)).to be false
+      as_another_process { expect(described_class.claim!(row)).to be false }
+    end
+
+    it "does not move the stamp when a claim is refused" do
+      described_class.claim!(row)
+      stamped = row.reload.last_notified_at
+
+      travel_to(2.minutes.from_now) { described_class.claim!(row) }
+
+      expect(row.reload.last_notified_at).to eq(stamped)
+    end
+
+    it "grants a claim again once the cooldown has passed" do
+      described_class.claim!(row)
+
+      travel_to(6.minutes.from_now) do
+        as_another_process { expect(described_class.claim!(row)).to be true }
+      end
+    end
+
+    it "always grants, and still stamps, when the cooldown is disabled" do
+      RailsErrorDashboard.configuration.notification_cooldown_minutes = 0
+
+      expect(described_class.claim!(row)).to be true
+      expect(described_class.claim!(row)).to be true
+      expect(row.reload.last_notified_at).to be_present
+    end
+
+    it "always grants, and still stamps, when asked not to respect the cooldown" do
+      described_class.claim!(row)
+
+      travel_to(1.minute.from_now) do
+        expect(described_class.claim!(row, respect_cooldown: false)).to be true
+        expect(row.reload.last_notified_at).to eq(Time.current)
+      end
+    end
+
+    it "keeps separate cooldowns for separate rows" do
+      other = create(:error_log)
+      described_class.claim!(row)
+
+      expect(described_class.claim!(other)).to be true
+    end
+
+    it "issues exactly one UPDATE and no SELECT" do
+      statements = []
+      counter = ->(_n, _s, _f, _i, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+      row # create outside the subscription
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { described_class.claim!(row) }
+
+      expect(statements.grep(/\A\s*UPDATE/i).size).to eq(1)
+      expect(statements.grep(/\A\s*SELECT/i)).to be_empty
+    end
+
+    context "when the last_notified_at column is absent (migration not run yet)" do
+      before do
+        allow(RailsErrorDashboard::ErrorLog).to receive(:column_names)
+          .and_return(RailsErrorDashboard::ErrorLog.column_names - [ "last_notified_at" ])
+      end
+
+      it "falls back to the in-process cooldown without touching the column" do
+        expect(described_class.claim!(row)).to be true
+        expect(described_class.claim!(row)).to be false
+        expect(row.reload.last_notified_at).to be_nil
+      end
+
+      it "grants again after the cooldown" do
+        described_class.claim!(row)
+
+        travel_to(6.minutes.from_now) { expect(described_class.claim!(row)).to be true }
+      end
+    end
+
+    it "fails open: a database error means notify" do
+      allow(RailsErrorDashboard::ErrorLog).to receive(:where).and_raise(ActiveRecord::StatementInvalid, "db down")
+
+      expect(described_class.claim!(row)).to be true
+    end
+
+    it "fails open for nil" do
+      expect(described_class.claim!(nil)).to be true
+    end
+  end
+
+  # The fallback Hash had no bound and cleanup! had no callers, so a process
+  # that saw a million distinct errors kept a million timestamps.
+  describe "in-process fallback bounds" do
+    def fake_log(i)
+      instance_double(RailsErrorDashboard::ErrorLog, error_hash: "hash_#{i}", error_type: "NoMethodError")
+    end
+
+    def tracked
+      described_class.instance_variable_get(:@last_notification_times)
+    end
+
+    it "never holds more than MAX_TRACKED keys" do
+      5_000.times { |i| described_class.record_notification(fake_log(i)) }
+
+      expect(tracked.size).to be <= described_class::MAX_TRACKED
+      expect(described_class::MAX_TRACKED).to eq(1_000)
+    end
+
+    it "evicts the oldest entries first, keeping the most recent cooldowns" do
+      allow(RailsErrorDashboard::Services::SeverityClassifier).to receive(:classify).and_return(:high)
+      1_500.times { |i| described_class.record_notification(fake_log(i)) }
+
+      expect(described_class.should_notify?(fake_log(1_499))).to be false # still in cooldown
+      expect(described_class.should_notify?(fake_log(0))).to be true      # evicted
+    end
+
+    it "sweeps expired entries on insert" do
+      travel_to(10.minutes.ago) { 50.times { |i| described_class.record_notification(fake_log(i)) } }
+
+      described_class.record_notification(fake_log(9_999))
+
+      expect(tracked.keys).to eq([ "hash_9999" ])
+    end
+
+    it "no longer exposes cleanup! (it had no callers)" do
+      expect(described_class).not_to respond_to(:cleanup!)
     end
   end
 
@@ -259,6 +380,42 @@ RSpec.describe RailsErrorDashboard::Services::NotificationThrottler do
     it "fails open if the check itself raises" do
       allow(RailsErrorDashboard.configuration).to receive(:notification_environments).and_raise("boom")
       expect(described_class.environment_allowed?(staging_error)).to be true
+    end
+  end
+  # should_notify? is a question about the ROW, not about the Ruby object the
+  # caller happens to hold: claim! stamps the row with update_all, so the
+  # caller's copy (and every other process's copy) still says "never notified".
+  describe ".should_notify? with a persisted row" do
+    let(:row) { create(:error_log, error_type: "NoMethodError") }
+
+    before do
+      allow(RailsErrorDashboard::Services::SeverityClassifier).to receive(:classify).and_return(:high)
+    end
+
+    it "is false right after record_notification on the same object" do
+      described_class.record_notification(row)
+
+      expect(described_class.should_notify?(row)).to be false
+    end
+
+    it "is false when another process claimed the row" do
+      stale_copy = RailsErrorDashboard::ErrorLog.find(row.id)
+      described_class.claim!(RailsErrorDashboard::ErrorLog.find(row.id))
+
+      expect(described_class.should_notify?(stale_copy)).to be false
+    end
+
+    it "is true again once the cooldown has passed" do
+      described_class.record_notification(row)
+      row.class.where(id: row.id).update_all(last_notified_at: 6.minutes.ago)
+
+      expect(described_class.should_notify?(row)).to be true
+    end
+
+    it "is true for a row that was deleted (nothing to throttle against)" do
+      row.destroy
+
+      expect(described_class.should_notify?(row)).to be true
     end
   end
 end

@@ -194,7 +194,7 @@ end
 error_id = workflow_error.id
 
 # Assign
-assigned = RailsErrorDashboard::Commands::AssignError.call(error_id, assigned_to: "Gandalf")
+assigned = RailsErrorDashboard::Commands::AssignError.call(error_id, assigned_to: "Gandalf")[:error]
 assert "assigned_to set", assigned.assigned_to == "Gandalf"
 assert "status -> in_progress (after assign)", assigned.status == "in_progress"
 
@@ -208,11 +208,11 @@ else
 end
 
 # Update priority (priority_level is integer: 3=P0/Critical, 2=P1/High, 1=P2/Medium, 0=P3/Low)
-prioritized = RailsErrorDashboard::Commands::UpdateErrorPriority.call(error_id, priority_level: 3)
+prioritized = RailsErrorDashboard::Commands::UpdateErrorPriority.call(error_id, priority_level: 3)[:error]
 assert "priority_level -> 3 (P0)", prioritized.priority_level == 3
 
 # Snooze
-snoozed = RailsErrorDashboard::Commands::SnoozeError.call(error_id, hours: 2, reason: "Investigating later")
+snoozed = RailsErrorDashboard::Commands::SnoozeError.call(error_id, hours: 2, reason: "Investigating later")[:error]
 assert "snoozed_until set", snoozed.snoozed_until.present?
 assert "snoozed_until ~2 hours from now", snoozed.snoozed_until > 1.hour.from_now
 

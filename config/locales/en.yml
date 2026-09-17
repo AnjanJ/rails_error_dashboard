@@ -1536,6 +1536,8 @@ en:
         sampling_rate: "Percentage of errors captured"
         application_name: "Name of this application (auto-detected if not set)"
         environment: "Environment errors are attributed to (Rails.env if not set)"
+        notification_burst_limit: "New-error notifications per window, per process (0 = no cap)"
+        notification_burst_window_seconds: "Length of the new-error notification window"
         notification_environments: "Only notify for these environments (all if not set)"
         database: "Active database for error logs"
         use_separate_database: "Use dedicated DB for error logs"
@@ -1643,6 +1645,19 @@ en:
         # %{reason} is a command's own error string.
         create_failed: "Failed to create issue: %{reason}"
         link_failed: "Failed to link issue: %{reason}"
+
+      # Result of the status workflow form. %{status}, %{from} and %{to} are the
+      # translated status labels from red.errors.row.status.
+      status:
+        updated: "Status changed to %{status}"
+        invalid_transition: "Cannot change status from %{from} to %{to}"
+        unknown: "That status does not exist"
+      snooze:
+        invalid_hours: "Snooze time must be a whole number of hours between 1 and %{max}"
+      priority:
+        invalid: "That priority level does not exist"
+      assign:
+        blank: "Enter a name to assign this error to"
 
       # The "X is not enabled" notice was written out eleven times with only
       # the feature name changing. Two keys rather than one because English
@@ -1909,6 +1924,14 @@ en:
           one: "%{value} error"
           other: "%{value} errors"
         view_in_dashboard: "View in Dashboard"
+
+      burst:
+        # Sent ONCE when more than %{limit} new errors arrive inside %{window}
+        # seconds (config.notification_burst_limit). It says that suppression has
+        # started, not how many were suppressed: that is not known yet.
+        suppressed: "More than %{limit} new errors were reported in %{application} within %{window} seconds."
+        still_recorded: "Notifications for further new errors are paused until that window ends; every error is still recorded."
+        dashboard: "Dashboard: %{url}"
 
       storm:
         # The single "error storm in progress" message. %{application} is the

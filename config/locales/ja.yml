@@ -979,6 +979,8 @@ ja:
         sampling_rate: エラーを記録する割合
         application_name: このアプリケーションの名前 (未設定の場合は自動検出)
         environment: エラーを紐付ける環境（未設定の場合は Rails.env）
+        notification_burst_limit: "時間枠ごと・プロセスごとの新規エラー通知数（0 = 上限なし）"
+        notification_burst_window_seconds: "新規エラー通知の時間枠の長さ"
         notification_environments: 通知する環境を限定（未設定の場合はすべて）
         database: エラーログで使用中のデータベース
         use_separate_database: エラーログ専用の DB を使用します
@@ -1066,6 +1068,16 @@ ja:
         linked: イシューを連携しました
         create_failed: 'イシューの作成に失敗しました: %{reason}'
         link_failed: 'イシューの連携に失敗しました: %{reason}'
+      status:
+        updated: "ステータスを %{status} に変更しました"
+        invalid_transition: "ステータスを %{from} から %{to} に変更することはできません"
+        unknown: "そのステータスは存在しません"
+      snooze:
+        invalid_hours: "スヌーズ時間は 1 から %{max} までの整数（時間単位）で指定してください"
+      priority:
+        invalid: "その優先度は存在しません"
+      assign:
+        blank: "このエラーの担当者の名前を入力してください"
       not_enabled: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_plural: "%{feature}は有効になっていません。%{file}で有効にしてください"
       not_enabled_options: "%{feature}は有効になっていません。%{file}で%{options}を有効にしてください"
@@ -1223,6 +1235,10 @@ ja:
         threshold_errors:
           other: "%{value}件のエラー"
         view_in_dashboard: ダッシュボードで表示
+      burst:
+        suppressed: "%{application} で %{window} 秒以内に %{limit} 件を超える新しいエラーが報告されました。"
+        still_recorded: "この時間枠が終わるまで、以降の新しいエラーの通知は一時停止されます。エラーはすべて引き続き記録されます。"
+        dashboard: "ダッシュボード: %{url}"
       storm:
         detected: "%{started_at}に%{application}でエラーストームを検知しました。"
         mode:

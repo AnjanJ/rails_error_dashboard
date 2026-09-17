@@ -49,7 +49,7 @@
         <div class="card text-center">
           <div class="card-body">
             <%
-              latest = @dumps.first
+              latest = @latest_dump
               latest_data = begin; JSON.parse(latest.dump_data); rescue; {}; end if latest
               thread_count = latest_data&.dig("system_health", "thread_count")
             %>

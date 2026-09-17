@@ -269,4 +269,21 @@ RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
       expect(helper.parse_pg_timestamp("not a date")).to be_nil
     end
   end
+
+  describe "#safe_parse_time" do
+    it "parses an ISO 8601 string" do
+      expect(helper.safe_parse_time("2026-01-02T03:04:05Z")).to eq(Time.utc(2026, 1, 2, 3, 4, 5))
+    end
+
+    it "passes a Time through" do
+      time = Time.utc(2026, 1, 2)
+      expect(helper.safe_parse_time(time)).to equal(time)
+    end
+
+    [ nil, "", "   ", "not a date", "2026-99-99T99:99:99Z", 12_345, 1.5, :sym, [], { "a" => 1 }, Object.new ].each do |value|
+      it "returns nil for #{value.inspect[0, 40]} without raising" do
+        expect(helper.safe_parse_time(value)).to be_nil
+      end
+    end
+  end
 end

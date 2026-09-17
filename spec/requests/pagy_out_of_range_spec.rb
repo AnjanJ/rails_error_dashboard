@@ -27,16 +27,24 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
         unresolved: "0",
         page: 999_999
       }
-      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to have_http_status(:see_other)
       expect(response.location).to include("error_type=ArgumentError")
       expect(response.location).to include("unresolved=0")
       expect(response.location).not_to include("page=999999")
       expect(response.location).not_to include("page=1") # not strictly required
     end
 
+    # A 301 is cached by the browser: the out-of-range URL would keep bouncing
+    # to page 1 even after enough errors arrive to make that page exist.
+    it "does not answer with a cacheable permanent redirect" do
+      get "/error_dashboard/errors", params: { page: 999_999 }
+      expect(response.status).not_to eq(301)
+      expect(response.status).not_to eq(308)
+    end
+
     it "redirects to bare path when no other params were provided" do
       get "/error_dashboard/errors", params: { page: 999_999 }
-      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to have_http_status(:see_other)
       expect(response.location).to end_with("/error_dashboard/errors")
     end
 
@@ -47,7 +55,7 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
       # on the next request — infinite redirect loop. Drop both :page and
       # :per_page when redirecting.
       get "/error_dashboard/errors", params: { per_page: "-1" }
-      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to have_http_status(:see_other)
       expect(response.location).not_to include("per_page=")
       # Following the redirect must reach 200, not loop.
       follow_redirect!

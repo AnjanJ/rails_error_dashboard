@@ -72,7 +72,7 @@
 
           <% if error.respond_to?(:environment) && error.environment.present? %>
             <div class="mb-3">
-              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.environment") %></small>
+              <small class="metadata-label d-block mb-1"><%= red_t("red.errors.sidebar.environment.title") %></small>
               <%= link_to errors_path(environment: error.environment, unresolved: '0'), class: "text-decoration-none", title: red_t("red.errors.sidebar.view_all_environment", environment: error.environment) do %>
                 <span class="badge badge-api" data-environment-badge="<%= error.environment %>"><i class="bi bi-hdd-stack"></i> <%= error.environment %></span>
               <% end %>
@@ -513,7 +513,7 @@
                   <% if health[:job_queue] %>
                     <% jq = health[:job_queue] %>
                     <div class="mb-1">
-                      <small class="text-muted">Job Queue (<%= jq[:adapter] %>):</small>
+                      <small class="text-muted"><%= red_t("red.errors.sidebar.health.job_queue", adapter: jq[:adapter]) %></small>
                       <code class="ms-1">
                         <% case jq[:adapter] %>
                         <% when "sidekiq" %>

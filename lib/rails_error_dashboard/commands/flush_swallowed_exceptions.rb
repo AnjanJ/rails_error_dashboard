@@ -25,8 +25,11 @@ module RailsErrorDashboard
         app_id = current_application_id
 
         # Process raise counts
+        # Keys are scrubbed before they are split: a class name or path with an
+        # invalid byte makes split/blank? raise, and the outer rescue would then
+        # drop every remaining count in the batch along with it.
         @raise_counts.each do |key, count|
-          class_name, location = key.split("|", 2)
+          class_name, location = Services::EncodingSanitizer.scrub(key.to_s).split("|", 2)
           next if class_name.blank? || location.blank?
 
           upsert_raise(class_name, location, period, app_id, count)
@@ -34,7 +37,7 @@ module RailsErrorDashboard
 
         # Process rescue counts
         @rescue_counts.each do |key, count|
-          class_name, locations = key.split("|", 2)
+          class_name, locations = Services::EncodingSanitizer.scrub(key.to_s).split("|", 2)
           next if class_name.blank? || locations.blank?
 
           raise_loc, rescue_loc = locations.split("->", 2)

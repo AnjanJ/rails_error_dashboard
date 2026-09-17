@@ -164,6 +164,50 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
 
         expect(result.count).to eq(0)
       end
+
+      # LIKE treats % and _ as wildcards. A search for them has to find the
+      # literal character, not everything. (The PostgreSQL branch uses full-text
+      # search and has no wildcards to escape.)
+      context "with LIKE wildcards in the search term", unless: ActiveRecord::Base.connection.adapter_name.downcase == "postgresql" do
+        let!(:snake) { create(:error_log, message: "undefined snake_case", error_type: "AlphaError", backtrace: "a.rb:1") }
+        let!(:snakex) { create(:error_log, message: "undefined snakeXcase", error_type: "BetaError", backtrace: "b.rb:1") }
+        let!(:percent) { create(:error_log, message: "100% done", error_type: "GammaError", backtrace: "c.rb:1") }
+        let!(:plain) { create(:error_log, message: "plain", error_type: "DeltaError", backtrace: "d.rb:1") }
+        let!(:bang) { create(:error_log, message: "save! failed", error_type: "EpsilonError", backtrace: "e.rb:1") }
+
+        def found(term)
+          described_class.call(search: term).where(id: [ snake, snakex, percent, plain, bang ].map(&:id)).to_a
+        end
+
+        it "matches an underscore literally" do
+          expect(found("snake_case")).to contain_exactly(snake)
+        end
+
+        it "finds only rows containing a literal percent sign" do
+          expect(found("%")).to contain_exactly(percent)
+        end
+
+        it "finds only rows containing a literal underscore" do
+          expect(found("_")).to contain_exactly(snake)
+        end
+
+        it "finds the escape character itself literally" do
+          expect(found("save!")).to contain_exactly(bang)
+          expect(found("!")).to contain_exactly(bang)
+        end
+
+        it "does not raise for a backslash, a quote or a trailing escape character" do
+          [ "\\", "a\\", "'", "100%!", "!%_" ].each do |term|
+            expect { found(term) }.not_to raise_error
+          end
+        end
+
+        it "is still case-insensitive and still searches type and backtrace" do
+          expect(found("SNAKE_CASE")).to contain_exactly(snake)
+          expect(found("gammaerror")).to contain_exactly(percent)
+          expect(found("d.rb")).to contain_exactly(plain)
+        end
+      end
     end
 
     describe "combining multiple filters" do
