@@ -39,6 +39,11 @@ RSpec.configure do |config|
     RailsErrorDashboard::Services::StormProtection::Gate.reset!
     RailsErrorDashboard.configuration.enable_storm_protection = false
 
+    # The new-error burst cap counts per PROCESS, and the suite is one
+    # process: without this the eleventh first-occurrence notification inside
+    # any 60 s of wall time is suppressed, in whichever example it lands.
+    RailsErrorDashboard::Services::NotificationThrottler.clear!
+
     # async_logging is forced off for the same reason, and it is the more
     # dangerous leak of the two: when it escapes, LogError enqueues
     # AsyncErrorLoggingJob instead of writing a row, so any example asserting

@@ -28,6 +28,9 @@ module RailsErrorDashboard
 
       @last_notification_times = {}
       @mutex = Mutex.new
+      @burst_mutex = Mutex.new
+      @burst_window_start = nil
+      @burst_count = 0
 
       class << self
         # Take the right to notify about this error, atomically.
@@ -128,6 +131,50 @@ module RailsErrorDashboard
           false
         end
 
+        # May a FIRST-OCCURRENCE notification go out right now?
+        #
+        # The per-error cooldown cannot bound a bad deploy that produces hundreds
+        # of DISTINCT new errors: each is a first occurrence, and first
+        # occurrences always notify. This is a fixed window counter:
+        #
+        #   :notify    within config.notification_burst_limit for this window
+        #   :summarize the first one over the limit: send ONE summary instead
+        #   :suppress  everything after that, until the window ends
+        #
+        # Per process, like Gate.issue_creation_allowed?, because there is no
+        # store every deployment shares except the database and this is asked on
+        # the capture path. Worst case is limit x processes per window.
+        #
+        # Each call consumes a slot: ask only when about to notify. A limit or
+        # window of 0 / nil turns the cap off. Fails open to :notify.
+        #
+        # @return [Symbol] :notify, :summarize or :suppress
+        def burst_decision
+          limit = RailsErrorDashboard.configuration.notification_burst_limit.to_i
+          window = RailsErrorDashboard.configuration.notification_burst_window_seconds.to_i
+          return :notify unless limit.positive? && window.positive?
+
+          now = monotonic_now
+          count = @burst_mutex.synchronize do
+            if @burst_window_start.nil? || now - @burst_window_start >= window
+              @burst_window_start = now
+              @burst_count = 0
+            end
+            @burst_count += 1
+          end
+
+          if count <= limit
+            :notify
+          elsif count == limit + 1
+            :summarize
+          else
+            :suppress
+          end
+        rescue => e
+          RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] NotificationThrottler.burst_decision failed: #{e.class}: #{e.message}")
+          :notify
+        end
+
         # Record that a notification was sent for this error, unconditionally.
         # Kept for callers that notify outside LogError; LogError itself uses
         # claim!, which decides and records in one step.
@@ -142,9 +189,17 @@ module RailsErrorDashboard
           @mutex.synchronize do
             @last_notification_times.clear
           end
+          @burst_mutex.synchronize do
+            @burst_window_start = nil
+            @burst_count = 0
+          end
         end
 
         private
+
+        def monotonic_now
+          Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        end
 
         def cooldown_minutes
           RailsErrorDashboard.configuration.notification_cooldown_minutes.to_i

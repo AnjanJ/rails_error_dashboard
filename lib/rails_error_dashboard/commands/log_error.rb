@@ -548,7 +548,7 @@ module RailsErrorDashboard
         # Send notifications for new errors and reopened errors (with throttling).
         # Muted errors skip notification dispatch but still fire plugin events.
         if error_log.occurrence_count == 1
-          maybe_notify(error_log) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
+          maybe_notify(error_log, first_occurrence: true) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
           PluginRegistry.dispatch(:on_error_logged, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
@@ -595,11 +595,12 @@ module RailsErrorDashboard
       # the cooldown has ever applied to: a first occurrence and a threshold
       # milestone always notify. They still stamp the row, so an error reopened
       # minutes after its first notification is throttled.
-      def maybe_notify(error_log, respect_cooldown: false)
+      def maybe_notify(error_log, respect_cooldown: false, first_occurrence: false)
         return if error_log.muted?
         return if Services::StormProtection::Gate.notifications_suppressed?
         return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless yield
+        return if first_occurrence && burst_capped?
 
         # Claim, THEN send. The claim is a conditional UPDATE only one process can
         # win, so N workers reopening the same error send one notification, not
@@ -617,6 +618,30 @@ module RailsErrorDashboard
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] Failed to dispatch notification for error #{error_log&.id}: #{e.class} - #{e.message}"
         )
+      end
+
+      # A bad deploy can produce hundreds of DISTINCT new errors, each a first
+      # occurrence the per-error cooldown never sees. Past
+      # config.notification_burst_limit per window, new-error notifications are
+      # held back and ONE summary says so. Asked only for first occurrences that
+      # were otherwise going to notify, and before the cooldown claim, so a
+      # suppressed error is not stamped as notified. The error itself is already
+      # stored; only the notification is dropped.
+      def burst_capped?
+        case Services::NotificationThrottler.burst_decision
+        when :summarize
+          config = RailsErrorDashboard.configuration
+          NotificationBurstSummaryJob.perform_later(
+            limit: config.notification_burst_limit.to_i,
+            window_seconds: config.notification_burst_window_seconds.to_i,
+            locale: ApplicationJob.enqueue_locale
+          )
+          true
+        when :suppress
+          true
+        else
+          false
+        end
       end
 
       # The environment this error is attributed to: an explicit context value

@@ -21,6 +21,16 @@ RailsErrorDashboard.configure do |config|
   # Only notify (Slack, email, Discord, PagerDuty, webhooks, storm and
   # baseline alerts) for these environments. nil = every environment.
   # config.notification_environments = %w[production]
+  #
+  # Notification throttling. The per-error cooldown stops one error that keeps
+  # being reopened from paging repeatedly; it is held in the database, so it
+  # applies across every worker. The burst cap is for the deploy that throws
+  # hundreds of DIFFERENT new errors: after N new-error notifications in a
+  # window (per process) one summary message replaces the rest. Every error
+  # is still recorded.
+  # config.notification_cooldown_minutes = 5          # 0 = no cooldown
+  # config.notification_burst_limit = 10              # 0 = no cap
+  # config.notification_burst_window_seconds = 60
 
   # === Custom Authentication (optional) ===
   # Use your app's existing auth instead of HTTP Basic Auth.
