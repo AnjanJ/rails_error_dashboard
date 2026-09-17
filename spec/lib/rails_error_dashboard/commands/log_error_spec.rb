@@ -249,11 +249,37 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
           srand(12345) # Seed for reproducible results
 
           count_before = RailsErrorDashboard::ErrorLog.count
+          # Each error is distinct (so deduplication stays out of the way), and the
+          # first event of an error is always admitted. Mark them as already seen
+          # so this measures what it means to: the dice, on repeat events.
+          100.times { |i| RailsErrorDashboard::Services::ExceptionFilter.first_sighting?(create_unique_exception(StandardError, "Error", i)) }
           100.times { |i| described_class.call(create_unique_exception(StandardError, "Error", i), context) }
           count_after = RailsErrorDashboard::ErrorLog.count
           logged_count = count_after - count_before
 
           expect(logged_count).to be_between(35, 65)
+        end
+      end
+
+      context "first event of each error under sampling" do
+        before { RailsErrorDashboard.configure { |config| config.sampling_rate = 0.01 } }
+
+        # Sampling cuts volume; it must not hide that an error exists.
+        it "records every distinct error once, however low the rate" do
+          allow(RailsErrorDashboard::Services::ExceptionFilter).to receive(:rand).and_return(0.99)
+
+          expect {
+            20.times { |i| described_class.call(create_unique_exception(StandardError, "Error", i), context) }
+          }.to change(RailsErrorDashboard::ErrorLog, :count).by(20)
+        end
+
+        it "samples the repeats" do
+          allow(RailsErrorDashboard::Services::ExceptionFilter).to receive(:rand).and_return(0.99)
+          described_class.call(create_unique_exception(StandardError, "Error", 1), context)
+
+          expect {
+            10.times { described_class.call(create_unique_exception(StandardError, "Error", 1), context) }
+          }.not_to change { RailsErrorDashboard::ErrorLog.sum(:occurrence_count) }
         end
       end
 
@@ -270,6 +296,10 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
           srand(54321) # Seed for reproducible results
 
           count_before = RailsErrorDashboard::ErrorLog.count
+          # Each error is distinct (so deduplication stays out of the way), and the
+          # first event of an error is always admitted. Mark them as already seen
+          # so this measures what it means to: the dice, on repeat events.
+          100.times { |i| RailsErrorDashboard::Services::ExceptionFilter.first_sighting?(create_unique_exception(StandardError, "Error", i)) }
           100.times { |i| described_class.call(create_unique_exception(StandardError, "Error", i), context) }
           count_after = RailsErrorDashboard::ErrorLog.count
           logged_count = count_after - count_before

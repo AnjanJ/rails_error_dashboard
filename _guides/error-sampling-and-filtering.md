@@ -117,6 +117,14 @@ CRITICAL_ERROR_TYPES = [
 
 **Why?** Critical errors indicate serious system problems that need immediate attention, regardless of sample rate.
 
+### The First Event of Every Error Is Always Logged
+
+Sampling is a dice roll per event. On its own that means an error which happens three times at a 1% rate is, more often than not, never recorded at all. So the **first** event of each distinct error in a process is always logged, and only the repeats are sampled: sampling cuts volume, it does not hide that an error exists.
+
+- "Distinct" here means exception class + the first application line in the backtrace. It is deliberately cheaper and coarser than the dashboard's real fingerprint.
+- It is tracked per process (each Puma worker and job process admits its own first), for up to 1,000 distinct errors at a time.
+- `sampling_rate = 0.0` is still a hard off switch for non-critical errors: nothing is admitted.
+
 ### Environment-Specific Configuration
 
 ```ruby
