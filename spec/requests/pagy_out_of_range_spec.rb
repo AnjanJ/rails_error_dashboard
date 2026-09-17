@@ -54,4 +54,74 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
       expect(response).to have_http_status(:ok)
     end
   end
+  # per_page came straight from the query string into LIMIT, so one request
+  # could ask the database for every row and render them all.
+  describe "per_page upper bound" do
+    # The limit may be inlined or sent as a bind, depending on the adapter.
+    def limits_for
+      seen = []
+      collector = lambda do |_n, _s, _f, _i, payload|
+        next unless payload[:sql].include?("LIMIT")
+
+        binds = payload[:type_casted_binds]
+        binds = binds.call if binds.respond_to?(:call)
+        seen << "#{payload[:sql]} #{Array(binds).inspect}"
+      end
+      ActiveSupport::Notifications.subscribed(collector, "sql.active_record") { yield }
+      seen.join("\n")
+    end
+
+    it "clamps a huge per_page to 100" do
+      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "9999999" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(sql).not_to include("9999999")
+      expect(sql).to match(/\b100\b/)
+    end
+
+    it "renders at most 100 rows however many are asked for" do
+      create_list(:error_log, 105, application: application, resolved: false)
+
+      get "/error_dashboard/errors", params: { per_page: "5000" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body.scan(/id="error_\d+"/).size).to eq(100)
+    end
+
+    it "leaves a value inside the range alone" do
+      create_list(:error_log, 10, application: application, resolved: false)
+
+      get "/error_dashboard/errors", params: { per_page: "5" }
+
+      expect(response.body.scan(/id="error_\d+"/).size).to eq(5)
+    end
+
+    it "uses 25 when per_page is absent" do
+      create_list(:error_log, 30, application: application, resolved: false)
+
+      get "/error_dashboard/errors"
+
+      expect(response.body.scan(/id="error_\d+"/).size).to eq(25)
+    end
+
+    it "clamps on the other paginated pages too" do
+      get "/error_dashboard/errors/releases", params: { per_page: "9999999" }
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "does not raise for a per_page that arrives as a Hash or an Array" do
+      get "/error_dashboard/errors", params: { per_page: { a: "1" } }
+      expect(response.status).to be < 500
+
+      get "/error_dashboard/errors", params: { per_page: [ "1", "2" ] }
+      expect(response.status).to be < 500
+    end
+
+    it "reads per_page in exactly one place" do
+      source = File.read(RailsErrorDashboard::Engine.root.join("app/controllers/rails_error_dashboard/errors_controller.rb"))
+
+      expect(source).not_to include("params[:per_page]")
+    end
+  end
 end

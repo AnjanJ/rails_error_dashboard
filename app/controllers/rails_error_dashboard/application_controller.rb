@@ -131,6 +131,9 @@ module RailsErrorDashboard
       redirect_to target, status: :moved_permanently
     end
 
+    DEFAULT_PER_PAGE = 25
+    MAX_PER_PAGE = 100
+
     private
 
     # Set the dashboard's locale for this request and restore whatever was
@@ -221,6 +224,17 @@ module RailsErrorDashboard
 
     def self.resolved_pagy_locales
       @resolved_pagy_locales ||= {}
+    end
+
+    # Page size for every paginated action. Only the upper bound is enforced
+    # here: a value that is not a positive integer is passed through unchanged
+    # so that Pagy rejects it and the rescue above redirects, as it always has.
+    def per_page_param
+      raw = params[:per_page]
+      return DEFAULT_PER_PAGE if raw.blank?
+
+      number = Integer(raw, exception: false) if raw.is_a?(String)
+      number && number > MAX_PER_PAGE ? MAX_PER_PAGE : raw
     end
 
     def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
