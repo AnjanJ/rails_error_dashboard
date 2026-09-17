@@ -79,8 +79,10 @@ RSpec.describe "SwallowedExceptionTracker buffer bounds and flush deadline" do
         rescue_counts: { tracker::RESCUE_OVERFLOW_KEY => 4 }
       )
 
-      row = RailsErrorDashboard::SwallowedException.find_by!(exception_class: "[overflow]")
-      expect(row.raise_count).to eq(7)
+      # Two rows: the raise bucket and the rescue bucket have different
+      # locations. Sum rather than pick one -- an unordered find_by! returned
+      # the raise row on SQLite and the rescue row on PostgreSQL.
+      expect(RailsErrorDashboard::SwallowedException.where(exception_class: "[overflow]").sum(:raise_count)).to eq(7)
       expect(RailsErrorDashboard::SwallowedException.where(exception_class: "[overflow]").sum(:rescue_count)).to eq(4)
     end
   end
