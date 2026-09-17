@@ -45,6 +45,10 @@ module RailsErrorDashboard
     # 4000, and the copy that drifts is the one the user reads.
     AI_HELP_QUESTION_LIMIT = 4000
 
+    # Cached in place of nil when the issue tracker has nothing to say, so that
+    # "nothing" is remembered for the TTL like any other answer.
+    NO_PLATFORM_DATA = "none"
+
     # The initializer every "not enabled" notice points at. A path, not prose.
     INITIALIZER_PATH = "config/initializers/rails_error_dashboard.rb"
 
@@ -820,13 +824,25 @@ module RailsErrorDashboard
       # The repository belongs in the key: two repositories sharing an issue
       # number would otherwise read each other's cached state.
       cache_key = issue_cache_key("issue_state", error)
-      Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.for_error(error)
-        return nil unless client
-
-        result = client.fetch_issue(number: error.external_issue_number)
-        result[:success] ? result : nil
+      #
+      # The negative result is cached too, as NO_PLATFORM_DATA rather than nil.
+      # `return nil unless client` used to leave the METHOD, so the block never
+      # finished and nothing was written; a raising client skipped the write the
+      # same way. Either meant one API attempt (and its timeout) per page view.
+      cached = Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
+        fetch_issue_state(error) || NO_PLATFORM_DATA
       end
+      cached == NO_PLATFORM_DATA ? nil : cached
+    rescue => e
+      nil
+    end
+
+    def fetch_issue_state(error)
+      client = Services::IssueTrackerClient.for_error(error)
+      return nil unless client
+
+      result = client.fetch_issue(number: error.external_issue_number)
+      result[:success] ? result : nil
     rescue => e
       nil
     end
@@ -837,13 +853,20 @@ module RailsErrorDashboard
 
       # Cache for 60 seconds to avoid API hammering on page refreshes
       cache_key = issue_cache_key("issue_comments", error)
+      # (an empty list is cached like any other answer -- see fetch_platform_issue)
       Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.for_error(error)
-        return [] unless client
+        fetch_issue_comments(error)
+      end || []
+    rescue => e
+      []
+    end
 
-        result = client.fetch_comments(number: error.external_issue_number, per_page: 20)
-        result[:success] ? result[:comments] : []
-      end
+    def fetch_issue_comments(error)
+      client = Services::IssueTrackerClient.for_error(error)
+      return [] unless client
+
+      result = client.fetch_comments(number: error.external_issue_number, per_page: 20)
+      result[:success] ? Array(result[:comments]) : []
     rescue => e
       []
     end
