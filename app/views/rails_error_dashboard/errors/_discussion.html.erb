@@ -47,7 +47,7 @@
                 <% end %>
                 <div>
                   <strong class="text-primary"><%= comment[:author] || red_t("red.common.unknown") %></strong>
-                  <small class="text-muted ms-2"><%= comment[:created_at] ? Time.parse(comment[:created_at]).strftime(red_time_format(:datetime)) : "" %></small>
+                  <small class="text-muted ms-2"><%= local_time(safe_parse_time(comment[:created_at]), format: :datetime, fallback: "") %></small>
                 </div>
               </div>
               <div class="ms-4 text-break" style="font-size: 0.9em;">

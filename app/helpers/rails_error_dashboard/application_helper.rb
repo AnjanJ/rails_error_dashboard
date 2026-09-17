@@ -226,6 +226,19 @@ module RailsErrorDashboard
       nil
     end
 
+    # Parses a timestamp that came from somewhere RED does not control (an issue
+    # tracker's API). nil for anything that is not a date: a blank, free text, a
+    # number, a nested value. Never raises -- one odd comment must not take the
+    # error page down with it.
+    def safe_parse_time(value)
+      return value if value.is_a?(Time) || value.is_a?(DateTime)
+      return nil unless value.is_a?(String) && value.present?
+
+      (Time.zone || Time).parse(value)
+    rescue ArgumentError, TypeError, RangeError
+      nil
+    end
+
     # Renders a relative time ("3 hours ago") that updates automatically
     # @param time [Time, DateTime, nil] The timestamp to display
     # @param fallback [String] Text to show if time is nil

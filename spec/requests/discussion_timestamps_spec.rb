@@ -48,4 +48,47 @@ RSpec.describe "Discussion timestamps", type: :request do
       expect(stamp["data-format"]).to eq("%d. %b %Y %H:%M")
     end
   end
+
+  # created_at comes from a forge's API. Time.parse raised on anything that was
+  # not a date, and one odd comment took the whole error page down.
+  describe "issue tracker comments" do
+    before do
+      config.enable_issue_tracking = true
+      error.update_columns(external_issue_url: "https://github.com/a/b/issues/1",
+                           external_issue_number: 1, external_issue_provider: "github")
+    end
+
+    def stub_comments(*created_ats)
+      comments = created_ats.each_with_index.map do |created_at, i|
+        { author: "user#{i}", body: "comment body #{i}", created_at: created_at, avatar_url: nil }
+      end
+      client = instance_double(RailsErrorDashboard::Services::GitHubIssueClient)
+      allow(client).to receive(:fetch_issue).and_return({ success: false })
+      allow(client).to receive(:fetch_comments).and_return({ success: true, comments: comments })
+      allow(RailsErrorDashboard::Services::IssueTrackerClient).to receive(:for_error).and_return(client)
+    end
+
+    [ "", "not a date", nil, "2026-99-99T99:99:99Z", 12_345, { "a" => 1 } ].each do |value|
+      it "renders the page with an empty time for created_at #{value.inspect}" do
+        stub_comments(value)
+
+        get "/error_dashboard/errors/#{error.id}"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("comment body 0")
+        expect(response.body).not_to include("Something went wrong")
+        expect(Nokogiri::HTML(response.body).css("#section-discussion .local-time")).to be_empty
+      end
+    end
+
+    it "still renders a valid timestamp, and one bad comment does not hide the others" do
+      stub_comments("2026-01-02T03:04:05Z", "garbage")
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      stamps = Nokogiri::HTML(response.body).css("#section-discussion .local-time")
+      expect(stamps.map { |s| s["data-utc"] }).to eq([ "2026-01-02T03:04:05Z" ])
+      expect(response.body).to include("comment body 1")
+    end
+  end
 end
