@@ -382,6 +382,7 @@ ja:
       issue_section:
         title: イシュートラッカー
         view_issue: イシューを表示
+        unsafe_link: "このイシューのリンクは http(s) の URL ではないため、テキストとして表示され、開くことはできません。"
         linked: 連携済み
         issue_reference: "%{provider} #%{number}"
         states:

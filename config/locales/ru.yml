@@ -441,6 +441,7 @@ ru:
       issue_section:
         title: Трекер задач
         view_issue: Открыть задачу
+        unsafe_link: "Эта ссылка на задачу не является URL-адресом http(s), поэтому она показана как текст и не может быть открыта."
         linked: Привязана
         issue_reference: "%{provider} #%{number}"
         states:

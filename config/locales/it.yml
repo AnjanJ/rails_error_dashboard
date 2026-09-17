@@ -431,6 +431,7 @@ it:
       issue_section:
         title: Sistema di segnalazioni
         view_issue: Vedi la segnalazione
+        unsafe_link: "Questo link alla segnalazione non è un URL http(s), quindi viene mostrato come testo e non può essere aperto."
         linked: Collegata
         issue_reference: "%{provider} #%{number}"
         states:

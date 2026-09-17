@@ -5,8 +5,10 @@
         <i class="bi bi-link-45deg me-2"></i>
         <%= red_t("red.errors.issue_section.title") %>
       </h5>
-      <% if @error.external_issue_url.present? %>
-        <a href="<%= @error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+      <%# nil unless the stored value is plain http(s) — see safe_external_url. %>
+      <% issue_url = safe_external_url(@error.external_issue_url) %>
+      <% if issue_url %>
+        <a href="<%= issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
           <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.issue_section.view_issue") %>
         </a>
       <% end %>
@@ -22,6 +24,15 @@
                    else "bi-link-45deg"
                    end %>
         <% issue = @platform_issue %>
+
+        <% unless issue_url %>
+          <%# Stored, but not plain http(s): shown as text, never as a link. %>
+          <div class="alert alert-warning py-2 px-3 mb-3" style="font-size: 0.85em;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <%= red_t("red.errors.issue_section.unsafe_link") %>
+            <code class="d-block text-break mt-1"><%= @error.external_issue_url.to_s.truncate(200) %></code>
+          </div>
+        <% end %>
 
         <!-- Issue badge + status -->
         <div class="d-flex align-items-center gap-2 mb-3">
@@ -50,8 +61,8 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                   <% issue[:assignees].each do |assignee| %>
                     <span class="d-inline-flex align-items-center gap-1 border rounded-pill px-2 py-1" style="font-size: 0.85em;">
-                      <% if assignee[:avatar_url].present? %>
-                        <img src="<%= assignee[:avatar_url] %>" width="18" height="18" class="rounded-circle">
+                      <% if (avatar = safe_external_url(assignee[:avatar_url])) %>
+                        <img src="<%= avatar %>" width="18" height="18" class="rounded-circle">
                       <% end %>
                       <%= assignee[:login] %>
                     </span>
@@ -118,10 +129,12 @@
     </div>
   </div>
 
-  <% if flash[:new_issue_url].present? %>
+  <%# The URL comes from the forge's API response; window.open would run a
+      javascript: target, so it gets the same http(s) check as the links. %>
+  <% if (new_issue_url = safe_external_url(flash[:new_issue_url])) %>
     <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
       (function() {
-        window.open('<%= j flash[:new_issue_url] %>', '_blank');
+        window.open('<%= j new_issue_url %>', '_blank');
       })();
     </script>
   <% end %>

@@ -85,15 +85,17 @@ RSpec.describe "Sidebar metadata translations", type: :request do
     end
 
     # The linked variant interpolates an <a> into an _html key, which is
-    # html_safe. Building the tag with link_to rather than putting the href in
-    # the key is what keeps a hostile URL from breaking out of the attribute.
-    it "escapes a hostile external issue url instead of injecting an attribute" do
+    # html_safe. Two things keep a hostile URL inert: safe_external_url refuses
+    # anything that is not plain http(s), so no link is built at all, and the
+    # stored value is only ever shown as escaped text.
+    it "shows a hostile external issue url as escaped text, not as a link" do
       error.update_column(:external_issue_url, %q{" onmouseover="alert(1)})
 
       get "/error_dashboard/errors/#{error.id}"
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("linked issue")
+      expect(response.body).not_to include("linked issue")
+      expect(response.body).to include("This issue link is not an http(s) URL")
       expect(response.body).not_to include(%q{onmouseover="alert(1)"})
       expect(response.body).to include("&quot; onmouseover=&quot;alert(1)")
     end

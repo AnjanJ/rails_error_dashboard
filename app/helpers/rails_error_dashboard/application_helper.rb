@@ -37,6 +37,17 @@ module RailsErrorDashboard
       value.to_json.gsub("</", '<\/').html_safe
     end
 
+    # Returns the value only when it is an absolute http(s) URL, otherwise nil.
+    # Every URL that comes from a stored column or a third-party API goes
+    # through this before it becomes an href, an img src or a window.open
+    # target. ERB escaping and link_to stop attribute breakout; neither rejects
+    # a scheme such as "javascript:". Same rule as the write path
+    # (Commands::LinkExistingIssue), so a row stored before that check existed
+    # is still inert when rendered.
+    def safe_external_url(value)
+      value if Services::UrlSafety.http_url?(value)
+    end
+
     # Returns Bootstrap color class for error severity
     # Uses Catppuccin Mocha colors in dark theme via CSS variables
     # @param severity [Symbol] The severity level (:critical, :high, :medium, :low, :info)

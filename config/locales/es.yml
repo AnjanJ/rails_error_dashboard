@@ -436,6 +436,7 @@ es:
       issue_section:
         title: Gestor de issues
         view_issue: Ver la issue
+        unsafe_link: "Este enlace a la issue no es una URL http(s), por lo que se muestra como texto y no se puede abrir."
         linked: Vinculada
         issue_reference: "%{provider} n.º %{number}"
         states:

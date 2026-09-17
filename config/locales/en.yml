@@ -603,6 +603,7 @@ en:
       issue_section:
         title: "Issue Tracker"
         view_issue: "View Issue"
+        unsafe_link: "This issue link is not an http(s) URL, so it is shown as text and cannot be opened."
         # Shown instead of a provider name when the provider is unknown.
         linked: "Linked"
         # %{provider} is a display name, %{number} the issue number.

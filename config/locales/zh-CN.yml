@@ -380,6 +380,7 @@ zh-CN:
       issue_section:
         title: 工单系统
         view_issue: 查看工单
+        unsafe_link: "此工单链接不是 http(s) URL，因此仅以文本显示，无法打开。"
         linked: 已关联
         issue_reference: "%{provider} #%{number}"
         states:

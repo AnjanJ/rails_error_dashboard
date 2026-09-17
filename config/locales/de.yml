@@ -420,6 +420,7 @@ de:
       issue_section:
         title: Issue-Tracker
         view_issue: Issue ansehen
+        unsafe_link: "Dieser Issue-Link ist keine http(s)-URL, daher wird er als Text angezeigt und kann nicht geöffnet werden."
         linked: Verknüpft
         issue_reference: "%{provider} #%{number}"
         states:

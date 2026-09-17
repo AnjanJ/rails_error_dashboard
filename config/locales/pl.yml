@@ -438,6 +438,7 @@ pl:
       issue_section:
         title: System zgłoszeń
         view_issue: Zobacz zgłoszenie
+        unsafe_link: "Ten odnośnik do zgłoszenia nie jest adresem URL http(s), dlatego jest wyświetlany jako tekst i nie można go otworzyć."
         linked: Powiązane
         issue_reference: "%{provider} #%{number}"
         states:

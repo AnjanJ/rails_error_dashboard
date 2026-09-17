@@ -436,6 +436,7 @@ pt-BR:
       issue_section:
         title: Rastreador de issues
         view_issue: Ver a issue
+        unsafe_link: "Este link da issue não é uma URL http(s), por isso é exibido como texto e não pode ser aberto."
         linked: Vinculada
         issue_reference: "%{provider} nº %{number}"
         states:

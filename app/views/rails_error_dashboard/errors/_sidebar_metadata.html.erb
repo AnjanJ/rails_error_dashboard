@@ -106,12 +106,21 @@
                     The <a> is built here rather than living in the key. The key
                     is _html and therefore html_safe, so a raw URL interpolated
                     into an href inside it would not be escaped and a crafted
-                    external_issue_url could inject an event handler. link_to
-                    escapes the URL. %>
-                <% if error.respond_to?(:external_issue_url) && error.external_issue_url.present? %>
+                    external_issue_url could inject an event handler.
+
+                    link_to escapes the URL, which stops attribute BREAKOUT. It
+                    does not reject a scheme: link_to("x", "javascript:...")
+                    is a working link. That protection comes from
+                    safe_external_url, which returns nil for anything that is
+                    not plain http(s). %>
+                <% stored_issue_url = error.respond_to?(:external_issue_url) ? error.external_issue_url : nil %>
+                <% sidebar_issue_url = safe_external_url(stored_issue_url) %>
+                <% if sidebar_issue_url %>
                   <%= red_t("red.errors.sidebar.issue_tracking_linked_html",
                         link: link_to(red_t("red.errors.sidebar.issue_tracking_link_text"),
-                              error.external_issue_url, target: "_blank", rel: "noopener")) %>
+                              sidebar_issue_url, target: "_blank", rel: "noopener")) %>
+                <% elsif stored_issue_url.present? %>
+                  <%= red_t("red.errors.issue_section.unsafe_link") %>
                 <% else %>
                   <%= red_t("red.errors.sidebar.issue_tracking_unlinked") %>
                 <% end %>

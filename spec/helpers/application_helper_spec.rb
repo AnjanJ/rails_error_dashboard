@@ -3,6 +3,19 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
+  describe "#safe_external_url" do
+    it "returns an http(s) URL unchanged" do
+      expect(helper.safe_external_url("https://x.test/a")).to eq("https://x.test/a")
+      expect(helper.safe_external_url("http://x.test/a")).to eq("http://x.test/a")
+    end
+
+    [ nil, "", "javascript:x", "JAVASCRIPT:x", "data:text/html,x", "//x", "/x", " https://x.test/a", 42 ].each do |value|
+      it "returns nil for #{value.inspect}" do
+        expect(helper.safe_external_url(value)).to be_nil
+      end
+    end
+  end
+
   describe "#extract_table_from_sql" do
     it "extracts table name from a standard SELECT query" do
       expect(helper.extract_table_from_sql('SELECT "users".* FROM "users" WHERE "users"."id" = ?')).to eq("users")

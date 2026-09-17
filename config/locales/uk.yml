@@ -438,6 +438,7 @@ uk:
       issue_section:
         title: Трекер задач
         view_issue: Переглянути задачу
+        unsafe_link: "Це посилання на задачу не є URL-адресою http(s), тому воно показане як текст і не може бути відкрите."
         linked: Приєднано
         issue_reference: "%{provider} #%{number}"
         states:

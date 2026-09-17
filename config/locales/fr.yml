@@ -438,6 +438,7 @@ fr:
       issue_section:
         title: Gestionnaire d'issues
         view_issue: Voir l'issue
+        unsafe_link: "Ce lien vers l'issue n'est pas une URL http(s) : il est affiché sous forme de texte et ne peut pas être ouvert."
         linked: Liée
         issue_reference: "%{provider} n°%{number}"
         states:
