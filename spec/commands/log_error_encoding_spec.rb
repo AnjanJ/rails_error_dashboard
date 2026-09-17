@@ -166,6 +166,37 @@ RSpec.describe "capturing errors that contain invalid bytes" do
     end
   end
 
+  describe "input tagged UTF-8 but invalid, on the other two paths" do
+    let(:tagged) { (+"tagged utf-8 \xFF\xFE token=abc123").force_encoding(Encoding::UTF_8) }
+    let(:tagged_context) do
+      hostile_context.transform_values { |v| v.is_a?(String) ? v.dup.force_encoding(Encoding::UTF_8) : v }
+    end
+
+    it "is enqueued and stored by the async path" do
+      RailsErrorDashboard.configuration.async_logging = true
+
+      RailsErrorDashboard::Commands::LogError.call(hostile_error(tagged), tagged_context)
+      perform_enqueued_jobs
+
+      expect(invalid_strings_in(logs.sole)).to eq([])
+    end
+
+    it "is buffered with a valid exemplar by the storm gate, under the sync path's fingerprint" do
+      sync_row = RailsErrorDashboard::Commands::LogError.call(hostile_error(tagged), tagged_context)
+
+      RailsErrorDashboard.configuration.enable_storm_protection = true
+      allow(gate.breaker).to receive(:record!).and_return(:open)
+      allow(gate.breaker).to receive(:episode_snapshot).and_return(nil)
+      gate.admit!(hostile_error(tagged), tagged_context)
+      snapshot = gate.count_buffer.snapshot!
+
+      expect(snapshot.to_json).to be_valid_encoding
+      RailsErrorDashboard::Commands::FlushStormCounts.call(entries: snapshot[:entries])
+      expect(logs.count).to eq(1)
+      expect(sync_row.reload.occurrence_count).to eq(2)
+    end
+  end
+
   describe "the storm gate" do
     before do
       RailsErrorDashboard.configuration.enable_storm_protection = true
