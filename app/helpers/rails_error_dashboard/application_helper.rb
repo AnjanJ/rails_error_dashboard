@@ -48,7 +48,28 @@ module RailsErrorDashboard
       value if Services::UrlSafety.http_url?(value)
     end
 
-    # Returns Bootstrap color class for error severity
+    DEFAULT_LABEL_COLOR = "#6c757d"
+
+    # A forge label colour, safe to put in a style attribute. Anything that is
+    # not 3 or 6 hex digits becomes neutral grey: ERB escaping keeps a value
+    # inside the attribute but does not stop it being CSS ("fff;position:fixed").
+    def safe_label_color(raw)
+      return DEFAULT_LABEL_COLOR unless raw.is_a?(String)
+
+      hex = raw.delete_prefix("#")
+      hex.match?(/\A(?:\h{6}|\h{3})\z/) ? "##{hex}" : DEFAULT_LABEL_COLOR
+    end
+
+    # Black or white, whichever reads on the given background. Takes the output
+    # of safe_label_color, never the raw label value.
+    def label_text_color(background)
+      hex = background.to_s.delete_prefix("#")
+      return "#fff" unless hex.match?(/\A(?:\h{6}|\h{3})\z/)
+
+      hex = hex.chars.map { |c| c * 2 }.join if hex.length == 3
+      hex.scan(/../).sum { |pair| pair.to_i(16) } > 382 ? "#000" : "#fff"
+    end
+
     # Uses Catppuccin Mocha colors in dark theme via CSS variables
     # @param severity [Symbol] The severity level (:critical, :high, :medium, :low, :info)
     # @return [String] Bootstrap color class (danger, warning, info, secondary)

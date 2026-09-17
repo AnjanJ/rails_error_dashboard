@@ -79,8 +79,9 @@
               <% if issue[:labels].present? && issue[:labels].any? %>
                 <div class="d-flex align-items-center gap-1 flex-wrap">
                   <% issue[:labels].each do |label| %>
-                    <% bg_color = label[:color].present? ? "##{label[:color]}" : "#6c757d" %>
-                    <% text_color = label[:color].present? && label[:color].scan(/../).map { |c| c.to_i(16) }.sum > 382 ? "#000" : "#fff" %>
+                    <%# Third-party value going into style=: validated, never interpolated raw. %>
+                    <% bg_color = safe_label_color(label[:color]) %>
+                    <% text_color = label_text_color(bg_color) %>
                     <span class="badge rounded-pill" style="background-color: <%= bg_color %>; color: <%= text_color %>; font-size: 0.78em;">
                       <%= label[:name] %>
                     </span>

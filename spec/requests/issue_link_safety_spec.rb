@@ -115,6 +115,43 @@ RSpec.describe "Issue link safety on the error page", type: :request do
     end
   end
 
+  # A label colour goes into a style attribute. ERB escaping keeps it inside
+  # the attribute but does nothing about the CSS itself.
+  describe "third-party label colours" do
+    before { store_link("https://github.com/a/b/issues/1") }
+
+    it "does not let a label colour inject CSS" do
+      stub_tracker(issue: { state: "open", assignees: [],
+                            labels: [ { name: "evil", color: "fff;position:fixed;inset:0;background:url(//evil.test/x)" } ] })
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response.body).to include("evil")
+      expect(response.body).not_to include("position:fixed")
+      expect(response.body).not_to include("evil.test")
+      expect(response.body).to include("background-color: #6c757d")
+    end
+
+    it "still renders a valid label colour with a readable text colour" do
+      stub_tracker(issue: { state: "open", assignees: [],
+                            labels: [ { name: "bug", color: "d73a4a" }, { name: "pale", color: "fef2c0" } ] })
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response.body).to include("background-color: #d73a4a; color: #fff")
+      expect(response.body).to include("background-color: #fef2c0; color: #000")
+    end
+
+    it "renders the page when a label colour is not a string" do
+      stub_tracker(issue: { state: "open", assignees: [], labels: [ { name: "odd", color: 123 }, { name: "none", color: nil } ] })
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body.scan("background-color: #6c757d; color: #fff").size).to eq(2)
+    end
+  end
+
   # Static guard: a stored or third-party URL may reach an href/src/window.open
   # only through a local assigned from safe_external_url, never directly.
   it "has no view that puts a raw stored or third-party URL into a link target" do
