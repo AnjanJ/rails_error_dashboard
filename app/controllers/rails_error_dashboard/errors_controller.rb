@@ -785,6 +785,11 @@ module RailsErrorDashboard
     end
 
     def set_application_context
+      # application_id[x]=1 is not an id. Left in params, the nested value reached
+      # url_for in the layout ("unable to convert unpermitted parameters to hash")
+      # and every page answered 500. An array of ids is still allowed.
+      params.delete(:application_id) if params[:application_id].is_a?(ActionController::Parameters)
+
       @current_application_id = params[:application_id].presence
       @applications = Application.ordered_by_name.pluck(:name, :id)
     end
