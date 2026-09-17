@@ -21,7 +21,10 @@ module RailsErrorDashboard
       end
 
       def initialize(entries:, overflow: 0, episode: nil, batch_id: nil)
-        @entries = Array(entries)
+        # The gate scrubs what it buffers, so this is normally a no-op scan. It
+        # covers entries buffered by an older release and direct callers: the
+        # exemplar becomes an ErrorLog row, and its message is matched by regex.
+        @entries = Array(Services::EncodingSanitizer.scrub_deep(entries))
         @overflow = overflow.to_i
         @episode = episode
         @batch_id = batch_id

@@ -492,7 +492,7 @@ namespace :error_dashboard do
       application_id: app.id,
       dump_data: dump.to_json,
       captured_at: Time.current,
-      note: ENV["NOTE"]
+      note: RailsErrorDashboard::Services::EncodingSanitizer.scrub(ENV["NOTE"])
     )
 
     puts "\n" + JSON.pretty_generate(dump)
@@ -548,6 +548,17 @@ namespace :error_dashboard do
     puts "  Time elapsed: #{elapsed} seconds"
 
     puts "\n" + "=" * 80 + "\n"
+  end
+
+  desc "Repair rows stored with invalid UTF-8 or NUL bytes (run once after upgrading on SQLite/MySQL)"
+  task scrub_invalid_encoding: :environment do
+    puts "Scanning error logs and occurrences for invalid bytes..."
+    result = RailsErrorDashboard::Commands::ScrubInvalidEncoding.call
+
+    puts "  scanned:    #{result[:scanned]}"
+    puts "  repaired:   #{result[:repaired]}"
+    puts "  unreadable: #{result[:unreadable].size}"
+    result[:unreadable].each { |row| puts "    - #{row}" }
   end
 
   desc "Send error digest email (PERIOD=daily|weekly, APP_ID=optional)"
