@@ -64,6 +64,13 @@ RSpec.describe "session ID digest" do
       expect(filter.digest_session_id(digest)).to eq(digest)
     end
 
+    it "digests a value that merely starts with the prefix" do
+      lookalike = "h1:not-a-digest-but-a-raw-token"
+
+      expect(filter.digest_session_id(lookalike)).to match(/\Ah1:\h{32}\z/)
+      expect(filter.digest_session_id(lookalike)).not_to include("raw-token")
+    end
+
     it "accepts a Rack session ID object" do
       rack_id = Rack::Session::SessionId.new(raw)
 
@@ -178,13 +185,15 @@ RSpec.describe "session ID digest" do
       legacy = create(:error_occurrence, error_log: error_log, session_id: raw)
       done = create(:error_occurrence, error_log: error_log, session_id: filter.digest_session_id("b" * 32))
       blank = create(:error_occurrence, error_log: error_log, session_id: nil)
+      lookalike = create(:error_occurrence, error_log: error_log, session_id: "h1:raw-token-not-a-digest")
 
       first = capture_stdout { task.invoke }
 
       expect(legacy.reload.session_id).to eq(filter.digest_session_id(raw))
       expect(done.reload.session_id).to eq(filter.digest_session_id("b" * 32))
       expect(blank.reload.session_id).to be_nil
-      expect(first).to include("Session IDs digested: 1")
+      expect(lookalike.reload.session_id).to match(/\Ah1:\h{32}\z/)
+      expect(first).to include("Session IDs digested: 2")
 
       task.reenable
       second = capture_stdout { task.invoke }

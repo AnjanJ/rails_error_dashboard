@@ -556,13 +556,15 @@ namespace :error_dashboard do
     prefix = filter::SESSION_DIGEST_PREFIX
     scope = RailsErrorDashboard::ErrorOccurrence
       .where.not(session_id: [ nil, "" ])
-      .where.not("session_id LIKE ?", "#{prefix}%")
+      .where("session_id NOT LIKE ? OR LENGTH(session_id) <> 35", "#{prefix}%")
 
     digested = 0
     failed = 0
     scope.in_batches(of: 1000) do |batch|
       batch.pluck(:id, :session_id).each do |id, raw|
         digest = filter.digest_session_id(raw)
+        next if digest == raw # already a digest that the SQL prefilter let through
+
         if digest
           RailsErrorDashboard::ErrorOccurrence.where(id: id).update_all(session_id: digest)
           digested += 1

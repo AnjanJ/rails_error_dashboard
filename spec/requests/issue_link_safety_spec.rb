@@ -187,7 +187,16 @@ RSpec.describe "Issue link safety on the error page", type: :request do
     it "still opens an https URL" do
       create_issue_returning("https://github.com/a/b/issues/9")
 
-      expect(response.body).to include("window.open('https://github.com/a/b/issues/9'")
+      expect(response.body).to include(%(window.open("https://github.com/a/b/issues/9", '_blank')))
+    end
+
+    # `j` inside ERB entity-escaped "&" to "&amp;" within the script, which
+    # is not decoded there and corrupted any URL with a query string.
+    it "keeps a query string usable" do
+      create_issue_returning("https://tracker.test/issues/9?a=1&b=2")
+
+      expect(response.body).not_to include("a=1&amp;b=2")
+      expect(response.body).to match(/window\.open\("https:\/\/tracker\.test\/issues\/9\?a=1(&|\\u0026)b=2"/)
     end
   end
 end

@@ -52,6 +52,7 @@ module RailsErrorDashboard
       end
 
       SESSION_DIGEST_PREFIX = "h1:"
+      SESSION_DIGEST_FORMAT = /\Ah1:\h{32}\z/
 
       # Keyed digest of a session ID, for storage.
       #
@@ -70,7 +71,8 @@ module RailsErrorDashboard
       def self.digest_session_id(raw)
         value = raw.to_s
         return nil if value.empty?
-        return value if value.start_with?(SESSION_DIGEST_PREFIX)
+        # Exact shape only: a raw value that merely starts with "h1:" is digested.
+        return value if value.match?(SESSION_DIGEST_FORMAT)
 
         SESSION_DIGEST_PREFIX + OpenSSL::HMAC.hexdigest("SHA256", session_digest_key, value)[0, 32]
       rescue => e
