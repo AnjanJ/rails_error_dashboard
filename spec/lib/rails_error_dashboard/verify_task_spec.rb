@@ -231,7 +231,7 @@ RSpec.describe "error_dashboard:retention_cleanup rake task" do
     context "when no errors to delete" do
       it "shows no errors message" do
         output = capture_stdout { task.invoke }
-        expect(output).to include("No errors older than")
+        expect(output).to include("No errors unseen for more than")
       end
     end
 

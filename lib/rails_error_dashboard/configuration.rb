@@ -304,7 +304,8 @@ module RailsErrorDashboard
 
       @use_separate_database = ENV.fetch("USE_SEPARATE_ERROR_DB", "false") == "true"
 
-      # Retention policy - days to keep errors before automatic deletion (default: 90)
+      # Retention policy - days an error may go unseen (last_seen_at) before it is
+      # deleted automatically (default: 90). An error still occurring is kept.
       # Set to nil to keep errors forever (not recommended for production)
       # Schedule cleanup: RailsErrorDashboard::RetentionCleanupJob.perform_later
       @retention_days = 90

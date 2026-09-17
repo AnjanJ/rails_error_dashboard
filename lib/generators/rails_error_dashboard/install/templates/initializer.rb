@@ -71,7 +71,8 @@ RailsErrorDashboard.configure do |config|
   # User model for error associations
   config.user_model = "User"
 
-  # Error retention policy (days to keep errors before automatic deletion)
+  # Error retention policy: an error is deleted once it has not been seen for
+  # this many days (an error that is still occurring is never deleted)
   # Set to nil to keep errors forever (not recommended for production)
   # Run cleanup manually: rails error_dashboard:retention_cleanup
   # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later

@@ -459,6 +459,8 @@ namespace :error_dashboard do
     puts "\nDeleting errors..."
     start_time = Time.current
     deleted = scope.delete_all
+    # delete_all skips callbacks, and the stat cards are cached.
+    RailsErrorDashboard::Services::AnalyticsCacheManager.clear
     elapsed = (Time.current - start_time).round(2)
 
     puts "\n✓ Cleanup complete!"
@@ -492,7 +494,7 @@ namespace :error_dashboard do
       application_id: app.id,
       dump_data: dump.to_json,
       captured_at: Time.current,
-      note: ENV["NOTE"]
+      note: RailsErrorDashboard::Services::EncodingSanitizer.scrub(ENV["NOTE"])
     )
 
     puts "\n" + JSON.pretty_generate(dump)
@@ -502,7 +504,7 @@ namespace :error_dashboard do
     puts "\n" + "=" * 70 + "\n"
   end
 
-  desc "Run retention cleanup (delete errors older than retention_days)"
+  desc "Run retention cleanup (delete errors not seen for retention_days)"
   task retention_cleanup: :environment do
     config = RailsErrorDashboard.configuration
 
@@ -517,14 +519,15 @@ namespace :error_dashboard do
     end
 
     cutoff = config.retention_days.days.ago
-    count = RailsErrorDashboard::ErrorLog.where("occurred_at < ?", cutoff).count
+    # The job's own selection, so the number shown is the number deleted.
+    count = RailsErrorDashboard::RetentionCleanupJob.expired_scope(cutoff).count
 
     puts "\n  Retention policy: #{config.retention_days} days"
     puts "  Cutoff date: #{cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
     puts "  Errors to delete: #{count}"
 
     if count.zero?
-      puts "\n  No errors older than #{config.retention_days} days"
+      puts "\n  No errors unseen for more than #{config.retention_days} days"
       puts "\n" + "=" * 80 + "\n"
       next
     end
@@ -548,6 +551,25 @@ namespace :error_dashboard do
     puts "  Time elapsed: #{elapsed} seconds"
 
     puts "\n" + "=" * 80 + "\n"
+  end
+
+  desc "Repair rows stored with invalid UTF-8 or NUL bytes (run once after upgrading on SQLite/MySQL)"
+  task scrub_invalid_encoding: :environment do
+    puts "Scanning error logs and occurrences for invalid bytes..."
+    result = RailsErrorDashboard::Commands::ScrubInvalidEncoding.call
+
+    puts "  scanned:    #{result[:scanned]}"
+    puts "  repaired:   #{result[:repaired]}"
+    puts "  unreadable: #{result[:unreadable].size}"
+    result[:unreadable].each { |row| puts "    - #{row}" }
+  end
+
+  desc "Backfill resolved_at for errors resolved through the status workflow (run once after upgrading)"
+  task backfill_resolved_at: :environment do
+    result = RailsErrorDashboard::Commands::BackfillResolvedAt.call
+
+    puts "Backfilled resolved_at on #{result[:updated]} resolved error(s)."
+    puts "MTTR now includes them, so expect the figure to rise to its true value." if result[:updated].positive?
   end
 
   desc "Send error digest email (PERIOD=daily|weekly, APP_ID=optional)"

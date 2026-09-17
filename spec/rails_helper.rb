@@ -37,6 +37,9 @@ RSpec.configure do |config|
   # the suite. Storm specs opt back in via their own (later-running) hooks.
   config.before(:each) do
     RailsErrorDashboard::Services::StormProtection::Gate.reset!
+    # The stats-broadcast throttle is per-process state too: without this an
+    # example that expects a stats broadcast depends on what ran before it.
+    RailsErrorDashboard::Services::ErrorBroadcaster.reset_throttle!
     RailsErrorDashboard.configuration.enable_storm_protection = false
 
     # The new-error burst cap counts per PROCESS, and the suite is one

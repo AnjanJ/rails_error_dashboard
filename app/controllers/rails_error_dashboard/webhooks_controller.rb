@@ -295,6 +295,9 @@ module RailsErrorDashboard
         status: "new",
         reopened_at: Time.current
       )
+      # Someone reopened the issue on the forge: a user action, so the cached
+      # stat cards are invalidated now rather than at their TTL.
+      Services::AnalyticsCacheManager.clear
     end
   end
 end

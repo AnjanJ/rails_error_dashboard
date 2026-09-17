@@ -39,6 +39,8 @@ module RailsErrorDashboard
           end
         end
 
+        Services::AnalyticsCacheManager.clear if unmuted_count.positive?
+
         PluginRegistry.dispatch(:on_errors_batch_unmuted, unmuted_errors) if unmuted_errors.any?
 
         {

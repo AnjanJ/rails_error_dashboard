@@ -39,6 +39,8 @@ module RailsErrorDashboard
             updated += ErrorLog.where(id: id, environment: nil).update_all(environment: env)
           end
         end
+        # Analytics groups by environment, and its result is cached.
+        Services::AnalyticsCacheManager.clear if updated.positive?
         updated
       end
 

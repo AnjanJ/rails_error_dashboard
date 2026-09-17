@@ -10,8 +10,9 @@ module RailsErrorDashboard
     # and two concurrent captures could both read count N and both write N+1.
     #
     # Search order:
+    # 0. wont_fix errors with same hash (any age) → increment, status untouched
     # 1. Unresolved errors with same hash within 24 hours → increment occurrence count
-    # 2. Resolved/wont_fix errors with same hash (any age) → reopen and increment
+    # 2. Resolved errors with same hash (any age) → reopen and increment
     # 3. No match → create new error record
     #
     # Environment is a MATCH dimension, not part of the hash: the same error in
@@ -42,11 +43,15 @@ module RailsErrorDashboard
 
       def call
         ErrorLog.transaction do
+          # Priority 0: a wont_fix row absorbs its recurrences, at any age
+          sticky = find_wont_fix
+          next increment_existing(sticky) if sticky
+
           # Priority 1: Find unresolved match (existing behavior)
           existing = find_unresolved
           next increment_existing(existing) if existing
 
-          # Priority 2: Find resolved/wont_fix match → reopen
+          # Priority 2: Find resolved match → reopen
           resolved = find_resolved
           next reopen_existing(resolved) if resolved
 
@@ -57,9 +62,26 @@ module RailsErrorDashboard
 
       private
 
+      # The three lookups are DISJOINT by status, so which row a recurrence
+      # lands on never depends on the order they happen to run in.
+
+      # "Won't fix" is a decision that the error recurs and will not be acted
+      # on, so it has no time window: the row counts its recurrences for as
+      # long as it keeps the status. It used to be matched by find_unresolved
+      # for 24 hours and then REOPENED by find_resolved -- sticky for a day,
+      # after which the triage decision was silently thrown away.
+      def find_wont_fix
+        with_environment(
+          ErrorLog
+            .where(error_hash: @error_hash)
+            .where(application_id: @attributes[:application_id])
+            .where(status: "wont_fix")
+        ).lock.order(last_seen_at: :desc).first
+      end
+
       def find_unresolved
         with_environment(
-          ErrorLog.unresolved
+          not_wont_fix(ErrorLog.unresolved)
             .where(error_hash: @error_hash)
             .where(application_id: @attributes[:application_id])
             .where("occurred_at >= ?", 24.hours.ago)
@@ -71,8 +93,14 @@ module RailsErrorDashboard
           ErrorLog
             .where(error_hash: @error_hash)
             .where(application_id: @attributes[:application_id])
-            .where(status: %w[resolved wont_fix])
+            .where(status: "resolved")
         ).lock.order(last_seen_at: :desc).first
+      end
+
+      # Spelled out rather than where.not(status: "wont_fix"): in SQL that also
+      # drops every row whose status is NULL.
+      def not_wont_fix(scope)
+        scope.where("status IS NULL OR status <> ?", "wont_fix")
       end
 
       # Restrict to this occurrence's environment or a legacy NULL row, exact
@@ -235,9 +263,13 @@ module RailsErrorDashboard
           ErrorLog.create!(new_record_attributes)
         end
       rescue ActiveRecord::RecordNotUnique
-        # Race condition: another process created the same error
+        # Race condition: another process created the same error. Same three
+        # lookups, same order, as the first pass.
+        retry_sticky = find_wont_fix
+        return increment_existing(retry_sticky) if retry_sticky
+
         retry_existing = with_environment(
-          ErrorLog.unresolved
+          not_wont_fix(ErrorLog.unresolved)
             .where(error_hash: @error_hash)
             .where(application_id: @attributes[:application_id])
             .where("occurred_at >= ?", 24.hours.ago)
@@ -257,7 +289,7 @@ module RailsErrorDashboard
             ErrorLog
               .where(error_hash: @error_hash)
               .where(application_id: @attributes[:application_id])
-              .where(status: %w[resolved wont_fix])
+              .where(status: "resolved")
           ).lock.first
 
           if retry_resolved
