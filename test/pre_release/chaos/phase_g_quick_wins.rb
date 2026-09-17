@@ -194,7 +194,8 @@ if RailsErrorDashboard::ErrorLog.column_names.include?("reopened_at")
   assert "G5: reopened_at set", reopen_error.reopened_at.present?
 end
 
-# Test wont_fix → reopen path
+# wont_fix is STICKY (0.13.0): a recurrence is counted on the same row and
+# never reopens it. It used to reopen like a resolved error.
 wontfix_error = begin
   raise ArgumentError, "wont_fix reopen test #{SecureRandom.hex(8)}"
 rescue => e
@@ -205,6 +206,8 @@ wontfix_id = wontfix_error.id
 wontfix_error.update!(resolved: true, status: "wont_fix", resolved_at: Time.current)
 wontfix_error.reload
 assert "G5: wont_fix status set", wontfix_error.status == "wont_fix"
+count_before_recurrence = wontfix_error.occurrence_count
+rows_before_recurrence = RailsErrorDashboard::ErrorLog.where(error_hash: wontfix_error.error_hash).count
 
 # Log same error again
 wontfix_again = begin
@@ -216,8 +219,12 @@ rescue => e
 end
 
 wontfix_error.reload
-assert "G5: wont_fix reopened", wontfix_error.resolved == false
-assert "G5: wont_fix status -> new", wontfix_error.status == "new"
+assert "G5: wont_fix recurrence lands on the same row", wontfix_again && wontfix_again.id == wontfix_id
+assert "G5: wont_fix stays wont_fix", wontfix_error.status == "wont_fix"
+assert "G5: wont_fix is not reopened", wontfix_error.reopened_at.nil?
+assert "G5: wont_fix recurrence is counted", wontfix_error.occurrence_count == count_before_recurrence + 1
+assert "G5: wont_fix recurrence creates no new row",
+  RailsErrorDashboard::ErrorLog.where(error_hash: wontfix_error.error_hash).count == rows_before_recurrence
 puts ""
 
 # ---------------------------------------------------------------------------
