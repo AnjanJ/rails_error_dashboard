@@ -606,6 +606,10 @@ module RailsErrorDashboard
       # suppressed — a single storm notification replaces them.
       def maybe_notify(error_log)
         return if error_log.muted?
+        # wont_fix: the team has decided not to act on this error, so its
+        # recurrences are counted and nothing else. Plugin events still fire,
+        # exactly as they do for a muted error.
+        return if error_log.status.to_s == "wont_fix"
         return if Services::StormProtection::Gate.notifications_suppressed?
         return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless yield
@@ -718,6 +722,7 @@ module RailsErrorDashboard
         # Return early if baseline alerts are disabled or error is muted
         return unless config.enable_baseline_alerts
         return if error_log.muted?
+        return if error_log.status.to_s == "wont_fix" # see maybe_notify
         return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless defined?(Queries::BaselineStats)
         return unless defined?(BaselineAlertJob)
