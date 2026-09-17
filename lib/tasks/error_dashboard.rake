@@ -561,6 +561,14 @@ namespace :error_dashboard do
     result[:unreadable].each { |row| puts "    - #{row}" }
   end
 
+  desc "Backfill resolved_at for errors resolved through the status workflow (run once after upgrading)"
+  task backfill_resolved_at: :environment do
+    result = RailsErrorDashboard::Commands::BackfillResolvedAt.call
+
+    puts "Backfilled resolved_at on #{result[:updated]} resolved error(s)."
+    puts "MTTR now includes them, so expect the figure to rise to its true value." if result[:updated].positive?
+  end
+
   desc "Send error digest email (PERIOD=daily|weekly, APP_ID=optional)"
   task send_digest: :environment do
     period = ENV.fetch("PERIOD", "daily")
