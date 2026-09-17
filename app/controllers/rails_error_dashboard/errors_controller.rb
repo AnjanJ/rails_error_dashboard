@@ -380,6 +380,10 @@ module RailsErrorDashboard
       result = Queries::ReleaseTimeline.call(days, application_id: @current_application_id)
       all_releases = result[:releases]
       @summary = result[:summary]
+      # Taken from every release, before pagination: the summary cards describe
+      # the whole period, not the page in view.
+      @current_release = all_releases.find { |r| r[:current] }
+      @problematic_release_count = all_releases.count { |r| r[:problematic] }
 
       @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
     end
@@ -639,6 +643,8 @@ module RailsErrorDashboard
       scope = DiagnosticDump.recent
       scope = scope.where(application_id: @current_application_id) if @current_application_id.present?
       @total_dumps = scope.count
+      # The newest dump overall; the "latest" cards must not change with the page.
+      @latest_dump = scope.first
 
       @pagy, @dumps = pagy(:offset, scope, limit: params[:per_page] || 25)
     end

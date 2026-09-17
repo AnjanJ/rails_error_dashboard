@@ -38,6 +38,39 @@ RSpec.describe "Releases page", type: :request do
       expect(response.body).to include("Current Release")
     end
 
+    # The summary cards describe every release, not the 25 on the page in view.
+    context "with more releases than fit on one page" do
+      before do
+        30.times do |i|
+          create(:error_log, :with_version, application: application,
+            app_version: format("9.%02d.0", i), occurred_at: (40 - i).hours.ago)
+        end
+      end
+
+      it "still shows the current release card on page 2" do
+        get "/error_dashboard/errors/releases", params: { page: 2 }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Current Release")
+        expect(response.body).to match(%r{Current Release:\s*<strong>9\.29\.0</strong>})
+      end
+
+      it "counts problematic releases across every page" do
+        # The newest release (page 1) has far more than twice the average.
+        10.times { create(:error_log, :with_version, application: application, app_version: "9.29.0", occurred_at: 1.hour.ago) }
+
+        get "/error_dashboard/errors/releases", params: { page: 2 }
+
+        expect(response.body).to match(%r{<div class="display-6 text-danger">1</div>})
+      end
+
+      it "shows the same current release card on page 1" do
+        get "/error_dashboard/errors/releases"
+
+        expect(response.body).to match(%r{Current Release:\s*<strong>9\.29\.0</strong>})
+      end
+    end
+
     it "displays summary cards" do
       create(:error_log, :with_version, application: application,
         app_version: "1.0.0", occurred_at: 5.days.ago)
