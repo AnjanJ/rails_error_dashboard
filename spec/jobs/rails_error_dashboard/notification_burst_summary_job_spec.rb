@@ -77,9 +77,15 @@ RSpec.describe RailsErrorDashboard::NotificationBurstSummaryJob do
     expect(german).not_to include("new errors") # really translated, not the English fallback
   end
 
-  it "sends nothing when no channel is enabled" do
+  # Email-only and PagerDuty-only deployments have no channel for a plain
+  # message. It must not vanish without a trace.
+  it "sends nothing, and says so in the log, when no plain-message channel is enabled" do
+    allow(Rails.logger).to receive(:warn)
+
     expect { described_class.perform_now(limit: 3, window_seconds: 60) }.not_to raise_error
+
     expect(WebMock).not_to have_requested(:post, /.*/)
+    expect(Rails.logger).to have_received(:warn).with(/no Slack, Discord or webhook channel is enabled/)
   end
 
   it "never raises when a channel is down" do

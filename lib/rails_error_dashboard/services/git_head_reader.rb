@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pathname"
+
 module RailsErrorDashboard
   module Services
     # Pure algorithm: the commit a checkout is on, read from .git directly

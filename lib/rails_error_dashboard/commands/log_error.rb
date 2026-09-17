@@ -628,6 +628,9 @@ module RailsErrorDashboard
       # suppressed error is not stamped as notified. The error itself is already
       # stored; only the notification is dropped.
       def burst_capped?
+        # Nothing can notify, so there is nothing to cap, and no summary to enqueue.
+        return false unless Services::ErrorNotificationDispatcher.any_channel?
+
         case Services::NotificationThrottler.burst_decision
         when :summarize
           config = RailsErrorDashboard.configuration
@@ -642,6 +645,10 @@ module RailsErrorDashboard
         else
           false
         end
+      rescue => e
+        # Fail-open: a cap that cannot decide must not cost a notification.
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] burst cap check failed: #{e.class}: #{e.message}")
+        false
       end
 
       # The environment this error is attributed to: an explicit context value

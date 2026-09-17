@@ -16,17 +16,27 @@ module RailsErrorDashboard
       # a sensible shape for a message that is not an incident.
       def deliver_plain_message(message, webhook_payload)
         config = RailsErrorDashboard.configuration
+        delivered = false
 
         if config.enable_slack_notifications && config.slack_webhook_url.present?
           post_json(config.slack_webhook_url, { text: message })
+          delivered = true
         end
 
         if config.enable_discord_notifications && config.discord_webhook_url.present?
           post_json(config.discord_webhook_url, { content: message })
+          delivered = true
         end
 
         if config.enable_webhook_notifications && config.webhook_urls.present?
           config.webhook_urls.each { |url| post_json(url, webhook_payload) }
+          delivered = true
+        end
+
+        # An email-only or PagerDuty-only deployment has no channel for this.
+        # Say so where an operator can find it rather than dropping it silently.
+        unless delivered
+          Rails.logger.warn("[RailsErrorDashboard] #{self.class.name.demodulize}: no Slack, Discord or webhook channel is enabled; message not sent: #{message}")
         end
       end
 

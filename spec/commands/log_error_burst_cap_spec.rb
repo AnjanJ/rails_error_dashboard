@@ -17,6 +17,8 @@ RSpec.describe "LogError first-occurrence burst cap", type: :job do
     config.async_logging = false
     config.notification_burst_limit = 3
     config.notification_burst_window_seconds = 60
+    config.enable_slack_notifications = true
+    config.slack_webhook_url = "https://hooks.slack.com/services/TEST/BURST/CAP"
     throttler.clear!
     allow(dispatcher).to receive(:call) { |error| dispatched << error.message }
   end
@@ -82,6 +84,15 @@ RSpec.describe "LogError first-occurrence burst cap", type: :job do
     expect(summary_job).not_to have_been_enqueued
   end
 
+  it "does nothing at all when no notification channel is enabled" do
+    config.enable_slack_notifications = false
+
+    8.times { |i| capture(i) }
+
+    expect(summary_job).not_to have_been_enqueued
+    expect(throttler.burst_decision).to eq(:notify) # no slot was consumed
+  end
+
   it "is off when the limit is 0" do
     config.notification_burst_limit = 0
 
@@ -91,10 +102,13 @@ RSpec.describe "LogError first-occurrence burst cap", type: :job do
     expect(summary_job).not_to have_been_enqueued
   end
 
+  # Fail-open: the error that would have carried the summary notifies
+  # normally instead, and nothing reaches the capture path.
   it "never raises into the capture path when the summary cannot be enqueued" do
     allow(summary_job).to receive(:perform_later).and_raise(RuntimeError, "queue down")
 
     expect { 5.times { |i| capture(i) } }.not_to raise_error
     expect(RailsErrorDashboard::ErrorLog.where("message LIKE 'burst %'").count).to eq(5)
+    expect(dispatched).to eq([ "burst 0", "burst 1", "burst 2", "burst 3" ])
   end
 end

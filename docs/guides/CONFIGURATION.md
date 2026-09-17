@@ -121,7 +121,7 @@ recycled Puma thread would render in whatever language the host app last used.
 | `notification_burst_limit` | Integer | `10` | Most notifications for **new** errors per window, **per process**. When it is exceeded, one summary message replaces the rest of the window. Every error is still recorded. `0` disables the cap |
 | `notification_burst_window_seconds` | Integer | `60` | Length of that window |
 
-The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`).
+The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
 
 ### Core Features
 
