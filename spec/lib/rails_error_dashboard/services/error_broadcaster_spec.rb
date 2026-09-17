@@ -144,4 +144,78 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
       described_class.broadcast_new(row)
     end
   end
+  # A capture broadcasts from inside the host app's request thread. The stats
+  # payload is the expensive half, so it is rate-limited per process, and
+  # nothing at all is broadcast while storm protection is shedding load.
+  describe "stats broadcast throttling" do
+    let(:channel) { double("StreamsChannel", broadcast_prepend_to: true, broadcast_replace_to: true) }
+    let(:stats) { { total_today: 1 } }
+    let(:now) { [ 1_000.0 ] }
+
+    before do
+      described_class.reset_throttle!
+      allow(described_class).to receive(:available?).and_return(true)
+      allow(described_class).to receive(:render_partial).and_return("<div></div>")
+      allow(described_class).to receive(:monotonic_now) { now.first }
+      allow(RailsErrorDashboard::Queries::DashboardStats).to receive(:call).and_return(stats)
+      allow(RailsErrorDashboard::Services::StormProtection::Gate).to receive(:state).and_return(:closed)
+      stub_const("Turbo::StreamsChannel", channel)
+    end
+
+    after { described_class.reset_throttle! }
+
+    def global_stats_calls
+      RailsErrorDashboard::Queries::DashboardStats
+    end
+
+    it "computes stats once for ten updates inside one second" do
+      10.times do
+        described_class.broadcast_update(error_log)
+        now[0] += 0.1
+      end
+
+      expect(global_stats_calls).to have_received(:call).with(no_args).once
+    end
+
+    it "still broadcasts every row update while stats are throttled" do
+      10.times { described_class.broadcast_update(error_log) }
+
+      expect(channel).to have_received(:broadcast_replace_to)
+        .with(anything, hash_including(target: "error_#{error_log.id}")).at_least(10).times
+    end
+
+    it "computes stats again once the interval has passed" do
+      described_class.broadcast_update(error_log)
+      now[0] += described_class::STATS_BROADCAST_INTERVAL + 0.01
+      described_class.broadcast_update(error_log)
+
+      expect(global_stats_calls).to have_received(:call).with(no_args).twice
+    end
+
+    it "does not let a failed stats computation consume the window forever" do
+      allow(RailsErrorDashboard::Queries::DashboardStats).to receive(:call).and_raise(RuntimeError, "db down")
+
+      expect { described_class.broadcast_update(error_log) }.not_to raise_error
+    end
+
+    %i[open half_open].each do |state|
+      it "broadcasts neither rows nor stats while the storm breaker is #{state}" do
+        allow(RailsErrorDashboard::Services::StormProtection::Gate).to receive(:state).and_return(state)
+
+        described_class.broadcast_new(error_log)
+        described_class.broadcast_update(error_log)
+
+        expect(channel).not_to have_received(:broadcast_prepend_to)
+        expect(channel).not_to have_received(:broadcast_replace_to)
+        expect(global_stats_calls).not_to have_received(:call)
+      end
+    end
+
+    it "is safe under concurrent callers: one stats computation per window" do
+      threads = Array.new(8) { Thread.new { 5.times { described_class.broadcast_stats } } }
+      threads.each(&:join)
+
+      expect(global_stats_calls).to have_received(:call).with(no_args).once
+    end
+  end
 end

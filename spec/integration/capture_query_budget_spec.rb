@@ -64,8 +64,10 @@ RSpec.describe "Capture query budget" do
     RailsErrorDashboard::Commands::LogError.call(exception, {})
 
     # Worst case: the stats cache is cold (it expires every minute), so this
-    # capture pays for the whole stats broadcast, spike detection included.
+    # capture pays for the whole stats broadcast, spike detection included,
+    # and it is the one capture in the window that is allowed to broadcast.
     cache.clear
+    RailsErrorDashboard::Services::ErrorBroadcaster.reset_throttle!
 
     statements = count_queries { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
 

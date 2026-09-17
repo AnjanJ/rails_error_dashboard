@@ -15,11 +15,23 @@ module RailsErrorDashboard
     # are NOT available there. We render via the engine's own controller renderer
     # and pass pre-rendered HTML to the broadcast to ensure route helpers work.
     class ErrorBroadcaster
+      # Minimum seconds between two stats broadcasts from one process. The row
+      # broadcasts are cheap (one partial); the stats payload is a full
+      # DashboardStats computation, and a capture runs it from inside the host
+      # app's request thread. Leading edge: the first event in a window
+      # broadcasts, later ones are dropped and corrected by the next window or
+      # the next page load.
+      STATS_BROADCAST_INTERVAL = 5
+
+      THROTTLE_MUTEX = Mutex.new
+      private_constant :THROTTLE_MUTEX
+
       # Broadcast a new error (prepend to error list + refresh stats)
       # @param error_log [ErrorLog] The newly created error
       def self.broadcast_new(error_log)
         return unless error_log
         return unless available?
+        return unless calm?
 
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
@@ -45,6 +57,7 @@ module RailsErrorDashboard
       def self.broadcast_update(error_log)
         return unless error_log
         return unless available?
+        return unless calm?
 
         platforms = ErrorLog.distinct.pluck(:platform).compact
         show_platform = platforms.size > 1
@@ -65,9 +78,11 @@ module RailsErrorDashboard
         Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
       end
 
-      # Broadcast stats refresh
+      # Broadcast stats refresh, at most once per STATS_BROADCAST_INTERVAL.
       def self.broadcast_stats
         return unless available?
+        return unless calm?
+        return unless claim_stats_window!
 
         stats = Queries::DashboardStats.call
         return unless stats.is_a?(Hash) && stats.present?
@@ -82,6 +97,39 @@ module RailsErrorDashboard
       rescue => e
         Rails.logger.error("[RailsErrorDashboard] Failed to broadcast stats update: #{e.class} - #{e.message}")
         Rails.logger.debug("[RailsErrorDashboard] Backtrace: #{e.backtrace&.first(3)&.join("\n")}")
+      end
+
+      # Live updates are a convenience; during a storm they are load. While the
+      # breaker is anything but :closed nothing is broadcast -- the page catches
+      # up on its next load. Fails towards broadcasting: Gate.state itself
+      # answers :closed when storm protection is off or unreadable.
+      def self.calm?
+        StormProtection::Gate.state == :closed
+      rescue StandardError
+        true
+      end
+
+      # True for the first caller in each window, false for the rest. The claim
+      # is taken BEFORE the stats are computed, so concurrent captures cannot
+      # all decide to compute at once, and a computation that fails does not
+      # get retried by every event that follows it.
+      def self.claim_stats_window!
+        THROTTLE_MUTEX.synchronize do
+          now = monotonic_now
+          return false if @last_stats_at && (now - @last_stats_at) < STATS_BROADCAST_INTERVAL
+
+          @last_stats_at = now
+          true
+        end
+      end
+
+      def self.monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      # For specs and for a forked worker that wants a clean slate.
+      def self.reset_throttle!
+        THROTTLE_MUTEX.synchronize { @last_stats_at = nil }
       end
 
       # Render a partial using the engine's controller renderer.
