@@ -1283,6 +1283,7 @@ fr:
         not_configured: Le suivi des issues n'est pas configuré
         already_linked: 'L''erreur a déjà une issue liée : %{url}'
         url_required: L'URL de l'issue est requise
+        url_invalid: L'URL de l'issue doit commencer par http:// ou https://
       error_not_found: 'Erreur introuvable : %{id}'
       batch_failed:
         mute:

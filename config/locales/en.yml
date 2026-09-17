@@ -1706,6 +1706,7 @@ en:
         # %{url} is the existing issue's URL.
         already_linked: "Error already has a linked issue: %{url}"
         url_required: "Issue URL is required"
+        url_invalid: "Issue URL must start with http:// or https://"
       # %{id} is the requested error's id.
       error_not_found: "Error not found: %{id}"
       # %{count} errors could not be updated in a batch operation.

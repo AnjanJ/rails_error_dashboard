@@ -1303,6 +1303,7 @@ ru:
         not_configured: Отслеживание задач не настроено
         already_linked: 'К ошибке уже привязана задача: %{url}'
         url_required: Требуется URL задачи
+        url_invalid: URL задачи должен начинаться с http:// или https://
       error_not_found: 'Ошибка не найдена: %{id}'
       batch_failed:
         mute:

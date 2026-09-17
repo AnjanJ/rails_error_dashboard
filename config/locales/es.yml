@@ -1284,6 +1284,7 @@ es:
         not_configured: El seguimiento de issues no está configurado
         already_linked: 'El error ya tiene una issue vinculada: %{url}'
         url_required: La URL de la issue es obligatoria
+        url_invalid: La URL de la issue debe empezar por http:// o https://
       error_not_found: 'Error no encontrado: %{id}'
       batch_failed:
         mute:

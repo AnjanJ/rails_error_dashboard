@@ -1303,6 +1303,7 @@ pl:
         not_configured: Śledzenie zgłoszeń nie jest skonfigurowane
         already_linked: 'Błąd ma już powiązane zgłoszenie: %{url}'
         url_required: Adres URL zgłoszenia jest wymagany
+        url_invalid: Adres URL zgłoszenia musi zaczynać się od http:// lub https://
       error_not_found: 'Nie znaleziono błędu: %{id}'
       batch_failed:
         mute:

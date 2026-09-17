@@ -1094,6 +1094,7 @@ ja:
         not_configured: イシュートラッキングが設定されていません
         already_linked: 'このエラーにはすでにイシューが連携されています: %{url}'
         url_required: イシューの URL を入力してください
+        url_invalid: イシューの URL は http:// または https:// で始まる必要があります
       error_not_found: 'エラーが見つかりません: %{id}'
       batch_failed:
         mute:

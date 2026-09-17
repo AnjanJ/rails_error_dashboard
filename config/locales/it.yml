@@ -1273,6 +1273,7 @@ it:
         not_configured: Il tracciamento delle segnalazioni non è configurato
         already_linked: 'L''errore ha già una segnalazione collegata: %{url}'
         url_required: L'URL della segnalazione è obbligatorio
+        url_invalid: L'URL della segnalazione deve iniziare con http:// o https://
       error_not_found: 'Errore non trovato: %{id}'
       batch_failed:
         mute:

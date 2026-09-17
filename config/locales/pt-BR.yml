@@ -1274,6 +1274,7 @@ pt-BR:
         not_configured: O rastreamento de issues não está configurado
         already_linked: 'O erro já tem uma issue vinculada: %{url}'
         url_required: A URL da issue é obrigatória
+        url_invalid: A URL da issue deve começar com http:// ou https://
       error_not_found: 'Erro não encontrado: %{id}'
       batch_failed:
         mute:

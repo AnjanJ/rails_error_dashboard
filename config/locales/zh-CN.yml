@@ -1087,6 +1087,7 @@ zh-CN:
         not_configured: 工单跟踪尚未配置
         already_linked: 该错误已关联工单：%{url}
         url_required: 必须提供工单 URL
+        url_invalid: 工单 URL 必须以 http:// 或 https:// 开头
       error_not_found: 未找到错误：%{id}
       batch_failed:
         mute:

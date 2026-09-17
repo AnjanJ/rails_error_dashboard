@@ -1301,6 +1301,7 @@ uk:
         not_configured: Відстеження задач не налаштовано
         already_linked: 'До помилки вже приєднано задачу: %{url}'
         url_required: Потрібна URL-адреса задачі
+        url_invalid: URL-адреса задачі має починатися з http:// або https://
       error_not_found: 'Помилку не знайдено: %{id}'
       batch_failed:
         mute:

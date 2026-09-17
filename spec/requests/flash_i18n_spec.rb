@@ -148,6 +148,25 @@ RSpec.describe "Flash message translations", type: :request do
       expect(flash[:alert]).to include("Failed to link issue:")
       expect(flash[:alert]).to include("Issue URL is required")
     end
+
+    it "refuses a non-http(s) issue URL and stores nothing" do
+      error = create(:error_log, application: application)
+
+      post "/error_dashboard/errors/#{error.id}/link_issue", params: { issue_url: "javascript:window.x=1" }
+
+      expect(flash[:alert]).to include("Issue URL must start with http:// or https://")
+      expect(error.reload.external_issue_url).to be_nil
+    end
+
+    it "does not raise when issue_url arrives as a nested parameter" do
+      error = create(:error_log, application: application)
+
+      post "/error_dashboard/errors/#{error.id}/link_issue", params: { issue_url: { "a" => "javascript:x" } }
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to include("Failed to link issue:")
+      expect(error.reload.external_issue_url).to be_nil
+    end
   end
 
   describe "AI help JSON errors" do

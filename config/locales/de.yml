@@ -1238,6 +1238,7 @@ de:
         not_configured: Issue-Tracking ist nicht konfiguriert
         already_linked: 'Der Fehler hat bereits ein verknüpftes Issue: %{url}'
         url_required: Die Issue-URL ist erforderlich
+        url_invalid: Die Issue-URL muss mit http:// oder https:// beginnen
       error_not_found: 'Fehler nicht gefunden: %{id}'
       batch_failed:
         mute:
