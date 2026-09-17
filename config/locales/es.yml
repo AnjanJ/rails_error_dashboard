@@ -1243,6 +1243,16 @@ es:
         linked: Issue vinculada correctamente
         create_failed: 'No se pudo crear la issue: %{reason}'
         link_failed: 'No se pudo vincular la issue: %{reason}'
+      status:
+        updated: "Estado cambiado a %{status}"
+        invalid_transition: "No se puede cambiar el estado de %{from} a %{to}"
+        unknown: "Ese estado no existe"
+      snooze:
+        invalid_hours: "El tiempo de posposición debe ser un número entero de horas entre 1 y %{max}"
+      priority:
+        invalid: "Ese nivel de prioridad no existe"
+      assign:
+        blank: "Introduce un nombre para asignar este error"
       not_enabled: "%{feature} no está activado. Actívelo en %{file}"
       not_enabled_plural: "%{feature} no están activados. Actívelos en %{file}"
       not_enabled_options: "%{feature} no está activado. Active %{options} en %{file}"

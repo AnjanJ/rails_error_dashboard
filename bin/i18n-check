@@ -426,6 +426,52 @@ def referenced_as_subtree?(blob, key)
   end
 end
 
+# A literal key that names a NAMESPACE rather than a string. FAILS.
+#
+# red_t("red.errors.sidebar.environment") resolves to a Hash (title, hint, …).
+# I18nStore treats a Hash as a miss and falls back to the humanized last
+# segment — "Environment" — which is exactly right in English and therefore
+# invisible, and untranslated in every other locale. Nothing else in this
+# script can see it: the key exists, so parity is happy, and the text on the
+# page looks translated to anyone reading English.
+#
+# A plural group is a Hash too. It is fine through red_tp / red_js_tp, which
+# pick a form, and a miss through red_t / red_js_t, which do not.
+#
+# Only literal keys are checked. A key built with interpolation cannot be
+# resolved here, and a key missing from en.yml is a different question (it may
+# carry a default:).
+NAMESPACE_KEY_GLOBS = [ "app/views/**/*.erb", "app/helpers/**/*.rb" ].freeze
+LITERAL_KEY_CALL = /\b(red_t|red_tp|red_js_t|red_js_tp)\s*\(?\s*(["'])(red\.[^"'#]+)\2/
+
+def check_namespace_keys(source, reporter)
+  prefixes = Set.new
+  source.each_key do |key|
+    parts = key.split(".")
+    (1...parts.size).each { |depth| prefixes << parts[0, depth].join(".") }
+  end
+  plural_parents = plural_groups(source).keys.to_set
+
+  NAMESPACE_KEY_GLOBS.flat_map { |glob| Dir.glob(File.join(ROOT, glob)) }.sort.each do |path|
+    # The whole file, not line by line: a call may break after its "(".
+    text = File.read(path)
+    text.to_enum(:scan, LITERAL_KEY_CALL).each do
+      match = Regexp.last_match
+      helper = match[1]
+      key = match[3]
+      next unless prefixes.include?(key)
+      next if plural_parents.include?(key) && helper.end_with?("tp")
+
+      line = text[0, match.begin(3)].count("\n") + 1
+      reporter.failure("namespace-keys",
+                       "#{path.sub("#{ROOT}/", "")}:#{line}: #{helper}(\"#{key}\") names a namespace, " \
+                       "not a string — it renders as humanized English in every locale")
+    end
+  end
+rescue StandardError => e
+  reporter.warn("namespace-keys", "could not scan sources: #{e.message}")
+end
+
 # REQ-6 — hardcoded English still sitting in a view.
 #
 # A heuristic, and warn-only by design: it cannot tell a user-facing sentence
@@ -597,6 +643,9 @@ def main(argv)
     check_plurals(locale, target, reporter, source_plural_parents)
     check_glossary(locale, source, target, reporter)
   end
+
+  # A failure, not a warning, so it runs under --quiet as well.
+  check_namespace_keys(source, reporter)
 
   unless quiet
     check_unused(source, reporter)

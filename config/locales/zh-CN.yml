@@ -1051,6 +1051,16 @@ zh-CN:
         linked: 工单关联成功
         create_failed: 创建工单失败：%{reason}
         link_failed: 关联工单失败：%{reason}
+      status:
+        updated: "状态已更改为 %{status}"
+        invalid_transition: "无法将状态从 %{from} 更改为 %{to}"
+        unknown: "该状态不存在"
+      snooze:
+        invalid_hours: "延后时间必须是 1 到 %{max} 之间的整数小时"
+      priority:
+        invalid: "该优先级不存在"
+      assign:
+        blank: "请输入要分配此错误的人员姓名"
       not_enabled: "%{feature}未启用。请在 %{file} 中启用。"
       not_enabled_plural: "%{feature}未启用。请在 %{file} 中启用。"
       not_enabled_options: "%{feature}未启用。请在 %{file} 中启用 %{options}。"

@@ -123,6 +123,23 @@ RSpec.describe RailsErrorDashboard::Commands::UpdateErrorStatus do
         described_class.call(error_log.id, status: 'resolved')
         expect(error_log.reload.status).to eq('new')
       end
+
+      it 'says the transition was the problem' do
+        expect(described_class.call(error_log.id, status: 'resolved')[:reason]).to eq(:invalid_transition)
+      end
+    end
+
+    context 'with a status that does not exist' do
+      [ 'banana', '', nil, :resolved, { 'x' => 'resolved' }, [ 'in_progress' ] ].each do |status|
+        it "fails with :unknown_status for #{status.inspect} and leaves the row alone" do
+          result = described_class.call(error_log.id, status: status)
+
+          expect(result[:success]).to be false
+          expect(result[:reason]).to eq(:unknown_status)
+          expect(result[:error]).to eq(error_log)
+          expect(error_log.reload.status).to eq('new')
+        end
+      end
     end
 
     it 'raises ActiveRecord::RecordNotFound for invalid id' do

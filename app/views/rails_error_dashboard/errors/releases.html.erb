@@ -43,7 +43,7 @@
     </div>
   <% else %>
     <%
-      current_release = @releases.find { |r| r[:current] }
+      current_release = @current_release
     %>
 
     <!-- Summary Cards -->
@@ -76,7 +76,7 @@
         <div class="card text-center">
           <div class="card-body">
             <%
-              problematic_count = @releases.count { |r| r[:problematic] }
+              problematic_count = @problematic_release_count
             %>
             <div class="display-6 <%= problematic_count > 0 ? 'text-danger' : 'text-success' %>"><%= problematic_count %></div>
             <small class="text-muted"><%= red_t("red.analytics.releases.summary.problematic") %></small>

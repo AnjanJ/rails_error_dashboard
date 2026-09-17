@@ -78,7 +78,7 @@ module RailsErrorDashboard
           if error_prefix.present?
             candidates += ErrorLog
                             .where(platform: target_error.platform)
-                            .where("error_type LIKE ?", "%#{error_prefix}%")
+                            .where("error_type LIKE ? ESCAPE '!'", "%#{ActiveRecord::Base.sanitize_sql_like(error_prefix, "!")}%")
                             .where.not(id: target_error.id)
                             .where.not(id: candidates.map(&:id))
                             .limit(20)

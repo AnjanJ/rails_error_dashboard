@@ -81,7 +81,7 @@ module RailsErrorDashboard
       Rails.logger.warn("[RailsErrorDashboard] Pagination error: #{exception.message}")
       preserved = request.query_parameters.except("page", :page, "per_page", :per_page)
       target = preserved.any? ? "#{request.path}?#{preserved.to_query}" : request.path
-      redirect_to target, status: :moved_permanently
+      redirect_to target, status: :see_other
     end
 
     private

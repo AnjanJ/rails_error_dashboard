@@ -1182,10 +1182,18 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               <i class="bi bi-layout-sidebar-inset"></i>
             </button>
             <!-- Search -->
-            <div style="position: relative;">
+            <%# A plain GET form to the errors index, using the same "search"
+                parameter as the index's own field. Hand-written rather than
+                form_with: a GET form must not put an authenticity token or a
+                utf8 field into the query string. Only String parameters are
+                echoed back; a nested one is ignored. %>
+            <form action="<%= errors_path %>" method="get" role="search" style="position: relative; margin: 0;">
               <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-tertiary);"></i>
-              <input class="red-search-input" placeholder="<%= red_t("red.navbar.search_placeholder") %>" id="globalSearch" />
-            </div>
+              <input class="red-search-input" type="text" name="search" value="<%= params[:search] if params[:search].is_a?(String) %>" placeholder="<%= red_t("red.navbar.search_placeholder") %>" aria-label="<%= red_t("red.navbar.search_placeholder") %>" id="globalSearch" />
+              <% if params[:application_id].is_a?(String) && params[:application_id].present? %>
+                <input type="hidden" name="application_id" value="<%= params[:application_id] %>" />
+              <% end %>
+            </form>
           </div>
           <div style="display: flex; align-items: center; gap: var(--space-3);">
             <!-- Application Switcher (multi-app) -->

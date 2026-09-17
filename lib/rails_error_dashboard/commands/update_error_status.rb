@@ -4,7 +4,8 @@ module RailsErrorDashboard
   module Commands
     # Command: Update the status of an error with optional comment
     # This is a write operation that validates transitions and updates status
-    # Returns {success: bool, error: ErrorLog}
+    # Returns {success: bool, error: ErrorLog}; a failure also carries
+    # reason: :unknown_status or :invalid_transition so the caller can say which.
     class UpdateErrorStatus
       def self.call(error_id, status:, comment: nil)
         new(error_id, status, comment).call
@@ -19,8 +20,13 @@ module RailsErrorDashboard
       def call
         error = ErrorLog.find(@error_id)
 
+        # A nested param arrives as a Hash-like object, never a known status.
+        unless @status.is_a?(String) && ErrorLog::STATUSES.include?(@status)
+          return { success: false, error: error, reason: :unknown_status }
+        end
+
         unless error.can_transition_to?(@status)
-          return { success: false, error: error }
+          return { success: false, error: error, reason: :invalid_transition }
         end
 
         error.transaction do

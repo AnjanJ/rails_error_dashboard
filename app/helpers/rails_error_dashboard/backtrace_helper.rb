@@ -175,6 +175,11 @@ module RailsErrorDashboard
           }
         end
       end
+    rescue => e
+      # Source context is a nicety. A cache store that is down must not take
+      # the error page with it -- the same rule read_coverage_for_file follows.
+      Rails.logger.error("[RailsErrorDashboard] read_source_code failed: #{e.class}: #{e.message}")
+      nil
     end
 
     # Read coverage data for a file when coverage tracking is active
@@ -204,6 +209,9 @@ module RailsErrorDashboard
         reader = Services::GitBlameReader.new(frame[:file_path], frame[:line_number])
         reader.read_blame
       end
+    rescue => e
+      Rails.logger.error("[RailsErrorDashboard] read_git_blame failed: #{e.class}: #{e.message}")
+      nil
     end
 
     # Generate GitHub/GitLab/Bitbucket link for a frame

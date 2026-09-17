@@ -1635,6 +1635,19 @@ en:
         create_failed: "Failed to create issue: %{reason}"
         link_failed: "Failed to link issue: %{reason}"
 
+      # Result of the status workflow form. %{status}, %{from} and %{to} are the
+      # translated status labels from red.errors.row.status.
+      status:
+        updated: "Status changed to %{status}"
+        invalid_transition: "Cannot change status from %{from} to %{to}"
+        unknown: "That status does not exist"
+      snooze:
+        invalid_hours: "Snooze time must be a whole number of hours between 1 and %{max}"
+      priority:
+        invalid: "That priority level does not exist"
+      assign:
+        blank: "Enter a name to assign this error to"
+
       # The "X is not enabled" notice was written out eleven times with only
       # the feature name changing. Two keys rather than one because English
       # agrees the verb and pronoun with the feature name: "Breadcrumbs are

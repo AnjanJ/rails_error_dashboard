@@ -250,5 +250,18 @@ RSpec.describe RailsErrorDashboard::Queries::SimilarErrors do
       # Should limit to reasonable number (50 from signature + 30 from type + 20 from prefix = max ~100)
       expect(candidates.size).to be <= 100
     end
+
+    # Strategy 3 builds a LIKE pattern from the stored error type, which for
+    # API-reported errors is whatever the client sent.
+    it "treats LIKE wildcards in the error type prefix literally" do
+      odd = create(:error_log, error_type: "My_%Error", platform: "iOS", backtrace_signature: "odd1")
+      lookalike = create(:error_log, error_type: "MyXYZError", platform: "iOS", backtrace_signature: "odd2")
+      literal = create(:error_log, error_type: "Other::My_%Thing", platform: "iOS", backtrace_signature: "odd3")
+
+      candidates = described_class.new(odd.id).send(:find_candidates, odd)
+
+      expect(candidates).to include(literal)
+      expect(candidates).not_to include(lookalike)
+    end
   end
 end

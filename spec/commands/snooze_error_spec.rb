@@ -8,7 +8,7 @@ RSpec.describe RailsErrorDashboard::Commands::SnoozeError do
 
     it 'sets the snoozed_until timestamp' do
       freeze_time do
-        result = described_class.call(error_log.id, hours: 2)
+        result = described_class.call(error_log.id, hours: 2)[:error]
         expect(result.snoozed_until).to be_within(1.second).of(2.hours.from_now)
       end
     end
@@ -46,7 +46,7 @@ RSpec.describe RailsErrorDashboard::Commands::SnoozeError do
     end
 
     it 'returns the updated error log' do
-      result = described_class.call(error_log.id, hours: 2)
+      result = described_class.call(error_log.id, hours: 2)[:error]
       expect(result).to be_a(RailsErrorDashboard::ErrorLog)
       expect(result.id).to eq(error_log.id)
     end
@@ -54,6 +54,34 @@ RSpec.describe RailsErrorDashboard::Commands::SnoozeError do
     it 'persists the snoozed_until to the database' do
       described_class.call(error_log.id, hours: 4)
       expect(error_log.reload.snoozed_until).to be_present
+    end
+
+    it 'reports success with the record' do
+      result = described_class.call(error_log.id, hours: 2)
+      expect(result[:success]).to be true
+      expect(result[:error]).to eq(error_log)
+    end
+
+    it 'accepts the hours as a numeric string' do
+      expect(described_class.call(error_log.id, hours: '24')[:success]).to be true
+      expect(error_log.reload.snoozed_until).to be_within(1.minute).of(24.hours.from_now)
+    end
+
+    it 'accepts the maximum' do
+      expect(described_class.call(error_log.id, hours: described_class::MAX_SNOOZE_HOURS)[:success]).to be true
+    end
+
+    [ -100_000, -1, 0, 721, 10**12, 1.5, 'abc', '', '1.5', nil, { 'a' => 1 }, [ 24 ] ].each do |hours|
+      it "fails with :invalid_hours for #{hours.inspect} and writes nothing" do
+        result = nil
+        expect {
+          result = described_class.call(error_log.id, hours: hours, reason: 'should not be saved')
+        }.not_to change(RailsErrorDashboard::ErrorComment, :count)
+
+        expect(result).to include(success: false, reason: :invalid_hours)
+        expect(result[:error]).to eq(error_log)
+        expect(error_log.reload.snoozed_until).to be_nil
+      end
     end
 
     it 'raises ActiveRecord::RecordNotFound for invalid id' do

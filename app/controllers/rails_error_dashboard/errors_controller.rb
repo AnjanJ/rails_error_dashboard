@@ -45,6 +45,10 @@ module RailsErrorDashboard
     # 4000, and the copy that drifts is the one the user reads.
     AI_HELP_QUESTION_LIMIT = 4000
 
+    # Cached in place of nil when the issue tracker has nothing to say, so that
+    # "nothing" is remembered for the TTL like any other answer.
+    NO_PLATFORM_DATA = "none"
+
     # The initializer every "not enabled" notice points at. A path, not prose.
     INITIALIZER_PATH = "config/initializers/rails_error_dashboard.rb"
 
@@ -137,8 +141,9 @@ module RailsErrorDashboard
     # Phase 3: Workflow Integration Actions (via Commands)
 
     def assign
-      @error = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
-      redirect_to error_path(@error, **app_context_params)
+      result = Commands::AssignError.call(params[:id], assigned_to: params[:assigned_to])
+      flash[:alert] = red_t("red.flash.assign.blank") unless result[:success]
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def unassign
@@ -147,13 +152,19 @@ module RailsErrorDashboard
     end
 
     def update_priority
-      @error = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
-      redirect_to error_path(@error, **app_context_params)
+      result = Commands::UpdateErrorPriority.call(params[:id], priority_level: params[:priority_level])
+      flash[:alert] = red_t("red.flash.priority.invalid") unless result[:success]
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def snooze
-      @error = Commands::SnoozeError.call(params[:id], hours: params[:hours].to_i, reason: params[:reason])
-      redirect_to error_path(@error, **app_context_params)
+      # The raw value, not to_i: "abc".to_i is 0 and a nested parameter has no
+      # to_i at all. The command decides what a number of hours is.
+      result = Commands::SnoozeError.call(params[:id], hours: params[:hours], reason: params[:reason])
+      unless result[:success]
+        flash[:alert] = red_t("red.flash.snooze.invalid_hours", max: Commands::SnoozeError::MAX_SNOOZE_HOURS)
+      end
+      redirect_to error_path(result[:error], **app_context_params)
     end
 
     def unsnooze
@@ -173,7 +184,19 @@ module RailsErrorDashboard
 
     def update_status
       result = Commands::UpdateErrorStatus.call(params[:id], status: params[:status], comment: params[:comment])
-      redirect_to error_path(result[:error], **app_context_params)
+      error = result[:error]
+
+      # The command refuses some transitions; saying nothing made a refused
+      # change look like a successful one.
+      if result[:success]
+        flash[:notice] = red_t("red.flash.status.updated", status: status_flash_label(error.status))
+      elsif result[:reason] == :invalid_transition
+        flash[:alert] = red_t("red.flash.status.invalid_transition",
+                              from: status_flash_label(error.status), to: status_flash_label(params[:status]))
+      else
+        flash[:alert] = red_t("red.flash.status.unknown")
+      end
+      redirect_to error_path(error, **app_context_params)
     end
 
     def create_issue
@@ -368,6 +391,10 @@ module RailsErrorDashboard
       result = Queries::ReleaseTimeline.call(days, application_id: @current_application_id)
       all_releases = result[:releases]
       @summary = result[:summary]
+      # Taken from every release, before pagination: the summary cards describe
+      # the whole period, not the page in view.
+      @current_release = all_releases.find { |r| r[:current] }
+      @problematic_release_count = all_releases.count { |r| r[:problematic] }
 
       @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
     end
@@ -627,6 +654,8 @@ module RailsErrorDashboard
       scope = DiagnosticDump.recent
       scope = scope.where(application_id: @current_application_id) if @current_application_id.present?
       @total_dumps = scope.count
+      # The newest dump overall; the "latest" cards must not change with the page.
+      @latest_dump = scope.first
 
       @pagy, @dumps = pagy(:offset, scope, limit: params[:per_page] || 25)
     end
@@ -767,6 +796,11 @@ module RailsErrorDashboard
     end
 
     def set_application_context
+      # application_id[x]=1 is not an id. Left in params, the nested value reached
+      # url_for in the layout ("unable to convert unpermitted parameters to hash")
+      # and every page answered 500. An array of ids is still allowed.
+      params.delete(:application_id) if params[:application_id].is_a?(ActionController::Parameters)
+
       @current_application_id = params[:application_id].presence
       @applications = Application.ordered_by_name.pluck(:name, :id)
     end
@@ -792,6 +826,12 @@ module RailsErrorDashboard
       [ "red", kind, error.external_issue_provider, repo.presence || "-", error.external_issue_number ].join("/")
     end
 
+    # The status labels the index and show pages already use; an unlabelled
+    # value ("new" has no key) falls back to the raw text.
+    def status_flash_label(status)
+      red_t("red.errors.row.status.#{status}", default: status.to_s.tr("_", " "))
+    end
+
     def fetch_platform_issue(error)
       return nil unless error.external_issue_url.present? && error.external_issue_number.present?
       return nil unless RailsErrorDashboard.configuration.enable_issue_tracking
@@ -799,13 +839,25 @@ module RailsErrorDashboard
       # The repository belongs in the key: two repositories sharing an issue
       # number would otherwise read each other's cached state.
       cache_key = issue_cache_key("issue_state", error)
-      Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.for_error(error)
-        return nil unless client
-
-        result = client.fetch_issue(number: error.external_issue_number)
-        result[:success] ? result : nil
+      #
+      # The negative result is cached too, as NO_PLATFORM_DATA rather than nil.
+      # `return nil unless client` used to leave the METHOD, so the block never
+      # finished and nothing was written; a raising client skipped the write the
+      # same way. Either meant one API attempt (and its timeout) per page view.
+      cached = Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
+        fetch_issue_state(error) || NO_PLATFORM_DATA
       end
+      cached == NO_PLATFORM_DATA ? nil : cached
+    rescue => e
+      nil
+    end
+
+    def fetch_issue_state(error)
+      client = Services::IssueTrackerClient.for_error(error)
+      return nil unless client
+
+      result = client.fetch_issue(number: error.external_issue_number)
+      result[:success] ? result : nil
     rescue => e
       nil
     end
@@ -816,13 +868,20 @@ module RailsErrorDashboard
 
       # Cache for 60 seconds to avoid API hammering on page refreshes
       cache_key = issue_cache_key("issue_comments", error)
+      # (an empty list is cached like any other answer -- see fetch_platform_issue)
       Rails.cache.fetch(cache_key, expires_in: 60.seconds) do
-        client = Services::IssueTrackerClient.for_error(error)
-        return [] unless client
+        fetch_issue_comments(error)
+      end || []
+    rescue => e
+      []
+    end
 
-        result = client.fetch_comments(number: error.external_issue_number, per_page: 20)
-        result[:success] ? result[:comments] : []
-      end
+    def fetch_issue_comments(error)
+      client = Services::IssueTrackerClient.for_error(error)
+      return [] unless client
+
+      result = client.fetch_comments(number: error.external_issue_number, per_page: 20)
+      result[:success] ? Array(result[:comments]) : []
     rescue => e
       []
     end
