@@ -230,6 +230,42 @@ RSpec.describe RailsErrorDashboard::Services::CodebergIssueClient do
     end
   end
 
+  # Gitea/Forgejo answer a successful PATCH with 200 (201 is for creation).
+  # Only 201 was accepted, so every close and reopen was reported as a failure
+  # even though the forge had applied it.
+  describe "#close_issue and #reopen_issue" do
+    let(:issue_url) { "https://codeberg.org/api/v1/repos/user/repo/issues/7" }
+
+    it "treats 200 as success when closing" do
+      stub_request(:patch, issue_url).with(body: hash_including("state" => "closed"))
+        .to_return(status: 200, body: { number: 7, state: "closed" }.to_json)
+
+      expect(client.close_issue(number: 7)[:success]).to be true
+    end
+
+    it "treats 200 as success when reopening" do
+      stub_request(:patch, issue_url).with(body: hash_including("state" => "open"))
+        .to_return(status: 200, body: { number: 7, state: "open" }.to_json)
+
+      expect(client.reopen_issue(number: 7)[:success]).to be true
+    end
+
+    it "still accepts 201" do
+      stub_request(:patch, issue_url).to_return(status: 201, body: "{}")
+
+      expect(client.close_issue(number: 7)[:success]).to be true
+      expect(client.reopen_issue(number: 7)[:success]).to be true
+    end
+
+    it "reports a failure for an error status" do
+      stub_request(:patch, issue_url).to_return(status: 404, body: "{}")
+
+      result = client.close_issue(number: 7)
+      expect(result[:success]).to be false
+      expect(result[:error]).to include("404")
+    end
+  end
+
   describe "custom API URL for self-hosted Gitea" do
     it "uses the custom API URL" do
       custom_client = described_class.new(token: "tok", repo: "org/app", api_url: "https://git.mycompany.com/api/v1")

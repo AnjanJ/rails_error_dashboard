@@ -40,7 +40,7 @@ module RailsErrorDashboard
           auth_headers
         )
 
-        response[:status] == 201 ? success_response({}) : error_response("Codeberg API error (#{response[:status]})")
+        patch_result(response)
       end
 
       def reopen_issue(number:)
@@ -50,7 +50,7 @@ module RailsErrorDashboard
           auth_headers
         )
 
-        response[:status] == 201 ? success_response({}) : error_response("Codeberg API error (#{response[:status]})")
+        patch_result(response)
       end
 
       def add_comment(number:, body:)
@@ -113,6 +113,17 @@ module RailsErrorDashboard
       end
 
       private
+
+      # Gitea/Forgejo answer a successful PATCH with 200; 201 is what they
+      # return for creation. Accepting only 201 reported every close and reopen
+      # as failed although the forge had applied it.
+      def patch_result(response)
+        if [ 200, 201 ].include?(response[:status])
+          success_response({})
+        else
+          error_response("Codeberg API error (#{response[:status]})")
+        end
+      end
 
       def auth_headers
         { "Authorization" => "token #{@token}" }
