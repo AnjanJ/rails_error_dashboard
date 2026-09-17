@@ -58,8 +58,6 @@ RSpec.describe "Capture query budget" do
   end
 
   it "captures a recurrence of a known error in fewer than 40 queries" do
-    pending "3663 queries at 39f281a; goes green once caches, broadcast and spike detection are bounded"
-
     # First capture creates the group; the measured one takes the update path.
     RailsErrorDashboard::Commands::LogError.call(exception, {})
 
