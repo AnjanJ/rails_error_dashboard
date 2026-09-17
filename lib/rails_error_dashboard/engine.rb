@@ -188,6 +188,16 @@ module RailsErrorDashboard
       # Enable TracePoint(:raise) + TracePoint(:rescue) for swallowed exception detection
       if RailsErrorDashboard.configuration.detect_swallowed_exceptions
         RailsErrorDashboard::Services::SwallowedExceptionTracker.enable!
+
+        # Drain buffered counts at the end of every request and job. Without
+        # this the buffer is only ever drained by a LATER rescue on the SAME
+        # thread, so a swallowed exception that happens once stays invisible
+        # until the process exits. to_complete fires after the response body
+        # is closed, so it never delays a request (safety rule 2); the flush is
+        # deadline-gated, so a flood is still one write per interval.
+        Rails.application.executor.to_complete do
+          RailsErrorDashboard::Services::SwallowedExceptionTracker.flush_if_due!
+        end
       end
 
       # Import crash files from previous process death, then register at_exit hook
