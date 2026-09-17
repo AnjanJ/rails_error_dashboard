@@ -91,6 +91,13 @@ module RailsErrorDashboard
       # Get dashboard stats using Query (pass application filter)
       @stats = Queries::DashboardStats.call(application_id: @current_application_id)
 
+      # Which Turbo streams this page listens to: its application's (or the
+      # global ones), and new-row prepends only when a new row belongs on top.
+      @live_streams = Services::ErrorBroadcaster.streams_for_view(
+        application_id: @current_application_id,
+        filtered: live_prepend_unsafe?
+      )
+
       # Get filter options using Query (pass application filter)
       filter_options = Queries::FilterOptions.call(application_id: @current_application_id)
       @error_types = filter_options[:error_types]
@@ -762,6 +769,14 @@ module RailsErrorDashboard
     def set_application_context
       @current_application_id = params[:application_id].presence
       @applications = Application.ordered_by_name.pluck(:name, :id)
+    end
+
+    # True when a brand-new error cannot simply be put on top of this list: any
+    # filter other than the application is active (the row may not match it), a
+    # sort is chosen, or this is not the first page.
+    def live_prepend_unsafe?
+      other_filters = FILTERABLE_PARAMS - [ :application_id ]
+      other_filters.any? { |key| params[key].present? } || params[:page].to_s.to_i > 1
     end
 
     # Preserves the application_id param across redirects

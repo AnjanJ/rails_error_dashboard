@@ -73,6 +73,18 @@ RSpec.describe "Capture query budget" do
       "capture issued #{statements.size} queries:\n" + statements.first(60).join("\n")
   end
 
+  # The common case: caches warm and the stats window already taken by an
+  # earlier event. No stats computation, no column-visibility scans.
+  it "captures a recurrence in fewer than 12 queries when the caches are warm" do
+    2.times { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
+
+    statements = count_queries { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
+
+    expect(statements.size).to be < 12,
+      "capture issued #{statements.size} queries:\n" + statements.join("\n")
+    expect(statements.grep(/SELECT DISTINCT/i)).to be_empty
+  end
+
   it "never sweeps the host's cache keyspace during a capture" do
     RailsErrorDashboard::Commands::LogError.call(exception, {})
     allow(cache).to receive(:delete_matched).and_call_original
