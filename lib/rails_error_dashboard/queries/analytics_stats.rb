@@ -17,7 +17,7 @@ module RailsErrorDashboard
 
       def call
         # Cache analytics data for 5 minutes to reduce database load
-        # Cache key includes days parameter and last error update timestamp
+        # Cache key includes the days parameter and the cache generation
         Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
           {
             days: @days,
@@ -41,13 +41,14 @@ module RailsErrorDashboard
         # - Query class name
         # - Days parameter (different time ranges = different caches)
         # - Application ID (per-app caching)
-        # - Last error update timestamp (auto-invalidates when errors change)
+        # - The cache generation (bumped by user actions; see AnalyticsCacheManager).
+        #   Captures do not bump it: they rely on the 5-minute TTL.
         # - Start date (ensures correct time window)
         [
           "analytics_stats",
           @days,
           @application_id || "all",
-          base_scope.maximum(:updated_at)&.to_i || 0,
+          Services::AnalyticsCacheManager.generation,
           @start_date.to_date.to_s
         ].join("/")
       end

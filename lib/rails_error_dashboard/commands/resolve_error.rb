@@ -25,6 +25,8 @@ module RailsErrorDashboard
           resolution_reference: @resolution_data[:resolution_reference],
           status: "resolved"
         )
+        # The stat cards are cached; a user action must show up at once.
+        Services::AnalyticsCacheManager.clear
 
         # Dispatch plugin event for resolved error
         PluginRegistry.dispatch(:on_error_resolved, error)

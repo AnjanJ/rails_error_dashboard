@@ -41,6 +41,8 @@ module RailsErrorDashboard
           end
         end
 
+        Services::AnalyticsCacheManager.clear if muted_count.positive?
+
         PluginRegistry.dispatch(:on_errors_batch_muted, muted_errors) if muted_errors.any?
 
         {

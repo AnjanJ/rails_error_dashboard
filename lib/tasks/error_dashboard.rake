@@ -459,6 +459,8 @@ namespace :error_dashboard do
     puts "\nDeleting errors..."
     start_time = Time.current
     deleted = scope.delete_all
+    # delete_all skips callbacks, and the stat cards are cached.
+    RailsErrorDashboard::Services::AnalyticsCacheManager.clear
     elapsed = (Time.current - start_time).round(2)
 
     puts "\n✓ Cleanup complete!"

@@ -5,6 +5,9 @@ module RailsErrorDashboard
     # Query: Fetch dashboard statistics
     # This is a read operation that aggregates error data for the dashboard
     class DashboardStats
+      # One instance answers ONE call: several aggregates (today's event count,
+      # the 7-day trend, spike detection) are memoised on it so that they are
+      # computed once per call rather than once per card that shows them.
       def initialize(application_id: nil)
         @application_id = application_id
       end
@@ -24,7 +27,7 @@ module RailsErrorDashboard
               # rows reported five users hitting one error as "1 error today".
               # Summing is also exact during a storm: counted-only events never
               # create occurrence rows, but they DO raise occurrence_count.
-              total_today: event_count_since(Time.current.beginning_of_day),
+              total_today: today_event_count,
               total_week: event_count_since(7.days.ago),
               total_month: event_count_since(30.days.ago),
               unresolved: base_scope.unresolved.count,
@@ -93,13 +96,14 @@ module RailsErrorDashboard
       end
 
       def cache_key
-        # Cache key includes last error update timestamp for auto-invalidation
-        # Also includes current hour to ensure fresh data
-        # Uses base_scope to respect application_id filter for proper cache isolation
+        # The cache GENERATION, not maximum(:updated_at): the timestamp cost a
+        # query per key build and changed on every capture, so the cache never
+        # hit while errors were arriving. Freshness after a capture is the
+        # 1-minute TTL; user actions bump the generation (AnalyticsCacheManager).
         [
           "dashboard_stats",
           @application_id || "all",
-          base_scope.maximum(:updated_at)&.to_i || 0,
+          Services::AnalyticsCacheManager.generation,
           Time.current.hour
         ].join("/")
       end
@@ -147,7 +151,7 @@ module RailsErrorDashboard
         recorded = occurrence_scope
                      .where("#{ErrorOccurrence.table_name}.occurred_at >= ?", Time.current.beginning_of_day)
                      .count
-        recorded < event_count_since(Time.current.beginning_of_day)
+        recorded < today_event_count
       rescue StandardError
         false
       end
@@ -169,9 +173,10 @@ module RailsErrorDashboard
 
       # Get 7-day error trend (daily counts)
       def errors_trend_7d
-        base_scope.where("occurred_at >= ?", 7.days.ago)
-                  .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
-                  .sum(:occurrence_count)
+        @errors_trend_7d ||=
+          base_scope.where("occurred_at >= ?", 7.days.ago)
+                    .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
+                    .sum(:occurrence_count)
       end
 
       # Get error counts by severity for last 7 days
@@ -193,21 +198,25 @@ module RailsErrorDashboard
 
       # Detect if there's an error spike
       #  Uses baselines if available, falls back to simple 2x average
+      #
+      # Memoised: the stats hash asks twice (spike_detected and spike_info), and
+      # this runs from the live stats broadcast inside the capture path.
       def spike_detected?
-        return false if errors_trend_7d.empty?
+        return @spike_detected if defined?(@spike_detected)
 
-        today_count = event_count_since(Time.current.beginning_of_day)
+        @spike_detected = compute_spike_detected
+      end
 
-        # Try baseline-based detection first
-        if baseline_anomaly_detected?(today_count)
-          return true
-        end
+      def compute_spike_detected
+        trend = errors_trend_7d
+        return false if trend.empty?
+        return true if baseline_anomalies.any?
 
         # Fall back to simple 2x average detection
-        avg_count = errors_trend_7d.values.sum / 7.0
+        avg_count = trend.values.sum / 7.0
         return false if avg_count.zero?
 
-        today_count >= (avg_count * 2)
+        today_event_count >= (avg_count * 2)
       end
 
       # Get spike information
@@ -215,7 +224,7 @@ module RailsErrorDashboard
       def spike_info
         return nil unless spike_detected?
 
-        today_count = event_count_since(Time.current.beginning_of_day)
+        today_count = today_event_count
         avg_count = (errors_trend_7d.values.sum / 7.0).round(1)
 
         info = {
@@ -226,46 +235,35 @@ module RailsErrorDashboard
         }
 
         # Add baseline info if available
-        baseline_info = baseline_anomaly_info(today_count)
+        baseline_info = baseline_anomaly_info
         info.merge!(baseline_info) if baseline_info.present?
 
         info
       end
 
-      # Check if baseline indicates anomaly
-      def baseline_anomaly_detected?(_count)
-        return false unless defined?(Queries::BaselineStats)
+      def today_event_count
+        @today_event_count ||= event_count_since(Time.current.beginning_of_day)
+      end
 
-        # Check most common error types for anomalies
-        base_scope.distinct.pluck(:error_type, :platform).compact.any? do |(error_type, platform)|
-          Queries::BaselineStats.new(error_type, platform)
-                                .check_current_anomaly(sensitivity: 2, application_id: @application_id)[:anomaly]
+      # Every anomalous (error_type, platform) pair, from a fixed number of
+      # queries (BaselineStats.current_anomalies), loaded once per call. This
+      # used to be about six queries per distinct pair, run twice.
+      def baseline_anomalies
+        return @baseline_anomalies if defined?(@baseline_anomalies)
+
+        @baseline_anomalies = if defined?(Queries::BaselineStats)
+          Queries::BaselineStats.current_anomalies(sensitivity: 2, application_id: @application_id)
+        else
+          []
         end
       end
 
       # Get baseline anomaly information
-      def baseline_anomaly_info(_total_count)
-        return nil unless defined?(Queries::BaselineStats)
-
-        # Find the most anomalous error type
-        anomalies = base_scope.distinct.pluck(:error_type, :platform).compact.map do |(error_type, platform)|
-          result = Queries::BaselineStats.new(error_type, platform)
-                                         .check_current_anomaly(sensitivity: 2, application_id: @application_id)
-          next unless result[:anomaly]
-
-          {
-            error_type: error_type,
-            platform: platform,
-            count: result[:current_count],
-            level: result[:level],
-            std_devs_above: result[:std_devs_above]
-          }
-        end.compact
-
-        return nil if anomalies.empty?
+      def baseline_anomaly_info
+        return nil if baseline_anomalies.empty?
 
         # Return info about worst anomaly
-        worst = anomalies.max_by { |a| a[:std_devs_above] || 0 }
+        worst = baseline_anomalies.max_by { |a| a[:std_devs_above] || 0 }
         {
           baseline_detected: true,
           anomaly_error_type: worst[:error_type],
@@ -283,7 +281,7 @@ module RailsErrorDashboard
       # make a real failure percentage from, so the honest figure is the rate
       # itself, uncapped, labelled with its unit.
       def error_rate
-        today_events = event_count_since(Time.current.beginning_of_day)
+        today_events = today_event_count
         return 0.0 if today_events.zero?
 
         hours_today = ((Time.current - Time.current.beginning_of_day) / 1.hour).round(1)
@@ -299,11 +297,12 @@ module RailsErrorDashboard
       # affected user. Storm count-only events create no occurrence row, so
       # this is a floor during a storm -- affected_users_incomplete? says when.
       def affected_users_today
-        distinct_affected_users(Time.current.beginning_of_day, nil)
+        @affected_users_today ||= distinct_affected_users(Time.current.beginning_of_day, nil)
       end
 
       def affected_users_yesterday
-        distinct_affected_users(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
+        @affected_users_yesterday ||=
+          distinct_affected_users(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
       end
 
       def distinct_affected_users(from, to)
@@ -334,7 +333,13 @@ module RailsErrorDashboard
 
       # Calculate percentage change in errors (today vs yesterday)
       def trend_percentage
-        today = event_count_since(Time.current.beginning_of_day)
+        return @trend_percentage if defined?(@trend_percentage)
+
+        @trend_percentage = compute_trend_percentage
+      end
+
+      def compute_trend_percentage
+        today = today_event_count
         yesterday = event_count_between(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
 
         return 0.0 if today.zero? && yesterday.zero?
