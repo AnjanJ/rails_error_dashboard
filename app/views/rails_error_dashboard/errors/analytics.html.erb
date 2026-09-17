@@ -70,7 +70,7 @@
       <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
         document.addEventListener('DOMContentLoaded', function() {
           const colors = window.getChartColors();
-          new Chartkick.LineChart("errors-over-time-chart", <%= raw @errors_over_time.to_json %>, {
+          new Chartkick.LineChart("errors-over-time-chart", <%= js_safe_json(@errors_over_time) %>, {
             color: "#DC2626",
             curve: false,
             points: true,
@@ -122,7 +122,7 @@
                   "#EF4444"  // Red - iOS
                 ];
 
-                new Chartkick.PieChart("errors-by-platform-chart", <%= raw @errors_by_platform.to_json %>, {
+                new Chartkick.PieChart("errors-by-platform-chart", <%= js_safe_json(@errors_by_platform) %>, {
                   colors: platformColors,
                   height: "300px",
                   legend: "bottom",
@@ -173,7 +173,7 @@
                 const colors = window.getChartColors();
                 const environmentColors = ["#EF4444", "#F59E0B", "#2563EB", "#10B981", "#8B5CF6", "#6B7280"];
 
-                new Chartkick.PieChart("errors-by-environment-chart", <%= raw environment_counts.to_json %>, {
+                new Chartkick.PieChart("errors-by-environment-chart", <%= js_safe_json(environment_counts) %>, {
                   colors: environmentColors,
                   height: "300px",
                   legend: "bottom",
@@ -217,7 +217,7 @@
           <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
             document.addEventListener('DOMContentLoaded', function() {
               const colors = window.getChartColors();
-              new Chartkick.BarChart("errors-by-type-chart", <%= raw @errors_by_type.to_json %>, {
+              new Chartkick.BarChart("errors-by-type-chart", <%= js_safe_json(@errors_by_type) %>, {
                 color: "#EF4444",
                 height: "400px",
                 library: {
@@ -260,7 +260,7 @@
           <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
             document.addEventListener('DOMContentLoaded', function() {
               const colors = window.getChartColors();
-              new Chartkick.ColumnChart("errors-by-hour-chart", <%= raw @errors_by_hour.to_json %>, {
+              new Chartkick.ColumnChart("errors-by-hour-chart", <%= js_safe_json(@errors_by_hour) %>, {
                 color: "#DC2626",
                 height: "300px",
                 library: {
@@ -469,7 +469,7 @@
             <div id="errors-by-version-chart"></div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
               document.addEventListener('DOMContentLoaded', function() {
-                const versionData = <%= raw @errors_by_version.transform_values { |v| v[:count] }.to_json %>;
+                const versionData = <%= js_safe_json(@errors_by_version.transform_values { |v| v[:count] }) %>;
                 const colors = window.getChartColors();
 
                 new Chartkick.ColumnChart("errors-by-version-chart", versionData, {
@@ -608,7 +608,7 @@
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
                 new Chartkick.BarChart("mttr-by-platform-chart",
-                  <%= raw @mttr_by_platform.to_json %>, {
+                  <%= js_safe_json(@mttr_by_platform) %>, {
                   suffix: '<%= red_js_t("red.ui_js.charts.suffix_hours") %>',
                   height: "200px",
                   colors: ["#8B5CF6"],
@@ -661,7 +661,7 @@
               document.addEventListener('DOMContentLoaded', function() {
                 const colors = window.getChartColors();
                 new Chartkick.LineChart("mttr-trend-chart",
-                  <%= raw @mttr_stats[:mttr_trend].to_json %>, {
+                  <%= js_safe_json(@mttr_stats[:mttr_trend]) %>, {
                   suffix: '<%= red_js_t("red.ui_js.charts.suffix_hours") %>',
                   height: "250px",
                   colors: ["#10B981"],
