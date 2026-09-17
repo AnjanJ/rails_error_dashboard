@@ -264,6 +264,10 @@ module RailsErrorDashboard
 
         context = context.merge(request_params: filtered[:request_params]) if context.key?(:request_params)
         context = context.merge(request_url: filtered[:request_url]) if context.key?(:request_url)
+        # The raw session ID must not sit in Redis / Solid Queue either.
+        if context[:session_id]
+          context = context.merge(session_id: Services::SensitiveDataFilter.digest_session_id(context[:session_id]))
+        end
 
         [ exception_data, context ]
       rescue => e
@@ -532,7 +536,9 @@ module RailsErrorDashboard
               occurred_at: attributes[:occurred_at],
               user_id: attributes[:user_id],
               request_id: error_context.request_id,
-              session_id: error_context.session_id
+              # Digest, not the raw ID -- it is a bearer credential. Idempotent,
+              # so a value already digested at the queue boundary passes through.
+              session_id: Services::SensitiveDataFilter.storable_session_id(error_context.session_id)
             }
             # The release THIS event happened under. The group keeps its first
             # release; per-release counts come from here (ReleaseTimeline).

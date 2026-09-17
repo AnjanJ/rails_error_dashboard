@@ -550,6 +550,32 @@ namespace :error_dashboard do
     puts "\n" + "=" * 80 + "\n"
   end
 
+  desc "Replace raw session IDs stored on occurrences with keyed digests (idempotent)"
+  task digest_session_ids: :environment do
+    filter = RailsErrorDashboard::Services::SensitiveDataFilter
+    prefix = filter::SESSION_DIGEST_PREFIX
+    scope = RailsErrorDashboard::ErrorOccurrence
+      .where.not(session_id: [ nil, "" ])
+      .where.not("session_id LIKE ?", "#{prefix}%")
+
+    digested = 0
+    failed = 0
+    scope.in_batches(of: 1000) do |batch|
+      batch.pluck(:id, :session_id).each do |id, raw|
+        digest = filter.digest_session_id(raw)
+        if digest
+          RailsErrorDashboard::ErrorOccurrence.where(id: id).update_all(session_id: digest)
+          digested += 1
+        else
+          failed += 1
+        end
+      end
+    end
+
+    puts "Session IDs digested: #{digested}"
+    puts "Could not be digested (left unchanged): #{failed}" if failed.positive?
+  end
+
   desc "Send error digest email (PERIOD=daily|weekly, APP_ID=optional)"
   task send_digest: :environment do
     period = ENV.fetch("PERIOD", "daily")

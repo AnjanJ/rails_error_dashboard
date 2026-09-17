@@ -51,7 +51,51 @@ module RailsErrorDashboard
         attributes
       end
 
-      # Build and cache the ParameterFilter instance
+      SESSION_DIGEST_PREFIX = "h1:"
+
+      # Keyed digest of a session ID, for storage.
+      #
+      # A session ID is a bearer credential, and the only thing the dashboard does
+      # with it is equality ("these occurrences were one session"). An HMAC keeps
+      # that and is useless for replay; keying it with secret_key_base means a
+      # guessed ID cannot be confirmed offline either. The prefix tells a digest
+      # from a raw Rails session ID (itself 32 hex characters), which makes
+      # digesting idempotent and leaves room for an "h2:".
+      #
+      # Rotating secret_key_base breaks correlation across the rotation.
+      #
+      # @param raw [#to_s, nil] raw session ID, or an existing digest
+      # @return [String, nil] "h1:" + 32 hex characters; nil for blank input or on
+      #   any failure (never the raw value, never an exception)
+      def self.digest_session_id(raw)
+        value = raw.to_s
+        return nil if value.empty?
+        return value if value.start_with?(SESSION_DIGEST_PREFIX)
+
+        SESSION_DIGEST_PREFIX + OpenSSL::HMAC.hexdigest("SHA256", session_digest_key, value)[0, 32]
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Session ID digest failed: #{e.class}")
+        nil
+      end
+
+      # What to write to error_occurrences.session_id: the digest while filtering
+      # is on, the raw value when the operator has turned filtering off.
+      def self.storable_session_id(raw)
+        return digest_session_id(raw) if RailsErrorDashboard.configuration.filter_sensitive_data
+
+        raw.nil? ? nil : raw.to_s
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Session ID handling failed: #{e.class}")
+        nil
+      end
+
+      def self.session_digest_key
+        key = Rails.application.secret_key_base if defined?(Rails) && Rails.application.respond_to?(:secret_key_base)
+        key.to_s.empty? ? "rails_error_dashboard" : key.to_s
+      rescue StandardError
+        "rails_error_dashboard"
+      end
+
       # @return [ActiveSupport::ParameterFilter, nil]
       def self.parameter_filter
         @parameter_filter ||= build_parameter_filter

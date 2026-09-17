@@ -23,7 +23,15 @@ module RailsErrorDashboard
     scope :in_time_window, ->(start_time, end_time) { where(occurred_at: start_time..end_time) }
     scope :for_user, ->(user_id) { where(user_id: user_id) }
     scope :for_request, ->(request_id) { where(request_id: request_id) }
-    scope :for_session, ->(session_id) { where(session_id: session_id) }
+    # Takes the raw session ID (or a stored digest). Rows are stored as a keyed
+    # digest while filter_sensitive_data is on, and raw otherwise or before the
+    # upgrade, so both forms are matched. Blank matches nothing.
+    scope :for_session, lambda { |session_id|
+      raw = session_id.to_s
+      next none if raw.empty?
+
+      where(session_id: [ raw, Services::SensitiveDataFilter.digest_session_id(raw) ].compact.uniq)
+    }
 
     # Find occurrences within a time window around this occurrence
     # @param window_minutes [Integer] Time window in minutes (default: 5)
