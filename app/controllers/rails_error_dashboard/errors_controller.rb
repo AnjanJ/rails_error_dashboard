@@ -2,7 +2,8 @@
 
 module RailsErrorDashboard
   class ErrorsController < ApplicationController
-    before_action :authenticate_dashboard_user!
+    # Authentication is declared once, on ApplicationController, and prepended.
+    # Re-declaring it here moved it to the END of the chain, behind the CSRF check.
     before_action :set_application_context
     before_action :check_default_credentials
     before_action :load_storm_banner

@@ -1377,6 +1377,16 @@ en:
           one: "%{count} type"
           other: "%{count} types"
 
+    errors_page:
+      csrf:
+        title: "Your session token has expired"
+        message: "Go back, reload the page and try again. Nothing was changed."
+      bad_request:
+        title: "This request could not be understood"
+        message: "A required value was missing or malformed. Go back and try again."
+      not_acceptable:
+        title: "This format is not available"
+        message: "The dashboard cannot produce the format this request asked for."
     settings:
       title: "Settings"
       # %{version} is the gem version. The "v" prefix is a sigil, not a word.

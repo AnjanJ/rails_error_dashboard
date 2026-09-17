@@ -871,6 +871,16 @@ zh-CN:
         user_types_html: 用户 %{user} · %{types}
         types:
           other: "%{count} 种类型"
+    errors_page:
+      csrf:
+        title: "会话令牌已过期"
+        message: "请返回并重新加载页面后重试。未做任何更改。"
+      bad_request:
+        title: "无法理解此请求"
+        message: "缺少必需的值或其格式不正确。请返回后重试。"
+      not_acceptable:
+        title: "此格式不可用"
+        message: "仪表板无法生成此请求所要求的格式。"
     settings:
       title: 设置
       version: v%{version}

@@ -10,7 +10,13 @@ module RailsErrorDashboard
     # Declaring it here inverts the default: a controller is protected unless
     # it explicitly opts out with skip_before_action, which is a visible,
     # reviewable act rather than an omission nobody notices.
-    before_action :authenticate_dashboard_user!
+    #
+    # Prepended so it runs before the CSRF check. A host app with
+    # default_protect_from_forgery registers verify_authenticity_token on
+    # ActionController::Base, ahead of anything declared here; an unauthenticated
+    # POST was then answered about its token (and by the error renderer) instead
+    # of with a 401.
+    prepend_before_action :authenticate_dashboard_user!
 
     include Pagy::Method
 
@@ -46,7 +52,9 @@ module RailsErrorDashboard
       # Log the error for debugging
       Rails.logger.error("[RailsErrorDashboard] Dashboard controller error: #{exception.class} - #{exception.message}")
       Rails.logger.error("Request: #{request.path} (#{request.method})")
-      Rails.logger.error("Params: #{params.inspect}")
+      # filtered_parameters, not params.inspect: the host app's filter_parameters
+      # must apply to the dashboard's log lines too.
+      Rails.logger.error("Params: #{request.filtered_parameters.inspect}")
       Rails.logger.error(exception.backtrace&.first(10)&.join("\n")) if exception.backtrace
 
       render_dashboard_error(
@@ -69,6 +77,45 @@ module RailsErrorDashboard
         message: "It may have been deleted or the ID is invalid.",
         detail: exception.message,
         status: :not_found
+      )
+    end
+
+    # Client mistakes are not dashboard failures. Without these, the catch-all
+    # above answered 500 "Something went wrong" for an expired CSRF token, which
+    # is both the wrong status and the wrong advice. One warn line each, and no
+    # parameters: a rejected form post is exactly where a secret would be.
+    rescue_from ActionController::ParameterMissing, ActionController::BadRequest do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Bad request: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-x-octagon",
+        title: red_t("red.errors_page.bad_request.title"),
+        message: red_t("red.errors_page.bad_request.message"),
+        status: :bad_request
+      )
+    end
+
+    rescue_from ActionController::UnknownFormat do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Unknown format: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-file-earmark-x",
+        title: red_t("red.errors_page.not_acceptable.title"),
+        message: red_t("red.errors_page.not_acceptable.message"),
+        status: :not_acceptable
+      )
+    end
+
+    rescue_from ActionController::InvalidAuthenticityToken do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] CSRF token rejected: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-shield-exclamation",
+        title: red_t("red.errors_page.csrf.title"),
+        message: red_t("red.errors_page.csrf.message"),
+        # Numeric: Rack renamed the symbol (:unprocessable_entity is deprecated,
+        # :unprocessable_content is unknown to the Rack that Rails 7.0 uses).
+        status: 422
       )
     end
 
@@ -177,6 +224,14 @@ module RailsErrorDashboard
     end
 
     def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
+      # The styled page runs queries and names the host app's applications. A
+      # caller who has not authenticated gets the title and nothing else: no
+      # layout, no queries, and no exception detail.
+      unless @dashboard_authenticated
+        render plain: title, status: status
+        return
+      end
+
       set_common_view_variables
       error_html = <<~ERB
         <div class="red-empty-state" style="margin-top: var(--space-6);">
@@ -208,6 +263,10 @@ module RailsErrorDashboard
       else
         authenticate_with_basic_auth
       end
+
+      # performed? means a 401/403 (or a redirect from the host's lambda) has
+      # already been rendered. Read by render_dashboard_error.
+      @dashboard_authenticated = !performed?
     end
 
     def authenticate_with_lambda(auth_lambda)

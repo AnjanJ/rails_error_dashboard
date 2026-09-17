@@ -1001,6 +1001,16 @@ pt-BR:
           one: "%{count} tipo"
           other: "%{count} tipos"
           many: "%{count} tipos"
+    errors_page:
+      csrf:
+        title: "O token da sua sessão expirou"
+        message: "Volte, recarregue a página e tente novamente. Nada foi alterado."
+      bad_request:
+        title: "Não foi possível interpretar esta solicitação"
+        message: "Um valor obrigatório estava ausente ou malformado. Volte e tente novamente."
+      not_acceptable:
+        title: "Este formato não está disponível"
+        message: "O painel não consegue gerar o formato pedido por esta solicitação."
     settings:
       title: Configurações
       version: v%{version}

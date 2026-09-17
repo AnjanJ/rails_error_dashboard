@@ -1006,6 +1006,16 @@ es:
           one: "%{count} tipo"
           other: "%{count} tipos"
           many: "%{count} tipos"
+    errors_page:
+      csrf:
+        title: "El token de tu sesión ha caducado"
+        message: "Vuelve atrás, recarga la página e inténtalo de nuevo. No se ha modificado nada."
+      bad_request:
+        title: "No se ha podido interpretar esta solicitud"
+        message: "Faltaba un valor obligatorio o tenía un formato incorrecto. Vuelve atrás e inténtalo de nuevo."
+      not_acceptable:
+        title: "Este formato no está disponible"
+        message: "El panel no puede generar el formato que pedía esta solicitud."
     settings:
       title: Configuración
       version: v%{version}

@@ -1007,6 +1007,16 @@ fr:
           one: "%{count} type"
           other: "%{count} types"
           many: "%{count} types"
+    errors_page:
+      csrf:
+        title: "Votre jeton de session a expiré"
+        message: "Revenez en arrière, rechargez la page et réessayez. Rien n'a été modifié."
+      bad_request:
+        title: "Cette requête n'a pas pu être interprétée"
+        message: "Une valeur requise était absente ou mal formée. Revenez en arrière et réessayez."
+      not_acceptable:
+        title: "Ce format n'est pas disponible"
+        message: "Le tableau de bord ne peut pas produire le format demandé par cette requête."
     settings:
       title: Paramètres
       version: v%{version}

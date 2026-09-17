@@ -973,6 +973,16 @@ de:
         types:
           one: "%{count} Typ"
           other: "%{count} Typen"
+    errors_page:
+      csrf:
+        title: "Ihr Sitzungstoken ist abgelaufen"
+        message: "Gehen Sie zurück, laden Sie die Seite neu und versuchen Sie es erneut. Es wurde nichts geändert."
+      bad_request:
+        title: "Diese Anfrage konnte nicht verarbeitet werden"
+        message: "Ein erforderlicher Wert fehlte oder war fehlerhaft. Gehen Sie zurück und versuchen Sie es erneut."
+      not_acceptable:
+        title: "Dieses Format ist nicht verfügbar"
+        message: "Das Dashboard kann das angeforderte Format nicht erzeugen."
     settings:
       title: Einstellungen
       version: v%{version}
