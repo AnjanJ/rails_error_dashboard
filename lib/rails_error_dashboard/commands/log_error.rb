@@ -553,7 +553,7 @@ module RailsErrorDashboard
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
         elsif error_log.just_reopened
-          maybe_notify(error_log) { Services::NotificationThrottler.should_notify?(error_log) }
+          maybe_notify(error_log, respect_cooldown: true) { Services::NotificationThrottler.severity_meets_minimum?(error_log) }
           PluginRegistry.dispatch(:on_error_reopened, error_log)
           trigger_callbacks(error_log)
           emit_instrumentation_events(error_log)
@@ -590,14 +590,25 @@ module RailsErrorDashboard
       # Muted errors skip notifications but still fire plugin events/callbacks.
       # During a storm (breaker not closed) per-error notifications are
       # suppressed — a single storm notification replaces them.
-      def maybe_notify(error_log)
+      #
+      # respect_cooldown is true only for the reopened path, which is the only one
+      # the cooldown has ever applied to: a first occurrence and a threshold
+      # milestone always notify. They still stamp the row, so an error reopened
+      # minutes after its first notification is throttled.
+      def maybe_notify(error_log, respect_cooldown: false)
         return if error_log.muted?
         return if Services::StormProtection::Gate.notifications_suppressed?
         return unless Services::NotificationThrottler.environment_allowed?(error_log)
         return unless yield
 
+        # Claim, THEN send. The claim is a conditional UPDATE only one process can
+        # win, so N workers reopening the same error send one notification, not
+        # N. The price: if the send below fails, this error is not retried inside
+        # the cooldown window. Recording after sending is what let every process
+        # through.
+        return unless Services::NotificationThrottler.claim!(error_log, respect_cooldown: respect_cooldown)
+
         Services::ErrorNotificationDispatcher.call(error_log)
-        Services::NotificationThrottler.record_notification(error_log)
       rescue => e
         # The error row is already written by the time we get here. A channel
         # that cannot be reached (Redis down for the Slack job's enqueue, a

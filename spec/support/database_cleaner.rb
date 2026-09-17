@@ -7,6 +7,15 @@ RSpec.configure do |config|
   end
 
   config.around(:each) do |example|
+    # Examples that need rows COMMITTED, because other connections must see
+    # them (a cross-connection race). Same treatment as :migration below; the
+    # group also sets `self.use_transactional_tests = false`.
+    if example.metadata[:non_transactional]
+      example.run
+      DatabaseCleaner.clean_with(:deletion)
+      next
+    end
+
     case example.metadata[:type]
     when :system
       # System specs use Rails transactional fixtures (Cuprite shares the AR connection)

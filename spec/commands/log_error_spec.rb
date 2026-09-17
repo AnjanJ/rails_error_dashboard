@@ -406,8 +406,10 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         error1 = described_class.call(exception, context)
         error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
 
-        # Clear cooldown from first notification so reopened error can notify
-        RailsErrorDashboard::Services::NotificationThrottler.clear!
+        # Put the first notification outside the cooldown so the reopened error
+        # can notify. The cooldown lives on the row now, so clearing this
+        # process's memory (what this example used to do) no longer resets it.
+        error1.update_columns(last_notified_at: 10.minutes.ago)
 
         # Reopened — should send notification
         expect {
@@ -526,6 +528,55 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         expect {
           described_class.call(exception, context)
         }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      # The first notification was sent by ANOTHER process: this one has no
+      # memory of it (clear!), only the row does. A per-process cooldown
+      # notified again here, once per worker.
+      it 'does not notify a reopened error within cooldown when a different process sent the first notification' do
+        RailsErrorDashboard.configuration.notification_cooldown_minutes = 60
+
+        error1 = described_class.call(exception, context)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
+        RailsErrorDashboard::Services::NotificationThrottler.clear!
+
+        expect {
+          described_class.call(exception, context)
+        }.not_to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'notifies a reopened error once the cooldown has passed' do
+        RailsErrorDashboard.configuration.notification_cooldown_minutes = 60
+
+        error1 = described_class.call(exception, context)
+        error1.update!(resolved: true, status: "resolved", resolved_at: Time.current)
+
+        travel_to(61.minutes.from_now) do
+          expect {
+            described_class.call(exception, context)
+          }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+        end
+      end
+
+      it 'still notifies a threshold milestone inside the cooldown' do
+        RailsErrorDashboard.configuration.notification_cooldown_minutes = 60
+        RailsErrorDashboard.configuration.notification_threshold_alerts = [ 3 ]
+
+        error1 = described_class.call(exception, context) # notified, row stamped
+        error1.update!(occurrence_count: 2)
+
+        expect {
+          described_class.call(exception, context)
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
+      end
+
+      it 'notifies when the claim itself fails (fail-open)' do
+        allow(RailsErrorDashboard::Services::NotificationThrottler).to receive(:claim_in_database)
+          .and_raise(ActiveRecord::StatementInvalid, "db down")
+
+        expect {
+          described_class.call(exception, context)
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
       end
 
       it 'notifies recurring error at threshold milestone' do
