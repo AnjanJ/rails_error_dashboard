@@ -90,18 +90,25 @@ end
 
 # Helper: Log an error and return the ErrorLog record
 # Handles both sync (returns ErrorLog) and async (returns job, need to look up record)
+#
+# The async lookup matches on the MESSAGE, not just the error class. Matching
+# only on error_type returned the newest RuntimeError row for every caller, so
+# three errors raised in a row handed back the same record three times: any
+# caller that collected the ids then worked with duplicates (a batch of 3 ids
+# resolved 2 distinct rows). Messages carry a random suffix in these scripts,
+# so they identify the row the way the class name cannot.
 def log_error_and_find(exception, context = {})
   result = RailsErrorDashboard::Commands::LogError.call(exception, context)
 
   # In sync mode, result IS the ErrorLog
   return result if result.is_a?(RailsErrorDashboard::ErrorLog)
 
-  # In async mode with inline adapter, the job already ran but returned the job instance.
-  # Look up the most recently created error matching this exception.
-  RailsErrorDashboard::ErrorLog
-    .where(error_type: exception.class.name)
-    .order(id: :desc)
-    .first
+  # In async mode with inline adapter, the job already ran but returned the job
+  # instance. Find THIS exception's row by its message, falling back to the
+  # newest row of that class when the message is not distinctive.
+  scope = RailsErrorDashboard::ErrorLog.where(error_type: exception.class.name)
+  scope.where(message: exception.message).order(id: :desc).first ||
+    scope.order(id: :desc).first
 end
 
 # Helper: Find the most recent ErrorLog for a given error type
