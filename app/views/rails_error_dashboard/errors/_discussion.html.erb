@@ -1,4 +1,7 @@
 <% has_linked_issue = error.respond_to?(:external_issue_url) && error.external_issue_url.present? %>
+<%# nil when the stored value is not plain http(s); the button is then omitted
+    (the issue card explains why). See safe_external_url. %>
+<% discussion_issue_url = has_linked_issue ? safe_external_url(error.external_issue_url) : nil %>
 <% has_audit_comments = error.respond_to?(:comments) && error.comments.any? %>
 <% platform_comments = @platform_comments || [] %>
 <% issue_tracking_enabled = RailsErrorDashboard.configuration.enable_issue_tracking %>
@@ -30,9 +33,11 @@
           <span class="badge bg-secondary ms-2"><%= platform_comments.size %></span>
         <% end %>
       </h5>
-      <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.reply_on", provider: discussion_provider) %>
-      </a>
+      <% if discussion_issue_url %>
+        <a href="<%= discussion_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.reply_on", provider: discussion_provider) %>
+        </a>
+      <% end %>
     </div>
     <div class="card-body p-0">
       <% if platform_comments.any? %>
@@ -40,8 +45,8 @@
           <% platform_comments.each_with_index do |comment, index| %>
             <div class="px-3 py-3 <%= index < platform_comments.size - 1 ? 'border-bottom' : '' %>">
               <div class="d-flex align-items-start gap-2 mb-2">
-                <% if comment[:avatar_url].present? %>
-                  <img src="<%= comment[:avatar_url] %>" alt="<%= comment[:author] %>" width="24" height="24" class="rounded-circle" style="flex-shrink: 0;">
+                <% if (avatar = safe_external_url(comment[:avatar_url])) %>
+                  <img src="<%= avatar %>" alt="<%= comment[:author] %>" width="24" height="24" class="rounded-circle" style="flex-shrink: 0;">
                 <% else %>
                   <i class="bi bi-person-circle" style="font-size: 1.3em; flex-shrink: 0;"></i>
                 <% end %>
@@ -84,9 +89,11 @@
       <h5 class="mb-0">
         <i class="bi bi-chat-dots"></i> <%= red_t("red.errors.discussion.title") %>
       </h5>
-      <a href="<%= error.external_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.start_on", provider: discussion_provider) %>
-      </a>
+      <% if discussion_issue_url %>
+        <a href="<%= discussion_issue_url %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-box-arrow-up-right me-1"></i> <%= red_t("red.errors.discussion.start_on", provider: discussion_provider) %>
+        </a>
+      <% end %>
     </div>
     <div class="card-body text-center py-3">
       <p class="text-muted small mb-0"><%= red_t("red.errors.discussion.empty", provider: discussion_provider_lc) %></p>

@@ -10,7 +10,13 @@ module RailsErrorDashboard
     # Declaring it here inverts the default: a controller is protected unless
     # it explicitly opts out with skip_before_action, which is a visible,
     # reviewable act rather than an omission nobody notices.
-    before_action :authenticate_dashboard_user!
+    #
+    # Prepended so it runs before the CSRF check. A host app with
+    # default_protect_from_forgery registers verify_authenticity_token on
+    # ActionController::Base, ahead of anything declared here; an unauthenticated
+    # POST was then answered about its token (and by the error renderer) instead
+    # of with a 401.
+    prepend_before_action :authenticate_dashboard_user!
 
     include Pagy::Method
 
@@ -46,7 +52,9 @@ module RailsErrorDashboard
       # Log the error for debugging
       Rails.logger.error("[RailsErrorDashboard] Dashboard controller error: #{exception.class} - #{exception.message}")
       Rails.logger.error("Request: #{request.path} (#{request.method})")
-      Rails.logger.error("Params: #{params.inspect}")
+      # filtered_parameters, not params.inspect: the host app's filter_parameters
+      # must apply to the dashboard's log lines too.
+      Rails.logger.error("Params: #{request.filtered_parameters.inspect}")
       Rails.logger.error(exception.backtrace&.first(10)&.join("\n")) if exception.backtrace
 
       render_dashboard_error(
@@ -72,6 +80,45 @@ module RailsErrorDashboard
       )
     end
 
+    # Client mistakes are not dashboard failures. Without these, the catch-all
+    # above answered 500 "Something went wrong" for an expired CSRF token, which
+    # is both the wrong status and the wrong advice. One warn line each, and no
+    # parameters: a rejected form post is exactly where a secret would be.
+    rescue_from ActionController::ParameterMissing, ActionController::BadRequest do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Bad request: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-x-octagon",
+        title: red_t("red.errors_page.bad_request.title"),
+        message: red_t("red.errors_page.bad_request.message"),
+        status: :bad_request
+      )
+    end
+
+    rescue_from ActionController::UnknownFormat do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] Unknown format: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-file-earmark-x",
+        title: red_t("red.errors_page.not_acceptable.title"),
+        message: red_t("red.errors_page.not_acceptable.message"),
+        status: :not_acceptable
+      )
+    end
+
+    rescue_from ActionController::InvalidAuthenticityToken do |exception|
+      Rails.logger.warn("[RailsErrorDashboard] CSRF token rejected: #{exception.class} on #{request.method} #{request.path}")
+
+      render_dashboard_error(
+        icon: "bi-shield-exclamation",
+        title: red_t("red.errors_page.csrf.title"),
+        message: red_t("red.errors_page.csrf.message"),
+        # Numeric: Rack renamed the symbol (:unprocessable_entity is deprecated,
+        # :unprocessable_content is unknown to the Rack that Rails 7.0 uses).
+        status: 422
+      )
+    end
+
     # Handle Pagy pagination errors — redirect to page 1, preserving filters.
     # Drop both :page and :per_page from the preserved query string. Either can
     # trigger the rescue (page out of range, per_page negative or non-numeric);
@@ -83,6 +130,9 @@ module RailsErrorDashboard
       target = preserved.any? ? "#{request.path}?#{preserved.to_query}" : request.path
       redirect_to target, status: :see_other
     end
+
+    DEFAULT_PER_PAGE = 25
+    MAX_PER_PAGE = 100
 
     private
 
@@ -176,7 +226,26 @@ module RailsErrorDashboard
       @resolved_pagy_locales ||= {}
     end
 
+    # Page size for every paginated action. Only the upper bound is enforced
+    # here: a value that is not a positive integer is passed through unchanged
+    # so that Pagy rejects it and the rescue above redirects, as it always has.
+    def per_page_param
+      raw = params[:per_page]
+      return DEFAULT_PER_PAGE if raw.blank?
+
+      number = Integer(raw, exception: false) if raw.is_a?(String)
+      number && number > MAX_PER_PAGE ? MAX_PER_PAGE : raw
+    end
+
     def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
+      # The styled page runs queries and names the host app's applications. A
+      # caller who has not authenticated gets the title and nothing else: no
+      # layout, no queries, and no exception detail.
+      unless @dashboard_authenticated
+        render plain: title, status: status
+        return
+      end
+
       set_common_view_variables
       error_html = <<~ERB
         <div class="red-empty-state" style="margin-top: var(--space-6);">
@@ -208,6 +277,10 @@ module RailsErrorDashboard
       else
         authenticate_with_basic_auth
       end
+
+      # performed? means a 401/403 (or a redirect from the host's lambda) has
+      # already been rendered. Read by render_dashboard_error.
+      @dashboard_authenticated = !performed?
     end
 
     def authenticate_with_lambda(auth_lambda)
@@ -229,14 +302,22 @@ module RailsErrorDashboard
 
     def authenticate_with_basic_auth
       authenticate_or_request_with_http_basic do |username, password|
-        ActiveSupport::SecurityUtils.secure_compare(
-          username,
-          RailsErrorDashboard.configuration.dashboard_username
-        ) &
-        ActiveSupport::SecurityUtils.secure_compare(
-          password,
-          RailsErrorDashboard.configuration.dashboard_password
-        )
+        # A Basic header need not decode to "user:pass": with no colon the
+        # password is nil, with nothing decodable both are. secure_compare
+        # raises on nil, which used to surface as a 500 rendered by the
+        # dashboard's own error page. A malformed header is a failed login.
+        next false if username.nil? || password.nil?
+
+        # A credential configured as nil must deny everyone. Coercing it with
+        # to_s would make it equal to an empty login ("Basic Og==" is ":").
+        expected_username = RailsErrorDashboard.configuration.dashboard_username
+        expected_password = RailsErrorDashboard.configuration.dashboard_password
+        next false if expected_username.nil? || expected_password.nil?
+
+        # Non-short-circuit & on purpose: both comparisons always run, so the
+        # response time does not reveal which half was wrong.
+        ActiveSupport::SecurityUtils.secure_compare(username.to_s, expected_username.to_s) &
+          ActiveSupport::SecurityUtils.secure_compare(password.to_s, expected_password.to_s)
       end
     end
   end

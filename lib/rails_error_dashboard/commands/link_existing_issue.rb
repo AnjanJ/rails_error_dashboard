@@ -32,6 +32,7 @@ module RailsErrorDashboard
 
       def call
         return { success: false, error: red_t("red.commands.issue.url_required") } if @issue_url.blank?
+        return { success: false, error: red_t("red.commands.issue.url_invalid") } unless Services::UrlSafety.http_url?(@issue_url)
 
         error = ErrorLog.find(@error_id)
         parsed = parse_issue_url(@issue_url)

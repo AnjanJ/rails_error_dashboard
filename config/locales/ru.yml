@@ -441,6 +441,7 @@ ru:
       issue_section:
         title: Трекер задач
         view_issue: Открыть задачу
+        unsafe_link: "Эта ссылка на задачу не является URL-адресом http(s), поэтому она показана как текст и не может быть открыта."
         linked: Привязана
         issue_reference: "%{provider} #%{number}"
         states:
@@ -1019,6 +1020,16 @@ ru:
           other: "%{count} типа"
           few: "%{count} типа"
           many: "%{count} типов"
+    errors_page:
+      csrf:
+        title: "Срок действия токена сеанса истёк"
+        message: "Вернитесь назад, перезагрузите страницу и повторите попытку. Ничего не было изменено."
+      bad_request:
+        title: "Не удалось обработать этот запрос"
+        message: "Обязательное значение отсутствовало или имело неверный формат. Вернитесь назад и повторите попытку."
+      not_acceptable:
+        title: "Этот формат недоступен"
+        message: "Панель не может сформировать формат, запрошенный в этом запросе."
     settings:
       title: Настройки
       version: v%{version}
@@ -1315,6 +1326,7 @@ ru:
         not_configured: Отслеживание задач не настроено
         already_linked: 'К ошибке уже привязана задача: %{url}'
         url_required: Требуется URL задачи
+        url_invalid: URL задачи должен начинаться с http:// или https://
       error_not_found: 'Ошибка не найдена: %{id}'
       batch_failed:
         mute:

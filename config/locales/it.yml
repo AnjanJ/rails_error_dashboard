@@ -431,6 +431,7 @@ it:
       issue_section:
         title: Sistema di segnalazioni
         view_issue: Vedi la segnalazione
+        unsafe_link: "Questo link alla segnalazione non è un URL http(s), quindi viene mostrato come testo e non può essere aperto."
         linked: Collegata
         issue_reference: "%{provider} #%{number}"
         states:
@@ -996,6 +997,16 @@ it:
           one: "%{count} tipo"
           other: "%{count} tipi"
           many: "%{count} tipi"
+    errors_page:
+      csrf:
+        title: "Il token di sessione è scaduto"
+        message: "Torna indietro, ricarica la pagina e riprova. Non è stato modificato nulla."
+      bad_request:
+        title: "Impossibile interpretare questa richiesta"
+        message: "Un valore obbligatorio era assente o non valido. Torna indietro e riprova."
+      not_acceptable:
+        title: "Questo formato non è disponibile"
+        message: "La dashboard non può produrre il formato richiesto."
     settings:
       title: Impostazioni
       version: v%{version}
@@ -1285,6 +1296,7 @@ it:
         not_configured: Il tracciamento delle segnalazioni non è configurato
         already_linked: 'L''errore ha già una segnalazione collegata: %{url}'
         url_required: L'URL della segnalazione è obbligatorio
+        url_invalid: L'URL della segnalazione deve iniziare con http:// o https://
       error_not_found: 'Errore non trovato: %{id}'
       batch_failed:
         mute:

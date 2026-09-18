@@ -382,6 +382,7 @@ ja:
       issue_section:
         title: イシュートラッカー
         view_issue: イシューを表示
+        unsafe_link: "このイシューのリンクは http(s) の URL ではないため、テキストとして表示され、開くことはできません。"
         linked: 連携済み
         issue_reference: "%{provider} #%{number}"
         states:
@@ -874,6 +875,16 @@ ja:
         user_types_html: ユーザー %{user} · %{types}
         types:
           other: "%{count}種類"
+    errors_page:
+      csrf:
+        title: "セッショントークンの有効期限が切れました"
+        message: "前のページに戻って再読み込みし、もう一度お試しください。変更は行われていません。"
+      bad_request:
+        title: "このリクエストを処理できませんでした"
+        message: "必須の値が不足しているか、形式が正しくありません。前のページに戻って、もう一度お試しください。"
+      not_acceptable:
+        title: "この形式は利用できません"
+        message: "リクエストされた形式をダッシュボードで生成することはできません。"
     settings:
       title: 設定
       version: v%{version}
@@ -1106,6 +1117,7 @@ ja:
         not_configured: イシュートラッキングが設定されていません
         already_linked: 'このエラーにはすでにイシューが連携されています: %{url}'
         url_required: イシューの URL を入力してください
+        url_invalid: イシューの URL は http:// または https:// で始まる必要があります
       error_not_found: 'エラーが見つかりません: %{id}'
       batch_failed:
         mute:

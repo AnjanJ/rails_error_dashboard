@@ -313,10 +313,10 @@
     new Chart(errorRateCtx, {
       type: 'bar',
       data: {
-        labels: <%= raw @error_rate_by_platform.keys.map { |k| k.to_s.capitalize }.to_json %>,
+        labels: <%= js_safe_json(@error_rate_by_platform.keys.map { |k| k.to_s.capitalize }) %>,
         datasets: [{
           label: '<%= red_js_t("red.ui_js.charts.series_total_errors") %>',
-          data: <%= raw @error_rate_by_platform.values.to_json %>,
+          data: <%= js_safe_json(@error_rate_by_platform.values) %>,
           backgroundColor: 'rgba(37, 99, 235, 0.5)', // Blue with transparency
           borderColor: '#2563EB', // Blue
           borderWidth: 1
@@ -338,14 +338,14 @@
   // Daily Trend Chart
   const dailyTrendCtx = document.getElementById('dailyTrendChart');
   if (dailyTrendCtx) {
-    const datasets = <%= raw @daily_trends.map { |platform, data|
+    const datasets = <%= js_safe_json(@daily_trends.map { |platform, data|
       {
         label: platform.to_s.capitalize,
         data: data.values,
         platform: platform.to_s.downcase,
         tension: 0.4
       }
-    }.to_json %>;
+    }) %>;
 
     // Apply platform-specific colors
     datasets.forEach(ds => {
@@ -358,7 +358,7 @@
     new Chart(dailyTrendCtx, {
       type: 'line',
       data: {
-        labels: <%= raw @daily_trends.values.first&.keys&.map { |d| red_chart_date(d) }&.to_json || [].to_json %>,
+        labels: <%= js_safe_json(@daily_trends.values.first&.keys&.map { |d| red_chart_date(d) } || []) %>,
         datasets: datasets
       },
       options: {
@@ -377,8 +377,8 @@
   // Resolution Time Chart
   const resolutionTimeCtx = document.getElementById('resolutionTimeChart');
   if (resolutionTimeCtx) {
-    const platforms = <%= raw @resolution_times.keys.map { |k| k.to_s.capitalize }.to_json %>;
-    const times = <%= raw @resolution_times.values.map { |v| v || 0 }.to_json %>;
+    const platforms = <%= js_safe_json(@resolution_times.keys.map { |k| k.to_s.capitalize }) %>;
+    const times = <%= js_safe_json(@resolution_times.values.map { |v| v || 0 }) %>;
 
     new Chart(resolutionTimeCtx, {
       type: 'bar',

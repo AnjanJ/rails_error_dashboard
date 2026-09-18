@@ -2,7 +2,8 @@
 
 module RailsErrorDashboard
   class ErrorsController < ApplicationController
-    before_action :authenticate_dashboard_user!
+    # Authentication is declared once, on ApplicationController, and prepended.
+    # Re-declaring it here moved it to the END of the chain, behind the CSRF check.
     before_action :set_application_context
     before_action :check_default_credentials
     before_action :load_storm_banner
@@ -90,7 +91,7 @@ module RailsErrorDashboard
       # on out-of-range pages (e.g. ?page=999999) so application_controller.rb's
       # rescue_from can redirect to a valid page. Without this, pagy 43.x silently
       # returns an empty result and users see "All clear!" instead of their data.
-      @pagy, @errors = pagy(:offset, errors_query, limit: params[:per_page] || 25, raise_range_error: true)
+      @pagy, @errors = pagy(:offset, errors_query, limit: per_page_param, raise_range_error: true)
 
       # Get dashboard stats using Query (pass application filter)
       @stats = Queries::DashboardStats.call(application_id: @current_application_id)
@@ -396,7 +397,7 @@ module RailsErrorDashboard
       @current_release = all_releases.find { |r| r[:current] }
       @problematic_release_count = all_releases.count { |r| r[:problematic] }
 
-      @pagy, @releases = pagy(:offset, all_releases, limit: params[:per_page] || 25)
+      @pagy, @releases = pagy(:offset, all_releases, limit: per_page_param)
     end
 
     def storms
@@ -412,7 +413,7 @@ module RailsErrorDashboard
       all_entries = result[:entries]
       @summary = result[:summary]
 
-      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
     def deprecations
@@ -432,7 +433,7 @@ module RailsErrorDashboard
       @total_count = all_deprecations.sum { |d| d[:count] }
       @affected_count = all_deprecations.flat_map { |d| d[:error_ids] }.uniq.size
 
-      @pagy, @deprecations = pagy(:offset, all_deprecations, limit: params[:per_page] || 25)
+      @pagy, @deprecations = pagy(:offset, all_deprecations, limit: per_page_param)
     end
 
     def n_plus_one_summary
@@ -452,7 +453,7 @@ module RailsErrorDashboard
       @total_count = all_patterns.sum { |p| p[:count] }
       @affected_count = all_patterns.flat_map { |p| p[:error_ids] }.uniq.size
 
-      @pagy, @patterns = pagy(:offset, all_patterns, limit: params[:per_page] || 25)
+      @pagy, @patterns = pagy(:offset, all_patterns, limit: per_page_param)
     end
 
     def cache_health_summary
@@ -473,7 +474,7 @@ module RailsErrorDashboard
       @avg_hit_rate = non_nil_rates.any? ? (non_nil_rates.sum / non_nil_rates.size).round(1) : nil
       @total_cache_ops = all_entries.sum { |e| e[:reads] + e[:writes] }
 
-      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
     def job_health_summary
@@ -493,7 +494,7 @@ module RailsErrorDashboard
       @total_failed = all_entries.sum { |e| e[:failed] || e[:errored] || 0 }
       @adapters_detected = all_entries.map { |e| e[:adapter] }.uniq
 
-      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
     def database_health_summary
@@ -524,7 +525,7 @@ module RailsErrorDashboard
       @total_dead = all_entries.sum { |e| e[:dead] }
       @total_waiting = all_entries.sum { |e| e[:waiting] }
 
-      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
     def swallowed_exceptions
@@ -549,7 +550,7 @@ module RailsErrorDashboard
       @total_rescue_count = all_entries.sum { |e| e[:rescue_count] }
       @total_raise_count = all_entries.sum { |e| e[:raise_count] }
 
-      @pagy, @entries = pagy(:offset, all_entries, limit: params[:per_page] || 25)
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
     def rack_attack_summary
@@ -579,7 +580,7 @@ module RailsErrorDashboard
       # never silently understated.
       @overflow_count = result[:overflow_count].to_i
 
-      @pagy, @events = pagy(:offset, all_events, limit: params[:per_page] || 25)
+      @pagy, @events = pagy(:offset, all_events, limit: per_page_param)
     end
 
     def actioncable_health_summary
@@ -600,7 +601,7 @@ module RailsErrorDashboard
       @total_events = all_channels.sum { |c| c[:total_events] }
       @total_rejections = all_channels.sum { |c| c[:rejection_count] }
 
-      @pagy, @channels = pagy(:offset, all_channels, limit: params[:per_page] || 25)
+      @pagy, @channels = pagy(:offset, all_channels, limit: per_page_param)
     end
 
     def llm_health_summary
@@ -620,7 +621,7 @@ module RailsErrorDashboard
       @totals = result[:totals]
       all_models = result[:models]
 
-      @pagy, @models = pagy(:offset, all_models, limit: params[:per_page] || 25)
+      @pagy, @models = pagy(:offset, all_models, limit: per_page_param)
     end
 
     def activestorage_health_summary
@@ -641,7 +642,7 @@ module RailsErrorDashboard
       @total_operations = all_services.sum { |s| s[:total_operations] }
       @errors_with_storage = all_services.sum { |s| s[:error_count] }
 
-      @pagy, @services = pagy(:offset, all_services, limit: params[:per_page] || 25)
+      @pagy, @services = pagy(:offset, all_services, limit: per_page_param)
     end
 
     def diagnostic_dumps
@@ -657,7 +658,7 @@ module RailsErrorDashboard
       # The newest dump overall; the "latest" cards must not change with the page.
       @latest_dump = scope.first
 
-      @pagy, @dumps = pagy(:offset, scope, limit: params[:per_page] || 25)
+      @pagy, @dumps = pagy(:offset, scope, limit: per_page_param)
     end
 
     def create_diagnostic_dump

@@ -436,6 +436,7 @@ es:
       issue_section:
         title: Gestor de issues
         view_issue: Ver la issue
+        unsafe_link: "Este enlace a la issue no es una URL http(s), por lo que se muestra como texto y no se puede abrir."
         linked: Vinculada
         issue_reference: "%{provider} n.º %{number}"
         states:
@@ -1005,6 +1006,16 @@ es:
           one: "%{count} tipo"
           other: "%{count} tipos"
           many: "%{count} tipos"
+    errors_page:
+      csrf:
+        title: "El token de tu sesión ha caducado"
+        message: "Vuelve atrás, recarga la página e inténtalo de nuevo. No se ha modificado nada."
+      bad_request:
+        title: "No se ha podido interpretar esta solicitud"
+        message: "Faltaba un valor obligatorio o tenía un formato incorrecto. Vuelve atrás e inténtalo de nuevo."
+      not_acceptable:
+        title: "Este formato no está disponible"
+        message: "El panel no puede generar el formato que pedía esta solicitud."
     settings:
       title: Configuración
       version: v%{version}
@@ -1296,6 +1307,7 @@ es:
         not_configured: El seguimiento de issues no está configurado
         already_linked: 'El error ya tiene una issue vinculada: %{url}'
         url_required: La URL de la issue es obligatoria
+        url_invalid: La URL de la issue debe empezar por http:// o https://
       error_not_found: 'Error no encontrado: %{id}'
       batch_failed:
         mute:

@@ -436,6 +436,7 @@ pt-BR:
       issue_section:
         title: Rastreador de issues
         view_issue: Ver a issue
+        unsafe_link: "Este link da issue não é uma URL http(s), por isso é exibido como texto e não pode ser aberto."
         linked: Vinculada
         issue_reference: "%{provider} nº %{number}"
         states:
@@ -1000,6 +1001,16 @@ pt-BR:
           one: "%{count} tipo"
           other: "%{count} tipos"
           many: "%{count} tipos"
+    errors_page:
+      csrf:
+        title: "O token da sua sessão expirou"
+        message: "Volte, recarregue a página e tente novamente. Nada foi alterado."
+      bad_request:
+        title: "Não foi possível interpretar esta solicitação"
+        message: "Um valor obrigatório estava ausente ou malformado. Volte e tente novamente."
+      not_acceptable:
+        title: "Este formato não está disponível"
+        message: "O painel não consegue gerar o formato pedido por esta solicitação."
     settings:
       title: Configurações
       version: v%{version}
@@ -1286,6 +1297,7 @@ pt-BR:
         not_configured: O rastreamento de issues não está configurado
         already_linked: 'O erro já tem uma issue vinculada: %{url}'
         url_required: A URL da issue é obrigatória
+        url_invalid: A URL da issue deve começar com http:// ou https://
       error_not_found: 'Erro não encontrado: %{id}'
       batch_failed:
         mute:

@@ -168,9 +168,10 @@ RSpec.describe "Language picker", type: :request do
       post "/error_dashboard/locale", params: { locale: "xh" }
 
       # The engine's rescue_from renders its own error page rather than letting
-      # the raise escape, so the observable outcome is a 500 and no persisted
-      # locale — not an exception reaching the spec.
-      expect(response).to have_http_status(:internal_server_error)
+      # the raise escape, so the observable outcome is a 422 and no persisted
+      # locale — not an exception reaching the spec. (It was a 500 until the
+      # catch-all stopped swallowing InvalidAuthenticityToken.)
+      expect(response).to have_http_status(422)
       expect(session[:red_locale]).to be_nil
     end
 

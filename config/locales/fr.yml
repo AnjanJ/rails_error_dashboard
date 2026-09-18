@@ -438,6 +438,7 @@ fr:
       issue_section:
         title: Gestionnaire d'issues
         view_issue: Voir l'issue
+        unsafe_link: "Ce lien vers l'issue n'est pas une URL http(s) : il est affiché sous forme de texte et ne peut pas être ouvert."
         linked: Liée
         issue_reference: "%{provider} n°%{number}"
         states:
@@ -1006,6 +1007,16 @@ fr:
           one: "%{count} type"
           other: "%{count} types"
           many: "%{count} types"
+    errors_page:
+      csrf:
+        title: "Votre jeton de session a expiré"
+        message: "Revenez en arrière, rechargez la page et réessayez. Rien n'a été modifié."
+      bad_request:
+        title: "Cette requête n'a pas pu être interprétée"
+        message: "Une valeur requise était absente ou mal formée. Revenez en arrière et réessayez."
+      not_acceptable:
+        title: "Ce format n'est pas disponible"
+        message: "Le tableau de bord ne peut pas produire le format demandé par cette requête."
     settings:
       title: Paramètres
       version: v%{version}
@@ -1295,6 +1306,7 @@ fr:
         not_configured: Le suivi des issues n'est pas configuré
         already_linked: 'L''erreur a déjà une issue liée : %{url}'
         url_required: L'URL de l'issue est requise
+        url_invalid: L'URL de l'issue doit commencer par http:// ou https://
       error_not_found: 'Erreur introuvable : %{id}'
       batch_failed:
         mute:

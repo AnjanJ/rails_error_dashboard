@@ -438,6 +438,7 @@ pl:
       issue_section:
         title: System zgłoszeń
         view_issue: Zobacz zgłoszenie
+        unsafe_link: "Ten odnośnik do zgłoszenia nie jest adresem URL http(s), dlatego jest wyświetlany jako tekst i nie można go otworzyć."
         linked: Powiązane
         issue_reference: "%{provider} #%{number}"
         states:
@@ -1016,6 +1017,16 @@ pl:
           other: "%{count} typu"
           few: "%{count} typy"
           many: "%{count} typów"
+    errors_page:
+      csrf:
+        title: "Token sesji wygasł"
+        message: "Wróć, odśwież stronę i spróbuj ponownie. Nic nie zostało zmienione."
+      bad_request:
+        title: "Nie udało się zrozumieć tego żądania"
+        message: "Brakowało wymaganej wartości lub była ona nieprawidłowa. Wróć i spróbuj ponownie."
+      not_acceptable:
+        title: "Ten format jest niedostępny"
+        message: "Panel nie może wygenerować formatu, o który poproszono w tym żądaniu."
     settings:
       title: Ustawienia
       version: v%{version}
@@ -1315,6 +1326,7 @@ pl:
         not_configured: Śledzenie zgłoszeń nie jest skonfigurowane
         already_linked: 'Błąd ma już powiązane zgłoszenie: %{url}'
         url_required: Adres URL zgłoszenia jest wymagany
+        url_invalid: Adres URL zgłoszenia musi zaczynać się od http:// lub https://
       error_not_found: 'Nie znaleziono błędu: %{id}'
       batch_failed:
         mute:

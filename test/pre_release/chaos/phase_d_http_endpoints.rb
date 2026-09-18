@@ -219,8 +219,8 @@ end
 eid = test_error.id
 
 # POST endpoints require CSRF token — without it, Rails returns 422 (CSRF protection)
-assert_http "POST assign blocked by CSRF", post_status("/errors/#{eid}/assign", { assigned_to: "Gandalf" }), 422..500
-assert_http "POST resolve blocked by CSRF", post_status("/errors/#{eid}/resolve", { resolved_by_name: "Aragorn" }), 422..500
+assert_http "POST assign blocked by CSRF", post_status("/errors/#{eid}/assign", { assigned_to: "Gandalf" }), 422..422
+assert_http "POST resolve blocked by CSRF", post_status("/errors/#{eid}/resolve", { resolved_by_name: "Aragorn" }), 422..422
 puts "  (POST actions require CSRF token — correct Rails security behavior)"
 
 # Verify workflow commands still work directly
@@ -250,7 +250,7 @@ assert_http "POST batch_action blocked by CSRF", post_status("/errors/batch_acti
   "error_ids[]" => batch_ids.first,
   action_type: "resolve",
   resolved_by_name: "Gandalf"
-}), 422..500
+}), 422..422
 
 # Direct batch resolve works
 result = RailsErrorDashboard::Commands::BatchResolveErrors.call(batch_ids, resolved_by_name: "Gimli")
@@ -341,6 +341,69 @@ if env_error
 else
   assert "captured error for environment check", false, "log_error_and_find returned nil"
 end
+puts ""
+
+# ---------------------------------------------------------------------------
+# D-HARDENING: request handling and output hardening (0.13.0)
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("D-HARDENING: links, auth headers, CSRF status, page size")
+
+def raw_status(path, authorization: nil, method: :get)
+  uri = URI.parse("#{HTTP_BASE}#{path}")
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.open_timeout = 10
+  http.read_timeout = 30
+  request = (method == :post ? Net::HTTP::Post : Net::HTTP::Get).new(uri.request_uri)
+  request["Authorization"] = authorization if authorization
+  http.request(request).code.to_i
+rescue => e
+  "ERROR: #{e.class}: #{e.message}"
+end
+
+hardening_error = begin
+  raise RuntimeError, "Hardening chaos #{SecureRandom.hex(4)}"
+rescue => e
+  log_error_and_find(e, { platform: "Web" })
+end
+
+if hardening_error
+  hid = hardening_error.id
+
+  # Write time: only http(s) issue URLs are accepted.
+  rejected = RailsErrorDashboard::Commands::LinkExistingIssue.call(hid, issue_url: "javascript:window.x=1")
+  assert "link_issue rejects a javascript: URL", rejected[:success] == false
+  assert "rejected URL is not stored", hardening_error.reload.external_issue_url.nil?
+
+  # Render time: a row stored before that check existed must still be inert.
+  if RailsErrorDashboard.configuration.enable_issue_tracking
+    hardening_error.update_columns(external_issue_url: "javascript:window.x=1", external_issue_number: 1)
+    body = get_body("/errors/#{hid}")
+    assert "error page renders with a legacy unsafe link", body.include?("Hardening chaos")
+    assert "legacy unsafe link is never an href", !body.match?(/href\s*=\s*["']?\s*javascript:/i)
+    hardening_error.update_columns(external_issue_url: nil, external_issue_number: nil)
+  end
+
+  accepted = RailsErrorDashboard::Commands::LinkExistingIssue.call(hid, issue_url: "https://github.com/a/b/issues/1")
+  assert "link_issue still accepts an https URL", accepted[:success] == true
+  assert_http "GET error page with a valid linked issue", get_status("/errors/#{hid}")
+
+  # CSRF is a client error, not a dashboard failure.
+  assert_http "POST without CSRF token is exactly 422", post_status("/errors/#{hid}/resolve", { resolved_by_name: "x" }), 422..422
+  assert_http "unauthenticated POST is 401, not a CSRF answer", raw_status("/errors/#{hid}/resolve", method: :post), 401..401
+else
+  assert "captured error for hardening checks", false, "log_error_and_find returned nil"
+end
+
+# A malformed Basic header is a failed login, never a 500.
+assert_http "Basic header with no colon is 401", raw_status("/errors", authorization: "Basic dXNlcm9ubHk="), 401..401
+assert_http "Basic header with no value is 401", raw_status("/errors", authorization: "Basic "), 401..401
+assert_http "Basic header that is not base64 is 401", raw_status("/errors", authorization: "Basic !!!notbase64"), 401..401
+assert_http "no Authorization header is 401", raw_status("/errors"), 401..401
+
+# Page size is capped; nonsense still recovers by redirect.
+assert_http "GET /errors?per_page=9999999 renders", get_status("/errors?per_page=9999999"), 200..200
+assert "per_page=9999999 renders at most 100 rows", get_body("/errors?per_page=9999999&unresolved=0").scan(/id="error_\d+"/).size <= 100
+assert_http "GET /errors/analytics with hostile chart data renders", get_status("/errors/analytics")
 puts ""
 
 # ---------------------------------------------------------------------------

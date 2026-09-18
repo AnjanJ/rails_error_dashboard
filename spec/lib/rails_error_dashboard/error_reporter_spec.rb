@@ -29,7 +29,10 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
 
       occurrence = RailsErrorDashboard::ErrorOccurrence.last
       expect(occurrence.request_id).to eq("req-round-trip")
-      expect(occurrence.session_id).to eq("sess-round-trip")
+      # Stored as a keyed digest, never raw (filter_sensitive_data is on by default).
+      expect(occurrence.session_id)
+        .to eq(RailsErrorDashboard::Services::SensitiveDataFilter.digest_session_id("sess-round-trip"))
+      expect(RailsErrorDashboard::ErrorOccurrence.for_session("sess-round-trip")).to include(occurrence)
       expect(occurrence.error_log.environment).to eq("staging")
     end
 

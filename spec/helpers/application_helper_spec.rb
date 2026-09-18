@@ -3,6 +3,48 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
+  describe "#safe_external_url" do
+    it "returns an http(s) URL unchanged" do
+      expect(helper.safe_external_url("https://x.test/a")).to eq("https://x.test/a")
+      expect(helper.safe_external_url("http://x.test/a")).to eq("http://x.test/a")
+    end
+
+    [ nil, "", "javascript:x", "JAVASCRIPT:x", "data:text/html,x", "//x", "/x", " https://x.test/a", 42 ].each do |value|
+      it "returns nil for #{value.inspect}" do
+        expect(helper.safe_external_url(value)).to be_nil
+      end
+    end
+  end
+
+  describe "#safe_label_color" do
+    it "accepts 6- and 3-digit hex, with or without a leading #" do
+      expect(helper.safe_label_color("d73a4a")).to eq("#d73a4a")
+      expect(helper.safe_label_color("#D73A4A")).to eq("#D73A4A")
+      expect(helper.safe_label_color("fff")).to eq("#fff")
+    end
+
+    [ nil, "", 123, "red", "fffff", "fffffff", "d73a4a;position:fixed", "d73a4a\n", "url(x)", "ggg" ].each do |value|
+      it "falls back to grey for #{value.inspect}" do
+        expect(helper.safe_label_color(value)).to eq("#6c757d")
+      end
+    end
+  end
+
+  describe "#label_text_color" do
+    it "picks black on light backgrounds and white on dark ones" do
+      expect(helper.label_text_color("#fef2c0")).to eq("#000")
+      expect(helper.label_text_color("#fff")).to eq("#000")
+      expect(helper.label_text_color("#d73a4a")).to eq("#fff")
+      expect(helper.label_text_color("#000")).to eq("#fff")
+      expect(helper.label_text_color("#6c757d")).to eq("#fff")
+    end
+
+    it "returns white for anything that is not a validated colour" do
+      expect(helper.label_text_color("nonsense")).to eq("#fff")
+      expect(helper.label_text_color(nil)).to eq("#fff")
+    end
+  end
+
   describe "#extract_table_from_sql" do
     it "extracts table name from a standard SELECT query" do
       expect(helper.extract_table_from_sql('SELECT "users".* FROM "users" WHERE "users"."id" = ?')).to eq("users")

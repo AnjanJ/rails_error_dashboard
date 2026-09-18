@@ -1317,6 +1317,8 @@ config.sensitive_data_patterns = [
 
 Values matching these patterns are replaced with `[FILTERED]`.
 
+**Session IDs.** While filtering is on, the session ID recorded on each occurrence is stored as a keyed digest (`h1:` followed by 32 hex characters, an HMAC keyed with your `secret_key_base`), never the raw ID. Occurrences from one session still share a value, so `ErrorOccurrence.for_session(raw_id)` keeps working, but the stored value cannot be used to resume a session. Rotating `secret_key_base` breaks that correlation across the rotation. After upgrading from 0.12.x or earlier, run `rails error_dashboard:digest_session_ids` once to convert rows stored before the change; it is idempotent. With `filter_sensitive_data = false` the raw ID is stored.
+
 ### Auto-Reopen on Recurrence
 
 When a resolved error occurs again, it automatically:

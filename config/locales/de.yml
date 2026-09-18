@@ -420,6 +420,7 @@ de:
       issue_section:
         title: Issue-Tracker
         view_issue: Issue ansehen
+        unsafe_link: "Dieser Issue-Link ist keine http(s)-URL, daher wird er als Text angezeigt und kann nicht geöffnet werden."
         linked: Verknüpft
         issue_reference: "%{provider} #%{number}"
         states:
@@ -972,6 +973,16 @@ de:
         types:
           one: "%{count} Typ"
           other: "%{count} Typen"
+    errors_page:
+      csrf:
+        title: "Ihr Sitzungstoken ist abgelaufen"
+        message: "Gehen Sie zurück, laden Sie die Seite neu und versuchen Sie es erneut. Es wurde nichts geändert."
+      bad_request:
+        title: "Diese Anfrage konnte nicht verarbeitet werden"
+        message: "Ein erforderlicher Wert fehlte oder war fehlerhaft. Gehen Sie zurück und versuchen Sie es erneut."
+      not_acceptable:
+        title: "Dieses Format ist nicht verfügbar"
+        message: "Das Dashboard kann das angeforderte Format nicht erzeugen."
     settings:
       title: Einstellungen
       version: v%{version}
@@ -1250,6 +1261,7 @@ de:
         not_configured: Issue-Tracking ist nicht konfiguriert
         already_linked: 'Der Fehler hat bereits ein verknüpftes Issue: %{url}'
         url_required: Die Issue-URL ist erforderlich
+        url_invalid: Die Issue-URL muss mit http:// oder https:// beginnen
       error_not_found: 'Fehler nicht gefunden: %{id}'
       batch_failed:
         mute:
