@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.13.0 highlights — hardening from a deep QA of 0.12.1
+
+> A deep QA pass over 0.12.1 produced 26 reproduced or source-audited defects. All are fixed
+> here, plus three that only turned up while verifying the fixes. Tracking issue: #223.
+
+**Upgrade steps.** This release has a migration.
+
+1. `rails rails_error_dashboard:install:migrations && rails db:migrate` — adds
+   `error_logs.last_notified_at` (one nullable datetime, no index). Upgrading the gem before
+   migrating is safe: until the column exists the old in-process cooldown is used.
+2. Run once, in any order (all idempotent):
+   - `rails error_dashboard:scrub_invalid_encoding` — SQLite/MySQL only; repairs rows stored with
+     invalid bytes. Pages render without it (rows are scrubbed as they load), but raw SQL and
+     exports still see the bad bytes until you run it.
+   - `rails error_dashboard:backfill_resolved_at` — **MTTR will rise to its true value afterwards.**
+   - `rails error_dashboard:digest_session_ids` — one-way; raw session IDs are not recoverable.
+
+**Behaviour changes.**
+
+- **"Won't fix" is sticky.** A recurrence is counted on the same row at any age: no reopen, no
+  notification, no new row. It used to hold for 24 hours and then reopen. Move the error back to
+  "New" by hand to be alerted again.
+- **Retention is "not seen for N days"**, not N days after first seen. An error that is still
+  happening is no longer deleted with its comments. Retention now also prunes diagnostic dumps and
+  swallowed-exception records.
+- **Stat cards may lag captures by up to 60 seconds.** Anything you do in the dashboard shows at once.
+- A form post with an expired CSRF token answers **422** (it was 500); a missing parameter 400; an
+  unknown format such as `?format=json` 406. Out-of-range pagination recovers with 303, not a
+  browser-cached 301. `per_page` is capped at 100.
+- `AssignError`, `SnoozeError` and `UpdateErrorPriority` return `{ success:, error: }` instead of
+  the record, and reject blank assignees, snoozes outside 1–720 hours and unknown priority levels.
+  `UpdateErrorStatus` adds `reason:`. **If you call these commands from your own code, update the callers.**
+- `ErrorComment#formatted_time` is removed; the views format the time in the dashboard's locale.
+
+**Capture correctness.** An error whose message, backtrace, cause, URL, user agent or params
+contained invalid UTF-8 or a NUL byte was silently lost on the sync path, raised while being
+enqueued on the async path, and broke its own page if it got as far as the table. It is now
+stored, with the bad bytes as `?`. Valid messages are untouched, so no fingerprint moves.
+
+**Alerting.** The storm circuit breaker only advanced when a new error arrived, so after a storm
+that ended in silence, notifications stayed suppressed until the next error — which was then
+swallowed as the probe. It now closes by elapsed time. A flat error rate no longer reports a
+"critical" anomaly (zero standard deviation), and exactly 3σ / 4σ are "high" / "critical". The
+notification cooldown is claimed in the database, so an error reopened by one deploy notifies once
+rather than once per worker. New: `config.notification_burst_limit` (10) and
+`config.notification_burst_window_seconds` (60) cap notifications for brand-new errors; over the
+cap one summary goes to Slack, Discord and webhooks. With `sampling_rate < 1.0` the first event of
+each distinct error per process is always recorded.
+
+**Capture cost.** Capturing one error into a database with 200 distinct error types ran **3663
+queries** in the host app's request thread and swept the host's cache with `delete_matched`. It is
+now under 40, guarded by a spec. Dashboard caches are invalidated by a generation counter, the
+stats broadcast is throttled to once per 5 seconds and paused during a storm, and capture no longer
+spawns `git rev-parse`.
+
+**Multi-app correctness.** The correlation page's period comparison and the live updates (new
+rows, stat cards) now respect the selected application.
+
+**Dashboard.** MTTR now includes errors resolved through the status workflow. A refused status
+change says so instead of showing success. The top-bar search box works (it had no form). `%` and
+`_` in a search match literally on SQLite and MySQL. The "Current Release" and "latest dump" cards
+no longer disappear on page 2. Two untranslated sidebar labels are fixed, and `bin/i18n-check`
+now fails on a key that names a namespace. A hostile or malformed query parameter (`days[x]=1`,
+`application_id[x]=1`, `per_page=9999999`) no longer answers 500.
+
+**Privacy.** While `filter_sensitive_data` is on, the session ID stored on each occurrence — and
+carried across the async queue — is a keyed digest (`h1:` + 32 hex), not the raw ID.
+`ErrorOccurrence.for_session(raw_id)` keeps working, including for rows stored before the upgrade.
+
+**Security.** See advisory GHSA-xmv7-mg68-3v2f. Issue links are
+validated as http(s) when stored and again when rendered; a malformed Basic `Authorization`
+header answers 401 before any query runs, and an error raised before authentication never renders
+the dashboard layout. Third-party label colours, avatar URLs and the new-issue popup URL are
+validated. JSON inlined into chart scripts no longer depends on the host app's
+`escape_html_entities_in_json` setting.
+
+**How it was verified.** Every fix was written against a failing spec first. RSpec: 5150 examples
+on SQLite, and the same suite green on PostgreSQL and MySQL.
+Production-mode integration suite: 1483 assertions across five generated apps, including a storm
+that ends in silence and an error made of invalid bytes. A hostile sweep of every GET route
+against 37 malformed parameter sets over hostile rows: 788 requests, no 5xx, no live payload.
+
 ## [0.12.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.12.0...rails_error_dashboard/v0.12.1) (2026-09-16)
 
 
