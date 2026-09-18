@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.12.1...rails_error_dashboard/v0.13.0) (2026-09-18)
+
+
+### 🐛 Bug Fixes
+
+* capture invalid bytes, sticky wont_fix, resolved_at and retention by last seen ([#224](https://github.com/AnjanJ/rails_error_dashboard/issues/224)) ([c88447f](https://github.com/AnjanJ/rails_error_dashboard/commit/c88447fd62937f94e24061eaac0477499ac52161))
+* **ci:** grant the smoke-test job its permissions so the Release workflow starts ([22427a0](https://github.com/AnjanJ/rails_error_dashboard/commit/22427a061411a252657bc0247cb2f3ab4a53bbd2)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* **ci:** let the Release workflow start again ([#230](https://github.com/AnjanJ/rails_error_dashboard/issues/230)) ([22427a0](https://github.com/AnjanJ/rails_error_dashboard/commit/22427a061411a252657bc0247cb2f3ab4a53bbd2))
+* **ci:** make the post-release smoke test actually run ([#221](https://github.com/AnjanJ/rails_error_dashboard/issues/221)) ([39f281a](https://github.com/AnjanJ/rails_error_dashboard/commit/39f281a68dc16bd8a7be5fe9f0ec3530de8b8fe4))
+* render rows that hold invalid bytes; ignore a non-scalar days parameter ([#229](https://github.com/AnjanJ/rails_error_dashboard/issues/229)) ([25be577](https://github.com/AnjanJ/rails_error_dashboard/commit/25be577f01f8871c4bb5edf4a70238434e2904dc))
+* **security:** harden issue links, Basic auth, error handling, session IDs and chart JSON ([#233](https://github.com/AnjanJ/rails_error_dashboard/issues/233)) ([30802f8](https://github.com/AnjanJ/rails_error_dashboard/commit/30802f8b5994a29d13b2b64ce97a2a1dcb84f370))
+* storm breaker that closes, database-held notification cooldown and a burst cap ([#225](https://github.com/AnjanJ/rails_error_dashboard/issues/225)) ([dafe3b0](https://github.com/AnjanJ/rails_error_dashboard/commit/dafe3b05803d70a0f632941dc65bdc8dfe69c37d))
+* **ui:** render rows that hold invalid bytes; ignore a non-scalar days param ([25be577](https://github.com/AnjanJ/rails_error_dashboard/commit/25be577f01f8871c4bb5edf4a70238434e2904dc)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* validate workflow input, literal search wildcards, a working search box ([#227](https://github.com/AnjanJ/rails_error_dashboard/issues/227)) ([e2c9c26](https://github.com/AnjanJ/rails_error_dashboard/commit/e2c9c263e28bc000c8f487580d32bc38930d4433))
+
+
+### ⚡ Performance
+
+* bound the cost of capturing an error; scope live updates per application ([#226](https://github.com/AnjanJ/rails_error_dashboard/issues/226)) ([2344272](https://github.com/AnjanJ/rails_error_dashboard/commit/23442726f99a84e401a2f93ac726a3e81ccb50da))
+
+
+### 📚 Documentation
+
+* **changelog:** write the 0.13.0 release notes and release as a minor ([#234](https://github.com/AnjanJ/rails_error_dashboard/issues/234)) ([0fd824c](https://github.com/AnjanJ/rails_error_dashboard/commit/0fd824ce1cd430c1f3996ebe791051a1d42f7c23)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+
 ### 0.13.0 highlights — hardening from a deep QA of 0.12.1
 
 > A deep QA pass over 0.12.1 produced 26 reproduced or source-audited defects. All are fixed
