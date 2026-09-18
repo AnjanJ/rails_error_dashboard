@@ -89,6 +89,17 @@ jobs:
   smoke-test:
     needs: release
     if: ${{ github.event_name == 'push' && needs.release.outputs.release_created }}
+    # A called workflow can never hold MORE permissions than the job that
+    # calls it. smoke-test-demo.yml's job asks for `issues: write` (it files an
+    # issue when the smoke test fails), and this workflow's top-level block
+    # grants only contents, pull-requests and id-token -- so GitHub rejected
+    # the whole workflow at startup ("startup_failure"), and with it
+    # release-please: no release PR could be opened from the moment this job
+    # was added. Declaring the permissions in the callee is not enough; the
+    # caller has to grant them here.
+    permissions:
+      contents: read
+      issues: write
     uses: ./.github/workflows/smoke-test-demo.yml
     secrets: inherit
 
