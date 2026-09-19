@@ -107,6 +107,80 @@ RSpec.describe "breadcrumbs for a failing background job" do
     expect(row.breadcrumbs.to_s).not_to include("worker thread activity")
   end
 
+  # The point of the whole feature, and the one shape every other example in
+  # this file misses: they assert against current_buffer DURING perform, or nil
+  # AFTER it. None asserted a STORED row for a FAILING job -- which is the only
+  # thing a user ever sees.
+  #
+  # It failed for a reason no during-perform assertion can reach: Active Job
+  # reports a job error two frames OUTSIDE the callback that owns the buffer
+  # (perform_now's `rescue Exception` is one frame out; the report fires from
+  # the railtie's :execute around-callback, further out still), so the ensure
+  # had already cleared the buffer and the row stored breadcrumbs = nil.
+  it "stores the job's own trail on the row for a job that raises" do
+    expect {
+      run_job("StoredTrailProbeJob") do
+        ActiveRecord::Base.connection.select_value("SELECT 424242 /* stored_trail_marker */")
+        RailsErrorDashboard.add_breadcrumb("checkpoint before the raise")
+        raise StandardError, "stored trail boom"
+      end
+    }.to raise_error(StandardError, "stored trail boom")
+
+    row = logs.find_by(message: "stored trail boom")
+    expect(row).not_to be_nil
+    expect(row.breadcrumbs.to_s).to include("stored_trail_marker")
+    expect(row.breadcrumbs.to_s).to include("checkpoint before the raise")
+  end
+
+  # A swallowed failure reports nothing, so nothing consumes the snapshot. The
+  # start-of-perform reset is what stops it becoming the NEXT job's trail on a
+  # pooled thread -- the exact bleed the thread-hygiene rule forbids.
+  it "does not bleed a swallowed job's trail into the next job on the thread" do
+    stub_const("SwallowedProbeError", Class.new(StandardError))
+    stub_const("SwallowingProbeJob", Class.new(ActiveJob::Base) do
+      discard_on SwallowedProbeError
+      def perform
+        ActiveRecord::Base.connection.select_value("SELECT 1 /* swallowed_marker */")
+        raise SwallowedProbeError, "swallowed"
+      end
+    end)
+    ActiveJob::Base.execute(
+      "job_class" => "SwallowingProbeJob", "job_id" => SecureRandom.uuid,
+      "queue_name" => "default", "arguments" => [], "executions" => 0, "priority" => nil
+    )
+
+    expect {
+      run_job("FollowingProbeJob") do
+        ActiveRecord::Base.connection.select_value("SELECT 2 /* following_marker */")
+        raise StandardError, "following boom"
+      end
+    }.to raise_error(StandardError, "following boom")
+
+    row = logs.find_by(message: "following boom")
+    expect(row.breadcrumbs.to_s).to include("following_marker")
+    expect(row.breadcrumbs.to_s).not_to include("swallowed_marker")
+  end
+
+  # The gem's own capture job runs through the same around_perform. Its buffer
+  # would collect the gem's OWN write traffic -- cache reads for the
+  # application record, SAVEPOINT/RELEASE pairs that the "rails_error_dashboard_"
+  # substring filter cannot catch, since transaction control names no table.
+  # Harmless while it was discarded; stored garbage once a trail is kept.
+  it "opens no buffer for the gem's own capture job" do
+    RailsErrorDashboard.configuration.async_logging = true
+    collector.clear_buffer
+
+    error = StandardError.new("self noise boom")
+    error.set_backtrace([ "#{Rails.root}/app/models/order.rb:1:in 'save'" ])
+    RailsErrorDashboard::Commands::LogError.call(error)
+    collector.clear_buffer
+    perform_enqueued_jobs
+
+    row = logs.find_by(message: "self noise boom")
+    expect(row.breadcrumbs.to_s).not_to include("SAVEPOINT")
+    expect(row.breadcrumbs.to_s).not_to include("application_id")
+  end
+
   # Nesting: a job performed inline INSIDE a request must not clear the
   # surrounding request's buffer, and its crumbs join that trail.
   it "leaves a surrounding request buffer intact when a job runs inline" do
