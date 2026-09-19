@@ -37,6 +37,16 @@ module RailsErrorDashboard
     # Association for tracking individual error occurrences
     has_many :error_occurrences, class_name: "RailsErrorDashboard::ErrorOccurrence", dependent: :destroy
 
+    # Hour buckets for storm-shed events. delete_all, not destroy: these rows
+    # are pure counters with no callbacks, and a group can own one per hour.
+    #
+    # The association has to live HERE. `dependent:` on EventCount's own
+    # belongs_to is rejected by Rails (":dependent option must be one of
+    # [:destroy, :delete, :destroy_async]"), so the cleanup can only be
+    # declared from the parent side. Retention deletes them separately as well,
+    # because it uses delete_all, which does not fire callbacks.
+    has_many :event_counts, class_name: "RailsErrorDashboard::EventCount", dependent: :delete_all
+
     # Comments used as internal audit trail for workflow actions (snooze, mute, status changes).
     # Manual comment form removed in v0.6 — discussion now lives on issue tracker.
     has_many :comments, class_name: "RailsErrorDashboard::ErrorComment", foreign_key: :error_log_id, dependent: :destroy

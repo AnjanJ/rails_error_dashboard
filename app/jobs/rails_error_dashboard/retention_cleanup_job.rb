@@ -58,6 +58,12 @@ module RailsErrorDashboard
 
       # Batch delete dependent records (occurrences, comments, cascade patterns)
       ErrorOccurrence.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
+      # Hour buckets for storm-shed events. Listed explicitly because this job
+      # deletes with delete_all, which does not fire the has_many :dependent
+      # callback on ErrorLog -- without this line the buckets outlive the group
+      # they describe, forever. The migration's own comment promised this
+      # pruning before the code existed.
+      EventCount.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all if EventCount.table_exists?
       ErrorComment.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
       CascadePattern.where(parent_error_id: expired_ids_scope)
                     .or(CascadePattern.where(child_error_id: expired_ids_scope))
