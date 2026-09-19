@@ -127,3 +127,56 @@ REQ-F8's cross-page invariant and NFR-F8's dimension rule are the direct answer 
 - Reviewed commit: `ae9b074b1ddbec7de6f774aa274918e67607c2da`
 - Reviewer's environment: fresh archive, Ruby 4.0.6, Rails 8.1.3.1, PostgreSQL 16.15
 - In-session reproduction: SQLite, Ruby 3.4.5, same commit, working tree clean
+
+---
+
+## Round 3 verification (2026-09-20, PR #247)
+
+Four contract failures found by independent review of `e92c04a`, all reproduced at source before
+any change was made. Two (F11, F13) were introduced by this sprint's own fixes.
+
+| # | Finding | Red before | Green after | Where |
+|---|---------|-----------|-------------|-------|
+| F11 | Quarter-hour buckets stored as hourly | ✅ 7 examples | ✅ | `event_count_bucket_parity_spec.rb` |
+| F12 | Overview breakdowns not migrated | ✅ 3 examples | ✅ | `dashboard_breakdowns_event_volume_spec.rb` |
+| F13 | Permanent unavailability lost counts | ✅ 4 examples | ✅ | `storm_permanent_bucket_degradation_spec.rb` |
+| F14 | Hourly map sized by events | ✅ 3 examples | ✅ | `event_volume_hourly_memory_spec.rb` |
+| F15 | Green test asserting nothing | n/a (never asserted) | ✅ | `overview_analytics_agreement_spec.rb` |
+| T-F5.3 | Probes promoted to regressions | n/a | ✅ 7 examples | `event_volume_invariants_spec.rb` |
+
+### Results
+
+- **Unit suite (SQLite):** 5280 examples, 0 failures, 1 pending
+- **PostgreSQL:** 5270 / 0; the 24 new examples green in one combined run
+- **CI:** 22 / 22, **including the MySQL row** — the `CONVERT_TZ` named-zone path is now verified
+  by execution, closing the gap this spec previously listed as read-only
+- **Chaos:** 1483 assertions across 5 apps, all passing
+- **Seeds:** 22222 and 33333 clean on a rebuilt test DB
+- **RuboCop:** 630 files, no offenses. **i18n-check:** no failures. **Schema parity:** 12 tables agree
+- **Legacy data:** a bucket written on an hour boundary by a previous version still reads correctly
+  (total 7, bucketed 7) — verified directly, since it is the backward-compatibility claim
+
+### Three things that went wrong in MY work, recorded because they were nearly missed
+
+1. **An order-dependent assertion I wrote.** `storm_permanent_bucket_degradation_spec.rb` asserted
+   `ErrorLog.sum(:occurrence_count)` across the whole table; it passed alone and failed on
+   PostgreSQL in a combined run (expected 15, got 10). A probe established that the PRODUCTION path
+   was correct before anything was changed, which located the fault in the assertion. **A count is
+   only meaningful against the group it belongs to.** Same class as last sprint's config leak.
+
+2. **A corrupted test database that impersonated a catastrophic regression.** Running a scratch
+   spec from inside `spec/` triggered a real-HTTP `LlmClient` example and a browser cascade that
+   left the schema half-dropped. The suite then reported 2407, then 624, then 2190 failures on the
+   same tree. The tell was that **CI was green on the same SHA** — trust that disagreement. Later
+   repeated by running a PostgreSQL suite concurrently with a SQLite one against the same file.
+
+3. **A stale probe that had never tested its contract.** `precedence_probe_spec.rb` called
+   `ManualErrorReporter.report` with a positional exception where it takes `error_type:`/`message:`
+   keywords. Confirmed stale by reproducing the identical failure on clean `main` in a worktree —
+   not assumed. Fixed; it now genuinely asserts manual-value precedence.
+
+### Still open
+
+- `.shipkit/specs/event-envelope/` (T-F5.9) — tracked follow-up, does not block release
+- Demo-app `GET /admin/seed` issue (T6.7) — separate repo
+- **0.14.0 remains held** (#237), per design.md F10 and the user's standing instruction
