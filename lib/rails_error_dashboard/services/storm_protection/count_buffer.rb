@@ -26,11 +26,25 @@ module RailsErrorDashboard
       # old reference just before the swap would increment a map nobody would
       # ever read again, and the "exact" count lost an event.
       class CountBuffer
+        # How finely shed events are timestamped.
+        #
+        # 15 minutes, not an hour: every UTC offset in use divides into 15
+        # minutes -- including +05:30 (Kolkata) and +05:45 (Kathmandu) -- so a
+        # local midnight always falls on a bucket EDGE and a day's total is
+        # exact. An hourly bucket straddles those boundaries and could only
+        # ever report them approximately.
+        BUCKET_SECONDS = 900
+
         Entry = Struct.new(
           :error_class, :message, :first_app_frame,
           :controller_name, :action_name, :custom_hash, :environment,
-          :opaque_identity, :count, :first_seen_at, :last_seen_at
+          :opaque_identity, :count, :first_seen_at, :last_seen_at, :buckets
         )
+
+        # The bucket an instant belongs to, as an epoch second.
+        def self.bucket_for(time)
+          (time.to_i / BUCKET_SECONDS) * BUCKET_SECONDS
+        end
 
         def initialize
           reset!
@@ -46,7 +60,10 @@ module RailsErrorDashboard
         # @param gate_key [String] cheap in-process bucketing key
         # @param parts [Hash] identity parts captured at the gate
         def record(gate_key, parts)
-          @lock.with_read_lock { add(gate_key, parts, 1, Time.current, Time.current) }
+          now = Time.current
+          @lock.with_read_lock do
+            add(gate_key, parts, 1, now, now, { self.class.bucket_for(now) => 1 })
+          end
         end
 
         # Put a snapshot BACK when its handoff failed (the flush job could not
@@ -66,7 +83,8 @@ module RailsErrorDashboard
                 parts_from(entry),
                 entry["count"].to_i,
                 parse_time(entry["first_seen_at"]),
-                parse_time(entry["last_seen_at"])
+                parse_time(entry["last_seen_at"]),
+                buckets_from(entry)
               )
             end
             @overflow.increment(overflow.to_i) if overflow.to_i.positive?
@@ -104,7 +122,12 @@ module RailsErrorDashboard
               "opaque_identity" => entry.opaque_identity,
               "count" => entry.count.value,
               "first_seen_at" => entry.first_seen_at.iso8601,
-              "last_seen_at" => entry.last_seen_at.iso8601
+              "last_seen_at" => entry.last_seen_at.iso8601,
+              # { epoch_second => count }. This is the timing evidence: the
+              # flush job reconciles each bucket separately, because a total
+              # plus last_seen_at cannot say how many events fell on either
+              # side of a day boundary.
+              "buckets" => entry.buckets.each_pair.to_h { |at, n| [ at.to_s, n.value ] }
             }
           end
 
@@ -127,7 +150,7 @@ module RailsErrorDashboard
         private
 
         # Callers hold the read lock.
-        def add(gate_key, parts, count, first_seen_at, last_seen_at)
+        def add(gate_key, parts, count, first_seen_at, last_seen_at, buckets = nil)
           return if count <= 0
 
           map = @map_ref.get
@@ -143,7 +166,8 @@ module RailsErrorDashboard
                 parts[:error_class], parts[:message], parts[:first_app_frame],
                 parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
                 parts[:opaque_identity],
-                Concurrent::AtomicFixnum.new(0), first_seen_at || Time.current, last_seen_at || Time.current
+                Concurrent::AtomicFixnum.new(0), first_seen_at || Time.current, last_seen_at || Time.current,
+                Concurrent::Map.new
               )
             end
           end
@@ -151,6 +175,40 @@ module RailsErrorDashboard
           entry.count.increment(count)
           entry.last_seen_at = [ entry.last_seen_at, last_seen_at ].compact.max
           entry.first_seen_at = [ entry.first_seen_at, first_seen_at ].compact.min
+
+          # Per-bucket tallies use the same AtomicFixnum-inside-a-Concurrent::Map
+          # shape as the total above, so they are safe under the READ lock and
+          # the write lock's scope is not widened (it still covers only the
+          # snapshot swap).
+          add_buckets(entry, count, last_seen_at, buckets)
+        end
+
+        # Distribute `count` across buckets. A live record supplies exactly one
+        # bucket; a restore supplies the map it was snapshotted with. The
+        # fallback keeps a caller that supplies none from losing the timing
+        # entirely -- it lands on last_seen_at's bucket, which is what the old
+        # behaviour did for every event.
+        def add_buckets(entry, count, last_seen_at, buckets)
+          pairs =
+            if buckets.is_a?(Hash) && buckets.any?
+              buckets
+            else
+              { self.class.bucket_for(last_seen_at || Time.current) => count }
+            end
+
+          pairs.each do |at, n|
+            n = n.to_i
+            next unless n.positive?
+
+            entry.buckets.compute_if_absent(at.to_i) { Concurrent::AtomicFixnum.new(0) }.increment(n)
+          end
+        end
+
+        def buckets_from(entry)
+          raw = entry["buckets"]
+          return nil unless raw.is_a?(Hash)
+
+          raw.to_h { |at, n| [ at.to_i, n.to_i ] }
         end
 
         def parts_from(entry)
