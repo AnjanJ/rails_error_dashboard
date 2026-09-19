@@ -34,6 +34,7 @@ module RailsErrorDashboard
         application = resolve_application
         counted = 0
         failed = 0
+        aborted = false
 
         # Counts are applied additively (occurrence_count + N), which is not
         # idempotent: delivering the same snapshot twice counted it twice. The
@@ -55,6 +56,20 @@ module RailsErrorDashboard
           @entries.each do |entry|
             entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
             counted += reconcile_entry(entry, application)
+          rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
+            # A transient store failure is NOT a bad entry. Claiming the batch
+            # here would commit the ledger row and strand every entry not yet
+            # applied: the retry is then suppressed as a replay and those events
+            # are lost for good. Re-raise so the whole transaction rolls back --
+            # nothing was committed, so nothing can double -- and let the job
+            # retry the batch intact. The generic rescue below still keeps a
+            # permanently malformed entry from poisoning its batch.
+            failed += 1
+            aborted = true
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Storm batch aborted by a transient store failure: #{e.class} - #{e.message}"
+            )
+            raise
           rescue => e
             # A corrupt (non-Hash) entry must not abort the whole batch — and the
             # log line itself must not assume `entry` is subscriptable (an Integer
@@ -76,10 +91,15 @@ module RailsErrorDashboard
         # Every entry failed and none was written. Reporting success with
         # reconciled: 0 made a total loss indistinguishable from an empty
         # batch, so the job acknowledged counts that never reached the
-        # database. Partial success stays successful: the entries that were
-        # written are written, and replaying the batch would double them.
+        # database.
+        #
+        # Reaching here means every failure was PERMANENT -- a transient store
+        # failure re-raises above and rolls the whole batch back. Partial
+        # success over permanent failures stays successful: the entries that
+        # were written are written, replaying would double them, and retrying a
+        # corrupt payload only loops forever.
         if failed.positive? && counted.zero?
-          return { success: false, reconciled: 0, failed: failed, overflow: @overflow,
+          return { success: false, retryable: false, reconciled: 0, failed: failed, overflow: @overflow,
                    error: "all #{failed} entries failed to reconcile" }
         end
 
@@ -89,7 +109,15 @@ module RailsErrorDashboard
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] FlushStormCounts failed: #{e.class} - #{e.message}"
         )
-        { success: false, error: "#{e.class}: #{e.message}" }
+        # retryable: true says "the batch is intact, replay it" -- nothing was
+        # committed, so the job can retry without doubling. A permanent failure
+        # carries no such promise.
+        retryable = Commands::LogError::RETRYABLE_STORE_ERRORS.any? { |klass| e.is_a?(klass) }
+        result = { success: false, retryable: retryable, error: "#{e.class}: #{e.message}" }
+        # reconciled: 0 because the transaction rolled back -- whatever this
+        # batch had counted in memory never reached the database.
+        result.merge!(reconciled: 0, failed: failed, overflow: @overflow) if aborted
+        result
       end
 
       private
@@ -197,13 +225,37 @@ module RailsErrorDashboard
           resolved_scope = resolved_scope.where(environment: [ env, nil ])
             .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
         end
-        resolved = resolved_scope.order(last_seen_at: :desc).first
+        # .lock (SELECT ... FOR UPDATE) held to commit by the transaction opened
+        # in #call, exactly as FindOrIncrementError does for the same reopen.
+        # Without it this branch read occurrence_count into Ruby and wrote an
+        # ABSOLUTE value back, so two concurrent batches both read N and both
+        # wrote N+count -- one batch's events vanished while both reported
+        # success. The unresolved branch above is safe because it increments in
+        # SQL; this branch cannot use update_all because reopening is a state
+        # transition the dashboard must see, and update_all skips the
+        # after_update_commit broadcast.
+        resolved = resolved_scope.lock.order(last_seen_at: :desc).first
         if resolved
+          # The count is incremented in SQL, never read into Ruby and written
+          # back. This branch used to compute `resolved.occurrence_count + count`
+          # and write that ABSOLUTE value, so two concurrent batches both read N
+          # and both wrote N+count -- one batch's events vanished while both
+          # reported success. The .lock above serializes the pair on
+          # PostgreSQL/MySQL; the atomic increment below conserves the count on
+          # every adapter, including SQLite where FOR UPDATE is a no-op.
+          ErrorLog.where(id: resolved.id).update_all([
+            "occurrence_count = occurrence_count + ?", count
+          ])
+
+          # The reopen is a state transition the dashboard must see, so it stays
+          # an update! -- update_all would skip the after_update_commit
+          # broadcast. Reload first so this write does not clobber the increment
+          # just made with a stale in-memory occurrence_count.
+          resolved.reload
           attrs = {
             resolved: false,
             status: "new",
             resolved_at: nil,
-            occurrence_count: resolved.occurrence_count + count,
             last_seen_at: last_seen
           }
           attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
@@ -249,10 +301,43 @@ module RailsErrorDashboard
         if ErrorLog.column_names.include?("context_captured_at")
           create_attrs[:context_captured_at] = create_attrs[:occurred_at]
         end
-        ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
+        begin
+          # requires_new opens a SAVEPOINT: on PostgreSQL a failed INSERT aborts
+          # its transaction, and every later statement -- including the recovery
+          # lookup below -- fails with InFailedSqlTransaction. The savepoint
+          # confines the damage to this INSERT so the batch can continue.
+          ErrorLog.transaction(requires_new: true) do
+            ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
+          end
+        rescue ActiveRecord::RecordNotUnique
+          # Another flush created this group between our lookups and this
+          # INSERT -- the group-identity index objected. Two concurrent batches
+          # for the same fingerprint is the NORMAL storm shape (every process
+          # flushes its own batch), so this must not fail the entry: the counts
+          # exist nowhere but in this payload. Re-run the same lookups and add
+          # to the row that now exists, exactly as FindOrIncrementError does.
+          #
+          # Nested in its own transaction because the failed INSERT poisons the
+          # surrounding one on PostgreSQL.
+          raise unless (target = existing_target(error_hash, application, env))
+
+          ErrorLog.where(id: target.id).update_all([
+            "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
+          ])
+        end
         count
       end
 
+      # The row a retried INSERT should add to: any row holding this group
+      # identity, whatever its status. Deliberately wider than the
+      # priority-ordered lookups above -- the index has already proved a row
+      # with this identity exists, so refusing to match a resolved or wont_fix
+      # one would drop the counts instead.
+      def existing_target(error_hash, application, env)
+        scope = ErrorLog.where(error_hash: error_hash, application_id: application.id)
+        scope = scope.where(environment: [ env, nil ]) if env
+        scope.order(last_seen_at: :desc).select(:id).first
+      end
 
       # The unresolved row the full capture path would increment right now.
       # No time window: "won't fix" holds for as long as the row keeps the status.

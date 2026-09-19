@@ -142,4 +142,53 @@ RSpec.describe "storm batch idempotency" do
     expect(result).to include(success: true, reconciled: 5)
     expect(logs.sum(:occurrence_count)).to eq(5)
   end
+
+  # A PARTIALLY failed batch is the gap the all-fail rollback above does not
+  # cover. Two failure classes need opposite handling, and the per-entry rescue
+  # used to treat them identically:
+  #
+  #   * a transient store failure is not a bad entry. Claiming the batch strands
+  #     every entry that had not been applied yet, and the replay is suppressed
+  #     as already_applied -- permanent loss.
+  #   * a permanently malformed entry must NOT abort its batch, or one corrupt
+  #     payload poisons the whole batch through every retry.
+  describe "a partly failed batch" do
+    it "keeps no claim when one entry hits a transient store failure, so the retry counts all of them" do
+      calls = 0
+      allow(logs).to receive(:unresolved).and_wrap_original do |orig, *args|
+        calls += 1
+        raise ActiveRecord::ConnectionNotEstablished, "store down" if calls == 2
+        orig.call(*args)
+      end
+
+      result = flush.call(entries: [ entry(count: 5), entry(count: 5, gate_key: "gk-2", message: "second boom") ])
+
+      # Nothing may be acknowledged: the batch is unclaimed and the counts are
+      # still only in the payload the job will retry with.
+      expect(result[:success]).to be false
+      # retryable tells the job the batch is intact and safe to replay, as
+      # opposed to a batch whose every entry is permanently corrupt.
+      expect(result[:retryable]).to be true
+      expect(ledger.count).to eq(0)
+      expect(logs.sum(:occurrence_count)).to eq(0)
+
+      allow(logs).to receive(:unresolved).and_call_original
+      retried = flush.call(entries: [ entry(count: 5), entry(count: 5, gate_key: "gk-2", message: "second boom") ])
+
+      expect(retried).to include(success: true, reconciled: 10)
+      expect(logs.sum(:occurrence_count)).to eq(10)
+    end
+
+    # The existing behavior, which is correct for this class and must not
+    # regress: a corrupt entry is skipped, the good entries are kept, and the
+    # batch IS claimed so the retry does not double the good ones.
+    it "still skips a permanently malformed entry and claims the batch" do
+      result = flush.call(entries: [ entry(count: 5), { "count" => 5 } ])
+
+      expect(result).to include(success: true, reconciled: 5)
+      expect(result[:failed]).to eq(1)
+      expect(ledger.count).to eq(1)
+      expect(logs.sum(:occurrence_count)).to eq(5)
+    end
+  end
 end
