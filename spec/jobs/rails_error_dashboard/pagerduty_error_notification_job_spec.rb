@@ -12,6 +12,10 @@ RSpec.describe RailsErrorDashboard::PagerdutyErrorNotificationJob, type: :job do
     RailsErrorDashboard.configuration.dashboard_base_url = "https://example.com"
   end
 
+  # Global configuration: restore it, or this key outlives the file and a later
+  # spec that enables PagerDuty finds a usable integration key waiting.
+  after { RailsErrorDashboard.reset_configuration! }
+
   describe "#perform" do
     context "when error is critical" do
       it "sends PagerDuty notification" do

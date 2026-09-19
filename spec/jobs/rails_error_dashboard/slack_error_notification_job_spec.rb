@@ -11,6 +11,11 @@ RSpec.describe RailsErrorDashboard::SlackErrorNotificationJob, type: :job do
     RailsErrorDashboard.configuration.dashboard_base_url = "https://example.com"
   end
 
+  # The URL above is set on the GLOBAL configuration. Left behind, it gives a
+  # later spec that enables Slack a live endpoint to post to -- which is how an
+  # unrelated "sends nothing" assertion failed under one RSpec seed.
+  after { RailsErrorDashboard.reset_configuration! }
+
   describe "#perform" do
     context "when error log exists" do
       it "sends Slack notification" do
