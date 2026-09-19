@@ -67,43 +67,62 @@ module RailsErrorDashboard
 
       # Two counting units, kept distinct on purpose.
       #
-      # An ErrorLog row is a GROUP; its occurrence_count says how many times
-      # that error actually happened. Volume figures are EVENTS (the sum), so
-      # this page agrees with the Overview, which counts the same way. Resolved
-      # and unresolved stay GROUP counts -- a group is the thing that gets
-      # resolved, and an event cannot be.
+      # An ErrorLog row is a GROUP; its occurred_at is FIRST-SEEN and is never
+      # rewritten when the error recurs.
+      #
+      #   EVENT figures  -> Queries::EventVolume, which counts occurrence rows
+      #                     + storm buckets + the untracked remainder, each
+      #                     against its OWN timestamp.
+      #   GROUP figures  -> base_query, which selects groups by first-seen.
+      #                     Correct here: a group is the thing that gets
+      #                     resolved, and an event cannot be.
+      #
+      # Mixing them is what made this page disagree with the Overview: filtering
+      # GROUPS by first-seen and then summing their LIFETIME occurrence_count
+      # answers "how much total volume do the groups born in this window carry",
+      # not "how many events happened in this window". A group first seen in
+      # August that recurred today was excluded entirely, so the page reported
+      # zero events while its own affected-users table listed the very event.
       def error_statistics
         {
           total: event_count,
           total_groups: base_query.count,
           unresolved: base_query.unresolved.count,
           resolved: base_query.resolved.count,
-          by_type: base_query.group(:error_type).sum(:occurrence_count).sort_by { |_, count| -count }.to_h,
-          by_day: base_query.group("DATE(occurred_at)").sum(:occurrence_count),
+          by_type: volume.by_group_attribute(:error_type).sort_by { |_, count| -count }.to_h,
+          by_day: volume.by_day.transform_keys(&:to_s),
           affected_users_incomplete: affected_users_incomplete?
         }
       end
 
-      # Total EVENTS in the window. dashboard_stats.rb and
-      # platform_comparison.rb:165 count the same way.
+      # One EventVolume for the window, reused by every EVENT figure below so
+      # they cannot drift apart from each other or from the headline total.
+      def volume
+        @volume ||= Queries::EventVolume.new(base_scope, @start_date)
+      end
+
+      # Total EVENTS in the window. dashboard_stats.rb counts the same way,
+      # through the same primitive -- that agreement is asserted by
+      # spec/queries/overview_analytics_agreement_spec.rb.
       def event_count
-        base_query.sum(:occurrence_count)
+        volume.count
       end
 
       def errors_over_time
-        base_query.group_by_day(:occurred_at).sum(:occurrence_count)
+        volume.by_day
       end
 
+      # Top 10 by EVENTS. Deliberately a partial breakdown -- it does not sum
+      # to the headline total, and the agreement spec treats it as such.
       def errors_by_type
-        base_query.group(:error_type)
-                  .sum(:occurrence_count)
-                  .sort_by { |_, count| -count }
-                  .first(10)
-                  .to_h
+        volume.by_group_attribute(:error_type)
+              .sort_by { |_, count| -count }
+              .first(10)
+              .to_h
       end
 
       def errors_by_platform
-        base_query.group(:platform).sum(:occurrence_count)
+        volume.by_group_attribute(:platform)
       end
 
       # NULL (captured before the column existed) is reported under :unknown
@@ -111,14 +130,16 @@ module RailsErrorDashboard
       def errors_by_environment
         return {} unless ErrorLog.column_names.include?("environment")
 
-        base_query.group(:environment).sum(:occurrence_count).transform_keys { |env| env.nil? ? :unknown : env }
+        volume.by_group_attribute(:environment).transform_keys { |env| env.nil? ? :unknown : env }
       end
 
+      # Diurnal pattern: which hour of the day errors peak in, 0..23.
+      #
+      # Counted per EVENT against the event's own timestamp. Grouping ErrorLog
+      # by its first-seen hour put a group's whole lifetime volume on the hour
+      # it was first seen, so a recurrence never moved the curve.
       def errors_by_hour
-        # group_by_hour_of_day buckets into 0..23 to show diurnal patterns
-        # (when in the day errors peak). The chart title says "Errors by Hour
-        # of Day" — group_by_hour produced a chronological time series instead.
-        base_query.group_by_hour_of_day(:occurred_at).sum(:occurrence_count)
+        volume.by_hour_of_day
       end
 
       # Events per user, counted from OCCURRENCE rows.
@@ -167,6 +188,11 @@ module RailsErrorDashboard
         group_user_counts
       end
 
+      # GROUP-based on purpose: this is the fallback for groups with no
+      # per-event record, where the group's own user_id and lifetime count are
+      # the only evidence that exists. Routing it through EventVolume would be
+      # wrong -- EventVolume counts events, and this needs the per-user split
+      # that only the group row carries. See design.md D5.
       def group_user_counts
         base_query.where.not(user_id: nil).group(:user_id).sum(:occurrence_count)
       end
@@ -245,11 +271,13 @@ module RailsErrorDashboard
       end
 
       def mobile_errors_count
-        base_query.where(platform: [ "iOS", "Android" ]).sum(:occurrence_count)
+        Queries::EventVolume.in_window(base_scope.where(platform: [ "iOS", "Android" ]), @start_date)
       end
 
       def api_errors_count
-        base_query.where("platform IS NULL OR platform = ?", "API").sum(:occurrence_count)
+        Queries::EventVolume.in_window(
+          base_scope.where("platform IS NULL OR platform = ?", "API"), @start_date
+        )
       end
 
       #  Pattern insights for top error types

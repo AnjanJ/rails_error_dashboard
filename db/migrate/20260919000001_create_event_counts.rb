@@ -25,8 +25,19 @@
 # which is correct for both ordinary and shed events.
 #
 # Small by construction: a row is written only while a storm is actually
-# shedding, at most one per group per hour, and RetentionCleanupJob prunes it
-# on bucket_at alongside the other aggregate tables.
+# shedding, at most one per group per hour.
+#
+# Cleanup follows the GROUP, not the bucket's own age: RetentionCleanupJob
+# deletes the buckets of groups it expires, and ErrorLog has_many :event_counts
+# with dependent: :delete_all covers an explicit destroy. Buckets of a
+# still-active group are deliberately kept -- pruning them by bucket_at alone
+# would silently redistribute those events onto the group's first-seen date,
+# because EventVolume falls back to the group's lifetime count for any group
+# with no per-event record left.
+#
+# (An earlier version of this comment claimed pruning "on bucket_at" that was
+# never implemented. Both mechanisms above are now covered by
+# spec/models/rails_error_dashboard/event_count_cleanup_spec.rb.)
 class CreateEventCounts < ActiveRecord::Migration[7.0]
   def change
     # Guard against a squashed schema migration having already created this
