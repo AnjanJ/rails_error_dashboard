@@ -517,14 +517,17 @@ module RailsErrorDashboard
 
         # Harvest breadcrumbs (if enabled and column exists)
         if !storm_lite && ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
-          # Sync path: harvest from current thread
-          raw_breadcrumbs = Services::BreadcrumbCollector.harvest
-
-          # Async path fallback: use pre-serialized breadcrumbs from call_async context
-          if raw_breadcrumbs.empty?
-            serialized = @context[:_serialized_breadcrumbs]
-            raw_breadcrumbs = serialized if serialized.is_a?(Array)
-          end
+          # The envelope wins when there is one.
+          #
+          # An async capture harvests the REQUEST's trail before enqueue and
+          # carries it here; the worker thread running this job now has a
+          # buffer of its own (jobs get one, so a failing job has a trail), and
+          # harvesting that first would show the worker's activity in place of
+          # the request's. Draining the current thread stays the sync path, and
+          # still runs below so a worker's own buffer is not left to leak.
+          serialized = @context[:_serialized_breadcrumbs] || @context["_serialized_breadcrumbs"]
+          current = Services::BreadcrumbCollector.harvest
+          raw_breadcrumbs = serialized.is_a?(Array) && serialized.any? ? serialized : current
 
           if raw_breadcrumbs.is_a?(Array) && raw_breadcrumbs.any?
             filtered = Services::BreadcrumbCollector.filter_sensitive(raw_breadcrumbs)

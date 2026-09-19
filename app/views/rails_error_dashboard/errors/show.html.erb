@@ -13,8 +13,8 @@
   </div>
 
   <!-- Hero card -->
-  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-6); background: var(--surface-primary); border-radius: var(--radius-md); border: 1px solid var(--border-primary); margin-bottom: var(--space-4);">
-    <div style="flex: 1; min-width: 0;">
+  <div class="red-error-hero" style="padding: var(--space-6); background: var(--surface-primary); border-radius: var(--radius-md); border: 1px solid var(--border-primary); margin-bottom: var(--space-4);">
+    <div class="red-error-hero-text">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
         <span class="badge bg-<%= severity_color(@error.severity) %>" style="display: inline-flex; align-items: center; gap: 4px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
@@ -75,7 +75,7 @@
         <span><%= red_t("red.errors.show.hero.last_seen_html", time: local_time_ago(@error.last_seen_at)) %></span>
       </div>
     </div>
-    <div style="display: flex; gap: 6px; flex-shrink: 0;">
+    <div class="red-error-hero-actions">
       <% unless @error.resolved? %>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#resolveModal" style="font-weight: 600;">
           <%= red_t("red.errors.show.actions.resolve") %>

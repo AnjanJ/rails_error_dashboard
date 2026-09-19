@@ -38,6 +38,51 @@ module RailsErrorDashboard
           @subscriptions
         end
 
+        # Open a breadcrumb buffer around every Active Job perform, so a job
+        # that fails outside a request still has an activity trail.
+        #
+        # Idempotent: the callback list belongs to ActiveJob::Base, and a
+        # second registration would open and close the buffer twice per job.
+        #
+        # The config check is INSIDE the callback, not around this method.
+        # enable_breadcrumbs defaults to false and the callback list is fixed
+        # once the class loads, so gating registration would permanently
+        # disable job breadcrumbs for any host that enables the feature in an
+        # initializer running after the engine's.
+        # @return [Boolean] true when the callback was installed
+        def install_job_buffer!
+          return false if @job_buffer_installed
+          return false unless defined?(ActiveJob::Base)
+
+          @job_buffer_installed = true
+          ActiveSupport.on_load(:active_job) do
+            around_perform do |_job, block|
+              collector = RailsErrorDashboard::Services::BreadcrumbCollector
+              owned =
+                if RailsErrorDashboard.configuration.enable_breadcrumbs
+                  collector.init_buffer_unless_present
+                else
+                  false
+                end
+
+              begin
+                block.call
+              ensure
+                # ensure, always: a worker pool reuses threads, and a
+                # thread-local left behind would leak one job's trail into the
+                # next (safety rule 4).
+                collector.clear_buffer_if_owned(owned)
+              end
+            end
+          end
+          true
+        rescue StandardError => e
+          RailsErrorDashboard::Logger.debug(
+            "[RailsErrorDashboard] install_job_buffer! failed: #{e.class} - #{e.message}"
+          )
+          false
+        end
+
         # Remove all breadcrumb subscribers
         def unsubscribe!
           @subscriptions.each do |sub|

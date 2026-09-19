@@ -434,6 +434,50 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
         expect(result["person"][:value]).to include("Alice")
       end
 
+      # inspect on an unknown object is arbitrary APPLICATION code running on
+      # the failure path. Truncating its output to 200 characters bounds what
+      # is stored, not what it costs: an object whose inspect is slow or
+      # allocates a megabyte pays that in full before a single character is
+      # discarded. The default is now a safe structural summary, with full
+      # inspect available per type by opt-in.
+      it "does not call inspect on an unknown object by default" do
+        expensive = Object.new
+        called = false
+        expensive.define_singleton_method(:inspect) do
+          called = true
+          "x" * 1_000_000
+        end
+
+        result = described_class.call({ thing: expensive })
+
+        expect(called).to be(false)
+        expect(result["thing"][:value]).to include("#<Object")
+      end
+
+      it "calls inspect for a type the host app opted in to" do
+        klass = Struct.new(:name)
+        config.local_variable_inspect_allowlist = [ "Struct" ]
+
+        result = described_class.call({ person: klass.new("Alice") })
+
+        expect(result["person"][:value]).to include("Alice")
+      end
+
+      # A budget, so even an allowlisted type cannot stall the failure path.
+      it "falls back to a safe summary when inspect exceeds its budget" do
+        slow = Object.new
+        slow.define_singleton_method(:inspect) do
+          sleep 0.05
+          "slow value"
+        end
+        config.local_variable_inspect_allowlist = [ "Object" ]
+        config.local_variable_inspect_budget_ms = 1
+
+        result = described_class.call({ slow: slow })
+
+        expect(result["slow"][:value]).to include("#<Object")
+      end
+
       it "handles object whose inspect raises" do
         bad_obj = Object.new
         def bad_obj.inspect; raise "nope"; end
