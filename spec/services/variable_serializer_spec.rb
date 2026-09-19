@@ -183,6 +183,51 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
         expect(result["config"][:value]["db"]["host"]).to eq("localhost")
       end
 
+      # Rails' own filter semantics, which the examples above never exercise:
+      # every pattern here is a FLAT name that matches at any depth. A dotted
+      # pattern is a PATH, and it only matches when the filter sees the whole
+      # tree -- so the variable's own name has to be part of that tree. Passing
+      # just the inner hash silently dropped the outer key, and the same value
+      # Rails redacts in request params stayed readable in captured locals.
+      context "with a dotted filter_parameters pattern" do
+        around do |example|
+          original = Rails.application.config.filter_parameters
+          Rails.application.config.filter_parameters = [ "profile.private_note" ]
+          RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+          example.run
+        ensure
+          Rails.application.config.filter_parameters = original
+          RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+        end
+
+        it "redacts the value at the dotted path, under the variable's own name" do
+          result = described_class.call({ profile: { private_note: "SYNTHETIC_SECRET", public: "ok" } })
+
+          expect(result["profile"][:value]["private_note"]).to eq("[FILTERED]")
+          expect(result["profile"][:value]["public"]).to eq("ok")
+        end
+
+        it "applies the same path semantics to instance variables" do
+          # Instance variables reach the same filter_serialized entry point, and
+          # carry an @ prefix that must not break the path match.
+          result = described_class.call(
+            { "@profile" => { private_note: "SYNTHETIC_SECRET" } },
+            additional_filter_patterns: [ "@profile.private_note" ]
+          )
+
+          expect(result["@profile"][:value]["private_note"]).to eq("[FILTERED]")
+        end
+
+        it "leaves the same key alone under a different variable name" do
+          # profile.private_note is a path, not a name: private_note under
+          # `other` is a different path and must survive, exactly as it does
+          # for request params.
+          result = described_class.call({ other: { private_note: "KEEP_ME" } })
+
+          expect(result["other"][:value]["private_note"]).to eq("KEEP_ME")
+        end
+      end
+
       it "filters sensitive keys inside arrays of hashes" do
         result = described_class.call({ users: [ { name: "John", password: "secret" } ] })
         expect(result["users"][:value].first["password"]).to eq("[FILTERED]")
