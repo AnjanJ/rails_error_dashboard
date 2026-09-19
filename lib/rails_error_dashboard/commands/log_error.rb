@@ -156,7 +156,7 @@ module RailsErrorDashboard
         # stored as 14:00/v2, and release comparison blamed the wrong build.
         # The row's created_at still records when the worker wrote it, so queue
         # lag stays observable.
-        context = context.merge(_captured_at: (context[:occurred_at] || Time.current).iso8601(6))
+        context = context.merge(_captured_at: (normalized_occurred_at(context) || Time.current).iso8601(6))
         context = context.merge(_app_version: capture_app_version) unless context.key?(:_app_version)
         context = context.merge(_git_sha: capture_git_sha) unless context.key?(:_git_sha)
 
@@ -946,6 +946,37 @@ module RailsErrorDashboard
       # it can be stamped onto the payload before it crosses the queue. The
       # worker reads the stamp instead of asking its own configuration, which
       # is what made a queued event inherit the release it was drained under.
+
+      # ONE normalization of a caller-supplied event time, shared by both
+      # transports.
+      #
+      # ErrorContext#extract_occurred_at already parses Strings, clamps a
+      # future time and rescues bad input -- but it runs in the WORKER on the
+      # async path, long after this method's caller has already had to
+      # serialize the value. Stamping the envelope by calling .iso8601 on the
+      # raw input therefore raised NoMethodError for a String (a documented
+      # ManualErrorReporter input form), the outer rescue in .call swallowed
+      # it, and the capture vanished: nothing enqueued, no row, nothing logged
+      # at error level. The sync path accepted the identical input.
+      #
+      # Normalizing here keeps ONE policy -- including the future clamp -- and
+      # returns nil rather than raising, so an unparseable value costs the
+      # timestamp and never the error itself (Safety Rule 1).
+      # @return [Time, nil]
+      def self.normalized_occurred_at(context)
+        raw = context[:occurred_at] || context["occurred_at"]
+        return nil if raw.nil? || (raw.respond_to?(:empty?) && raw.empty?)
+
+        time = raw.is_a?(String) ? Time.zone.parse(raw) : raw
+        return nil unless time.respond_to?(:to_time)
+
+        [ time.to_time, Time.current ].min
+      rescue StandardError => e
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] Unparseable occurred_at (#{e.class}); using capture time"
+        )
+        nil
+      end
 
       def self.capture_app_version
         RailsErrorDashboard.configuration.app_version ||
