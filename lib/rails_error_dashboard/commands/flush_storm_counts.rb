@@ -176,7 +176,28 @@ module RailsErrorDashboard
       end
 
 
+      # Reconcile one buffered entry and, on every path that adds counts, give
+      # those shed events a TIME BUCKET as well as a total.
+      #
+      # occurrence_count alone is a lifetime counter: it says how many events
+      # there were but not when, so no window query can place them. Ordinary
+      # captures carry their own ErrorOccurrence row; shed events write none by
+      # design, which is what made them invisible to "errors today". The bucket
+      # written here is what Queries::EventVolume adds to the occurrence rows.
       def reconcile_entry(entry, application)
+        error_log_id = nil
+        count = reconcile_entry_count(entry, application) { |id| error_log_id = id }
+        if count.positive? && error_log_id
+          EventCount.accumulate(
+            error_log_id: error_log_id,
+            bucket_at: parse_time(entry["last_seen_at"]) || Time.current,
+            count: count
+          )
+        end
+        count
+      end
+
+      def reconcile_entry_count(entry, application)
         count = entry["count"].to_i
         return 0 if count <= 0
 
@@ -213,6 +234,7 @@ module RailsErrorDashboard
               "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
             ])
           end
+          yield target.id if block_given?
           return count
         end
 
@@ -261,6 +283,7 @@ module RailsErrorDashboard
           attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
           attrs[:environment] = env if env && resolved.environment.blank?
           resolved.update!(attrs)
+          yield resolved.id if block_given?
           return count
         end
 
@@ -307,7 +330,8 @@ module RailsErrorDashboard
           # lookup below -- fails with InFailedSqlTransaction. The savepoint
           # confines the damage to this INSERT so the batch can continue.
           ErrorLog.transaction(requires_new: true) do
-            ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
+            created = ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
+            yield created.id if block_given?
           end
         rescue ActiveRecord::RecordNotUnique
           # Another flush created this group between our lookups and this
@@ -324,6 +348,10 @@ module RailsErrorDashboard
           ErrorLog.where(id: target.id).update_all([
             "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
           ])
+          # Yield on the RECOVERY path too: these counts are as real as the ones
+          # the winning INSERT wrote, so they need a time bucket as well, or a
+          # raced create silently loses its volume from every window query.
+          yield target.id if block_given?
         end
         count
       end

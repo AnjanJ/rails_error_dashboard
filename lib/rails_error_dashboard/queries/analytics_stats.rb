@@ -150,15 +150,45 @@ module RailsErrorDashboard
 
         # A user whose events predate occurrence tracking -- or whose events
         # were shed by storm protection, which writes no occurrence row -- still
-        # belongs in the table. Fall back to the group's own user for those,
-        # taking whichever count is larger. UserImpactSummary merges the same way.
-        group_user_counts.merge(counts) { |_user, group_count, occurrence_count| [ group_count, occurrence_count ].max }
+        # belongs in the table. The fallback covers ONLY groups with no
+        # occurrence coverage at all in this window.
+        #
+        # It used to merge by taking the larger of the two counts per user, and
+        # that overstated real users: the group's user_id is overwritten by
+        # every new occurrence, so group_user_counts attributes a group's whole
+        # lifetime count to whoever hit it LAST. For occurrences {A: 2, B: 1}
+        # the group figure for B was 3, max kept 3, and the page reported five
+        # events for a three-event group. A number that overstates a user's
+        # events cannot be presented as an "at least" bound, so the uncovered
+        # case is counted and the covered case is left to the occurrence rows.
+        uncovered = uncovered_group_user_counts
+        counts.merge(uncovered) { |_user, from_occurrences, from_groups| from_occurrences + from_groups }
       rescue StandardError
         group_user_counts
       end
 
       def group_user_counts
         base_query.where.not(user_id: nil).group(:user_id).sum(:occurrence_count)
+      end
+
+      # Groups in this window that have NO occurrence row at all: rows from
+      # before occurrence tracking, and groups whose every event was shed by
+      # storm protection. Their occurrence_count is the only evidence those
+      # events happened, and the group's own user_id the only attribution
+      # available -- a floor, which affected_users_incomplete? reports.
+      #
+      # A group with even one occurrence row is excluded: its per-event rows
+      # are authoritative, and adding the group total on top is what produced
+      # the overcount.
+      def uncovered_group_user_counts
+        covered = ErrorOccurrence.where(error_log_id: base_query.select(:id)).select(:error_log_id)
+
+        base_query.where.not(user_id: nil)
+                  .where.not(id: covered)
+                  .group(:user_id)
+                  .sum(:occurrence_count)
+      rescue StandardError
+        {}
       end
 
       # Occurrence rows joined back to error_logs, so the application filter

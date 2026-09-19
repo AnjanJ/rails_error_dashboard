@@ -28,7 +28,7 @@ module RailsErrorDashboard
               # Summing is also exact during a storm: counted-only events never
               # create occurrence rows, but they DO raise occurrence_count.
               total_today: today_event_count,
-              total_week: event_count_since(7.days.ago),
+              total_week: week_event_counts.values.sum,
               total_month: event_count_since(30.days.ago),
               unresolved: base_scope.unresolved.count,
               resolved: base_scope.resolved.count,
@@ -116,14 +116,21 @@ module RailsErrorDashboard
         scope
       end
 
-      # Total EVENTS in a window: the sum of every matching group's
-      # occurrence_count. platform_comparison.rb counts the same way.
+      # Total EVENTS in a window -- the events that HAPPENED in it, not the
+      # lifetime volume of the groups first seen in it.
+      #
+      # This used to filter groups by occurred_at and sum occurrence_count.
+      # occurred_at is first-seen and is never rewritten on recurrence, so an
+      # error first seen at 23:59 that recurred at 00:01 reported zero errors
+      # today and two yesterday. Queries::EventVolume counts per-event records
+      # instead: occurrence rows, plus storm-shed time buckets, plus the
+      # remainder of any group that has neither.
       def event_count_since(since)
-        base_scope.where("occurred_at >= ?", since).sum(:occurrence_count)
+        Queries::EventVolume.in_window(base_scope, since)
       end
 
       def event_count_between(from, to)
-        base_scope.where("occurred_at >= ? AND occurred_at < ?", from, to).sum(:occurrence_count)
+        Queries::EventVolume.in_window(base_scope, from, to)
       end
 
       # Occurrence rows carry the user of EACH event. The group's user_id is
@@ -172,11 +179,14 @@ module RailsErrorDashboard
       end
 
       # Get 7-day error trend (daily counts)
+      # Events per day, placed on the day they HAPPENED. Grouping the ErrorLog
+      # table by its own occurred_at put a group's whole lifetime volume on the
+      # day it was first seen, so a recurrence never moved the trend.
+      #
+      # The zero-filled date range is preserved: the chart needs a point for
+      # every day in the window, not only the days that had errors.
       def errors_trend_7d
-        @errors_trend_7d ||=
-          base_scope.where("occurred_at >= ?", 7.days.ago)
-                    .group_by_day(:occurred_at, range: 7.days.ago.to_date..Date.current, default_value: 0)
-                    .sum(:occurrence_count)
+        week_event_counts
       end
 
       # Get error counts by severity for last 7 days
@@ -241,8 +251,19 @@ module RailsErrorDashboard
         info
       end
 
+      # Today, yesterday and the 7-day total all come from ONE daily breakdown.
+      # Each window is three queries (occurrence rows, shed buckets, untracked
+      # remainder), and this method runs on the capture path via the stats
+      # broadcast, so asking per window multiplied the query count.
+      def week_event_counts
+        @week_event_counts ||= begin
+          counts = Queries::EventVolume.by_day(base_scope, 7.days.ago)
+          (7.days.ago.to_date..Date.current).to_h { |day| [ day, counts[day] || 0 ] }
+        end
+      end
+
       def today_event_count
-        @today_event_count ||= event_count_since(Time.current.beginning_of_day)
+        @today_event_count ||= week_event_counts[Date.current].to_i
       end
 
       # Every anomalous (error_type, platform) pair, from a fixed number of
@@ -340,7 +361,7 @@ module RailsErrorDashboard
 
       def compute_trend_percentage
         today = today_event_count
-        yesterday = event_count_between(1.day.ago.beginning_of_day, Time.current.beginning_of_day)
+        yesterday = week_event_counts[Date.current - 1].to_i
 
         return 0.0 if today.zero? && yesterday.zero?
         return 100.0 if yesterday.zero? && today.positive?
