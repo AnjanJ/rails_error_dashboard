@@ -15,6 +15,20 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "permanent bucke
     allow(RailsErrorDashboard::EventCount).to receive(:table_exists?).and_return(false)
   end
 
+  # Scoped to THIS example's own identity, not a global sum.
+  #
+  # The assertions below asserted ErrorLog.sum(:occurrence_count) across the
+  # whole table, which made them depend on what every other spec had left
+  # behind -- they passed alone and failed in a combined run. A count is only
+  # meaningful against the group it belongs to.
+  let(:identity) { "degrade-#{SecureRandom.hex(6)}" }
+
+  def counted_for_identity
+    RailsErrorDashboard::ErrorLog.where(error_type: "StormError")
+                                 .where("message LIKE ?", "%#{identity}%")
+                                 .sum(:occurrence_count)
+  end
+
   # batch_id varies per flush: the batch-digest ledger suppresses an identical
   # replay by design, so a fixture that reused one would measure idempotency
   # rather than degradation.
@@ -22,8 +36,8 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "permanent bucke
     described_class.call(
       entries: [
         {
-          "error_class" => "StormError", "message" => "degrade",
-          "count" => 5, "opaque_identity" => "degrade-fixture",
+          "error_class" => "StormError", "message" => identity,
+          "count" => 5, "opaque_identity" => identity,
           "first_seen_at" => 10.minutes.ago.iso8601, "last_seen_at" => Time.current.iso8601
         }
       ],
@@ -35,13 +49,13 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "permanent bucke
     result = flush_five
 
     expect(result[:success]).to be(true)
-    expect(RailsErrorDashboard::ErrorLog.sum(:occurrence_count)).to eq(5)
+    expect(counted_for_identity).to eq(5)
   end
 
   it "does not lose counts across repeated flushes" do
     3.times { flush_five }
 
-    expect(RailsErrorDashboard::ErrorLog.sum(:occurrence_count)).to eq(15)
+    expect(counted_for_identity).to eq(15)
   end
 
   it "reports that the time-window evidence is incomplete" do
