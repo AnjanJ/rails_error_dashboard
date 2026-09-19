@@ -15,7 +15,7 @@ gem "rails", rails_version
 # Fixed on rails main and backported (rails/rails#58601, #58685), but no 8.x
 # release carries it yet and 7.x never will. CI deletes Gemfile.lock, so
 # without this pin every run resolves json 3 and the whole matrix goes red.
-gem "json", "< 3"
+gem "json", "< 4"
 
 gem "puma"
 
