@@ -175,18 +175,58 @@ module RailsErrorDashboard
           return { value: label, truncated: false }
         end
 
-        # Fallback: .inspect with truncation
+        # #inspect on an unknown object is arbitrary APPLICATION code, running
+        # on the failure path. Truncating its output bounds what is STORED,
+        # not what it COSTS: an inspect that sleeps or builds a megabyte pays
+        # that in full before a single character is discarded. So the default
+        # is a safe structural summary, and inspect runs only for types the
+        # host app opted in to -- under a wall-clock budget even then.
         max_len = config.local_variable_max_string_length || 200
+        return { value: safe_summary(value), truncated: false } unless inspectable?(value, config)
+
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         inspected = value.inspect
+        elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+
+        budget = config.local_variable_inspect_budget_ms || 5
+        if elapsed_ms > budget
+          RailsErrorDashboard::Logger.debug(
+            "[RailsErrorDashboard] #{value.class}#inspect took #{elapsed_ms.round(1)}ms " \
+            "(budget #{budget}ms) — storing a summary instead"
+          )
+          return { value: safe_summary(value), truncated: true }
+        end
+
         if inspected.length > max_len
           { value: inspected[0, max_len], truncated: true }
         else
           { value: inspected, truncated: false }
         end
       rescue
-        { value: "#<#{value.class.name rescue "Object"}>", truncated: false }
+        { value: safe_summary(value), truncated: false }
       end
       private_class_method :serialize_object
+
+      # What an object is, without asking the object. Costs one class-name read.
+      def self.safe_summary(value)
+        "#<#{value.class.name}>"
+      rescue StandardError
+        "#<Object>"
+      end
+      private_class_method :safe_summary
+
+      # True when this object's class (or an ancestor) is on the allowlist, so
+      # the host app has accepted the cost of its #inspect.
+      def self.inspectable?(value, config)
+        allowlist = Array(config.local_variable_inspect_allowlist)
+        return false if allowlist.empty?
+
+        ancestors = value.class.ancestors.map { |mod| mod.name }.compact
+        (ancestors & allowlist).any?
+      rescue StandardError
+        false
+      end
+      private_class_method :inspectable?
 
       # --- Sensitive data filtering (post-serialization) ---
       # Reuses SensitiveDataFilter.parameter_filter — same pattern as BreadcrumbCollector.

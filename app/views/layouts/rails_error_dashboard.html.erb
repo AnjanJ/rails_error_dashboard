@@ -744,9 +744,54 @@ dd { color: var(--text-primary); }
 }
 .red-stat-grid > * { min-width: 0; }
 
-/* Error detail responsive grid */
+/* Error detail hero
+   Same failure as the stat grids above: an inline `display: flex` cannot carry
+   a media query. The action row held `flex-shrink: 0` while the title column
+   was plain `flex: 1`, so at 390px up to five buttons kept their full width
+   and the title absorbed every pixel of the squeeze — "NoMethodError" wrapped
+   to roughly one character per line, making a very tall header before the
+   backtrace on the one screen an on-call engineer actually reads.
+
+   `flex: 1 1 260px` is the load-bearing part: the 260px basis stops the text
+   column collapsing toward zero. Dropping flex-shrink from the actions lets
+   them wrap onto their own line instead. */
+.red-error-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.red-error-hero-text { flex: 1 1 260px; min-width: 0; }
+.red-error-hero-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 575.98px) {
+  /* Full-width buttons once stacked: a wrapped row of five reads as rubble. */
+  .red-error-hero-actions { width: 100%; }
+  .red-error-hero-actions .btn { flex: 1 1 auto; }
+}
+
+/* Error detail responsive grid
+   The single-column rule below stacks the panels, but `1fr` is min-content by
+   default, so a track still refused to shrink below its widest child: at 390px
+   the grid measured 334px while its content needed 419px, and the page scrolled
+   sideways independently of the hero. Same fix as the stat grids: minmax's 0
+   floor lets the track shrink, and min-width:0 lets its children do the same. */
 .red-detail-grid { display: grid; grid-template-columns: 1fr 260px; gap: var(--space-4); }
-@media (max-width: 1023.98px) { .red-detail-grid { grid-template-columns: 1fr; } }
+.red-detail-grid > * { min-width: 0; }
+@media (max-width: 1023.98px) { .red-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Detail tables inside those panels (Request Context, Metadata).
+   Their label column is a fixed `width="200"` and their values are URLs and
+   JSON, so the table's intrinsic width stayed ~416px however narrow the panel
+   became — the last thing still pushing the detail page sideways on a phone
+   once the grid and the hero were fixed. Below the stacking breakpoint the
+   label column narrows and long values wrap on any character, so the table
+   fits its panel instead of widening the page. */
+@media (max-width: 1023.98px) {
+  .red-detail-grid .card-body > .table { table-layout: fixed; width: 100%; }
+  .red-detail-grid .card-body > .table th { width: 40%; }
+  .red-detail-grid .card-body > .table td { overflow-wrap: anywhere; }
+}
 
 /* Env badge */
 .red-env-badge {

@@ -82,6 +82,50 @@ RSpec.describe RailsErrorDashboard::Services::BreadcrumbCollector do
     end
   end
 
+  # The ownership protocol is what makes a job performed INLINE inside a
+  # request safe: the job adds its crumbs to the request's trail and must not
+  # tear it down on the way out. It had no direct coverage at all -- only one
+  # transitive integration assertion -- so the flag could be broken in a way a
+  # single example anywhere in the suite would catch.
+  describe ".init_buffer_unless_present / .clear_buffer_if_owned" do
+    after { described_class.clear_buffer }
+
+    it "opens a buffer and claims ownership when the thread has none" do
+      described_class.clear_buffer
+
+      expect(described_class.init_buffer_unless_present).to be(true)
+      expect(described_class.current_buffer).not_to be_nil
+    end
+
+    it "declines ownership when a buffer is already open, and leaves it in place" do
+      described_class.init_buffer
+      described_class.add("controller", "surrounding request")
+
+      expect(described_class.init_buffer_unless_present).to be(false)
+      expect(described_class.current_breadcrumbs.to_s).to include("surrounding request")
+    end
+
+    it "tears down only what the caller opened" do
+      described_class.init_buffer
+      described_class.add("controller", "surrounding request")
+      owned = described_class.init_buffer_unless_present
+
+      described_class.clear_buffer_if_owned(owned)
+
+      expect(described_class.current_buffer).not_to be_nil
+      expect(described_class.current_breadcrumbs.to_s).to include("surrounding request")
+    end
+
+    it "tears the buffer down when the caller did open it" do
+      described_class.clear_buffer
+      owned = described_class.init_buffer_unless_present
+
+      described_class.clear_buffer_if_owned(owned)
+
+      expect(described_class.current_buffer).to be_nil
+    end
+  end
+
   describe ".add" do
     before { described_class.init_buffer }
 

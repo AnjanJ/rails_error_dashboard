@@ -85,6 +85,19 @@ module RailsErrorDashboard
         RailsErrorDashboard::Subscribers::BreadcrumbSubscriber.subscribe!
       end
 
+      # Give background jobs a breadcrumb buffer of their own. init_buffer had
+      # exactly one caller -- the Rack middleware -- so a job never entered the
+      # HTTP stack and had no buffer at all; every subscriber early-returns on
+      # `unless current_buffer`, so a failing job's SQL and custom crumbs were
+      # dropped in the one place an error is hardest to reproduce.
+      #
+      # Registered unconditionally and gated at PERFORM time, not here:
+      # enable_breadcrumbs defaults to false, and the ActiveJob callback list
+      # is fixed once the class loads, so a boot-time gate would leave this
+      # permanently unregistered for any host that turns the feature on in an
+      # initializer that runs later. Off, it costs one config read per job.
+      RailsErrorDashboard::Subscribers::BreadcrumbSubscriber.install_job_buffer!
+
       # Subscribe to Rack Attack AS::Notifications events (requires Rack::Attack).
       # Breadcrumbs are NOT required — events persist to their own table (issue #143).
       if RailsErrorDashboard.configuration.enable_rack_attack_tracking &&

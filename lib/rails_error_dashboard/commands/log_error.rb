@@ -166,7 +166,15 @@ module RailsErrorDashboard
 
         # Harvest breadcrumbs NOW (before job dispatch — different thread won't have them)
         if !lite && RailsErrorDashboard.configuration.enable_breadcrumbs
-          context = context.merge(_serialized_breadcrumbs: Services::BreadcrumbCollector.harvest)
+          # A failing job's snapshot rides the envelope: the worker that runs
+          # the capture is a different thread (and often a different process),
+          # so a thread-local left here would never be seen again. Prefer it
+          # over the live buffer, which the job's ensure has already cleared.
+          job_trail = Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY]
+          Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY] = nil
+          harvested = Services::BreadcrumbCollector.harvest
+          trail = job_trail.is_a?(Array) && job_trail.any? ? job_trail : harvested
+          context = context.merge(_serialized_breadcrumbs: trail)
         end
 
         # Capture system health NOW (metrics are time-sensitive, different thread = different state)
@@ -517,14 +525,38 @@ module RailsErrorDashboard
 
         # Harvest breadcrumbs (if enabled and column exists)
         if !storm_lite && ErrorLog.column_names.include?("breadcrumbs") && RailsErrorDashboard.configuration.enable_breadcrumbs
-          # Sync path: harvest from current thread
-          raw_breadcrumbs = Services::BreadcrumbCollector.harvest
+          # The envelope wins when there is one.
+          #
+          # An async capture harvests the REQUEST's trail before enqueue and
+          # carries it here; the worker thread running this job now has a
+          # buffer of its own (jobs get one, so a failing job has a trail), and
+          # harvesting that first would show the worker's activity in place of
+          # the request's. Draining the current thread stays the sync path, and
+          # still runs below so a worker's own buffer is not left to leak.
+          serialized = @context[:_serialized_breadcrumbs] || @context["_serialized_breadcrumbs"]
 
-          # Async path fallback: use pre-serialized breadcrumbs from call_async context
-          if raw_breadcrumbs.empty?
-            serialized = @context[:_serialized_breadcrumbs]
-            raw_breadcrumbs = serialized if serialized.is_a?(Array)
-          end
+          # A failing job's trail, snapshotted by the around_perform on its way
+          # out. Active Job reports a job error two frames OUTSIDE the callback
+          # that owns the buffer, so by now the live buffer is already gone and
+          # a current-thread harvest returns nothing -- the snapshot is the only
+          # surviving copy. Consumed here, whoever wrote it.
+          job_trail = Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY]
+          Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY] = nil
+
+          # Still unconditional: drains a worker's own buffer so it cannot leak.
+          current = Services::BreadcrumbCollector.harvest
+
+          # The envelope stays FIRST. An async capture carries the request's
+          # trail across the queue, and neither the worker's own buffer nor a
+          # snapshot may displace it.
+          raw_breadcrumbs =
+            if serialized.is_a?(Array) && serialized.any?
+              serialized
+            elsif job_trail.is_a?(Array) && job_trail.any?
+              job_trail
+            else
+              current
+            end
 
           if raw_breadcrumbs.is_a?(Array) && raw_breadcrumbs.any?
             filtered = Services::BreadcrumbCollector.filter_sensitive(raw_breadcrumbs)

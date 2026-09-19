@@ -77,6 +77,29 @@ module RailsErrorDashboard
         nil
       end
 
+      # Open a buffer ONLY if this thread has none, and say whether we opened
+      # it. The caller passes that answer back to clear_buffer_if_owned, so a
+      # job performed inline inside a request adds its crumbs to the request's
+      # trail and does not tear it down on the way out.
+      #
+      # Unconditional init/clear here would erase a surrounding request's
+      # buffer on every perform_now, the test adapter and the :inline queue.
+      # @return [Boolean] true when this caller opened the buffer
+      def self.init_buffer_unless_present
+        return false if Thread.current[THREAD_KEY]
+
+        init_buffer
+        true
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BreadcrumbCollector.init_buffer_unless_present failed: #{e.message}")
+        false
+      end
+
+      # Tear down only what this caller opened (see init_buffer_unless_present).
+      def self.clear_buffer_if_owned(owned)
+        clear_buffer if owned
+      end
+
       # Clear the ring buffer (end of request — MUST be called in ensure block)
       def self.clear_buffer
         Thread.current[THREAD_KEY] = nil

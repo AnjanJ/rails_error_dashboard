@@ -182,6 +182,12 @@ module RailsErrorDashboard
     attr_accessor :local_variable_max_array_items     # Max array items to serialize (default: 10)
     attr_accessor :local_variable_max_hash_items      # Max hash entries to serialize (default: 20)
     attr_accessor :local_variable_filter_patterns     # Additional sensitive name patterns (default: [])
+    # Calling #inspect on an unknown object runs arbitrary APPLICATION code on
+    # the failure path; truncating the result bounds storage, not cost. The
+    # default is a safe structural summary, with full inspect per type by
+    # opt-in and a wall-clock budget even then.
+    attr_accessor :local_variable_inspect_allowlist   # Class names whose #inspect may run (default: safe built-ins)
+    attr_accessor :local_variable_inspect_budget_ms   # Wall-clock budget for one #inspect (default: 5)
 
     # Instance variable capture from tp.self (receiver object at raise time)
     attr_accessor :enable_instance_variables           # Master switch (default: false)
@@ -415,6 +421,10 @@ module RailsErrorDashboard
       @local_variable_max_array_items = 10      # Max array items to serialize
       @local_variable_max_hash_items = 20       # Max hash entries to serialize
       @local_variable_filter_patterns = []      # Additional sensitive variable name patterns
+      # Struct and ActiveModel print their own attributes and are cheap; both
+      # are the shapes a developer most often wants to read in a snapshot.
+      @local_variable_inspect_allowlist = %w[Struct ActiveModel::Model ActiveModel::Attributes]
+      @local_variable_inspect_budget_ms = 5
 
       # Instance variable capture defaults - OFF by default (opt-in)
       @enable_instance_variables = false         # Capture ivars from tp.self at raise time
