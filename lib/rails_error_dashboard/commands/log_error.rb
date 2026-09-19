@@ -19,6 +19,14 @@ module RailsErrorDashboard
         ActiveRecord::Deadlocked
       ].freeze
 
+      # Context keys whose Hash value ErrorContext#extract_params folds into the
+      # stored request_params. Each one must be redacted before the payload
+      # crosses the queue, or the queue and the database drift apart.
+      # :job/:job_class carry live objects rather than Hashes and are skipped by
+      # the is_a?(Hash) guard; their arguments reach the payload through
+      # :params, which is covered here.
+      CONTEXT_PARAM_KEYS = %i[params additional_context metadata].freeze
+
       def self.call(exception, context = {})
         # Filter FIRST (ignore list + static sampling) so ignored exceptions
         # never count toward storm state. _pre_filtered prevents the sync path
@@ -79,7 +87,14 @@ module RailsErrorDashboard
       # Kept as a module-level helper so both sync and async paths can call it.
       # @return [Hash<String, Object>]
       def self.build_capture_span_attributes(exception, was_async:)
-        msg = exception.message.to_s
+        # Redact BEFORE truncating. The span leaves the process for a collector
+        # the host app may not control, so it is an export boundary and gets the
+        # same policy as storage -- otherwise enabling tracing silently widened
+        # what counts as safe to emit. filter_attributes returns its input
+        # unchanged when filter_sensitive_data is off and rescues internally.
+        msg = Services::SensitiveDataFilter.filter_attributes(
+          message: exception.message.to_s
+        )[:message].to_s
         {
           "error.type" => exception.class.name,
           "error.message" => msg.length > 200 ? "#{msg[0, 200]}…" : msg,
@@ -270,6 +285,24 @@ module RailsErrorDashboard
 
         context = context.merge(request_params: filtered[:request_params]) if context.key?(:request_params)
         context = context.merge(request_url: filtered[:request_url]) if context.key?(:request_url)
+
+        # request_params is only one of the shapes that becomes the stored
+        # params: ErrorContext#extract_params also folds in :params,
+        # :additional_context, :metadata and the job/sidekiq keys. Those crossed
+        # the queue raw, so the row was redacted while the secret sat in the
+        # queue's backing store -- exactly the drift this method exists to
+        # prevent. ParameterFilter takes a Hash directly; filter_json_string is
+        # no use here because these are Hashes, not JSON strings.
+        param_filter = Services::SensitiveDataFilter.parameter_filter
+        if param_filter
+          CONTEXT_PARAM_KEYS.each do |key|
+            value = context[key]
+            next unless value.is_a?(Hash)
+
+            context = context.merge(key => param_filter.filter(value))
+          end
+        end
+
         # The raw session ID must not sit in Redis / Solid Queue either.
         if context[:session_id]
           context = context.merge(session_id: Services::SensitiveDataFilter.digest_session_id(context[:session_id]))

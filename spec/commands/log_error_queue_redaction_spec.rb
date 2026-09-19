@@ -68,6 +68,49 @@ RSpec.describe "capture payload redaction at the queue boundary" do
       expect(context["_identity"]).to match(/\A[0-9a-f]{16}\z/)
     end
 
+    # request_params is only ONE of the shapes that becomes the stored params.
+    # ErrorContext#extract_params also folds in :params, :additional_context and
+    # the job/sidekiq-derived keys, and those crossed the queue raw: the stored
+    # row was filtered, so the leak was invisible from the dashboard while the
+    # secret sat in Redis / Solid Queue, its backups and any job-argument log.
+    it "redacts the raw params form the command also accepts" do
+      RailsErrorDashboard::Commands::LogError.call(
+        boom("plain failure"), params: { password: "QUEUE_RAW_PARAM" }
+      )
+
+      payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+
+      expect(payload).not_to include("QUEUE_RAW_PARAM")
+    end
+
+    it "redacts additional_context, which mobile and API clients use" do
+      RailsErrorDashboard::Commands::LogError.call(
+        boom("plain failure"), additional_context: { api_key: "QUEUE_CTX_SECRET", screen: "Checkout" }
+      )
+
+      payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+
+      expect(payload).not_to include("QUEUE_CTX_SECRET")
+      # Benign context must survive -- this is investigation data.
+      expect(payload).to include("Checkout")
+    end
+
+    it "redacts metadata supplied by a manual report" do
+      RailsErrorDashboard::Commands::LogError.call(
+        boom("plain failure"), metadata: { auth_token: "QUEUE_META_SECRET" }
+      )
+
+      payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+
+      expect(payload).not_to include("QUEUE_META_SECRET")
+    end
+
     it "still redacts the row itself when the job runs" do
       RailsErrorDashboard::Commands::LogError.call(
         boom, request_params: { token: "QUEUE_TOKEN" }.to_json
@@ -77,6 +120,37 @@ RSpec.describe "capture payload redaction at the queue boundary" do
       row = logs.sole
       expect(row.message).to eq("password=[FILTERED]")
       expect(row.request_params.to_s).not_to include("QUEUE_TOKEN")
+    end
+  end
+
+  # One capture, every boundary it can cross. Each sub-finding of the redaction
+  # review was a single boundary drifting from the others; asserting them
+  # together is what stops the next one drifting silently.
+  describe "one policy at every boundary" do
+    before { RailsErrorDashboard.configuration.async_logging = true }
+
+    it "keeps the same secret out of the queue payload, the stored row and the span" do
+      error = boom("auth failed password=OMNI_SECRET")
+
+      RailsErrorDashboard::Commands::LogError.call(error, params: { api_key: "OMNI_PARAM" })
+
+      # 1. the queue payload
+      queue_payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+      expect(queue_payload).not_to include("OMNI_SECRET")
+      expect(queue_payload).not_to include("OMNI_PARAM")
+
+      # 2. the export boundary -- the attributes any tracer would receive
+      span_attributes = RailsErrorDashboard::Commands::LogError
+        .build_capture_span_attributes(error, was_async: true)
+      expect(span_attributes.to_json).not_to include("OMNI_SECRET")
+
+      # 3. the stored row
+      perform_enqueued_jobs
+      row = logs.sole
+      expect(row.message).not_to include("OMNI_SECRET")
+      expect(row.request_params.to_s).not_to include("OMNI_PARAM")
     end
   end
 

@@ -215,9 +215,17 @@ module RailsErrorDashboard
             info[:value] = SensitiveDataFilter.send(:filter_message, filter, info[:value])
           end
 
-          # Filter nested hash keys recursively
+          # Filter nested hash keys recursively.
+          #
+          # The hash is wrapped back under its own variable name first, so the
+          # filter sees the SAME key path Rails sees for request params. A
+          # dotted pattern like "profile.private_note" is a path, not a name:
+          # passing the bare inner hash dropped the "profile" segment, and the
+          # value Rails redacts in params stayed readable here. Unwrapping
+          # afterwards leaves the stored shape unchanged.
           if info[:value].is_a?(Hash)
-            info[:value] = filter_hash_recursive(filter, info[:value])
+            scoped = filter.filter(var_name => info[:value])[var_name]
+            info[:value] = filter_hash_recursive(filter, scoped)
           end
 
           # Filter nested array items

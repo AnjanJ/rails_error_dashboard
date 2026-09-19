@@ -110,6 +110,19 @@ RSpec.describe "Commands::LogError OTel instrumentation" do
       expect(span.attributes["error.message"]).to start_with("boom — capture me")
     end
 
+    # The span is an EXPORT boundary: its attributes leave the process for a
+    # collector the host app does not necessarily control. Sending the raw
+    # message there while the stored row says password=[FILTERED] let an
+    # observability integration silently widen the sensitive-data policy.
+    it "redacts the message before it reaches the span, as storage does" do
+      secret = StandardError.new("login failed password=SYNTHETIC_TRACE_SECRET")
+      RailsErrorDashboard::Commands::LogError.call(secret, {})
+
+      span = tracer.spans.first[:span]
+      expect(span.attributes["error.message"]).not_to include("SYNTHETIC_TRACE_SECRET")
+      expect(span.attributes["error.message"]).to include("[FILTERED]")
+    end
+
     it "truncates error.message to 200 chars" do
       long = StandardError.new("x" * 500)
       RailsErrorDashboard::Commands::LogError.call(long, {})
