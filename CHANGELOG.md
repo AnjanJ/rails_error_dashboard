@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.13.0...rails_error_dashboard/v0.14.0) (2026-09-19)
+
+
+### ✨ Features
+
+* bound serialization work, collect job breadcrumbs, fix phone layout ([#240](https://github.com/AnjanJ/rails_error_dashboard/issues/240)) ([e02cbb6](https://github.com/AnjanJ/rails_error_dashboard/commit/e02cbb60df13804824ea58804bc97ee972b56d51)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* count events in the window they happened, and stamp async captures ([#238](https://github.com/AnjanJ/rails_error_dashboard/issues/238)) ([c217a86](https://github.com/AnjanJ/rails_error_dashboard/commit/c217a86dc8f0799ca28bbf9fff2fc326b339e53c)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+
+
+### 🐛 Bug Fixes
+
+* apply dotted redaction to every captured value shape ([#242](https://github.com/AnjanJ/rails_error_dashboard/issues/242)) ([83aea13](https://github.com/AnjanJ/rails_error_dashboard/commit/83aea1392df9dba65b48eb855e3f0ae73367b9f5)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* apply one redaction policy at storage, queue and export boundaries ([#236](https://github.com/AnjanJ/rails_error_dashboard/issues/236)) ([622407b](https://github.com/AnjanJ/rails_error_dashboard/commit/622407b4c37c15b34ec43b3b1cd928a2a93b1a77)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* bound nested inspect by serializing structs member-wise ([#246](https://github.com/AnjanJ/rails_error_dashboard/issues/246)) ([e92c04a](https://github.com/AnjanJ/rails_error_dashboard/commit/e92c04a2e6049672d54fd31c52881990ea32d694)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* bucket storm counts by time and widen snapshot provenance ([#245](https://github.com/AnjanJ/rails_error_dashboard/issues/245)) ([4c3544d](https://github.com/AnjanJ/rails_error_dashboard/commit/4c3544d2b4e893c99294a4f0472128a0f126ce24)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* conserve storm counts under concurrent reopen and transient failure ([#235](https://github.com/AnjanJ/rails_error_dashboard/issues/235)) ([5fd04ee](https://github.com/AnjanJ/rails_error_dashboard/commit/5fd04eebe3fc66d72a388a1fbda2cd9e412a8880)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* count analytics events in their own window and prune count buckets ([#244](https://github.com/AnjanJ/rails_error_dashboard/issues/244)) ([f8330c4](https://github.com/AnjanJ/rails_error_dashboard/commit/f8330c41b472bc1e8cac8bf6cd0376afa07e3768)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* label snapshot provenance honestly and retain manual-report fields ([#239](https://github.com/AnjanJ/rails_error_dashboard/issues/239)) ([ad169fa](https://github.com/AnjanJ/rails_error_dashboard/commit/ad169fa272cc3311b8fe1ef96a258fd059f882eb)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+* normalize a caller-supplied capture time once, before transport ([#243](https://github.com/AnjanJ/rails_error_dashboard/issues/243)) ([ed3a0cb](https://github.com/AnjanJ/rails_error_dashboard/commit/ed3a0cbcc72db3239efba0489bfebab31ad07096)), closes [#223](https://github.com/AnjanJ/rails_error_dashboard/issues/223)
+
 ## [0.13.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.12.1...rails_error_dashboard/v0.13.0) (2026-09-18)
 
 
