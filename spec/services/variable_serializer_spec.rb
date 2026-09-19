@@ -701,4 +701,77 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
       expect(Thread.current[described_class::THREAD_KEY]).to be_nil
     end
   end
+
+  # R8: the default path must never call arbitrary #inspect -- not directly,
+  # and not transitively through an allowlisted container.
+  #
+  # Struct and ActiveModel were allowlisted because they print their own
+  # attributes cheaply. That is true of the CONTAINER and false of whatever it
+  # holds: Struct#inspect calls its members' #inspect, so a Struct wrapping an
+  # unknown object with a slow #inspect ran that code in full. Measuring
+  # elapsed time AFTERWARDS selects the output; it does not bound the work.
+  describe "bounded execution of nested inspect" do
+    let(:slow) do
+      Class.new do
+        def self.name = "SlowNested"
+
+        def inspect
+          $slow_inspect_called = true
+          sleep 0.025
+          "x" * 100_000
+        end
+      end.new
+    end
+
+    around do |example|
+      $slow_inspect_called = false
+      RailsErrorDashboard.reset_configuration!
+      example.run
+    ensure
+      $slow_inspect_called = false
+      RailsErrorDashboard.reset_configuration!
+    end
+
+    it "does not run a nested object's inspect through the default Struct allowlist" do
+      struct = Struct.new(:payload).new(slow)
+
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      described_class.call({ wrapper: struct })
+      elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+
+      expect($slow_inspect_called).to be(false),
+        "Struct#inspect reached the nested object's own inspect"
+      expect(elapsed_ms).to be < 25,
+        "serialization took #{elapsed_ms.round(1)}ms -- the nested inspect ran"
+    end
+
+    it "still renders a plain Struct's own attributes" do
+      point = Struct.new(:name, :age).new("Alice", 30)
+
+      result = described_class.call({ point: point })
+
+      expect(result["point"][:value].to_s).to include("Alice")
+    end
+
+    it "summarizes ActiveModel rather than reading attributes" do
+      # Reading ActiveModel::Attributes#attributes runs each attribute's type
+      # cast, which is application code -- so member-wise traversal would have
+      # the same unbounded-work problem by another door. Verified: a type whose
+      # cast sleeps 20ms takes 24ms to read.
+      cast_ran = false
+      type = Class.new(ActiveModel::Type::Value) do
+        define_method(:cast) { |_v| cast_ran = true; sleep 0.025; "casted" }
+      end.new
+      model_class = Class.new do
+        def self.name = "SlowModel"
+        include ActiveModel::Model
+        include ActiveModel::Attributes
+      end
+      model_class.attribute :field, type
+
+      described_class.call({ model: model_class.new(field: "raw") })
+
+      expect(cast_ran).to be(false), "reading ActiveModel attributes ran a custom type's cast"
+    end
+  end
 end

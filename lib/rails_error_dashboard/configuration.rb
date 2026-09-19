@@ -421,9 +421,19 @@ module RailsErrorDashboard
       @local_variable_max_array_items = 10      # Max array items to serialize
       @local_variable_max_hash_items = 20       # Max hash entries to serialize
       @local_variable_filter_patterns = []      # Additional sensitive variable name patterns
-      # Struct and ActiveModel print their own attributes and are cheap; both
-      # are the shapes a developer most often wants to read in a snapshot.
-      @local_variable_inspect_allowlist = %w[Struct ActiveModel::Model ActiveModel::Attributes]
+      # Struct is serialized MEMBER-WISE (never via its own #inspect), so it
+      # needs no allowlist entry -- see VariableSerializer.serialize_struct.
+      #
+      # ActiveModel is deliberately NOT allowlisted. Reading
+      # ActiveModel::Attributes#attributes runs each attribute's type cast,
+      # which is application code, so neither #inspect nor member-wise reading
+      # can be bounded for it; it gets a safe summary instead.
+      #
+      # Anything added here opts that type IN to unbounded execution: the only
+      # way to interrupt arbitrary Ruby mid-call is Timeout, which is not safe
+      # on the capture path. The budget below selects the stored OUTPUT after
+      # the fact; it does not bound the work.
+      @local_variable_inspect_allowlist = []
       @local_variable_inspect_budget_ms = 5
 
       # Instance variable capture defaults - OFF by default (opt-in)

@@ -182,12 +182,30 @@ module RailsErrorDashboard
         # is a safe structural summary, and inspect runs only for types the
         # host app opted in to -- under a wall-clock budget even then.
         max_len = config.local_variable_max_string_length || 200
+
+        # A Struct is serialized MEMBER-WISE, never through its own #inspect.
+        #
+        # Struct was allowlisted because it prints its attributes cheaply --
+        # true of the container, false of what it holds. Struct#inspect calls
+        # each member's #inspect, so a Struct wrapping an unknown object ran
+        # that object's arbitrary code in full. Walking the members instead
+        # gives every one of them the same safe-summary default an unknown
+        # object already gets, so the guarantee holds by construction rather
+        # than by measuring afterwards.
+        return serialize_struct(value, config, depth, max_depth) if struct?(value)
+
         return { value: safe_summary(value), truncated: false } unless inspectable?(value, config)
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         inspected = value.inspect
         elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
 
+        # An OUTPUT-selection threshold, not an execution budget: the inspect
+        # above has already run to completion by the time this is measured.
+        # Only reachable for a type the host app explicitly opted in to, and
+        # that opt-in is documented as accepting unbounded execution -- the
+        # only way to interrupt arbitrary Ruby mid-call is Timeout, which is
+        # not safe on the capture path (safety rule 1).
         budget = config.local_variable_inspect_budget_ms || 5
         if elapsed_ms > budget
           RailsErrorDashboard::Logger.debug(
@@ -206,6 +224,38 @@ module RailsErrorDashboard
         { value: safe_summary(value), truncated: false }
       end
       private_class_method :serialize_object
+
+      def self.struct?(value)
+        value.is_a?(Struct)
+      rescue StandardError
+        false
+      end
+      private_class_method :struct?
+
+      # Serialize a Struct's members through the ordinary bounded path.
+      #
+      # Bounded twice over: member count is capped, and each member recurses
+      # with depth + 1, so a Struct of Structs cannot reintroduce unbounded
+      # work through recursion instead of through #inspect.
+      def self.serialize_struct(value, config, depth, max_depth)
+        max_members = config.local_variable_max_array_items || 10
+        members = value.members.first(max_members)
+        truncated = value.members.size > members.size
+
+        pairs = members.map do |member|
+          serialized = serialize_value(value[member], config, depth + 1, max_depth)
+          truncated ||= serialized[:truncated]
+          "#{member}=#{serialized[:value]}"
+        end
+
+        # An anonymous Struct has no class name; label it by shape rather than
+        # rendering "#<struct  a=1>" with a hole in it.
+        label = value.class.name.presence || "struct"
+        { value: "#<#{label} #{pairs.join(', ')}>", truncated: truncated }
+      rescue StandardError
+        { value: safe_summary(value), truncated: false }
+      end
+      private_class_method :serialize_struct
 
       # What an object is, without asking the object. Costs one class-name read.
       def self.safe_summary(value)
