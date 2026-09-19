@@ -21,11 +21,14 @@ module RailsErrorDashboard
         entries: entries, overflow: overflow, episode: episode, batch_id: batch_id
       )
 
-      # A batch that reconciled nothing because every write failed is not a
-      # delivered batch. Fail the job so Active Job retries it rather than
-      # dropping counts that were only ever held in one process's memory.
+      # A batch that wrote nothing is not a delivered batch. Fail the job so
+      # Active Job retries it rather than dropping counts that were only ever
+      # held in one process's memory. Two shapes reach here: every entry failed
+      # permanently, and a transient store failure that rolled the whole batch
+      # back (retryable: true) -- the latter is intact and safe to replay.
       if result.is_a?(Hash) && result[:success] == false
-        raise FlushFailed, "storm flush reconciled nothing: #{result[:error]}"
+        reason = result[:retryable] ? "storm flush rolled back" : "storm flush reconciled nothing"
+        raise FlushFailed, "#{reason}: #{result[:error]}"
       end
 
       result
