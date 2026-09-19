@@ -56,11 +56,27 @@ RSpec.describe RailsErrorDashboard::EventCount do
       expect(described_class.count).to eq(0)
     end
 
-    # The authoritative total is occurrence_count on the group. Losing a bucket
-    # degrades a time window; it must never fail the flush that carries the
-    # counts (host-app safety: nothing in this path may raise).
-    it "never raises when the table cannot be written" do
+    # Transient and permanent failures are NOT the same, and treating them
+    # alike is what erased time windows.
+    #
+    # This example previously asserted that accumulate never raises at all,
+    # using StatementInvalid -- which is a RETRYABLE class. Swallowing it let
+    # FlushStormCounts finalize its batch ledger with the bucket missing, so
+    # the replay was suppressed as already-applied and those events vanished
+    # from every window permanently while the lifetime count stayed correct.
+    # Changed deliberately; see design.md F6.
+    it "re-raises a transient failure so the caller can retry the batch" do
       allow(described_class).to receive(:where).and_raise(ActiveRecord::StatementInvalid, "gone")
+
+      expect {
+        described_class.accumulate(error_log_id: group.id, bucket_at: Time.current, count: 5)
+      }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
+    # A permanent failure still degrades quietly: retrying cannot help, and
+    # failing the flush would turn a lost time bucket into a lost COUNT.
+    it "returns false, without raising, on a permanent failure" do
+      allow(described_class).to receive(:where).and_raise(ArgumentError, "malformed")
 
       expect {
         expect(described_class.accumulate(error_log_id: group.id, bucket_at: Time.current, count: 5)).to be false

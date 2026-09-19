@@ -16,6 +16,12 @@ module RailsErrorDashboard
     # Counts are exact. Notifications are NOT dispatched from here — during a
     # storm they're suppressed by design; the storm notification covers it.
     class FlushStormCounts
+      # A bucket write failed in a way that may succeed on retry. Raised so the
+      # per-entry rescue in #call classifies it exactly as it classifies a
+      # transient COUNT failure: roll the batch back, leave the ledger
+      # unclaimed, let the job retry the whole batch intact.
+      class EventCountWriteFailed < StandardError; end
+
       def self.call(entries:, overflow: 0, episode: nil, batch_id: nil)
         new(entries: entries, overflow: overflow, episode: episode, batch_id: batch_id).call
       end
@@ -56,7 +62,7 @@ module RailsErrorDashboard
           @entries.each do |entry|
             entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
             counted += reconcile_entry(entry, application)
-          rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
+          rescue EventCountWriteFailed, *Commands::LogError::RETRYABLE_STORE_ERRORS => e
             # A transient store failure is NOT a bad entry. Claiming the batch
             # here would commit the ledger row and strand every entry not yet
             # applied: the retry is then suppressed as a replay and those events
@@ -187,14 +193,42 @@ module RailsErrorDashboard
       def reconcile_entry(entry, application)
         error_log_id = nil
         count = reconcile_entry_count(entry, application) { |id| error_log_id = id }
-        if count.positive? && error_log_id
-          EventCount.accumulate(
-            error_log_id: error_log_id,
-            bucket_at: parse_time(entry["last_seen_at"]) || Time.current,
-            count: count
-          )
-        end
+        write_event_buckets(entry, error_log_id, count) if count.positive? && error_log_id
         count
+      end
+
+      # Write one row per BUCKET the producer recorded, not one row for the
+      # whole entry.
+      #
+      # The buffer tallies events per 15-minute bucket precisely so this does
+      # not have to guess: assigning the entry's whole total to last_seen_at's
+      # bucket put an event from 23:59:59 and one from 00:00:01 on the same
+      # day. A payload from an older release carries no buckets, so it falls
+      # back to the old behaviour rather than losing the count.
+      def write_event_buckets(entry, error_log_id, count)
+        buckets = entry["buckets"]
+        buckets = nil unless buckets.is_a?(Hash) && buckets.any?
+
+        pairs =
+          if buckets
+            buckets.map { |at, n| [ Time.zone.at(at.to_i), n.to_i ] }
+          else
+            [ [ parse_time(entry["last_seen_at"]) || Time.current, count ] ]
+          end
+
+        pairs.each do |bucket_at, n|
+          next unless n.positive?
+
+          # The return value is NOT ignored. EventCount.accumulate rescues a
+          # transient store failure and reports it; swallowing that here
+          # finalized the batch ledger with the bucket missing, so the replay
+          # was suppressed as already-applied and the time window lost those
+          # events permanently while the lifetime count stayed correct.
+          next if EventCount.accumulate(error_log_id: error_log_id, bucket_at: bucket_at, count: n)
+
+          raise EventCountWriteFailed,
+                "event bucket write failed for error_log #{error_log_id} at #{bucket_at.iso8601}"
+        end
       end
 
       def reconcile_entry_count(entry, application)

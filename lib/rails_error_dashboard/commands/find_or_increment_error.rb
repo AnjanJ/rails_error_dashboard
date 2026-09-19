@@ -163,11 +163,23 @@ module RailsErrorDashboard
         retains_older_value?(error) ? "partial" : "full"
       end
 
+      # Every field whose stored value this capture could RETAIN from an
+      # earlier occurrence. Defined once, so a field cannot join the displayed
+      # snapshot without joining the provenance policy -- which is exactly how
+      # local variables came to be shown beside a "full" label and a newer
+      # timestamp while belonging to a different event.
+      #
+      # Request identity plus the context payloads: both are subject to the
+      # same `||` chain, and a reader cannot tell them apart on the page.
+      PROVENANCE_TRACKED = (REFRESHED_REQUEST_IDENTITY + REFRESHED_CONTEXT).uniq.freeze
+
       # True when the row already holds a displayed value that this occurrence
       # did NOT supply, so the `||` chain is about to keep it and the stored
       # snapshot will describe two different events.
       def retains_older_value?(error)
-        REFRESHED_REQUEST_IDENTITY.any? do |key|
+        PROVENANCE_TRACKED.any? do |key|
+          next false unless ErrorLog.column_names.include?(key.to_s)
+
           @attributes[key].nil? && previous_value(error, key).present?
         end
       end

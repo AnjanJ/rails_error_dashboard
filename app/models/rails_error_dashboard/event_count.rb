@@ -69,18 +69,42 @@ module RailsErrorDashboard
           .update_all([ "count = count + ?, updated_at = ?", count.to_i, Time.current ])
           .positive?
       end
-    rescue StandardError => e
-      # Never fail a storm flush over the rollup: the authoritative total is
-      # still occurrence_count on the group. Losing a bucket degrades a time
-      # window, it does not lose the count.
+    rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
+      # TRANSIENT: the store may be back in a moment. Do NOT swallow it.
+      #
+      # Returning false here let FlushStormCounts finalize its batch ledger
+      # with the bucket missing, so the replay was suppressed as
+      # already-applied and those events were erased from every time window --
+      # permanently -- while the lifetime count stayed correct. The caller
+      # turns this into an abort-and-retry of the whole batch.
       RailsErrorDashboard::Logger.debug(
-        "[RailsErrorDashboard] EventCount.accumulate failed: #{e.class} - #{e.message}"
+        "[RailsErrorDashboard] EventCount.accumulate hit a transient failure: #{e.class} - #{e.message}"
+      )
+      raise
+    rescue StandardError => e
+      # PERMANENT: a malformed row, a missing table, an adapter that refuses
+      # this statement. Retrying cannot help, and failing the flush would turn
+      # a lost time bucket into a lost COUNT -- the authoritative total is
+      # occurrence_count on the group, and it is already written.
+      #
+      # This is the only case the old comment actually described.
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] EventCount.accumulate failed permanently: #{e.class} - #{e.message}"
       )
       false
     end
 
+    # Whether the rollup table is usable.
+    #
+    # A transient connection failure here is NOT "the table does not exist":
+    # swallowing it returned false before any write was attempted, so a storm
+    # flush reported success with no bucket written, and EventVolume silently
+    # dropped the bucket term from its reads. Let the transient class through
+    # so the caller can retry; only a genuinely absent table returns false.
     def self.table_exists?
       connection.table_exists?(table_name)
+    rescue *Commands::LogError::RETRYABLE_STORE_ERRORS
+      raise
     rescue StandardError
       false
     end

@@ -184,4 +184,58 @@ RSpec.describe "diagnostic snapshot provenance" do
       expect(row.context_fidelity).to be_nil
     end
   end
+
+  # R7: provenance must describe EVERY displayed payload, not request identity
+  # alone. A second occurrence that supplies fresh user/URL/params/agent/IP but
+  # NO locals keeps the first occurrence's locals via the `||` chain -- and the
+  # row was still labelled "full", with the newer timestamp, so a reader could
+  # not tell that the variables belonged to a different event.
+  describe "provenance over retained context payloads" do
+    def capture(message, **context)
+      error = StandardError.new(message)
+      error.set_backtrace([ "#{Rails.root}/app/models/order.rb:1:in 'save'" ])
+      RailsErrorDashboard::Commands::LogError.call(error, context)
+    end
+
+    it "labels a snapshot partial when locals are retained from an earlier occurrence" do
+      RailsErrorDashboard.configuration.enable_local_variables = true
+
+      travel_to(Time.zone.parse("2026-09-19 12:00:00")) do
+        capture("provenance payload boom",
+                user_id: 10, request_url: "/first",
+                _serialized_local_variables: { "phase" => { type: "String", value: "older event", truncated: false } })
+      end
+
+      row = travel_to(Time.zone.parse("2026-09-19 12:01:00")) do
+        capture("provenance payload boom",
+                user_id: 20, request_url: "/second",
+                request_params: { "a" => 1 }.to_json, user_agent: "UA", ip_address: "1.2.3.4")
+      end.reload
+
+      expect(row.local_variables.to_s).to include("older event"),
+        "fixture guard: the older locals must actually have been retained"
+      expect(row.context_fidelity).to eq("partial"),
+        "a row showing an earlier occurrence's locals is not a fresh full capture"
+    end
+
+    it "still labels a wholly refreshed snapshot full" do
+      RailsErrorDashboard.configuration.enable_local_variables = true
+
+      travel_to(Time.zone.parse("2026-09-19 12:00:00")) do
+        capture("provenance whole boom",
+                user_id: 10, request_url: "/first",
+                _serialized_local_variables: { "phase" => { type: "String", value: "older", truncated: false } })
+      end
+
+      row = travel_to(Time.zone.parse("2026-09-19 12:01:00")) do
+        capture("provenance whole boom",
+                user_id: 20, request_url: "/second",
+                request_params: { "a" => 1 }.to_json, user_agent: "UA", ip_address: "1.2.3.4",
+                _serialized_local_variables: { "phase" => { type: "String", value: "newer", truncated: false } })
+      end.reload
+
+      expect(row.local_variables.to_s).to include("newer")
+      expect(row.context_fidelity).to eq("full")
+    end
+  end
 end
