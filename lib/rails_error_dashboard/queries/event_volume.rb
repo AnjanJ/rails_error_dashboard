@@ -319,9 +319,16 @@ module RailsErrorDashboard
           when /postgres/
             "DATE(#{table}.#{column} AT TIME ZONE 'UTC' AT TIME ZONE #{ErrorLog.connection.quote(zone.tzinfo.name)})"
           when /mysql|trilogy/
-            # Requires the host's MySQL to have its time-zone tables loaded
-            # (mysql_tzinfo_to_sql). Documented in the upgrade notes.
-            "DATE(CONVERT_TZ(#{table}.#{column}, '+00:00', #{ErrorLog.connection.quote(zone.formatted_offset)}))"
+            # A NAMED zone, not a numeric offset. CONVERT_TZ with '+05:30'
+            # applies one fixed offset to every row, which silently misplaces
+            # rows on the far side of a DST transition; the named form uses the
+            # offset in force at each row's own timestamp.
+            #
+            # This needs the server's time-zone tables (mysql_tzinfo_to_sql) --
+            # the same requirement groupdate already imposes for every chart on
+            # the dashboard, and which `rails error_dashboard:verify` checks.
+            # See docs/guides/DATABASE_OPTIONS.md.
+            "DATE(CONVERT_TZ(#{table}.#{column}, '+00:00', #{ErrorLog.connection.quote(zone.tzinfo.name)}))"
           else
             # SQLite: no tz database. Bucketing happens in Ruby (see
             # group_by_local_day), so the SQL key is the raw timestamp.

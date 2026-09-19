@@ -223,6 +223,8 @@ The burst cap exists for the bad deploy that produces hundreds of *distinct* new
 | `local_variable_max_array_items` | Integer | `10` | Maximum array items to serialize |
 | `local_variable_max_hash_items` | Integer | `20` | Maximum hash entries to serialize |
 | `local_variable_filter_patterns` | Array | `[]` | Additional sensitive variable name patterns to filter (beyond Rails `filter_parameters`) |
+| `local_variable_inspect_allowlist` | Array | `[]` | Class names whose `#inspect` may run. Empty by default: an unknown object gets a safe structural summary instead, because `#inspect` is arbitrary application code on the failure path. **Adding a type here opts it in to unbounded execution** — there is no safe way to interrupt arbitrary Ruby mid-call. Structs are serialized member-wise and need no entry. |
+| `local_variable_inspect_budget_ms` | Integer | `5` | Wall-clock threshold for an allowlisted `#inspect`. Output-selection only: it decides whether the result is *stored*, after the call has already completed. It does not bound execution. |
 
 ### Instance Variable Capture (v0.4.0)
 
