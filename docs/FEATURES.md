@@ -742,7 +742,7 @@ config.enable_local_variables = true
 
 ### How It Works
 
-Uses `TracePoint(:raise)` to capture local variables from the stack frame where the exception originates — before the stack unwinds and the values are lost. This is the most valuable debugging context possible: instead of guessing what went wrong from a stack trace, you see exactly what the variables contained.
+Uses `TracePoint(:raise)` to capture local variables from the stack frame where the exception originates — before the stack unwinds and the values are lost. This is the most valuable debugging context possible: instead of guessing what went wrong from a stack trace, you see what the variables contained at raise time. The snapshot is one level deep — strings, arrays and hashes are copied as the exception is raised, while nested containers and other objects are retained by reference, so a value mutated afterwards (in an `ensure` block, say) displays its later state.
 
 Variables are displayed on the error detail page in a dedicated "Local Variables" card with:
 

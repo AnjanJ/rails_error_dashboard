@@ -608,6 +608,7 @@ es:
         snapshot_stale: de una aparición anterior — las posteriores no aportaron contexto
         snapshot_fidelity_lite: captura reducida (la protección ante storms descartó los payloads de contexto)
         snapshot_fidelity_minimal: contabilizado durante un storm — no se capturó ningún contexto
+        snapshot_fidelity_partial: instantánea mixta — algunos campos provienen de una aparición anterior
         snapshot_unknown: capturada antes de que RED registrara la procedencia de las instantáneas
       similar_errors:
         title: Errores similares

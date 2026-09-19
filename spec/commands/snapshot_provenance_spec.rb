@@ -131,6 +131,51 @@ RSpec.describe "diagnostic snapshot provenance" do
     end
   end
 
+  # The `||` chain in increment_existing keeps a previous occurrence's user,
+  # params, agent and locals when the new one has none -- that is deliberate
+  # and useful. What was wrong is the LABEL: provenance advanced whenever any
+  # displayed field was refreshed, so a mixture of two events was stamped with
+  # the newer event's time and called a full capture. A reader cannot tell
+  # which moment the values describe.
+  describe "an occurrence that refreshes only some of the snapshot" do
+    it "does not call a mixture a fresh full capture" do
+      log_error.call(boom, user_id: 10, request_url: "https://shop.test/first")
+      row = logs.sole
+      first_stamp = row.context_captured_at
+
+      travel_to(1.minute.from_now) do
+        # Anonymous, different URL, and no locals: the user and locals shown
+        # afterwards still belong to the FIRST event.
+        log_error.call(boom, request_url: "https://shop.test/anonymous")
+      end
+
+      row.reload
+      expect(row.request_url).to eq("https://shop.test/anonymous")
+      expect(row.user_id).to eq(10)
+
+      # Either the stamp stays with the event that actually supplied the
+      # retained payload, or the fidelity says the snapshot is mixed. What it
+      # must not do is claim a fresh, complete capture.
+      expect([ row.context_captured_at, row.context_fidelity ])
+        .not_to eq([ be > first_stamp, "full" ])
+      expect(row.context_fidelity).to eq("partial")
+    end
+
+    it "still calls a wholly refreshed snapshot full" do
+      log_error.call(boom, user_id: 10, request_url: "https://shop.test/first")
+      row = logs.sole
+
+      travel_to(1.minute.from_now) do
+        log_error.call(boom, user_id: 11, request_url: "https://shop.test/second",
+                             user_agent: "Mozilla/5.0", ip_address: "10.0.0.2")
+      end
+
+      row.reload
+      expect(row.user_id).to eq(11)
+      expect(row.context_fidelity).to eq("full")
+    end
+  end
+
   describe "rows captured before provenance was recorded" do
     it "reports no provenance rather than inventing one" do
       row = create(:error_log, occurred_at: 1.day.ago, context_captured_at: nil, context_fidelity: nil)

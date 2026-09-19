@@ -42,7 +42,11 @@ module RailsErrorDashboard
     # @param app_version [String, nil] Version of the app where error occurred
     # @param metadata [Hash, nil] Additional custom metadata about the error
     # @param occurred_at [Time, nil] When the error occurred (defaults to Time.current)
-    # @param severity [Symbol, nil] Severity level (:critical, :high, :medium, :low)
+    # @param severity [Symbol, nil] IGNORED, and kept only so existing callers
+    #   do not break. Severity is not stored: ErrorLog#severity is CLASSIFIED
+    #   from error_type by Services::SeverityClassifier, so the way to control
+    #   it is the error_type you report. Accepting this silently made callers
+    #   believe they had set a value that was never read.
     # @param source [String, nil] Source identifier (e.g., "frontend", "mobile_app")
     #
     # @return [ErrorLog, nil] The created error log record, or nil if filtered/ignored
@@ -65,8 +69,7 @@ module RailsErrorDashboard
     #     user_agent: request.user_agent,
     #     ip_address: request.remote_ip,
     #     app_version: "1.2.3",
-    #     metadata: { card_type: "visa", amount: 99.99 },
-    #     severity: :high
+    #     metadata: { card_type: "visa", amount: 99.99 }
     #   )
     def self.report(
       error_type:,
@@ -100,9 +103,17 @@ module RailsErrorDashboard
         platform: platform,
         app_version: app_version,
         metadata: metadata,
-        occurred_at: occurred_at || Time.current,
-        severity: severity
+        occurred_at: occurred_at || Time.current
       }.compact # Remove nil values
+
+      # severity is deliberately NOT forwarded: nothing downstream reads it,
+      # and passing it on would keep the illusion that it does.
+      if severity.present?
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] ManualErrorReporter: severity: is ignored — " \
+          "severity is classified from error_type (#{error_type})."
+        )
+      end
 
       # Use the existing LogError command
       Commands::LogError.call(synthetic_exception, context)

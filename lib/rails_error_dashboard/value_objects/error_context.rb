@@ -7,7 +7,8 @@ module RailsErrorDashboard
     class ErrorContext
       attr_reader :user_id, :request_url, :request_params, :user_agent, :ip_address, :platform,
                   :controller_name, :action_name, :request_id, :session_id,
-                  :http_method, :hostname, :content_type, :request_duration_ms, :environment
+                  :http_method, :hostname, :content_type, :request_duration_ms, :environment,
+                  :occurred_at, :app_version
 
       def initialize(context, source = nil)
         @context = context
@@ -23,6 +24,8 @@ module RailsErrorDashboard
         @action_name = extract_action_name
         @request_id = extract_request_id
         @session_id = extract_session_id
+        @occurred_at = extract_occurred_at
+        @app_version = extract_app_version
         @http_method = extract_http_method
         @hostname = extract_hostname
         @content_type = extract_content_type
@@ -52,11 +55,39 @@ module RailsErrorDashboard
           hostname: hostname,
           content_type: content_type,
           request_duration_ms: request_duration_ms,
-          environment: environment
+          environment: environment,
+          # Both belong in to_h, not only in the readers: LogError builds a
+          # SECOND ErrorContext from this hash on the async path, and a key
+          # missing here is silently dropped there. That hop is what lost
+          # request_id and session_id before.
+          occurred_at: occurred_at,
+          app_version: app_version
         }
       end
 
       private
+
+      # A caller-supplied event time, e.g. a mobile client reporting a failure
+      # that happened while it was offline. Never in the future: a client clock
+      # can be wrong, and a future row would sort above every real error and
+      # never age out of a window.
+      def extract_occurred_at
+        raw = @context[:occurred_at]
+        return nil if raw.blank?
+
+        time = raw.is_a?(String) ? Time.zone.parse(raw) : raw
+        return nil unless time.respond_to?(:to_time)
+
+        [ time, Time.current ].min
+      rescue StandardError
+        nil
+      end
+
+      # The release the REPORTER was running, which for a mobile or frontend
+      # report is the whole point -- it differs from the server's version.
+      def extract_app_version
+        @context[:app_version].presence
+      end
 
       def extract_user_id
         @context[:current_user]&.id ||
@@ -119,6 +150,10 @@ module RailsErrorDashboard
 
         # Additional context (from mobile apps, etc.)
         params.merge!(@context[:additional_context]) if @context[:additional_context]
+
+        # Caller-supplied metadata, documented by ManualErrorReporter and
+        # previously accepted and discarded.
+        params.merge!(@context[:metadata]) if @context[:metadata].is_a?(Hash)
 
         # Pre-serialized params (from async logging or double-ErrorContext path).
         # LogError creates a second ErrorContext from error_context.to_h which

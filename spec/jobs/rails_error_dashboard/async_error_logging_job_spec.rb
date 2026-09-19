@@ -114,13 +114,19 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
     end
 
     context "when exception class doesn't exist" do
-      it "falls back to StandardError" do
+      # The reconstructed OBJECT is still a StandardError -- allocating a class
+      # that does not exist is impossible -- but the stored error_type keeps
+      # the name that was reported. A frontend or mobile client reporting
+      # "FrontendWidgetFailure" is the normal case for this path, and renaming
+      # every one of them StandardError collapsed distinct client errors into
+      # a single group.
+      it "keeps the reported type rather than the fallback class" do
         data = exception_data.merge(class_name: "NonExistentError")
 
         described_class.new.perform(data, context)
         error_log = RailsErrorDashboard::ErrorLog.last
 
-        expect(error_log.error_type).to eq("StandardError")
+        expect(error_log.error_type).to eq("NonExistentError")
       end
 
       it "still logs the original message" do

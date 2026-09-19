@@ -313,7 +313,11 @@ RSpec.describe RailsErrorDashboard::ValueObjects::ErrorContext do
       expect(result.keys).to contain_exactly(
         :user_id, :request_url, :request_params, :user_agent, :ip_address, :platform,
         :controller_name, :action_name, :request_id, :session_id, :http_method, :hostname,
-        :content_type, :request_duration_ms, :environment
+        :content_type, :request_duration_ms, :environment,
+        # Both must be in to_h, not only in the readers: LogError builds a
+        # SECOND ErrorContext from this hash on the async path, so a key
+        # missing here is dropped there.
+        :occurred_at, :app_version
       )
     end
 

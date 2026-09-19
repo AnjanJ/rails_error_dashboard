@@ -529,6 +529,7 @@ zh-CN:
         snapshot_stale: 来自更早的一次发生 — 之后的发生未携带上下文
         snapshot_fidelity_lite: 已精简的捕获（storm 保护丢弃了上下文 payload）
         snapshot_fidelity_minimal: 在 storm 期间计数 — 未捕获任何上下文
+        snapshot_fidelity_partial: 混合快照 — 部分字段来自更早的一次发生
         snapshot_unknown: 在 RED 记录快照来源之前捕获
       similar_errors:
         title: 相似错误

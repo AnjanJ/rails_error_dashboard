@@ -887,7 +887,7 @@ end
 
 ## Local Variable Capture (v0.4.0)
 
-Capture local variables at the exact moment an exception is raised via `TracePoint(:raise)`. The most valuable debugging context possible.
+Capture local variables when an exception is raised via `TracePoint(:raise)`. The most valuable debugging context possible. The snapshot is one level deep: strings, arrays and hashes are copied at raise time, while nested containers and other objects are retained by reference and show their state at serialization time.
 
 ```ruby
 RailsErrorDashboard.configure do |config|

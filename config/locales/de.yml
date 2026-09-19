@@ -583,6 +583,7 @@ de:
         snapshot_stale: aus einem früheren Auftreten — spätere lieferten keinen Kontext
         snapshot_fidelity_lite: reduzierte Erfassung (der Storm-Schutz hat die Kontext-Payloads verworfen)
         snapshot_fidelity_minimal: während eines Storms gezählt — es wurde kein Kontext erfasst
+        snapshot_fidelity_partial: gemischter Snapshot — einige Felder stammen aus einem früheren Vorkommen
         snapshot_unknown: erfasst, bevor RED die Herkunft von Momentaufnahmen aufzeichnete
       similar_errors:
         title: Ähnliche Fehler
