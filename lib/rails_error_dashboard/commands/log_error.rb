@@ -148,6 +148,18 @@ module RailsErrorDashboard
         exception_data, context = redact_async_payload(exception_data, context)
         context = context.merge(_identity: identity_parts) if identity_parts
 
+        # Stamp WHEN and WHAT RELEASE this event was captured under, before it
+        # crosses the queue. Both used to be resolved by the worker from
+        # Time.current and its own process configuration, so a queue backed up
+        # across a deploy gave the event the drain time and the new release --
+        # an error captured at 12:00 under v1 and drained at 14:00 under v2 was
+        # stored as 14:00/v2, and release comparison blamed the wrong build.
+        # The row's created_at still records when the worker wrote it, so queue
+        # lag stays observable.
+        context = context.merge(_captured_at: (context[:occurred_at] || Time.current).iso8601(6))
+        context = context.merge(_app_version: capture_app_version) unless context.key?(:_app_version)
+        context = context.merge(_git_sha: capture_git_sha) unless context.key?(:_git_sha)
+
         # Storm shedding: :lite captures skip ALL pre-enqueue context harvest —
         # this is request-thread CPU, the most valuable thing to shed.
         lite = storm_lite?(context)
@@ -417,7 +429,9 @@ module RailsErrorDashboard
           platform: error_context.platform,
           controller_name: error_context.controller_name,
           action_name: error_context.action_name,
-          occurred_at: Time.current
+          # The capture-time stamp when this came off a queue (see call_async),
+          # falling back to now for a synchronous capture.
+          occurred_at: captured_at_from_context || Time.current
         }
 
         # Enriched request context (if columns exist)
@@ -456,17 +470,13 @@ module RailsErrorDashboard
 
         #  Add git/release info if columns exist
         if ErrorLog.column_names.include?("git_sha")
-          attributes[:git_sha] = RailsErrorDashboard.configuration.git_sha ||
-                                  ENV["GIT_SHA"] ||
-                                  ENV["HEROKU_SLUG_COMMIT"] ||
-                                  ENV["RENDER_GIT_COMMIT"] ||
-                                  RailsErrorDashboard.detected_git_sha
+          # The release the event was CAPTURED under, carried across the queue,
+          # falling back to this process's own for a synchronous capture.
+          attributes[:git_sha] = context_value(:_git_sha) || capture_git_sha
         end
 
         if ErrorLog.column_names.include?("app_version")
-          attributes[:app_version] = RailsErrorDashboard.configuration.app_version ||
-                                      ENV["APP_VERSION"] ||
-                                      detect_version_from_file
+          attributes[:app_version] = context_value(:_app_version) || capture_app_version
         end
 
         # Add environment snapshot (if column exists)
@@ -863,11 +873,65 @@ module RailsErrorDashboard
 
       # Detect app version from VERSION file (fallback)
       def detect_version_from_file
+        self.class.detect_version_from_file
+      end
+
+      # --- Capture-time envelope -------------------------------------------
+      #
+      # The release THIS process is running, resolved on the capture thread so
+      # it can be stamped onto the payload before it crosses the queue. The
+      # worker reads the stamp instead of asking its own configuration, which
+      # is what made a queued event inherit the release it was drained under.
+
+      def self.capture_app_version
+        RailsErrorDashboard.configuration.app_version ||
+          ENV["APP_VERSION"] ||
+          detect_version_from_file
+      end
+
+      def self.capture_git_sha
+        RailsErrorDashboard.configuration.git_sha ||
+          ENV["GIT_SHA"] ||
+          ENV["HEROKU_SLUG_COMMIT"] ||
+          ENV["RENDER_GIT_COMMIT"] ||
+          RailsErrorDashboard.detected_git_sha
+      end
+
+      def self.detect_version_from_file
         version_file = Rails.root.join("VERSION")
         return File.read(version_file).strip if File.exist?(version_file)
         nil
       rescue => e
         RailsErrorDashboard::Logger.debug("Could not detect version: #{e.message}")
+        nil
+      end
+
+      # Symbol or string key: the async job round-trips the context through the
+      # queue serializer, which turns symbol keys into strings.
+      def context_value(key)
+        return nil unless @context.is_a?(Hash)
+
+        (@context[key] || @context[key.to_s]).presence
+      rescue StandardError
+        nil
+      end
+
+      def capture_app_version
+        self.class.capture_app_version
+      end
+
+      def capture_git_sha
+        self.class.capture_git_sha
+      end
+
+      # The capture-time stamp an async payload carries, or nil for a
+      # synchronous capture (which has no queue hop and is already "now").
+      def captured_at_from_context
+        raw = context_value(:_captured_at)
+        return nil if raw.blank?
+
+        Time.zone ? Time.zone.parse(raw.to_s) : Time.parse(raw.to_s)
+      rescue StandardError
         nil
       end
     end

@@ -135,6 +135,63 @@ RSpec.describe "analytics counting units" do
     end
   end
 
+  # A window figure must count the events that happened IN the window, not the
+  # lifetime volume of the groups first seen in it. occurred_at on an ErrorLog
+  # is first-seen and is never rewritten on recurrence, so summing
+  # occurrence_count against it pins a group's whole history to its birth day.
+  # An error at 23:59 that recurs at 00:01 was reported as "0 errors today",
+  # with both events on yesterday -- while the occurrence table held the truth.
+  describe "an error that recurs after midnight" do
+    let(:yesterday) { 1.day.ago.end_of_day - 1.minute }
+    let(:today) { Time.current.beginning_of_day + 1.minute }
+
+    before do
+      travel_to(yesterday) { log_error.call(boom("midnight boom")) }
+      travel_to(today) { log_error.call(boom("midnight boom")) }
+    end
+
+    it "is one group holding two occurrences" do
+      group = logs.find_by(message: "midnight boom")
+      expect(group.occurrence_count).to eq(2)
+      expect(group.error_occurrences.count).to eq(2)
+    end
+
+    it "counts today's recurrence under today" do
+      expect(stats.call[:total_today]).to eq(1)
+    end
+
+    it "puts one event on each day of the trend" do
+      trend = stats.call[:errors_trend_7d]
+      expect(trend[Date.current]).to eq(1)
+      expect(trend[Date.current - 1]).to eq(1)
+    end
+  end
+
+  # The group's user_id is overwritten by every new occurrence, so the
+  # group-level fallback attributes the whole lifetime count to whoever hit it
+  # LAST. Merging that with genuine per-user counts by taking the maximum
+  # reported more events for a user than the group contains.
+  describe "two users hitting one error" do
+    before do
+      2.times { log_error.call(boom("attribution boom"), user_id: 10) }
+      log_error.call(boom("attribution boom"), user_id: 20)
+    end
+
+    it "attributes each occurrence to the user who experienced it" do
+      analytics = RailsErrorDashboard::Queries::AnalyticsStats.call(7)
+      counts = analytics[:top_users].to_h { |u| [ u[:user_id], u[:count] ] }
+
+      expect(counts).to eq({ 10 => 2, 20 => 1 })
+    end
+
+    it "never reports more user events than the group holds" do
+      analytics = RailsErrorDashboard::Queries::AnalyticsStats.call(7)
+      total = analytics[:top_users].sum { |u| u[:count] }
+
+      expect(total).to be <= logs.find_by(message: "attribution boom").occurrence_count
+    end
+  end
+
   describe "event counts include storm-shed events" do
     it "counts every occurrence, not just those with a recorded row" do
       application = RailsErrorDashboard::Application.find_or_create_by_name("shed events")

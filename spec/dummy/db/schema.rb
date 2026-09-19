@@ -251,6 +251,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_17_000001) do
     t.index [ "user_id" ], name: "index_error_occurrences_on_user"
   end
 
+  create_table "rails_error_dashboard_event_counts", force: :cascade do |t|
+    t.bigint "error_log_id", null: false
+    t.datetime "bucket_at", null: false
+    t.bigint "count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "bucket_at" ], name: "index_red_event_counts_on_bucket_at"
+    t.index [ "error_log_id", "bucket_at" ], name: "index_red_event_counts_on_group_and_bucket", unique: true
+  end
+
   add_foreign_key "rails_error_dashboard_diagnostic_dumps", "rails_error_dashboard_applications", column: "application_id"
   add_foreign_key "rails_error_dashboard_cascade_patterns", "rails_error_dashboard_error_logs", column: "child_error_id"
   add_foreign_key "rails_error_dashboard_cascade_patterns", "rails_error_dashboard_error_logs", column: "parent_error_id"
