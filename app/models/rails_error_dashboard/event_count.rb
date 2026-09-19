@@ -27,12 +27,24 @@ module RailsErrorDashboard
       to ? scope.where(arel_table[:bucket_at].lt(to)) : scope
     }
 
-    # Hour bucket a time belongs to, in UTC. One definition, used by both the
-    # writer and the readers -- a mismatch here would silently split a bucket.
+    # Bucket width, shared with the PRODUCER.
+    #
+    # This must equal CountBuffer::BUCKET_SECONDS, and there is a spec that
+    # asserts it. The producer tallies 15-minute buckets precisely so that a
+    # local midnight falls on a bucket EDGE in every UTC offset in use --
+    # including +05:30 (Kolkata) and +05:45 (Kathmandu). Rounding those buckets
+    # to the hour here destroyed exactly the property the producer paid for:
+    # a storm event at 23:59:30 and one at 00:00:30 in Kolkata shared one
+    # bucket, and a day's total was wrong by the whole straddle.
+    BUCKET_SECONDS = Services::StormProtection::CountBuffer::BUCKET_SECONDS
+
+    # The bucket a time belongs to, in UTC. One definition, used by the writer
+    # and the readers -- a mismatch here silently splits or merges a bucket.
     # @param time [Time]
     # @return [Time]
     def self.bucket_for(time)
-      (time || Time.current).utc.beginning_of_hour
+      time = (time || Time.current)
+      Time.at((time.to_i / BUCKET_SECONDS) * BUCKET_SECONDS).utc
     end
 
     # Add +count+ shed events to (error_log_id, bucket_at), creating the row if
@@ -44,15 +56,23 @@ module RailsErrorDashboard
     # repeatedly into the same hour) is a single statement, and the INSERT race
     # is resolved by retrying the UPDATE once.
     #
-    # @return [Boolean] true when the bucket was written
+    # @return [Symbol] :written when the bucket landed, :unavailable when the
+    #   rollup is permanently unusable (no table, bad args, an adapter that
+    #   refuses the statement). A TRANSIENT failure raises instead.
+    #
+    #   Three states, not a boolean: the caller has to tell "the bucket is
+    #   permanently unavailable, degrade" from "the write failed, retry the
+    #   batch". Collapsing both into false made FlushStormCounts abort the
+    #   whole transaction on a host that had simply never migrated the rollup
+    #   table -- rolling back the authoritative lifetime count with it.
     def self.accumulate(error_log_id:, bucket_at:, count:)
-      return false unless error_log_id && count.to_i.positive?
-      return false unless table_exists?
+      return :unavailable unless error_log_id && count.to_i.positive?
+      return :unavailable unless table_exists?
 
       bucket = bucket_for(bucket_at)
       updated = where(error_log_id: error_log_id, bucket_at: bucket)
         .update_all([ "count = count + ?, updated_at = ?", count.to_i, Time.current ])
-      return true if updated.positive?
+      return :written if updated.positive?
 
       begin
         # requires_new: a failed INSERT aborts its transaction on PostgreSQL,
@@ -60,14 +80,14 @@ module RailsErrorDashboard
         transaction(requires_new: true) do
           create!(error_log_id: error_log_id, bucket_at: bucket, count: count.to_i)
         end
-        true
+        :written
       rescue ActiveRecord::RecordNotUnique
         # Another process created the same bucket between the UPDATE and the
         # INSERT. The row exists now, so the UPDATE that missed a moment ago
         # succeeds.
         where(error_log_id: error_log_id, bucket_at: bucket)
           .update_all([ "count = count + ?, updated_at = ?", count.to_i, Time.current ])
-          .positive?
+          .positive? ? :written : :unavailable
       end
     rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
       # TRANSIENT: the store may be back in a moment. Do NOT swallow it.
@@ -91,7 +111,7 @@ module RailsErrorDashboard
       RailsErrorDashboard::Logger.debug(
         "[RailsErrorDashboard] EventCount.accumulate failed permanently: #{e.class} - #{e.message}"
       )
-      false
+      :unavailable
     end
 
     # Whether the rollup table is usable.

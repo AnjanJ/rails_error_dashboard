@@ -17,7 +17,7 @@
 # which is exactly when the numbers matter most.
 #
 # So shed volume needs its own timestamp, and this is it: one row per
-# (error group, hour), holding how many shed events landed in that hour.
+# (error group, 15-minute bucket), holding how many shed events landed in it.
 # Window volume is then
 #
 #   occurrence rows in the window + shed bucket counts in the window
@@ -25,7 +25,7 @@
 # which is correct for both ordinary and shed events.
 #
 # Small by construction: a row is written only while a storm is actually
-# shedding, at most one per group per hour.
+# shedding, at most one per group per quarter hour.
 #
 # Cleanup follows the GROUP, not the bucket's own age: RetentionCleanupJob
 # deletes the buckets of groups it expires, and ErrorLog has_many :event_counts
@@ -46,15 +46,18 @@ class CreateEventCounts < ActiveRecord::Migration[7.0]
 
     create_table :rails_error_dashboard_event_counts do |t|
       t.bigint :error_log_id, null: false
-      # Truncated to the hour, in UTC. The hour is the finest bucket any
-      # dashboard view needs (the hourly chart) and keeps the row count bounded
-      # even through a long storm.
+      # Truncated to a 15-MINUTE bucket, in UTC (EventCount::BUCKET_SECONDS,
+      # shared with the producer). Not the hour: every UTC offset in use
+      # divides into 15 minutes -- including +05:30 and +05:45 -- so a local
+      # midnight falls on a bucket EDGE and a day's total is exact. The row
+      # count stays bounded even through a long storm: at most one row per
+      # group per quarter hour, and only while shedding.
       t.datetime :bucket_at, null: false
       t.bigint :count, null: false, default: 0
       t.timestamps
     end
 
-    # The upsert target: one bucket per group per hour. Named explicitly --
+    # The upsert target: one bucket per group per quarter hour. Named explicitly --
     # an auto-generated name here would exceed PostgreSQL's 63-character limit
     # and fail during the HOST app's deploy (see mailboxer#480).
     add_index :rails_error_dashboard_event_counts, [ :error_log_id, :bucket_at ],
