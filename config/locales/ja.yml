@@ -532,6 +532,7 @@ ja:
         snapshot_stale: より前の発生から取得 — それ以降の発生はコンテキストを伴いませんでした
         snapshot_fidelity_lite: 縮小された取得 (storm 保護によりコンテキストの payload が破棄されました)
         snapshot_fidelity_minimal: storm 中にカウントされました — コンテキストは取得されていません
+        snapshot_fidelity_partial: 混在したスナップショット — 一部のフィールドは以前の発生時のものです
         snapshot_unknown: RED がスナップショットの出所を記録する前に取得されました
       similar_errors:
         title: 類似エラー

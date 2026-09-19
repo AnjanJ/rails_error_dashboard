@@ -418,7 +418,11 @@ module RailsErrorDashboard
         truncated_backtrace = Services::BacktraceProcessor.truncate(@exception.backtrace)
         attributes = {
           application_id: application.id,
-          error_type: @exception.class.name,
+          # The reported type wins over the reconstructed class: an async
+          # capture of a type with no Ruby class here (a frontend error) is
+          # rebuilt as StandardError, and that name must not become the group
+          # identity. Falls back to the real class for every ordinary capture.
+          error_type: reported_error_type || @exception.class.name,
           message: @exception.message,
           backtrace: truncated_backtrace,
           user_id: error_context.user_id,
@@ -429,9 +433,12 @@ module RailsErrorDashboard
           platform: error_context.platform,
           controller_name: error_context.controller_name,
           action_name: error_context.action_name,
-          # The capture-time stamp when this came off a queue (see call_async),
-          # falling back to now for a synchronous capture.
-          occurred_at: captured_at_from_context || Time.current
+          # Three sources, most specific first. A caller-supplied event time
+          # (ManualErrorReporter documents it, already clamped to not-future by
+          # ErrorContext) beats the capture-time stamp carried across the queue
+          # (see call_async), which in turn beats this worker's clock. Ordinary
+          # synchronous captures supply neither and fall through to now.
+          occurred_at: error_context.occurred_at || captured_at_from_context || Time.current
         }
 
         # Enriched request context (if columns exist)
@@ -476,7 +483,15 @@ module RailsErrorDashboard
         end
 
         if ErrorLog.column_names.include?("app_version")
-          attributes[:app_version] = context_value(:_app_version) || capture_app_version
+          # Same precedence as occurred_at above. The reporter's own version
+          # wins over this server's -- for a mobile or frontend report they are
+          # different and the client's is the useful one (documented by
+          # ManualErrorReporter, previously discarded) -- then the release the
+          # event was CAPTURED under carried across the queue, then this
+          # process's own.
+          attributes[:app_version] = error_context.app_version ||
+                                      context_value(:_app_version) ||
+                                      capture_app_version
         end
 
         # Add environment snapshot (if column exists)
@@ -571,9 +586,15 @@ module RailsErrorDashboard
         # context payloads by design, and must not be recorded as though it
         # refreshed the snapshot -- nor allowed to overwrite a good backtrace.
         # It is stripped before the INSERT (it is a signal, not a column).
+        #
+        # Only the SHED case is asserted here. "This capture was complete" and
+        # "the stored snapshot is complete" are different claims: when the
+        # grouping command keeps an earlier occurrence's user or locals beside
+        # this one's URL, the row displays a mixture, and only that command can
+        # see it. Passing nil lets it decide between "full" and "partial".
         error_log = ErrorLog.find_or_increment_by_hash(
           error_hash,
-          attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : "full")
+          attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : nil)
         )
 
         # OTel: now that the error_log exists, attach its id + dedup flag + severity
@@ -868,6 +889,17 @@ module RailsErrorDashboard
         chain.to_json
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Failed to build cause JSON from context: #{e.message}")
+        nil
+      end
+
+      # The error type as REPORTED, carried across the queue by
+      # AsyncErrorLoggingJob. Symbol or string key: ActiveJob's serializer
+      # turns symbol keys into strings on the way through.
+      def reported_error_type
+        return nil unless @context.is_a?(Hash)
+
+        (@context[:_reported_error_type] || @context["_reported_error_type"]).presence
+      rescue StandardError
         nil
       end
 

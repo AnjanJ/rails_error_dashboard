@@ -88,6 +88,50 @@ RSpec.describe RailsErrorDashboard::ManualErrorReporter do
         expect(error_log.ip_address).to eq("192.168.1.1")
       end
 
+      # The documented parameters were accepted and silently discarded: the
+      # row took the server's version, the worker's clock and empty params, so
+      # a mobile or frontend report -- the whole reason this API exists -- was
+      # attributed to the wrong release and the wrong moment.
+      it "keeps the caller's app_version rather than the server's" do
+        error_log = described_class.report(**full_params)
+
+        expect(error_log.app_version).to eq("1.2.3")
+      end
+
+      it "keeps the caller's metadata" do
+        error_log = described_class.report(**full_params)
+
+        expect(error_log.request_params.to_s).to include("visa")
+      end
+
+      it "keeps the caller's occurred_at" do
+        happened_at = 20.minutes.ago.change(usec: 0)
+
+        error_log = described_class.report(**full_params, occurred_at: happened_at)
+
+        expect(error_log.occurred_at.to_i).to eq(happened_at.to_i)
+      end
+
+      # A backdated report must not create a group outside the 24-hour
+      # grouping window: find_unresolved matches on occurred_at, so such a row
+      # could never be matched again and every recurrence would make a new
+      # group. The event keeps its true time; the GROUP is clamped.
+      it "does not let a backdated report create an unmatchable group" do
+        long_ago = 5.days.ago.change(usec: 0)
+
+        first = described_class.report(**full_params, occurred_at: long_ago)
+        second = described_class.report(**full_params, occurred_at: long_ago)
+
+        expect(second.id).to eq(first.id)
+        expect(first.reload.occurrence_count).to eq(2)
+      end
+
+      it "clamps a future occurred_at to now" do
+        error_log = described_class.report(**full_params, occurred_at: 2.days.from_now)
+
+        expect(error_log.occurred_at).to be <= Time.current + 5.seconds
+      end
+
       it "stores the backtrace" do
         error_log = described_class.report(**full_params)
 

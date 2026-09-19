@@ -821,6 +821,7 @@ en:
         # but no backtrace or context was ever captured for it.
         snapshot_fidelity_lite: "reduced capture (storm protection shed the context payloads)"
         snapshot_fidelity_minimal: "counted during a storm — no context was captured"
+        snapshot_fidelity_partial: "mixed snapshot — some fields are kept from an earlier occurrence"
         snapshot_unknown: "captured before RED recorded snapshot provenance"
 
       similar_errors:

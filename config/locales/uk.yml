@@ -612,6 +612,7 @@ uk:
         snapshot_stale: з ранішого випадку — подальші не містили контексту
         snapshot_fidelity_lite: скорочений збір (захист від storm відкинув payload контексту)
         snapshot_fidelity_minimal: враховано під час storm — контекст не збирався
+        snapshot_fidelity_partial: змішаний знімок — частина полів залишилася від давнішої події
         snapshot_unknown: отримано до того, як RED почав записувати походження знімків
       similar_errors:
         title: Схожі помилки

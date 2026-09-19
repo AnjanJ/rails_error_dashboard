@@ -611,6 +611,7 @@ pl:
         snapshot_stale: z wcześniejszego wystąpienia — późniejsze nie przyniosły kontekstu
         snapshot_fidelity_lite: ograniczone przechwytywanie (ochrona przed storm odrzuciła payloady kontekstu)
         snapshot_fidelity_minimal: zliczone podczas storm — nie przechwycono żadnego kontekstu
+        snapshot_fidelity_partial: mieszany zrzut — część pól pochodzi z wcześniejszego wystąpienia
         snapshot_unknown: przechwycono, zanim RED zaczął zapisywać pochodzenie migawek
       similar_errors:
         title: Podobne błędy

@@ -434,7 +434,7 @@ Reverting to a previous version after a failed deployment. Rails Error Dashboard
 Ruby's built-in mechanism for hooking into runtime events. Rails Error Dashboard uses `TracePoint(:raise)` to capture local/instance variables at exception time, and `TracePoint(:rescue)` (Ruby 3.3+) for swallowed exception detection. Production-safe — Sentry ships the same `:raise` event.
 
 ### Local Variable Capture
-Capturing the values of local variables at the exact moment an exception is raised, via `TracePoint(:raise)`. Shows what the code was working with when it failed.
+Capturing the values of local variables when an exception is raised, via `TracePoint(:raise)`. Strings, arrays and hashes are copied one level deep at raise time; nested containers and other objects are retained by reference and therefore show their state at serialization time, not at raise time. Shows what the code was working with when it failed.
 
 ### Instance Variable Capture
 Capturing instance variables from `tp.self` (the receiver object) when an exception is raised. Shows the internal state of the object that failed.

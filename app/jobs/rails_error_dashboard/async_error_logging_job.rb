@@ -23,6 +23,16 @@ module RailsErrorDashboard
         context[:_serialized_cause_chain] = exception_data[:cause_chain]
       end
 
+      # The type as REPORTED, independent of whether a Ruby class of that name
+      # exists here. reconstruct_exception falls back to StandardError for an
+      # unconstantizable name -- which is the normal case for a frontend or
+      # mobile report -- and reading error_type off the reconstructed object
+      # then renamed every such error StandardError, collapsing distinct
+      # client errors into one group.
+      if exception_data[:class_name].present?
+        context[:_reported_error_type] = exception_data[:class_name]
+      end
+
       # Log the error synchronously in the background job.
       # .new(...).call bypasses the async check (we're already async);
       # worker: true makes an unreachable error store raise instead of being

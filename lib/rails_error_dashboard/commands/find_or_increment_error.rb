@@ -137,19 +137,64 @@ module RailsErrorDashboard
       # leaves both the snapshot and its provenance alone -- otherwise the row
       # would claim a fresh capture time for evidence from an older event,
       # which is precisely the confusion this exists to remove.
-      def context_provenance(refreshed)
+      def context_provenance(refreshed, error = nil)
         return {} unless refreshed.any? || refreshed_request_identity?
         return {} unless ErrorLog.column_names.include?("context_captured_at")
 
         provenance = { context_captured_at: @attributes[:occurred_at] || Time.current }
         if ErrorLog.column_names.include?("context_fidelity")
-          provenance[:context_fidelity] = @attributes[:_context_fidelity].presence || "full"
+          provenance[:context_fidelity] =
+            @attributes[:_context_fidelity].presence || snapshot_fidelity(error)
         end
         provenance
       end
 
+      # "full" means every displayed field came from THIS occurrence. When the
+      # `||` chain keeps an older value beside a newly refreshed one, the row
+      # is showing a mixture of two events, and calling that a fresh full
+      # capture is what made the snapshot unreadable: a new request URL sat
+      # beside a previous occurrence's user and locals under one timestamp.
+      #
+      # Keeping the older value is still the right behaviour -- a useful
+      # exemplar beats a blank one -- so only the LABEL changes.
+      def snapshot_fidelity(error)
+        return "full" if error.nil?
+
+        retains_older_value?(error) ? "partial" : "full"
+      end
+
+      # True when the row already holds a displayed value that this occurrence
+      # did NOT supply, so the `||` chain is about to keep it and the stored
+      # snapshot will describe two different events.
+      def retains_older_value?(error)
+        REFRESHED_REQUEST_IDENTITY.any? do |key|
+          @attributes[key].nil? && previous_value(error, key).present?
+        end
+      end
+
+      # read_attribute, never public_send: :instance_variables would otherwise
+      # resolve to Ruby's own Object#instance_variables if the generated
+      # attribute method were ever absent (ignored_columns, load order), and
+      # silently compare an Array of symbols against captured context.
+      def previous_value(error, key)
+        error.read_attribute(key)
+      rescue StandardError
+        nil
+      end
+
       def refreshed_request_identity?
         REFRESHED_REQUEST_IDENTITY.any? { |key| !@attributes[key].nil? }
+      end
+
+      # Inside the 24-hour matching window find_unresolved uses, so the group
+      # this creates can still be found by its own recurrences.
+      def clamped_group_time(time)
+        return Time.current if time.blank?
+
+        floor = 24.hours.ago + 1.minute
+        time < floor ? floor : time
+      rescue StandardError
+        Time.current
       end
 
       # A group first seen during a storm has a MINIMAL exemplar: the flush job
@@ -205,7 +250,7 @@ module RailsErrorDashboard
           user_agent: @attributes[:user_agent] || error.user_agent,
           ip_address: @attributes[:ip_address] || error.ip_address,
           **refreshed,
-          **context_provenance(refreshed),
+          **context_provenance(refreshed, error),
           **backtrace_upgrade(error),
           **environment_adoption(error)
         )
@@ -225,7 +270,7 @@ module RailsErrorDashboard
           user_agent: @attributes[:user_agent] || error.user_agent,
           ip_address: @attributes[:ip_address] || error.ip_address,
           **(refreshed = latest_context),
-          **context_provenance(refreshed),
+          **context_provenance(refreshed, error),
           **backtrace_upgrade(error),
           **environment_adoption(error)
         }
@@ -244,6 +289,15 @@ module RailsErrorDashboard
       def new_record_attributes
         attrs = @attributes.reject { |key, _| key.to_s.start_with?("_") }
         attrs = attrs.reverse_merge(resolved: false)
+
+        # The GROUP's occurred_at is clamped into the matching window, even
+        # when the EVENT is older. find_unresolved matches on
+        # `occurred_at >= 24.hours.ago`, so a backdated report (a mobile client
+        # flushing a queue it collected offline) would otherwise create a row
+        # that can never be matched again -- every recurrence making yet
+        # another group. The event's true time is preserved on its occurrence
+        # row, which is what the time-window queries read.
+        attrs[:occurred_at] = clamped_group_time(attrs[:occurred_at])
 
         if ErrorLog.column_names.include?("context_captured_at")
           attrs[:context_captured_at] ||= @attributes[:occurred_at] || Time.current
