@@ -71,10 +71,14 @@ RSpec.describe "Overview and Analytics agree on event volume" do
       travel_to(Time.zone.parse("2026-09-19 12:00:00")) do
         Rails.cache.clear
         result = RailsErrorDashboard::Queries::AnalyticsStats.call(30)
-        users = result[:user_impact] || result[:affected_users] || {}
+        # fetch, not []: this example read :user_impact / :affected_users --
+        # keys AnalyticsStats has never returned -- so `next if users.blank?`
+        # fired every run and the example exited before asserting anything. A
+        # green test that tests nothing is worse than no test.
+        users = result.fetch(:top_users)
 
-        next if users.blank?
-
+        expect(users).to be_present,
+          "fixture guard: the reopened group should appear in the user table"
         expect(result.dig(:error_stats, :total)).to be > 0,
           "Analytics reported 0 events while listing #{users.inspect} in its user table"
       end

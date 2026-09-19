@@ -205,24 +205,69 @@ module RailsErrorDashboard
         nil
       end
 
-      # Grouped by the raw timestamp so the LOCAL hour can be derived per row
-      # (see by_hour_of_day). The window still bounds what is aggregated; only
-      # the grouped result reaches Ruby.
+      # Grouped by the HOUR, never by the raw timestamp.
+      #
+      # Grouping by the raw timestamp returned one row per distinct instant:
+      # 1,000 events inside one second produced 1,000 intermediate entries in
+      # Ruby to compute 24 bins. Memory has to be bounded by the reporting
+      # WINDOW, not by how many distinct timestamps happen to be in it -- a
+      # burst is exactly when these numbers matter and exactly when the row
+      # count explodes.
+      #
+      # On PostgreSQL/MySQL the local hour is derived in SQL, so at most 24
+      # rows come back. SQLite has no tz database, so it truncates to the UTC
+      # hour in SQL (bounding the result by the window's hours) and Ruby
+      # converts that to the local hour -- correct because every zone offset in
+      # use is a whole number of minutes and we only ever bucket by hour after
+      # conversion.
       def occurrence_events_by_hour
         return {} unless occurrences_available?
 
-        window(ErrorOccurrence.where(error_log_id: group_ids), ErrorOccurrence.table_name)
-          .group("#{ErrorOccurrence.table_name}.occurred_at").count
+        table = ErrorOccurrence.table_name
+        window(ErrorOccurrence.where(error_log_id: group_ids), table)
+          .group(hour_expression(table, "occurred_at")).count
       end
 
       def bucketed_events_by_hour
         return {} unless buckets_available?
 
-        window(EventCount.where(error_log_id: group_ids), EventCount.table_name, column: "bucket_at")
-          .group("#{EventCount.table_name}.bucket_at").sum(:count)
+        table = EventCount.table_name
+        window(EventCount.where(error_log_id: group_ids), table, column: "bucket_at")
+          .group(hour_expression(table, "bucket_at")).sum(:count)
       end
 
+      # The grouping key for hour-of-day aggregation.
+      #
+      # Returns the local hour directly where the adapter can convert zones,
+      # and a UTC-hour-truncated timestamp where it cannot. local_hour handles
+      # both: an Integer passes straight through, a timestamp is converted.
+      def hour_expression(table, column)
+        zone = self.class.reporting_zone
+        quoted = ErrorLog.connection.quote(zone.tzinfo.name)
+
+        Arel.sql(
+          case ErrorLog.connection.adapter_name.downcase
+          when /postgres/
+            "EXTRACT(HOUR FROM #{table}.#{column} AT TIME ZONE 'UTC' AT TIME ZONE #{quoted})"
+          when /mysql|trilogy/
+            # Named zone, not a numeric offset -- same DST reasoning as
+            # day_expression.
+            "HOUR(CONVERT_TZ(#{table}.#{column}, '+00:00', #{quoted}))"
+          else
+            # SQLite: bound the row count by truncating to the UTC hour. Ruby
+            # then shifts it into the reporting zone.
+            "strftime('%Y-%m-%d %H:00:00', #{table}.#{column})"
+          end
+        )
+      end
+
+      # The adapter may hand back either an hour already binned in SQL
+      # (PostgreSQL/MySQL, possibly as a Numeric or a numeric string) or a
+      # UTC-hour-truncated timestamp that still needs converting (SQLite).
       def local_hour(value, zone)
+        return value.to_i % 24 if value.is_a?(Numeric)
+        return value.to_i % 24 if value.is_a?(String) && value.match?(/\A\d+(\.\d+)?\z/)
+
         time = to_time(value)
         time ? time.in_time_zone(zone).hour : 0
       end
