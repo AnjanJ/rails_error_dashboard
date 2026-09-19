@@ -27,6 +27,18 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
     RailsErrorDashboard.configuration.baseline_alert_cooldown_minutes = 120
   end
 
+  # Nested contexts below set slack_webhook_url, discord_webhook_url and
+  # webhook_urls on the GLOBAL configuration. The before block above resets the
+  # enable_* flags, which protects THIS file, but the URLs it never clears
+  # outlived the file and poisoned whichever spec ran next: a channel that is
+  # disabled here gets re-enabled there and suddenly has a URL to post to.
+  #
+  # That is exactly how notification_burst_summary_job_spec's "sends nothing"
+  # example failed under RSpec seed 38098 while passing under most others --
+  # it asserts `not_to have_requested(:post, /.*/)` and got a POST to the
+  # hooks.slack.com/test URL left behind here.
+  after { RailsErrorDashboard.reset_configuration! }
+
   describe "#perform" do
     context "when error log does not exist" do
       it "does not send notifications" do

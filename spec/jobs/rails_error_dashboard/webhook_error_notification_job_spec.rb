@@ -11,6 +11,10 @@ RSpec.describe RailsErrorDashboard::WebhookErrorNotificationJob, type: :job do
     RailsErrorDashboard.configuration.dashboard_base_url = "https://example.com"
   end
 
+  # Global configuration: restore it, or these URLs outlive the file and a later
+  # spec that enables webhooks finds live endpoints waiting.
+  after { RailsErrorDashboard.reset_configuration! }
+
   describe "#perform" do
     context "when error log exists" do
       it "sends webhook notification" do

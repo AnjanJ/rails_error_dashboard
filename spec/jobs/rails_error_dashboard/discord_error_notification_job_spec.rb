@@ -10,6 +10,10 @@ RSpec.describe RailsErrorDashboard::DiscordErrorNotificationJob, type: :job do
     RailsErrorDashboard.configuration.discord_webhook_url = webhook_url
   end
 
+  # Global configuration: restore it, or this URL outlives the file and a later
+  # spec that enables Discord finds a live endpoint waiting.
+  after { RailsErrorDashboard.reset_configuration! }
+
   describe "#perform" do
     context "when error log exists" do
       it "sends Discord notification" do
