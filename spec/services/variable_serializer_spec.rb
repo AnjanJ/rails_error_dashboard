@@ -226,6 +226,129 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
 
           expect(result["other"][:value]["private_note"]).to eq("KEEP_ME")
         end
+
+        # REQ-F4: nothing may observe a value that carries display metadata but
+        # has not been filtered. The pipeline is serialize -> filter -> return,
+        # and `type`/`truncated` are SIBLINGS of `value`, never wrapped around
+        # it, so the filter always receives the raw structure. Asserted here
+        # rather than assumed, because the whole R6 class of bug came from the
+        # filter seeing something other than what it needed to see.
+        it "returns no variable whose value is unfiltered but already labelled" do
+          result = described_class.call(
+            { profile: [ { private_note: "SYNTHETIC_SECRET" } ], other: { ok: "fine" } }
+          )
+
+          result.each_value do |info|
+            expect(info).to have_key(:type)
+            expect(info).to have_key(:truncated)
+            expect(info[:value].to_s).not_to include("SYNTHETIC_SECRET")
+          end
+        end
+
+        # The contract is PARITY WITH RAILS, not maximal redaction. Each
+        # expectation below is what ActiveSupport::ParameterFilter itself does
+        # to the same structure in request params -- verified by running it,
+        # not assumed. Over-redaction is a defect on the same footing as
+        # under-redaction: it silently destroys data a developer needs.
+        #
+        # The array row is the R6 leak: the previous fix wrapped Hash values
+        # under the variable name and sent Array values straight to the
+        # recursive walker, dropping the "profile" path segment.
+        describe "parity with ActiveSupport::ParameterFilter" do
+          def rails_result(structure)
+            ActiveSupport::ParameterFilter
+              .new([ "profile.private_note" ])
+              .filter("profile" => structure)["profile"]
+          end
+
+          {
+            "a hash" => { private_note: "SYNTHETIC_SECRET" },
+            "an array of hashes" => [ { private_note: "SYNTHETIC_SECRET" } ],
+            "a nested array of hashes" => [ [ { private_note: "SYNTHETIC_SECRET" } ] ]
+          }.each do |shape, value|
+            it "redacts #{shape}, as Rails does" do
+              result = described_class.call({ profile: value })
+
+              expect(result["profile"][:value].to_s).not_to include("SYNTHETIC_SECRET")
+              expect(result["profile"][:value].to_s).to include("[FILTERED]")
+              # And the shape is preserved, not collapsed.
+              expect(result["profile"][:value].class).to eq(value.class)
+            end
+          end
+
+          # These paths do NOT match, so the secret must survive filtering.
+          # Depth limiting is a separate concern and would mask the assertion,
+          # so the nested case is given headroom via local_variable_max_depth.
+          {
+            "a hash under an intermediate key" => { list: [ { private_note: "SYNTHETIC_SECRET" } ] },
+            "a scalar" => "SYNTHETIC_SECRET"
+          }.each do |shape, value|
+            it "leaves #{shape} alone, because Rails does not match that path" do
+              # profile.list.private_note and profile are DIFFERENT paths from
+              # profile.private_note. Redacting here would exceed Rails.
+              expect(rails_result(value).to_s).to include("SYNTHETIC_SECRET")
+
+              RailsErrorDashboard.configuration.local_variable_max_depth = 6
+              result = described_class.call({ profile: value })
+
+              expect(result["profile"][:value].to_s).to include("SYNTHETIC_SECRET")
+            end
+          end
+        end
+
+        it "redacts an array-valued instance variable under its @-prefixed name" do
+          # Instance variables reach the same entry point with an @ prefix that
+          # must not break the path match -- and the array shape is the one
+          # that leaked.
+          result = described_class.call(
+            { "@profile" => [ { private_note: "SYNTHETIC_SECRET" } ] },
+            additional_filter_patterns: [ "@profile.private_note" ]
+          )
+
+          expect(result["@profile"][:value].to_s).not_to include("SYNTHETIC_SECRET")
+        end
+
+        it "applies a Regexp pattern to an array-valued variable" do
+          result = described_class.call(
+            { profile: [ { private_note: "SYNTHETIC_SECRET" } ] },
+            additional_filter_patterns: [ /private_note/ ]
+          )
+
+          expect(result["profile"][:value].to_s).not_to include("SYNTHETIC_SECRET")
+        end
+
+        it "hands a Proc pattern the key and value, not a synthesized dotted path" do
+          # ParameterFilter calls a Proc with (key, value) -- or
+          # (key, value, original_params) for a 3-arity Proc. Wrapping under the
+          # variable name preserves that contract precisely BECAUSE
+          # ParameterFilter does the walking; hand-rolled path matching could
+          # not emulate it.
+          seen = []
+          proc_filter = lambda do |key, value|
+            seen << key
+            value.replace("[FILTERED]") if key == "private_note" && value.is_a?(String)
+          end
+
+          result = described_class.call(
+            { profile: [ { private_note: +"SYNTHETIC_SECRET" } ] },
+            additional_filter_patterns: [ proc_filter ]
+          )
+
+          expect(seen).to include("private_note")
+          expect(seen).not_to include("profile.private_note")
+          expect(result["profile"][:value].to_s).not_to include("SYNTHETIC_SECRET")
+        end
+
+        it "redacts a nested path when the pattern actually names it" do
+          # Same structure as the negative case above; only the pattern differs.
+          Rails.application.config.filter_parameters = [ "profile.list.private_note" ]
+          RailsErrorDashboard::Services::SensitiveDataFilter.reset!
+          RailsErrorDashboard.configuration.local_variable_max_depth = 6
+
+          result = described_class.call({ profile: { list: [ { private_note: "SYNTHETIC_SECRET" } ] } })
+
+          expect(result["profile"][:value].to_s).not_to include("SYNTHETIC_SECRET")
+        end
       end
 
       it "filters sensitive keys inside arrays of hashes" do

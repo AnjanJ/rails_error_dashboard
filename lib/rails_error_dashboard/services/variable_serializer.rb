@@ -255,22 +255,39 @@ module RailsErrorDashboard
             info[:value] = SensitiveDataFilter.send(:filter_message, filter, info[:value])
           end
 
-          # Filter nested hash keys recursively.
+          # Path-aware filtering, in ONE call for every container type.
           #
-          # The hash is wrapped back under its own variable name first, so the
-          # filter sees the SAME key path Rails sees for request params. A
-          # dotted pattern like "profile.private_note" is a path, not a name:
-          # passing the bare inner hash dropped the "profile" segment, and the
-          # value Rails redacts in params stayed readable here. Unwrapping
-          # afterwards leaves the stored shape unchanged.
-          if info[:value].is_a?(Hash)
+          # The value is wrapped back under its own variable name so the filter
+          # sees the SAME key path Rails sees for request params. A dotted
+          # pattern like "profile.private_note" is a path, not a name: dropping
+          # the "profile" segment means the value Rails redacts in params stays
+          # readable here. Unwrapping afterwards leaves the stored shape
+          # unchanged.
+          #
+          # This must NOT ask "what shape is this?" first. Wrapping only Hashes
+          # and sending Arrays straight to the recursive walker is exactly how
+          # `profile = [{ private_note: ... }]` leaked while the identical
+          # request params were redacted: ParameterFilter already traverses
+          # arbitrary nesting of Hash and Array, so one wrap covers every shape
+          # and a new container type cannot reintroduce the gap.
+          #
+          # Parity with Rails is the contract in both directions -- a pattern
+          # that Rails does NOT match (profile.list.private_note, or a bare
+          # scalar) must survive here too. Over-redaction silently destroys
+          # data a developer needs to debug.
+          if info[:value].is_a?(Hash) || info[:value].is_a?(Array)
             scoped = filter.filter(var_name => info[:value])[var_name]
-            info[:value] = filter_hash_recursive(filter, scoped)
-          end
 
-          # Filter nested array items
-          if info[:value].is_a?(Array)
-            info[:value] = filter_array_recursive(filter, info[:value])
+            # The recursive pass stays, and runs AFTER the path-aware filter:
+            # it scrubs sensitive CONTENT inside strings (credit-card and
+            # key=value patterns), which ParameterFilter does not do -- it only
+            # matches keys.
+            info[:value] =
+              case scoped
+              when Hash  then filter_hash_recursive(filter, scoped)
+              when Array then filter_array_recursive(filter, scoped)
+              else scoped
+              end
           end
         end
 
