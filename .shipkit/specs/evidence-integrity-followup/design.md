@@ -843,3 +843,71 @@ wrong for a neighbouring case I had not enumerated — a nil episode, a post-com
 non-default setting. The check that would have caught all three is the same one: before calling a
 fix done, list the inputs it depends on (optional collaborators, transaction boundaries,
 configurable values) and ask what each one does at its extremes.
+
+## F24 — the completeness predicate may not consult the aggregate whose completeness is in doubt
+
+**Context.** F23 guarded the timing banner with `return false if month_event_count.zero?`, on the
+reasoning that a window showing no events has nothing to qualify. Round 7 (external review of
+PR #250) falsified that reasoning with a case F23 did not enumerate: an error group first seen
+*outside* the displayed window that recurs *inside* it while bucket storage is unavailable.
+
+`EventVolume` can only place a group's untracked remainder at the group's own `occurred_at`
+(`event_volume.rb`, `untracked_groups` — the candidate set is bounded by the window, so a group
+whose `occurred_at` precedes it cannot contribute). Losing the time buckets is therefore exactly
+what makes those events invisible to the aggregate. Reproduced: five real events today, lifetime
+count 10, a current gap persisted, group alive and reopened — and `today = week = month = 0`, so the
+guard suppressed the banner in precisely the state the banner exists to announce.
+
+The flaw is structural, not arithmetic: **the guard used a potentially-incomplete aggregate as
+evidence about its own completeness.** A zero aggregate cannot distinguish "the events were deleted"
+from "the events could not be counted".
+
+**Alternatives.** (1) Ask surviving GROUPS instead — does any group have `last_seen_at` inside the
+widest displayed window. (2) Remove the guard outright, as the review recommended, and accept the
+orphan-gap noise. (3) Decide from the gap's own covered interval (gap inside the window ⇒ warn).
+(4) Delete the gap when its covered events vanish.
+
+**Case for (1).** It is the same fact retention actually deletes on: a group is expired only once it
+has not been seen for `retention_days`, so "no group seen in this window" *is* "the covered events
+are gone" — the evidence F23 needed and did not have. It is independent of the timing loss (a
+degraded flush still writes `last_seen_at`), it is an indexed existence check rather than an
+aggregate, and the query plan confirms a MULTI-INDEX OR on
+`index_rails_error_dashboard_error_logs_on_last_seen_at` with no table scan, so it is cheap enough
+for the capture path. (2) reintroduces the F23 noise that the banner cannot afford. (3) fails the
+orphan case as actually specified: the existing orphan example covers a gap only ten days old, well
+inside the window, so gap age does not separate the two cases. (4) is F22's option (3), still
+rejected: a gap carries no group key by design (F19).
+
+**Case against (1).** It is a second predicate to keep true, and it is a *proxy*: it answers "is
+anything alive in this window", not "are this gap's own events alive", which F19 makes unanswerable
+cheaply. So a live group plus an unrelated orphan gap still warns. Bounded, and the failure
+direction is the safe one — a spurious "timing may be incomplete" on a page that is genuinely
+showing data, rather than silence on a page that is not. Keeping both witnesses (below) also makes
+the orphan suppression strictly narrower than F23 intended: it fires only when the window is empty of
+events *and* of live groups.
+
+**Decision.** (1), as a disjunction with the old aggregate rather than a replacement of it: suppress
+only when the window holds no events **and** no group was seen in it.
+
+An adversarial pass against the first cut of (1) found the converse hole. `EventVolume` windows
+occurrence rows and buckets on *their own* timestamps against an unwindowed group set (`group_ids`),
+so a group whose `last_seen_at` has fallen behind its own event rows still puts events on the page,
+and liveness alone would have dropped the banner while a displayed figure was non-zero — an
+F22 regression introduced while fixing F23. The two witnesses fail in opposite directions, so
+requiring both to be silent is what actually preserves the invariant. Liveness is tested first: it is
+an indexed `EXISTS` and short-circuits before the heavier aggregate.
+
+The `NULL last_seen_at` arm is kept and indexed separately, mirroring the retention job's `COALESCE`
+equivalence, so pre-`last_seen_at` rows are judged by `occurred_at`.
+
+**I would reverse this if** gaps ever carry a group or fingerprint key, at which point the exact
+question ("are THIS gap's events still present") becomes answerable and the proxy should be replaced
+by it.
+
+**Pattern note, seven rounds in.** The shape held again, with a sharper edge: the F23 guard's own
+falsifiability clause named this condition in advance — *"I would reverse this if the warning ever
+needs to describe a window the page does not display, where 'no events shown' would stop implying
+'nothing to qualify'."* The clause was right; what was missed is that the condition was **already
+true** when it was written, because an old group's recurrence is invisible to the very window the
+page does display. A falsifiability clause is only protection if you also ask whether it already
+holds.
