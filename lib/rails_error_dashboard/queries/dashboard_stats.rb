@@ -33,7 +33,7 @@ module RailsErrorDashboard
               # create occurrence rows, but they DO raise occurrence_count.
               total_today: today_event_count,
               total_week: week_event_counts.values.sum,
-              total_month: event_count_since(30.days.ago),
+              total_month: month_event_count,
               unresolved: base_scope.unresolved.count,
               resolved: base_scope.resolved.count,
               reopened: reopened_count,
@@ -141,6 +141,14 @@ module RailsErrorDashboard
         Queries::EventVolume.in_window(base_scope, since)
       end
 
+      # The widest-window total, memoised: the stats hash shows it and the
+      # completeness predicate needs the same number. One instance answers one
+      # call, and this runs on the capture path via the stats broadcast, so a
+      # second identical aggregate here is pure waste.
+      def month_event_count
+        @month_event_count ||= event_count_since(WIDEST_DISPLAYED_WINDOW.ago)
+      end
+
       def event_count_between(from, to)
         Queries::EventVolume.in_window(base_scope, from, to)
       end
@@ -194,6 +202,15 @@ module RailsErrorDashboard
       # after the counts transaction commits. See the migration for the full
       # history of why this moved.
       def event_timing_incomplete?
+        # Nothing displayed, nothing to qualify.
+        #
+        # Gaps are deliberately retained past their own retention while the
+        # figures they describe are still shown (see the cleanup job), so a gap
+        # can outlive every event it covered -- a group expiring is what
+        # removes those events. Warning that an empty window is "incomplete"
+        # is noise, and worse, it trains people to ignore the banner.
+        return false if month_event_count.zero?
+
         EventTimingGap.affecting?(WIDEST_DISPLAYED_WINDOW.ago, application_id: @application_id)
       rescue StandardError
         false

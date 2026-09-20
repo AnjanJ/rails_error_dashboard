@@ -783,3 +783,63 @@ symptom while preserving the structure that produced it — hashes but not array
 Analytics, the episode marker but not its optionality. The question to ask before calling a fix
 done is not "does the reported case pass" but "what shape of thing produced this, and is that shape
 gone".
+
+---
+
+# Round 6 — the two clocks that govern completeness evidence
+
+## F22 — evidence outlives the shorter clock, and stops at the longer one
+
+**Context.** Round 5 added gap pruning on the configured retention cutoff. The Overview reads gaps
+against a 30-day window. Those are two different clocks, and whenever retention is the shorter of
+them the evidence disappeared while the figures it qualified were still displayed: at
+`retention_days = 7`, `month=10` before and after cleanup, warning `true` → `false`, group still
+active.
+
+**Why the original spec missed it.** It used the 90-day default, where the retention cutoff is
+already the later of the two clocks. **A spec that exercises only the default value cannot find a
+bug that lives in the configurable range.** That is the durable lesson here, not the arithmetic.
+
+**Alternatives.** (1) Delete only once BOTH clocks have passed: `min(retention_cutoff,
+WIDEST_DISPLAYED_WINDOW.ago)`. (2) Prune gaps strictly by the reporting window, ignoring retention.
+(3) Delete a gap when the events it covers are gone.
+
+**Case for (1).** It states the actual invariant — completeness evidence must outlive the horizon it
+qualifies — and it is a no-op on the default, so no existing install retains more than before.
+(2) ignores an explicit user setting for the longer-retention case. (3) is the correct idea and
+impossible to implement cheaply: a gap has no group key by design (F19), and re-deriving "are any
+covered events still present" per gap is a scan on the dashboard path.
+
+**Case against (1).** Rows now survive their nominal retention, which a user reading
+`retention_days` might not expect. Bounded: gaps are written only while the rollup is genuinely
+unusable, and the extra horizon is capped at the reporting window.
+
+**Decision.** (1).
+**I would reverse this if** the Overview ever displays a window wider than the gap table can
+comfortably hold, at which point pruning needs its own configurable horizon rather than borrowing
+one.
+
+## F23 — the warning must not outlive its own subject
+
+Retaining a gap past its retention creates the case the review named in advance: the gap can outlive
+every event it covered, because expiring the GROUP is what removes those events. Reproduced as a
+banner qualifying a window showing **zero** events.
+
+**Alternatives.** (1) Guard the read — no events in the window, no warning. (2) Shorten the
+retention again. (3) Delete the gap when its events vanish.
+
+(2) reintroduces F22 exactly. (3) is F22's option (3), rejected for the same cost reason.
+
+**Decision.** (1), with the widest-window count memoised — the stats hash and the predicate need the
+same number, and this runs on the capture path via the stats broadcast, so a second identical
+aggregate is pure waste. **Noise in a warning is not harmless: it trains people to ignore the
+banner**, which costs more than the missing warning it was added to prevent.
+**I would reverse this if** the warning ever needs to describe a window the page does not display,
+where "no events shown" would stop implying "nothing to qualify".
+
+**Pattern note, six rounds in.** Rounds 4, 5 and 6 each found a defect in the previous round's fix.
+The common shape is not carelessness but **scope**: each fix was correct for the case reported and
+wrong for a neighbouring case I had not enumerated — a nil episode, a post-commit window, a
+non-default setting. The check that would have caught all three is the same one: before calling a
+fix done, list the inputs it depends on (optional collaborators, transaction boundaries,
+configurable values) and ask what each one does at its extremes.

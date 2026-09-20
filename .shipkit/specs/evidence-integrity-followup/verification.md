@@ -273,3 +273,40 @@ table was taken with that check confirmed empty first.
 
 That is three rounds in which the environment, not the code, produced the alarming number. The
 check is now in the project memory notes and in the command itself.
+
+---
+
+## Round 6 verification (2026-09-20, PR #250)
+
+One conditional finding, reproduced exactly, plus a second case it created that I found and fixed
+while addressing the first.
+
+| # | Case | Before | After |
+|---|------|--------|-------|
+| F22 | `retention_days = 7`, active group, 10-day-old gap | `month=10 warning=false gaps=0` | `month=10 warning=true gaps=1` |
+| F23 | Gap retained, all its events expired | `month=0 warning=true` | `month=0 warning=false` |
+
+Causation: reverting ONLY the cleanup change turns 2 examples red; restoring makes all pass.
+
+### Results
+
+- **Unit suite: 5320 / 0** (`pgrep -f '[r]spec'` confirmed empty first)
+- **PostgreSQL: 5317 / 0** (likewise)
+- **RuboCop:** 600 files, no offenses
+
+### Why the round-5 spec did not catch this
+
+It asserted pruning with `retention_days = 90`, the default, where the retention cutoff is already
+later than the reporting window — so the two clocks never disagreed. **A spec that exercises only
+the default value cannot find a bug that lives in the configurable range.** The new examples cover
+both sides of the boundary: retention shorter than the window (keep) and longer (prune).
+
+### The second case, found not reported
+
+Retaining the gap means it can outlive every event it covered, since expiring the group is what
+removes those events. My own probe showed a banner qualifying a window with zero events. Guarded at
+the read rather than by shortening retention again, which would have reintroduced F22 exactly.
+
+Worth stating because it is easy to get backwards: **a warning that fires on an empty window is not
+a harmless false positive — it trains people to ignore the banner**, which costs more than the
+missing warning the retention fix was added to prevent.
