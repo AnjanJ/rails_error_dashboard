@@ -5,9 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### 0.14.0 highlights — event timing, capture privacy and snapshot reliability
+## [0.14.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.13.0...rails_error_dashboard/v0.14.0) (2026-09-20)
 
-#### Upgrade instructions
+### Upgrade instructions
 
 This release adds three migrations:
 
@@ -27,7 +27,7 @@ For installations using a separate error database, run
 `bin/rails db:migrate:error_dashboard` instead of the last command. The installer
 preserves the existing initializer and detects the configured migration directory.
 
-#### Event counts and reporting time
+### Event counts and reporting time
 
 Overview and Analytics count events within their reporting window instead of
 summing the lifetime counts of groups first seen in that window. Recurrences of
@@ -54,7 +54,7 @@ Storm count buckets are removed when their error group is deleted or expires.
 Concurrent recurrence, transient storage failures and retried batches preserve
 storm counts without applying a successful batch twice.
 
-#### Variable serialization changes
+### Variable serialization changes
 
 Unknown objects now produce a class summary by default instead of invoking their
 `inspect` method. ActiveModel objects also receive summaries; Active Record
@@ -73,7 +73,7 @@ Two new configuration options control explicit inspection:
 The threshold is not an execution timeout. Adding a class to the allowlist permits
 its application-defined code to run to completion on the capture path.
 
-#### Capture privacy and fidelity
+### Capture privacy and fidelity
 
 - With sensitive-data filtering enabled, dotted filter paths apply consistently
   to local-variable hashes and arrays. Params, additional context and metadata
@@ -92,7 +92,7 @@ its application-defined code to run to completion on the capture path.
 - Snapshots that retain older fields alongside a newer occurrence are labeled
   `partial`, rather than presenting the combined context as one complete capture.
 
-#### Background jobs and mobile layout
+### Background jobs and mobile layout
 
 When breadcrumbs are enabled, Active Job executions receive a breadcrumb buffer
 and failed-job trails survive handoff to the reporter. Inline jobs preserve an
