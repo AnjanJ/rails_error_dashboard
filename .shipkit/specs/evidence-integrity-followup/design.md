@@ -708,3 +708,78 @@ Two things followed from that overreach, both now corrected:
 'expect('`) and expensive to retract once published. Verify before asserting, especially when the
 claim flatters your own work — "their tests were weak, mine are strong" is exactly the claim that
 deserves the most scrutiny.
+
+---
+
+# Round 5 — the completeness warning, done properly
+
+## F19 — the warning belongs to the interval, not to an episode
+
+**Context.** Round 4 put `buckets_incomplete` on the storm EPISODE, written by `upsert_storm_event`.
+Three failures followed, and they are one failure wearing three hats: **the warning was attached to
+an optional, post-commit object.**
+
+- The episode is optional. The gate sheds with its breaker closed and passes `episode: nil`, so
+  `return unless @episode.is_a?(Hash)` dropped the marker entirely — reproduced as
+  `buckets_incomplete: true`, zero episodes, dashboard reporting completeness.
+- `upsert_storm_event` runs AFTER the counts transaction commits and rescues its own failures. A
+  transient save lost the marker while the batch ledger had already recorded the batch as applied,
+  so the replay was suppressed and the gap was never recorded at all.
+- The predicate asked only about today while the same page shows 7-day and 30-day figures that still
+  contained the affected events.
+
+**Alternatives.** (1) A dedicated `event_timing_gaps` table keyed by the interval. (2) A column on
+`error_logs`. (3) Keep the episode and add a nil-guard fallback.
+
+**Case for (1).** The thing that is unreliable is a TIME INTERVAL, so that is what should be
+recorded. It requires no optional collaborator, and being its own row it can be written inside the
+counts transaction — which is what makes failures recoverable rather than silently swallowed.
+
+**Case against (1).** A new table and migration for what is, on a healthy install, always empty.
+Accepted: it is written only while the rollup is genuinely unusable, which is a misconfiguration
+rather than a steady state, and the read side degrades to `false` when the table is absent.
+
+**Why not (2).** `error_logs` already has 88 columns, and a gap describes a window, not a group —
+the same group can have some events timed and others not.
+
+**Why not (3).** A nil-guard keeps the optional dependency that caused the first failure. Fixing the
+symptom while preserving the structure is how round 4 produced round 5.
+
+**Atomicity is the point.** The gap is created inside the same transaction as the counts. If it
+cannot be written the whole batch rolls back and stays replayable. Committing counts whose
+unreliability we failed to record is strictly worse than retrying them.
+
+**Decision.** (1), read against `WIDEST_DISPLAYED_WINDOW` so the warning covers every figure on the
+page rather than the narrowest one.
+**I would reverse this if** incompleteness ever needs attributing to a specific group rather than an
+interval, which would require a join table instead.
+
+## F20 — retention for a table with no parent
+
+The new table has no `error_log_id`, so nothing in `RetentionCleanupJob` would ever have pruned it
+and it would have grown for the life of the installation. Pruned on `covered_until`, and
+deliberately placed ABOVE the early return that fires when no error logs are expired — gaps expire
+independently of errors, exactly like the rack-attack rows whose comment already warns about that
+trap. **A new table is not finished until something deletes from it.**
+
+## F21 — a spec that is green only by daylight
+
+The volume invariants placed fixtures at 2 and 3 hours ago and queried "since midnight". Run at
+00:30 both fixtures fell outside the window and the total came out 3 instead of 15.
+
+**This is the worst shape a failing test can take:** green whenever a human looks at it, red only
+for whoever runs CI after midnight — and then dismissed as a flake, because it passes on re-run in
+the morning. It is the same trap as the notification-burst "flake" earlier in this project, which
+turned out to be a real order-dependent defect.
+
+**Decision.** Pin the clock, do not widen the window. Widening makes the symptom go away and leaves
+the dependency in place. Audited the sibling specs added this sprint and found two more with the
+same latent pattern (minute-scale offsets against day-boundary queries); both pinned.
+**I would reverse this if** a spec genuinely needs to assert real-clock behaviour, which would make
+the dependency the subject of the test rather than an accident of it.
+
+**The meta-lesson, now three rounds old:** every round of this review has found that I fixed a
+symptom while preserving the structure that produced it — hashes but not arrays, Overview but not
+Analytics, the episode marker but not its optionality. The question to ask before calling a fix
+done is not "does the reported case pass" but "what shape of thing produced this, and is that shape
+gone".
