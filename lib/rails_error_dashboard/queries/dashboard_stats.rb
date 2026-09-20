@@ -5,6 +5,10 @@ module RailsErrorDashboard
     # Query: Fetch dashboard statistics
     # This is a read operation that aggregates error data for the dashboard
     class DashboardStats
+      # The widest window any figure on the Overview covers (total_month).
+      # The completeness predicate is matched to this, not to "today".
+      WIDEST_DISPLAYED_WINDOW = 30.days
+
       # One instance answers ONE call: several aggregates (today's event count,
       # the 7-day trend, spike detection) are memoised on it so that they are
       # computed once per call rather than once per card that shows them.
@@ -178,22 +182,19 @@ module RailsErrorDashboard
       # knew is long over by the time the dashboard renders, and the flag has
       # to survive a replay. Every guard here is deliberate -- the storm table
       # may not exist, and the column may not be migrated yet on an older host.
+      # True when any recorded timing gap overlaps a window this page shows.
+      #
+      # The page displays today, 7-day AND 30-day figures, so the predicate has
+      # to match the WIDEST of them. An earlier version asked only about today
+      # and dropped the warning while the weekly and monthly numbers on the
+      # same screen still contained the affected events.
+      #
+      # Read from EventTimingGap rather than the storm episode: the episode is
+      # optional (the gate can shed with its breaker closed), and it is written
+      # after the counts transaction commits. See the migration for the full
+      # history of why this moved.
       def event_timing_incomplete?
-        return false unless StormEvent.table_exists?
-        return false unless StormEvent.column_names.include?("buckets_incomplete")
-
-        # Matched on the episode's OVERLAP with today, not on started_at
-        # alone. A storm that began yesterday and is still shedding today is
-        # the ordinary case -- filtering by started_at >= beginning_of_day
-        # missed exactly that, and the dashboard went back to presenting
-        # incomplete timing as an ordinary quiet period.
-        #
-        # Still active (ended_at IS NULL) counts however long ago it began;
-        # an ended episode counts if it ran past midnight.
-        today = Time.current.beginning_of_day
-        StormEvent.where(buckets_incomplete: true)
-                  .where("ended_at IS NULL OR ended_at >= ?", today)
-                  .exists?
+        EventTimingGap.affecting?(WIDEST_DISPLAYED_WINDOW.ago, application_id: @application_id)
       rescue StandardError
         false
       end

@@ -229,3 +229,47 @@ process. Recorded in the project memory notes.
 
 I reported one of these numbers to the user before diagnosing it. That was premature: the correct
 order is verify the environment, then report.
+
+---
+
+## Round 5 verification (2026-09-20, PR #249)
+
+Three gaps in the completeness-warning contract plus a test-clock defect, all reproduced at source
+before any change. The SQLite time-zone and memory fixes from #248 were confirmed good by the
+reviewer and are untouched here.
+
+| # | Finding | Reproduction | After |
+|---|---------|--------------|-------|
+| F19a | No episode → no warning | `buckets_incomplete: true`, 0 episodes, dashboard complete | warning recorded and shown |
+| F19b | Failed save unrecoverable | post-commit + self-rescuing; ledger says applied | in-transaction; batch stays replayable |
+| F19c | Warning vanishes early | week 10, month 10, warning `false` | matched to the widest displayed window |
+| F21 | Spec green only by daylight | **expected 15, got 3** at 00:30 | clock pinned; 2 sibling specs also pinned |
+
+### Causation, not correlation
+
+Reverting ONLY the implementation (keeping specs, model and schema) turns **6 of 9** recording
+examples red; restoring makes all 9 pass. The three that pass either way are the negative cases,
+which is what they should do.
+
+### Results
+
+- **Unit suite: 5316 / 0** on a machine verified idle first (`pgrep -f '[r]spec'` empty)
+- **PostgreSQL: 5313 / 0**, likewise verified idle before the run
+- **RuboCop:** 600 files, no offenses. **Schema parity:** 13 tables agree
+- Migration is additive; model, query and job all no-op when the table is absent
+
+### Caught while fixing, not reported
+
+The new table had **no retention path**. A gap has no `error_log_id` to cascade from, so nothing
+would ever have deleted it. Pruning added on `covered_until`, above the early return that fires when
+no error logs are expired. **A new table is not finished until something deletes from it.**
+
+### Process note: a number from a contended machine, again
+
+I published a suite number (1870 failures) taken while a superseded run was still live. I caught it
+myself this time — `live: 2` was printed at the head of the same output — but only because the
+`pgrep` check had become part of the command rather than an intention. Every number in this round's
+table was taken with that check confirmed empty first.
+
+That is three rounds in which the environment, not the code, produced the alarming number. The
+check is now in the project memory notes and in the command itself.

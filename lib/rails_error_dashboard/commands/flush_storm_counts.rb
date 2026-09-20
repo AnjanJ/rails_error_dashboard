@@ -95,6 +95,20 @@ module RailsErrorDashboard
           # roll the claim back and let the job retry the whole batch.
           raise ActiveRecord::Rollback if failed.positive? && counted.zero?
 
+          # INSIDE the transaction, deliberately.
+          #
+          # The counts and the record that their timing is unreliable have to
+          # land together or not at all. Writing this after the commit (as the
+          # storm-episode marker did) meant a transient failure lost the
+          # marker while the ledger had already recorded the batch as applied
+          # -- the replay was then suppressed and the gap was never recorded,
+          # so the dashboard reported completeness it could not vouch for.
+          #
+          # If this write fails, the whole batch rolls back and stays
+          # replayable. Counts whose unreliability we cannot record are worth
+          # retrying, not committing silently.
+          record_timing_gap!(counted) if @buckets_incomplete && counted.positive?
+
           finalize_batch!(ledger, counted)
         end
 
@@ -490,6 +504,36 @@ module RailsErrorDashboard
                    (defined?(Rails) && Rails.application.class.module_parent_name) ||
                    "Rails Application"
         Application.find_or_create_by_name(app_name)
+      end
+
+      # Record the interval whose per-event timing was lost.
+      #
+      # Keyed by the interval, NOT by a storm episode: the gate can shed events
+      # with its breaker closed and pass episode: nil, and a marker on the
+      # episode vanished in exactly that case. The events are just as
+      # untimed whether or not an episode object happens to exist.
+      #
+      # Bounds come from the entries themselves, so the gap describes when the
+      # events actually happened rather than when the worker got to them.
+      def record_timing_gap!(counted)
+        return unless EventTimingGap.table_exists?
+
+        times = @entries.filter_map do |entry|
+          entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
+          parse_time(entry["last_seen_at"]) || parse_time(entry["first_seen_at"])
+        end
+        first_seen = @entries.filter_map do |entry|
+          entry = entry.with_indifferent_access if entry.respond_to?(:with_indifferent_access)
+          parse_time(entry["first_seen_at"])
+        end
+
+        now = Time.current
+        EventTimingGap.create!(
+          application_id: resolve_application&.id,
+          covered_from: (first_seen + times).min || now,
+          covered_until: times.max || now,
+          events_affected: counted
+        )
       end
 
       def upsert_storm_event(counted)

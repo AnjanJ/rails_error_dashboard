@@ -16,7 +16,7 @@
 # (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
 # carry the 250 limit the MySQL index-key migration leaves them with.
 # bin/check-schema-parity compares this file with the migrations.
-ActiveRecord::Schema[7.0].define(version: 2026_09_20_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_20_000002) do
   create_table "rails_error_dashboard_rack_attack_events", force: :cascade do |t|
     t.string "rule", limit: 250, null: false
     t.string "match_type", limit: 50, null: false
@@ -45,6 +45,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_20_000001) do
     t.datetime "updated_at", null: false
     t.index [ "applied_at" ], name: "index_storm_flush_batches_on_applied_at"
     t.index [ "digest" ], name: "index_storm_flush_batches_on_digest", unique: true
+  end
+
+  create_table "rails_error_dashboard_event_timing_gaps", force: :cascade do |t|
+    t.bigint "application_id"
+    t.datetime "covered_from", null: false
+    t.datetime "covered_until", null: false
+    t.bigint "events_affected", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "covered_until" ], name: "index_red_timing_gaps_on_covered_until"
   end
 
   create_table "rails_error_dashboard_storm_events", force: :cascade do |t|
