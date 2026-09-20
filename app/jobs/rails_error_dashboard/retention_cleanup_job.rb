@@ -47,6 +47,7 @@ module RailsErrorDashboard
       cleanup_storm_flush_batches(cutoff)
       cleanup_diagnostic_dumps(cutoff)
       cleanup_swallowed_exceptions(cutoff)
+      cleanup_event_timing_gaps(cutoff)
 
       expired_scope = self.class.expired_scope(cutoff)
       return 0 if expired_scope.none?
@@ -156,6 +157,37 @@ module RailsErrorDashboard
     rescue => e
       RailsErrorDashboard::Logger.debug(
         "[RailsErrorDashboard] Swallowed exception retention cleanup failed: #{e.class} - #{e.message}"
+      )
+    end
+
+    # Timing gaps are pruned by their OWN age, not by a group.
+    #
+    # A gap describes an interval, not an error, so there is no error_log_id to
+    # cascade from -- without this it would accumulate for the life of the
+    # installation. It also runs ABOVE the early return in #perform, which
+    # fires whenever no error logs happen to be expired: gaps expire
+    # independently of errors, exactly like the rack-attack events whose
+    # comment already warns about this.
+    #
+    # Safe to prune on covered_until: once the cutoff has moved past a gap, no
+    # window the dashboard displays can still reach it, so the warning it
+    # carries is no longer meaningful. Own rescue, like its siblings.
+    def cleanup_event_timing_gaps(cutoff)
+      return unless EventTimingGap.table_exists?
+
+      deleted = 0
+      EventTimingGap.where("covered_until < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} event timing gaps"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Event timing gap retention cleanup failed: #{e.class} - #{e.message}"
       )
     end
 
