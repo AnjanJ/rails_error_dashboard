@@ -15,6 +15,18 @@ require "rails_helper"
 # storm-shed occurrence rows: say the dimension is incomplete rather than
 # quietly under-reporting it.
 RSpec.describe "buckets_incomplete propagation" do
+  # Clock pinned to MIDDAY for every example.
+  #
+  # These fixtures use minute-scale offsets against day-boundary queries, so on
+  # a real clock they depend on the time of day -- the same latent defect that
+  # made the volume invariants fail only near midnight (expected 15, got 3).
+  # Midday leaves a twelve-hour margin either side.
+  #
+  # `travel_to` in a before hook rather than an `around`: several examples
+  # below travel again themselves, and Rails rejects a nested travel_to.
+  # TimeHelpers unstubs automatically after each example.
+  before { travel_to(Time.zone.parse("2026-09-15 12:00:00")) }
+
   before do
     RailsErrorDashboard.reset_configuration!
     RailsErrorDashboard.configuration.async_logging = false

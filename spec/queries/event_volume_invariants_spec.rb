@@ -32,6 +32,19 @@ require "rails_helper"
 # the last was an invariant BETWEEN two readers, which no single reader's own
 # spec can express. That is why they were found by review instead of by CI.
 RSpec.describe "EventVolume invariants", type: :model do
+  # The clock is PINNED to midday, for every example in this file.
+  #
+  # The fixtures place events at 2 and 3 hours ago and the queries ask for
+  # "since midnight", so on a real clock these examples silently depended on
+  # the time of day: run at 00:30, both fixtures fell outside the window and
+  # the bucket and legacy terms vanished (expected 15, got 3). A spec that
+  # passes all day and fails at night is worse than one that always fails --
+  # it is green when anyone looks at it.
+  #
+  # Pinned rather than widened: widening the query window would have hidden
+  # the dependency instead of removing it.
+  around { |ex| travel_to(Time.zone.parse("2026-09-15 12:00:00")) { ex.run } }
+
   before do
     RailsErrorDashboard.reset_configuration!
     RailsErrorDashboard.configuration.async_logging = false
