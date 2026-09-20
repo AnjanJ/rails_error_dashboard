@@ -215,11 +215,9 @@ module RailsErrorDashboard
       # count explodes.
       #
       # On PostgreSQL/MySQL the local hour is derived in SQL, so at most 24
-      # rows come back. SQLite has no tz database, so it truncates to the UTC
-      # hour in SQL (bounding the result by the window's hours) and Ruby
-      # converts that to the local hour -- correct because every zone offset in
-      # use is a whole number of minutes and we only ever bucket by hour after
-      # conversion.
+      # rows come back. SQLite has no tz database, so it truncates to a
+      # FIXED-WIDTH UTC bin in SQL (bounding the result by the window) and Ruby
+      # converts that bin's instant to the local hour.
       def occurrence_events_by_hour
         return {} unless occurrences_available?
 
@@ -236,11 +234,27 @@ module RailsErrorDashboard
           .group(hour_expression(table, "bucket_at")).sum(:count)
       end
 
+      # The width of the SQLite grouping bin, in seconds.
+      #
+      # A local hour boundary must always fall on a bin EDGE, or two events on
+      # opposite sides of it collapse into one bin and can no longer be told
+      # apart: in Asia/Kolkata (+05:30) 00:15 and 00:45 UTC are local hours 5
+      # and 6, but share a UTC hour. So the bin has to divide every zone offset
+      # in use. Offsets are whole multiples of 15 minutes (+05:30, +05:45,
+      # -09:30 and the rest), which makes 15 minutes the widest safe bin -- the
+      # same 900s quantum EventCount::BUCKET_SECONDS uses, for the same
+      # divides-the-clock-cleanly reason.
+      #
+      # Width matters only for the row count, which stays bounded by the
+      # WINDOW (4 rows per hour) rather than by the number of distinct event
+      # timestamps in it.
+      HOUR_BIN_SECONDS = 900
+
       # The grouping key for hour-of-day aggregation.
       #
       # Returns the local hour directly where the adapter can convert zones,
-      # and a UTC-hour-truncated timestamp where it cannot. local_hour handles
-      # both: an Integer passes straight through, a timestamp is converted.
+      # and a UTC bin key where it cannot. local_hour handles both: a Numeric
+      # passes straight through, a key is parsed AS UTC and converted.
       def hour_expression(table, column)
         zone = self.class.reporting_zone
         quoted = ErrorLog.connection.quote(zone.tzinfo.name)
@@ -254,22 +268,38 @@ module RailsErrorDashboard
             # day_expression.
             "HOUR(CONVERT_TZ(#{table}.#{column}, '+00:00', #{quoted}))"
           else
-            # SQLite: bound the row count by truncating to the UTC hour. Ruby
-            # then shifts it into the reporting zone.
-            "strftime('%Y-%m-%d %H:00:00', #{table}.#{column})"
+            # SQLite: bound the row count by truncating the UTC epoch second to
+            # a whole bin. Integer division floors, which is what keeps every
+            # bin edge on a multiple of HOUR_BIN_SECONDS from the epoch -- and
+            # therefore on every local hour boundary. Ruby then shifts the bin
+            # into the reporting zone.
+            "(CAST(strftime('%s', #{table}.#{column}) AS INTEGER) / #{HOUR_BIN_SECONDS}) * #{HOUR_BIN_SECONDS}"
           end
         )
       end
 
       # The adapter may hand back either an hour already binned in SQL
-      # (PostgreSQL/MySQL, possibly as a Numeric or a numeric string) or a
-      # UTC-hour-truncated timestamp that still needs converting (SQLite).
+      # (PostgreSQL/MySQL, as a Numeric or a numeric string) or a UTC bin key
+      # that still needs converting (SQLite: epoch seconds).
+      #
+      # SQLite's key is an epoch second, so it carries its own UTC meaning and
+      # there is nothing to misread. The earlier key was a bare
+      # 'YYYY-MM-DD HH:00:00' string, which Time.zone.parse read as LOCAL time
+      # -- reporting the UTC hour verbatim.
       def local_hour(value, zone)
+        return Time.at(value.to_i).utc.in_time_zone(zone).hour if sqlite_hour_bins?
+
         return value.to_i % 24 if value.is_a?(Numeric)
         return value.to_i % 24 if value.is_a?(String) && value.match?(/\A\d+(\.\d+)?\z/)
 
         time = to_time(value)
         time ? time.in_time_zone(zone).hour : 0
+      end
+
+      # True when hour_expression fell through to the SQLite branch and the
+      # keys are UTC bin epochs rather than hours binned in SQL.
+      def sqlite_hour_bins?
+        !ErrorLog.connection.adapter_name.downcase.match?(/postgres|mysql|trilogy/)
       end
 
       # The three by-attribute terms. Each joins back to ErrorLog because the
@@ -375,31 +405,74 @@ module RailsErrorDashboard
             # See docs/guides/DATABASE_OPTIONS.md.
             "DATE(CONVERT_TZ(#{table}.#{column}, '+00:00', #{ErrorLog.connection.quote(zone.tzinfo.name)}))"
           else
-            # SQLite: no tz database. Bucketing happens in Ruby (see
-            # group_by_local_day), so the SQL key is the raw timestamp.
-            "#{table}.#{column}"
+            # SQLite: no tz database, so the fold into local days happens in
+            # Ruby (see group_by_local_day). The SQL key must still be BOUNDED
+            # -- grouping by the raw timestamp returned one row per distinct
+            # instant, so a burst of 200 events in one day handed Ruby 200 rows
+            # to produce a single daily total. Memory has to be bounded by the
+            # reporting WINDOW, not by how many distinct timestamps are in it.
+            #
+            # The bound is a 15-minute truncated UTC bin, the same width the
+            # storm rollup uses and for the same reason: 15 minutes divides
+            # every UTC offset in use (including +05:30 Kolkata and +05:45
+            # Kathmandu), so a LOCAL day boundary always falls on a bin edge
+            # and no bin ever straddles two local days. An hour-wide bin would
+            # NOT be safe in those zones.
+            #
+            # The key is the bin's EPOCH SECOND, not a datetime string. An
+            # epoch second carries its own UTC meaning, so there is nothing to
+            # misread; a bare 'YYYY-MM-DD HH:MM:SS' string is parsed as LOCAL
+            # by Time.zone.parse, which would shift every bin by the reporting
+            # zone's offset. Integer division floors, keeping every bin edge on
+            # a multiple of the width from the epoch -- and therefore on every
+            # local midnight.
+            "(CAST(strftime('%s', #{table}.#{column}) AS INTEGER) / #{DAY_BIN_SECONDS}) * #{DAY_BIN_SECONDS}"
           end
         )
       end
+
+      # The width of the SQLite day-grouping bin, in seconds -- the same 900s
+      # quantum, and the same reasoning, as HOUR_BIN_SECONDS above: it has to
+      # divide every zone offset in use so a local DAY boundary falls on a bin
+      # EDGE and no bin ever straddles two local days.
+      #
+      # This must equal EventCount::BUCKET_SECONDS, and there is a spec that
+      # asserts it. It is a literal rather than a reference because EventCount
+      # is an autoloaded model and this constant is evaluated at load time.
+      DAY_BIN_SECONDS = 900
 
       # True when the adapter cannot convert zones itself and Ruby must.
       def ruby_side_day_bucketing?
         !ErrorLog.connection.adapter_name.downcase.match?(/postgres|mysql|trilogy/)
       end
 
-      # Collapse a { timestamp => count } result into { Date => count } using
+      # Collapse a { utc instant => count } result into { Date => count } using
       # the zone's offset AT EACH instant -- which is what makes a DST-spanning
-      # window correct.
+      # window correct. The keys are 15-minute bins (see day_expression), and
+      # because that width divides every offset in use, a bin never straddles
+      # two local days: folding by the bin's own instant is exact.
       def group_by_local_day(rows)
         zone = self.class.reporting_zone
         totals = Hash.new(0)
         rows.each do |key, value|
-          time = to_time(key)
+          time = to_utc_bin_time(key)
           next unless time
 
           totals[time.in_time_zone(zone).to_date] += value
         end
         totals
+      end
+
+      # day_expression's SQLite key is a UTC epoch second (see there), which is
+      # unambiguous. Anything else reaching here is already a Time-like value
+      # from another adapter, so it is used as-is -- deliberately NOT routed
+      # through Time.zone.parse, which reads a bare datetime string as LOCAL.
+      def to_utc_bin_time(value)
+        return Time.at(value.to_i).utc if value.is_a?(Numeric)
+        return Time.at(value.to_i).utc if value.is_a?(String) && value.match?(/\A-?\d+\z/)
+        return value if value.respond_to?(:in_time_zone) && !value.is_a?(String)
+
+        nil
       end
 
       def to_date(value)
