@@ -169,13 +169,24 @@ module RailsErrorDashboard
         base_scope.where.not(reopened_at: nil).count
       end
 
+      # Top error types in the last 7 days, by EVENTS.
+      #
+      # Filtering groups by first-seen and summing their LIFETIME
+      # occurrence_count answered a different question: an August group that
+      # recurred today was excluded entirely, so reopening it produced an empty
+      # list while the headline total (already on EventVolume) counted the
+      # event. Routed through the same primitive as the total so the page's
+      # parts and its whole cannot drift apart.
       def top_errors
-        base_scope.where("occurred_at >= ?", 7.days.ago)
-                  .group(:error_type)
-                  .sum(:occurrence_count)
-                  .sort_by { |_, count| -count }
-                  .first(10)
-                  .to_h
+        weekly_volume.by_group_attribute(:error_type)
+                     .sort_by { |_, count| -count }
+                     .first(10)
+                     .to_h
+      end
+
+      # One EventVolume for the 7-day window, shared by every weekly breakdown.
+      def weekly_volume
+        @weekly_volume ||= Queries::EventVolume.new(base_scope, 7.days.ago)
       end
 
       # Get 7-day error trend (daily counts)
@@ -191,19 +202,30 @@ module RailsErrorDashboard
 
       # Get error counts by severity for last 7 days
       # OPTIMIZED: Use database filtering instead of loading all records into Ruby
+      # Weekly events by severity.
+      #
+      # Folded from the SAME per-type breakdown top_errors uses, rather than
+      # four independently scoped sums. Two reasons: it was summing LIFETIME
+      # counts of groups born in the window (so a reopened August group scored
+      # zero across every severity), and deriving both figures from one
+      # breakdown makes them agree by construction instead of by luck --
+      # asserted by spec/queries/dashboard_breakdowns_event_volume_spec.rb.
       def errors_by_severity_7d
-        scoped_errors = base_scope.where("occurred_at >= ?", 7.days.ago)
+        critical = Services::SeverityClassifier::CRITICAL_ERROR_TYPES
+        high     = Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
+        medium   = Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
 
-        {
-          critical: scoped_errors.where(error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES).sum(:occurrence_count),
-          high: scoped_errors.where(error_type: Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES).sum(:occurrence_count),
-          medium: scoped_errors.where(error_type: Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES).sum(:occurrence_count),
-          low: scoped_errors.where.not(
-            error_type: Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
-                       Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES +
-                       Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
-          ).sum(:occurrence_count)
-        }
+        totals = { critical: 0, high: 0, medium: 0, low: 0 }
+        weekly_volume.by_group_attribute(:error_type).each do |error_type, count|
+          bucket =
+            if critical.include?(error_type) then :critical
+            elsif high.include?(error_type)  then :high
+            elsif medium.include?(error_type) then :medium
+            else :low
+            end
+          totals[bucket] += count
+        end
+        totals
       end
 
       # Detect if there's an error spike

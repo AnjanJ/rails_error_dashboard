@@ -32,6 +32,10 @@ module RailsErrorDashboard
         # exemplar becomes an ErrorLog row, and its message is matched by regex.
         @entries = Array(Services::EncodingSanitizer.scrub_deep(entries))
         @overflow = overflow.to_i
+        # Set when a bucket write was permanently unavailable. The counts are
+        # still correct; only their placement in TIME is missing, and a caller
+        # reading a time window deserves to know that.
+        @buckets_incomplete = false
         @episode = episode
         @batch_id = batch_id
       end
@@ -106,11 +110,14 @@ module RailsErrorDashboard
         # corrupt payload only loops forever.
         if failed.positive? && counted.zero?
           return { success: false, retryable: false, reconciled: 0, failed: failed, overflow: @overflow,
+                   buckets_incomplete: @buckets_incomplete,
                    error: "all #{failed} entries failed to reconcile" }
         end
 
         upsert_storm_event(counted)
-        { success: true, reconciled: counted, failed: failed, overflow: @overflow }
+        result = { success: true, reconciled: counted, failed: failed, overflow: @overflow }
+        result[:buckets_incomplete] = true if @buckets_incomplete
+        result
       rescue => e
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] FlushStormCounts failed: #{e.class} - #{e.message}"
@@ -219,15 +226,27 @@ module RailsErrorDashboard
         pairs.each do |bucket_at, n|
           next unless n.positive?
 
-          # The return value is NOT ignored. EventCount.accumulate rescues a
-          # transient store failure and reports it; swallowing that here
-          # finalized the batch ledger with the bucket missing, so the replay
-          # was suppressed as already-applied and the time window lost those
-          # events permanently while the lifetime count stayed correct.
-          next if EventCount.accumulate(error_log_id: error_log_id, bucket_at: bucket_at, count: n)
-
-          raise EventCountWriteFailed,
-                "event bucket write failed for error_log #{error_log_id} at #{bucket_at.iso8601}"
+          # Three outcomes, three responses.
+          #
+          # :written     -- done.
+          # raises       -- TRANSIENT. Handled by the caller's rescue, which
+          #                 aborts and replays the batch intact. Swallowing it
+          #                 finalized the ledger with the bucket missing, so
+          #                 the replay was suppressed as already-applied and
+          #                 the time window lost those events permanently
+          #                 while the lifetime count stayed correct.
+          # :unavailable -- PERMANENT. Degrade: the rollup is simply not
+          #                 usable on this host (never migrated, adapter
+          #                 refuses the statement). Raising here rolled back
+          #                 the surrounding transaction and destroyed the
+          #                 authoritative lifetime count along with it --
+          #                 turning a missing time bucket into a lost count,
+          #                 which is strictly worse. Record it instead, so the
+          #                 result can say the timing evidence is incomplete.
+          case EventCount.accumulate(error_log_id: error_log_id, bucket_at: bucket_at, count: n)
+          when :written then next
+          else @buckets_incomplete = true
+          end
         end
       end
 
