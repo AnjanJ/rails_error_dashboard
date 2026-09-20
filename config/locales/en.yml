@@ -1331,6 +1331,7 @@ en:
         # Zero errors and "the dashboard could not read its data" are
         # different states. This banner says which one you are looking at.
         data_unavailable: "Statistics are currently unavailable — the figures below are not a measurement."
+        event_timing_incomplete: "Event timing is incomplete — storm protection dropped per-event timestamps; the totals are still exact."
         unresolved: "Unresolved"
         unresolved_hint: "Pending resolution"
         resolution_rate: "Resolution Rate"

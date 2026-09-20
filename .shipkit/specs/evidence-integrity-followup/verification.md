@@ -180,3 +180,52 @@ any change was made. Two (F11, F13) were introduced by this sprint's own fixes.
 - `.shipkit/specs/event-envelope/` (T-F5.9) — tracked follow-up, does not block release
 - Demo-app `GET /admin/seed` issue (T6.7) — separate repo
 - **0.14.0 remains held** (#237), per design.md F10 and the user's standing instruction
+
+---
+
+## Round 4 verification (2026-09-20, PR #248)
+
+Three implementation findings at `3f05b28`, all reproduced at source before any change, then
+verified fixed by MY OWN probes rather than accepted on a subagent's report.
+
+| # | Finding | Before | After |
+|---|---------|--------|-------|
+| F16a | SQLite hour wrong in New York | `{10=>1}` | `{6=>1}` |
+| F16b | Fractional-offset collapse (Kolkata) | `{0=>2}` | `{5=>1, 6=>1}` |
+| F16c | Daily path materialized per timestamp | 200 SQL rows | 1 |
+| F17 | Flag reached no model, query or view | returned, discarded | persisted → queried → 11-locale banner |
+| F18 | False claim about the probes | published in 3 places | corrected, incl. publicly on #223 |
+
+Kathmandu (+05:45) returns `{6=>2}` for the same two instants, which is the CORRECT answer there —
+evidence the fix is real zone math rather than a constant that happens to suit Kolkata.
+
+### Results
+
+- **CI: 22 / 22 SUCCESS on head SHA `8612111`**, including the dedicated PostgreSQL and MySQL rows
+- **Unit suite: 5305 / 0** on a verified-idle machine
+- **PostgreSQL: 69 / 0** across every changed path
+- **RuboCop:** 597 files, no offenses. **i18n-check:** no failures. **Schema parity:** 12 tables agree
+- **Migration:** verified idempotent on re-run
+
+### The reviewer's fixture found a bug mine missed
+
+F17's window predicate was wrong on the first attempt. I filtered `started_at >= beginning_of_day`;
+their fixture (five events yesterday, five today) failed because a storm that began yesterday and is
+still shedding today is the ordinary case. My fixture flushed everything today and passed.
+
+**A fixture that is easier than production tests the easy case.** Their fixture is now a permanent
+test, including an explicit replay assertion.
+
+### Process failure worth recording: three invalid suite readings
+
+Three times this round I read a mass-failure number that was DB contention, not a regression:
+2460, then 1814, then 1558 failures. Causes: my own concurrent PostgreSQL + SQLite runs, and twice a
+SUBAGENT's rspec process still live after it had reported.
+
+The tell each time was `SQLite3::BusyException: database is locked` (or a corrupted schema load), and
+the disagreement with green CI on the same SHA. **`pgrep -f '[r]spec'` must be empty before any
+full-suite number is trusted** — a subagent that has already sent its report may still hold a live
+process. Recorded in the project memory notes.
+
+I reported one of these numbers to the user before diagnosing it. That was premature: the correct
+order is verify the environment, then report.

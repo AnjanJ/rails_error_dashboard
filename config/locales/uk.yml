@@ -979,6 +979,7 @@ uk:
         rate_per_hour: "%{value}/год"
         affected_users_incomplete: щонайменше — захист від storm відкинув деталізацію за подіями
         data_unavailable: Статистика зараз недоступна — наведені нижче числа не є вимірюванням.
+        event_timing_incomplete: "Позначки часу неповні — захист від шторму відкинув їх; підсумкові значення залишаються точними."
         unresolved: Не вирішено
         unresolved_hint: Очікують вирішення
         resolution_rate: Частка вирішених

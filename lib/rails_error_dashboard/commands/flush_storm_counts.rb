@@ -512,6 +512,13 @@ module RailsErrorDashboard
         event.fingerprints_affected = [ event.fingerprints_affected.to_i, @entries.size ].max
         event.peak_rate_per_minute = [ event.peak_rate_per_minute.to_i, @episode["peak_rate_per_minute"].to_i ].max
         event.reached_open ||= @episode["reached_open"] == true
+        # Sticky, like reached_open: once an episode has lost bucket timing it
+        # has lost it, and a later flush that happens to succeed does not make
+        # the earlier gap reappear. Guarded on the column so a host that has
+        # not run the migration yet keeps flushing normally.
+        if @buckets_incomplete && event.respond_to?(:buckets_incomplete)
+          event.buckets_incomplete = true
+        end
         event.top_fingerprints = top_fingerprints_json(event)
         event.ended_at = parse_time(@episode["ended_at"]) if @episode["ended_at"]
         event.save!

@@ -843,6 +843,7 @@ zh-CN:
         rate_per_hour: "%{value}/小时"
         affected_users_incomplete: 至少 — storm 保护丢弃了逐事件的明细
         data_unavailable: 统计数据当前不可用 — 下方数字并非测量结果。
+        event_timing_incomplete: "事件时间记录不完整 — 风暴保护丢弃了时间戳；总数仍然准确。"
         unresolved: 未解决
         unresolved_hint: 等待处理
         resolution_rate: 解决率

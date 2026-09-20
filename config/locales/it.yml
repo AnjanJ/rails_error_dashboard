@@ -963,6 +963,7 @@ it:
         rate_per_hour: "%{value}/h"
         affected_users_incomplete: almeno — la protezione dagli storm ha scartato il dettaglio per evento
         data_unavailable: Le statistiche non sono al momento disponibili — i valori seguenti non sono una misurazione.
+        event_timing_incomplete: "Le marche temporali sono incomplete — la protezione tempeste le ha scartate; i totali restano esatti."
         unresolved: Non risolti
         unresolved_hint: In attesa di risoluzione
         resolution_rate: Tasso di risoluzione

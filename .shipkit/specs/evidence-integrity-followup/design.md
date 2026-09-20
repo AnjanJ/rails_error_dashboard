@@ -614,3 +614,97 @@ lets the example skip: prefer the accessor that fails loudly when a test's own p
 
 **I would reverse this if** an example legitimately needs to skip on absent data — in which case the
 skip must be an explicit `skip` with a reason, never a silent `next`.
+
+---
+
+# Round 4 — three implementation findings at `3f05b28`
+
+## F16 — one unambiguous time key, both aggregation paths
+
+**Context.** SQLite has no tz database, so both the hourly and daily groupings bucket in Ruby. The
+hourly key was `'YYYY-MM-DD HH:00:00'` and the daily key was the raw timestamp. Three defects fell
+out of that: `Time.zone.parse` read the hourly string as LOCAL (10:15 UTC reported hour 10 in New
+York, not 6); truncating to the UTC hour destroyed the sub-hour boundary +05:30 and +05:45 need
+(Kolkata 00:15 and 00:45 collapsed into one bin instead of hours 5 and 6); and the daily path
+returned one row per distinct instant (200 rows for 200 events in a day).
+
+**Alternatives.** (1) Emit a UTC **epoch-second** bin and read it as an integer. (2) Keep the
+datetime string and parse it with an explicit UTC zone. (3) Bucket entirely in Ruby from plucked
+timestamps.
+
+**Case for (1).** (2) fixes today's bug and leaves the next reader one `Time.zone.parse` away from
+reintroducing it — the ambiguity survives in the data format. An epoch second has no local-vs-UTC
+reading at all, so the defect class becomes *unrepresentable* rather than corrected. (3) is the
+unbounded shape being removed.
+
+**Case against (1).** The grouping key is no longer human-readable in a query log, and two constants
+(`HOUR_BIN_SECONDS`, `DAY_BIN_SECONDS`) now restate 900 rather than referencing
+`EventCount::BUCKET_SECONDS`. The latter is forced: that model is autoloaded and the constant is
+evaluated at class-definition time — referencing it broke the gem at boot. Guard specs assert all
+three stay equal.
+
+**Why 15 minutes.** It divides every UTC offset in use, so a local hour AND a local day boundary
+always fall on a bin edge. An hour-wide bin is not safe in fractional zones — that is defect two.
+
+**Decision.** (1), applied to BOTH paths, with `local_hour` dispatching on ADAPTER rather than value
+shape: a SQLite epoch bin *is* a Numeric and would otherwise fall into the PostgreSQL branch and
+silently return garbage.
+**I would reverse this if** an adapter appears whose hour/day extraction cannot be expressed in SQL
+and whose keys cannot be made unambiguous, forcing the Ruby path to become the general one.
+
+## F17 — incompleteness is persisted state, not a return value
+
+**Context.** `buckets_incomplete` was an instance variable copied into the flush result. No model,
+query or view consumed it; a background job's return hash never reaches the dashboard; and an
+idempotent replay returns `already_applied` with no flag at all. The dashboard therefore presented
+incomplete timing as an ordinary quiet period.
+
+**Alternatives.** (1) Persist on the storm EPISODE (`storm_events.buckets_incomplete`). (2) Persist
+per affected ErrorLog group. (3) Recompute at read time by comparing counts to bucket coverage.
+
+**Case for (1).** Incompleteness is a property of the EPISODE — one storm, one degradation event —
+and `StormEvent` already accumulates exactly this kind of per-episode fact. It survives the job
+boundary and the replay for free, because the state is not in the result hash the replay declines to
+build. (2) multiplies rows and answers a narrower question than the dashboard asks. (3) cannot work:
+once the timing evidence is discarded there is nothing left to compare against — the finding is about
+*recording* uncertainty, not reconstructing timestamps.
+
+**Case against (1).** It needs a migration and a new column on a host that may never have had a
+storm. Mitigated by an additive boolean defaulting to false, guarded at both ends by a
+column-existence check so an unmigrated host keeps flushing and rendering normally.
+
+**Sticky, like `reached_open`.** Once an episode has lost bucket timing it has lost it; a later
+successful flush does not make the earlier gap reappear.
+
+**The window predicate was wrong on the first attempt,** and the reviewer's fixture is what caught
+it. I filtered `started_at >= beginning_of_day`; a storm that began yesterday and is still shedding
+today is the ORDINARY case, and it was missed. Now matched on the episode's overlap with today.
+My own fixture flushed everything today and passed — a reminder that a fixture which is easier than
+production tests the easy case.
+
+**Decision.** (1), surfaced as `:event_timing_incomplete` and banner-rendered in all 11 locales,
+mirroring the existing `affected_users_incomplete` contract rather than inventing a new mechanism.
+**I would reverse this if** incompleteness ever needs to be attributed to a specific group or time
+range rather than an episode, which would force per-group rows.
+
+## F18 — the probe claim I got wrong
+
+I stated the review's probes "were diagnostic `puts` scripts, not assertions", and repeated it in a
+commit body, a PR description and a public issue comment. **It was false.** Three of the eight carry
+real `expect` calls (8 in the precedence probe, 1 each in payload and persistence). I generalized
+from the five that do not.
+
+Two things followed from that overreach, both now corrected:
+
+- `event_volume_invariants_spec.rb` was presented as replacing the probes. It does not — it covers
+  the event-volume invariants only. It now carries an explicit probe → permanent-test mapping that
+  names what is NOT carried over (ActiveJob-lifecycle, UI/layout).
+- Its "Overview and Analytics agree" examples called only Overview, and its three-term test asserted
+  `count == a + b + c` against an implementation that DEFINES `count` as `a + b + c`, with two terms
+  zero. The first now calls both pages; the second builds each term by a different mechanism and
+  asserts each is nonzero before checking an independently computed total.
+
+**The lesson worth keeping:** a claim about someone else's artifact is cheap to verify (`grep -c
+'expect('`) and expensive to retract once published. Verify before asserting, especially when the
+claim flatters your own work — "their tests were weak, mine are strong" is exactly the claim that
+deserves the most scrutiny.

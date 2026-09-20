@@ -972,6 +972,7 @@ fr:
         rate_per_hour: "%{value}/h"
         affected_users_incomplete: au moins — la protection contre les storms a écarté le détail par événement
         data_unavailable: Les statistiques sont indisponibles pour le moment — les chiffres ci-dessous ne sont pas une mesure.
+        event_timing_incomplete: "L'horodatage est incomplet — la protection anti-tempête a supprimé les horodatages ; les totaux restent exacts."
         unresolved: Non résolues
         unresolved_hint: En attente de résolution
         resolution_rate: Taux de résolution

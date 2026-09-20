@@ -941,6 +941,7 @@ de:
         rate_per_hour: "%{value}/Std."
         affected_users_incomplete: mindestens — der Storm-Schutz hat Detaildaten pro Ereignis verworfen
         data_unavailable: Statistiken sind derzeit nicht verfügbar — die Zahlen unten sind keine Messung.
+        event_timing_incomplete: "Zeitangaben sind unvollständig — der Sturmschutz hat Zeitstempel verworfen; die Gesamtzahlen stimmen."
         unresolved: Offen
         unresolved_hint: Behebung ausstehend
         resolution_rate: Behebungsquote
