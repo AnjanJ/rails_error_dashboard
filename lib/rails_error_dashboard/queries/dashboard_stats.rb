@@ -202,18 +202,59 @@ module RailsErrorDashboard
       # after the counts transaction commits. See the migration for the full
       # history of why this moved.
       def event_timing_incomplete?
-        # Nothing displayed, nothing to qualify.
+        # Nothing left to qualify, so no warning.
         #
         # Gaps are deliberately retained past their own retention while the
         # figures they describe are still shown (see the cleanup job), so a gap
         # can outlive every event it covered -- a group expiring is what
-        # removes those events. Warning that an empty window is "incomplete"
-        # is noise, and worse, it trains people to ignore the banner.
-        return false if month_event_count.zero?
+        # removes those events. Warning about a window whose subject matter is
+        # gone is noise, and noise trains people to ignore the banner.
+        #
+        # Asked of surviving GROUPS, not of the event aggregate. The aggregate
+        # is the wrong witness here: losing the time buckets is exactly what
+        # makes events invisible to it, so an old group that recurs today
+        # reports zero for every window (EventVolume can only place an
+        # untracked remainder at the group's own occurred_at, which precedes
+        # the window -- see untracked_groups) while the events are real, the
+        # group is alive and a current gap records them. Reading that zero as
+        # "nothing happened" suppressed the banner in precisely the state it
+        # exists to announce.
+        #
+        # last_seen_at is the right evidence because it is what retention
+        # deletes on: a group is expired only once it has not been seen for
+        # retention_days, so "no group seen in this window" is the same fact as
+        # "the covered events are gone" -- and it is indexed, and immune to the
+        # timing loss itself.
+        #
+        # Suppressed only when BOTH witnesses are silent, because neither alone
+        # is sufficient and they fail in opposite directions. The aggregate
+        # misses an old group's untracked recurrence (the defect above); the
+        # liveness check misses the converse, since EventVolume windows
+        # occurrence rows and buckets on THEIR OWN timestamps against an
+        # unwindowed group set (see group_ids), so a group whose last_seen_at
+        # has fallen behind its own event rows can still put events on the page.
+        # Requiring both to be empty means the banner can never be dropped
+        # while any displayed figure is non-zero, which is the F22 invariant.
+        return false unless groups_seen_in_widest_window? || month_event_count.positive?
 
         EventTimingGap.affecting?(WIDEST_DISPLAYED_WINDOW.ago, application_id: @application_id)
       rescue StandardError
         false
+      end
+
+      # Whether any error group was last seen inside the widest displayed
+      # window. Existence, not a count: one indexed row settles it, and this
+      # runs on the capture path via the stats broadcast.
+      #
+      # The NULL arm covers rows written before last_seen_at existed, whose
+      # occurred_at is the only timestamp they have -- the same COALESCE
+      # equivalence the retention job documents, written so each arm keeps its
+      # own index.
+      def groups_seen_in_widest_window?
+        cutoff = WIDEST_DISPLAYED_WINDOW.ago
+        base_scope.where(
+          "last_seen_at >= :cutoff OR (last_seen_at IS NULL AND occurred_at >= :cutoff)", cutoff: cutoff
+        ).exists?
       end
 
       def reopened_count

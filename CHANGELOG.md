@@ -5,6 +5,103 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 0.14.0 highlights — event timing, capture privacy and snapshot reliability
+
+#### Upgrade instructions
+
+This release adds three migrations:
+
+- `CreateEventCounts`: per-group, 15-minute counts for events retained by storm protection without full occurrence records.
+- `AddBucketsIncompleteToStormEvents`: a timing-completeness flag on storm episodes.
+- `CreateEventTimingGaps`: durable records of intervals with missing event timing, independent of optional storm episodes.
+
+Update the gem, rerun the installer to copy the new migrations, and migrate:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails generate rails_error_dashboard:install
+bin/rails db:migrate
+```
+
+For installations using a separate error database, run
+`bin/rails db:migrate:error_dashboard` instead of the last command. The installer
+preserves the existing initializer and detects the configured migration directory.
+
+#### Event counts and reporting time
+
+Overview and Analytics count events within their reporting window instead of
+summing the lifetime counts of groups first seen in that window. Recurrences of
+older errors now contribute to the appropriate totals, trends and breakdowns.
+
+Storm protection records shed events in 15-minute UTC buckets. Daily and hourly
+reporting uses the configured reporting time zone, including fractional-hour
+offsets and daylight-saving changes. SQLite aggregation is bounded by the time
+window rather than returning one intermediate result per distinct timestamp.
+MySQL continues to require populated time-zone tables for named-zone conversion.
+
+Historical counts without per-event timestamps still fall back to the group's
+first-seen time; the new migrations cannot reconstruct that missing history.
+Storm buckets provide 15-minute resolution. Existing totals can change after the
+upgrade because the queries now use different, more appropriate timing evidence.
+
+The Overview warns when persisted timing gaps overlap its reporting window.
+The warning remains visible when missing timing makes every displayed total zero
+but an error group still shows recent activity. Orphan warnings are suppressed
+only when both recent groups and displayed events are absent.
+Timing-gap evidence is recorded in the same transaction as degraded storm counts
+and retained for at least the 30-day reporting horizon when retention is enabled.
+Storm count buckets are removed when their error group is deleted or expires.
+Concurrent recurrence, transient storage failures and retried batches preserve
+storm counts without applying a successful batch twice.
+
+#### Variable serialization changes
+
+Unknown objects now produce a class summary by default instead of invoking their
+`inspect` method. ActiveModel objects also receive summaries; Active Record
+objects retain their existing record summaries. Structs are serialized member by
+member with the configured collection/depth limits, so nested objects follow the
+same policy. Captured variable output may therefore contain less detail or have
+a different representation than in 0.13.0.
+
+Two new configuration options control explicit inspection:
+
+- `local_variable_inspect_allowlist`, default `[]`: class or ancestor names whose
+  `inspect` methods may run.
+- `local_variable_inspect_budget_ms`, default `5`: selects a summary instead of
+  the returned inspection text if the completed call exceeded this threshold.
+
+The threshold is not an execution timeout. Adding a class to the allowlist permits
+its application-defined code to run to completion on the capture path.
+
+#### Capture privacy and fidelity
+
+- With sensitive-data filtering enabled, dotted filter paths apply consistently
+  to local-variable hashes and arrays. Params, additional context and metadata
+  are filtered before crossing the async queue; OpenTelemetry capture messages
+  are filtered before export.
+- Async captures carry their capture timestamp, application version and Git SHA
+  across the queue, so queue delay and intervening deploys do not substitute the
+  worker's time and build for available capture-time evidence.
+- Manual reports preserve caller-supplied event time, application version and
+  metadata. Parseable timestamp strings work on the async path; future timestamps
+  are clamped and invalid timestamps fall back to capture time. Client error types
+  without a matching Ruby class retain their reported names after async handling.
+- `ManualErrorReporter`'s `severity:` argument remains accepted but ignored;
+  severity is classified from the reported error type. This existing limitation
+  is now explicitly documented and logged at debug level when supplied.
+- Snapshots that retain older fields alongside a newer occurrence are labeled
+  `partial`, rather than presenting the combined context as one complete capture.
+
+#### Background jobs and mobile layout
+
+When breadcrumbs are enabled, Active Job executions receive a breadcrumb buffer
+and failed-job trails survive handoff to the reporter. Inline jobs preserve an
+existing request buffer, and async error capture prefers the original event's
+trail over the capture worker's activity.
+
+The error-detail header, action buttons and context tables wrap correctly on
+narrow screens instead of squeezing titles and forcing horizontal page scrolling.
+
 ## [0.13.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.12.1...rails_error_dashboard/v0.13.0) (2026-09-18)
 
 

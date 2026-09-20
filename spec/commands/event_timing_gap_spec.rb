@@ -249,6 +249,116 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, "timing gaps under shor
       expect(stats[:total_month]).to eq(0)
       expect(stats[:event_timing_incomplete]).to be_falsey
     end
+
+    # The other half of the same predicate, and the one the first version got
+    # wrong: a zero window total is ALSO what a group whose timing was lost
+    # looks like, so zero cannot be read as "nothing happened".
+    #
+    # A group first seen outside the window that recurs inside it is invisible
+    # to the aggregate by construction -- EventVolume can only place an
+    # untracked remainder at the group's own occurred_at, which precedes the
+    # window -- so the events are real, the group is alive, and every displayed
+    # figure is zero. Suppressing here is silence in exactly the state the
+    # banner exists to announce (see F24).
+    it "warns when the window total is zero because the timing itself was lost" do
+      app = RailsErrorDashboard::Application.find_or_create_by_name("zero-volume-gap")
+      group = RailsErrorDashboard::ErrorLog.create!(
+        application_id: app.id, error_type: "StormError", message: "recurred untimed",
+        error_hash: SecureRandom.hex(8), occurrence_count: 10,
+        occurred_at: 60.days.ago, resolved: false
+      )
+      # last_seen_at is stamped on create, so set the recurrence explicitly.
+      group.update_column(:last_seen_at, Time.current)
+      RailsErrorDashboard::EventTimingGap.create!(
+        application_id: app.id, covered_from: Time.current, covered_until: Time.current,
+        events_affected: 5
+      )
+
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call
+
+      # The aggregate genuinely cannot see the events; the banner must anyway.
+      expect(stats[:total_month]).to eq(0)
+      expect(stats[:event_timing_incomplete]).to be(true)
+    end
+
+    # The suppression must key on group liveness, not on gap age: the orphan
+    # example above uses a gap only ten days old, well inside the window, so
+    # "old gap" cannot be the discriminator.
+    it "does not warn when the only group expired before the window" do
+      app = RailsErrorDashboard::Application.find_or_create_by_name("expired-group-gap")
+      group = RailsErrorDashboard::ErrorLog.create!(
+        application_id: app.id, error_type: "StormError", message: "long gone",
+        error_hash: SecureRandom.hex(8), occurrence_count: 3,
+        occurred_at: 200.days.ago, resolved: false
+      )
+      group.update_column(:last_seen_at, 200.days.ago)
+      RailsErrorDashboard::EventTimingGap.create!(
+        covered_from: 10.days.ago, covered_until: 10.days.ago, events_affected: 5
+      )
+
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call
+
+      expect(stats[:event_timing_incomplete]).to be_falsey
+    end
+
+    # The converse of the defect, and why liveness alone is not enough either.
+    #
+    # EventVolume windows occurrence rows and buckets on THEIR OWN timestamps
+    # against an unwindowed group set (group_ids), so a group whose last_seen_at
+    # has fallen behind its own event rows still puts events on the page. The
+    # banner must not be dropped while a displayed figure is non-zero (F22), so
+    # suppression requires BOTH witnesses to be silent.
+    it "warns when events are displayed even though the group looks quiet" do
+      app = RailsErrorDashboard::Application.find_or_create_by_name("stale-liveness-gap")
+      group = RailsErrorDashboard::ErrorLog.create!(
+        application_id: app.id, error_type: "StormError", message: "stale liveness",
+        error_hash: SecureRandom.hex(8), occurrence_count: 10,
+        occurred_at: 60.days.ago, resolved: false
+      )
+      # last_seen_at behind the occurrence row it should have advanced past.
+      group.update_column(:last_seen_at, 40.days.ago)
+      RailsErrorDashboard::ErrorOccurrence.create!(error_log_id: group.id, occurred_at: 2.hours.ago)
+      RailsErrorDashboard::EventTimingGap.create!(
+        application_id: app.id, covered_from: 3.hours.ago, covered_until: 2.hours.ago,
+        events_affected: 5
+      )
+
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call(application_id: app.id)
+
+      expect(stats[:total_month]).to be > 0
+      expect(stats[:event_timing_incomplete]).to be(true)
+    end
+
+    # Pre-last_seen_at rows have only occurred_at, which is why the predicate
+    # keeps a separate NULL arm rather than wrapping both in COALESCE (that
+    # would forfeit the index on the largest table).
+    it "judges a legacy row with no last_seen_at by its occurred_at" do
+      app = RailsErrorDashboard::Application.find_or_create_by_name("legacy-row-gap")
+      group = RailsErrorDashboard::ErrorLog.create!(
+        application_id: app.id, error_type: "StormError", message: "legacy",
+        error_hash: SecureRandom.hex(8), occurrence_count: 4,
+        occurred_at: 2.days.ago, resolved: false
+      )
+      group.update_column(:last_seen_at, nil)
+      query = RailsErrorDashboard::Queries::DashboardStats.new(application_id: app.id)
+      # Check the NULL arm independently: the positive monthly total below
+      # would otherwise let this example pass even if that arm were removed.
+      expect(query.send(:groups_seen_in_widest_window?)).to be(true)
+      RailsErrorDashboard::EventTimingGap.create!(
+        covered_from: 1.day.ago, covered_until: 1.day.ago, events_affected: 4
+      )
+
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call
+
+      expect(stats[:event_timing_incomplete]).to be(true)
+
+      group.update_column(:occurred_at, 40.days.ago)
+      expect(query.send(:groups_seen_in_widest_window?)).to be(false)
+    end
   end
 
   context "when retention is longer than the reporting window" do
