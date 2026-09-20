@@ -175,8 +175,24 @@ module RailsErrorDashboard
     def cleanup_event_timing_gaps(cutoff)
       return unless EventTimingGap.table_exists?
 
+      # Kept for the LONGER of the two horizons that govern it.
+      #
+      # This used the configured retention cutoff alone, which is wrong
+      # whenever retention is shorter than the window the dashboard reports on:
+      # at retention_days = 7 the gap was deleted while the events it qualified
+      # were still on the page -- ten monthly events, no warning, group still
+      # active. A gap outlives its own retention precisely because the figures
+      # it qualifies do.
+      #
+      # Deleting it only once BOTH clocks have passed means the warning can
+      # never disappear while the numbers it describes are still displayed.
+      # The reverse case is unaffected: with the 90-day default the retention
+      # cutoff is already the later of the two, so nothing is kept longer than
+      # before.
+      gap_cutoff = [ cutoff, Queries::DashboardStats::WIDEST_DISPLAYED_WINDOW.ago ].min
+
       deleted = 0
-      EventTimingGap.where("covered_until < ?", cutoff).in_batches(of: 1000) do |batch|
+      EventTimingGap.where("covered_until < ?", gap_cutoff).in_batches(of: 1000) do |batch|
         deleted += batch.delete_all
       end
 

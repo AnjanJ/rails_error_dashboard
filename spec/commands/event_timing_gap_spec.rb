@@ -173,3 +173,95 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, "timing gap pruning" do
     expect(RailsErrorDashboard::EventTimingGap.where(id: recent.id)).to exist
   end
 end
+
+# Completeness evidence has to outlive the SHORTER of the two clocks that
+# govern it, not just one of them.
+#
+# Gap cleanup used the configured retention_days, while the Overview reads gaps
+# against a 30-day window. With retention_days = 7 the gap was deleted while the
+# events it qualified were still on the page: ten monthly events, no warning,
+# group still active. Only settings BELOW the reporting window are affected --
+# the 90-day default and a 30-day setting both behave correctly, which is why
+# this survived the original pruning spec.
+RSpec.describe RailsErrorDashboard::RetentionCleanupJob, "timing gaps under short retention" do
+  before do
+    RailsErrorDashboard.reset_configuration!
+    RailsErrorDashboard.configuration.async_logging = false
+    Rails.cache.clear
+  end
+
+  after { RailsErrorDashboard.reset_configuration! }
+
+  # Active today, so retention keeps the group; its gap is older than a short
+  # retention window but still inside the reporting window.
+  def active_group_with_old_gap
+    app = RailsErrorDashboard::Application.find_or_create_by_name("retention-horizon")
+    group = RailsErrorDashboard::ErrorLog.create!(
+      application_id: app.id, error_type: "StormError", message: "still active",
+      error_hash: SecureRandom.hex(8), occurrence_count: 10,
+      occurred_at: 10.days.ago, last_seen_at: Time.current, resolved: false
+    )
+    gap = RailsErrorDashboard::EventTimingGap.create!(
+      covered_from: 10.days.ago, covered_until: 10.days.ago, events_affected: 5
+    )
+    [ group, gap ]
+  end
+
+  context "when retention is shorter than the reporting window" do
+    before { RailsErrorDashboard.configuration.retention_days = 7 }
+
+    it "keeps the gap while its events are still displayed" do
+      _group, gap = active_group_with_old_gap
+
+      described_class.perform_now
+
+      expect(RailsErrorDashboard::EventTimingGap.where(id: gap.id)).to exist
+    end
+
+    it "keeps warning about the events it still shows" do
+      active_group_with_old_gap
+
+      described_class.perform_now
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call
+
+      expect(stats[:total_month]).to be > 0
+      expect(stats[:event_timing_incomplete]).to be(true)
+    end
+  end
+
+  # Retaining a gap past its own retention means it can outlive every event it
+  # covered, because expiring the GROUP is what removes those events. A banner
+  # qualifying a window that shows nothing is noise, and noise trains people to
+  # ignore the banner.
+  context "when the events themselves are gone" do
+    before { RailsErrorDashboard.configuration.retention_days = 7 }
+
+    it "does not warn about an empty window" do
+      RailsErrorDashboard::EventTimingGap.create!(
+        covered_from: 10.days.ago, covered_until: 10.days.ago, events_affected: 5
+      )
+
+      described_class.perform_now
+      Rails.cache.clear
+      stats = RailsErrorDashboard::Queries::DashboardStats.call
+
+      expect(stats[:total_month]).to eq(0)
+      expect(stats[:event_timing_incomplete]).to be_falsey
+    end
+  end
+
+  context "when retention is longer than the reporting window" do
+    before { RailsErrorDashboard.configuration.retention_days = 90 }
+
+    it "still prunes a gap older than both horizons" do
+      old = RailsErrorDashboard::EventTimingGap.create!(
+        covered_from: 200.days.ago, covered_until: 200.days.ago, events_affected: 1
+      )
+
+      described_class.perform_now
+
+      expect(RailsErrorDashboard::EventTimingGap.where(id: old.id)).not_to exist
+    end
+  end
+end
