@@ -967,6 +967,7 @@ pt-BR:
         rate_per_hour: "%{value}/h"
         affected_users_incomplete: no mínimo — a proteção contra storms descartou o detalhe por evento
         data_unavailable: As estatísticas estão indisponíveis no momento — os números abaixo não são uma medição.
+        event_timing_incomplete: "Os horários estão incompletos — a proteção contra tempestades descartou os carimbos de tempo; os totais continuam exatos."
         unresolved: Não resolvidos
         unresolved_hint: Aguardando resolução
         resolution_rate: Taxa de resolução

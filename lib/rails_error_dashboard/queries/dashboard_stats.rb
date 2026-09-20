@@ -54,6 +54,13 @@ module RailsErrorDashboard
               # window, the dimension is incomplete and the page says so
               # rather than presenting an undercount as fact.
               affected_users_incomplete: affected_users_incomplete?,
+              # A storm episode in this window lost its per-bucket TIMING
+              # evidence, so every time-window figure for it rests on the
+              # group's own occurred_at rather than on per-event records.
+              # Reported for the same reason as affected_users_incomplete:
+              # an incomplete dimension should say so rather than present a
+              # figure of unknown completeness as fact.
+              event_timing_incomplete: event_timing_incomplete?,
               data_unavailable: false
             }
           end
@@ -71,6 +78,7 @@ module RailsErrorDashboard
           {
             data_unavailable: true,
             affected_users_incomplete: false,
+            event_timing_incomplete: false,
             total_today: 0,
             total_week: 0,
             total_month: 0,
@@ -159,6 +167,33 @@ module RailsErrorDashboard
                      .where("#{ErrorOccurrence.table_name}.occurred_at >= ?", Time.current.beginning_of_day)
                      .count
         recorded < today_event_count
+      rescue StandardError
+        false
+      end
+
+      # True when a storm episode overlapping this window degraded without
+      # writing its time buckets.
+      #
+      # Read from the persisted episode rather than recomputed: the flush that
+      # knew is long over by the time the dashboard renders, and the flag has
+      # to survive a replay. Every guard here is deliberate -- the storm table
+      # may not exist, and the column may not be migrated yet on an older host.
+      def event_timing_incomplete?
+        return false unless StormEvent.table_exists?
+        return false unless StormEvent.column_names.include?("buckets_incomplete")
+
+        # Matched on the episode's OVERLAP with today, not on started_at
+        # alone. A storm that began yesterday and is still shedding today is
+        # the ordinary case -- filtering by started_at >= beginning_of_day
+        # missed exactly that, and the dashboard went back to presenting
+        # incomplete timing as an ordinary quiet period.
+        #
+        # Still active (ended_at IS NULL) counts however long ago it began;
+        # an ended episode counts if it ran past midnight.
+        today = Time.current.beginning_of_day
+        StormEvent.where(buckets_incomplete: true)
+                  .where("ended_at IS NULL OR ended_at >= ?", today)
+                  .exists?
       rescue StandardError
         false
       end

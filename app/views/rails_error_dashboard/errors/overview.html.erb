@@ -16,6 +16,18 @@
     </div>
   <% end %>
 
+  <%# A storm episode degraded without writing its time buckets, so the
+      time-window figures below rest on each group's first-seen timestamp
+      rather than on per-event records. The COUNTS are still exact -- only
+      their placement in time is approximate, and saying so beats presenting
+      a figure of unknown completeness as fact. %>
+  <% if @stats[:event_timing_incomplete] %>
+    <div class="alert-warning" style="display: flex; align-items: center; gap: 10px; padding: 10px var(--space-5); background: var(--status-warning-bg); border-radius: var(--radius-md); border: 1px solid var(--status-warning); margin-bottom: var(--space-6); font-size: 13px; color: var(--status-warning);">
+      <i class="bi bi-clock-history"></i>
+      <strong><%= red_t("red.errors.overview_page.event_timing_incomplete") %></strong>
+    </div>
+  <% end %>
+
   <!-- Spike / Critical Alerts Banner -->
   <% if @critical_alerts.any? %>
     <%

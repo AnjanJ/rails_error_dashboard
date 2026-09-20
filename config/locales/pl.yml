@@ -979,6 +979,7 @@ pl:
         rate_per_hour: "%{value}/godz."
         affected_users_incomplete: co najmniej — ochrona przed storm odrzuciła szczegóły poszczególnych zdarzeń
         data_unavailable: Statystyki są obecnie niedostępne — poniższe liczby nie są pomiarem.
+        event_timing_incomplete: "Znaczniki czasu są niepełne — ochrona przed burzą je odrzuciła; sumy pozostają dokładne."
         unresolved: Nierozwiązane
         unresolved_hint: Oczekują na rozwiązanie
         resolution_rate: Wskaźnik rozwiązań

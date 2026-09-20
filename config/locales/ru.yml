@@ -982,6 +982,7 @@ ru:
         rate_per_hour: "%{value}/ч"
         affected_users_incomplete: не менее — защита от storm отбросила детализацию по событиям
         data_unavailable: Статистика сейчас недоступна — приведённые ниже числа не являются измерением.
+        event_timing_incomplete: "Отметки времени неполные — защита от шторма отбросила их; итоговые значения остаются точными."
         unresolved: Не решено
         unresolved_hint: Ожидают решения
         resolution_rate: Доля решённых

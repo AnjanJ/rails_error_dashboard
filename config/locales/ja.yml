@@ -847,6 +847,7 @@ ja:
         rate_per_hour: "%{value}/時"
         affected_users_incomplete: 最少値 — storm 保護によりイベントごとの詳細が破棄されました
         data_unavailable: 統計は現在利用できません — 以下の数値は計測値ではありません。
+        event_timing_incomplete: "発生時刻の記録が不完全です — ストーム保護がタイムスタンプを破棄しました。合計値は正確です。"
         unresolved: 未解決
         unresolved_hint: 解決待ち
         resolution_rate: 解決率
