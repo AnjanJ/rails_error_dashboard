@@ -56,17 +56,39 @@ module RailsErrorDashboard
         I18nStore.translate(PERIODS[@period][:label_key], locale: @locale)
       end
 
-      def base_scope
-        scope = ErrorLog.where("occurred_at >= ?", @start_date)
+      # Two counting units, kept distinct on purpose (as in AnalyticsStats).
+      #
+      #   EVENT figures -> Queries::EventVolume over app_scope: how much
+      #                    erroring happened in the period. Occurrences, the
+      #                    top-errors counts and the period comparison.
+      #   GROUP figures -> base_scope, groups FIRST SEEN in the period: new,
+      #                    resolved, unresolved, critical/high, resolution rate
+      #                    and the critical-unresolved list.
+      #
+      # Summing the lifetime counts of groups born in the period reported an
+      # unresolved August error that fired all day today as zero occurrences,
+      # absent from Top Errors, with an empty comparison.
+
+      # Every group of the application, NOT cut by date -- what EventVolume
+      # must be handed, or it never sees an older group's recurrences.
+      def app_scope
+        scope = ErrorLog.all
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
+      end
+
+      def base_scope
+        app_scope.where("occurred_at >= ?", @start_date)
       end
 
       def build_stats
         scope = base_scope
 
-        new_errors = scope.where("occurrence_count <= 1").count
-        total_occurrences = scope.sum(:occurrence_count)
+        # GROUP figure: errors first seen in the period, however often they
+        # fired. `occurrence_count <= 1` counted "seen once", so a brand-new
+        # error that fired twice was missing from the headline and the subject.
+        new_errors = scope.count
+        total_occurrences = Queries::EventVolume.in_window(app_scope, @start_date)
         resolved = scope.where(resolved: true).count
         unresolved = scope.where(resolved: false).count
         # Severity is computed from error_type via SeverityClassifier (not a DB column).
@@ -91,15 +113,21 @@ module RailsErrorDashboard
         { new_errors: 0, total_occurrences: 0, resolved: 0, unresolved: 0, critical_high: 0, resolution_rate: 0 }
       end
 
+      # Unresolved error types ranked by their events in the period. This used
+      # to count GROUPS per type (a type with five groups scored 5 however
+      # often each fired), and only groups born in the period.
       def top_errors
-        base_scope
-          .where(resolved: false)
-          .group(:error_type)
-          .order("count_all DESC")
-          .limit(5)
-          .count
+        unresolved = app_scope.where(resolved: false)
+
+        Queries::EventVolume.by_group_attribute(unresolved, :error_type, @start_date)
+          .select { |_, count| count.positive? }
+          .sort_by { |error_type, count| [ -count, error_type.to_s ] }
+          .first(5)
           .map do |error_type, count|
-            sample = base_scope.where(error_type: error_type).order(occurred_at: :desc).first
+            # Most recently seen first; COALESCE because PostgreSQL sorts NULLs
+            # first in descending order.
+            sample = unresolved.where(error_type: error_type)
+                               .order(Arel.sql("COALESCE(last_seen_at, occurred_at) DESC"), id: :desc).first
             {
               error_type: error_type,
               message: sample&.message.to_s.truncate(100),
@@ -137,10 +165,11 @@ module RailsErrorDashboard
         previous_start = (@days * 2).days.ago
         previous_end = @start_date
 
-        current_count = base_scope.count
-        previous_scope = ErrorLog.where("occurred_at >= ? AND occurred_at < ?", previous_start, previous_end)
-        previous_scope = previous_scope.where(application_id: @application_id) if @application_id.present?
-        previous_count = previous_scope.count
+        # Events in each period, counted where they happened. Counting groups
+        # born in each period measured how many NEW errors appeared, not
+        # whether the application is erroring more or less.
+        current_count = Queries::EventVolume.in_window(app_scope, @start_date)
+        previous_count = Queries::EventVolume.in_window(app_scope, previous_start, previous_end)
 
         delta = current_count - previous_count
         percentage = previous_count > 0 ? ((delta.to_f / previous_count) * 100).round(1) : nil
