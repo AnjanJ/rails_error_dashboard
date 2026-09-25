@@ -911,3 +911,84 @@ needs to describe a window the page does not display, where 'no events shown' wo
 true** when it was written, because an old group's recurrence is invisible to the very window the
 page does display. A falsifiability clause is only protection if you also ask whether it already
 holds.
+
+# Round 8 — the three readers the cutover never reached (after 0.14.0)
+
+## F25 — every volume figure on the remaining readers, classified and routed
+
+**Context.** REQ-F6 required *every* event-volume figure in the gem to count events by their own
+timestamp, and named five files. 0.14.0 shipped with two of them migrated. `platform_comparison.rb`,
+`user_impact_summary.rb` and `digest_builder.rb` still selected groups by first-seen `occurred_at`
+and then summed or counted them — the pattern REQ-F7 forbids. T-F2.3's EVENT/GROUP inventory, which
+was meant to be the durable answer to "which unit is this figure?", was never written. This is the
+same ticked-but-not-done shape as the first sprint's T3.6. Reproduced on 0.14.0 with the Aug→Sep
+reopen fixture:
+- Platform Comparison's error-rate chart was empty. That includes the Overview's platform health card.
+- The User Impact row had no message, no link and "0x".
+- The daily digest said "Total Occurrences: 0" with no top errors, for an unresolved error firing
+  that day.
+- Analytics reported 2 events for the same week in which Platform Comparison reported 0.
+
+**Alternatives.**
+(1) Migrate only the four `sum(:occurrence_count)` sites the REQ-F6 inventory table names: the
+cross-platform total and breakdown, User Impact's occurrences, and the digest's occurrences.
+(2) Classify *every* figure these readers produce and route each EVENT figure through `EventVolume`,
+including the ones that `count` groups rather than sum them.
+(3) Delegate the platform and digest figures to `DashboardStats`/`AnalyticsStats` instead of calling
+the primitive.
+
+**Case for (2).** REQ-F6's own first sentence covers every event-volume figure, not every
+`sum(:occurrence_count)` call. On Platform Comparison, "Error Rate", "Daily Error Trends" and the
+health card's "Total Errors" are volume figures. They were implemented as group `count`s, so
+option (1) would leave them wrong, and they would disagree with the Overview headline on the
+Overview page itself. Classifying by *what the figure claims* rather than by *which method it calls*
+is the only rule that survives the next refactor. (3) is F3's rejected option: those query objects
+have different windows and shapes, and the primitive is the single source.
+
+**Case against (2).** It is a larger diff in a released query object, and several visible numbers
+change. The digest comparison, Platform Comparison's rates, velocity and severity bars, and the
+top-errors rankings all move from group counts to event counts; any host reading these hashes
+programmatically will see new values under unchanged keys. `top_errors_by_platform` now builds a
+per-group breakdown: one integer pair per group with events in the window, up to 365 days. That is
+bounded by the window rather than by the table, but it is larger than the ten rows it used to load.
+
+**Decision.** (2), with this classification. The rule is the one already stated in
+`analytics_stats.rb`:
+- A figure that measures *how much erroring happened* is **EVENT**: a total, rate, trend,
+  breakdown, velocity, period comparison, or ranking by count.
+- A figure about *the state of distinct errors* is **GROUP**, and it keeps selecting by first-seen,
+  as REQ-F7 requires: new, resolved, unresolved, resolution rate, resolution time, and lists of
+  groups by status.
+- A subset takes the unit of the total it belongs to.
+
+| Reader | Figure | Unit |
+|---|---|---|
+| PlatformComparison | `error_rate_by_platform`, `daily_trend_by_platform`, `severity_distribution_by_platform`, `cross_platform_errors`, `top_errors_by_platform` (ranking and `occurrence_count`, now the count within the window), health `total_errors` / `critical_errors` / `error_velocity` | EVENT |
+| | health `unresolved_errors`, `resolution_rate` (now groups ÷ groups, not groups ÷ events), `resolution_time_by_platform` | GROUP |
+| UserImpactSummary | `total_occurrences` | EVENT |
+| | `unique_users` (occurrence rows, D5 fallback) | unchanged |
+| | row sample, taken from the application scope, most recently seen first; `last_seen` becomes `last_seen_at` | metadata |
+| DigestBuilder | `total_occurrences`, `top_errors` (was a count of *groups* per type), `comparison` current and previous | EVENT |
+| | `new_errors`, `resolved`, `unresolved`, `critical_high`, `resolution_rate`, `critical_unresolved` | GROUP |
+
+Every `EventVolume` call receives the application-scoped, **un-windowed** scope. A first-seen scope
+handed to the primitive silently reproduces the defect it exists to fix. Each file now carries a
+comment naming its figures' units. `spec/queries/remaining_readers_event_volume_spec.rb` asserts
+the reopen case for all three readers. It also asserts two invariants:
+- Severity parts equal each platform's rate (an exhaustive breakdown).
+- Platform Comparison's total equals Analytics' total for the same window.
+
+It also asserts that the digest's `new_errors` stays 0 for a reopened August group, which is
+REQ-F7's other half.
+
+**Known and deliberately left alone:**
+- The digest's `new_errors` means `occurrence_count <= 1`, so a new error that fired twice is not
+  "new". That is a separate semantic defect.
+- `critical_unresolved` and `resolution_time_by_platform` select by first-seen. That is correct under
+  the GROUP rule, but a chronic critical error born before the period never reaches the digest's
+  critical list.
+
+**I would reverse this if** a user-facing figure classified EVENT here is shown next to a GROUP
+figure it is arithmetically combined with, such as a rate whose numerator and denominator end up in
+different units. That would mean the subset rule misassigned it, and that figure should move to the
+unit of its partner instead.
