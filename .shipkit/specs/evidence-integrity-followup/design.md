@@ -992,3 +992,63 @@ REQ-F7's other half.
 figure it is arithmetically combined with, such as a rate whose numerator and denominator end up in
 different units. That would mean the subset rule misassigned it, and that figure should move to the
 unit of its partner instead.
+
+## F26 — the last volume readers, "new errors", and what is deliberately left
+
+**Context.** F25's scoping turned up two more readers with the REQ-F7 pattern.
+- `RecurringIssues#high_frequency_errors` (Analytics, "High Frequency Errors") is a sixth
+  lifetime-sum site, and the REQ-F6 inventory never listed it.
+- `ErrorCorrelation#period_comparison` and `#platform_specific_errors` (the Correlation page)
+  count groups first seen in the window.
+
+On 0.14.0, a chronic error first seen a month earlier and firing all day was absent from High
+Frequency Errors, and the Correlation period cards read 0 / 0 / 0. Separately, the digest's
+`new_errors` (also its subject line) was `occurrence_count <= 1`: a brand-new error that fired
+twice was not "new".
+
+**Alternatives.** For the high-frequency threshold:
+- (1) Keep it per group (more than 10), counting events in the window.
+- (2) Make it per type (a type with more than 10 events in the window).
+- (3) Keep the lifetime threshold and only fix the window.
+
+For `new_errors`:
+- (a) Count every group first seen in the period.
+- (b) Keep the `<= 1` filter.
+
+**Case for (1) and (a).** Option (1) preserves *which* errors qualify: the unit that is "frequent"
+is the error (the group), as before. Only the evidence changes, to this window. Option (2) would
+let eleven one-off groups of one type qualify. Option (3) keeps a group that fired 11 times last
+year and once this month. As for (a): "new" is a GROUP figure by F25's rule, and "first seen in the
+period" is what the word means. The `<= 1` filter measured "seen once", so a new error that fired
+twice disappeared from the digest's headline.
+
+**Case against.** (1) needs the per-group window breakdown: one integer pair per group with events
+in the window, bounded by the window, the same accepted cost as F25's `top_errors_by_platform`.
+(a) changes an asserted behaviour. `digest_builder_spec`'s "counts new errors" example moves from
+3 to 4, and every digest subject line counts differently after upgrade.
+
+**Decision.** (1) and (a). `period_comparison` and `platform_specific_errors` are EVENT, the same
+as F25's comparisons and rankings. `errors_by_version` and `errors_by_git_sha` stay GROUP:
+release attribution is first-seen by design (C2 never refreshes `app_version`/`git_sha`).
+Occurrences carry their own version, so an event-based release view is possible later, but it
+would be a new figure, not a correction.
+
+**Found and deliberately NOT changed.** These are three more classes of first-seen reader. None of
+them is a volume *figure*, so none is a REQ-F6 defect, but each misleads in the same way.
+- **B. Timing analyses fed with first-seen timestamps.** They run pattern analysis over the
+  sibling groups' `occurred_at` instead of per-event times: `RecurringIssues#cyclical_patterns`,
+  `ErrorCorrelation#time_correlated_errors`, `ErrorLog#occurrence_pattern`, `ErrorLog#error_bursts`.
+  They need per-event timestamps (occurrence rows plus storm buckets), which raises the same
+  bounded-memory question `EventVolume#by_hour_of_day` answered with SQL binning.
+- **C. Group lists filtered by "born in the window" where "active in the window" is meant.** The
+  errors list's timeframe filter, `CriticalAlerts` (last hour) and
+  `RecurringIssues#persistent_errors`, which cannot list anything first seen more than
+  `days` ago, the very errors it exists to surface. Whether these should select by `last_seen_at`
+  is a product decision.
+- **D. Health summaries** (N+1, cache, database, jobs, LLM, Action Cable, Active Storage,
+  deprecations) read breadcrumbs and snapshots from groups selected by first-seen. Since C2
+  refreshes those payloads on recurrence, a chronic group's latest context is excluded.
+
+**I would reverse (1) if** users report "high frequency" missing errors that fire often as a *type*
+across many short-lived groups (for example, fingerprints split by a volatile message). That would
+mean the type, not the group, is the unit people mean by frequent.
