@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.0...rails_error_dashboard/v0.14.1) (2026-09-25)
+
+
+### 🐛 Bug Fixes
+
+* count events on the high-frequency and correlation figures ([#253](https://github.com/AnjanJ/rails_error_dashboard/issues/253)) ([49a86e4](https://github.com/AnjanJ/rails_error_dashboard/commit/49a86e431fab25ee83bebe6bab84d43d3a198b7e))
+* count events, not first-seen groups, on the three readers 0.14.0 missed ([#252](https://github.com/AnjanJ/rails_error_dashboard/issues/252)) ([0242d79](https://github.com/AnjanJ/rails_error_dashboard/commit/0242d79e29f8aa4a28cd21d6a06ac6b09ba673ac))
+
+### Upgrade instructions
+
+There are no migrations and no configuration changes. Update the gem and restart:
+
+```sh
+bundle update rails_error_dashboard
+```
+
+Several figures on the pages listed below will change after the upgrade. The new values are
+corrections, not regressions.
+
+### Every page counts events when they happened
+
+0.14.0 made the Overview and Analytics totals count events within their reporting window. The
+pages below still chose error groups by the day each was **first seen** and then counted or
+summed them. An error first seen before the window, but still firing inside it, was therefore
+missing from these pages or counted as zero. Each of these figures now counts events by when
+they happened:
+
+- **Platform Comparison**, and the platform health cards on the **Overview**. Changed figures:
+  - error rate and daily trends
+  - the severity distribution
+  - the cross-platform totals
+  - the health card's total, critical count and error velocity
+
+  Each platform's top errors are now ranked by their events in the window, and the count shown
+  is the count within the window, not the group's lifetime total.
+- **User Impact**. The Occurrences column counts events in the window. Each row now takes its
+  message, severity and link from the most recently seen error of that type, so an error that
+  began before the window no longer shows a row with nothing to click. "Last Seen" shows when
+  the error was last seen, not when it was first seen.
+- **Analytics, High Frequency Errors**. An error qualifies when it fired more than 10 times
+  **within the window** (previously: more than 10 times in its lifetime, among errors first seen
+  in the window). Chronic errors now appear here.
+- **Correlation**. The period comparison counts the events in each half of the window.
+  Platform-specific errors are ranked by events, and "also on" lists the other platforms where
+  the same error type had events in the window.
+- **Digest email**. Occurrences, the Top Errors counts and the comparison with the previous
+  period all count events. Top Errors used to count *how many groups* each error type had, not
+  how often it fired.
+
+Figures about the state of distinct errors still select errors by the day they were first
+seen: new, resolved, unresolved, resolution rate, resolution time, and the list of critical
+unresolved errors.
+
+### Digest "New Errors"
+
+The digest's **New Errors** figure, which also appears in the email subject, now counts every
+error first seen in the period, however often it fired. It used to count only errors seen
+exactly once, so a new error that fired twice on its first day was missing from the headline.
+Expect this number to be higher.
+
+### If you read these figures from code
+
+No hash keys changed, but the values of these entries now count events within the window:
+
+- `Queries::PlatformComparison`: every figure listed above. `top_errors_by_platform[...][:occurrence_count]` is the count within the window.
+- `Queries::UserImpactSummary`: `total_occurrences`. `last_seen` is the last-seen time.
+- `Queries::RecurringIssues`: `high_frequency_errors`.
+- `Queries::ErrorCorrelation`: `period_comparison` and `platform_specific_errors`.
+- `Services::DigestBuilder`: `total_occurrences`, `top_errors[:count]` and `comparison`. `new_errors` counts every error first seen in the period.
+
+### Not changed in this release
+
+These still work from the time each error group was first seen:
+- Occurrence-pattern and hourly-correlation analyses
+- The errors list's time filters, Critical Alerts, and Persistent Unresolved Errors
+- The health summaries (for example N+1 queries, cache, jobs and LLM calls)
+
 ## [0.14.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.13.0...rails_error_dashboard/v0.14.0) (2026-09-20)
 
 ### Upgrade instructions

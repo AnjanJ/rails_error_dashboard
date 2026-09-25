@@ -128,15 +128,28 @@ RSpec.describe "async capture envelope" do
       end
     end
 
+    # Frozen an hour after `moment`. Unfrozen, `moment` aged out of the 24-hour
+    # grouping window on 2026-09-20: FindOrIncrementError clamps a new GROUP's
+    # occurred_at to "24 hours ago" at each capture's own instant, so this
+    # compared two wall-clock clamps and went red whenever the captures
+    # straddled a second boundary -- no longer testing the caller's time at
+    # all. The OCCURRENCE row keeps the true event time, so it is asserted too.
     it "stores the same occurred_at for a String as for the equivalent Time" do
-      RailsErrorDashboard.configuration.async_logging = false
-      from_time = RailsErrorDashboard::Commands::LogError.call(boom, occurred_at: moment)
-      from_string = RailsErrorDashboard::Commands::LogError.call(
-        StandardError.new("string form").tap { |e| e.set_backtrace([ "#{Rails.root}/app/models/order.rb:12:in 'save'" ]) },
-        occurred_at: moment.iso8601
-      )
+      travel_to(moment + 1.hour) do
+        RailsErrorDashboard.configuration.async_logging = false
+        from_time = RailsErrorDashboard::Commands::LogError.call(boom, occurred_at: moment)
+        from_string = RailsErrorDashboard::Commands::LogError.call(
+          StandardError.new("string form").tap { |e| e.set_backtrace([ "#{Rails.root}/app/models/order.rb:12:in 'save'" ]) },
+          occurred_at: moment.iso8601
+        )
 
-      expect(from_string.occurred_at.to_i).to eq(from_time.occurred_at.to_i)
+        expect(from_string.occurred_at.to_i).to eq(from_time.occurred_at.to_i)
+        expect(from_time.occurred_at.to_i).to eq(moment.to_i)
+
+        event_time = ->(log) { RailsErrorDashboard::ErrorOccurrence.where(error_log_id: log.id).pick(:occurred_at).to_i }
+        expect(event_time.call(from_string)).to eq(event_time.call(from_time))
+        expect(event_time.call(from_time)).to eq(moment.to_i)
+      end
     end
 
     it "still clamps a future time, on both transports" do
