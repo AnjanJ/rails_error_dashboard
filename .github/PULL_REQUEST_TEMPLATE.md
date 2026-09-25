@@ -19,10 +19,11 @@
 
 ## Related Issues
 
-<!-- Link to related issues using keywords like "Fixes #123" or "Closes #456" -->
+<!-- Link related issues with "Refs #123". Please avoid closing keywords (Closes, Fixes,
+     Resolves): they close the issue on merge, and this project leaves it open until the
+     reporter has confirmed the fix. -->
 
-Fixes #
-Related to #
+Refs #
 
 ## Motivation and Context
 
@@ -64,7 +65,7 @@ Related to #
 
 ### Documentation
 - [ ] I have updated the README.md if needed
-- [ ] I have updated the CHANGELOG.md (under "Unreleased" section)
+- [ ] The PR title follows Conventional Commits (`feat:`, `fix:`, `docs:` ...) — release-please builds CHANGELOG.md from it, so CHANGELOG.md is not edited by hand
 - [ ] I have added/updated relevant code comments
 - [ ] I have updated relevant documentation files
 
@@ -76,8 +77,7 @@ Related to #
 ### Breaking Changes
 - [ ] This PR does not contain breaking changes
 - OR
-- [ ] I have clearly documented breaking changes in the PR description and CHANGELOG
-- [ ] I have updated the version number appropriately (major version bump)
+- [ ] I have clearly documented breaking changes in the PR description (release-please sets the version; don't bump it by hand)
 - [ ] I have provided migration instructions for users
 
 ## Additional Notes

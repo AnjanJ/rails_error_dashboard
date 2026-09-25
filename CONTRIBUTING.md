@@ -113,7 +113,8 @@ Pull requests are the best way to propose changes to the codebase. We actively w
    - Update README.md if adding user-facing features
    - Add/update guides in `docs/` for detailed features
    - Add RDoc comments for complex code
-   - Update CHANGELOG.md (see [CHANGELOG Guidelines](#changelog-guidelines))
+   - Do **not** edit CHANGELOG.md or the version number — release-please writes both from
+     your commit messages (see [CHANGELOG Guidelines](#changelog-guidelines))
 
 5. **Run the full test suite** and ensure everything passes
    ```bash
@@ -127,10 +128,14 @@ Pull requests are the best way to propose changes to the codebase. We actively w
    bundle exec rubocop -A
    ```
 
-7. **Ensure tests pass on all supported versions** (optional but appreciated)
+7. **Ensure tests pass on other Rails versions** (optional — CI runs the full Ruby × Rails
+   matrix on every pull request)
    ```bash
-   bundle exec rake test:all_versions
+   rm -f Gemfile.lock   # gitignored; pinned to the last Rails you installed
+   RAILS_VERSION=7.0 bundle install
+   RAILS_VERSION=7.0 bundle exec rspec
    ```
+   See [docs/development/TESTING.md](docs/development/TESTING.md) for the matrix.
 
 8. **Push to your fork** and submit a pull request
    ```bash
@@ -147,12 +152,12 @@ Your PR must meet these requirements:
 - [ ] **Tests pass** - `bundle exec rspec` runs without failures
 - [ ] **RuboCop passes** - `bundle exec rubocop` shows no offenses
 - [ ] **Documentation updated** - README, guides, or code comments updated
-- [ ] **CHANGELOG updated** - Entry added to `[Unreleased]` section (unless docs/tests only)
+- [ ] **Conventional PR title** - PRs are squash-merged, so the title becomes the commit on `main` that release-please turns into the changelog (see [Commit Messages](#commit-messages)). No CHANGELOG.md edit
 - [ ] **One feature per PR** - Unrelated changes belong in separate PRs
 - [ ] **Clean commit history** - Squash "WIP" or "fix typo" commits
 - [ ] **Up-to-date with main** - Rebase on latest main branch
 
-**Note:** The pre-commit hooks (via Lefthook) will automatically check RuboCop and run tests. If you need to skip hooks temporarily: `LEFTHOOK=0 git commit -m "message"`
+**Note:** The pre-commit hook (via Lefthook) runs RuboCop on your staged Ruby files, the spec files you staged, bundle audit and the chaos suite — see [Pre-commit Hooks](#pre-commit-hooks). To skip only the slow chaos stage: `LEFTHOOK_EXCLUDE=chaos-tests git commit -m "message"`. To skip all hooks temporarily: `LEFTHOOK=0 git commit -m "message"`
 
 ## Development Setup
 
@@ -182,10 +187,10 @@ Your PR must meet these requirements:
    bundle install
    ```
 
-4. **Set up the test database**
+4. **Set up the test database** (the same command CI runs)
    ```bash
    cd spec/dummy
-   RAILS_ENV=test bundle exec rails db:create db:migrate
+   RAILS_ENV=test bundle exec rake db:schema:load
    cd ../..
    ```
 
@@ -234,18 +239,18 @@ bundle exec rspec spec/lib/rails_error_dashboard/commands/log_error_spec.rb:42
 # Run unit/integration tests only (no browser needed)
 bundle exec rspec --exclude-pattern "spec/system/**/*"
 
-# Run system tests only (requires Chrome/Chromium)
-bundle exec rspec spec/system/
-
-# Run system tests with visible browser (for debugging)
-HEADLESS=false bundle exec rspec spec/system/
+# Run with the system specs' browser visible (for debugging)
+HEADLESS=false bundle exec rspec
 
 # Run with Chrome DevTools inspector
-INSPECTOR=true HEADLESS=false bundle exec rspec spec/system/
-
-# Run with coverage report
-COVERAGE=true bundle exec rspec
+INSPECTOR=true HEADLESS=false bundle exec rspec
 ```
+
+**A directory argument does not narrow the run.** `spec/spec_helper.rb` pins
+`config.pattern` to every spec under `spec/`, so `bundle exec rspec spec/system/`
+runs the whole suite, system specs included — CI's system-test job runs exactly
+that and reports the full example count. Use `--exclude-pattern` (above) to leave
+the browser specs out.
 
 ### System Tests
 
@@ -258,7 +263,7 @@ System test files live in `spec/system/`. Helper modules:
 
 ### Test Coverage
 
-We use SimpleCov to track test coverage. After running tests with `COVERAGE=true`, open `coverage/index.html` in your browser to see the coverage report.
+We use SimpleCov to track test coverage. It runs on every `bundle exec rspec`; open `coverage/index.html` in your browser afterwards to see the report. `ENFORCE_COVERAGE=true` also fails the run below 80%.
 
 **Guidelines:**
 - Maintain or improve existing coverage percentage
@@ -337,15 +342,28 @@ bundle exec rubocop -A
 
 ### Pre-commit Hooks
 
-Lefthook automatically runs these checks on commit:
-- RuboCop (full codebase check)
-- RSpec (full test suite)
-- Bundle audit (security vulnerabilities)
+Lefthook runs the pre-commit hook in two stages (see `lefthook.yml`). Stage 2 runs only
+if stage 1 passes.
+
+**Stage 1 — fast checks on what you staged:**
+- RuboCop on staged `.rb` files (it reports; it does not auto-correct)
+- RSpec on staged `*_spec.rb` files
+- Bundle audit (vulnerable dependencies)
 - Debugger statement check
+- `bin/i18n-check`, when a locale file is staged
 - Trailing whitespace check
+
+**Stage 2 — the pre-release chaos suite** (`bin/pre-release-test all`): builds four
+temporary Rails apps in production mode. It takes several minutes.
+
+There is no pre-push hook; CI runs the full suite on your pull request.
 
 **To skip hooks temporarily:**
 ```bash
+# Skip only the chaos stage (fast checks still run)
+LEFTHOOK_EXCLUDE=chaos-tests git commit -m "message"
+
+# Skip all hooks
 LEFTHOOK=0 git commit -m "message"
 # or
 git commit --no-verify -m "message"
@@ -374,19 +392,23 @@ feat(notifications): add Discord webhook support
 Adds Discord notification channel similar to existing Slack integration.
 Includes configuration options for webhook URL and message customization.
 
-Closes #123
+Refs #123
 ```
+
+**Your PR title is the commit message that counts.** PRs are squash-merged, and the
+squashed commit takes the PR title as its subject. That subject is what release-please
+reads to build the changelog, so give the PR a Conventional Commits title.
 
 ### Types
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
+- `feat:` - New feature (listed in the changelog)
+- `fix:` - Bug fix (listed in the changelog)
+- `perf:` - Performance improvements (listed in the changelog)
+- `docs:` - Documentation changes (hidden from the changelog)
+- `refactor:` - Code refactoring, no feature change (hidden from the changelog)
+- `test:` - Adding or updating tests (hidden from the changelog)
+- `chore:` - Maintenance tasks such as dependencies or build (hidden from the changelog)
 - `style:` - Code style changes (formatting, no logic change)
-- `refactor:` - Code refactoring (no feature change)
-- `perf:` - Performance improvements
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks (dependencies, build, etc.)
 - `ci:` - CI/CD changes
 
 ### Guidelines
@@ -394,7 +416,7 @@ Closes #123
 - **Use present tense** - "Add feature" not "Added feature"
 - **Be concise** - 50 chars or less for subject line
 - **Use body for details** - Explain what and why, not how
-- **Reference issues** - Use "Closes #123" or "Fixes #123"
+- **Reference issues with "Refs #123"** - Please avoid GitHub's closing keywords (Closes, Fixes, Resolves). They close the issue the moment the PR merges, and this project leaves an issue open until its reporter has confirmed the fix
 - **Separate subject and body** - Blank line between them
 
 **Good Examples:**
@@ -431,7 +453,7 @@ Good documentation helps users understand and use your contributions.
 - New features → README.md + guides in `docs/`
 - Changed behavior → Update relevant docs
 - New configuration options → docs/guides/CONFIGURATION.md
-- Breaking changes → CHANGELOG.md with migration guide
+- Breaking changes → describe them, with upgrade steps, in the PR description (CHANGELOG.md is generated; see below)
 
 **Code-level changes may need comments:**
 - Complex algorithms → Explain the approach
@@ -473,45 +495,39 @@ end
 
 ### CHANGELOG Guidelines
 
-All user-visible changes must be documented in CHANGELOG.md.
+**Don't edit CHANGELOG.md, and don't bump the version.** Both are owned by
+[release-please](https://github.com/googleapis/release-please), configured in
+`.release-please-config.json`. When commits land on `main`, it opens (or updates) a
+release PR that adds a changelog section and bumps
+`lib/rails_error_dashboard/version.rb`; merging that PR publishes the gem.
 
-**Add your changes to the `[Unreleased]` section:**
+The Conventional Commit type of the squashed commit (your PR title) decides where it
+appears:
 
-```markdown
-## [Unreleased]
+| Type | Changelog section |
+|------|-------------------|
+| `feat` | ✨ Features |
+| `fix` | 🐛 Bug Fixes |
+| `perf` | ⚡ Performance |
+| `docs`, `test`, `refactor`, `chore` | Hidden — no entry |
 
-### Added
-- Discord notification support (#123) @yourusername
+The type also drives the version bump: `fix` gives a patch release, `feat` a minor one.
+The maintainer can override the bump for a release.
 
-### Fixed
-- Duplicate error entries for identical stack traces (#124) @yourusername
-```
-
-**Categories:**
-- `Added` - New features
-- `Changed` - Changes to existing functionality
-- `Deprecated` - Soon-to-be removed features
-- `Removed` - Removed features
-- `Fixed` - Bug fixes
-- `Security` - Security fixes
-
-**No CHANGELOG entry needed for:**
-- Documentation-only changes
-- Test-only changes
-- Internal refactoring (no user impact)
-- CI/build configuration
+If your change is breaking, or users need to do something when they upgrade, say so in
+the PR description so it can be carried into the release notes.
 
 ## Questions?
 
 - **Bug reports** - [Open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues/new/choose)
 - **Feature requests** - [Open an issue](https://github.com/AnjanJ/rails_error_dashboard/issues/new/choose)
 - **Questions** - [GitHub Discussions](https://github.com/AnjanJ/rails_error_dashboard/discussions)
-- **Security issues** - See [SECURITY.md](.github/SECURITY.md)
+- **Security issues** - See [SECURITY.md](SECURITY.md)
 
 ## Recognition
 
 Contributors are recognized in:
-- CHANGELOG.md (with GitHub username)
+- [CONTRIBUTORS.md](CONTRIBUTORS.md)
 - GitHub contributors page
 - Release notes (for significant contributions)
 

@@ -36,32 +36,42 @@ We use [Lefthook](https://github.com/evilmartians/lefthook) to ensure code quali
 
 ### Hooks Installed
 
-#### Pre-Commit (Fast - runs on `git commit`)
-Runs ONLY on staged files (< 2 seconds):
-- ✅ RuboCop on changed files
-- ✅ Check for debugger statements
-- ✅ Ruby syntax validation
-- ✅ Trailing whitespace check
+All hooks are defined in `lefthook.yml`, and every command runs through `bin/with-ruby`
+so the hook uses the Ruby pinned in `.ruby-version`.
 
-#### Pre-Push (Comprehensive - runs on `git push`)
-Mirrors CI checks (~1-2 minutes):
-- ✅ RuboCop on entire codebase
-- ✅ Full RSpec test suite
-- ✅ Bundle audit (security check)
-- ✅ Check for uncommitted changes
+#### Pre-Commit (runs on `git commit`)
+The hook is **piped**: stage 1 runs first, and stage 2 runs only if stage 1 passes.
+
+Stage 1 — fast checks, scoped to what is staged:
+- ✅ RuboCop on staged `.rb` files (generator templates excluded)
+- ✅ RSpec on staged `*_spec.rb` files
+- ✅ `bundle audit check --update` (vulnerable dependencies; runs on every commit)
+- ✅ Debugger statements (`binding.pry`, `byebug`, `debugger`) in staged `.rb` files
+- ✅ `bin/i18n-check`, when a locale file or the checker itself is staged
+- ✅ Trailing whitespace in staged `.rb`, `.yml`, `.js` and `.md` files
+
+Stage 2 — the pre-release chaos suite (`bin/pre-release-test all`): builds four temporary
+Rails apps in production mode and runs the chaos phases against them. This is the slow part
+(`lefthook.yml` puts it at ~4-5 minutes). Skip only this stage with
+`LEFTHOOK_EXCLUDE=chaos-tests git commit -m "message"`.
+
+#### Pre-Push
+There is no pre-push hook. `lefthook.yml` leaves it disabled and relies on GitHub Actions
+instead. (`bin/setup` still prints "pre-push" in its summary; that line is out of date.)
 
 ### Hook Commands
 
 ```bash
-# Skip hooks temporarily
+# Skip only the chaos stage (fast checks still run)
+LEFTHOOK_EXCLUDE=chaos-tests git commit -m "message"
+
+# Skip all hooks temporarily
 LEFTHOOK=0 git commit -m "message"
-git push --no-verify
 
-# Run hooks manually
+# Run the pre-commit hook manually
 lefthook run pre-commit
-lefthook run pre-push
 
-# Run all quality checks (like CI)
+# Run all quality checks: RuboCop, the full RSpec suite, bundle audit
 lefthook run qa
 
 # Run quick checks (changed files only)
@@ -69,9 +79,6 @@ lefthook run quick
 
 # Auto-fix RuboCop issues
 lefthook run fix
-
-# Multi-version testing (Rails 7.0-8.0)
-lefthook run multi-version
 ```
 
 ---
@@ -88,10 +95,24 @@ bundle exec rspec
 bundle exec rspec spec/lib/rails_error_dashboard/commands/log_error_spec.rb
 ```
 
-### Run With Coverage
+### Coverage
+SimpleCov runs on every `bundle exec rspec` (`spec/spec_helper.rb` starts it
+unconditionally; the `COVERAGE` variable the CI workflows set is not read).
+`ENFORCE_COVERAGE=true` also fails the run below 80%.
+
 ```bash
-COVERAGE=true bundle exec rspec
+bundle exec rspec
 open coverage/index.html
+```
+
+### Directory Arguments Run Everything
+`spec/spec_helper.rb` pins `config.pattern` to every spec under `spec/`, so
+passing a directory — `bundle exec rspec spec/system/` included — runs the
+whole suite. CI's system-test job does exactly that and reports the full
+count. To leave the browser specs out, exclude them instead:
+
+```bash
+bundle exec rspec --exclude-pattern "spec/system/**/*"
 ```
 
 ### Testing on PostgreSQL or MySQL
@@ -116,13 +137,18 @@ compares `schema.rb` with the migrations on SQLite; CI runs it on every PR.
 
 ### Multi-Version Testing
 ```bash
-# Test against specific Rails version
+# Gemfile.lock is gitignored and pinned to whichever Rails you last installed,
+# so delete it before switching (CI deletes it for every matrix row too)
+rm -f Gemfile.lock
 RAILS_VERSION=7.0 bundle install
 RAILS_VERSION=7.0 bundle exec rspec
 
-# Or use Lefthook
-lefthook run multi-version
+# Back to the default (Rails 8.1)
+rm -f Gemfile.lock
+bundle install
 ```
+
+See [docs/development/TESTING.md](docs/development/TESTING.md) for the full matrix.
 
 ---
 
@@ -144,10 +170,9 @@ bundle exec rubocop lib/rails_error_dashboard/commands/log_error.rb
 ```
 
 ### Pre-Commit Hook
-RuboCop runs automatically on changed files when you commit. It will:
-- Auto-fix simple issues
-- Block commit if critical issues found
-- Stage fixed files automatically
+RuboCop runs automatically on staged `.rb` files when you commit. It does not
+auto-correct: any offense blocks the commit. Run `bundle exec rubocop -A` to fix
+what can be fixed automatically, then stage the result.
 
 ---
 
@@ -164,7 +189,7 @@ bundle audit update
 # Check for vulnerabilities
 bundle audit check
 
-# This runs automatically on pre-push hook
+# The pre-commit hook runs `bundle audit check --update` on every commit
 ```
 
 ---
@@ -174,20 +199,30 @@ bundle audit check
 ### Local Development (You)
 ```
 1. Make changes
-2. Pre-commit hook runs → Fast checks
-3. git push
-4. Pre-push hook runs → Full CI mirror
-5. Push to GitHub (only if all checks pass)
+2. git commit → pre-commit hook: fast checks on staged files, then the chaos suite
+3. git push   → no hook; GitHub Actions runs on the pull request
 ```
 
 ### GitHub Actions (CI)
-```
-1. Runs same checks as pre-push hook
-2. Multi-version testing (Rails 7.0-8.0, Ruby 3.2-3.3)
-3. Deployment (if on main branch)
-```
 
-**Result:** CI almost always passes because local hooks caught issues!
+A pull request to `main` gets 22 checks from two workflows:
+
+- **`.github/workflows/ci.yml`**
+  - `lint` — RuboCop and `bin/i18n-check`
+  - `Integration Tests (shared + separate DB)` — `bin/full-integration-test all`
+  - `Upgrade Path (published → this branch)` — `bin/pre-release-test full_upgrade`.
+    The job always reports, but it only does the work on release PRs and on PRs
+    that touch `db/migrate/`
+- **`.github/workflows/test.yml`**
+  - RSpec, system specs excluded, on Ruby 3.2, 3.3 and 3.4 × Rails 7.0, 7.1,
+    7.2, 8.0 and 8.1 (15 jobs, SQLite)
+  - PostgreSQL 16 and MySQL 8.4 on Ruby 3.4 / Rails 8.1, with the test schema
+    built from the gem's own migrations (`RED_TEST_SCHEMA=migrations`)
+  - `Schema parity (schema.rb vs db/migrate)` — `bin/check-schema-parity`
+  - `System Tests (Chrome)` — Ruby 3.4 / Rails 8.1
+
+On pushes to `main`, `release.yml` runs release-please (merging its release PR
+publishes the gem to RubyGems) and `pages.yml` deploys the documentation site.
 
 ---
 
@@ -216,7 +251,7 @@ git commit -m "feat: add amazing feature"
 ### 5. Push to GitHub
 ```bash
 git push origin feature/amazing-feature
-# Pre-push hook runs automatically (mirrors CI)
+# No pre-push hook; CI runs on the pull request
 ```
 
 ### 6. Create Pull Request
@@ -238,12 +273,16 @@ ls -la .git/hooks/
 
 ### Hooks Too Slow
 
-```bash
-# Skip hooks temporarily
-LEFTHOOK=0 git commit -m "WIP"
-git push --no-verify
+The chaos stage is the slow part of the pre-commit hook.
 
-# Run quick checks instead of full suite
+```bash
+# Skip only the chaos stage (fast checks still run)
+LEFTHOOK_EXCLUDE=chaos-tests git commit -m "WIP"
+
+# Skip all hooks temporarily
+LEFTHOOK=0 git commit -m "WIP"
+
+# Run quick checks instead of the full suite
 lefthook run quick
 ```
 
@@ -293,8 +332,8 @@ RAILS_ENV=test bundle exec rails db:reset
 ## 💡 Tips for Contributors
 
 ### Save CI Minutes
-- ✅ Always let pre-push hooks run (they mirror CI)
-- ✅ Use `lefthook run qa` before pushing large changes
+- ✅ Let the pre-commit hook run
+- ✅ Use `lefthook run qa` (RuboCop, full RSpec, bundle audit) before pushing large changes
 - ✅ Fix RuboCop issues locally (`rubocop -A`)
 
 ### Fast Development
@@ -319,13 +358,18 @@ RAILS_ENV=test bundle exec rails db:reset
 - `.github/workflows/` - CI configuration
 
 ### Lefthook Configuration
-Edit `lefthook.yml` to customize hooks:
+Hooks live in `lefthook.yml`. An excerpt of the pre-commit hook:
 ```yaml
 pre-commit:
+  piped: true  # stage 1 first; the chaos tests only run if it passes
+
   commands:
-    rubocop-changed:
-      run: bundle exec rubocop {staged_files}
-      stage_fixed: true  # Auto-stage fixes
+    rubocop-staged:
+      priority: 1
+      glob: "*.rb"
+      exclude:
+        - "lib/generators/**/templates/*"
+      run: bin/with-ruby bundle exec rubocop {staged_files}
 ```
 
 ---
