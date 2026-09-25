@@ -5,6 +5,13 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  ignore:
+    # json 3 breaks every CI row (quirks_mode on Rails <= 8.0, positional
+    # decode options on 8.1). The Gemfile pins it below 3 until a Rails
+    # release carries the backport (rails/rails#58601, #58685); 7.x never
+    # will. Remove this entry together with that pin.
+    - dependency-name: "json"
+      versions: [">= 3"]
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
