@@ -59,18 +59,20 @@ To change what version ships, change the commits, not the PR.
    Check the version bump matches the change types (two `fix:` commits should
    produce a patch bump, not a minor).
 
-3. **Run the full local verification** — CI does not run chaos tests:
+3. **Run the full local verification** — CI does not run `bin/pre-release-test all`
+   (its only chaos run is the `full_upgrade` app, on release PRs):
    ```bash
    bundle exec rspec        # expect 0 failures
    bundle exec rubocop      # expect no offenses
-   bin/pre-release-test all # 5 apps, expect 0 failed assertions
+   bin/pre-release-test all # builds 4 apps; the summary says "Apps passed: 5" because
+                            # the HTTP app records two runs. Expect 0 failed assertions
    ```
 
 4. **Check CI on the release PR**:
    ```bash
    gh pr checks <PR>
    ```
-   All 18 checks must pass. If the PR shows `BLOCKED` with checks stuck at
+   All 22 checks must pass. If the PR shows `BLOCKED` with checks stuck at
    `action_required`, GitHub is holding workflow runs because the PR was opened
    by a bot. Approve them:
    ```bash
