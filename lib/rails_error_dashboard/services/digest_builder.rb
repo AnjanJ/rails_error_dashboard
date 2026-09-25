@@ -84,7 +84,10 @@ module RailsErrorDashboard
       def build_stats
         scope = base_scope
 
-        new_errors = scope.where("occurrence_count <= 1").count
+        # GROUP figure: errors first seen in the period, however often they
+        # fired. `occurrence_count <= 1` counted "seen once", so a brand-new
+        # error that fired twice was missing from the headline and the subject.
+        new_errors = scope.count
         total_occurrences = Queries::EventVolume.in_window(app_scope, @start_date)
         resolved = scope.where(resolved: true).count
         unresolved = scope.where(resolved: false).count
