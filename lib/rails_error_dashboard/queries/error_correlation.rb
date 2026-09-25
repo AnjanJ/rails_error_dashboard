@@ -224,16 +224,14 @@ module RailsErrorDashboard
         previous_start = @start_date
         previous_end = current_start
 
-        # Both periods come from base_query, which carries the application
-        # filter (and the window start). Querying ErrorLog directly made this
-        # the one panel on an application-filtered page that counted every app.
-        current_errors = base_query
-          .where("occurred_at >= ?", current_start)
-          .count
-
-        previous_errors = base_query
-          .where("occurred_at < ?", previous_end)
-          .count
+        # EVENTS in each period, counted where they happened, over app_scope
+        # (which carries the application filter -- querying ErrorLog directly
+        # once made this the one panel that counted every app). Counting groups
+        # BORN in each period measured how many new errors appeared, not whether
+        # the application errors more or less: a chronic error that fired all
+        # month counted as zero in both halves.
+        current_errors = Queries::EventVolume.in_window(app_scope, current_start)
+        previous_errors = Queries::EventVolume.in_window(app_scope, previous_start, previous_end)
 
         change_percentage = if previous_errors > 0
           ((current_errors - previous_errors).to_f / previous_errors * 100).round(1)
@@ -261,25 +259,28 @@ module RailsErrorDashboard
       # Get top error types by platform
       # Shows which errors are platform-specific vs cross-platform
       # @return [Hash] Platform => top error types
+      #
+      # EVENT ranking: each platform's error types by their events in the
+      # window, and `also_on` from where else that type had events. Counting
+      # groups first seen in the window left out every chronic error, and
+      # ranked a type with many one-off groups above one that fired all day.
       def platform_specific_errors
-        platforms = base_query.distinct.pluck(:platform).compact
+        platforms = app_scope.distinct.pluck(:platform).compact
+        counts_by_platform = platforms.index_with do |platform|
+          Queries::EventVolume.by_group_attribute(app_scope.where(platform: platform), :error_type, @start_date)
+                              .select { |_, count| count.positive? }
+        end
 
-        platforms.each_with_object({}) do |platform, result|
-          platform_errors = base_query.where(platform: platform)
-          top_errors = platform_errors
-            .group(:error_type)
-            .count
-            .sort_by { |_, count| -count }
-            .first(5)
+        counts_by_platform.each_with_object({}) do |(platform, counts_by_type), result|
+          next if counts_by_type.empty?
+
+          top_errors = counts_by_type.sort_by { |error_type, count| [ -count, error_type.to_s ] }.first(5)
 
           result[platform] = top_errors.map do |error_type, count|
-            # Check if this error occurs on other platforms
-            other_platforms = base_query
-              .where(error_type: error_type)
-              .where.not(platform: platform)
-              .distinct
-              .pluck(:platform)
-              .compact
+            # Other platforms where this type had events in the window
+            other_platforms = counts_by_platform
+              .select { |other, other_counts| other != platform && other_counts.key?(error_type) }
+              .keys
 
             {
               error_type: error_type,
@@ -293,10 +294,18 @@ module RailsErrorDashboard
 
       private
 
-      def base_query
-        scope = ErrorLog.where("occurred_at >= ?", @start_date)
+      # Every group of the application, NOT cut by date -- what EventVolume
+      # must be handed, or it never sees an older group's recurrences.
+      def app_scope
+        scope = ErrorLog.all
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
+      end
+
+      # Groups FIRST SEEN in the window. Release attribution (errors by
+      # version / git SHA) is first-seen by design, so those figures use this.
+      def base_query
+        app_scope.where("occurred_at >= ?", @start_date)
       end
 
       # Check if app_version column exists

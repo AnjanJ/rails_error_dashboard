@@ -5,6 +5,9 @@ module RailsErrorDashboard
     # Query: Analyze recurring and persistent errors
     # Returns data about high-frequency errors, persistent issues, and cyclical patterns
     class RecurringIssues
+      # Minimum events IN THE WINDOW for a group to count as high frequency.
+      HIGH_FREQUENCY_THRESHOLD = 10
+
       def self.call(days = 30, application_id: nil)
         new(days, application_id: application_id).call
       end
@@ -25,37 +28,53 @@ module RailsErrorDashboard
 
       private
 
-      def base_query
-        scope = ErrorLog.where("occurred_at >= ?", @start_date)
+      # Every group of the application, NOT cut by date -- what EventVolume
+      # must be handed, or it never sees an older group's recurrences.
+      def app_scope
+        scope = ErrorLog.all
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
       end
 
-      def high_frequency_errors
-        # Errors with high occurrence count
-        base_query
-          .where("occurrence_count > ?", 10)
-          .group(:error_type)
-          .select("error_type,
-                   SUM(occurrence_count) as total_occurrences,
-                   MIN(first_seen_at) as first_occurrence,
-                   MAX(last_seen_at) as last_occurrence,
-                   COUNT(*) as unique_error_count")
-          .order("total_occurrences DESC")
-          .limit(10)
-          .map do |error|
-            first_seen = error.first_occurrence.is_a?(Time) ? error.first_occurrence : Time.parse(error.first_occurrence.to_s)
-            last_seen = error.last_occurrence.is_a?(Time) ? error.last_occurrence : Time.parse(error.last_occurrence.to_s)
+      # Groups FIRST SEEN in the window, for the group lists below.
+      def base_query
+        app_scope.where("occurred_at >= ?", @start_date)
+      end
 
-            {
-              error_type: error.error_type,
-              total_occurrences: error.total_occurrences,
-              first_seen: first_seen,
-              last_seen: last_seen,
-              duration_days: ((last_seen - first_seen) / 1.day).round,
-              still_active: last_seen > 24.hours.ago
-            }
-          end
+      # EVENT figure: error types whose groups fired more than
+      # HIGH_FREQUENCY_THRESHOLD times in the window, by events in the window.
+      #
+      # Selecting groups by first-seen and summing their LIFETIME
+      # occurrence_count listed only errors born in the window -- a chronic
+      # error that fired all month was never "high frequency" once it was a
+      # month old. The threshold stays per group (not per type) so eleven
+      # one-off groups of one type do not qualify; it now counts this window.
+      def high_frequency_errors
+        events_by_group = Queries::EventVolume.by_group_attribute(app_scope, :id, @start_date)
+                                              .select { |_, count| count > HIGH_FREQUENCY_THRESHOLD }
+        return [] if events_by_group.empty?
+
+        groups = ErrorLog.where(id: events_by_group.keys)
+                         .pluck(:id, :error_type, :first_seen_at, :last_seen_at, :occurred_at)
+
+        groups.group_by { |_, error_type, *| error_type }
+              .map do |error_type, rows|
+                # first_seen_at/last_seen_at are NULL on rows from before those
+                # columns; occurred_at is the only timestamp such a row has.
+                first_seen = rows.map { |_, _, first, _, occurred| first || occurred }.min
+                last_seen = rows.map { |_, _, _, last, occurred| last || occurred }.max
+
+                {
+                  error_type: error_type,
+                  total_occurrences: rows.sum { |id, *| events_by_group[id] },
+                  first_seen: first_seen,
+                  last_seen: last_seen,
+                  duration_days: ((last_seen - first_seen) / 1.day).round,
+                  still_active: last_seen > 24.hours.ago
+                }
+              end
+              .sort_by { |entry| [ -entry[:total_occurrences], entry[:error_type].to_s ] }
+              .first(10)
       end
 
       def persistent_errors
