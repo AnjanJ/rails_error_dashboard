@@ -19,14 +19,14 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 
 ### RSpec (unit/integration)
 ```bash
-bundle exec rspec                          # full suite (~4,280 specs)
+bundle exec rspec                          # full suite (~5,300 specs)
 bundle exec rspec spec/system/             # system tests (Capybara + Cuprite)
 HEADLESS=false bundle exec rspec spec/system/  # visible browser
 ```
 
 ### Pre-Release Chaos Tests (integration, production mode)
 ```bash
-bin/pre-release-test all            # all 4 apps (~4-5 min, 1000+ assertions)
+bin/pre-release-test all            # all 4 apps (~4-5 min, ~1,480 assertions)
 bin/pre-release-test full_sync      # sync + shared DB
 bin/pre-release-test full_async     # async (Sidekiq inline) + shared DB
 bin/pre-release-test full_http      # HTTP middleware capture + dashboard
@@ -43,7 +43,7 @@ Chaos tests create real Rails apps in `/tmp`, install the gem, and run in produc
 
 ### Lefthook Pre-Commit
 Runs automatically on `git commit`:
-- Stage 1 (parallel): RuboCop, changed specs, bundle-audit, debugger check, whitespace
+- Stage 1 (parallel): RuboCop, changed specs, bundle-audit, debugger check, i18n-check (locale files), whitespace
 - Stage 2 (sequential): chaos tests (`bin/pre-release-test all`)
 
 Skip chaos tests: `LEFTHOOK_EXCLUDE=chaos-tests git commit -m "msg"`

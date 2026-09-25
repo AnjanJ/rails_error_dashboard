@@ -10,7 +10,7 @@ Run integration tests that create real Rails apps in `/tmp`, install the gem, an
 
 ## Usage
 
-- `/chaos` or `/chaos all` — all 4 core apps (~4-5 min, 1000+ assertions)
+- `/chaos` or `/chaos all` — all 4 core apps (~4-5 min, ~1,480 assertions; the summary counts 5 runs because the HTTP app records two)
 - `/chaos release` — full release audit, 8 apps (~12-15 min, 2100+ assertions)
 - `/chaos sync` — sync config only (~1 min)
 - `/chaos async` — async (Sidekiq inline) + shared DB
