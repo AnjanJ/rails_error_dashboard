@@ -24,6 +24,20 @@ RSpec.describe RailsErrorDashboard::Services::DigestBuilder do
       expect(result[:critical_unresolved]).to be_empty
     end
 
+    # "New" means first seen in the period. It used to mean occurrence_count
+    # <= 1, so a brand-new error that fired twice vanished from the headline
+    # and the subject line ("0 new errors") on exactly the day it appeared.
+    context "with a new error that fired more than once" do
+      before do
+        create(:error_log, application: app, error_type: "NoMethodError",
+          occurred_at: 6.hours.ago, occurrence_count: 3)
+      end
+
+      it "counts it as one new error" do
+        expect(described_class.call(period: :daily)[:stats][:new_errors]).to eq(1)
+      end
+    end
+
     context "with error data" do
       before do
         # NoMethodError is classified as :high by SeverityClassifier
@@ -38,9 +52,11 @@ RSpec.describe RailsErrorDashboard::Services::DigestBuilder do
           occurred_at: 2.hours.ago, occurrence_count: 1)
       end
 
-      it "counts new errors (occurrence_count <= 1)" do
+      it "counts every group first seen in the period as new, however often it fired" do
         result = described_class.call(period: :daily)
-        expect(result[:stats][:new_errors]).to eq(3)
+        # All four groups are first seen in the last 24 hours, including the
+        # NoMethodError that fired 5 times and the one already resolved.
+        expect(result[:stats][:new_errors]).to eq(4)
       end
 
       it "sums total occurrences" do

@@ -29,11 +29,20 @@ module RailsErrorDashboard
 
       private
 
-      def base_scope
-        scope = ErrorLog.where("occurred_at >= ?", @start_date)
-                        .where.not(user_id: nil)
+      # Every group of the selected application, NOT cut by date. EventVolume
+      # and the row samples need this: an error first seen before the window
+      # that recurs inside it is still this window's error.
+      def app_scope
+        scope = ErrorLog.all
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
+      end
+
+      # Groups FIRST SEEN in the window with a user -- the group-level fallback
+      # for errors whose events predate occurrence tracking (see
+      # distinct_users_by_type).
+      def base_scope
+        app_scope.where("occurred_at >= ?", @start_date).where.not(user_id: nil)
       end
 
       def build_entries
@@ -42,17 +51,26 @@ module RailsErrorDashboard
         # distinct across groups reported five users hitting one error as one.
         user_counts = distinct_users_by_type
 
-        # EVENTS per type, not groups. occurrence_count is exact and includes
-        # storm-shed events, which create no occurrence row.
-        occurrence_counts = base_scope
-          .group(:error_type)
-          .sum(:occurrence_count)
+        # EVENTS per type in the window, each counted where it happened --
+        # occurrence rows, storm-shed buckets and the untracked remainder.
+        # Summing the lifetime occurrence_count of groups born in the window
+        # gave an August error recurring today zero occurrences on a row that
+        # still listed its users.
+        occurrence_counts = Queries::EventVolume.by_group_attribute(app_scope, :error_type, @start_date)
 
         total_users = effective_total_users
 
         user_counts.map do |error_type, unique_users|
           occurrences = occurrence_counts[error_type] || 0
-          sample = base_scope.where(error_type: error_type).order(occurred_at: :desc).first
+          # The row's message, severity and link: the most recently seen group
+          # of this type. Taken from app_scope for the same reason as the
+          # counts -- a first-seen scope has no sample for an older error, and
+          # the row rendered with no message and nothing to click.
+          # COALESCE, not a bare last_seen_at DESC: PostgreSQL sorts NULLs
+          # FIRST in descending order, so a row from before the column existed
+          # would outrank every live one there.
+          sample = app_scope.where(error_type: error_type).where.not(user_id: nil)
+                            .order(Arel.sql("COALESCE(last_seen_at, occurred_at) DESC"), id: :desc).first
           impact_pct = total_users && total_users > 0 ? (unique_users.to_f / total_users * 100).round(1) : nil
 
           {
@@ -62,7 +80,8 @@ module RailsErrorDashboard
             total_occurrences: occurrences,
             impact_percentage: impact_pct,
             severity: sample&.severity,
-            last_seen: sample&.occurred_at,
+            # "Last Seen" -- occurred_at is FIRST-seen and never moves.
+            last_seen: sample&.last_seen_at || sample&.occurred_at,
             id: sample&.id
           }
         end.sort_by { |e| -e[:unique_users] }

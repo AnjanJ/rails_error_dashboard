@@ -101,7 +101,8 @@ Branch `fix/event-volume-parity`. Files: `queries/analytics_stats.rb`, `queries/
 
 ### The cutover
 
-- [ ] **T-F2.3** **Inventory every volume reader first, then classify each as EVENT or GROUP.**
+- [x] **T-F2.3** **Inventory every volume reader first, then classify each as EVENT or GROUP.**
+  *Done after 0.14.0: the three readers 0.14.0 missed, and the classification, are in `design.md` §F25.*
   "Analytics is wrong, Overview is right" was false — Overview is only *partly* cut over. The
   real inventory is **21 `sum(:occurrence_count)` sites across 5 files** (verified):
 
@@ -116,7 +117,7 @@ Branch `fix/event-volume-parity`. Files: `queries/analytics_stats.rb`, `queries/
   Record the classification in the spec folder as the durable answer to "which unit is this
   figure?", so a future reader cannot re-derive it wrongly. Route every EVENT figure through
   `Queries::EventVolume`; leave GROUP figures alone and say so. → REQ-F6
-- [ ] **T-F2.4** Leave `total_groups`, `unresolved`, `resolved` on `base_query` filtering by
+- [x] **T-F2.4** Leave `total_groups`, `unresolved`, `resolved` on `base_query` filtering by
   first-seen `occurred_at` — correct for group metrics. Extend the existing comment at `:67-73`
   to say which unit each figure uses and why. Apply the same treatment to any GROUP figure the
   T-F2.3 inventory identifies in the other four files. → REQ-F7

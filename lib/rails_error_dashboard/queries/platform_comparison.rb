@@ -12,6 +12,24 @@ module RailsErrorDashboard
     # - Platform stability scores
     # - Cross-platform errors
     #
+    # Two counting units, kept distinct on purpose -- the same split as
+    # AnalyticsStats, for the same reason.
+    #
+    #   EVENT figures  -> Queries::EventVolume: how much erroring happened in
+    #                     the window. Error rate, daily trend, severity
+    #                     distribution, cross-platform totals, the top-errors
+    #                     ranking, and the health card's total, critical count
+    #                     and velocity.
+    #   GROUP figures  -> groups FIRST SEEN in the window: the state of
+    #                     distinct errors. Unresolved count, resolution rate and
+    #                     resolution time. A group is what gets resolved; an
+    #                     event cannot be.
+    #
+    # An ErrorLog row is a GROUP and its occurred_at is FIRST-SEEN. Selecting
+    # groups by it and counting them made a group born last month that recurs
+    # today invisible here -- zero errors on this page (and on the Overview's
+    # platform health card) while the Overview's own total counted the event.
+    #
     # @example
     #   comparison = PlatformComparison.new(days: 7)
     #   comparison.error_rate_by_platform
@@ -29,7 +47,9 @@ module RailsErrorDashboard
 
       private
 
-      # Base scope that filters by application when present
+      # Every group of the selected application, NOT cut by date. EventVolume
+      # must be handed this: a scope already filtered by first-seen drops the
+      # events of every older group that recurred inside the window.
       # @return [ActiveRecord::Relation]
       def base_scope
         scope = ErrorLog.all
@@ -37,38 +57,47 @@ module RailsErrorDashboard
         scope
       end
 
-      public
-
-      # Get error count by platform for the time period
-      # @return [Hash] Platform name => error count
-      def error_rate_by_platform
-        base_scope
-          .where("occurred_at >= ?", @start_date)
-          .group(:platform)
-          .count
+      def platforms
+        @platforms ||= base_scope.distinct.pluck(:platform).compact
       end
 
-      # Get severity distribution by platform
+      def volume
+        @volume ||= Queries::EventVolume.new(base_scope, @start_date)
+      end
+
+      # platform => { error_type => events in the window }.
+      #
+      # Severity, critical counts and cross-platform totals all fold from this
+      # one breakdown, so they cannot drift from each other, and each platform's
+      # parts sum to its error rate (the same primitive, exhaustively grouped).
+      def type_volume_by_platform
+        @type_volume_by_platform ||= platforms.index_with do |platform|
+          Queries::EventVolume.by_group_attribute(base_scope.where(platform: platform), :error_type, @start_date)
+        end
+      end
+
+      public
+
+      # Events per platform in the window.
+      # @return [Hash] Platform name => event count
+      def error_rate_by_platform
+        # select, not the raw breakdown: that is a Hash.new(0), and a platform
+        # with no events must read as absent (nil), not as a silent zero.
+        @error_rate_by_platform ||= volume.by_group_attribute(:platform).select { |_, count| count.positive? }
+      end
+
+      # Events per platform, by severity of their error type.
       # @return [Hash] Platform => { severity => count }
       def severity_distribution_by_platform
-        platforms = base_scope.distinct.pluck(:platform).compact
-
-        platforms.each_with_object({}) do |platform, result|
-          errors = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ?", @start_date)
-
-          # Calculate severity in Ruby since it's a method, not a column
-          severity_counts = Hash.new(0)
-          errors.each do |error|
-            severity_counts[error.severity] += 1
+        type_volume_by_platform.transform_values do |counts_by_type|
+          counts_by_type.each_with_object(Hash.new(0)) do |(error_type, count), severities|
+            severities[Services::SeverityClassifier.classify(error_type)] += count
           end
-
-          result[platform] = severity_counts
         end
       end
 
       # Get average resolution time by platform
+      # GROUP figure: a resolution belongs to a group, selected by first-seen.
       # @return [Hash] Platform => average hours to resolve
       def resolution_time_by_platform
         platforms = base_scope.distinct.pluck(:platform).compact
@@ -90,28 +119,38 @@ module RailsErrorDashboard
         end
       end
 
-      # Get top 10 errors for each platform
+      # Top 10 groups per platform, ranked by their events in the window.
+      #
+      # :occurrence_count is the group's count WITHIN the window, not its
+      # lifetime total -- the key is kept so the view and callers are
+      # unchanged. The per-group breakdown holds one integer pair per group
+      # with events in the window; only the top ten rows are loaded.
       # @return [Hash] Platform => Array of error hashes
       def top_errors_by_platform
-        platforms = base_scope.distinct.pluck(:platform).compact
-
         platforms.each_with_object({}) do |platform, result|
-          result[platform] = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ?", @start_date)
-            .select(:id, :error_type, :message, :occurrence_count, :occurred_at)
-            .order(occurrence_count: :desc)
-            .limit(10)
-            .map do |error|
-              {
-                id: error.id,
-                error_type: error.error_type,
-                message: error.message&.truncate(100),
-                severity: error.severity, # Calls the method
-                occurrence_count: error.occurrence_count,
-                occurred_at: error.occurred_at
-              }
-            end
+          events_by_group = Queries::EventVolume.by_group_attribute(
+            base_scope.where(platform: platform), :id, @start_date
+          )
+          top = events_by_group.select { |_, count| count.positive? }
+                               .sort_by { |id, count| [ -count, id ] }
+                               .first(10)
+          groups = ErrorLog.where(id: top.map(&:first))
+                           .select(:id, :error_type, :message, :occurred_at)
+                           .index_by(&:id)
+
+          result[platform] = top.filter_map do |id, count|
+            error = groups[id]
+            next unless error
+
+            {
+              id: error.id,
+              error_type: error.error_type,
+              message: error.message&.truncate(100),
+              severity: error.severity, # Calls the method
+              occurrence_count: count,
+              occurred_at: error.occurred_at
+            }
+          end
         end
       end
 
@@ -141,98 +180,70 @@ module RailsErrorDashboard
         end
       end
 
-      # Find errors that occur across multiple platforms
+      # Error types with events on more than one platform in the window.
       # @return [Array<Hash>] Errors with their platforms
       def cross_platform_errors
-        # Get error types that appear on 2+ platforms
-        error_types_with_platforms = base_scope
-          .where("occurred_at >= ?", @start_date)
-          .group(:error_type, :platform)
-          .select(:error_type, :platform)
-          .having("COUNT(*) > 0")
-          .pluck(:error_type, :platform)
+        by_type = Hash.new { |hash, error_type| hash[error_type] = {} }
+        type_volume_by_platform.each do |platform, counts_by_type|
+          counts_by_type.each do |error_type, count|
+            by_type[error_type][platform] = count if count.positive?
+          end
+        end
 
-        # Group by error_type to find those on multiple platforms
-        errors_by_type = error_types_with_platforms.group_by { |error_type, _| error_type }
-
-        errors_by_type
-          .select { |_, platforms| platforms.map(&:last).uniq.count > 1 }
-          .map do |error_type, platform_pairs|
-            platforms = platform_pairs.map(&:last).uniq
-            total_count = base_scope
-              .where(error_type: error_type, platform: platforms)
-              .where("occurred_at >= ?", @start_date)
-              .sum(:occurrence_count)
-
+        by_type
+          .select { |_, breakdown| breakdown.size > 1 }
+          .map do |error_type, breakdown|
             {
               error_type: error_type,
-              platforms: platforms.sort,
-              total_occurrences: total_count,
-              platform_breakdown: platforms.each_with_object({}) do |platform, breakdown|
-                breakdown[platform] = base_scope
-                  .where(error_type: error_type, platform: platform)
-                  .where("occurred_at >= ?", @start_date)
-                  .sum(:occurrence_count)
-              end
+              platforms: breakdown.keys.sort,
+              total_occurrences: breakdown.values.sum,
+              platform_breakdown: breakdown
             }
           end
           .sort_by { |error| -error[:total_occurrences] }
       end
 
-      # Get daily error trend by platform
+      # Events per day per platform, on the day each event HAPPENED.
+      #
+      # The zero-filled date range is preserved: the chart needs a point for
+      # every day in the window, not only the days that had errors.
       # @return [Hash] Platform => { date => count }
       def daily_trend_by_platform
-        platforms = base_scope.distinct.pluck(:platform).compact
+        days = (@start_date.to_date..Date.current)
 
-        platforms.each_with_object({}) do |platform, result|
-          result[platform] = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ?", @start_date)
-            .group_by_day(:occurred_at, range: @start_date..Time.current)
-            .count
+        platforms.index_with do |platform|
+          counts = Queries::EventVolume.by_day(base_scope.where(platform: platform), @start_date)
+          days.to_h { |day| [ day, counts[day] || 0 ] }
         end
       end
 
       # Get platform health summary
       # @return [Hash] Platform => health metrics
       def platform_health_summary
-        platforms = base_scope.distinct.pluck(:platform).compact
         error_rates = error_rate_by_platform
         stability_scores = platform_stability_scores
+        severities = severity_distribution_by_platform
+        midpoint = @start_date + (@days / 2.0).days
 
         platforms.each_with_object({}) do |platform, result|
+          platform_scope = base_scope.where(platform: platform)
+          groups_in_window = platform_scope.where("occurred_at >= ?", @start_date)
+
+          # EVENT figures: part of the same volume as the error rate.
           total_errors = error_rates[platform] || 0
+          critical_errors = severities.fetch(platform, {})[:critical] || 0
 
-          # Count critical errors by checking severity method
-          critical_errors = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ?", @start_date)
-            .select { |error| error.severity == :critical }
-            .count
+          # GROUP figures. The resolution rate divides groups by groups; divided
+          # by the event total it would mix units and stop meaning anything.
+          unresolved_errors = groups_in_window.where(resolved_at: nil).count
+          resolved_errors = groups_in_window.where.not(resolved_at: nil).count
+          total_groups = unresolved_errors + resolved_errors
+          resolution_rate = total_groups.positive? ? ((resolved_errors.to_f / total_groups) * 100).round(1) : 0.0
 
-          unresolved_errors = base_scope
-            .where(platform: platform, resolved_at: nil)
-            .where("occurred_at >= ?", @start_date)
-            .count
-
-          resolved_errors = base_scope
-            .where(platform: platform)
-            .where.not(resolved_at: nil)
-            .where("occurred_at >= ?", @start_date)
-            .count
-
-          resolution_rate = total_errors.positive? ? ((resolved_errors.to_f / total_errors) * 100).round(1) : 0.0
-
-          # Calculate error velocity (increasing or decreasing)
-          first_half = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ? AND occurred_at < ?", @start_date, @start_date + (@days / 2.0).days)
-            .count
-
-          second_half = base_scope
-            .where(platform: platform)
-            .where("occurred_at >= ?", @start_date + (@days / 2.0).days)
-            .count
+          # Error velocity: events in the second half of the window against the
+          # first, each counted where it happened.
+          first_half = Queries::EventVolume.in_window(platform_scope, @start_date, midpoint)
+          second_half = Queries::EventVolume.in_window(platform_scope, midpoint)
 
           velocity = first_half.positive? ? (((second_half - first_half).to_f / first_half) * 100).round(1) : 0.0
 
