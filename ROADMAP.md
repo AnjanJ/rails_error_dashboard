@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: August 31, 2026 | Current version: v0.11.4 | Next: nothing scheduled — see "Open, uncommitted"
+> Last updated: September 25, 2026 | Current version: v0.14.0 | Next: nothing scheduled — see "Open, uncommitted"
 >
 > **Working analysis docs are local-only, by design.** Earlier revisions of this file linked to
 > `DEEP_INTROSPECTION_ANALYSIS.md`, `FAULTLINE_COMPARISON.md`, `TIMESERIES_ANALYSIS.md` and
@@ -23,9 +23,9 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 
 | Metric | rails_error_dashboard | solid_errors | faultline | findbug | exception_notification |
 |--------|-----------------------|-------------|-----------|---------|----------------------|
-| Total Downloads | 37,381 | 377,820 | N/A (git-only) | 2,542 | 23,958,401 |
-| GitHub Stars | 90 | 488 | 87 | 25 | 2,173 |
-| Last Commit | 2026-08-24 (active) | 2025-11-24 (stale) | 2026-05-14 (slowing) | 2026-02-25 (active) | 2025-03-22 (dormant) |
+| Total Downloads | 47,992 | 377,820 | N/A (git-only) | 2,542 | 23,958,401 |
+| GitHub Stars | 92 | 488 | 87 | 25 | 2,173 |
+| Last Commit | 2026-09-25 (active) | 2025-11-24 (stale) | 2026-05-14 (slowing) | 2026-02-25 (active) | 2025-03-22 (dormant) |
 | Dashboard UI | Yes (Bootstrap 5) | Yes (minimal) | Yes (Tailwind) | Yes | No |
 | Notifications | Slack, Email, Discord, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
 | Issue Trackers | GitHub, GitLab, Codeberg, Linear | No | No | No | No |
@@ -43,7 +43,8 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | Telegram | Not yet (7a, open) | No | Yes | No | No |
 | Performance Monitoring | Deferred, see (Z) | No | No | Yes (Redis-based) | No |
 
-> Download and star counts verified against RubyGems and the GitHub API on 2026-08-25. `faultline` is
+> RED's downloads, stars and last commit re-verified against RubyGems and the GitHub API on 2026-09-25.
+> Every other project's figures are as of 2026-08-25 and were not re-checked. `faultline` is
 > git-only, so its RubyGems row stays N/A; its star count is the `dlt/faultline` repo.
 
 ### vs SaaS (Sentry, Honeybadger, Rollbar, Bugsnag, Airbrake)
@@ -116,7 +117,8 @@ These features depend on running inside the process. Not all of them are unique 
 - **Impact:** Credibility +++ — found 2026-08-27 while verifying README copy
 - **Implemented:** the overwrite option. `FindOrIncrementError::REFRESHED_CONTEXT` (breadcrumbs, system_health, local/instance variables, http_method, hostname, content_type, request_duration_ms) is copied onto the row on every increment, reopen and race-retry; keys the occurrence did not capture (storm :lite, feature off, column missing) leave the stored payload untouched, and app_version/git_sha/occurred_at are never refreshed because release tracking depends on first-seen. Per-occurrence history remains a follow-up
 
-### C3. Per-occurrence context history — PLANNED (v0.12)
+### C3. Per-occurrence context history — OPEN (not scheduled)
+- **Status (2026-09-25):** not built. This was pencilled in for v0.12, but 0.12.0–0.14.0 went to correctness and evidence-integrity fixes instead, and no release has added the side table or `config.occurrence_context_limit`. The design below still stands
 - **What:** Keep the moment-of-failure context for the last N occurrences of an error, not only the latest (C2). A 1:1 side table `rails_error_dashboard_error_occurrence_contexts` (`error_occurrence_id`, `payload`, `created_at`) written after the `ErrorOccurrence` insert whenever `FindOrIncrementError#latest_context` is non-empty; trimmed to `config.occurrence_context_limit` (default 25, matching the calm-weather sampling threshold) per error; retention cascades through the existing occurrence cleanup. The History tab links each occurrence that has a context row to `?occurrence=ID`, and the detail page renders the existing system-health, breadcrumb and variable cards from that payload instead of the row's latest
 - **Why:** C2 makes the error row show the *latest* failure; this is the honest long form of "the state of the process at the moment of failure" — every captured failure, browsable. A separate table (not a column on `error_occurrences`) keeps `CoOccurringErrors` and the cascade queries, which load occurrence rows with `SELECT *`, from paying for multi-KB blobs; a storm-shed capture simply has no row
 - **Constraints:** storage is bounded by the same storm ladder that limits full-context captures today; needs an incremental migration, so it is a minor release (feat), with the installer/upgrade-path test and the demo repo's schema dumps updated in step
@@ -554,7 +556,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 ## Tier 4 — Differentiators (stand out from the crowd)
 
 ### 15a. Ruby 4.0 in the CI test matrix — OPEN
-- **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1. Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
+- **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1 (re-checked 2026-09-25: the matrix is still `['3.2', '3.3', '3.4']`). Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
 - **Why:** The README beta note currently has to say "CI runs Ruby 3.2–3.4; Ruby 4.0 is verified by the maintainer" — an honest caveat, but one that should not need to exist. Known blockers to check first: `ostruct` is no longer a default gem on 4.0 and sqlite3 2.8.1 does not compile on macOS (see CLAUDE.md gotchas); the Linux runner may not hit the second
 - **Effort:** Half a day
 - **Impact:** Credibility ++ — found 2026-08-27 while verifying README compatibility claims
@@ -603,7 +605,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 ### 22. Submit to Ruby Toolbox — SUBMITTED, AWAITING MERGE
 - Ruby Toolbox categorizes gems and shows comparative stats
 - Being listed under "Exception Notification" alongside exception_notification, solid_errors, and airbrake would immediately surface the gem
-- **Status:** [rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033) opened and still open as of 2026-08-31 — not merged. Nothing further to do on our side
+- **Status:** [rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033) is still open and unmerged as of 2026-09-25; its last activity was 2026-08-27. Nothing further to do on our side
 
 ### 23. Write a Launch Blog Post
 - "Why I built a self-hosted error dashboard for Rails" on dev.to or Medium
@@ -615,7 +617,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - Raise an error on startup if `dashboard_username` is still "gandalf" and `dashboard_password` is still "youshallnotpass" in production
 - Users will ship with demo credentials — this is a security issue that will come up in every code review
 - **Implemented, then found insufficient.** The original guard asked `Rails.env.production?`, which tests one literal string — an internet-facing app deployed as `staging`, `uat`, `demo`, `preprod` or `qa` booted fine on credentials this project publishes in its own README. Reported by [@rajnisht7](https://github.com/rajnisht7) as [GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6) (high). v0.9.1 replaces the check with an **allowlist**: only `development` and `test` may run on built-in credentials; every other environment name — including ones that do not exist yet — is refused. This is a breaking boot-time change and is called out in the changelog
-- **Open loop:** the CVE ID for the advisory had not been assigned as of 2026-08-25. The reporter is owed an email once it lands
+- **Loop closed:** the advisory now carries **CVE-2026-94549** (on the advisory since 2026-09-22), and the maintainer has notified the reporter
 
 ---
 
@@ -623,7 +625,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ### Where we actually are
 
-Nine months, 668 commits, 85 published versions, currently **v0.11.4**. The version-by-version
+Nine months, 721 commits, 94 published versions, currently **v0.14.0**. The version-by-version
 table that used to live here had gone stale in a way that made it actively misleading — it still
 targeted i18n at "v1.1+" months after it shipped in v0.9.0, and listed features at v0.5/v0.6 that
 had been done since spring. It has been replaced by the shipped history below plus a short,
@@ -648,19 +650,28 @@ honest forward list.
 | v0.11.2 | Aug 29 2026 | Rack::Attack buffered events drained at the end of each request, so one throttled request is visible without waiting for a second (#195) |
 | v0.11.3 | Aug 29 2026 | GitHub Copilot classified as an AI agent; RubyGems description rendered as RDoc sections (#197) |
 | v0.11.4 | Aug 30 2026 | Chart date axes repaired and reordered, and chart plural rules matched to the server (#199, closes #178) |
+| v0.11.5 | Sep 7 2026 | French translation reviewed by a native speaker, @gmarziou (#201, issue #158) |
+| v0.11.6 | Sep 7 2026 | 0.11.5 review findings — storm counts, redaction, row lock, async capture, release and baseline analytics (#204) |
+| v0.11.7–v0.11.8 | Sep 8 2026 | PostgreSQL indexes fresh installs never got, and the search index PostgreSQL actually uses; CI rows on PostgreSQL and MySQL built from the migrations (#206, #209) |
+| v0.11.9 | Sep 14 2026 | Active Job retry backoff that Rails 7.2+ accepts (#211, @BarnabeD); source links only for http(s) repository URLs (#214) |
+| v0.12.0 | Sep 15 2026 | Nine correctness findings from an independent review of 0.11.9 — capture, event counting, storm accounting, group identity, redaction before enqueue; four migrations and a one-time fingerprint regrouping (#215) |
+| v0.12.1 | Sep 16 2026 | Analytics page counts events, not groups (#218) |
+| v0.13.0 | Sep 18 2026 | Deep-QA hardening of 0.12.1 (tracking issue #223) — capture of invalid bytes, sticky "won't fix", storm breaker, capture cost; advisory [GHSA-xmv7-mg68-3v2f](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-xmv7-mg68-3v2f); one migration |
+| v0.14.0 | Sep 20 2026 | Evidence integrity — events counted in their own reporting window, storm counts in 15-minute buckets, bounded variable serialization, job breadcrumbs; three migrations |
 
 Note the shape: the first three quarters were feature build-out (156 commits in March alone), the
-last two months are hardening and correctness (34 commits in August, but a security advisory
-and nine releases). That shift is deliberate. Depth before breadth.
+last two months are hardening and correctness (37 commits and nine releases in August, with a
+security advisory; 50 commits and nine more releases in September to date, with a second). That
+shift is deliberate. Depth before breadth.
 
 ### Next up
 
 | When | Item | State |
 |------|------|-------|
-| **Verifying** | Chart locale fixes for #178 | #170 confirmed and closed. #178 fixed again in v0.11.4 (#199) and left open for @gmarziou to confirm and close |
-| **Demo** | Live demo on v0.11.0 with seeded staging errors so the environment filter, badges and chart are visible | Done 2026-08-26; demo CI fully green for the first time since July (Brakeman 8.0.6, sqlite3 2.9.6). Not yet refreshed onto v0.11.1–v0.11.4 |
-| **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open |
-| **Waiting** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Reporter owed an email once assigned |
+| **Verifying** | Chart locale fixes for #178 | #170 confirmed and closed. #178 fixed again in v0.11.4 (#199) and left open for @gmarziou to confirm and close. Still open on 2026-09-25, with no reply since the maintainer's 2026-08-30 comment announcing the fix |
+| **Demo** | Live demo tracks each gem release | On v0.14.0 (checked 2026-09-25). A scheduled workflow in the demo repo (`update-demo-release.yml` in `AnjanJ/rails_error_dashboard_demo_app`) moves it to each newly published version |
+| **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open and unmerged as of 2026-09-25 |
+| **Done** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Assigned: CVE-2026-94549 (on the advisory since 2026-09-22). The maintainer has notified the reporter |
 | **Community-owned** | Native-speaker review of the remaining 9 locales (#156–#165 less #158) | Open by design — the contribution path, not a backlog. First one landed: @gmarziou on French (#201, shipped in v0.11.5, closing #158) |
 
 ### Open, uncommitted
@@ -670,6 +681,7 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Item | Effort | Impact | Note |
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
+| Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
 | Webhook HMAC signatures (20) | Half day | Security + | Standard practice for outbound webhooks |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
@@ -695,7 +707,8 @@ principle (see its entry above).
 
 ## Internal Audit Summary (Current Strengths & Weaknesses)
 
-> Scores are the maintainer's own judgement, not a benchmark. Figures verified 2026-08-25.
+> Scores are the maintainer's own judgement, not a benchmark. The Testing, Community and
+> Dependencies figures were re-verified on 2026-09-25; every other figure is as of 2026-08-25.
 
 ### What's Strong Today
 - Error capture & deduplication (9/10) — SHA256 hashing, smart normalization, custom fingerprint, auto-reopen, cause chain
@@ -715,9 +728,9 @@ principle (see its entry above).
 - Source code integration (8/10) — source reader, git blame, GitHub links
 - Multi-tenancy (8/10) — per-app isolation, auto-detection, shared DB
 - Deployment (8/10) — 3-step install, works with Thruster, API-only mode, MySQL + PostgreSQL + SQLite supported
-- Dependencies (9/10) — only 2 required (pagy, groupdate), 4 optional with graceful degradation
-- Testing (9.5/10) — 4,174 examples across 240 spec files, 18-phase chaos suite (~893 assertions), full CI matrix of Ruby 3.2–3.4 × Rails 7.0–8.1, plus system, integration and upgrade-path jobs
-- Community (growing) — 8 contributors, 49 merged PRs, 37,381 downloads, 90 stars
+- Dependencies (9/10) — only 3 required besides Rails (pagy, groupdate, concurrent-ruby), 4 optional with graceful degradation (browser, chartkick, httparty, turbo-rails)
+- Testing (9.5/10) — 5,300+ RSpec examples across 315 spec files (5,338 in CI on 2026-09-25); a pre-release chaos suite that ran 1,483 assertions in production mode on 2026-09-25; CI runs Ruby 3.2–3.4 × Rails 7.0–8.1, PostgreSQL and MySQL rows built from the migrations, plus system, schema-parity, integration and upgrade-path jobs (22 checks per pull request)
+- Community (growing) — 9 contributors, 121 merged PRs, 47,992 downloads, 92 stars
 
 ### What Needs Work
 - API (3/10) — no JSON endpoints at all (ICEBOX)
@@ -730,9 +743,11 @@ principle (see its entry above).
 - Community growth — awesome-ruby **merged 2026-08-13** ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox PR still open ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033))
 
 ### Security Track Record
-Two advisories published, both reported by outside researchers, both fixed and released within a day:
-- [GHSA-4rwp-83g9-78gv](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-4rwp-83g9-78gv) (2026-05-04) — stored XSS in `resolution_comment` rendering
-- [GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6) (2026-08-24, high) — default credentials accepted outside production. CVE ID still pending
+Three advisories published. One was reported by an outside researcher and two were found
+internally; each was published on the same day as the release that fixed it:
+- [GHSA-4rwp-83g9-78gv](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-4rwp-83g9-78gv) (2026-05-04, high) — stored XSS in `resolution_comment` rendering. Found by an internal security audit; patched in 0.6.4
+- [GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6) (2026-08-24, high) — default credentials accepted outside production. Reported by [@rajnisht7](https://github.com/rajnisht7); patched in 0.9.1; **CVE-2026-94549**
+- [GHSA-xmv7-mg68-3v2f](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-xmv7-mg68-3v2f) (2026-09-18, medium) — stored XSS through a linked issue URL, and an unauthenticated 500 (instead of 401) on a malformed Basic auth header. Found by the maintainer during a deep QA pass over 0.12.1; patched in 0.13.0
 
-A third hardening fix, authenticating every dashboard controller rather than only `ErrorsController`
+Another hardening fix, authenticating every dashboard controller rather than only `ErrorsController`
 (#167), shipped in v0.9.0 without an advisory — it was found internally before disclosure.
