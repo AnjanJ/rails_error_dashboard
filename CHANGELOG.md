@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.0...rails_error_dashboard/v0.14.1) (2026-09-25)
+
+
+### 🐛 Bug Fixes
+
+* count events on the high-frequency and correlation figures ([#253](https://github.com/AnjanJ/rails_error_dashboard/issues/253)) ([49a86e4](https://github.com/AnjanJ/rails_error_dashboard/commit/49a86e431fab25ee83bebe6bab84d43d3a198b7e))
+* count events, not first-seen groups, on the three readers 0.14.0 missed ([#252](https://github.com/AnjanJ/rails_error_dashboard/issues/252)) ([0242d79](https://github.com/AnjanJ/rails_error_dashboard/commit/0242d79e29f8aa4a28cd21d6a06ac6b09ba673ac))
+
 ## [0.14.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.13.0...rails_error_dashboard/v0.14.0) (2026-09-20)
 
 ### Upgrade instructions
