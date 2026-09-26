@@ -314,6 +314,14 @@ module RailsErrorDashboard
         expected_password = RailsErrorDashboard.configuration.dashboard_password
         next false if expected_username.nil? || expected_password.nil?
 
+        # A blank credential must deny everyone too: "" would equal an empty login.
+        next false if expected_username.to_s.strip.empty? || expected_password.to_s.strip.empty?
+
+        # The boot check refuses the published credentials outside development
+        # and test, but it is skipped while SECRET_KEY_BASE_DUMMY is set. Refuse
+        # them here as well, so that variable left set at runtime reopens nothing.
+        next false if RailsErrorDashboard.configuration.refuse_default_credentials?
+
         # Non-short-circuit & on purpose: both comparisons always run, so the
         # response time does not reveal which half was wrong.
         ActiveSupport::SecurityUtils.secure_compare(username.to_s, expected_username.to_s) &

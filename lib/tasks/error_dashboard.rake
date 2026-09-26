@@ -171,14 +171,19 @@ namespace :error_dashboard do
     if config.authenticate_with
       puts "OK (custom authentication)"
       checks_passed += 1
-    elsif config.dashboard_username == "gandalf" && config.dashboard_password == "youshallnotpass"
-      if Rails.env.production?
-        puts "WARNING - using default credentials in production!"
+    elsif (problem = config.credentials_problem)
+      # Same rule and environment allowlist as the boot check in validate!
+      label = problem == :blank ? "blank credentials" : "default credentials"
+      if config.refuse_default_credentials?
+        puts "WARNING - #{label} outside development and test!"
         checks_failed += 1
       else
-        puts "OK (default credentials - change before production)"
+        puts "OK (#{label} - change before production)"
         warnings += 1
       end
+    elsif config.dashboard_password == RailsErrorDashboard::Configuration::DEFAULT_DASHBOARD_PASSWORD
+      puts "OK (the published default password, set explicitly by ERROR_DASHBOARD_PASSWORD)"
+      warnings += 1
     else
       puts "OK (custom credentials)"
       checks_passed += 1
