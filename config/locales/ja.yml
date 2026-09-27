@@ -23,7 +23,7 @@ ja:
         '30': 30日間
         '90': 90日間
       frame_category:
-        app: 自分のコード
+        app: アプリケーションコード
         gem: Gem
         framework: Rails フレームワーク
         ruby_core: Ruby コア
@@ -520,7 +520,7 @@ ja:
         user_agent: 'User Agent:'
         ip_address: 'IP アドレス:'
         replay: 'リクエストの再現:'
-        raw_user_agent: User Agent の生データ
+        raw_user_agent: User Agent 文字列
         duration_seconds: "%{value}秒"
         duration_ms: "%{value}ミリ秒"
         copy_curl: curl としてコピー
@@ -530,7 +530,7 @@ ja:
         snapshot: 'スナップショット:'
         snapshot_captured_html: '%{time} に取得'
         snapshot_stale: より前の発生から取得 — それ以降の発生はコンテキストを伴いませんでした
-        snapshot_fidelity_lite: 縮小された取得 (storm 保護によりコンテキストの payload が破棄されました)
+        snapshot_fidelity_lite: 限定的な情報取得（storm 保護によりコンテキストの payload を省略）
         snapshot_fidelity_minimal: storm 中にカウントされました — コンテキストは取得されていません
         snapshot_fidelity_partial: 混在したスナップショット — 一部のフィールドは以前の発生時のものです
         snapshot_unknown: RED がスナップショットの出所を記録する前に取得されました
@@ -667,10 +667,10 @@ ja:
           backtrace: Backtrace
         backtrace:
           label: 'Backtrace:'
-          frame_counts: "(自分のコード%{app}件、フレームワーク/gem %{framework}件)"
+          frame_counts: "(アプリケーションコード%{app}件、フレームワーク/gem %{framework}件)"
           copy_full: Backtrace 全体をコピー
           copy_full_title: Backtrace 全体をコピー
-          your_code: 自分のコード
+          your_code: アプリケーションコード
           framework_code: フレームワーク・gem のコード
           frames:
             other: "%{count}フレーム"
