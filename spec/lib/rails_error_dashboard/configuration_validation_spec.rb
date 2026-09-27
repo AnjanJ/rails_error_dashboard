@@ -837,6 +837,30 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.authenticate_with = false
       expect(config.default_credentials?).to be true
     end
+
+    # The login compares with to_s, so the check has to as well: the published
+    # password held as a Symbol used to pass the check and still log in.
+    it "returns true when the published password is configured as a Symbol" do
+      config.dashboard_username = "admin"
+      config.dashboard_password = :youshallnotpass
+      expect(config.default_credentials?).to be true
+    end
+
+    # String#strip only removes ASCII whitespace, so a password of one no-break
+    # space used to count as a real one, and logged in.
+    [ " ", " ", "　", "  \t" ].each do |value|
+      it "returns true when the password is only Unicode whitespace (#{value.dump})" do
+        config.dashboard_username = "admin"
+        config.dashboard_password = value
+        expect(config.default_credentials?).to be true
+      end
+    end
+
+    it "returns true when the username is only Unicode whitespace" do
+      config.dashboard_username = " "
+      config.dashboard_password = "a-real-password"
+      expect(config.default_credentials?).to be true
+    end
   end
 
   # An explicitly set ERROR_DASHBOARD_PASSWORD is a deliberate choice, even when
@@ -1074,6 +1098,40 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.dashboard_password = "secure_pass"
 
       expect { config.validate! }.not_to raise_error
+    end
+
+    it "raises ConfigurationError in staging when the published password is a Symbol" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = :youshallnotpass
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging: the dashboard password is the published default/
+      )
+    end
+
+    it "raises ConfigurationError in staging when the password is a no-break space" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = " "
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging: the dashboard username or password is blank/
+      )
+    end
+
+    # Setting the variables cannot repair an initializer that overwrites them,
+    # so the advice has to say so. (Every ConfigurationError already ends by
+    # naming the initializer file; that footer alone does not say this.)
+    it "tells the operator that the initializer must not overwrite the variables" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /make sure the initializer does not overwrite them/
+      )
     end
 
     it "raises ConfigurationError in staging when authenticate_with is false" do

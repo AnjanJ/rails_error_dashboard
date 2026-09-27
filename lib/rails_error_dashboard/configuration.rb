@@ -551,7 +551,7 @@ module RailsErrorDashboard
         else
           "the dashboard password is the published default and was not set by ERROR_DASHBOARD_PASSWORD"
         end
-        errors << "Default or blank credentials cannot be used in #{Rails.env}: #{reason}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
+        errors << "Default or blank credentials cannot be used in #{Rails.env}: #{reason}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables and make sure the initializer does not overwrite them, or use authenticate_with for custom auth."
       end
 
       # Validate sampling_rate (must be between 0.0 and 1.0)
@@ -947,16 +947,29 @@ module RailsErrorDashboard
     #   be THAT variable: setting only ERROR_DASHBOARD_USER used to leave the
     #   password on the published default, and an initializer can hardcode it.
     #
+    # Both compare values the way the login does, with to_s: a Symbol holding the
+    # published password logs in just the same.
+    #
     # @return [Symbol, nil]
     def credentials_problem
-      return :blank if dashboard_username.to_s.strip.empty? || dashboard_password.to_s.strip.empty?
+      return :blank if self.class.blank_credential?(dashboard_username) ||
+                       self.class.blank_credential?(dashboard_password)
 
-      if dashboard_password == DEFAULT_DASHBOARD_PASSWORD &&
+      if dashboard_password.to_s == DEFAULT_DASHBOARD_PASSWORD &&
          ENV["ERROR_DASHBOARD_PASSWORD"] != DEFAULT_DASHBOARD_PASSWORD
         return :published_password
       end
 
       nil
+    end
+
+    # True for a credential that cannot be a secret: nil, empty, or only
+    # whitespace, including Unicode whitespace such as a no-break space, which
+    # String#strip leaves in place. The boot check and the login both use it.
+    #
+    # @return [Boolean]
+    def self.blank_credential?(value)
+      value.to_s.blank?
     end
 
     # Check if basic auth is active with blank credentials or the published

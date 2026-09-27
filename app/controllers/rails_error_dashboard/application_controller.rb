@@ -315,7 +315,8 @@ module RailsErrorDashboard
         next false if expected_username.nil? || expected_password.nil?
 
         # A blank credential must deny everyone too: "" would equal an empty login.
-        next false if expected_username.to_s.strip.empty? || expected_password.to_s.strip.empty?
+        next false if RailsErrorDashboard::Configuration.blank_credential?(expected_username) ||
+                      RailsErrorDashboard::Configuration.blank_credential?(expected_password)
 
         # The boot check refuses the published credentials outside development
         # and test, but it is skipped while SECRET_KEY_BASE_DUMMY is set. Refuse

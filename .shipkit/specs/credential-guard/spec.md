@@ -20,15 +20,22 @@ the dashboard runs on its published credentials. The guard could still be bypass
 - `authenticate_with = false` (what `Rails.env.production? && -> { ... }` gives in staging) made
   the check stand down, while the login fell back to Basic auth on the published credentials.
   Found while writing the review brief.
+- The independent review (2026-09-27) found two more:
+  - the published password held as a Symbol passed the check but logged in, because the login
+    compares with `to_s`;
+  - a password of only Unicode whitespace (e.g. a no-break space) was not blank to
+    `String#strip`, so it passed and logged in.
 
 Every release was affected: before 0.5.3 there was no check at all.
 
 ## Requirements (EARS)
 
-- **REQ-1:** If the effective dashboard password equals the built-in default and
+- **REQ-1:** If the effective dashboard password, compared as the login compares it (`to_s`),
+  equals the built-in default and
   `ENV["ERROR_DASHBOARD_PASSWORD"]` does not itself equal it, then `default_credentials?` shall be
   true.
-- **REQ-2:** If the effective username or password is blank (nil, empty or whitespace), then
+- **REQ-2:** If the effective username or password is blank (nil, empty, or only whitespace,
+  including Unicode whitespace), then
   `default_credentials?` shall be true, whatever the environment variables say.
 - **REQ-3:** Where `ERROR_DASHBOARD_PASSWORD` supplies a non-blank effective password,
   `default_credentials?` shall be false, even when that password is the default (the live demo).

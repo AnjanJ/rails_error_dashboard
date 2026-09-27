@@ -21,5 +21,16 @@ failed, all for the bug itself.
 - [x] **T7** A falsy `authenticate_with` counts as Basic auth → REQ-4. Test: `false` makes
   `default_credentials?` true, is refused at boot in staging, and a staging login on the defaults
   gets a 401. All three were red first. Full suite 5372 examples, 0 failures.
+- [x] **T8** Independent review fixes → REQ-1, REQ-2, REQ-5.
+  - One shared `Configuration.blank_credential?` (`to_s.blank?`, which is Unicode-aware) for boot
+    and login.
+  - The published-password comparison uses `to_s`.
+  - The boot error tells the operator to make sure the initializer does not overwrite the
+    variables.
+  - Test: 11 new examples (5372 → 5383), all red before the fix. The message example first passed
+    spuriously, because it matched the ConfigurationError footer, and was tightened until it
+    failed.
+  - The reviewer's 8 reproductions pass. Full suite 5383, 0 failures. Re-review of `3b54927`:
+    no remaining blockers.
 - [ ] **T5** The release notes carry a "this can stop an app booting" section, as 0.9.1 did.
 - [ ] **T6** New GHSA (range `< 0.14.2`, CVE requested), published once 0.14.2 is on RubyGems.
