@@ -829,6 +829,14 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.authenticate_with = -> { true }
       expect(config.default_credentials?).to be false
     end
+
+    # The login treats a falsy authenticate_with as "no lambda" and falls back to
+    # Basic auth, so the check has to as well. `Rails.env.production? && -> { ... }`
+    # evaluates to false in staging and used to switch the check off there.
+    it "returns true when authenticate_with is false, because the login falls back to Basic auth" do
+      config.authenticate_with = false
+      expect(config.default_credentials?).to be true
+    end
   end
 
   # An explicitly set ERROR_DASHBOARD_PASSWORD is a deliberate choice, even when
@@ -1066,6 +1074,16 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.dashboard_password = "secure_pass"
 
       expect { config.validate! }.not_to raise_error
+    end
+
+    it "raises ConfigurationError in staging when authenticate_with is false" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.authenticate_with = false
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging/
+      )
     end
 
     it "does not raise in staging when authenticate_with is set" do

@@ -17,6 +17,9 @@ the dashboard runs on its published credentials. The guard could still be bypass
   deliberate choice, and `""` then matched an empty Basic login.
 - A `SECRET_KEY_BASE_DUMMY` left set at runtime skipped the boot check entirely.
 - `error_dashboard:verify` reported blank credentials as "custom" and only checked `production?`.
+- `authenticate_with = false` (what `Rails.env.production? && -> { ... }` gives in staging) made
+  the check stand down, while the login fell back to Basic auth on the published credentials.
+  Found while writing the review brief.
 
 Every release was affected: before 0.5.3 there was no check at all.
 
@@ -29,7 +32,8 @@ Every release was affected: before 0.5.3 there was no check at all.
   `default_credentials?` shall be true, whatever the environment variables say.
 - **REQ-3:** Where `ERROR_DASHBOARD_PASSWORD` supplies a non-blank effective password,
   `default_credentials?` shall be false, even when that password is the default (the live demo).
-- **REQ-4:** Where `authenticate_with` is configured, `default_credentials?` shall be false.
+- **REQ-4:** Where `authenticate_with` is truthy, `default_credentials?` shall be false. A falsy
+  value (`nil` or `false`) means Basic auth is active, exactly as the login treats it.
 - **REQ-5:** When `validate!` runs outside development and test and REQ-1 or REQ-2 holds, it shall
   raise `ConfigurationError` naming the environment, the specific problem and the fix.
 - **REQ-6:** If a configured Basic credential is blank, then the dashboard shall deny every login

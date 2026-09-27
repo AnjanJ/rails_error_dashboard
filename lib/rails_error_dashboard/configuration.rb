@@ -962,9 +962,13 @@ module RailsErrorDashboard
     # Check if basic auth is active with blank credentials or the published
     # default password (see #credentials_problem)
     #
+    # Basic auth is active whenever authenticate_with is falsy, not only nil:
+    # the login falls back to it for `false` too, which is what
+    # `Rails.env.production? && -> { ... }` evaluates to in staging.
+    #
     # @return [Boolean]
     def default_credentials?
-      authenticate_with.nil? && !credentials_problem.nil?
+      !authenticate_with && !credentials_problem.nil?
     end
 
     # True where default_credentials? has to stop the dashboard: anywhere that is

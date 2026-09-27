@@ -211,6 +211,17 @@ RSpec.describe "Dashboard authentication", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it "denies the published defaults outside development and test when authenticate_with is false" do
+      RailsErrorDashboard.configuration.authenticate_with = false
+      RailsErrorDashboard.configuration.dashboard_username = "gandalf"
+      RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      get "/error_dashboard/errors", headers: auth_header("gandalf", "youshallnotpass")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     it "still lets the published defaults in during development and test" do
       RailsErrorDashboard.configuration.dashboard_username = "gandalf"
       RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
