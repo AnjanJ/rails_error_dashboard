@@ -57,6 +57,7 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 ### Gaël Marziou ([@gmarziou](https://github.com/gmarziou))
 
 - 🐛 [#113](https://github.com/AnjanJ/rails_error_dashboard/pull/113) - Fixed "Copy as curl" generating `https://` URLs for loopback addresses (`127.0.0.1`, `::1`, `0.0.0.0`). Added `local_host?` regex helper covering all loopback variants with optional port suffixes (#112)
+- 🌐 [#201](https://github.com/AnjanJ/rails_error_dashboard/pull/201) - Native-speaker review of the French translation, with consistent terminology throughout (v0.11.5)
 
 ---
 
@@ -69,6 +70,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 ### Barnabé ([@BarnabeD](https://github.com/BarnabeD))
 
 - 🐛 [#211](https://github.com/AnjanJ/rails_error_dashboard/pull/211) - Replaced the `:exponentially_longer` retry backoff, removed in Rails 7.2, with `:polynomially_longer` in the base job and the troubleshooting docs (v0.11.9)
+
+---
+
+### Yoshihiro Okamoto ([@10rayan](https://github.com/10rayan))
+
+- 🌐 [#258](https://github.com/AnjanJ/rails_error_dashboard/pull/258) - Native-speaker review of the Japanese translation: clearer, more natural labels for "Your Code", the raw user agent, and storm protection's reduced capture (v0.14.2)
 
 ---
 
@@ -142,8 +149,8 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 9 (including maintainer)
-**External Contributors:** 8
+**Total Contributors:** 10 (including maintainer)
+**External Contributors:** 9
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
@@ -175,6 +182,10 @@ When you contribute to Rails Error Dashboard, you get:
 ### 📚 Documentation Heroes
 - [@RafaelTurtle](https://github.com/RafaelTurtle) - Jekyll front matter for all 32 doc pages, fixed GitHub Pages 404s
 
+### 🌐 Translators
+- [@gmarziou](https://github.com/gmarziou) - French native-speaker review
+- [@10rayan](https://github.com/10rayan) - Japanese native-speaker review
+
 ### ✨ Feature Creators
 - [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
 - [@j4rs](https://github.com/j4rs) - Mute/unmute notification suppression
@@ -194,4 +205,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: September 14, 2026*
+*This page is updated with each release. Last updated: September 27, 2026*

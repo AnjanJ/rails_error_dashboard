@@ -13,6 +13,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * clarify Japanese translations ([#258](https://github.com/AnjanJ/rails_error_dashboard/issues/258)) ([4e0d84f](https://github.com/AnjanJ/rails_error_dashboard/commit/4e0d84f8d8bceb38a7a9907816c51793c806fd52))
 * refuse partial, blank and non-string dashboard credentials ([#260](https://github.com/AnjanJ/rails_error_dashboard/issues/260)) ([b00c8e5](https://github.com/AnjanJ/rails_error_dashboard/commit/b00c8e5b88508cc31fe522491fa09ee20664fcf6))
 
+### Upgrade instructions
+
+There are no migrations. Update the gem and restart:
+
+```sh
+bundle update rails_error_dashboard
+```
+
+**This release can stop an app booting, on purpose.** Read the security section below before you
+deploy.
+
+### Security: the default-credentials guard could be bypassed
+
+> Detail for the credentials entry above. Security advisory:
+> [GHSA-qh4g-qc9x-9f83](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qh4g-qc9x-9f83).
+
+Since 0.9.1, RED has refused to boot outside `development` and `test` while the dashboard runs on
+its published credentials, `gandalf` / `youshallnotpass`
+([GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6)).
+That check could be bypassed. In each of these setups the app booted, and the published password,
+or sometimes an empty one, logged in:
+
+- only `ERROR_DASHBOARD_USER` was set, so the password fell back to the published default;
+- a custom username was set in the initializer, and the password was left alone;
+- a credential variable was set but empty (for example, a Compose file passing an unset variable
+  through), or contained only whitespace, including Unicode whitespace;
+- the initializer overwrote a variable's value with the default or a blank value;
+- `config.authenticate_with = false`, for example `Rails.env.production? && -> { ... }` outside
+  production;
+- the password was the Symbol `:youshallnotpass`;
+- `SECRET_KEY_BASE_DUMMY` was left set at runtime, which skips the boot check.
+
+The published password is now accepted only when `ERROR_DASHBOARD_PASSWORD` itself sets it, as an
+explicit choice (a public demo, for example). A blank credential is never accepted. The boot check,
+the login and `bin/rails error_dashboard:verify` all use the same rule. The login also refuses
+these credentials on its own, so they stay refused even when the boot check was skipped.
+
+#### ⚠️ This can stop an app booting when you upgrade
+
+**If an app outside `development` and `test` relies on any setup above, it will now raise
+`ConfigurationError` on boot.** The error says which problem it found. To fix it:
+
+```ruby
+# 1. Set both environment variables (recommended), and make sure
+#    config/initializers/rails_error_dashboard.rb does not overwrite them
+ENV["ERROR_DASHBOARD_USER"]     = "..."
+ENV["ERROR_DASHBOARD_PASSWORD"] = "..."
+
+# 2. Or hand authentication to your own app
+RailsErrorDashboard.configure do |config|
+  config.authenticate_with = -> { current_user&.admin? }
+end
+```
+
+**Unaffected:**
+- apps that set both credentials to real values;
+- apps that use an `authenticate_with` lambda;
+- apps that run only in `development` or `test`;
+- Docker asset precompilation, which still skips the check via `SECRET_KEY_BASE_DUMMY`.
+
+### Clearer Japanese translations
+
+A native-speaker review by [@10rayan](https://github.com/10rayan) makes several Japanese labels
+clearer and more natural: "Your Code", the raw user agent, and the wording for storm protection's
+reduced capture ([#258](https://github.com/AnjanJ/rails_error_dashboard/pull/258)). Thank you!
+
 ## [0.14.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.0...rails_error_dashboard/v0.14.1) (2026-09-25)
 
 
