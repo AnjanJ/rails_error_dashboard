@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.1...rails_error_dashboard/v0.14.2) (2026-09-27)
+
+
+### 🐛 Bug Fixes
+
+* clarify Japanese translations ([#258](https://github.com/AnjanJ/rails_error_dashboard/issues/258)) ([4e0d84f](https://github.com/AnjanJ/rails_error_dashboard/commit/4e0d84f8d8bceb38a7a9907816c51793c806fd52))
+* refuse partial, blank and non-string dashboard credentials ([#260](https://github.com/AnjanJ/rails_error_dashboard/issues/260)) ([b00c8e5](https://github.com/AnjanJ/rails_error_dashboard/commit/b00c8e5b88508cc31fe522491fa09ee20664fcf6))
+
 ## [0.14.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.0...rails_error_dashboard/v0.14.1) (2026-09-25)
 
 
