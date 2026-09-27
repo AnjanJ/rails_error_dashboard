@@ -2,6 +2,12 @@
 
 module RailsErrorDashboard
   class Configuration
+    # The built-in Basic auth credentials. They are published (README, demo,
+    # gemspec), so outside development and test they are refused unless
+    # ERROR_DASHBOARD_PASSWORD explicitly supplies the password.
+    DEFAULT_DASHBOARD_USERNAME = "gandalf"
+    DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
+
     # Dashboard authentication (always required)
     attr_accessor :dashboard_username
     attr_accessor :dashboard_password
@@ -269,8 +275,8 @@ module RailsErrorDashboard
 
     def initialize
       # Default values - Authentication is ALWAYS required
-      @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
-      @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
+      @dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", DEFAULT_DASHBOARD_USERNAME)
+      @dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", DEFAULT_DASHBOARD_PASSWORD)
       @authenticate_with = nil
 
       @user_model = nil  # Auto-detect if not set
@@ -536,12 +542,16 @@ module RailsErrorDashboard
       # (GHSA-qhgm-3pxf-mvc6). Every future environment name a team invents is
       # now refused by default and has to be added here on purpose.
       #
-      # Skip during asset precompilation (SECRET_KEY_BASE_DUMMY=1) — ENV vars aren't available at build time
-      if default_credentials? &&
-         defined?(Rails) && Rails.respond_to?(:env) &&
-         !Rails.env.development? && !Rails.env.test? &&
-         ENV["SECRET_KEY_BASE_DUMMY"].blank?
-        errors << "Default or blank credentials cannot be used in #{Rails.env}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables, or use authenticate_with for custom auth."
+      # Skip during asset precompilation (SECRET_KEY_BASE_DUMMY=1) — ENV vars aren't available at build time.
+      # The login refuses the same credentials on its own, so SECRET_KEY_BASE_DUMMY
+      # left set at runtime does not reopen them.
+      if refuse_default_credentials? && ENV["SECRET_KEY_BASE_DUMMY"].blank?
+        reason = if credentials_problem == :blank
+          "the dashboard username or password is blank"
+        else
+          "the dashboard password is the published default and was not set by ERROR_DASHBOARD_PASSWORD"
+        end
+        errors << "Default or blank credentials cannot be used in #{Rails.env}: #{reason}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables and make sure the initializer does not overwrite them, or use authenticate_with for custom auth."
       end
 
       # Validate sampling_rate (must be between 0.0 and 1.0)
@@ -925,23 +935,65 @@ module RailsErrorDashboard
       list.empty? ? nil : list
     end
 
-    # Check if using default or blank demo credentials with basic auth
+    # Why the Basic auth credentials cannot be trusted outside development and
+    # test, or nil when they can.
     #
-    # Returns false if the user explicitly set ENV vars (even to the same default values),
-    # because that's a deliberate choice. Only blocks when credentials are untouched defaults
-    # or blank.
+    # - :blank - the username or password is empty or whitespace. An explicitly
+    #   empty variable is not a choice: a compose file passing an unset variable
+    #   through produces exactly that, and "" would match an empty login.
+    # - :published_password - the password is the published default and did not
+    #   come from ERROR_DASHBOARD_PASSWORD. Setting that variable, even to the
+    #   default, is a deliberate choice (the live demo runs that way). It has to
+    #   be THAT variable: setting only ERROR_DASHBOARD_USER used to leave the
+    #   password on the published default, and an initializer can hardcode it.
     #
-    # @return [Boolean] true if basic auth is active with untouched default or blank credentials
+    # Both compare values the way the login does, with to_s: a Symbol holding the
+    # published password logs in just the same.
+    #
+    # @return [Symbol, nil]
+    def credentials_problem
+      return :blank if self.class.blank_credential?(dashboard_username) ||
+                       self.class.blank_credential?(dashboard_password)
+
+      if dashboard_password.to_s == DEFAULT_DASHBOARD_PASSWORD &&
+         ENV["ERROR_DASHBOARD_PASSWORD"] != DEFAULT_DASHBOARD_PASSWORD
+        return :published_password
+      end
+
+      nil
+    end
+
+    # True for a credential that cannot be a secret: nil, empty, or only
+    # whitespace, including Unicode whitespace such as a no-break space, which
+    # String#strip leaves in place. The boot check and the login both use it.
+    #
+    # @return [Boolean]
+    def self.blank_credential?(value)
+      value.to_s.blank?
+    end
+
+    # Check if basic auth is active with blank credentials or the published
+    # default password (see #credentials_problem)
+    #
+    # Basic auth is active whenever authenticate_with is falsy, not only nil:
+    # the login falls back to it for `false` too, which is what
+    # `Rails.env.production? && -> { ... }` evaluates to in staging.
+    #
+    # @return [Boolean]
     def default_credentials?
-      return false unless authenticate_with.nil?
+      !authenticate_with && !credentials_problem.nil?
+    end
 
-      # If user explicitly set ENV vars, respect their choice
-      return false if ENV.key?("ERROR_DASHBOARD_USER") || ENV.key?("ERROR_DASHBOARD_PASSWORD")
+    # True where default_credentials? has to stop the dashboard: anywhere that is
+    # not local development or test. The boot check and the login both use it,
+    # so the login still refuses when the boot check was skipped.
+    #
+    # @return [Boolean]
+    def refuse_default_credentials?
+      return false unless default_credentials?
+      return false unless defined?(Rails) && Rails.respond_to?(:env)
 
-      default = dashboard_username == "gandalf" && dashboard_password == "youshallnotpass"
-      blank = dashboard_username.to_s.strip.empty? || dashboard_password.to_s.strip.empty?
-
-      default || blank
+      !Rails.env.development? && !Rails.env.test?
     end
 
     # Resolve the effective issue tracker provider (auto-detect from git_repository_url).

@@ -170,4 +170,83 @@ RSpec.describe "Dashboard authentication", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
   end
+
+  # The boot check refuses these outside development and test, but it does not
+  # run in development, and it is skipped while SECRET_KEY_BASE_DUMMY is set, so
+  # a build variable left set at runtime used to reopen the dashboard. The login
+  # itself has to fail closed as well.
+  describe "with credentials the boot check refuses" do
+    it "denies everyone when both credentials are blank, including a matching empty login" do
+      RailsErrorDashboard.configuration.dashboard_username = ""
+      RailsErrorDashboard.configuration.dashboard_password = ""
+
+      get "/error_dashboard/errors", headers: auth_header("", "")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies a matching login when only the password is blank" do
+      RailsErrorDashboard.configuration.dashboard_password = ""
+
+      get "/error_dashboard/errors", headers: auth_header("admin", "")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies a matching login when only the username is blank" do
+      RailsErrorDashboard.configuration.dashboard_username = ""
+
+      get "/error_dashboard/errors", headers: auth_header("", "secret123")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies the published defaults outside development and test, even when the boot check was skipped" do
+      RailsErrorDashboard.configuration.dashboard_username = "gandalf"
+      RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      get "/error_dashboard/errors", headers: auth_header("gandalf", "youshallnotpass")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies a matching login when the password is only Unicode whitespace" do
+      RailsErrorDashboard.configuration.dashboard_password = " "
+
+      get "/error_dashboard/errors", headers: auth_header("admin", " ")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies the published password held as a Symbol outside development and test" do
+      RailsErrorDashboard.configuration.dashboard_username = "gandalf"
+      RailsErrorDashboard.configuration.dashboard_password = :youshallnotpass
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      get "/error_dashboard/errors", headers: auth_header("gandalf", "youshallnotpass")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "denies the published defaults outside development and test when authenticate_with is false" do
+      RailsErrorDashboard.configuration.authenticate_with = false
+      RailsErrorDashboard.configuration.dashboard_username = "gandalf"
+      RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      get "/error_dashboard/errors", headers: auth_header("gandalf", "youshallnotpass")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "still lets the published defaults in during development and test" do
+      RailsErrorDashboard.configuration.dashboard_username = "gandalf"
+      RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
+
+      get "/error_dashboard/errors", headers: auth_header("gandalf", "youshallnotpass")
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end

@@ -784,9 +784,11 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       expect(config.default_credentials?).to be true
     end
 
-    it "returns false when username is changed" do
+    # This used to return false: a custom username made the published password
+    # acceptable. The username is not the secret, so it cannot vouch for it.
+    it "returns true when only the username is changed, leaving the published password" do
       config.dashboard_username = "admin"
-      expect(config.default_credentials?).to be false
+      expect(config.default_credentials?).to be true
     end
 
     it "returns false when password is changed" do
@@ -828,16 +830,185 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       expect(config.default_credentials?).to be false
     end
 
-    it "returns false when ERROR_DASHBOARD_USER ENV var is set (even to default value)" do
-      allow(ENV).to receive(:key?).and_call_original
-      allow(ENV).to receive(:key?).with("ERROR_DASHBOARD_USER").and_return(true)
-      expect(config.default_credentials?).to be false
+    # The login treats a falsy authenticate_with as "no lambda" and falls back to
+    # Basic auth, so the check has to as well. `Rails.env.production? && -> { ... }`
+    # evaluates to false in staging and used to switch the check off there.
+    it "returns true when authenticate_with is false, because the login falls back to Basic auth" do
+      config.authenticate_with = false
+      expect(config.default_credentials?).to be true
     end
 
-    it "returns false when ERROR_DASHBOARD_PASSWORD ENV var is set (even to default value)" do
-      allow(ENV).to receive(:key?).and_call_original
-      allow(ENV).to receive(:key?).with("ERROR_DASHBOARD_PASSWORD").and_return(true)
-      expect(config.default_credentials?).to be false
+    # The login compares with to_s, so the check has to as well: the published
+    # password held as a Symbol used to pass the check and still log in.
+    it "returns true when the published password is configured as a Symbol" do
+      config.dashboard_username = "admin"
+      config.dashboard_password = :youshallnotpass
+      expect(config.default_credentials?).to be true
+    end
+
+    # String#strip only removes ASCII whitespace, so a password of one no-break
+    # space used to count as a real one, and logged in.
+    [ " ", " ", "　", "  \t" ].each do |value|
+      it "returns true when the password is only Unicode whitespace (#{value.dump})" do
+        config.dashboard_username = "admin"
+        config.dashboard_password = value
+        expect(config.default_credentials?).to be true
+      end
+    end
+
+    it "returns true when the username is only Unicode whitespace" do
+      config.dashboard_username = " "
+      config.dashboard_password = "a-real-password"
+      expect(config.default_credentials?).to be true
+    end
+  end
+
+  # An explicitly set ERROR_DASHBOARD_PASSWORD is a deliberate choice, even when
+  # it is the published default: the live demo runs that way. But the check used
+  # to stand down as soon as EITHER variable existed, so setting only
+  # ERROR_DASHBOARD_USER left the password on the published default, and an
+  # explicitly empty value counted as a choice too. Both booted outside
+  # development and test.
+  #
+  # The values are read from ENV once, when the configuration is built, so these
+  # set real variables and build a fresh configuration afterwards. Stubbing
+  # ENV.key? alone would test a path no application takes.
+  describe "credentials taken from the environment" do
+    around do |example|
+      saved = ENV.to_h.slice("ERROR_DASHBOARD_USER", "ERROR_DASHBOARD_PASSWORD")
+      ENV.delete("ERROR_DASHBOARD_USER")
+      ENV.delete("ERROR_DASHBOARD_PASSWORD")
+      example.run
+    ensure
+      ENV.delete("ERROR_DASHBOARD_USER")
+      ENV.delete("ERROR_DASHBOARD_PASSWORD")
+      saved.each { |k, v| ENV[k] = v }
+    end
+
+    def config_from_env(user: nil, password: nil)
+      ENV["ERROR_DASHBOARD_USER"] = user unless user.nil?
+      ENV["ERROR_DASHBOARD_PASSWORD"] = password unless password.nil?
+      described_class.new
+    end
+
+    def run_in(env_name)
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new(env_name))
+    end
+
+    describe "#default_credentials?" do
+      it "returns true when only ERROR_DASHBOARD_USER is set, leaving the published password" do
+        expect(config_from_env(user: "ops").default_credentials?).to be true
+      end
+
+      it "returns true when both variables are set but empty" do
+        expect(config_from_env(user: "", password: "").default_credentials?).to be true
+      end
+
+      it "returns true when the password variable is set but empty" do
+        expect(config_from_env(user: "ops", password: "").default_credentials?).to be true
+      end
+
+      it "returns true when the username variable is set but empty" do
+        expect(config_from_env(user: "", password: "a-real-password").default_credentials?).to be true
+      end
+
+      it "returns true when the password variable is only whitespace" do
+        expect(config_from_env(user: "ops", password: "   ").default_credentials?).to be true
+      end
+
+      it "returns true when the initializer hardcodes the published password over the variable" do
+        configuration = config_from_env(user: "ops", password: "a-real-password")
+        configuration.dashboard_password = "youshallnotpass"
+
+        expect(configuration.default_credentials?).to be true
+      end
+
+      it "returns true when the initializer blanks a password the variable set" do
+        configuration = config_from_env(user: "ops", password: "a-real-password")
+        configuration.dashboard_password = ""
+
+        expect(configuration.default_credentials?).to be true
+      end
+
+      it "returns false when both variables explicitly choose the published defaults" do
+        expect(config_from_env(user: "gandalf", password: "youshallnotpass").default_credentials?).to be false
+      end
+
+      it "returns false when ERROR_DASHBOARD_PASSWORD alone explicitly chooses the published default" do
+        expect(config_from_env(password: "youshallnotpass").default_credentials?).to be false
+      end
+
+      it "returns false when only a real password is set" do
+        expect(config_from_env(password: "a-real-password").default_credentials?).to be false
+      end
+    end
+
+    describe "#refuse_default_credentials?" do
+      it "is true on the published defaults outside development and test" do
+        run_in("staging")
+
+        expect(config_from_env.refuse_default_credentials?).to be true
+      end
+
+      it "is false on the published defaults in development" do
+        run_in("development")
+
+        expect(config_from_env.refuse_default_credentials?).to be false
+      end
+
+      it "is false when authenticate_with is set" do
+        run_in("staging")
+        configuration = config_from_env
+        configuration.authenticate_with = -> { true }
+
+        expect(configuration.refuse_default_credentials?).to be false
+      end
+
+      it "is false once real credentials are set" do
+        run_in("staging")
+
+        expect(config_from_env(user: "ops", password: "a-real-password").refuse_default_credentials?).to be false
+      end
+    end
+
+    describe "the boot check" do
+      it "refuses to boot in staging when only ERROR_DASHBOARD_USER is set, and says why" do
+        run_in("staging")
+
+        expect { config_from_env(user: "ops").validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError,
+          /cannot be used in staging: the dashboard password is the published default/
+        )
+      end
+
+      it "refuses to boot in production when both variables are empty, and says why" do
+        run_in("production")
+
+        expect { config_from_env(user: "", password: "").validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError,
+          /cannot be used in production: the dashboard username or password is blank/
+        )
+      end
+
+      it "boots in development when only ERROR_DASHBOARD_USER is set" do
+        run_in("development")
+
+        expect { config_from_env(user: "ops").validate! }.not_to raise_error
+      end
+
+      it "boots in production when both variables explicitly choose the published defaults" do
+        run_in("production")
+
+        expect { config_from_env(user: "gandalf", password: "youshallnotpass").validate! }.not_to raise_error
+      end
+
+      it "still skips the check during asset precompilation (SECRET_KEY_BASE_DUMMY)" do
+        run_in("production")
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("SECRET_KEY_BASE_DUMMY").and_return("1")
+
+        expect { config_from_env(user: "ops").validate! }.not_to raise_error
+      end
     end
   end
 
@@ -927,6 +1098,50 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.dashboard_password = "secure_pass"
 
       expect { config.validate! }.not_to raise_error
+    end
+
+    it "raises ConfigurationError in staging when the published password is a Symbol" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = :youshallnotpass
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging: the dashboard password is the published default/
+      )
+    end
+
+    it "raises ConfigurationError in staging when the password is a no-break space" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.dashboard_username = "admin"
+      config.dashboard_password = " "
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging: the dashboard username or password is blank/
+      )
+    end
+
+    # Setting the variables cannot repair an initializer that overwrites them,
+    # so the advice has to say so. (Every ConfigurationError already ends by
+    # naming the initializer file; that footer alone does not say this.)
+    it "tells the operator that the initializer must not overwrite the variables" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /make sure the initializer does not overwrite them/
+      )
+    end
+
+    it "raises ConfigurationError in staging when authenticate_with is false" do
+      allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("staging"))
+      config.authenticate_with = false
+
+      expect { config.validate! }.to raise_error(
+        RailsErrorDashboard::ConfigurationError,
+        /cannot be used in staging/
+      )
     end
 
     it "does not raise in staging when authenticate_with is set" do
