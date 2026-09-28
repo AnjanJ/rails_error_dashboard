@@ -128,6 +128,17 @@ RSpec.describe "error_dashboard:verify rake task" do
       expect(output).to include("blank credentials")
     end
 
+    # It used to say "OK (blank credentials - change before production)" while
+    # every login was being denied.
+    it "warns that a blank credential denies every login in development and test" do
+      RailsErrorDashboard.configuration.dashboard_username = "custom_user"
+      RailsErrorDashboard.configuration.dashboard_password = ""
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("WARNING - blank credentials: every login is denied")
+    end
+
     it "fails the check on the published password outside development and test" do
       RailsErrorDashboard.configuration.dashboard_username = "custom_user"
       RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"

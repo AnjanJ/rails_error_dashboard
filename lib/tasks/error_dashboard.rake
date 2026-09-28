@@ -177,8 +177,12 @@ namespace :error_dashboard do
       if config.refuse_default_credentials?
         puts "WARNING - #{label} outside development and test!"
         checks_failed += 1
+      elsif problem == :blank
+        # The login denies everyone on a blank credential, in every environment.
+        puts "WARNING - #{label}: every login is denied"
+        warnings += 1
       else
-        puts "OK (#{label} - change before production)"
+        puts "OK (#{label} - set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD before deploying)"
         warnings += 1
       end
     elsif config.dashboard_password == RailsErrorDashboard::Configuration::DEFAULT_DASHBOARD_PASSWORD

@@ -895,6 +895,82 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new(env_name))
     end
 
+    # A blank credential denies every login. Outside development and test the
+    # app refuses to boot; in development it used to boot without a word, and
+    # the developer was simply locked out.
+    describe "a blank credential in development" do
+      let(:warnings) { [] }
+
+      before do
+        allow(Rails.logger).to receive(:warn) { |message| warnings << message }
+      end
+
+      def login_warnings
+        warnings.select { |message| message.include?("login") }
+      end
+
+      it "warns, naming the variable that is set but empty" do
+        run_in("development")
+
+        config_from_env(user: "ops", password: "").validate!
+
+        expect(login_warnings).to contain_exactly(
+          a_string_including("ERROR_DASHBOARD_PASSWORD is set but empty", "every dashboard login will be denied")
+        )
+      end
+
+      it "names the username variable when that is the empty one" do
+        run_in("development")
+
+        config_from_env(user: "", password: "a-real-password").validate!
+
+        expect(login_warnings).to contain_exactly(a_string_including("ERROR_DASHBOARD_USER is set but empty"))
+      end
+
+      it "names the setting when the initializer made it blank" do
+        run_in("development")
+        configuration = config_from_env
+        configuration.dashboard_password = ""
+
+        configuration.validate!
+
+        expect(login_warnings).to contain_exactly(a_string_including("dashboard_password is blank"))
+      end
+
+      it "does not warn on the development defaults" do
+        run_in("development")
+
+        config_from_env.validate!
+
+        expect(login_warnings).to be_empty
+      end
+
+      it "does not warn when authenticate_with is a lambda" do
+        run_in("development")
+        configuration = config_from_env(user: "ops", password: "")
+        configuration.authenticate_with = -> { true }
+
+        configuration.validate!
+
+        expect(login_warnings).to be_empty
+      end
+
+      it "does not warn in test, where CI would log it on every boot" do
+        run_in("test")
+
+        config_from_env(user: "ops", password: "").validate!
+
+        expect(login_warnings).to be_empty
+      end
+
+      it "still refuses to boot in production" do
+        run_in("production")
+
+        expect { config_from_env(user: "ops", password: "").validate! }
+          .to raise_error(RailsErrorDashboard::ConfigurationError, /blank/)
+      end
+    end
+
     describe "#default_credentials?" do
       it "returns true when only ERROR_DASHBOARD_USER is set, leaving the published password" do
         expect(config_from_env(user: "ops").default_credentials?).to be true
