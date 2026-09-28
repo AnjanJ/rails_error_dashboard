@@ -495,7 +495,7 @@ module RailsErrorDashboard
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
-      @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
+      @log_level = :silent  # Silent by default; see Logger::LOG_LEVELS for the levels
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
@@ -786,7 +786,9 @@ module RailsErrorDashboard
 
       # Validate log level (must be valid symbol)
       if log_level
-        valid_log_levels = %i[debug info warn error fatal silent]
+        # Referenced here, not as a class-body constant: this file loads before
+        # logger.rb, and a bare Logger in the class body would be ::Logger.
+        valid_log_levels = RailsErrorDashboard::Logger::LOG_LEVELS.keys
         unless valid_log_levels.include?(log_level)
           errors << "log_level must be one of #{valid_log_levels.inspect} (got: #{log_level.inspect})"
         end
