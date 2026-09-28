@@ -40,6 +40,15 @@ module RailsErrorDashboard
         say "  #{status_icon(@components[:migrations])} Migrations (#{migration_count} files)"
         say "  #{status_icon(@components[:tables])} Database tables (#{table_count} tables)"
         say "\n"
+
+        # Couldn't see the error database (no database.yml entry for it, or the
+        # server is down). Carrying on would remove the initializer and leave
+        # every table behind, with nothing left that knows where they are.
+        if @database_error && !options[:keep_data] && !options[:manual_only]
+          raise Thor::Error, "Can't reach the error database, so nothing was removed: #{@database_error}\n" \
+                             "Fix config/database.yml (or start the database) and run this again, " \
+                             "or pass --keep-data to remove only the files."
+        end
       end
 
       def show_manual_instructions
@@ -289,6 +298,7 @@ module RailsErrorDashboard
         @table_names ||= begin
           RailsErrorDashboard::Queries::UninstallPlan.call(drop_connection).map { |entry| entry[:table] }
         rescue => e
+          @database_error = e.message
           say "  ⚠️  Could not inspect the error database: #{e.message}", :yellow
           []
         end
