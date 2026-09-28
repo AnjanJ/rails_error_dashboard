@@ -344,6 +344,39 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 ## Dashboard Access Problems
 
+### App Refuses to Boot: Default or Blank Credentials
+
+**Problem**: Outside development and test, the app (or `db:migrate`, or a console) fails to start with:
+
+```
+RailsErrorDashboard::ConfigurationError: Rails Error Dashboard configuration is invalid:
+
+  1. Default or blank credentials cannot be used in production: the dashboard password is the published default and was not set by ERROR_DASHBOARD_PASSWORD. ...
+```
+
+**Cause**: the dashboard would be protected by the published default password, or by a blank credential. Common reasons:
+
+- `ERROR_DASHBOARD_PASSWORD` isn't set where the command runs, for example in a release phase or a migration job;
+- only `ERROR_DASHBOARD_USER` is set;
+- a variable is set but empty, for example a Compose file passing an unset variable through;
+- the initializer overwrites the credentials, for example with a hardcoded value.
+
+**Solution**: set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` to real values in that environment, and remove any `dashboard_username` / `dashboard_password` lines from the initializer. Or configure an `authenticate_with` lambda. See [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials).
+
+### Docker Build Fails During assets:precompile
+
+**Problem**: `docker build` fails at `assets:precompile` with the `ConfigurationError` above.
+
+**Cause**: precompiling boots the app in production, and the build has no secrets.
+
+**Solution**: run the step with `SECRET_KEY_BASE_DUMMY=1`, as the Dockerfile Rails 7.1+ generates does:
+
+```dockerfile
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+```
+
+Set it on that command only, never in the runtime environment: while it is set, RED captures no errors at all. The login still refuses the default credentials either way.
+
 ### Authentication Not Working
 
 **Problem**: Can't access dashboard with correct credentials.
@@ -355,8 +388,11 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    # In rails console
    RailsErrorDashboard.configuration.dashboard_username
    RailsErrorDashboard.configuration.dashboard_password
-   # Should return configured values (not nil)
+   # Should return your values: not nil, not blank
    ```
+   A blank or `nil` value denies every login, in development too. The usual cause is
+   `config.dashboard_username = ENV["ERROR_DASHBOARD_USER"]` in the initializer with the variable
+   unset. Remove that line: the gem reads the variable itself.
 
 2. **Verify HTTP Basic Auth header**:
    ```bash

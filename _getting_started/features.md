@@ -944,6 +944,7 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 - **Custom authentication** via `config.authenticate_with` lambda — use Devise, Warden, session-based, or any auth system
 - **Configurable credentials** via environment variables
 - **Fail-closed security** — lambda errors are rescued, logged, and result in 403 Forbidden
+- **Default credentials protection** — Outside development and test, the app refuses to boot on blank credentials, or on the published default password (`youshallnotpass`) unless `ERROR_DASHBOARD_PASSWORD` sets it explicitly. That covers `staging`, `uat`, `demo` and any other name you deploy under, and the login enforces the same rule. The dashboard shows a reminder banner while the default password is in use. See [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials)
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure

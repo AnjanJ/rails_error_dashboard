@@ -512,9 +512,8 @@ See [Plugin System Guide](/rails_error_dashboard/docs/features/plugin-system/) f
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Authentication
-  config.username = "admin"
-  config.password = "secure_password"
+  # Dashboard credentials come from the ERROR_DASHBOARD_USER and
+  # ERROR_DASHBOARD_PASSWORD environment variables. Don't set them here.
 
   # Performance
   config.async_logging = true
@@ -575,9 +574,8 @@ end
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Security
-  config.username = ENV['ERROR_DASHBOARD_USERNAME']
-  config.password = ENV['ERROR_DASHBOARD_PASSWORD']
+  # Dashboard credentials come from the ERROR_DASHBOARD_USER and
+  # ERROR_DASHBOARD_PASSWORD environment variables. Don't set them here.
 
   # Performance (high traffic)
   config.async_logging = true

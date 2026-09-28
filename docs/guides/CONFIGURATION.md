@@ -319,9 +319,11 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 All environment variables that can be used instead of or alongside configuration:
 
 ```bash
-# Authentication
-ERROR_DASHBOARD_USER=admin
-ERROR_DASHBOARD_PASSWORD=secure_password
+# Authentication. Not needed in development and test. Everywhere else,
+# set both (see Dashboard Credentials). Generate the password with:
+#   openssl rand -base64 32
+# ERROR_DASHBOARD_USER=admin
+# ERROR_DASHBOARD_PASSWORD=
 
 # Multi-App
 APPLICATION_NAME=my-api
@@ -409,9 +411,8 @@ Create an initializer at `config/initializers/rails_error_dashboard.rb`:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Dashboard authentication (always required)
-  config.dashboard_username = "admin"
-  config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "changeme")
+  # Dashboard credentials come from the ERROR_DASHBOARD_USER and
+  # ERROR_DASHBOARD_PASSWORD environment variables. Don't set them here.
 
   # Data retention (days)
   config.retention_days = 90
@@ -424,6 +425,85 @@ RailsErrorDashboard.configure do |config|
   config.enable_error_subscriber = true
 end
 ```
+
+### Dashboard Credentials
+
+Unless you configure `authenticate_with` (see [Custom Authentication](#custom-authentication)), the dashboard is protected by HTTP Basic Auth. The gem reads the credentials from two environment variables itself, so you don't need to set them in the initializer:
+
+| Variable | Default |
+|----------|---------|
+| `ERROR_DASHBOARD_USER` | `gandalf` |
+| `ERROR_DASHBOARD_PASSWORD` | `youshallnotpass` |
+
+**In development and test**, the defaults work. There is nothing to set.
+
+**In every other environment** (`production`, `staging`, `uat`, or any other name), the defaults are refused, because they are published. Set both variables before you deploy:
+
+```bash
+# Generate a strong password
+openssl rand -base64 32
+```
+
+Put the values wherever your platform keeps secrets or environment variables: Kamal secrets, Heroku config vars, Fly.io secrets, Render environment variables, or the `environment:` section of a Compose file. Don't commit them.
+
+If you set only `ERROR_DASHBOARD_PASSWORD`, the username stays `gandalf`. That works, but set both. If you set only `ERROR_DASHBOARD_USER`, the password stays the published default and the app refuses to boot.
+
+#### What is checked at boot
+
+Outside development and test, the app refuses to boot and raises `RailsErrorDashboard::ConfigurationError` when either of these is true:
+
+- the username or password is blank, including whitespace only;
+- the password is the published default (`youshallnotpass`) and did not come from `ERROR_DASHBOARD_PASSWORD`.
+
+The message says which one it was. The login applies the same rule on every request, so these credentials are refused even when the boot check is skipped.
+
+The check runs every time the app boots in that environment, which includes `bin/rails db:migrate`, `bin/rails console` and `bin/rails assets:precompile`. So the two variables must also be present wherever those commands run: a release phase, a migration job, a one-off console.
+
+Two exceptions:
+
+- **Docker asset builds.** A build step has no secrets. When `SECRET_KEY_BASE_DUMMY=1` is set, the check is skipped. The Dockerfile that Rails 7.1+ generates already runs `SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile`. If yours precompiles without it, add it. Set it on that command only, never in the runtime environment: while it is set, RED skips its error subscriber and captures no errors at all. (It wouldn't reopen the default credentials, because the login still refuses them.)
+- **A deliberately public dashboard.** Setting `ERROR_DASHBOARD_PASSWORD=youshallnotpass` explicitly counts as a choice, and is allowed. That is how the public demo runs. Never do it for an app with real data.
+
+#### Patterns to avoid
+
+| In the initializer | What goes wrong |
+|--------------------|-----------------|
+| `config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "changeme")` | If the variable is missing, the app boots with `changeme`. The boot check only knows the gem's own default, so it can't catch this. |
+| `config.dashboard_password = "s3cret"` | Hardcoded credentials end up in source control. |
+| `config.dashboard_username = ENV["ERROR_DASHBOARD_USER"]` | Where the variable is unset, the value is `nil`. In development every login is then denied; elsewhere the app refuses to boot. |
+| `config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD")` | Raises `KeyError` wherever the variable is unset, including development and CI. |
+| `config.username = ...` or `config.password = ...` | These settings don't exist (`NoMethodError`). The names are `dashboard_username` and `dashboard_password`. |
+
+`config.authenticate_with = false` does not turn authentication off. Any falsy value, including `Rails.env.production? && -> { ... }` outside production, falls back to HTTP Basic Auth.
+
+#### Using Rails credentials instead
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  # Development and test keep the built-in defaults.
+  unless Rails.env.development? || Rails.env.test?
+    config.dashboard_username = Rails.application.credentials.dig(:error_dashboard, :username)
+    config.dashboard_password = Rails.application.credentials.dig(:error_dashboard, :password)
+  end
+end
+```
+
+If an entry is missing, its value is `nil` and the app refuses to boot, saying the credentials are blank.
+
+#### Checking your setup
+
+`bin/rails error_dashboard:verify` reports whether the app is using custom, default or blank credentials, using the same rule as the boot check.
+
+#### Upgrading to 0.14.2
+
+0.14.2 closed several ways around the boot check ([GHSA-qh4g-qc9x-9f83](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qh4g-qc9x-9f83)). An app that relied on one of them now refuses to boot outside development and test. The common causes are:
+
+- only `ERROR_DASHBOARD_USER` was set;
+- the initializer hardcoded the default password;
+- a variable was passed through empty, for example by a Compose file;
+- `authenticate_with` evaluated to `false`.
+
+To fix it, set both variables to real values and make sure the initializer doesn't overwrite them, or configure an `authenticate_with` lambda.
 
 ### Custom Authentication
 
@@ -463,7 +543,7 @@ end
 - **Falsy return** (including `nil`) → 403 Forbidden
 - **Lambda raises** → rescued, logged, 403 (fail closed)
 - **Lambda calls `redirect_to`** → redirect honored (e.g. to your login page)
-- **`authenticate_with = nil`** (default) → falls back to HTTP Basic Auth
+- **`authenticate_with` is `nil`** (the default) **or `false`** → HTTP Basic Auth is used (see [Dashboard Credentials](#dashboard-credentials))
 
 ---
 
@@ -1522,7 +1602,8 @@ RailsErrorDashboard.configure do |config|
   # ============================================================================
   # AUTHENTICATION (Always Required)
   # ============================================================================
-  # Authentication is always required in all environments
+  # The defaults work in development and test only. Everywhere else, set
+  # ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD (see Dashboard Credentials).
   config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
 
@@ -2029,11 +2110,10 @@ See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
    RailsErrorDashboard.configuration.dashboard_password
    ```
 
-2. **Verify HTTP Basic Auth is configured**
-   ```ruby
-   config.dashboard_username = "admin"
-   config.dashboard_password = "secure_password"
-   ```
+2. **Check neither value is blank**
+   A blank or `nil` username or password denies every login, in development too. The usual cause is
+   `config.dashboard_username = ENV["ERROR_DASHBOARD_USER"]` in the initializer with the variable unset.
+   See [Dashboard Credentials](#dashboard-credentials).
 
 3. **Test credentials**
    ```bash
