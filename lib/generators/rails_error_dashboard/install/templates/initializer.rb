@@ -163,9 +163,11 @@ RailsErrorDashboard.configure do |config|
 
 <% if @enable_async_logging -%>
   # Async Error Logging - ENABLED
-  # Errors are logged in background jobs — zero impact on request response time.
-  # Default adapter is :async (Rails built-in, no extra infrastructure needed).
-  # Swap to :sidekiq or :solid_queue when you have a background worker running.
+  # Errors are logged in background jobs, off the request path. The jobs run on
+  # your app's Active Job adapter (config.active_job.queue_adapter), so in
+  # production a worker must process the default and error_notifications queues
+  # (Rails 8: bin/jobs for Solid Queue). async_adapter below is only validated
+  # and shown on the Settings page; it does not choose the backend.
   config.async_logging = true
   config.async_adapter = :async  # Options: :async (built-in), :sidekiq, :solid_queue
   # To disable: Set config.async_logging = false

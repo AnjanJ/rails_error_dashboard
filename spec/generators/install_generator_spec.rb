@@ -50,6 +50,42 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
     generator.invoke_all
   end
 
+  # The installer said async logging used Rails' :async adapter with "no extra
+  # process needed", and that the dashboard "also works at /error_dashboard".
+  # RED's jobs run on the app's own Active Job adapter, which is Solid Queue in
+  # Rails 8 production and needs a worker; nothing serves /error_dashboard.
+  describe "what the installer tells a new user" do
+    let(:output) do
+      original = $stdout
+      $stdout = StringIO.new
+      run_generator [ "--no-interactive" ]
+      $stdout.string
+    ensure
+      $stdout = original
+    end
+
+    let(:initializer) { File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb") }
+
+    it "never claims async logging needs no worker" do
+      text = output + initializer + described_class.class_options[:async_logging].description
+
+      expect(text).not_to include("no extra process needed")
+      expect(text).not_to include("no extra infrastructure needed")
+    end
+
+    it "says async logging runs on the app's Active Job adapter and needs a worker for RED's queues" do
+      expect(output).to include("config.active_job.queue_adapter")
+      expect(output).to include("default and error_notifications")
+      expect(initializer).to include("config.active_job.queue_adapter")
+    end
+
+    it "does not claim the dashboard is served at /error_dashboard" do
+      output
+
+      expect(File.read("#{destination_root}/config/routes.rb")).not_to include("/error_dashboard")
+    end
+  end
+
   describe "basic installation" do
     context "with default options (non-interactive)" do
       before do
