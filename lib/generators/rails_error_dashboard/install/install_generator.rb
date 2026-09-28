@@ -503,21 +503,22 @@ module RailsErrorDashboard
           else
             say "  3. Run: rails db:migrate:error_dashboard"
           end
-          say "  4. Update credentials in config/initializers/rails_error_dashboard.rb"
+          say "  4. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
           say "  5. Restart your Rails server"
           say "  6. Visit http://localhost:3000/red"
           say "  7. Verify: rails error_dashboard:verify"
         else
           say "  1. Run: rails db:migrate"
-          say "  2. Update credentials in config/initializers/rails_error_dashboard.rb"
+          say "  2. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
           say "  3. Restart your Rails server"
           say "  4. Visit http://localhost:3000/red"
         end
         say "Authentication:", :cyan
-        say "  Default: HTTP Basic Auth (gandalf/youshallnotpass)", :white
+        say "  Default: HTTP Basic Auth, gandalf/youshallnotpass in development and test only", :white
+        say "  Elsewhere: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD, or the app won't boot", :white
         say "  Devise/Warden: config.authenticate_with = -> { warden.authenticated? }", :white
         say "  Session-based: config.authenticate_with = -> { session[:admin] == true }", :white
-        say "  See: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#custom-authentication", :white
+        say "  See: https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#dashboard-credentials", :white
         say "\n"
         say "Issue Tracking (optional):", :cyan
         say "  Create a dedicated RED (Rails Error Dashboard) bot account on your platform:", :white

@@ -5,9 +5,12 @@ RailsErrorDashboard.configure do |config|
   # AUTHENTICATION (Always Required - Cannot Be Disabled)
   # ============================================================================
 
-  # Dashboard authentication credentials
-  # ⚠️ CHANGE THESE BEFORE PRODUCTION! ⚠️
-  # Authentication is ALWAYS enforced in ALL environments (production, development, test)
+  # Dashboard login (HTTP Basic Auth). Always enforced, in every environment.
+  # gandalf / youshallnotpass work in development and test only. Everywhere
+  # else, set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD in the
+  # environment, or the app refuses to boot. Don't replace the fallback values
+  # below with a real password: it would end up in source control.
+  # https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#dashboard-credentials
   config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
   config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
 
