@@ -427,7 +427,7 @@ The check runs every time the app boots in that environment, which includes `bin
 
 Two exceptions:
 
-- **Docker asset builds.** A build step has no secrets. When `SECRET_KEY_BASE_DUMMY=1` is set, the check is skipped. The Dockerfile that Rails 7.1+ generates already runs `SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile`. If yours precompiles without it, add it. Leaving the variable set at runtime doesn't reopen the default credentials, because the login still refuses them.
+- **Docker asset builds.** A build step has no secrets. When `SECRET_KEY_BASE_DUMMY=1` is set, the check is skipped. The Dockerfile that Rails 7.1+ generates already runs `SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile`. If yours precompiles without it, add it. Set it on that command only, never in the runtime environment: while it is set, RED skips its error subscriber and captures no errors at all. (It wouldn't reopen the default credentials, because the login still refuses them.)
 - **A deliberately public dashboard.** Setting `ERROR_DASHBOARD_PASSWORD=youshallnotpass` explicitly counts as a choice, and is allowed. That is how the public demo runs. Never do it for an app with real data.
 
 #### Patterns to avoid

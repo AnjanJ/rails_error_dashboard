@@ -375,7 +375,7 @@ RailsErrorDashboard::ConfigurationError: Rails Error Dashboard configuration is 
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 ```
 
-This skips the credential check for the build only. At runtime the login still refuses the default credentials.
+Set it on that command only, never in the runtime environment: while it is set, RED captures no errors at all. The login still refuses the default credentials either way.
 
 ### Authentication Not Working
 
