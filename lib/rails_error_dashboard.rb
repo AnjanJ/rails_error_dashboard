@@ -138,6 +138,8 @@ require "rails_error_dashboard/commands/flush_swallowed_exceptions"
 require "rails_error_dashboard/commands/flush_rack_attack_events"
 require "rails_error_dashboard/commands/scrub_invalid_encoding"
 require "rails_error_dashboard/commands/backfill_resolved_at"
+require "rails_error_dashboard/queries/uninstall_plan"
+require "rails_error_dashboard/commands/drop_all_tables"
 require "rails_error_dashboard/queries/errors_list"
 # Before the queries that use it: window volume is shared by dashboard and
 # analytics, and both would otherwise rescue a NameError into a silent zero.

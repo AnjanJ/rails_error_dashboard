@@ -5,6 +5,11 @@ module RailsErrorDashboard
     class UninstallGenerator < Rails::Generators::Base
       desc "Uninstalls Rails Error Dashboard and removes all associated files and data"
 
+      MIGRATION_GLOBS = [
+        "db/migrate/*rails_error_dashboard*.rb",
+        "db/error_dashboard_migrate/*rails_error_dashboard*.rb"
+      ].freeze
+
       class_option :keep_data, type: :boolean, default: false, desc: "Keep error data in database (don't drop tables)"
       class_option :skip_confirmation, type: :boolean, default: false, desc: "Skip confirmation prompts"
       class_option :manual_only, type: :boolean, default: false, desc: "Show manual instructions only, don't perform automated uninstall"
@@ -42,12 +47,15 @@ module RailsErrorDashboard
         say "  📖 Manual Uninstall Instructions", :cyan
         say "=" * 80
         say "\n"
-
-        say "Step 1: Remove from Gemfile", :yellow
-        say "  Open: Gemfile"
-        say "  Remove: gem 'rails_error_dashboard'"
-        say "  Run: bundle install"
+        say "Do these in order: the table drop needs the gem, so the Gemfile comes last.", :yellow
         say "\n"
+
+        if @components[:tables]
+          say "Step 1: Drop database tables (⚠️  DESTRUCTIVE - will delete all error data)", :yellow
+          say "  Run: bin/rails rails_error_dashboard:db:drop"
+          say "  It drops every RED table in foreign-key order, on the error database if you use one."
+          say "\n"
+        end
 
         if @components[:initializer]
           say "Step 2: Remove initializer", :yellow
@@ -58,33 +66,31 @@ module RailsErrorDashboard
         if @components[:route]
           say "Step 3: Remove route", :yellow
           say "  Open: config/routes.rb"
-          say "  Remove: mount RailsErrorDashboard::Engine => '/error_dashboard'"
+          say "  Remove the line: mount RailsErrorDashboard::Engine => ..."
           say "\n"
         end
 
         if @components[:migrations]
           say "Step 4: Remove migrations", :yellow
-          say "  Delete migration files from db/migrate/:"
           migration_files.each do |file|
-            say "    - #{File.basename(file)}", :white
+            say "    - #{file}", :white
           end
           say "\n"
         end
 
-        if @components[:tables]
-          say "Step 5: Drop database tables (⚠️  DESTRUCTIVE - will delete all error data)", :yellow
-          say "  Run: rails rails_error_dashboard:db:drop"
-          say "  Or manually in rails console:"
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_logs')", :white
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_occurrences')", :white
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_cascade_patterns')", :white
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_baselines')", :white
-          say "    ActiveRecord::Base.connection.execute('DROP TABLE rails_error_dashboard_error_comments')", :white
-          say "    ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_logs) rescue nil", :white
-          say "\n"
-        end
+        say "Step 5: Separate database only: remove its entry from config/database.yml", :yellow
+        say "\n"
 
-        say "Step 6: Clean up environment variables (optional)", :yellow
+        say "Step 6: Regenerate the schema file", :yellow
+        say "  Run: bin/rails db:schema:dump (otherwise db:schema:load recreates the tables)"
+        say "\n"
+
+        say "Step 7: Remove from Gemfile", :yellow
+        say "  Remove: gem 'rails_error_dashboard'"
+        say "  Run: bundle install"
+        say "\n"
+
+        say "Step 8: Clean up environment variables (optional)", :yellow
         say "  Remove from .env or environment:"
         say "    - ERROR_DASHBOARD_USER"
         say "    - ERROR_DASHBOARD_PASSWORD"
@@ -96,8 +102,7 @@ module RailsErrorDashboard
         say "    - DASHBOARD_BASE_URL"
         say "\n"
 
-        say "Step 7: Restart your application", :yellow
-        say "  Run: rails restart (or restart your server)"
+        say "Step 9: Restart your application", :yellow
         say "\n"
 
         say "=" * 80
@@ -165,6 +170,20 @@ module RailsErrorDashboard
         say "\n"
       end
 
+      # Before any file is removed: if the drop fails, the app still boots with
+      # its initializer and can reach the error database to try again.
+      def drop_database_tables
+        return if options[:manual_only]
+        return if options[:keep_data]
+        return unless @components[:tables]
+
+        say "  Dropping database tables...", :yellow
+        dropped = RailsErrorDashboard::Commands::DropAllTables.call(connection: drop_connection)
+        say "  ✓ Dropped #{dropped.size} database table(s)", :green
+      rescue => e
+        raise Thor::Error, "Could not drop RED's tables, so no files were removed: #{e.message}"
+      end
+
       def remove_initializer
         return if options[:manual_only]
         return unless @components[:initializer]
@@ -182,7 +201,7 @@ module RailsErrorDashboard
           say "  ✓ Removed route", :green
         rescue => e
           say "  ⚠️  Could not automatically remove route: #{e.message}", :yellow
-          say "  Please manually remove: mount RailsErrorDashboard::Engine => '/error_dashboard'", :yellow
+          say "  Please remove the mount RailsErrorDashboard::Engine line from config/routes.rb", :yellow
         end
       end
 
@@ -194,35 +213,6 @@ module RailsErrorDashboard
           remove_file file
         end
         say "  ✓ Removed #{migration_count} migration file(s)", :green
-      end
-
-      def drop_database_tables
-        return if options[:manual_only]
-        return if options[:keep_data]
-        return unless @components[:tables]
-
-        say "  Dropping database tables...", :yellow
-
-        # Drop tables in reverse order (to respect foreign keys)
-        tables_to_drop = [
-          "rails_error_dashboard_error_comments",
-          "rails_error_dashboard_error_occurrences",
-          "rails_error_dashboard_cascade_patterns",
-          "rails_error_dashboard_error_baselines",
-          "rails_error_dashboard_error_logs"
-        ]
-
-        dropped_count = 0
-        tables_to_drop.each do |table|
-          if ActiveRecord::Base.connection.table_exists?(table)
-            ActiveRecord::Base.connection.drop_table(table, if_exists: true)
-            dropped_count += 1
-          end
-        rescue => e
-          say "  ⚠️  Could not drop table #{table}: #{e.message}", :yellow
-        end
-
-        say "  ✓ Dropped #{dropped_count} database table(s)", :green
       end
 
       def show_completion_message
@@ -282,7 +272,7 @@ module RailsErrorDashboard
       end
 
       def migration_files
-        Dir.glob("db/migrate/*rails_error_dashboard*.rb")
+        Dir.glob(MIGRATION_GLOBS)
       end
 
       def migration_count
@@ -290,22 +280,26 @@ module RailsErrorDashboard
       end
 
       def tables_exist?
-        return false unless defined?(ActiveRecord::Base)
-        table_names.any? { |table| ActiveRecord::Base.connection.table_exists?(table) rescue false }
+        table_names.any?
       end
 
+      # The tables Queries::UninstallPlan finds on the error database, in drop
+      # order. Empty (with the reason shown) when that database can't be reached.
       def table_names
-        [
-          "rails_error_dashboard_error_logs",
-          "rails_error_dashboard_error_occurrences",
-          "rails_error_dashboard_cascade_patterns",
-          "rails_error_dashboard_error_baselines",
-          "rails_error_dashboard_error_comments"
-        ]
+        @table_names ||= begin
+          RailsErrorDashboard::Queries::UninstallPlan.call(drop_connection).map { |entry| entry[:table] }
+        rescue => e
+          say "  ⚠️  Could not inspect the error database: #{e.message}", :yellow
+          []
+        end
+      end
+
+      def drop_connection
+        RailsErrorDashboard::Commands::DropAllTables.connection
       end
 
       def table_count
-        table_names.count { |table| ActiveRecord::Base.connection.table_exists?(table) rescue false }
+        table_names.count
       end
 
       def gemfile_includes_gem?
