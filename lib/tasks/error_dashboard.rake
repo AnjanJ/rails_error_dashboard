@@ -189,6 +189,31 @@ namespace :error_dashboard do
       checks_passed += 1
     end
 
+    # 9. Solid Queue config. A section with workers and no dispatchers runs no
+    # dispatcher, so no delayed job ever runs, the app's own included; the
+    # retired rails_error_dashboard:solid_queue generator wrote exactly that.
+    # Checked whenever Solid Queue is loaded, not only when it is the current
+    # adapter: Rails 8 sets it in production only, and verify usually runs locally.
+    queue_check = RailsErrorDashboard::Services::SolidQueueConfigCheck
+    queue_config = queue_check.config_path(Rails.root)
+    if defined?(SolidQueue) && queue_config.exist?
+      print "  Solid Queue config... "
+      environments = queue_check.app_environments(Rails.root).presence || [ Rails.env.to_s ]
+      result = queue_check.call(queue_config, environments: environments)
+      if result[:skipped]
+        puts "SKIPPED (#{result[:skipped]})"
+        warnings += 1
+      elsif result[:problems].any?
+        puts "FAILED"
+        result[:problems].each { |problem| puts "    - #{problem}" }
+        puts "    Fix: replace it with Solid Queue's own template (bin/rails solid_queue:install)."
+        checks_failed += 1
+      else
+        puts "OK"
+        checks_passed += 1
+      end
+    end
+
     # Summary
     puts "\n" + "-" * 70
     puts "  Results: #{checks_passed} passed, #{checks_failed} failed, #{warnings} warnings"

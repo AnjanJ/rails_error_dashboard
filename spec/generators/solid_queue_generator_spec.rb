@@ -1,130 +1,103 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "rails/generators"
+require "generators/rails_error_dashboard/solid_queue/solid_queue_generator"
 
-RSpec.describe "Solid Queue Generator Template", type: :generator do
-  let(:template_path) do
-    File.expand_path("../../lib/generators/rails_error_dashboard/solid_queue/templates/queue.yml", __dir__)
-  end
+# The generator used to write a config/queue.yml with workers and no
+# dispatchers, which made Solid Queue start no dispatcher at all: no delayed
+# job ran, the host app's own included. It is retired: it writes nothing and
+# checks whatever config the app already has.
+RSpec.describe RailsErrorDashboard::Generators::SolidQueueGenerator, type: :generator do
+  include FileUtils
 
-  let(:config) { YAML.load_file(template_path) }
+  let(:destination_root) { File.expand_path("../../tmp/solid_queue_generator_test", __dir__) }
+  let(:fixtures) { File.expand_path("../fixtures/solid_queue", __dir__) }
+  let(:queue_yml) { File.join(destination_root, "config/queue.yml") }
 
-  it "template file exists" do
-    expect(File.exist?(template_path)).to be true
-  end
-
-  it "generates valid YAML configuration" do
-    expect(config).to be_a(Hash)
-    expect(config.keys).to include("development", "test", "production", "staging")
-  end
-
-  describe "development configuration" do
-    it "includes error_notifications queue" do
-      workers = config["development"]["workers"]
-      error_notifications_worker = workers.find { |w| w["queues"] == "error_notifications" }
-
-      expect(error_notifications_worker).to be_present
-      expect(error_notifications_worker["threads"]).to eq(2)
-      expect(error_notifications_worker["processes"]).to eq(1)
-      expect(error_notifications_worker["polling_interval"]).to eq(1)
-    end
-
-    it "includes default queue" do
-      workers = config["development"]["workers"]
-      default_worker = workers.find { |w| w["queues"] == "default" }
-
-      expect(default_worker).to be_present
-      expect(default_worker["threads"]).to eq(3)
-      expect(default_worker["processes"]).to eq(1)
-      expect(default_worker["polling_interval"]).to eq(1)
+  before do
+    mkdir_p("#{destination_root}/config/environments")
+    %w[development test production].each do |env|
+      File.write("#{destination_root}/config/environments/#{env}.rb", "")
     end
   end
 
-  describe "production configuration" do
-    it "has higher thread count for default queue" do
-      workers = config["production"]["workers"]
-      default_worker = workers.find { |w| w["queues"] == "default" }
+  after do
+    rm_rf(destination_root)
+  end
 
-      expect(default_worker["threads"]).to eq(5)
-      expect(default_worker["processes"]).to eq(2)
+  def run_generator(force: false)
+    generator = described_class.new([], { force: force }, destination_root: destination_root)
+    capture_stdout { generator.invoke_all }
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  it "does not create config/queue.yml" do
+    run_generator
+
+    expect(File.exist?(queue_yml)).to be false
+  end
+
+  it "says it is deprecated and that Solid Queue's own config covers RED's queues" do
+    output = run_generator
+
+    expect(output).to include("deprecated")
+    expect(output).to include("solid_queue:install")
+    expect(output).to include("bin/jobs")
+  end
+
+  it "points to Solid Queue's installer when the app has no config" do
+    output = run_generator
+
+    expect(output).to include("No config/queue.yml")
+  end
+
+  context "with the config the old generator wrote" do
+    before { cp(File.join(fixtures, "red_generator_queue.yml"), queue_yml) }
+
+    it "leaves the file untouched, even with --force" do
+      before_bytes = File.binread(queue_yml)
+
+      run_generator(force: true)
+
+      expect(File.binread(queue_yml)).to eq(before_bytes)
     end
 
-    it "has optimized polling interval" do
-      workers = config["production"]["workers"]
-      workers.each do |worker|
-        expect(worker["polling_interval"]).to eq(0.5)
+    it "reports the missing dispatcher for every environment the app has" do
+      output = run_generator
+
+      %w[development test production].each do |env|
+        expect(output).to match(/#{env}:.*no dispatcher/)
       end
-    end
-
-    it "includes both queues" do
-      workers = config["production"]["workers"]
-      queue_names = workers.map { |w| w["queues"] }
-
-      expect(queue_names).to include("error_notifications", "default")
+      expect(output).to include("Solid Queue's own template")
     end
   end
 
-  describe "test configuration" do
-    it "uses wildcard queue to process all queues" do
-      workers = config["test"]["workers"]
-      expect(workers.first["queues"]).to eq("*")
+  context "with Solid Queue's own config" do
+    before { cp(File.join(fixtures, "solid_queue_install_queue.yml"), queue_yml) }
+
+    # The old generator replaced this working file with its broken one.
+    it "leaves the file untouched, even with --force" do
+      before_bytes = File.binread(queue_yml)
+
+      run_generator(force: true)
+
+      expect(File.binread(queue_yml)).to eq(before_bytes)
     end
 
-    it "has minimal threads and processes" do
-      workers = config["test"]["workers"]
-      expect(workers.first["threads"]).to eq(1)
-      expect(workers.first["processes"]).to eq(1)
-    end
+    it "reports nothing wrong" do
+      output = run_generator
 
-    it "has fast polling interval for tests" do
-      workers = config["test"]["workers"]
-      expect(workers.first["polling_interval"]).to eq(0.1)
-    end
-  end
-
-  describe "staging configuration" do
-    it "includes both queues with moderate settings" do
-      workers = config["staging"]["workers"]
-
-      error_worker = workers.find { |w| w["queues"] == "error_notifications" }
-      expect(error_worker["threads"]).to eq(2)
-      expect(error_worker["processes"]).to eq(1)
-
-      default_worker = workers.find { |w| w["queues"] == "default" }
-      expect(default_worker["threads"]).to eq(3)
-      expect(default_worker["processes"]).to eq(1)
-    end
-
-    it "has optimized polling for staging" do
-      workers = config["staging"]["workers"]
-      workers.each do |worker|
-        expect(worker["polling_interval"]).to eq(0.5)
-      end
-    end
-  end
-
-  describe "all environments" do
-    it "include workers configuration" do
-      %w[development test production staging].each do |env|
-        expect(config[env]).to have_key("workers")
-        expect(config[env]["workers"]).to be_an(Array)
-        expect(config[env]["workers"]).not_to be_empty
-      end
-    end
-
-    it "have valid worker configurations" do
-      %w[development test production staging].each do |env|
-        config[env]["workers"].each do |worker|
-          expect(worker).to have_key("queues")
-          expect(worker).to have_key("threads")
-          expect(worker).to have_key("processes")
-          expect(worker).to have_key("polling_interval")
-
-          expect(worker["threads"]).to be > 0
-          expect(worker["processes"]).to be > 0
-          expect(worker["polling_interval"]).to be >= 0
-        end
-      end
+      expect(output).not_to include("no dispatcher")
+      expect(output).to include("processes RED's queues")
     end
   end
 end

@@ -19,26 +19,27 @@ Solid Queue is a **database-backed Active Job adapter** introduced in Rails 8.1.
 
 ## Quick Start
 
-### 1. Generate Configuration
+### 1. Install Solid Queue
 
-Use the generator to create a ready-to-use Solid Queue configuration:
+Rails 8.0+ apps already have it. Otherwise:
 
-```bash
-rails generate rails_error_dashboard:solid_queue
-```
-
-This creates `config/queue.yml` with optimized settings for all environments.
-
-### 2. Install Solid Queue
-
-If not already installed (Rails 8.1+ includes it by default):
-
-```bash
 ```bash
 bundle add solid_queue
 bin/rails solid_queue:install
-bin/rails db:migrate
+bin/rails db:prepare
 ```
+
+`solid_queue:install` writes `config/queue.yml` with a `"*"` worker and a dispatcher. That already processes RED's queues (`default` and `error_notifications`), so RED needs no config of its own.
+
+### 2. Check Your Config
+
+```bash
+bin/rails error_dashboard:verify
+```
+
+It reports "Solid Queue config... OK", or the problem in each environment.
+
+> **Ran `rails generate rails_error_dashboard:solid_queue` before 0.14.3?** It wrote a `config/queue.yml` with workers and no `dispatchers:`. With that file Solid Queue runs no dispatcher, so no delayed job ever runs: your app's own `retry_on wait:` and `perform_later(wait:)` included. Its workers also served only RED's two queues. Replace the file with Solid Queue's own template (`bin/rails solid_queue:install`). Since 0.14.3 the generator writes nothing; it only checks your config.
 
 ### 3. Configure ActiveJob Adapter
 
@@ -86,60 +87,35 @@ RailsErrorDashboard uses two queues:
 
 ### Environment-Specific Settings
 
-#### Development
+Keep Solid Queue's own structure. **Every environment section needs a `dispatchers:` block**: a section that lists `workers:` and no `dispatchers:` runs no dispatcher, so no delayed job or retry ever runs, your app's included. Keep a `"*"` worker so your app's other queues are processed too.
+
+If RED's notifications need their own threads, add a worker for `error_notifications` next to the `"*"` one:
+
 ```yaml
+default: &default
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+  workers:
+    - queues: "*"                     # every queue: your app's and RED's
+      threads: 3
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 0.1
+    - queues: error_notifications     # optional: dedicated threads for Slack, email and issue jobs
+      threads: 2
+      polling_interval: 0.5
+
 development:
-  workers:
-    - queues: error_notifications
-      threads: 2          # Moderate concurrency for API calls
-      processes: 1        # Single process (low resource usage)
-      polling_interval: 1 # Check for jobs every second
+  <<: *default
 
-    - queues: default
-      threads: 3          # Higher concurrency for DB operations
-      processes: 1
-      polling_interval: 1
-```
-
-**Why these settings?**
-- Low resource usage for local development
-- 1-second polling is responsive enough for dev work
-- 2-3 threads handle typical dev load
-
-#### Production
-```yaml
-production:
-  workers:
-    - queues: error_notifications
-      threads: 3          # More threads for external API calls
-      processes: 1        # Keep processes low (API rate limits)
-      polling_interval: 0.5
-
-    - queues: default
-      threads: 5          # Higher concurrency for DB writes
-      processes: 2        # Multiple processes for throughput
-      polling_interval: 0.5
-```
-
-**Why these settings?**
-- 0.5s polling for near-real-time processing
-- Multiple processes for horizontal scaling
-- More threads on `default` queue (DB operations scale better than API calls)
-
-#### Test
-```yaml
 test:
-  workers:
-    - queues: "*"       # Process all queues
-      threads: 1
-      processes: 1
-      polling_interval: 0.1  # Fast polling for quick test execution
+  <<: *default
+
+production:
+  <<: *default
 ```
 
-**Why these settings?**
-- Single thread/process (deterministic test execution)
-- Fast polling (tests complete quickly)
-- Wildcard queue (simplifies test setup)
+Run `bin/rails error_dashboard:verify` after editing: it checks every environment in the file.
 
 ## Performance Tuning
 
