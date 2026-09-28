@@ -18,12 +18,17 @@ module RailsErrorDashboard
   #     config.log_level = :error
   #   end
   module Logger
+    # The levels Configuration#validate! accepts: it reads this hash, so the two
+    # can't drift apart again (validate! once accepted :fatal while this hash
+    # lacked it, and every log call raised). RED emits nothing at :fatal, so it
+    # logs nothing, as with Ruby's Logger.
     LOG_LEVELS = {
       debug: 0,
       info: 1,
       warn: 2,
       error: 3,
-      silent: 4
+      fatal: 4,
+      silent: 5
     }.freeze
 
     class << self
@@ -89,8 +94,11 @@ module RailsErrorDashboard
       # @param level [Symbol] The log level to check (:debug, :info, :warn, :error)
       # @return [Boolean]
       def log_level_enabled?(level)
-        config_level = RailsErrorDashboard.configuration.log_level || :silent
-        LOG_LEVELS[level] >= LOG_LEVELS[config_level]
+        config_level = RailsErrorDashboard.configuration.log_level.to_s.to_sym
+        LOG_LEVELS.fetch(level) >= LOG_LEVELS.fetch(config_level, LOG_LEVELS[:silent])
+      rescue StandardError
+        # The logger runs inside rescue blocks on the capture path; it must never raise.
+        false
       end
 
       # Format message with gem prefix

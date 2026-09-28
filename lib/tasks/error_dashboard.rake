@@ -177,8 +177,12 @@ namespace :error_dashboard do
       if config.refuse_default_credentials?
         puts "WARNING - #{label} outside development and test!"
         checks_failed += 1
+      elsif problem == :blank
+        # The login denies everyone on a blank credential, in every environment.
+        puts "WARNING - #{label}: every login is denied"
+        warnings += 1
       else
-        puts "OK (#{label} - change before production)"
+        puts "OK (#{label} - set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD before deploying)"
         warnings += 1
       end
     elsif config.dashboard_password == RailsErrorDashboard::Configuration::DEFAULT_DASHBOARD_PASSWORD
@@ -187,6 +191,31 @@ namespace :error_dashboard do
     else
       puts "OK (custom credentials)"
       checks_passed += 1
+    end
+
+    # 9. Solid Queue config. A section with workers and no dispatchers runs no
+    # dispatcher, so no delayed job ever runs, the app's own included; the
+    # retired rails_error_dashboard:solid_queue generator wrote exactly that.
+    # Checked whenever Solid Queue is loaded, not only when it is the current
+    # adapter: Rails 8 sets it in production only, and verify usually runs locally.
+    queue_check = RailsErrorDashboard::Services::SolidQueueConfigCheck
+    queue_config = queue_check.config_path(Rails.root)
+    if defined?(SolidQueue) && queue_config.exist?
+      print "  Solid Queue config... "
+      environments = queue_check.app_environments(Rails.root).presence || [ Rails.env.to_s ]
+      result = queue_check.call(queue_config, environments: environments)
+      if result[:skipped]
+        puts "SKIPPED (#{result[:skipped]})"
+        warnings += 1
+      elsif result[:problems].any?
+        puts "FAILED"
+        result[:problems].each { |problem| puts "    - #{problem}" }
+        puts "    Fix: replace it with Solid Queue's own template (bin/rails solid_queue:install)."
+        checks_failed += 1
+      else
+        puts "OK"
+        checks_passed += 1
+      end
     end
 
     # Summary
@@ -453,7 +482,7 @@ namespace :error_dashboard do
 
     # Confirm before proceeding
     print "\nProceed with deletion? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Cleanup cancelled"
@@ -463,7 +492,9 @@ namespace :error_dashboard do
 
     puts "\nDeleting errors..."
     start_time = Time.current
-    deleted = scope.delete_all
+    # Dependents first, in batches: occurrences, comments and cascade patterns
+    # hold foreign keys to the log, so a plain delete_all failed on them.
+    deleted = RailsErrorDashboard::RetentionCleanupJob.delete_with_dependents(scope)
     # delete_all skips callbacks, and the stat cards are cached.
     RailsErrorDashboard::Services::AnalyticsCacheManager.clear
     elapsed = (Time.current - start_time).round(2)

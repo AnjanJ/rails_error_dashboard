@@ -33,6 +33,32 @@ module RailsErrorDashboard
       )
     end
 
+    # Deletes error logs and everything that references them: dependents first,
+    # all in batches. Occurrences, comments and cascade patterns hold foreign
+    # keys to the log, so deleting the logs first fails, and one unbounded
+    # DELETE would lock the table. Public because error_dashboard:cleanup_resolved
+    # deletes the same way.
+    #
+    # @param scope [ActiveRecord::Relation] the ErrorLog rows to delete
+    # @return [Integer] number of error logs deleted
+    def self.delete_with_dependents(scope)
+      ids = scope.select(:id)
+
+      ErrorOccurrence.where(error_log_id: ids).in_batches(of: 1000).delete_all
+      # Hour buckets for storm-shed events. Listed explicitly because delete_all
+      # does not fire the has_many :dependent callback on ErrorLog -- without
+      # this line the buckets outlive the group they describe, forever.
+      EventCount.where(error_log_id: ids).in_batches(of: 1000).delete_all if EventCount.table_exists?
+      ErrorComment.where(error_log_id: ids).in_batches(of: 1000).delete_all
+      CascadePattern.where(parent_error_id: ids)
+                    .or(CascadePattern.where(child_error_id: ids))
+                    .in_batches(of: 1000).delete_all
+
+      deleted = 0
+      scope.in_batches(of: 1000) { |batch| deleted += batch.delete_all }
+      deleted
+    end
+
     # @return [Integer] number of errors deleted
     def perform
       retention_days = RailsErrorDashboard.configuration.retention_days
@@ -52,29 +78,7 @@ module RailsErrorDashboard
       expired_scope = self.class.expired_scope(cutoff)
       return 0 if expired_scope.none?
 
-      deleted_count = 0
-
-      # Delete dependents first, then errors — all in batches to prevent table locks
-      expired_ids_scope = expired_scope.select(:id)
-
-      # Batch delete dependent records (occurrences, comments, cascade patterns)
-      ErrorOccurrence.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
-      # Hour buckets for storm-shed events. Listed explicitly because this job
-      # deletes with delete_all, which does not fire the has_many :dependent
-      # callback on ErrorLog -- without this line the buckets outlive the group
-      # they describe, forever. The migration's own comment promised this
-      # pruning before the code existed.
-      EventCount.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all if EventCount.table_exists?
-      ErrorComment.where(error_log_id: expired_ids_scope).in_batches(of: 1000).delete_all
-      CascadePattern.where(parent_error_id: expired_ids_scope)
-                    .or(CascadePattern.where(child_error_id: expired_ids_scope))
-                    .in_batches(of: 1000).delete_all
-
-      # Now batch delete the error logs themselves
-      expired_scope.in_batches(of: 1000) do |batch|
-        batch_size = batch.delete_all
-        deleted_count += batch_size
-      end
+      deleted_count = self.class.delete_with_dependents(expired_scope)
 
       # delete_all skips callbacks, and the stat cards are cached.
       Services::AnalyticsCacheManager.clear if deleted_count > 0

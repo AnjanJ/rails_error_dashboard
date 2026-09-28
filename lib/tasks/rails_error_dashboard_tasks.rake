@@ -16,75 +16,69 @@ namespace :rails_error_dashboard do
       puts "=" * 80
       puts "\n"
 
-      # List tables that will be dropped
-      tables_to_drop = [
-        "rails_error_dashboard_error_comments",
-        "rails_error_dashboard_error_occurrences",
-        "rails_error_dashboard_cascade_patterns",
-        "rails_error_dashboard_error_baselines",
-        "rails_error_dashboard_error_logs"
-      ]
+      # The connection RED's models use: the separate or shared error database
+      # when there is one. Raises if the engine fell back to the primary one.
+      connection = RailsErrorDashboard::Commands::DropAllTables.connection
+      database = connection.pool.db_config.name
+      plan = RailsErrorDashboard::Queries::UninstallPlan.call(connection)
 
-      existing_tables = tables_to_drop.select do |table|
-        ActiveRecord::Base.connection.table_exists?(table)
-      end
-
-      if existing_tables.empty?
-        puts "No Rails Error Dashboard tables found in the database."
+      if plan.empty?
+        puts "No Rails Error Dashboard tables found in the '#{database}' database."
         puts "\n"
-        exit 0
+        next
       end
 
-      puts "The following tables will be PERMANENTLY DELETED:"
-      existing_tables.each do |table|
-        record_count = ActiveRecord::Base.connection.execute("SELECT COUNT(*) FROM #{table}").first.values.first rescue 0
-        puts "  • #{table} (#{record_count} records)"
+      puts "The following tables in the '#{database}' database will be PERMANENTLY DELETED:"
+      plan.each do |entry|
+        puts "  • #{entry[:table]} (#{entry[:rows] || '?'} records)"
       end
       puts "\n"
+
+      if plan.any? { |entry| entry[:table] == "rails_error_dashboard_applications" }
+        names = connection.select_values("SELECT name FROM #{connection.quote_table_name('rails_error_dashboard_applications')} ORDER BY name")
+        if names.size > 1
+          puts "⚠️  This database holds errors for #{names.size} applications, and ALL of them will be deleted:"
+          names.each { |name| puts "  • #{name}" }
+          puts "\n"
+        end
+      end
+
       puts "⚠️  This action CANNOT be undone!"
       puts "\n"
 
-      # Ask for confirmation
       print "Type 'DELETE ALL DATA' to confirm: "
-      confirmation = $stdin.gets.chomp
+      confirmation = $stdin.gets.to_s.chomp
 
       if confirmation != "DELETE ALL DATA"
         puts "\n"
         puts "Cancelled. No tables were dropped."
         puts "\n"
-        exit 0
+        next
       end
 
       puts "\n"
       puts "Dropping tables..."
-
-      # Drop tables in reverse order (respects foreign keys)
-      dropped_count = 0
-      existing_tables.reverse.each do |table|
-        begin
-          ActiveRecord::Base.connection.drop_table(table, if_exists: true)
-          puts "  ✓ Dropped #{table}"
-          dropped_count += 1
-        rescue => e
-          puts "  ✗ Failed to drop #{table}: #{e.message}"
-        end
-      end
+      dropped = RailsErrorDashboard::Commands::DropAllTables.call(connection: connection)
+      dropped.each { |table| puts "  ✓ Dropped #{table}" }
 
       puts "\n"
       puts "=" * 80
-      puts "  ✅ Successfully dropped #{dropped_count} table(s)"
+      puts "  ✅ Successfully dropped #{dropped.size} table(s)"
       puts "=" * 80
       puts "\n"
       puts "Next steps:"
-      puts "  1. Remove gem 'rails_error_dashboard' from Gemfile"
-      puts "  2. Run: bundle install"
-      puts "  3. Remove initializer: config/initializers/rails_error_dashboard.rb"
-      puts "  4. Remove route from config/routes.rb"
-      puts "  5. Delete migration files: db/migrate/*rails_error_dashboard*.rb"
-      puts "  6. Restart your Rails server"
+      puts "  1. Remove the initializer: config/initializers/rails_error_dashboard.rb"
+      puts "  2. Remove the route from config/routes.rb (mount RailsErrorDashboard::Engine)"
+      puts "  3. Delete RED's migrations: db/migrate/*rails_error_dashboard*.rb"
+      puts "     (and db/error_dashboard_migrate/ with a separate database)"
+      puts "  4. Separate database: remove its entry from config/database.yml"
+      puts "  5. Regenerate the schema file: bin/rails db:schema:dump"
+      puts "     (otherwise db:schema:load recreates these tables)"
+      puts "  6. Remove gem 'rails_error_dashboard' from the Gemfile and run: bundle install"
+      puts "  7. Restart your Rails server"
       puts "\n"
-      puts "Or use the automated uninstaller:"
-      puts "  rails generate rails_error_dashboard:uninstall"
+      puts "Or use the automated uninstaller, before removing the gem:"
+      puts "  bin/rails generate rails_error_dashboard:uninstall"
       puts "\n"
     end
   end

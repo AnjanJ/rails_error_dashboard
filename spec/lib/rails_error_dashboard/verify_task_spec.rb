@@ -128,6 +128,17 @@ RSpec.describe "error_dashboard:verify rake task" do
       expect(output).to include("blank credentials")
     end
 
+    # It used to say "OK (blank credentials - change before production)" while
+    # every login was being denied.
+    it "warns that a blank credential denies every login in development and test" do
+      RailsErrorDashboard.configuration.dashboard_username = "custom_user"
+      RailsErrorDashboard.configuration.dashboard_password = ""
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("WARNING - blank credentials: every login is denied")
+    end
+
     it "fails the check on the published password outside development and test" do
       RailsErrorDashboard.configuration.dashboard_username = "custom_user"
       RailsErrorDashboard.configuration.dashboard_password = "youshallnotpass"
@@ -230,6 +241,62 @@ RSpec.describe "error_dashboard:verify rake task" do
         output = capture_stdout { task.invoke }
         expect(output).to include("SEPARATE")
       end
+    end
+  end
+
+  # A config/queue.yml with workers and no dispatchers runs no dispatcher, so no
+  # delayed job runs. The retired rails_error_dashboard:solid_queue generator
+  # wrote one, and verify is how existing installs find out. It checks whenever
+  # Solid Queue is loaded, not only when it is the current adapter: Rails 8 sets
+  # :solid_queue in production only, and verify is usually run locally (this
+  # suite's adapter is :test).
+  describe "Solid Queue config check" do
+    let(:fixtures) { File.expand_path("../../fixtures/solid_queue", __dir__) }
+    let(:check) { RailsErrorDashboard::Services::SolidQueueConfigCheck }
+
+    def with_config(name)
+      allow(check).to receive(:config_path).and_return(Pathname(File.join(fixtures, name)))
+    end
+
+    context "when Solid Queue is loaded" do
+      before { stub_const("SolidQueue", Module.new) }
+
+      it "fails the config the old generator wrote, in every environment, whatever the current adapter" do
+        with_config("red_generator_queue.yml")
+        allow(check).to receive(:app_environments).and_return(%w[development production])
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).to include("Solid Queue config... FAILED")
+        expect(output).to match(/development: .*no dispatcher/)
+        expect(output).to match(/production: .*no dispatcher/)
+        expect(output).to include("Solid Queue's own template")
+      end
+
+      it "passes Solid Queue's own config" do
+        with_config("solid_queue_install_queue.yml")
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).to include("Solid Queue config... OK")
+      end
+
+      it "says nothing when the app has no config file" do
+        with_config("does_not_exist.yml")
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).not_to include("Solid Queue config")
+      end
+    end
+
+    it "says nothing when Solid Queue is not loaded" do
+      hide_const("SolidQueue") if defined?(SolidQueue)
+      with_config("red_generator_queue.yml")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).not_to include("Solid Queue config")
     end
   end
 

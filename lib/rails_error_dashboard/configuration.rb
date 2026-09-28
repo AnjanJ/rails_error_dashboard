@@ -495,7 +495,7 @@ module RailsErrorDashboard
 
       # Internal logging defaults - SILENT by default
       @enable_internal_logging = false  # Opt-in for debugging
-      @log_level = :silent  # Silent by default, use :debug, :info, :warn, :error, or :silent
+      @log_level = :silent  # Silent by default; see Logger::LOG_LEVELS for the levels
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet
@@ -552,6 +552,14 @@ module RailsErrorDashboard
           "the dashboard password is the published default and was not set by ERROR_DASHBOARD_PASSWORD"
         end
         errors << "Default or blank credentials cannot be used in #{Rails.env}: #{reason}. Only development and test may run on the built-in credentials. Set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD environment variables and make sure the initializer does not overwrite them, or use authenticate_with for custom auth."
+      end
+
+      # In development the app boots on a blank credential, and the login then
+      # denies everyone: say so, or the developer is locked out with no clue
+      # why. Development only, because a test run boots on every CI job.
+      if default_credentials? && credentials_problem == :blank &&
+         defined?(Rails) && Rails.respond_to?(:env) && Rails.env.development?
+        warnings.concat(blank_credential_warnings)
       end
 
       # Validate sampling_rate (must be between 0.0 and 1.0)
@@ -786,7 +794,9 @@ module RailsErrorDashboard
 
       # Validate log level (must be valid symbol)
       if log_level
-        valid_log_levels = %i[debug info warn error fatal silent]
+        # Referenced here, not as a class-body constant: this file loads before
+        # logger.rb, and a bare Logger in the class body would be ::Logger.
+        valid_log_levels = RailsErrorDashboard::Logger::LOG_LEVELS.keys
         unless valid_log_levels.include?(log_level)
           errors << "log_level must be one of #{valid_log_levels.inspect} (got: #{log_level.inspect})"
         end
@@ -994,6 +1004,27 @@ module RailsErrorDashboard
       return false unless defined?(Rails) && Rails.respond_to?(:env)
 
       !Rails.env.development? && !Rails.env.test?
+    end
+
+    # One warning per blank credential, naming where the blank came from: an
+    # environment variable that is set but empty, or the initializer.
+    #
+    # @return [Array<String>]
+    private def blank_credential_warnings
+      {
+        "ERROR_DASHBOARD_USER" => [ :dashboard_username, dashboard_username ],
+        "ERROR_DASHBOARD_PASSWORD" => [ :dashboard_password, dashboard_password ]
+      }.filter_map do |variable, (setting, value)|
+        next unless self.class.blank_credential?(value)
+
+        if ENV.key?(variable) && ENV[variable].to_s == value.to_s
+          "#{variable} is set but empty, so every dashboard login will be denied. " \
+            "Unset it to use the development default, or give it a value."
+        else
+          "config.#{setting} is blank, so every dashboard login will be denied. " \
+            "Remove that line from the initializer to use the development default, or give it a value."
+        end
+      end
     end
 
     # Resolve the effective issue tracker provider (auto-detect from git_repository_url).

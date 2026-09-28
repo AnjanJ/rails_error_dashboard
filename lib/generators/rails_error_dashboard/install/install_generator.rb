@@ -15,7 +15,7 @@ module RailsErrorDashboard
       class_option :pagerduty, type: :boolean, default: false, desc: "Enable PagerDuty notifications"
       class_option :webhooks, type: :boolean, default: false, desc: "Enable webhook notifications"
       # Performance options
-      class_option :async_logging, type: :boolean, default: true, desc: "Enable async error logging (default: true, uses Rails :async adapter — no extra infrastructure needed)"
+      class_option :async_logging, type: :boolean, default: true, desc: "Enable async error logging (default: true; jobs run on your app's Active Job adapter, so production needs a worker)"
       class_option :error_sampling, type: :boolean, default: false, desc: "Enable error sampling (reduce volume)"
       class_option :separate_database, type: :boolean, default: false, desc: "Use separate database for errors"
       class_option :database, type: :string, default: nil, desc: "Database name to use for errors (e.g., 'error_dashboard')"
@@ -383,7 +383,7 @@ module RailsErrorDashboard
           return
         end
 
-        route "mount RailsErrorDashboard::Engine => '/red'  # RED (Rails Error Dashboard) — also works at /error_dashboard"
+        route "mount RailsErrorDashboard::Engine => '/red'  # RED (Rails Error Dashboard)"
       end
 
       def show_feature_summary
@@ -400,7 +400,7 @@ module RailsErrorDashboard
         say "  ✓ Dashboard UI", :green
         say "  ✓ Real-time Updates", :green
         say "  ✓ Analytics", :green
-        say "  ✓ Async Logging (Rails :async adapter — no extra infrastructure needed)", :green
+        say "  ✓ Async Logging (runs on your app's Active Job adapter)", :green
 
         # Count optional features enabled
         enabled_count = 0
@@ -477,14 +477,11 @@ module RailsErrorDashboard
         say "  → Set PAGERDUTY_INTEGRATION_KEY in .env", :yellow if @enable_pagerduty
         say "  → Set WEBHOOK_URLS in .env", :yellow if @enable_webhooks
         if @enable_async_logging
-          # Check which async adapter is in use — only warn about external workers when needed
-          async_section = File.exist?(File.join(destination_root, "config/initializers/rails_error_dashboard.rb")) &&
-                          File.read(File.join(destination_root, "config/initializers/rails_error_dashboard.rb"))
-          if async_section && (async_section.include?("async_adapter = :sidekiq") || async_section.include?("async_adapter = :solid_queue"))
-            say "  → Ensure your background worker (Sidekiq/SolidQueue) is running for async logging", :yellow
-          else
-            say "  ✓ Async logging uses Rails :async adapter — no extra process needed", :green
-          end
+          # RED's jobs run on the app's own Active Job adapter; async_adapter only
+          # feeds validation and the Settings page. Rails 8 production uses Solid
+          # Queue, which needs a worker, so don't promise that none is needed.
+          say "  → Async logging enqueues on your app's config.active_job.queue_adapter.", :yellow
+          say "    Run a worker for the default and error_notifications queues, or set config.async_logging = false.", :yellow
         end
 
         # Database-specific instructions
@@ -550,7 +547,7 @@ module RailsErrorDashboard
 
       def build_quick_defaults
         {
-          # Async ON (built-in Rails :async adapter, zero infrastructure)
+          # Async ON (runs on the app's Active Job adapter)
           async_logging: true,
           # All analytics ON — run at query/background time, zero request-path overhead
           baseline_alerts: true,

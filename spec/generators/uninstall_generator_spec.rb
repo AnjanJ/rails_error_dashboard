@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "rails/generators"
 require "generators/rails_error_dashboard/uninstall/uninstall_generator"
 
 RSpec.describe RailsErrorDashboard::Generators::UninstallGenerator, type: :generator do
@@ -48,14 +49,14 @@ RSpec.describe RailsErrorDashboard::Generators::UninstallGenerator, type: :gener
 
     describe "#migrations_exist?" do
       it "returns true when migration files exist" do
-        allow(Dir).to receive(:glob).with("db/migrate/*rails_error_dashboard*.rb").and_return(
+        allow(Dir).to receive(:glob).with(described_class::MIGRATION_GLOBS).and_return(
           [ "db/migrate/20251224_create_rails_error_dashboard_error_logs.rb" ]
         )
         expect(generator.send(:migrations_exist?)).to be true
       end
 
       it "returns false when no migration files exist" do
-        allow(Dir).to receive(:glob).with("db/migrate/*rails_error_dashboard*.rb").and_return([])
+        allow(Dir).to receive(:glob).with(described_class::MIGRATION_GLOBS).and_return([])
         expect(generator.send(:migrations_exist?)).to be false
       end
     end
@@ -78,13 +79,58 @@ RSpec.describe RailsErrorDashboard::Generators::UninstallGenerator, type: :gener
   describe "table names" do
     let(:generator) { described_class.new }
 
-    it "returns all expected table names" do
-      table_names = generator.send(:table_names)
-      expect(table_names).to include("rails_error_dashboard_error_logs")
-      expect(table_names).to include("rails_error_dashboard_error_occurrences")
-      expect(table_names).to include("rails_error_dashboard_cascade_patterns")
-      expect(table_names).to include("rails_error_dashboard_error_baselines")
-      expect(table_names).to include("rails_error_dashboard_error_comments")
+    # The generator used to know 5 of the 13 tables.
+    it "lists every RED table on the error database" do
+      expect(generator.send(:table_names)).to match_array(red_tables)
     end
+
+    it "shows why, and lists nothing, when the error database can't be reached" do
+      allow(RailsErrorDashboard::Commands::DropAllTables).to receive(:connection)
+        .and_raise(RailsErrorDashboard::Commands::DropAllTables::Error, "no 'error_dashboard' entry")
+
+      output = capture_stdout { expect(generator.send(:table_names)).to eq([]) }
+
+      expect(output).to include("no 'error_dashboard' entry")
+    end
+  end
+
+  describe "dropping the tables" do
+    let(:generator) { described_class.new([], {}, {}) }
+
+    before { generator.instance_variable_set(:@components, { tables: true }) }
+
+    # Thor runs a generator's public methods in the order they are defined.
+    it "drops the tables before it removes any file" do
+      order = described_class.all_commands.keys
+
+      %w[remove_initializer remove_route remove_migrations].each do |removal|
+        expect(order.index("drop_database_tables")).to be < order.index(removal)
+      end
+    end
+
+    it "drops through DropAllTables on the error database" do
+      connection = RailsErrorDashboard::ErrorLogsRecord.connection
+      allow(RailsErrorDashboard::Commands::DropAllTables).to receive(:call).and_return(%w[a b])
+
+      capture_stdout { generator.drop_database_tables }
+
+      expect(RailsErrorDashboard::Commands::DropAllTables).to have_received(:call).with(connection: connection)
+    end
+
+    it "stops the uninstall when the drop fails, instead of reporting success" do
+      allow(RailsErrorDashboard::Commands::DropAllTables).to receive(:call).and_raise(ActiveRecord::StatementInvalid, "FOREIGN KEY constraint failed")
+
+      expect { capture_stdout { generator.drop_database_tables } }
+        .to raise_error(Thor::Error, /no files were removed.*FOREIGN KEY/)
+    end
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
   end
 end
