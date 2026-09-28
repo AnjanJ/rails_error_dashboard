@@ -36,15 +36,7 @@ The dashboard supports HTTP Basic Authentication:
 curl -u username:password https://your-app.com/error_dashboard/errors
 ```
 
-Configure credentials in your initializer:
-
-```ruby
-RailsErrorDashboard.configure do |config|
-  # Authentication is always required (cannot be disabled)
-  config.dashboard_username = "admin"
-  config.dashboard_password = "secure_password"
-end
-```
+Use the dashboard's credentials, `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD`. They must be set in every environment except development and test. See [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials). If you configure `authenticate_with` instead, these endpoints use it too.
 
 ## Rate Limiting
 

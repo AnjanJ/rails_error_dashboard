@@ -181,7 +181,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-**Important**: Change the default username and password before deploying to production!
+**Before you deploy.** `gandalf` / `youshallnotpass` work in development and test only. In every other environment (production, staging, or any other name) the app refuses to boot on them. Set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` where the app runs. You don't need to edit the initializer, because the gem reads both variables itself. See [Dashboard Credentials](guides/CONFIGURATION.md#dashboard-credentials) for details, including Docker builds and Rails credentials.
 
 **Using Devise or another auth system?** Replace HTTP Basic Auth with a lambda:
 
@@ -320,11 +320,12 @@ end
 
 ### "Authentication not working"
 
-**Using HTTP Basic Auth?** Verify credentials in `config/initializers/rails_error_dashboard.rb`:
+**Using HTTP Basic Auth?** Check the values the app actually uses, in a Rails console:
 ```ruby
-config.dashboard_username = "admin"
-config.dashboard_password = "your_password"
+RailsErrorDashboard.configuration.dashboard_username
+RailsErrorDashboard.configuration.dashboard_password
 ```
+A blank value denies every login, in development too. If the app refuses to boot outside development and test, see [Dashboard Credentials](guides/CONFIGURATION.md#dashboard-credentials).
 
 **Using custom auth (Devise/Warden)?** Verify your lambda works:
 ```ruby

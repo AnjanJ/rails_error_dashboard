@@ -635,9 +635,9 @@ The installer guides you through optional feature selection — notifications, p
 http://localhost:3000/red
 ```
 
-Default credentials: `gandalf` / `youshallnotpass`
+Default credentials: `gandalf` / `youshallnotpass`, for development and test only.
 
-**Change these before production!** Edit `config/initializers/rails_error_dashboard.rb`
+**Before you deploy anywhere else**, set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` in that environment. Outside development and test, the app refuses to boot on the defaults. See [Dashboard Credentials](docs/guides/CONFIGURATION.md#dashboard-credentials).
 
 ### 4. Test it out
 
@@ -654,11 +654,8 @@ raise "Test error from Rails Error Dashboard!"
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Authentication
-  config.dashboard_username = ENV.fetch('ERROR_DASHBOARD_USER', 'gandalf')
-  config.dashboard_password = ENV.fetch('ERROR_DASHBOARD_PASSWORD', 'youshallnotpass')
-
-  # Or use your existing auth (Devise, Warden, etc.):
+  # Dashboard login: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD outside
+  # development and test (the gem reads them itself). Or use your existing auth:
   # config.authenticate_with = -> { warden.authenticated? }
 
   # Optional features — enable as needed

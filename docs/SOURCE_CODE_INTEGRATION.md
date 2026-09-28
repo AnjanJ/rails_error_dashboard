@@ -407,9 +407,8 @@ Optimize for production use with performance and security settings.
 ```ruby
 # config/initializers/rails_error_dashboard.rb
 RailsErrorDashboard.configure do |config|
-  # Core authentication (always required)
-  config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "admin")
-  config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD")
+  # Dashboard credentials come from the ERROR_DASHBOARD_USER and
+  # ERROR_DASHBOARD_PASSWORD environment variables. Don't set them here.
 
   # ═══════════════════════════════════════════════════════════
   # SOURCE CODE INTEGRATION
@@ -443,8 +442,6 @@ end
 **Option A: .env file (for development)**
 ```bash
 # .env
-ERROR_DASHBOARD_USER=admin
-ERROR_DASHBOARD_PASSWORD=super_secret_password
 GIT_REPOSITORY_URL=https://github.com/myorg/myapp
 GIT_SHA=abc123def456  # Set by deployment script
 ```
