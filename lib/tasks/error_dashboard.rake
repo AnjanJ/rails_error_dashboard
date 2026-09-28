@@ -478,7 +478,7 @@ namespace :error_dashboard do
 
     # Confirm before proceeding
     print "\nProceed with deletion? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Cleanup cancelled"
@@ -488,7 +488,9 @@ namespace :error_dashboard do
 
     puts "\nDeleting errors..."
     start_time = Time.current
-    deleted = scope.delete_all
+    # Dependents first, in batches: occurrences, comments and cascade patterns
+    # hold foreign keys to the log, so a plain delete_all failed on them.
+    deleted = RailsErrorDashboard::RetentionCleanupJob.delete_with_dependents(scope)
     # delete_all skips callbacks, and the stat cards are cached.
     RailsErrorDashboard::Services::AnalyticsCacheManager.clear
     elapsed = (Time.current - start_time).round(2)
