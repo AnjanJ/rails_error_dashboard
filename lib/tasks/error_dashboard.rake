@@ -210,7 +210,7 @@ namespace :error_dashboard do
       elsif result[:problems].any?
         puts "FAILED"
         result[:problems].each { |problem| puts "    - #{problem}" }
-        puts "    Fix: replace it with Solid Queue's own template (bin/rails solid_queue:install)."
+        queue_check::FIX.each { |line| puts "    #{line}" }
         checks_failed += 1
       else
         puts "OK"

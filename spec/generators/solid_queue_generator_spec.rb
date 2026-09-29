@@ -46,18 +46,22 @@ RSpec.describe RailsErrorDashboard::Generators::SolidQueueGenerator, type: :gene
     expect(File.exist?(queue_yml)).to be false
   end
 
-  it "says it is deprecated and that Solid Queue's own config covers RED's queues" do
+  it "says it is deprecated and how to run RED's jobs" do
     output = run_generator
 
     expect(output).to include("deprecated")
-    expect(output).to include("solid_queue:install")
     expect(output).to include("bin/jobs")
   end
 
-  it "points to Solid Queue's installer when the app has no config" do
+  # With no config file, Solid Queue runs its defaults: a "*" worker and a
+  # dispatcher. Its installer is not the fix, and on an app that already
+  # uses Solid Queue it rewrites production.rb (Solid Queue 1.7.0).
+  it "says Solid Queue runs its defaults when the app has no config" do
     output = run_generator
 
     expect(output).to include("No config/queue.yml")
+    expect(output).to include("defaults")
+    expect(output).not_to include("solid_queue:install")
   end
 
   context "with the config the old generator wrote" do
@@ -77,7 +81,16 @@ RSpec.describe RailsErrorDashboard::Generators::SolidQueueGenerator, type: :gene
       %w[development test production].each do |env|
         expect(output).to match(/#{env}:.*no dispatcher/)
       end
-      expect(output).to include("Solid Queue's own template")
+    end
+
+    # The people who see this fix are the ones the old generator broke, and
+    # they already use Solid Queue: its installer would rewrite production.rb.
+    it "gives a fix that edits the file, not one that re-runs Solid Queue's installer" do
+      output = run_generator
+
+      expect(output).not_to include("solid_queue:install")
+      expect(output).to include("dispatchers:")
+      expect(output).to include(RailsErrorDashboard::Services::SolidQueueConfigCheck::GUIDE_URL)
     end
   end
 
@@ -98,6 +111,7 @@ RSpec.describe RailsErrorDashboard::Generators::SolidQueueGenerator, type: :gene
 
       expect(output).not_to include("no dispatcher")
       expect(output).to include("processes RED's queues")
+      expect(output).not_to include("solid_queue:install")
     end
   end
 end
