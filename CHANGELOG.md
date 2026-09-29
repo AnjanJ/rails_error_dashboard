@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.2...rails_error_dashboard/v0.14.3) (2026-09-29)
+
+
+### 🐛 Bug Fixes
+
+* **auth:** warn in development when a blank credential denies every login ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **cleanup:** delete dependents first in error_dashboard:cleanup_resolved ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **generators:** retire the Solid Queue generator, which wrote a queue.yml with no dispatcher ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **install:** stop claiming async logging needs no worker ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **logger:** accept log_level :fatal and never raise from the internal logger ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **solid_queue:** stop telling apps that use Solid Queue to re-run its installer ([3b6070a](https://github.com/AnjanJ/rails_error_dashboard/commit/3b6070a593babdcce0f48cac4da5607d55b0f0df))
+* **uninstall:** drop every RED table in foreign-key order, on the error database ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **uninstall:** stop when the error database can't be reached ([#264](https://github.com/AnjanJ/rails_error_dashboard/issues/264)) ([d953f2d](https://github.com/AnjanJ/rails_error_dashboard/commit/d953f2dd7dca085383301ce6e7a3c022f8dc3e40))
+* **verify:** match Solid Queue on configs it can't start or that start no worker ([3b6070a](https://github.com/AnjanJ/rails_error_dashboard/commit/3b6070a593babdcce0f48cac4da5607d55b0f0df))
+
 ## [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.1...rails_error_dashboard/v0.14.2) (2026-09-27)
 
 
