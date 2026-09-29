@@ -611,12 +611,20 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       expect(initializer_content).to include("RailsErrorDashboard.configure")
     end
 
-    it "generates valid Ruby syntax" do
+    # Loading the initializer runs RailsErrorDashboard.configure, which used to
+    # write --slack and --async_logging into the suite's global configuration
+    # and never put it back. Any later spec that called validate! on it failed
+    # ("slack_webhook_url is required"), depending on the random order. The
+    # initializer now configures a throwaway Configuration.
+    it "generates an initializer that loads without errors" do
       run_generator [ "--no-interactive", "--slack", "--async_logging" ]
       initializer_path = "#{destination_root}/config/initializers/rails_error_dashboard.rb"
+      configuration = RailsErrorDashboard::Configuration.new
+      allow(RailsErrorDashboard).to receive(:configuration).and_return(configuration)
 
-      # Check if the generated file has valid Ruby syntax
       expect { load initializer_path }.not_to raise_error
+      expect(configuration.enable_slack_notifications).to be true
+      expect(configuration.async_logging).to be true
     end
   end
 
