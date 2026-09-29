@@ -26,6 +26,15 @@ module RailsErrorDashboard
     class SolidQueueConfigCheck
       DEFAULT_CONFIG_FILE = "config/queue.yml"
       PROCESS_KEYS = %i[workers dispatchers scheduler].freeze
+      GUIDE_URL = "https://anjanj.github.io/rails_error_dashboard/docs/guides/solid-queue-setup/#what-red-needs-from-solid-queue"
+
+      # The fix printed with a reported problem. It is never Solid Queue's
+      # installer: whoever sees this already uses Solid Queue, and its 1.7.0
+      # installer also rewrites production.rb to use a separate queue database.
+      FIX = [
+        "Fix: edit the file. Give each environment a dispatchers: block and a worker",
+        "for RED's queues (a \"*\" worker covers them). Guide: #{GUIDE_URL}"
+      ].freeze
 
       # The config file Solid Queue reads, honouring SOLID_QUEUE_CONFIG as it does.
       #

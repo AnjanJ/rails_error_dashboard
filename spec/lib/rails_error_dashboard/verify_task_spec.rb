@@ -270,7 +270,18 @@ RSpec.describe "error_dashboard:verify rake task" do
         expect(output).to include("Solid Queue config... FAILED")
         expect(output).to match(/development: .*no dispatcher/)
         expect(output).to match(/production: .*no dispatcher/)
-        expect(output).to include("Solid Queue's own template")
+      end
+
+      # Whoever sees this already uses Solid Queue, and its installer would
+      # rewrite production.rb to use a separate queue database (1.7.0).
+      it "gives a fix that edits the file, not one that re-runs Solid Queue's installer" do
+        with_config("red_generator_queue.yml")
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).not_to include("solid_queue:install")
+        expect(output).to include("dispatchers:")
+        expect(output).to include(check::GUIDE_URL)
       end
 
       it "passes Solid Queue's own config" do

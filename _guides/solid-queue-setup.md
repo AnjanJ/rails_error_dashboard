@@ -6,30 +6,42 @@ order: 5
 
 # Solid Queue Setup Guide
 
-This guide covers how to configure **Solid Queue** (Rails 8.1+ default) for optimal performance with RailsErrorDashboard.
+This guide covers running RailsErrorDashboard's jobs on **Solid Queue**, the default Active Job backend in Rails 8.
 
 ## What is Solid Queue?
 
-Solid Queue is a **database-backed Active Job adapter** introduced in Rails 8.1. It provides:
+Solid Queue is a **database-backed Active Job adapter**, the default since Rails 8.0. It provides:
 - ✅ No external dependencies (Redis, etc.)
 - ✅ ACID guarantees for job processing
 - ✅ Built-in job monitoring and inspection
 - ✅ Simple deployment (no additional services)
 - ✅ Works with any Rails-supported database
 
-## Quick Start
+## What RED needs from Solid Queue
 
-### 1. Install Solid Queue
+RED's jobs run on your app's own Active Job adapter. RED writes nothing for Solid Queue: no config, no schedule, no schema. With Solid Queue, three things must be true in every environment that runs jobs:
 
-Rails 8.0+ apps already have it. Otherwise:
+1. **A dispatcher.** Every environment section of `config/queue.yml` needs a `dispatchers:` block. A section with `workers:` and no `dispatchers:` starts no dispatcher, so no delayed job ever runs: RED's retries, and your app's own `retry_on wait:` and `perform_later(wait:)`.
+2. **A worker for RED's queues.** RED uses `default` and `error_notifications` (with your `queue_name_prefix`, if you set one). A `"*"` worker processes them, and your app's other queues too.
+3. **A running worker process**: `bin/jobs`, or Solid Queue's Puma plugin (`SOLID_QUEUE_IN_PUMA=1`). Without one, errors logged asynchronously wait in the queue and are never recorded.
+
+Check your config with:
 
 ```bash
-bundle add solid_queue
-bin/rails solid_queue:install
-bin/rails db:prepare
+bin/rails error_dashboard:verify
 ```
 
-`solid_queue:install` writes `config/queue.yml` with a `"*"` worker and a dispatcher. That already processes RED's queues (`default` and `error_notifications`), so RED needs no config of its own.
+It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running.
+
+## Quick Start
+
+### 1. Set up Solid Queue
+
+Rails 8 apps come with Solid Queue set up. For an older app, follow [Solid Queue's installation guide](https://github.com/rails/solid_queue#installation). RED adds nothing to it, and its generated `config/queue.yml` (a `"*"` worker and a dispatcher) already covers everything above.
+
+> **Already using Solid Queue? Edit `config/queue.yml`; don't re-run Solid Queue's installer to fix it.** As of Solid Queue 1.7.0, `bin/rails solid_queue:install` also rewrites the queue settings in `config/environments/production.rb` to use a separate `queue` database. That breaks an app that runs Solid Queue on its main database. The installer also offers to overwrite `config/recurring.yml`, where your scheduled jobs live.
+
+> **Ran `rails generate rails_error_dashboard:solid_queue` before 0.14.3?** It wrote a `config/queue.yml` with workers and no `dispatchers:`. With that file Solid Queue runs no dispatcher, so no delayed job ever runs, your app's own included. Its workers also served only RED's two queues. Replace the file's contents with the [example below](#environment-specific-settings), keeping any other environment sections you have (`staging:`, for example) as `<<: *default`. Since 0.14.3 the generator writes nothing; it only checks your config.
 
 ### 2. Check Your Config
 
@@ -37,9 +49,9 @@ bin/rails db:prepare
 bin/rails error_dashboard:verify
 ```
 
-It reports "Solid Queue config... OK", or the problem in each environment.
+Run it again after any change to `config/queue.yml`: it checks every environment in the file.
 
-> **Ran `rails generate rails_error_dashboard:solid_queue` before 0.14.3?** It wrote a `config/queue.yml` with workers and no `dispatchers:`. With that file Solid Queue runs no dispatcher, so no delayed job ever runs: your app's own `retry_on wait:` and `perform_later(wait:)` included. Its workers also served only RED's two queues. Replace the file with Solid Queue's own template (`bin/rails solid_queue:install`). Since 0.14.3 the generator writes nothing; it only checks your config.
+Solid Queue 1.6+ can also check its own config: `RAILS_ENV=production bin/jobs check`. That catches other mistakes, such as a typo in `config/recurring.yml`. It passes a section with workers and no dispatcher, though, so run both.
 
 ### 3. Configure ActiveJob Adapter
 
