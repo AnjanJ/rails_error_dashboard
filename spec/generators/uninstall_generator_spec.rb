@@ -94,6 +94,37 @@ RSpec.describe RailsErrorDashboard::Generators::UninstallGenerator, type: :gener
     end
   end
 
+  # With use_separate_database on but no database.yml entry for it (or the
+  # database server down), the generator could not see the tables, treated that
+  # as "no tables", and removed the initializer, route and migrations anyway.
+  # The error database kept every table, and with the initializer gone nothing
+  # could find them again. Found by the release scenario run for 0.14.3.
+  describe "when the error database can't be reached" do
+    before do
+      allow(RailsErrorDashboard::Commands::DropAllTables).to receive(:connection)
+        .and_raise(RailsErrorDashboard::Commands::DropAllTables::Error, "no 'error_dashboard' entry")
+    end
+
+    it "stops before anything is removed" do
+      generator = described_class.new([], { skip_confirmation: true }, {})
+
+      expect { capture_stdout { generator.detect_installed_components } }
+        .to raise_error(Thor::Error, /nothing was removed.*no 'error_dashboard' entry/m)
+    end
+
+    it "carries on with --keep-data, which removes only files" do
+      generator = described_class.new([], { keep_data: true, skip_confirmation: true }, {})
+
+      expect { capture_stdout { generator.detect_installed_components } }.not_to raise_error
+    end
+
+    it "carries on with --manual-only, which removes nothing" do
+      generator = described_class.new([], { manual_only: true }, {})
+
+      expect { capture_stdout { generator.detect_installed_components } }.not_to raise_error
+    end
+  end
+
   describe "dropping the tables" do
     let(:generator) { described_class.new([], {}, {}) }
 
