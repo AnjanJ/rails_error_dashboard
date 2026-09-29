@@ -3,9 +3,11 @@
 require "rails_helper"
 require "tmpdir"
 
-# The check mirrors Solid Queue 1.7.0's own rules (SolidQueue::Configuration
-# and SolidQueue::QueueSelector), so it reports exactly the configs Solid Queue
-# would run with no dispatcher, no worker, or no worker for one of RED's queues.
+# The check mirrors Solid Queue's own rules (SolidQueue::Configuration and
+# SolidQueue::QueueSelector), so it reports exactly the configs Solid Queue
+# would run with no dispatcher, no worker, or no worker for one of RED's queues,
+# and the ones it can't start at all. solid_queue_config_check_contract_spec.rb
+# checks the same rules against the real library.
 RSpec.describe RailsErrorDashboard::Services::SolidQueueConfigCheck do
   let(:fixtures) { File.expand_path("../fixtures/solid_queue", __dir__) }
   let(:queue_names) { %w[default error_notifications] }
@@ -70,10 +72,36 @@ RSpec.describe RailsErrorDashboard::Services::SolidQueueConfigCheck do
       expect(problems).to contain_exactly(a_string_including("production:", "no dispatcher"))
     end
 
-    it "treats a dispatchers key with no value as no dispatcher" do
+    # Solid Queue raises on these while it builds its processes, so bin/jobs
+    # can't start (the contract spec checks each against the real library).
+    it "reports a key with no value as a config Solid Queue can't start" do
       problems = check({ production: { workers: [ { queues: "*" } ], dispatchers: nil } })
 
-      expect(problems).to contain_exactly(a_string_including("no dispatcher"))
+      expect(problems).to contain_exactly(a_string_including("production:", "can't start", "dispatchers: must be a list"))
+    end
+
+    it "reports a map where a list belongs as a config Solid Queue can't start" do
+      problems = check({ production: { dispatchers: [ {} ], workers: { queues: "*" } } })
+
+      expect(problems).to contain_exactly(a_string_including("can't start", "workers: must be a list"))
+    end
+
+    it "reports processes that isn't a whole number as a config Solid Queue can't start" do
+      problems = check({ production: { dispatchers: [ {} ], workers: [ { processes: "2" } ] } })
+
+      expect(problems).to contain_exactly(a_string_including("can't start", "whole number"))
+    end
+
+    it "reports workers that all have processes: 0 as no worker process" do
+      problems = check({ production: { dispatchers: [ {} ], workers: [ { queues: "*", processes: 0 } ] } })
+
+      expect(problems).to contain_exactly(a_string_including("no worker process starts"))
+    end
+
+    it "only counts the workers that start a process for RED's queues" do
+      config = { production: { dispatchers: [ {} ], workers: [ { queues: "*", processes: 0 }, { queues: "default" } ] } }
+
+      expect(check(config)).to contain_exactly(a_string_including("no worker processes error_notifications"))
     end
 
     it "reports dispatchers with no workers" do
@@ -86,6 +114,18 @@ RSpec.describe RailsErrorDashboard::Services::SolidQueueConfigCheck do
       problems = check({ production: { scheduler: { polling_interval: 1 } } })
 
       expect(problems).to contain_exactly(a_string_including("no worker", "no dispatcher"))
+    end
+
+    # Solid Queue 1.4.0 made scheduler: a process key. Before it, a section
+    # with only a scheduler fell back to the defaults.
+    it "follows the loaded Solid Queue's rules for a scheduler-only section" do
+      config = { production: { scheduler: { polling_interval: 1 } } }
+
+      old = described_class.processes_for(config, environment: "production", queue_names: queue_names, solid_queue_version: "1.3.2")
+      new = described_class.processes_for(config, environment: "production", queue_names: queue_names, solid_queue_version: "1.4.0")
+
+      expect(old).to include(dispatchers: 1, workers: 1)
+      expect(new).to include(dispatchers: 0, workers: 0)
     end
 
     it "accepts a section Solid Queue fills with its defaults" do

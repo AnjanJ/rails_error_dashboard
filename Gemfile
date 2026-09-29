@@ -53,6 +53,15 @@ gem "httparty", ">= 0.24"
 # exercise the gem itself and the fixtures had to guess at its behaviour.
 gem "rack-attack", "~> 6.7"
 gem "turbo-rails", "~> 2.0"
+# Solid Queue is never loaded into the test process (RED branches on
+# defined?(::SolidQueue), so loading it would change other specs). The contract
+# spec runs its real config parser in a child process and checks that
+# SolidQueueConfigCheck agrees with it. CI resolves the newest release on every
+# run, so a Solid Queue change that breaks the check shows up here first.
+# Solid Queue needs Rails 7.1+.
+unless rails_env.start_with?("7.0") || rails_env.start_with?("~> 7.0")
+  gem "solid_queue", require: false
+end
 
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"
