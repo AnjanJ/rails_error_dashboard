@@ -5,6 +5,150 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.2...rails_error_dashboard/v0.14.3) (2026-09-29)
+
+
+### 🐛 Bug Fixes
+
+* **auth:** warn in development when a blank credential denies every login ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **cleanup:** delete dependents first in error_dashboard:cleanup_resolved ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **generators:** retire the Solid Queue generator, which wrote a queue.yml with no dispatcher ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **install:** stop claiming async logging needs no worker ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **logger:** accept log_level :fatal and never raise from the internal logger ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **solid_queue:** stop telling apps that use Solid Queue to re-run its installer ([3b6070a](https://github.com/AnjanJ/rails_error_dashboard/commit/3b6070a593babdcce0f48cac4da5607d55b0f0df))
+* **uninstall:** drop every RED table in foreign-key order, on the error database ([cc86c1a](https://github.com/AnjanJ/rails_error_dashboard/commit/cc86c1a41773d642a1b12b2590f7f380c46593e8))
+* **uninstall:** stop when the error database can't be reached ([#264](https://github.com/AnjanJ/rails_error_dashboard/issues/264)) ([d953f2d](https://github.com/AnjanJ/rails_error_dashboard/commit/d953f2dd7dca085383301ce6e7a3c022f8dc3e40))
+* **verify:** match Solid Queue on configs it can't start or that start no worker ([3b6070a](https://github.com/AnjanJ/rails_error_dashboard/commit/3b6070a593babdcce0f48cac4da5607d55b0f0df))
+
+### Upgrade instructions
+
+There are no migrations. Update the gem, restart, and run verify, which now checks your Solid Queue
+config too:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails error_dashboard:verify
+```
+
+Two things to check when you upgrade:
+
+- **Did you ever run `rails generate rails_error_dashboard:solid_queue`?** Replace the
+  `config/queue.yml` it wrote. Until you do, Solid Queue runs none of your app's delayed jobs. See
+  below.
+- **Is your app on a Rails older than 8.1.4 or 7.2.4?** That includes every 8.0, 7.1 and 7.0
+  release. Pin `json` below 3. See the known issue at the end.
+
+### If you ran the Solid Queue generator, replace its `config/queue.yml`
+
+The generator wrote a `config/queue.yml` with `workers:` and no `dispatchers:`. Solid Queue starts
+no dispatcher from that file, so no delayed job ever runs. That covers your whole app, not only RED:
+`retry_on ... wait:`, `perform_later(wait:)` and anything else scheduled for later. Its workers
+also served only `default` and `error_notifications`, so jobs on your app's other queues were never
+picked up. On an app that already had Solid Queue's config, the generator replaced that working
+file.
+
+To fix it, replace `config/queue.yml` with Solid Queue's own template:
+
+```yaml
+default: &default
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+  workers:
+    - queues: "*"
+      threads: 3
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 1
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
+```
+
+Keep any other environments your app has (a `staging:` section, for example) as `<<: *default`
+too. Then run `bin/rails error_dashboard:verify`. It checks every environment in the file and
+names any section with no dispatcher, no worker for RED's queues, or settings Solid Queue can't
+start with.
+
+Edit the file; don't re-run `bin/rails solid_queue:install` to get it. On an app that already uses
+Solid Queue, its installer (as of 1.7.0) also rewrites the queue settings in
+`config/environments/production.rb` to use a separate `queue` database, which breaks an app that
+runs Solid Queue on its main database. It also offers to overwrite `config/recurring.yml`.
+
+The generator now writes nothing. It checks your config, prints what it found, and will be removed
+in a later minor release. RED needs no queue config of its own: Solid Queue's `"*"` worker already
+processes RED's queues. From this release on, RED never writes Solid Queue's files or tells you to
+run its installer; the [Solid Queue guide](https://anjanj.github.io/rails_error_dashboard/docs/guides/solid-queue-setup/#what-red-needs-from-solid-queue)
+lists what RED needs from your config.
+
+### Uninstall now removes every RED table
+
+Before 0.14.3, the uninstall generator and `rails_error_dashboard:db:drop` both knew 5 of RED's 13
+tables and left the other 8 behind. One of those, `rails_error_dashboard_rack_attack_events`, holds
+IP addresses and user agents. Once RED had recorded data, foreign keys could stop the drops too. And
+with `use_separate_database`, both looked in the primary database, found nothing, and reported
+success.
+
+Both now find every `rails_error_dashboard_*` table on the database RED actually uses, and drop them
+in foreign-key order. The generator drops the tables before it removes any file. Both refuse, and
+drop nothing, in these cases:
+
+- **The error database can't be reached**, because `database.yml` has no entry for it or the
+  server is down. The generator used to carry on here: it removed the initializer, the route and
+  the migrations, and left all 13 tables in a database nothing pointed to any more. It now stops
+  before removing anything. If that database really is gone, `--keep-data` removes only the files.
+- **One of your app's tables has a foreign key into a RED table.** The message names the key.
+
+### Other fixes
+
+- **`error_dashboard:verify` now agrees with Solid Queue itself.** Its Solid Queue check is tested
+  against the real library on every CI run, and it now catches configs it used to pass:
+  - configs `bin/jobs` can't start with: `workers:` or `dispatchers:` left empty or written as a
+    map instead of a list, or `processes:` that isn't a whole number;
+  - `processes: 0`, which starts no worker.
+
+  It also follows your Solid Queue version's rules for a section with only a `scheduler:`.
+
+- **`error_dashboard:cleanup_resolved` failed with a foreign-key error** on any resolved error that
+  had occurrences, comments or cascade patterns. It now deletes those first, in batches, the same
+  way the retention job does.
+- **`config.log_level = :fatal` broke RED's logging.** It passed validation, but every internal log
+  call then raised `ArgumentError`, including the ones inside rescue blocks. `:fatal` now works (RED
+  has no fatal messages, so it logs nothing), and an unknown level can no longer make the logger
+  raise.
+- **A blank dashboard credential in development denied every login without a word.** For example,
+  `ERROR_DASHBOARD_PASSWORD=` in a `.env` file. RED now logs a warning at boot that says where the
+  blank value came from, and `error_dashboard:verify` reports it instead of saying OK.
+- **The installer said async logging needs no extra process.** It does. RED's jobs run on your
+  app's Active Job adapter, which in Rails 8 production is Solid Queue. So a worker (`bin/jobs`, or
+  Solid Queue's Puma plugin) must process the `default` and `error_notifications` queues. Without
+  one, errors are queued but never recorded. If you use async logging, check that a worker runs, or
+  set `config.async_logging = false`. The installer and the generated initializer now say this.
+
+### Known issue: json 3 breaks Rails before 8.1.4 and 7.2.4
+
+This is a Rails bug, not a RED one, but RED is often where it shows first. json 3.0.0 (released
+2026-09-07) rejects options that Rails still passes when it encodes and parses JSON:
+
+- On Rails 8.0 (up to 8.0.5.1), 7.2 before 7.2.4, 7.1 and 7.0, any `to_json` raises. RED's dashboard
+  returns a 500 and error capture fails silently.
+- On Rails 8.1 before 8.1.4, reading the session cookie raises, so every dashboard page returns a
+  500.
+
+Other JSON in your app breaks too. Rails 8.1.4 and 7.2.4 carry the fix; 8.0, 7.1 and 7.0 have no
+release with it. Until you can upgrade, keep json below 3 in your `Gemfile`:
+
+```ruby
+gem "json", "< 3"
+```
+
+Then run `bundle update json`.
+
 ## [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.1...rails_error_dashboard/v0.14.2) (2026-09-27)
 
 
