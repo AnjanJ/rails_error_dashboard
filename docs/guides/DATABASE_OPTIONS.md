@@ -187,15 +187,30 @@ production:
     migrations_paths: db/error_dashboard_migrate
 ```
 
-```bash
-# The database already exists (App 1 created it).
-# If you ran the installer, you'll have migrations in db/error_dashboard_migrate/.
-# Running migrate is safe. The installer gives App 2's copies their own version
-# numbers, so they run, find the tables and columns already there, and change nothing.
-rails db:migrate:error_dashboard
+The database already exists, and App 1 has migrated it. Install RED in App 2 with
+`bin/rails generate rails_error_dashboard:install --separate-database`, but **don't run App 2's
+migrations against the shared database**. The installer gives App 2's copies their own version
+numbers, so the shared database's `schema_migrations` doesn't list them, and `db:migrate` would
+replay every RED migration over App 1's tables. One of them removes the `environment` column and a
+later one adds it back empty, so every error loses its environment.
 
-# Verify the connection:
-rails error_dashboard:verify
+Before App 2's first `db:migrate`, record its copies as already run. With both apps on the same RED
+version, run this once in App 2's `bin/rails console`:
+
+```ruby
+connection = RailsErrorDashboard::ErrorLogsRecord.connection
+Dir["db/error_dashboard_migrate/*.rb"].each do |file|
+  version = connection.quote(File.basename(file)[/\A\d+/])
+  next if connection.select_value("SELECT 1 FROM schema_migrations WHERE version = #{version}")
+  connection.execute("INSERT INTO schema_migrations (version) VALUES (#{version})")
+end
+```
+
+Then migrate as usual (RED's migrations are no longer pending) and check the connection:
+
+```bash
+bin/rails db:migrate
+bin/rails error_dashboard:verify
 ```
 
 ### App 3 and beyond
@@ -226,7 +241,7 @@ All 13 tables are shared. Errors are separated by `application_id`:
 | `rails_error_dashboard_error_baselines` | Anomaly detection data |
 | `rails_error_dashboard_cascade_patterns` | Error cascade relationships |
 | `rails_error_dashboard_diagnostic_dumps` | On-demand diagnostic dumps |
-| `rails_error_dashboard_event_counts` | Hourly counts of events storm protection didn't store one by one |
+| `rails_error_dashboard_event_counts` | 15-minute counts of events storm protection didn't store one by one |
 | `rails_error_dashboard_event_timing_gaps` | Periods whose per-event timestamps were lost |
 | `rails_error_dashboard_rack_attack_events` | Rack::Attack events |
 | `rails_error_dashboard_storm_events` | Error storm episodes |
@@ -268,26 +283,33 @@ bin/rails db:create:error_dashboard
 
 ### 4. Copy RED's tables and their data
 
-Copy the tables as they are, structure included, into the empty database. If you don't need the
-errors you already have, skip this step: the next one builds empty tables.
+Copy the tables as they are, structure included, into the empty database, together with
+`schema_migrations`. The copied `schema_migrations` tells the new database that RED's migrations
+have already run. Without it, the next step would replay every RED migration over the copied
+tables, and one of them deletes every error's environment.
+
+If you don't need the errors you already have, skip this step: the next one builds empty tables.
 
 PostgreSQL:
 
 ```bash
-pg_dump --no-owner -t 'rails_error_dashboard_*' myapp_production | psql -v ON_ERROR_STOP=1 myapp_errors_production
+pg_dump --no-owner -t 'rails_error_dashboard_*' -t schema_migrations myapp_production | psql -v ON_ERROR_STOP=1 myapp_errors_production
 ```
 
 MySQL (on MariaDB, leave out `--set-gtid-purged=OFF`):
 
 ```bash
-mysqldump --no-tablespaces --single-transaction --set-gtid-purged=OFF myapp_production $(mysql -N -e "SHOW TABLES LIKE 'rails\_error\_dashboard\_%'" myapp_production) | mysql myapp_errors_production
+mysqldump --no-tablespaces --single-transaction --set-gtid-purged=OFF myapp_production $(mysql -N -e "SHOW TABLES LIKE 'rails\_error\_dashboard\_%'" myapp_production) schema_migrations | mysql myapp_errors_production
 ```
 
 SQLite:
 
 ```bash
-sqlite3 storage/production.sqlite3 ".dump 'rails_error_dashboard_%'" | sqlite3 storage/error_dashboard_production.sqlite3
+sqlite3 storage/production.sqlite3 ".dump 'rails_error_dashboard_%' schema_migrations" | sqlite3 storage/error_dashboard_production.sqlite3
 ```
+
+`schema_migrations` also carries your app's own migration versions. They do nothing in the error
+database; `bin/rails db:migrate:status:error_dashboard` lists them as `NO FILE`.
 
 ### 5. Migrate the new database
 
@@ -295,8 +317,8 @@ sqlite3 storage/production.sqlite3 ".dump 'rails_error_dashboard_%'" | sqlite3 s
 bin/rails db:migrate:error_dashboard
 ```
 
-The tables are already there, so RED's migrations find them in place and change nothing; this
-records them as run, so later upgrades migrate this database.
+With the copied `schema_migrations`, no RED migration is pending, so nothing runs. If you skipped
+the copy, this builds RED's tables from scratch. Either way, later upgrades migrate this database.
 
 ### 6. Restart, then check
 
@@ -304,7 +326,7 @@ records them as run, so later upgrades migrate this database.
 bin/rails error_dashboard:verify
 ```
 
-It should report the separate database and all 13 tables. In production, steps 3 to 5 need the new
+It should report `Database mode... SEPARATE (key: error_dashboard)` and the required tables as OK. In production, steps 3 to 5 need the new
 configuration, and must finish before the app restarts with it: run them in your release step, or
 stop the app while they run. Errors captured after the copy and before the restart stay in the old
 tables.
@@ -346,8 +368,9 @@ which migrates the error database too. With a separate database the installer co
 migrations to `db/error_dashboard_migrate/`.
 
 **Multi-app users:** run the upgrade in every app, so each one has the new migration files. The
-first app to migrate updates the shared database; the other apps' copies of the same migrations
-then find the change already made and do nothing.
+first app to migrate updates the shared database; the other apps' copies of those new migrations
+then find the change already made and do nothing. (Only a first install replays older migrations:
+see [App 2 setup](#app-2-setup-joining-existing).)
 
 ---
 
