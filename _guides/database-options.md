@@ -35,6 +35,17 @@ rails db:migrate
 
 Isolate error data in its own database. Recommended for production.
 
+On a new install, let the installer set it up:
+
+```bash
+bin/rails generate rails_error_dashboard:install --separate-database
+```
+
+It writes the initializer below, copies RED's migrations to `db/error_dashboard_migrate/`, and
+prints the `config/database.yml` entry to add. An app that already stores RED's errors in its main
+database needs [Moving to a separate database](#moving-from-the-main-database-to-a-separate-one)
+instead.
+
 ### Step 1: Update initializer
 
 ```ruby
@@ -47,7 +58,10 @@ end
 
 ### Step 2: Add database.yml entry
 
-The key name (`error_dashboard:`) must match `config.database`:
+The key name (`error_dashboard:`) must match `config.database`. Add it to **every environment the
+app boots in**, test included. In an environment without it, RED logs a warning at boot and falls
+back to the main database, which has no RED tables, so that environment's errors are not recorded
+anywhere.
 
 ```yaml
 # config/database.yml
@@ -59,6 +73,15 @@ development:
   error_dashboard:
     <<: *default
     database: myapp_errors_development
+    migrations_paths: db/error_dashboard_migrate
+
+test:
+  primary:
+    <<: *default
+    database: myapp_test
+  error_dashboard:
+    <<: *default
+    database: myapp_errors_test
     migrations_paths: db/error_dashboard_migrate
 
 production:
@@ -103,7 +126,7 @@ Multiple Rails apps write errors to one shared database. One dashboard to monito
          +------------------------+------------------------+
                                   |
                     Shared error_dashboard database
-                    (6 tables, all prefixed rails_error_dashboard_)
+                    (13 tables, all prefixed rails_error_dashboard_)
                                   |
                     Dashboard shows app switcher:
                     [All Apps] [BlogAPI] [AdminPanel] [MobileAPI]
@@ -167,8 +190,8 @@ production:
 ```bash
 # The database already exists (App 1 created it).
 # If you ran the installer, you'll have migrations in db/error_dashboard_migrate/.
-# Running migrate is safe — migrations that App 1 already applied will be skipped
-# (they're tracked in the shared schema_migrations table).
+# Running migrate is safe. The installer gives App 2's copies their own version
+# numbers, so they run, find the tables and columns already there, and change nothing.
 rails db:migrate:error_dashboard
 
 # Verify the connection:
@@ -181,7 +204,8 @@ Same pattern as App 2. Point `database.yml` to the same physical database. Set a
 
 ### What auto-detection produces
 
-If you don't set `config.application_name`, the gem detects it from your Rails app:
+The name comes from `config.application_name`, then the `APPLICATION_NAME` environment variable,
+then your Rails app's module name:
 
 | App class | Auto-detected name |
 |-----------|-------------------|
@@ -191,7 +215,7 @@ If you don't set `config.application_name`, the gem detects it from your Rails a
 
 ### Tables in the shared database
 
-All 6 tables are shared. Errors are separated by `application_id`:
+All 13 tables are shared. Errors are separated by `application_id`:
 
 | Table | Purpose |
 |-------|---------|
@@ -201,6 +225,13 @@ All 6 tables are shared. Errors are separated by `application_id`:
 | `rails_error_dashboard_error_comments` | Comment threads |
 | `rails_error_dashboard_error_baselines` | Anomaly detection data |
 | `rails_error_dashboard_cascade_patterns` | Error cascade relationships |
+| `rails_error_dashboard_diagnostic_dumps` | On-demand diagnostic dumps |
+| `rails_error_dashboard_event_counts` | Hourly counts of events storm protection didn't store one by one |
+| `rails_error_dashboard_event_timing_gaps` | Periods whose per-event timestamps were lost |
+| `rails_error_dashboard_rack_attack_events` | Rack::Attack events |
+| `rails_error_dashboard_storm_events` | Error storm episodes |
+| `rails_error_dashboard_storm_flush_batches` | Storm-protection count batches already applied |
+| `rails_error_dashboard_swallowed_exceptions` | Swallowed-exception statistics |
 
 ### Dashboard app switcher
 
@@ -208,76 +239,115 @@ When 2+ applications exist, the dashboard shows an app switcher dropdown. You ca
 
 ---
 
-## Migrating From Primary to Separate Database
+## Moving From the Main Database to a Separate One
 
-If you started with Option 1 and want to move to Option 2 or 3:
+If RED already stores its errors in your app's main database (Option 1) and you want them in a
+database of their own (Option 2 or 3). The examples use PostgreSQL database names; adjust them to
+yours.
 
 ### 1. Configure the separate database
 
-Follow Option 2 or 3 above to set up `database.yml` and the initializer.
+Set `config.use_separate_database = true` and `config.database = :error_dashboard` in the
+initializer, and add the `error_dashboard` entry to every environment in `config/database.yml`, as
+in [Option 2](#option-2-separate-database-single-app) (or [Option 3](#option-3-shared-database-multi-app)).
 
-### 2. Create and migrate the new database
+### 2. Move RED's migrations
+
+Re-running the installer doesn't move them: it skips every migration your app already has. Move
+them yourself:
 
 ```bash
-rails db:create:error_dashboard
-rails db:migrate:error_dashboard
+mkdir -p db/error_dashboard_migrate && git mv db/migrate/*.rails_error_dashboard.rb db/error_dashboard_migrate/
 ```
 
-### 3. Copy existing data
-
-Use SQL to copy data directly between databases. The gem's `connects_to` runs once at boot, so you can't switch connections at runtime via config toggles.
+### 3. Create the new database, and don't migrate it yet
 
 ```bash
-# PostgreSQL example: dump from primary, restore to separate DB
-pg_dump -t 'rails_error_dashboard_*' myapp_development | psql myapp_errors_development
-
-# Or use Rails dbconsole to export/import:
-# 1. Export from primary
-rails dbconsole -p < <(echo "COPY rails_error_dashboard_error_logs TO '/tmp/error_logs.csv' CSV HEADER;")
-
-# 2. Import to separate DB
-rails dbconsole --database=error_dashboard < <(echo "COPY rails_error_dashboard_error_logs FROM '/tmp/error_logs.csv' CSV HEADER;")
+bin/rails db:create:error_dashboard
 ```
 
-For SQLite, copy the tables using `.dump`:
+### 4. Copy RED's tables and their data
+
+Copy the tables as they are, structure included, into the empty database. If you don't need the
+errors you already have, skip this step: the next one builds empty tables.
+
+PostgreSQL:
+
 ```bash
-sqlite3 db/development.sqlite3 ".dump rails_error_dashboard_error_logs" | sqlite3 db/myapp_errors_development.sqlite3
+pg_dump --no-owner -t 'rails_error_dashboard_*' myapp_production | psql -v ON_ERROR_STOP=1 myapp_errors_production
 ```
 
-### 4. Verify and clean up
+MySQL (on MariaDB, leave out `--set-gtid-purged=OFF`):
 
 ```bash
-rails error_dashboard:verify
-# Once verified, remove old data from primary database if desired
+mysqldump --no-tablespaces --single-transaction --set-gtid-purged=OFF myapp_production $(mysql -N -e "SHOW TABLES LIKE 'rails\_error\_dashboard\_%'" myapp_production) | mysql myapp_errors_production
+```
+
+SQLite:
+
+```bash
+sqlite3 storage/production.sqlite3 ".dump 'rails_error_dashboard_%'" | sqlite3 storage/error_dashboard_production.sqlite3
+```
+
+### 5. Migrate the new database
+
+```bash
+bin/rails db:migrate:error_dashboard
+```
+
+The tables are already there, so RED's migrations find them in place and change nothing; this
+records them as run, so later upgrades migrate this database.
+
+### 6. Restart, then check
+
+```bash
+bin/rails error_dashboard:verify
+```
+
+It should report the separate database and all 13 tables. In production, steps 3 to 5 need the new
+configuration, and must finish before the app restarts with it: run them in your release step, or
+stop the app while they run. Errors captured after the copy and before the restart stay in the old
+tables.
+
+### 7. Remove the old tables from the main database
+
+Once the new database checks out, drop RED's tables from the main database in
+`bin/rails console`. This drops every `rails_error_dashboard_*` table on the main connection, each
+one after the tables that reference it:
+
+```ruby
+connection = ActiveRecord::Base.connection
+tables = connection.tables.grep(/\Arails_error_dashboard_/)
+until tables.empty?
+  # A table can go once no other remaining RED table has a foreign key to it.
+  droppable = tables.reject do |table|
+    (tables - [table]).any? { |other| connection.foreign_keys(other).any? { |fk| fk.to_table == table } }
+  end
+  raise "foreign-key cycle among #{tables.join(', ')}" if droppable.empty?
+  droppable.each { |table| connection.drop_table(table) }
+  tables -= droppable
+end
+```
+
+Don't use `bin/rails rails_error_dashboard:db:drop` for this: it drops RED's tables on RED's
+current connection, which is now the new database. Then update the schema files:
+
+```bash
+bin/rails db:schema:dump
 ```
 
 ---
 
 ## Upgrading the Gem
 
-When you upgrade `rails_error_dashboard` to a new version:
+Follow [Upgrading](/rails_error_dashboard/docs/upgrading/#the-upgrade): `bundle update rails_error_dashboard`, then
+`bin/rails generate rails_error_dashboard:install --no-interactive`, then `bin/rails db:migrate`,
+which migrates the error database too. With a separate database the installer copies the new
+migrations to `db/error_dashboard_migrate/`.
 
-**Step 1: Update the gem and copy new migrations**
-```bash
-bundle update rails_error_dashboard
-rails generate rails_error_dashboard:install
-```
-
-Re-running the installer is safe — it skips migrations you already have and only copies new ones from the updated gem. Your existing initializer and routes are not overwritten.
-
-**Step 2: Run the new migrations**
-
-Single database users:
-```bash
-rails db:migrate
-```
-
-Separate database users:
-```bash
-rails db:migrate:error_dashboard
-```
-
-**Multi-app users:** Only one app needs to run migrations. The shared database schema is updated once — all other apps will use the new schema automatically. However, all apps should re-run the installer to get the new migration files (in case they need to run migrations in the future).
+**Multi-app users:** run the upgrade in every app, so each one has the new migration files. The
+first app to migrate updates the shared database; the other apps' copies of the same migrations
+then find the change already made and do nothing.
 
 ---
 
@@ -305,6 +375,7 @@ You can host the error database on a completely separate server:
 ```yaml
 production:
   primary:
+    <<: *default
     database: myapp_production
     host: app-db.example.com
 
@@ -354,11 +425,14 @@ rails db:migrate
 
 ### Dashboard shows no errors after switching to separate database
 
-1. Verify `config.use_separate_database = true` in your initializer
-2. Restart your Rails server
-3. Run `rails error_dashboard:verify` to check the connection
-4. If migrating, make sure you copied data to the new database
+1. Verify `config.use_separate_database = true` and `config.database = :error_dashboard` in your initializer
+2. Check `config/database.yml` has the `error_dashboard` entry for the environment you're running.
+   Without it, RED logs `Separate database 'error_dashboard' is not configured in database.yml`
+   at boot and records no errors
+3. Restart your Rails server
+4. Run `rails error_dashboard:verify` to check the connection
+5. If moving from the main database, make sure you [copied the data](#4-copy-reds-tables-and-their-data)
 
 ### Multi-app: App 2 doesn't see App 1's errors
 
-Both apps must point to the **same physical database** in their `database.yml`. The database key name (`error_dashboard:`) must be the same, and the `database:` value must point to the same DB.
+Both apps must point to the **same physical database** in their `database.yml`: the same `host` and `database:` values. The key name only has to match each app's own `config.database`.
