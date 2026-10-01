@@ -130,4 +130,4 @@ These principles govern HOW work is done. Follow them when the path forward is c
 - **Ruby 4.0.1**: `ostruct` removed from default gems; sqlite3 2.8.1 doesn't compile on macOS
 - **Puma in test scripts**: Always `lsof -ti :$port | xargs kill -9` before starting. Never use `-d` (daemonize) — use `&` instead
 - **SQLite pragmas**: `pragmas:` (plural) not `pragma:` in database.yml
-- **Separate DB**: Installer puts migrations in `db/migrate/` — must manually move to `db/error_dashboard_migrate/`
+- **Separate DB**: With a separate database selected (`--separate-database`, or `use_separate_database = true` in an existing initializer), the installer copies migrations to `db/error_dashboard_migrate/` (since #93). It skips migrations an app already has in either folder, so an app moving from the main database must move them itself (docs/guides/DATABASE_OPTIONS.md)
