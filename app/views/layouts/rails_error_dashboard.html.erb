@@ -1335,6 +1335,19 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
             </div>
             <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>try { if (sessionStorage.getItem('red_dismiss_creds_warning') === '1') { document.getElementById('security-warning').style.display = 'none'; } } catch(e) {}</script>
           <% end %>
+          <% solid_queue_problems = red_solid_queue_problems %>
+          <% if solid_queue_problems.any? %>
+            <div id="solid-queue-warning" class="alert alert-warning" style="display: flex; align-items: flex-start; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid var(--status-warning);">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; flex-shrink: 0;"></i>
+              <div style="flex: 1;">
+                <strong><%= red_t("red.banners.solid_queue.label") %></strong> <%= red_t("red.banners.solid_queue.body_html") %>
+                <ul style="margin: var(--space-2) 0; padding-left: var(--space-5); font-family: var(--font-mono); font-size: 12px;">
+                  <% solid_queue_problems.each do |problem| %><li><%= problem %></li><% end %>
+                </ul>
+                <a href="<%= RailsErrorDashboard::Services::SolidQueueConfigCheck::GUIDE_URL %>" target="_blank" rel="noopener"><%= red_t("red.banners.solid_queue.guide") %></a>
+              </div>
+            </div>
+          <% end %>
           <% if defined?(@storm_banner_event) && @storm_banner_event %>
             <% storm_active = @storm_banner_event.active? %>
             <div id="storm-banner" class="alert <%= storm_active ? 'alert-danger' : 'alert-info' %>" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid <%= storm_active ? 'var(--status-critical)' : 'var(--status-info)' %>;">

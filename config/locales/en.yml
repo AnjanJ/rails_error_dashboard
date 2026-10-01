@@ -155,6 +155,11 @@ en:
           initializer.
         dismiss: "Dismiss for this session"
 
+      solid_queue:
+        # Shown when Solid Queue runs RED's jobs with a config/queue.yml that never would.
+        label: "Solid Queue won't run RED's jobs."
+        body_html: "Errors captured in the background and notifications wait in the queue until <code>config/queue.yml</code> is fixed. Run <code>bin/rails error_dashboard:verify</code> for the fix, then restart."
+        guide: "What RED needs from Solid Queue"
       storm:
         # Whole sentences, not fragments. The English original assembled these
         # from a stem plus a conditional clause, which cannot be reordered into

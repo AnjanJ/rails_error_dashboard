@@ -85,6 +85,10 @@ zh-CN:
         body_html: 你正在使用默认凭据（gandalf/youshallnotpass）。请设置环境变量 <code>ERROR_DASHBOARD_USER</code>
           和 <code>ERROR_DASHBOARD_PASSWORD</code>，或在初始化文件中配置 <code>authenticate_with</code>。
         dismiss: 本次会话内不再提示
+      solid_queue:
+        label: "Solid Queue 不会运行 RED 的任务。"
+        body_html: "在修复 <code>config/queue.yml</code> 之前，后台捕获的错误和通知会一直在队列中等待。运行 <code>bin/rails error_dashboard:verify</code> 查看修复方法，然后重启应用。"
+        guide: "RED 对 Solid Queue 的要求"
       storm:
         active_title: 错误风暴进行中
         recent_title: 近期触发过风暴保护

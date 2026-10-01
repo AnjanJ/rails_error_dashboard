@@ -86,6 +86,10 @@ pl:
           Ustaw zmienne środowiskowe <code>ERROR_DASHBOARD_USER</code> i <code>ERROR_DASHBOARD_PASSWORD</code>
           albo skonfiguruj <code>authenticate_with</code> w swoim inicjalizatorze.
         dismiss: Ukryj na czas tej sesji
+      solid_queue:
+        label: "Solid Queue nie uruchomi zadań RED."
+        body_html: "Błędy przechwycone w tle i powiadomienia czekają w kolejce, dopóki <code>config/queue.yml</code> nie zostanie poprawiony. Uruchom <code>bin/rails error_dashboard:verify</code>, aby zobaczyć poprawkę, a następnie zrestartuj aplikację."
+        guide: "Czego RED potrzebuje od Solid Queue"
       storm:
         active_title: Trwa sztorm błędów
         recent_title: Ochrona przed sztormem zadziałała niedawno

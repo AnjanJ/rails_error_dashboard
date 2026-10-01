@@ -86,6 +86,10 @@ uk:
           Встановіть змінні середовища <code>ERROR_DASHBOARD_USER</code> і <code>ERROR_DASHBOARD_PASSWORD</code>
           або налаштуйте <code>authenticate_with</code> у своєму ініціалізаторі.
         dismiss: Приховати для цієї сесії
+      solid_queue:
+        label: "Solid Queue не виконуватиме завдання RED."
+        body_html: "Помилки, записані у фоні, і сповіщення чекають у черзі, доки не виправлено <code>config/queue.yml</code>. Запустіть <code>bin/rails error_dashboard:verify</code>, щоб побачити виправлення, потім перезапустіть застосунок."
+        guide: "Що RED потрібно від Solid Queue"
       storm:
         active_title: Триває шторм помилок
         recent_title: Нещодавно спрацював захист від штормів

@@ -86,6 +86,10 @@ es:
           Defina las variables de entorno <code>ERROR_DASHBOARD_USER</code> y <code>ERROR_DASHBOARD_PASSWORD</code>,
           o configure <code>authenticate_with</code> en su initializer.
         dismiss: Ocultar durante esta sesión
+      solid_queue:
+        label: "Solid Queue no ejecutará los trabajos de RED."
+        body_html: "Los errores capturados en segundo plano y las notificaciones esperan en la cola hasta que se corrija <code>config/queue.yml</code>. Ejecute <code>bin/rails error_dashboard:verify</code> para ver la corrección y luego reinicie."
+        guide: "Lo que RED necesita de Solid Queue"
       storm:
         active_title: Tormenta de errores en curso
         recent_title: La protección ante tormentas se activó recientemente

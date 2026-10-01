@@ -77,6 +77,11 @@ module RailsErrorDashboard
       # configured: then it is never consulted.
       RailsErrorDashboard.detected_git_sha if RailsErrorDashboard.configuration.git_sha.blank?
 
+      # One error-level line if Solid Queue runs RED's jobs with a
+      # config/queue.yml that never would (no dispatcher, no worker for RED's
+      # queues). Reads the file once; never raises. The dashboard shows a banner.
+      RailsErrorDashboard::Services::SolidQueueConfigCheck.log_current_problems
+
       if RailsErrorDashboard.configuration.enable_error_subscriber
         Rails.error.subscribe(RailsErrorDashboard::ErrorReporter.new)
       end
