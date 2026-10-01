@@ -131,7 +131,10 @@ module RailsErrorDashboard
         advanced_keys = %i[async_logging error_sampling breadcrumbs system_health
                            source_code_integration git_blame swallowed_exceptions
                            crash_capture diagnostic_dump]
-        any_advanced_cli_flag = advanced_keys.any? { |k| options[k] }
+        # A flag the user passed, not an option left at its default: async_logging
+        # defaults to true, so "is any of these set?" was always yes and this
+        # question was never asked.
+        any_advanced_cli_flag = advanced_keys.any? { |k| options[k] != self.class.class_options[k]&.default }
 
         say "\n[3/3] Advanced Options (performance tuning & diagnostics)", :cyan
         say "    Async logging, error sampling, breadcrumbs, system health,", :white
@@ -169,8 +172,10 @@ module RailsErrorDashboard
             advanced_features.each do |f|
               say "\n    #{f[:name]}", :cyan
               say "    #{f[:desc]}", :white
-              r = ask("    Enable? (y/N):", :yellow, limited_to: [ "y", "Y", "n", "N", "" ])
-              @selected_features[f[:key]] = r.downcase == "y"
+              # Async logging is on unless declined, as it is without this question.
+              default_on = f[:key] == :async_logging
+              r = ask("    Enable? (#{default_on ? 'Y/n' : 'y/N'}):", :yellow, limited_to: [ "y", "Y", "n", "N", "" ])
+              @selected_features[f[:key]] = default_on ? r.downcase != "n" : r.downcase == "y"
               if @selected_features[f[:key]] && f[:key] == :swallowed_exceptions && RUBY_VERSION < "3.3"
                 say "    ⚠ Requires Ruby 3.3+ (you have #{RUBY_VERSION}) — will activate after upgrade", :yellow
               end
@@ -293,7 +298,9 @@ module RailsErrorDashboard
         @enable_webhooks = @selected_features&.dig(:webhooks) || options[:webhooks]
 
         # Performance
-        @enable_async_logging = @selected_features&.dig(:async_logging) || options[:async_logging]
+        # An answer, when there was one, wins: `answer || default` turned a "no"
+        # into the default's "yes".
+        @enable_async_logging = @selected_features&.key?(:async_logging) ? @selected_features[:async_logging] : options[:async_logging]
         @enable_error_sampling = @selected_features&.dig(:error_sampling) || options[:error_sampling]
 
         # Database mode (set by select_database_mode or CLI flags)

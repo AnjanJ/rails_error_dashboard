@@ -50,6 +50,69 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
     generator.invoke_all
   end
 
+  # The [3/3] Advanced Options question was never asked: the async_logging
+  # option defaults to true, so "was any advanced flag passed?" always said yes.
+  # And once asked, answering no to async logging was overridden by that default.
+  describe "interactive [3/3] Advanced Options" do
+    def run_interactive(answers, options = {})
+      allow($stdin).to receive(:tty?).and_return(true)
+      generator = described_class.new([], options, destination_root: destination_root)
+      generator.options = generator.options.merge(force: true)
+      asked = []
+      allow(generator).to receive(:ask) do |prompt, *|
+        asked << prompt
+        answers.find { |pattern, _| prompt.match?(pattern) }&.last || ""
+      end
+      original = $stdout
+      $stdout = StringIO.new
+      generator.invoke_all
+      asked
+    ensure
+      $stdout = original
+    end
+
+    def answers(async:)
+      {
+        /Set up notifications/ => "n", /Enable all\?/ => "n", /Configure advanced options/ => "y",
+        %r{Enable\? \(Y/n\)} => async, %r{Enable\? \(y/N\)} => "n", %r{Choose \(1/2/3\)} => "1"
+      }
+    end
+
+    let(:initializer) { File.read(File.join(destination_root, "config/initializers/rails_error_dashboard.rb")) }
+
+    it "asks it when no advanced flag is passed" do
+      asked = run_interactive(answers(async: ""))
+
+      expect(asked).to include(a_string_matching(/Configure advanced options/))
+    end
+
+    it "keeps async logging on when Enter is pressed at its prompt" do
+      run_interactive(answers(async: ""))
+
+      expect(initializer).to match(/^  config\.async_logging = true$/)
+    end
+
+    # Anchored: the template's comments also mention "config.async_logging = false".
+    it "turns async logging off when answered no" do
+      run_interactive(answers(async: "n"))
+
+      expect(initializer).to match(/^  config\.async_logging = false$/)
+    end
+
+    it "skips the question when an advanced flag is passed" do
+      asked = run_interactive(answers(async: ""), { error_sampling: true })
+
+      expect(asked).not_to include(a_string_matching(/Configure advanced options/))
+    end
+
+    it "treats --no-async-logging as a flag, and honours it" do
+      asked = run_interactive(answers(async: ""), { async_logging: false })
+
+      expect(asked).not_to include(a_string_matching(/Configure advanced options/))
+      expect(initializer).to match(/^  config\.async_logging = false$/)
+    end
+  end
+
   # The installer said async logging used Rails' :async adapter with "no extra
   # process needed", and that the dashboard "also works at /error_dashboard".
   # RED's jobs run on the app's own Active Job adapter, which is Solid Queue in
