@@ -19,7 +19,7 @@ rails generate rails_error_dashboard:install
 rails db:migrate
 ```
 
-Open `/red` and raise a test exception. No monitoring account or ingestion service is required.
+Open `/red`, then send a test error from its Settings page. No monitoring account or ingestion service is required.
 
 [Try the live demo](https://rails-error-dashboard.anjan.dev) (`gandalf` / `youshallnotpass`) · [Read the documentation](https://anjanj.github.io/rails_error_dashboard/) · [View on RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
@@ -91,7 +91,7 @@ That makes RED a self-hosted Sentry alternative for teams that want Rails-specif
 
 - Store data in the application's existing PostgreSQL, MySQL/Trilogy or SQLite database.
 - Isolate monitoring writes in a separate error database.
-- Use synchronous writes, or async logging through Sidekiq or Solid Queue (GoodJob is detected for job-health stats but is not an async adapter).
+- Use synchronous writes, or async logging through your app's own Active Job backend (Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`).
 - Track several Rails applications through a shared database.
 
 No RED licence or event-ingestion fee, and no plan limits — your database is the only cap, and storm protection deliberately sheds context during floods.
@@ -619,6 +619,11 @@ Span names follow the `rails_error_dashboard.<operation>` convention, e.g. `rail
 gem 'rails_error_dashboard'
 ```
 
+RED requires Rails 7.0 or newer, Ruby 3.2 or newer, `pagy ~> 43` and `groupdate ~> 6`. An app that pins an older Pagy or groupdate must upgrade it first, or `bundle install` fails.
+
+- **Rails before 8.1.4 or 7.2.4** (every 8.0, 7.1 and 7.0 release): also add `gem "json", "< 3"`. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+- **MySQL**: load the time-zone tables (`mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql`), or the charts fail.
+
 ### 2. Install with Interactive Setup
 
 ```bash
@@ -627,7 +632,9 @@ rails generate rails_error_dashboard:install
 rails db:migrate
 ```
 
-The installer guides you through optional feature selection — notifications, performance optimizations, advanced analytics. All features are opt-in.
+The installer asks about notifications, advanced analytics and advanced options, then where to store errors: in your app's database (the default), a separate one, or one shared by several apps. Without a terminal (CI, Docker) it asks nothing: async logging is on, and every other optional feature is off.
+
+**Chose a separate or shared database?** Add the `config/database.yml` entry the installer prints, then run `bin/rails db:create` before `db:migrate`. See [Database Options](docs/guides/DATABASE_OPTIONS.md).
 
 ### 3. Visit your dashboard
 
@@ -641,10 +648,13 @@ Default credentials: `gandalf` / `youshallnotpass`, for development and test onl
 
 ### 4. Test it out
 
+Open `/red/settings` and click **Send Test Error**, or raise an exception in any controller action. Errors raised at the Rails console prompt are not captured. To report one from the console, use:
+
 ```ruby
-# In Rails console or any controller
-raise "Test error from Rails Error Dashboard!"
+Rails.error.report(RuntimeError.new("Test error from Rails Error Dashboard"), handled: false)
 ```
+
+With async logging on (the default), leave the console open for a second or two so the background job can write it.
 
 [Full installation guide →](docs/QUICKSTART.md)
 
@@ -671,8 +681,7 @@ RailsErrorDashboard.configure do |config|
   # Optional features — enable as needed
   config.enable_slack_notifications = true
   config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
-  config.async_logging = true
-  config.async_adapter = :sidekiq  # or :solid_queue, :async
+  config.async_logging = true  # jobs run on your app's Active Job adapter; production needs a worker
 end
 ```
 
@@ -680,7 +689,7 @@ end
 
 **Multi-App Support** — Track errors from multiple Rails apps in a single shared database. Auto-detects app name, supports per-app filtering. [Multi-App guide →](docs/MULTI_APP_PERFORMANCE.md)
 
-**OpenTelemetry Export** — Emit error-capture operations as OTel spans to Datadog, Honeycomb, or Jaeger. Add `gem "opentelemetry-api"` and set `config.enable_otel_export = true`. See [OpenTelemetry Export](#opentelemetry-export--emit-gem-operations-as-spans) above for full options.
+**OpenTelemetry Export** — Emit error-capture operations as OTel spans to Datadog, Honeycomb, or Jaeger. Add `gem "opentelemetry-api"` and set `config.enable_otel_export = true`. See **OpenTelemetry Export** under [Features](#features) above for the full options.
 
 ---
 
@@ -721,7 +730,7 @@ RED translates through its own private I18n backend, so it never reads, writes o
 ## FAQ
 
 **Does Rails Error Dashboard support a separate database for errors?**
-Yes. You can store errors in your app's existing database (shared) **or** in a dedicated, isolated database (separate). Set `config.use_separate_database = true` (or `USE_SEPARATE_ERROR_DB=true`) and point it at a separate connection — the engine routes all of its tables through `connects_to`, keeping error data fully isolated from your app data. Both modes are first-class and covered by the [Database Options guide](docs/guides/DATABASE_OPTIONS.md).
+Yes. You can store errors in your app's existing database **or** in a dedicated one. Choose it at the installer's database prompt (or pass `--separate-database`), then add the `error_dashboard` entry it prints to `config/database.yml` for every environment. The engine routes all of its tables through `connects_to`, keeping error data isolated from your app data. Both modes are first-class and covered by the [Database Options guide](docs/guides/DATABASE_OPTIONS.md).
 
 **Which databases does it work with?**
 SQLite, PostgreSQL, and MySQL/Trilogy — in either shared or separate-database mode.
@@ -736,13 +745,13 @@ Yes — local **and** instance variables at the moment the exception is raised, 
 No. Storm protection (a circuit breaker with adaptive sampling, **ON by default**) makes the gem degrade itself first during error floods — occurrence counts stay exact while it sheds the expensive work, and a Storm History page shows exactly what was shed. There is no I/O on the hot path — the check is a digest and an atomic increment.
 
 **Does it work with my background jobs?**
-Yes — errors raised in jobs are captured, and it can log errors asynchronously through Sidekiq or SolidQueue (or the in-process `:async` adapter). Sidekiq, SolidQueue and GoodJob are all auto-detected for the job-queue stats stored on each error.
+Yes — errors raised in jobs are captured, and it can log errors asynchronously through your app's Active Job adapter (Sidekiq, Solid Queue, GoodJob or the in-process `:async`). In production, run a worker for the `default` and `error_notifications` queues. Sidekiq, Solid Queue and GoodJob are all auto-detected for the job-queue stats stored on each error.
 
 **Does it work with my authentication?**
 Yes — HTTP Basic Auth out of the box, or a custom `authenticate_with` lambda that integrates with Devise, Warden, or session-based auth.
 
 **Can it track more than one app?**
-Yes — multi-app support tracks errors from multiple Rails apps in one dashboard with per-app filtering.
+Yes — apps that point at the same error database share one dashboard, with per-app filtering.
 
 **What Rails and Ruby versions are supported?**
 Rails 7.0–8.1 and Ruby 3.2–4.0.
