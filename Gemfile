@@ -7,17 +7,20 @@ gemspec
 # Use pessimistic version to get latest patch versions (e.g. ~> 7.0.0 gets latest 7.0.x)
 rails_version = ENV["RAILS_VERSION"] || "~> 8.1.0"
 rails_version = "~> #{rails_version}.0" if rails_version =~ /^\d+\.\d+$/
-gem "rails", rails_version
+# The first release in each series that works with json 3 (see below).
+json3_floor = { "7.2" => "7.2.4", "8.1" => "8.1.4" }[rails_version[/\A~> (\d+\.\d+)\.0\z/, 1]]
+gem "rails", rails_version, *([ ">= #{json3_floor}" ] if json3_floor)
 
 # json 3.0 (2026-09-07) raises ArgumentError on options that older Rails
-# versions still pass: `quirks_mode` on 7.0-8.0, and a positional options hash
-# in ActiveSupport::JSON.decode on 8.1 before 8.1.4 (breaks every session/flash
-# read). Rails 8.1.4 and 7.2.4 carry the fix (rails/rails#58601, #58685); 8.0,
-# 7.1 and 7.0 never will. CI deletes Gemfile.lock and resolves "~> 7.2.0" /
-# "~> 8.1.0" to the latest patch, so those rows test json 3, as host apps on a
-# fixed Rails get it. Every other requirement (older series, an exact
-# version) keeps the pin.
-gem "json", "< 3" unless rails_version.match?(/\A~> (7\.2|8\.1)\.0\z/)
+# versions still pass: `quirks_mode` on 7.0-8.0 and on 7.2 before 7.2.4, and a
+# positional options hash in ActiveSupport::JSON.decode on 8.1 before 8.1.4
+# (breaks every session/flash read). Rails 8.1.4 and 7.2.4 carry the fix
+# (rails/rails#58601, #58685); 8.0, 7.1 and 7.0 never will. The 7.2 and 8.1
+# rows test json 3 on those releases. The floor above matters: 7.2.4 caps
+# minitest < 6 and connection_pool < 3, so without it Bundler prefers 7.2.3
+# (no caps, newer minitest and json) and json 3 breaks it. Every other
+# requirement (older series, an exact version) keeps the pin.
+gem "json", "< 3" unless json3_floor
 
 gem "puma"
 
