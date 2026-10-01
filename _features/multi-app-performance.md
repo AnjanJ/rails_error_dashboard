@@ -15,10 +15,10 @@ Multi-app support is designed for high-concurrency scenarios with multiple Rails
 ### Key Design Decisions
 
 1. **Row-Level Locking**: Uses pessimistic locking scoped to `(application_id, error_hash)` - apps never block each other
-2. **Cached Application Lookups**: Application names cached for 1 hour to reduce database hits
+2. **Cached Application Lookups**: each app's id is cached by name for 1 hour, so the lookup by name is skipped
 3. **Composite Indexes**: Optimized indexes on `[application_id, occurred_at]` and `[application_id, resolved]`
 4. **Per-App Deduplication**: Error hashes include application_id to track same errors independently across apps
-5. **Consistent Lock Ordering**: Prevents deadlocks by always locking in `(application_id ASC, error_hash ASC)` order
+5. **One Row per Write**: each write locks a single error row. Two processes creating the same new error at once are stopped by a unique index on the error group (PostgreSQL and SQLite) and a retry on `RecordNotUnique`
 
 ## Database Performance
 
@@ -37,7 +37,7 @@ SELECT
   idx_tup_fetch as tuples_fetched
 FROM pg_stat_user_indexes
 WHERE tablename = 'rails_error_dashboard_error_logs'
-  AND indexname LIKE '%application%'
+  AND (indexname LIKE '%application%' OR indexname LIKE '%\_app\_%')
 ORDER BY idx_scan DESC;
 ```
 
@@ -75,9 +75,9 @@ LIMIT 20;
 - Average query time < 50ms for dashboard queries
 - Max query time < 500ms for analytics
 
-### Cache Hit Rate
+### Buffer Cache Hit Rate (PostgreSQL)
 
-Monitor application lookup cache performance:
+This measures PostgreSQL's own buffer cache for the applications table, not `Rails.cache`:
 
 ```sql
 -- PostgreSQL cache hit ratio
@@ -94,7 +94,9 @@ WHERE relname = 'rails_error_dashboard_applications';
 If lower:
 - Applications table should be tiny (usually <100 rows)
 - All reads should hit cache
-- Check if `find_or_create_by_name` is being cached in Rails (should be 1-hour TTL)
+
+RED's `Rails.cache` entry (1-hour TTL) saves the lookup by name. A cache hit still loads the
+application row by id, so it doesn't remove the database round trip.
 
 ### Lock Monitoring
 
@@ -123,7 +125,7 @@ ORDER BY l.granted, a.query_start;
 
 If you see ungranted locks:
 1. Check for long-running transactions
-2. Verify row-level locking is working (check `find_or_increment_by_hash` uses `.lock`)
+2. Verify row-level locking is working (`FindOrIncrementError#find_unresolved` uses `.lock`)
 3. Look for deadlocks in PostgreSQL logs
 
 ### Deadlock Detection
@@ -132,8 +134,8 @@ If you see ungranted locks:
 -- Check PostgreSQL logs for deadlocks
 -- In postgresql.conf: log_lock_waits = on, deadlock_timeout = 1s
 
--- Or query recent deadlocks (requires logging_collector = on)
-SELECT * FROM pg_stat_database_conflicts
+-- Or read the deadlock counter for this database
+SELECT deadlocks FROM pg_stat_database
 WHERE datname = current_database();
 ```
 
@@ -142,8 +144,8 @@ WHERE datname = current_database();
 Our design prevents deadlocks by:
 - Applications table is READ-ONLY after setup
 - Error writes lock single row only
-- Consistent lock ordering by (application_id, error_hash)
-- Retry logic for `RecordNotUnique` exceptions
+- A unique index on the error group (PostgreSQL and SQLite) plus a retry on `RecordNotUnique`
+  stops duplicate groups
 
 ## Rails Application Monitoring
 
@@ -152,26 +154,21 @@ Our design prevents deadlocks by:
 Monitor Rails cache for application lookups:
 
 ```ruby
-# In Rails console
-stats = Rails.cache.stats
-
-# Check hit rate
-cache_key_pattern = "error_dashboard/application/*"
-
-# Clear cache and test
-Rails.cache.clear
+# In Rails console. Deletes only this entry: Rails.cache.clear would empty your
+# whole app's cache.
+key = "error_dashboard/application_id/TestApp"
+Rails.cache.delete(key)
 app1 = RailsErrorDashboard::Application.find_or_create_by_name("TestApp")
 app2 = RailsErrorDashboard::Application.find_or_create_by_name("TestApp") # Should hit cache
 
-# Verify cache
-cached = Rails.cache.read("error_dashboard/application/TestApp")
-puts "Cached: #{cached.inspect}"
+# Verify cache: the entry holds the application's id
+Rails.cache.read(key)  # => app1.id
 ```
 
 **Expected**:
-- First call: Database hit
-- Second call: Cache hit (within 1 hour)
-- Cache size: ~500 bytes per application name
+- First call: lookup by name (or create)
+- Second call: cache hit (within 1 hour), then a lookup by id
+- In development, `Rails.cache` is a null store unless you run `bin/rails dev:cache`, so nothing is cached there
 
 ### Query Object Performance
 
@@ -276,19 +273,20 @@ end
 ```ruby
 # In config/initializers/rails_error_dashboard.rb
 
-# Track error logging performance
-ActiveSupport::Notifications.subscribe("log_error.rails_error_dashboard") do |*args|
+# Count logged errors per application. RED's own events are sent after the
+# write, so their duration is about zero.
+ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
+  app_name = event.payload[:error_log].application&.name
+  NewRelic::Agent.increment_metric("Custom/ErrorDashboard/Application/#{app_name}")
+end
 
-  NewRelic::Agent.record_metric(
-    "Custom/ErrorDashboard/LogError",
-    event.duration
-  )
+# Time the write itself (async logging): Active Job reports each job's duration
+ActiveSupport::Notifications.subscribe("perform.active_job") do |*args|
+  event = ActiveSupport::Notifications::Event.new(*args)
+  next unless event.payload[:job].is_a?(RailsErrorDashboard::AsyncErrorLoggingJob)
 
-  NewRelic::Agent.record_metric(
-    "Custom/ErrorDashboard/Application/#{event.payload[:application_name]}",
-    event.duration
-  )
+  NewRelic::Agent.record_metric("Custom/ErrorDashboard/LogError", event.duration)
 end
 
 # Instrument find_or_create_by_name
@@ -349,7 +347,7 @@ Use this checklist to verify multi-app performance:
 - [ ] Cache expiry set to 1 hour
 - [ ] Query objects use `base_scope` helper
 - [ ] All dashboard queries scoped by application_id
-- [ ] Row-level locking in `find_or_increment_by_hash`
+- [ ] Row-level locking in `FindOrIncrementError` (which `ErrorLog.find_or_increment_by_hash` calls)
 - [ ] Error hash includes application_id
 
 ### Monitoring
@@ -370,11 +368,15 @@ Use this checklist to verify multi-app performance:
 -- Check if indexes are used
 EXPLAIN ANALYZE
 SELECT * FROM rails_error_dashboard_error_logs
-WHERE application_id = 1 AND error_hash = 'abc123';
+WHERE application_id = 1 AND error_hash = 'abc123' AND resolved = false;
 ```
 
+The plan should use an existing index (`index_error_logs_on_group_identity` on PostgreSQL and
+SQLite, `index_error_logs_on_hash_resolved_occurred` on all three). Don't add another: the
+fingerprint already includes the application.
+
 **Solutions**:
-1. Verify composite index exists: `CREATE INDEX index_error_logs_on_app_hash ON rails_error_dashboard_error_logs(application_id, error_hash);`
+1. Check every RED migration has run: `bin/rails db:migrate:status | grep -i 'rails error dashboard'`
 2. Check database load and connection pool
 3. Enable async logging in config
 
@@ -401,7 +403,7 @@ grep "deadlock detected" /var/log/postgresql/postgresql-*.log
 ```
 
 **Solutions**:
-1. Verify `find_or_increment_by_hash` uses `.lock`
+1. Verify `FindOrIncrementError#find_unresolved` uses `.lock`
 2. Check for custom queries that bypass row-level locking
 3. Review transaction isolation level (should be READ COMMITTED)
 
@@ -453,20 +455,18 @@ These are reference benchmarks from testing multi-app support:
 
 1. **Use Async Logging**: Enable `config.async_logging = true` to move error writes out of request cycle
 
-2. **Archive Old Errors**: Use `error_dashboard:cleanup_resolved` rake task to remove old resolved errors
+2. **Archive Old Errors**: Schedule `RailsErrorDashboard::RetentionCleanupJob` (see [Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs)), or run the `error_dashboard:cleanup_resolved` rake task by hand to remove old resolved errors (it asks for confirmation)
 
 3. **Separate Database**: Consider dedicated database for error dashboard to isolate performance impact
 
 4. **Connection Pooling**: Increase connection pool size if seeing "could not obtain connection" errors
 
-5. **Read Replicas**: Route dashboard queries to read replicas to reduce load on primary
-
-6. **Sampling**: Enable error sampling for high-frequency errors to reduce write volume
+5. **Sampling**: Enable error sampling for high-frequency errors to reduce write volume
 
 ## Contact
 
 For performance issues or optimization questions:
-- GitHub Issues: https://github.com/YourUsername/rails_error_dashboard/issues
+- GitHub Issues: https://github.com/AnjanJ/rails_error_dashboard/issues
 - Performance label: `performance` + `multi-app`
 
 Include:
