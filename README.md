@@ -648,6 +648,16 @@ raise "Test error from Rails Error Dashboard!"
 
 [Full installation guide →](docs/QUICKSTART.md)
 
+### Upgrading
+
+```bash
+bundle update rails_error_dashboard
+bin/rails generate rails_error_dashboard:install --no-interactive
+bin/rails db:migrate
+```
+
+The installer keeps your initializer and copies only the new migrations. Some releases need a step of their own, and two of them can stop an app booting: [read the upgrade guide](docs/UPGRADING.md) before you deploy.
+
 ---
 
 ## Configuration
@@ -744,6 +754,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 ### Getting Started
 - **[Quickstart Guide](docs/QUICKSTART.md)** — 5-minute setup
 - **[Configuration](docs/guides/CONFIGURATION.md)** — All configuration options
+- **[Upgrading](docs/UPGRADING.md)** — The upgrade, and the releases that need a step
 - **[Uninstalling](docs/UNINSTALL.md)** — Clean removal
 
 ### Features
