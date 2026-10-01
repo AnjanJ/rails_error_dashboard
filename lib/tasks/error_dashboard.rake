@@ -237,6 +237,28 @@ namespace :error_dashboard do
       end
     end
 
+    # 10. json 3.0 breaks Rails before 8.1.4 and 7.2.4: dashboard pages return
+    # 500 and captures can fail, with no error message. The bug is in Rails.
+    json_version = Gem.loaded_specs["json"]&.version
+    if json_version && json_version >= Gem::Version.new("3")
+      print "  json gem... "
+      rails_version = Gem::Version.new(Rails.version)
+      series = rails_version.segments.first(2)
+      json3_ok = (series == [ 8, 1 ] && rails_version >= Gem::Version.new("8.1.4")) ||
+                 (series == [ 7, 2 ] && rails_version >= Gem::Version.new("7.2.4")) ||
+                 (series <=> [ 8, 1 ]) == 1
+      if json3_ok
+        puts "OK (json #{json_version}, Rails #{Rails.version})"
+        checks_passed += 1
+      else
+        puts "WARNING"
+        puts "    json #{json_version} breaks Rails #{Rails.version} (fixed in Rails 8.1.4 and 7.2.4):"
+        puts "    dashboard pages return 500 and errors can fail to be captured."
+        puts "    Add gem \"json\", \"< 3\" to your Gemfile and run bundle update json, or upgrade Rails."
+        warnings += 1
+      end
+    end
+
     # Summary
     puts "\n" + "-" * 70
     puts "  Results: #{checks_passed} passed, #{checks_failed} failed, #{warnings} warnings"

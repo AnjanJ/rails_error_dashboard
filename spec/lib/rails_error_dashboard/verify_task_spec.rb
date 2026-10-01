@@ -203,6 +203,42 @@ RSpec.describe "error_dashboard:verify rake task" do
     end
   end
 
+  # json 3.0 breaks Rails before 8.1.4 / 7.2.4: dashboard pages return 500 and
+  # captures can fail, with no error message. verify is the place to say so.
+  describe "json gem check" do
+    def with_json(version)
+      specs = Gem.loaded_specs.merge("json" => instance_double(Gem::Specification, version: Gem::Version.new(version)))
+      allow(Gem).to receive(:loaded_specs).and_return(specs)
+    end
+
+    it "warns when json 3 runs on a Rails it breaks" do
+      with_json("3.0.2")
+      allow(Rails).to receive(:version).and_return("8.0.4")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("json gem... WARNING")
+      expect(output).to include('gem "json", "< 3"')
+    end
+
+    it "is OK when json 3 runs on a fixed Rails" do
+      with_json("3.0.2")
+      allow(Rails).to receive(:version).and_return("8.1.4")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("json gem... OK")
+    end
+
+    it "says nothing with json 2" do
+      with_json("2.21.2")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).not_to include("json gem...")
+    end
+  end
+
   describe "retention policy check" do
     it "shows OK with retention_days when configured" do
       output = capture_stdout { task.invoke }
