@@ -324,7 +324,7 @@ namespace :error_dashboard do
 
     # Confirm before proceeding
     print "\nProceed with backfill? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Backfill cancelled"
@@ -569,7 +569,7 @@ namespace :error_dashboard do
     end
 
     print "\n  Proceed with deletion? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n  Cleanup cancelled"
