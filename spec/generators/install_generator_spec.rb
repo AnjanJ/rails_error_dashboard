@@ -552,6 +552,51 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
     end
   end
 
+  # What the installer prints must match what it does.
+  describe "installer messages" do
+    def output_with(options)
+      allow($stdin).to receive(:tty?).and_return(false)
+      generator = described_class.new([], options, destination_root: destination_root)
+      generator.options = generator.options.merge(force: true)
+      original = $stdout
+      $stdout = StringIO.new
+      generator.invoke_all
+      $stdout.string
+    ensure
+      $stdout = original
+    end
+
+    it "--quick says that it turns breadcrumbs on" do
+      output = output_with(quick: true)
+
+      expect(output).not_to include("breadcrumbs OFF")
+      expect(output).to include("breadcrumbs ON")
+    end
+
+    it "--database=NAME uses that name in the database.yml snippet and the next steps" do
+      output = output_with(interactive: false, separate_database: true, database: "errors")
+
+      expect(output).to match(/^\s+errors:$/)
+      expect(output).not_to match(/^\s+error_dashboard:$/)
+      expect(output).to include("db:create:errors", "db:migrate:errors")
+      expect(output).not_to include("db:create:error_dashboard")
+    end
+
+    it "the database.yml snippet covers the test environment too" do
+      output = output_with(interactive: false, separate_database: true)
+
+      expect(output).to match(/^\s+test:$/)
+    end
+
+    it "says only critical errors bypass sampling" do
+      output_with(interactive: false, error_sampling: true)
+      initializer = File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb")
+
+      expect(initializer).not_to include("Critical and high severity errors are ALWAYS logged")
+      expect(initializer).to include("Critical errors are always logged")
+    end
+  end
+
   describe "--quick flag" do
     before do
       run_generator [ "--quick" ]

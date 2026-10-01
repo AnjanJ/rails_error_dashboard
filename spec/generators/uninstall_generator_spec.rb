@@ -156,6 +156,21 @@ RSpec.describe RailsErrorDashboard::Generators::UninstallGenerator, type: :gener
     end
   end
 
+  # The completion message left out two steps its own manual instructions list.
+  describe "completion message" do
+    it "lists the schema dump and the database.yml entry" do
+      output = capture_stdout { described_class.new([], {}).show_completion_message }
+
+      expect(output).to include("bin/rails db:schema:dump", "config/database.yml")
+    end
+
+    it "skips the schema dump when the tables were kept" do
+      output = capture_stdout { described_class.new([], { keep_data: true }).show_completion_message }
+
+      expect(output).not_to include("db:schema:dump")
+    end
+  end
+
   def capture_stdout
     original = $stdout
     $stdout = StringIO.new

@@ -186,7 +186,8 @@ RailsErrorDashboard.configure do |config|
 <% if @enable_error_sampling -%>
   # Error Sampling - ENABLED
   # Samples non-critical errors to reduce storage volume.
-  # Critical and high severity errors are ALWAYS logged at 100% regardless of this setting.
+  # Critical errors are always logged, regardless of this setting. So is the first
+  # occurrence of each error in each process.
   # 0.5 = log 50% of non-critical occurrences — halves storage while keeping
   # occurrence counts meaningful and error patterns visible.
   # Tune lower (e.g. 0.1) if one error is flooding the DB; set to 1.0 to log everything.

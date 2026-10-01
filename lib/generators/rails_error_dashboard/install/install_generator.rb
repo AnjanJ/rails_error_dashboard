@@ -58,7 +58,7 @@ module RailsErrorDashboard
 
         if quick_mode?
           @selected_features = build_quick_defaults
-          say "  Using sensible defaults (analytics ON, notifications OFF, breadcrumbs OFF)", :green
+          say "  Using sensible defaults (analytics, breadcrumbs ON, system health ON, 50% sampling; notifications OFF)", :green
           return
         end
 
@@ -500,12 +500,12 @@ module RailsErrorDashboard
         say "Next Steps:", :cyan
         if @enable_separate_database
           say "  1. Add the database.yml entry shown above"
-          say "  2. Run: rails db:create:error_dashboard"
+          say "  2. Run: rails db:create:#{@database_name}"
           if @enable_multi_app
             say "  3. Run migrations (only needed on the FIRST app):"
-            say "     rails db:migrate:error_dashboard"
+            say "     rails db:migrate:#{@database_name}"
           else
-            say "  3. Run: rails db:migrate:error_dashboard"
+            say "  3. Run: rails db:migrate:#{@database_name}"
           end
           say "  4. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
           say "  5. Restart your Rails server"
@@ -602,33 +602,23 @@ module RailsErrorDashboard
           say "  # Separate error database", :white
         end
 
-        say "\n  development:", :cyan
-        say "    primary:", :white
-        say "      <<: *default", :white
-        say "      database: #{app_name_snake}_development", :white
-        say "    error_dashboard:", :white
-        say "      <<: *default", :white
-        if @enable_multi_app
-          shared_db_base = @shared_db_name || "shared_errors"
-          say "      database: #{shared_db_base}_development", :white
-        else
-          say "      database: #{app_name_snake}_errors_development", :white
+        # Every environment the app boots in needs the entry, test included:
+        # without it RED falls back to the main database and records nothing.
+        %w[development test production].each do |env|
+          say "\n  #{env}:", :cyan
+          say "    primary:", :white
+          say "      <<: *default", :white
+          say "      database: #{app_name_snake}_#{env}", :white
+          say "    #{@database_name}:", :white
+          say "      <<: *default", :white
+          if @enable_multi_app
+            shared_db_base = @shared_db_name || "shared_errors"
+            say "      database: #{shared_db_base}_#{env}", :white
+          else
+            say "      database: #{app_name_snake}_errors_#{env}", :white
+          end
+          say "      migrations_paths: db/error_dashboard_migrate", :white
         end
-        say "      migrations_paths: db/error_dashboard_migrate", :white
-
-        say "\n  production:", :cyan
-        say "    primary:", :white
-        say "      <<: *default", :white
-        say "      database: #{app_name_snake}_production", :white
-        say "    error_dashboard:", :white
-        say "      <<: *default", :white
-        if @enable_multi_app
-          shared_db_base = @shared_db_name || "shared_errors"
-          say "      database: #{shared_db_base}_production", :white
-        else
-          say "      database: #{app_name_snake}_errors_production", :white
-        end
-        say "      migrations_paths: db/error_dashboard_migrate", :white
         say "\n"
 
         if @enable_multi_app
