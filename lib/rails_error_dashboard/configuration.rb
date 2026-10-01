@@ -530,6 +530,18 @@ module RailsErrorDashboard
       initialize
     end
 
+    # Whether config/database.yml has the entry config.database names for this
+    # environment. Without it the engine skips connects_to and RED uses the
+    # main database, where its tables usually don't exist, so nothing is
+    # recorded. The engine and error_dashboard:verify both ask this.
+    #
+    # @param env_name [String] the Rails environment
+    # @return [Boolean]
+    def separate_database_entry?(env_name = Rails.env)
+      name = (database || :error_dashboard).to_s
+      ActiveRecord::Base.configurations.configs_for(env_name: env_name.to_s).any? { |config| config.name == name }
+    end
+
     # Like Object#inspect, with every credential in SECRET_ATTRIBUTES replaced
     # by [FILTERED] when set. Unset ones still show nil or [], which is useful
     # when checking why a channel stays off.

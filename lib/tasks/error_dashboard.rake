@@ -34,6 +34,25 @@ namespace :error_dashboard do
     end
     checks_passed += 1
 
+    # 2b. Separate database: the database.yml entry for this environment. Without
+    # it the engine skips connects_to and RED uses the main database, which
+    # usually has no RED tables, so nothing is recorded.
+    if config.use_separate_database
+      print "  Error database entry... "
+      db_name = config.database || :error_dashboard
+      if config.separate_database_entry?
+        puts "OK"
+        checks_passed += 1
+      else
+        puts "FAILED"
+        puts "    config/database.yml has no '#{db_name}' entry for the '#{Rails.env}' environment."
+        puts "    RED is using the main database instead, so errors are not recorded in the error database."
+        puts "    Add '#{db_name}:' under '#{Rails.env}:' with migrations_paths: db/error_dashboard_migrate"
+        puts "    (see docs/guides/DATABASE_OPTIONS.md), then restart."
+        checks_failed += 1
+      end
+    end
+
     # 3. Database connection
     print "  Database connection... "
     begin

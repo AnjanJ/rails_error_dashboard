@@ -165,6 +165,44 @@ RSpec.describe "error_dashboard:verify rake task" do
     end
   end
 
+  # With a separate database, a missing database.yml entry for this environment
+  # makes the engine skip connects_to: RED then uses the main database, and
+  # unless that has RED's tables no error is recorded. verify has to say so.
+  describe "error database entry check" do
+    before do
+      RailsErrorDashboard.configuration.use_separate_database = true
+      RailsErrorDashboard.configuration.database = :error_dashboard
+    end
+
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "fails when config/database.yml has no entry for this environment" do
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("Error database entry... FAILED")
+      expect(output).to include("no 'error_dashboard' entry for the 'test' environment")
+      expect(output).to include("Status: NEEDS ATTENTION")
+    end
+
+    it "passes when the entry exists" do
+      entry = instance_double(ActiveRecord::DatabaseConfigurations::HashConfig, name: "error_dashboard")
+      allow(ActiveRecord::Base.configurations).to receive(:configs_for).and_call_original
+      allow(ActiveRecord::Base.configurations).to receive(:configs_for).with(env_name: "test").and_return([ entry ])
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("Error database entry... OK")
+    end
+
+    it "isn't checked without a separate database" do
+      RailsErrorDashboard.configuration.use_separate_database = false
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).not_to include("Error database entry...")
+    end
+  end
+
   describe "retention policy check" do
     it "shows OK with retention_days when configured" do
       output = capture_stdout { task.invoke }
