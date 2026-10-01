@@ -3,6 +3,15 @@ class RemoveEnvironmentFromErrorLogs < ActiveRecord::Migration[7.0]
     # Skip if squashed migration ran (column never existed) or already removed
     return unless column_exists?(:rails_error_dashboard_error_logs, :environment)
 
+    # Only the v0.1.x column is removed: it was NOT NULL. The column
+    # AddEnvironmentToErrorLogs adds back (0.11.0) is nullable and holds real
+    # data. This migration replays over it whenever RED's migrations run
+    # against tables that already exist (an app joining a shared error
+    # database runs its own renumbered copy of every migration), and dropping
+    # it there wiped every error's environment.
+    environment = columns(:rails_error_dashboard_error_logs).find { |column| column.name == "environment" }
+    return if environment.nil? || environment.null
+
     # Remove composite index first
     remove_index :rails_error_dashboard_error_logs,
                  name: 'index_error_logs_on_environment_and_occurred_at',
