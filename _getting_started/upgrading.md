@@ -24,7 +24,8 @@ On an app that already has RED, the installer:
 
 - keeps `config/initializers/rails_error_dashboard.rb` as it is, so options added since you
   installed use their defaults until you set them;
-- leaves the route in `config/routes.rb` alone;
+- leaves `config/routes.rb` alone when it already mentions `RailsErrorDashboard::Engine`, and
+  otherwise adds the `/red` mount;
 - copies only the migrations your app doesn't have yet. With a separate error database
   (`config.use_separate_database = true` in the initializer) they go to `db/error_dashboard_migrate/`,
   and otherwise to `db/migrate/`.
@@ -40,7 +41,7 @@ included. To migrate only that one, run `bin/rails db:migrate:error_dashboard`.
 
 The release notes for 0.11.0, 0.12.0 and 0.13.0 say to run
 `bin/rails rails_error_dashboard:install:migrations`. That is Rails' generic task for engines, and
-it always copies into `db/migrate/`. On an app with a separate error database it copies every RED
+by default it copies into `db/migrate/`. On an app with a separate error database it copies every RED
 migration there, and the next `db:migrate` builds all of RED's tables in your main database. Use
 the installer, as above. On an app without a separate database, the two copy the same files.
 
@@ -50,7 +51,8 @@ the installer, as above. On an app without a separate database, the two copy the
   `bin/rails db:prepare`, which is what the Docker entrypoint of a new Rails app runs.
 - With a separate database, every environment in `config/database.yml` needs the
   `error_dashboard` entry, with `migrations_paths: db/error_dashboard_migrate`. If an environment
-  has no entry, RED logs a warning at boot and writes its errors to the main database instead.
+  has no entry, RED logs a warning at boot and falls back to the main database, which has no RED
+  tables, so that environment's errors are not recorded anywhere.
 
 ## Releases that need a step
 
@@ -63,10 +65,10 @@ links to its full notes in the [CHANGELOG](https://github.com/AnjanJ/rails_error
 | [0.9.1](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#091-2026-08-24) | **Can stop your app booting.** Outside `development` and `test`, RED refuses to boot on the default credentials (`gandalf` / `youshallnotpass`). Set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` in every other environment. See [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials). |
 | [0.11.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0110-2026-08-26) | Optional. Errors captured before 0.11.0 have no environment. `bin/rails rails_error_dashboard:backfill_environments` fills it in from the snapshot each error already stores. |
 | [0.11.6](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0116-2026-09-07) | No action. Errors with messages longer than 500 characters start a new group once. See [Behaviour changes in 0.11.6](#behaviour-changes-in-0116). |
-| [0.12.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0120-2026-09-15) | No action. An unresolved error that recurs after the upgrade opens a new group, once. One migration merges any duplicate groups you already have. |
+| [0.12.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0120-2026-09-15) | No action. An unresolved error that recurs after the upgrade opens a new group, once. On PostgreSQL and SQLite, one migration merges any duplicate groups you already have. |
 | [0.13.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0130-2026-09-18) | Run three one-off tasks, in any order: `bin/rails error_dashboard:scrub_invalid_encoding` (SQLite and MySQL only), `bin/rails error_dashboard:backfill_resolved_at` (MTTR rises to its true value afterwards) and `bin/rails error_dashboard:digest_session_ids` (one-way). Also, "Won't fix" no longer reopens, and retention deletes errors by when they were last seen. |
 | [0.14.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0140-2026-09-20), [0.14.1](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0141-2026-09-25) | No action. Overview, Analytics and several other pages now count events by when they happened, so some figures change. |
-| [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0142-2026-09-27) | **Can stop your app booting.** Outside `development` and `test`, RED also refuses a blank credential, a password that falls back to the default, and `authenticate_with = false`. The error names the problem. Set both variables to real values, or use an `authenticate_with` lambda. |
+| [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0142-2026-09-27) | **Can stop your app booting.** Outside `development` and `test`, RED also refuses to boot when a credential is blank, or when the password falls back to the published default (for example, when only `ERROR_DASHBOARD_USER` is set). The error names the problem. Set both variables to real values, or use an `authenticate_with` lambda. |
 | [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0143-2026-09-29) | If you ever ran `rails generate rails_error_dashboard:solid_queue`, replace the `config/queue.yml` it wrote: until you do, Solid Queue runs none of your app's delayed jobs. See [Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/). On Rails before 8.1.4 or 7.2.4, [pin json below 3](#rails-before-814-or-724-pin-json-below-3). |
 
 ## Rails before 8.1.4 or 7.2.4: pin json below 3

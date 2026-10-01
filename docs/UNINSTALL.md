@@ -108,8 +108,8 @@ only this app's files. Drop the tables when you remove RED from the last app.
 The commands above change files on your machine and data in one database. For a deployed app:
 
 1. **Drop the data in each environment first**, while the deployed app still has the gem. Run
-   `bin/rails rails_error_dashboard:db:drop` from a shell in that environment; it needs a terminal
-   to confirm. With a separate database you can instead drop the whole database afterwards, as
+   `bin/rails rails_error_dashboard:db:drop` from a shell in that environment. It asks you to type
+   `DELETE ALL DATA`, so run it where you can answer. With a separate database you can instead drop the whole database afterwards, as
    above.
 2. **Ship the code changes in one deploy**: the initializer, the route, the migrations, the schema
    file, `Gemfile` and `Gemfile.lock`. That way no release runs the gem without its configuration.
@@ -119,10 +119,18 @@ If you deploy the removal without step 1, the tables stay behind. Drop them as i
 
 ## Keep capturing errors, remove the dashboard
 
-Delete only the `mount RailsErrorDashboard::Engine` line from `config/routes.rb`. RED inserts its
-middleware and error subscriber itself, so errors are still captured and notifications still go
-out; only the dashboard pages are gone. Leave `config.enable_middleware` and
-`config.enable_error_subscriber` on: turning them off stops capture.
+Comment out the `mount RailsErrorDashboard::Engine` line in `config/routes.rb`:
+
+```ruby
+# mount RailsErrorDashboard::Engine => "/red"
+```
+
+RED inserts its middleware and error subscriber itself, so errors are still captured and
+notifications still go out; only the dashboard pages are gone. Comment the line out rather than
+deleting it: the installer adds a `/red` mount whenever `config/routes.rb` doesn't mention the
+engine, so after a deleted line the next upgrade would put the dashboard back. Leave
+`config.enable_middleware` and `config.enable_error_subscriber` on: turning them off stops
+capture.
 
 ## Keep the data, remove the code
 

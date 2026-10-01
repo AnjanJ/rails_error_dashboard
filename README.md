@@ -632,7 +632,7 @@ rails generate rails_error_dashboard:install
 rails db:migrate
 ```
 
-The installer asks about notifications, advanced analytics and advanced options, then where to store errors: in your app's database (the default), a separate one, or one shared by several apps. Without a terminal (CI, Docker) it asks nothing: async logging is on, and every other optional feature is off.
+The installer asks about notifications and advanced analytics, then where to store errors: in your app's database (the default), a separate one, or one shared by several apps. Without a terminal (CI, Docker) it asks nothing: async logging is on, and every other optional feature is off.
 
 **Chose a separate or shared database?** Add the `config/database.yml` entry the installer prints, then run `bin/rails db:create` before `db:migrate`. See [Database Options](docs/guides/DATABASE_OPTIONS.md).
 

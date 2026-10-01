@@ -17,10 +17,11 @@ migration paths, so a migration runs in an app only once it has been copied ther
 - **The installer** (`bin/rails generate rails_error_dashboard:install`) copies every migration the
   app doesn't have yet. They go into `db/migrate/`, or into `db/error_dashboard_migrate/` when the
   initializer sets `config.use_separate_database = true`. Each copy is named
-  `<timestamp>_<name>.rails_error_dashboard.rb`, and the timestamps start just after the newest
-  migration already in either folder, so a re-run never reuses a version.
+  `<timestamp>_<name>.rails_error_dashboard.rb`. The timestamps start at the current time, or just
+  after the newest migration already in either folder if that is later, so a re-run never reuses a
+  version.
 - **`bin/rails rails_error_dashboard:install:migrations`**, Rails' generic task for engines, also
-  copies the missing migrations under new timestamps, but always into `db/migrate/`. That's wrong
+  copies the missing migrations under new timestamps, but by default into `db/migrate/`. That's wrong
   for an app with a separate database (see [Upgrading](UPGRADING.md#with-a-separate-database-dont-use-installmigrations)).
 
 Either way, the versions in an app's `schema_migrations` are the timestamps of its copies, not the
