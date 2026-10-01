@@ -8,6 +8,14 @@ module RailsErrorDashboard
     DEFAULT_DASHBOARD_USERNAME = "gandalf"
     DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
 
+    # Settings that hold credentials. #inspect masks them, so printing the
+    # configuration in a console (IRB shows results with pp, which uses
+    # #inspect) or pasting it into an issue doesn't leak them.
+    SECRET_ATTRIBUTES = %i[
+      dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
+      webhook_urls issue_tracker_token issue_webhook_secret llm_api_key
+    ].freeze
+
     # Dashboard authentication (always required)
     attr_accessor :dashboard_username
     attr_accessor :dashboard_password
@@ -520,6 +528,18 @@ module RailsErrorDashboard
     # Reset configuration to defaults
     def reset!
       initialize
+    end
+
+    # Like Object#inspect, with every credential in SECRET_ATTRIBUTES replaced
+    # by [FILTERED] when set. Unset ones still show nil or [], which is useful
+    # when checking why a channel stays off.
+    def inspect
+      attributes = instance_variables.map do |ivar|
+        value = instance_variable_get(ivar)
+        secret = SECRET_ATTRIBUTES.include?(ivar.to_s.delete_prefix("@").to_sym) && value.present?
+        "#{ivar}=#{secret ? '[FILTERED]' : value.inspect}"
+      end
+      "#<#{self.class.name} #{attributes.join(', ')}>"
     end
 
     # Validate configuration values
