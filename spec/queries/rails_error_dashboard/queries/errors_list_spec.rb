@@ -165,6 +165,20 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
         expect(result.count).to eq(0)
       end
 
+      # With a separate error database, the main database can use another
+      # adapter. The search has to follow RED's own connection, or it sends
+      # PostgreSQL full-text SQL to SQLite/MySQL (or skips PostgreSQL's index).
+      it "chooses its SQL from RED's connection, not the main database's" do
+        red_connection = RailsErrorDashboard::ErrorLogsRecord.connection
+        other = red_connection.adapter_name.downcase == "postgresql" ? "SQLite" : "PostgreSQL"
+        main_connection = SimpleDelegator.new(red_connection)
+        main_connection.define_singleton_method(:adapter_name) { other }
+        allow(RailsErrorDashboard::ErrorLogsRecord).to receive(:connection).and_return(red_connection)
+        allow(ActiveRecord::Base).to receive(:connection).and_return(main_connection)
+
+        expect(described_class.call(search: "not found").to_a).to include(searchable_error)
+      end
+
       # LIKE treats % and _ as wildcards. A search for them has to find the
       # literal character, not everything. (The PostgreSQL branch uses full-text
       # search and has no wildcards to escape.)
