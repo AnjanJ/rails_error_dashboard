@@ -177,8 +177,9 @@ Run `bin/rails error_dashboard:verify` after editing.
 - ✅ Lower database load
 - ❌ Slower job pickup (higher latency)
 
-Solid Queue's own template uses 0.1s for workers and 1s for the dispatcher, as in the example
-above. Raise the worker interval if polling load matters more than how quickly jobs start.
+Solid Queue's current template uses 1s for workers and the dispatcher; when a worker sets no
+interval, Solid Queue uses 0.1s. The example above uses 0.1s for faster pickup. Raise it if polling
+load matters more than how quickly jobs start.
 
 ## Database Connection Pool
 

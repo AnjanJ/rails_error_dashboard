@@ -168,7 +168,7 @@ Rails.cache.read(key)  # => app1.id
 **Expected**:
 - First call: lookup by name (or create)
 - Second call: cache hit (within 1 hour), then a lookup by id
-- In development, `Rails.cache` is a null store unless you run `bin/rails dev:cache`, so nothing is cached there
+- With a null cache store (Rails 7 apps in development, unless you run `bin/rails dev:cache`), nothing is cached
 
 ### Query Object Performance
 
@@ -273,8 +273,9 @@ end
 ```ruby
 # In config/initializers/rails_error_dashboard.rb
 
-# Count logged errors per application. RED's own events are sent after the
-# write, so their duration is about zero.
+# Count new and reopened errors per application (error_logged doesn't fire for
+# other recurrences). RED's own events are sent after the write, so their
+# duration is about zero.
 ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do |*args|
   event = ActiveSupport::Notifications::Event.new(*args)
   app_name = event.payload[:error_log].application&.name

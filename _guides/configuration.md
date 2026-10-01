@@ -117,7 +117,7 @@ recycled Puma thread would render in whatever language the host app last used.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `notification_minimum_severity` | Symbol | `:low` | Skip notifications below this severity (`:low`, `:medium`, `:high`, `:critical`) |
+| `notification_minimum_severity` | Symbol | `:low` | For a new or reopened error, skip notifications below this severity (`:low`, `:medium`, `:high`, `:critical`). Milestone notifications (`notification_threshold_alerts`) are sent at any severity |
 | `notification_cooldown_minutes` | Integer | `5` | Minimum gap between notifications for one error that keeps being reopened. Claimed in the database (`error_logs.last_notified_at`), so it holds across every worker and job process. `0` disables it. First occurrences and threshold milestones are never held back by it |
 | `notification_threshold_alerts` | Array | `[10, 50, 100, 500, 1000]` | Occurrence counts that send a milestone notification |
 | `notification_burst_limit` | Integer | `10` | Most notifications for **new** errors per window, **per process**. When it is exceeded, one summary message replaces the rest of the window. Every error is still recorded. `0` disables the cap |
@@ -133,7 +133,7 @@ The burst cap exists for the bad deploy that produces hundreds of *distinct* new
 | `digest_recipients` | Array | `nil` | Who receives it. Falls back to `notification_email_recipients`; with neither, nothing is sent |
 | `digest_frequency` | Symbol | `:daily` | Shown on the Settings page only. The job's `period:` argument and your schedule decide what is sent and when |
 
-### Storm Protection
+### Storm Protection Options
 
 On by default. See [Storm Protection](#storm-protection) below.
 
@@ -147,7 +147,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `storm_cooldown_seconds` | Integer | `60` | Time spent only counting before RED tries full capture again |
 | `storm_max_tracked_fingerprints` | Integer | `1000` | Errors tracked in memory; the rest share one overflow count |
 | `storm_flush_interval_seconds` | Integer | `30` | How often buffered counts are written to the error records |
-| `storm_notification` | Boolean | `true` | Send one "storm in progress" notification per storm, instead of one per error |
+| `storm_notification` | Boolean | `true` | Send one "storm in progress" notification per storm. Per-error notifications pause during a storm either way |
 | `auto_issue_rate_limit_count` | Integer | `5` | Most issues created automatically per window, during a storm or not (only while storm protection is on) |
 | `auto_issue_rate_limit_window_minutes` | Integer | `10` | Length of that window |
 | `context_sampling_threshold_per_day` | Integer | `25` | Full-context captures per error per day. After that, context is kept every Nth time |
@@ -334,7 +334,7 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_internal_logging` | Boolean | `false` | Turns on RED's debug, info and warn messages, at or above `log_level` |
-| `log_level` | Symbol | `:silent` | `:debug`, `:info`, `:warn`, `:error`, `:fatal` or `:silent`. RED's error messages are logged at `:error` and below, with or without `enable_internal_logging`. The default, `:silent`, logs nothing, failures included |
+| `log_level` | Symbol | `:silent` | `:debug`, `:info`, `:warn`, `:error`, `:fatal` or `:silent`. RED's error messages are logged at `:error` and below, with or without `enable_internal_logging`. The default, `:silent`, silences RED's internal logger. Some messages, such as job failures and boot warnings, go straight to the Rails log whatever this says |
 
 ### Read-Only Attributes
 
@@ -683,7 +683,7 @@ The job runs on your app's Active Job adapter (`config.active_job.queue_adapter`
 `config.async_adapter` is only checked for a valid value; it doesn't choose the backend.
 
 A worker has to process RED's two queues, `default` and `error_notifications`. Without a worker,
-set `config.async_logging = false`. See [Run a worker for RED's jobs](/rails_error_dashboard/docs/production/#1-run-a-worker-for-reds-jobs).
+set `config.async_logging = false`; notifications still need one. See [Run a worker for RED's jobs](/rails_error_dashboard/docs/production/#1-run-a-worker-for-reds-jobs).
 
 ### Error Sampling
 
@@ -1332,15 +1332,21 @@ config.sampling_rate = 1.0  # Log everything
 
 When the error rate spikes, after a bad deploy or during a dependency outage, storm protection
 limits RED's own database writes so that error tracking doesn't add to the incident. It is on by
-default. Occurrences are always counted exactly; only per-event detail is sampled:
+default. Occurrence counts stay exact; what is sampled is per-event detail:
 
 1. Past `storm_fingerprint_full_per_minute` captures of one error in a minute, RED stops storing
    context for it, then keeps only every `storm_occurrence_sample_keep_every`th occurrence row.
 2. Past `storm_shedding_threshold_per_second` errors per second, RED stops storing per-event
-   context for every error. Past `storm_open_threshold_per_second`, it only counts, for
-   `storm_cooldown_seconds`, then tries full capture again.
-3. Per-error notifications are replaced by one "storm in progress" notification.
+   context for every error. Past `storm_open_threshold_per_second`, it only counts. After
+   `storm_cooldown_seconds`, once the rate is back below the shedding threshold, it captures a
+   sample of events without context, and returns to full capture when the rate stays low.
+3. Per-error notifications pause; with `storm_notification` on, one "storm in progress"
+   notification goes out instead.
 4. The buffered counts are written to the error records every `storm_flush_interval_seconds`.
+
+An error first seen while RED only counts gets a minimal record, with no callbacks, events or
+notifications. Past `storm_max_tracked_fingerprints` distinct errors in one process, further
+events are added to one overflow total that isn't attached to any error.
 
 Every threshold is per process: each Puma worker and job process keeps its own counts. While
 storm protection is on, every option in the table must be a positive integer, and
@@ -2075,14 +2081,15 @@ end
    ```
 
 5. **Check what holds notifications back**
-   - `notification_minimum_severity` (default `:low`): errors below it don't notify.
+   - `notification_minimum_severity` (default `:low`): new and reopened errors below it don't
+     notify. Milestone notifications ignore it.
    - A recurring error notifies only at the `notification_threshold_alerts` counts
      (10, 50, 100, 500, 1000), and a reopened one at most every `notification_cooldown_minutes` (5).
    - `notification_burst_limit` (10 per 60 seconds, per process) replaces the rest of a burst of
      new errors with one summary.
    - `notification_environments`, when set, limits notifications to those environments.
    - Muted errors, errors marked "Won't fix" and errors during an error storm don't notify.
-   - PagerDuty only ever receives critical errors.
+   - PagerDuty only receives critical errors, and baseline alerts at the `:critical` level.
 
 ### Custom Severity Rules Not Working
 

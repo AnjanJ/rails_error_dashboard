@@ -69,7 +69,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 6. **Check a worker is running**: the installer turns on `config.async_logging`, so each error is
    saved by a background job on the `default` queue. Without a worker, errors never appear. Run
-   one, or set `config.async_logging = false`. See
+   one, or set `config.async_logging = false` (notifications still need a worker). See
    [Run a worker for RED's jobs](/rails_error_dashboard/docs/production/#1-run-a-worker-for-reds-jobs).
 
 ---
@@ -257,11 +257,13 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
    ```
 
 2. **Know what counts as "the same error"**: the fingerprint covers the error class, the message
-   with numbers, quoted strings and object addresses masked, the backtrace location, and the controller and action. Two
-   `RuntimeError`s raised in different places are two errors. A repeat of one error increments its
-   `occurrence_count` instead of creating a new record:
+   with numbers, quoted strings and object addresses masked, the file of the first backtrace line
+   outside your gems, and the controller and action. Two `RuntimeError`s raised in different files
+   are two errors. A repeat increments the existing record's `occurrence_count` only while that
+   record is unresolved, was first seen in the last 24 hours, and belongs to the same environment
+   and application. Otherwise the repeat starts a new record, which notifies like a new error:
    ```ruby
-   RailsErrorDashboard::ErrorLog.where(error_type: "RuntimeError").pluck(:id, :occurrence_count)
+   RailsErrorDashboard::ErrorLog.where(error_type: "RuntimeError").pluck(:id, :occurrence_count, :occurred_at)
    ```
 
 3. **A resolved error that happens again** reopens the same record. One marked "Won't fix" stays
@@ -293,9 +295,10 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
      Rails.error.report(e, severity: :error)
    end
    ```
-   Don't do this in a rescue that re-raises: the job error is reported anyway, so it would be
-   counted twice. `Rails.error.report` with the default severity (`:warning`, for a handled error)
-   is ignored by RED.
+   In a rescue that re-raises, you don't need it: the job error is reported when it escapes. (On
+   Rails 7.0 it would be counted twice; 7.1 and later skip an exception that was already reported.)
+   `Rails.error.report` with the default severity (`:warning`, for a handled error) is ignored by
+   RED.
 
 ---
 
@@ -482,14 +485,18 @@ Set it on that command only, never in the runtime environment: while it is set, 
    `Slack HTTP request failed` or `Failed to send Slack notification`.
 
 6. **Check what holds notifications back**:
-   - `config.notification_minimum_severity` (default `:low`): errors below it don't notify.
+   - `config.notification_minimum_severity` (default `:low`): new and reopened errors below it
+     don't notify. Milestone notifications ignore it.
    - RED notifies on an error's first occurrence, when a resolved error reopens, and when the
      occurrence count reaches one of `notification_threshold_alerts` (10, 50, 100, 500, 1000).
-     Raising the same error again doesn't send another notification.
+     Raising the same error again within 24 hours of its first occurrence doesn't send another
+     notification.
    - Muted errors, errors marked "Won't fix", environments outside `notification_environments`,
      errors during an error storm, and new errors past `notification_burst_limit` don't notify.
 
-7. **Send a test**: open `/red/settings` and click **Send Test Error**.
+7. **Send a test**: open `/red/settings` and click **Send Test Error**. Every click logs the same
+   `TestError`, so only the first click notifies (or the first after you resolve it, or after 24
+   hours). It is classified `:low`, so a higher `notification_minimum_severity` blocks it.
 
 ---
 
@@ -571,8 +578,8 @@ Set it on that command only, never in the runtime environment: while it is set, 
      }'
    ```
 
-3. **Check severity** (PagerDuty only receives critical errors, and there is no setting to change
-   that):
+3. **Check severity** (PagerDuty only receives critical errors, plus baseline alerts at the
+   `:critical` level, and there is no setting to change that):
    ```ruby
    RailsErrorDashboard::ErrorLog.last.critical?
    ```
@@ -757,7 +764,8 @@ Set it on that command only, never in the runtime environment: while it is set, 
    ```
 
 3. **Check platform detection**: the platform comes from the request's user agent: `iOS`,
-   `Android`, `Mobile` for other mobile clients, and `API` for everything else, browsers included.
+   `Android`, `Mobile` for Expo clients that name neither, and `API` for everything else, browsers
+   and other mobile clients included.
    With only one platform there is nothing to compare.
 
 ---
