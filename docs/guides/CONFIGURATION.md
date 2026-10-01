@@ -26,6 +26,8 @@ This guide covers all configuration options for Rails Error Dashboard, including
 - [Custom Severity Classification](#custom-severity-classification)
 - [Ignored Exceptions](#ignored-exceptions)
 - [Error Sampling](#error-sampling)
+- [Storm Protection](#storm-protection)
+- [Scheduled Digests](#scheduled-digests)
 - [Notification Callbacks](#notification-callbacks)
 - [ActiveSupport Notifications](#activesupport-notifications)
 - [Backtrace Configuration](#backtrace-configuration)
@@ -35,7 +37,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Complete reference of all 60+ configuration options with defaults, types, and descriptions.
+Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; `custom_fingerprint`; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`).
 
 ### Authentication & Access
 
@@ -44,7 +46,7 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 | `dashboard_username` | String | `"gandalf"` | Username for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_USER`) |
 | `dashboard_password` | String | `"youshallnotpass"` | Password for HTTP Basic Auth (ENV: `ERROR_DASHBOARD_PASSWORD`) |
 | `authenticate_with` | Lambda/Proc/Callable | `nil` | Custom auth lambda executed in controller context. When set, replaces HTTP Basic Auth. Return truthy to allow, falsy to deny (403). |
-| `user_model` | String | `"User"` | Model name for user associations |
+| `user_model` | String | `nil` (auto-detected) | Model name for user associations. The generated initializer sets `"User"` |
 
 ### Multi-App Support
 
@@ -52,8 +54,8 @@ Complete reference of all 60+ configuration options with defaults, types, and de
 |--------|------|---------|-------------|
 | `application_name` | String | Auto-detected | Application identifier (ENV: `APPLICATION_NAME`) |
 | `environment` | String | `Rails.env` | Environment errors are attributed to — `production`, `staging`, `uat`, any name (ENV: `ERROR_DASHBOARD_ENVIRONMENT`) |
-| `database` | Symbol/String | `nil` | Database connection name (nil = primary database) |
-| `use_separate_database` | Boolean | `false` | Use separate database for errors (ENV: `USE_SEPARATE_ERROR_DB`) |
+| `database` | Symbol/String | `nil` | Name of the error database's entry in `config/database.yml`. Used only with `use_separate_database = true`, and then required: boot fails without it. The generated initializer sets `:error_dashboard` |
+| `use_separate_database` | Boolean | `false` | Store errors in their own database. ENV: `USE_SEPARATE_ERROR_DB`, which only applies when the initializer doesn't set this option; the generated initializer always sets it |
 
 ### Dashboard UI
 
@@ -109,7 +111,7 @@ recycled Puma thread would render in whatever language the host app last used.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `notification_environments` | Array | `nil` (all) | Only notify for these environments; applies to every channel plus storm and baseline alerts (ENV: `ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS`, comma-separated) |
+| `notification_environments` | Array | `nil` (all) | Only notify for these environments; applies to every channel plus storm and baseline alerts. An Array of Strings: Symbols fail boot (ENV: `ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS`, comma-separated) |
 
 ### Notifications - Throttling
 
@@ -123,43 +125,71 @@ recycled Puma thread would render in whatever language the host app last used.
 
 The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
 
+### Notifications - Scheduled Digests
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_scheduled_digests` | Boolean | `false` | Send a summary email of recent errors. Sent only when `RailsErrorDashboard::ScheduledDigestJob` runs, which you schedule: see [Scheduled Digests](#scheduled-digests) |
+| `digest_recipients` | Array | `nil` | Who receives it. Falls back to `notification_email_recipients`; with neither, nothing is sent |
+| `digest_frequency` | Symbol | `:daily` | Shown on the Settings page only. The job's `period:` argument and your schedule decide what is sent and when |
+
+### Storm Protection
+
+On by default. See [Storm Protection](#storm-protection) below.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_storm_protection` | Boolean | `true` | Limit RED's own database writes during an error flood |
+| `storm_fingerprint_full_per_minute` | Integer | `30` | Full-detail captures per error per minute |
+| `storm_occurrence_sample_keep_every` | Integer | `10` | Past that cap, keep every Nth occurrence row |
+| `storm_shedding_threshold_per_second` | Integer | `10` | Errors per second at which RED stops storing per-event context |
+| `storm_open_threshold_per_second` | Integer | `50` | Errors per second at which RED only counts. Must be at least `storm_shedding_threshold_per_second` |
+| `storm_cooldown_seconds` | Integer | `60` | Time spent only counting before RED tries full capture again |
+| `storm_max_tracked_fingerprints` | Integer | `1000` | Errors tracked in memory; the rest share one overflow count |
+| `storm_flush_interval_seconds` | Integer | `30` | How often buffered counts are written to the error records |
+| `storm_notification` | Boolean | `true` | Send one "storm in progress" notification per storm, instead of one per error |
+| `auto_issue_rate_limit_count` | Integer | `5` | Most issues created automatically per window, during a storm or not (only while storm protection is on) |
+| `auto_issue_rate_limit_window_minutes` | Integer | `10` | Length of that window |
+| `context_sampling_threshold_per_day` | Integer | `25` | Full-context captures per error per day. After that, context is kept every Nth time |
+| `context_sampling_keep_every` | Integer | `10` | That N |
+
 ### Core Features
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_middleware` | Boolean | `true` | Enable error catching middleware |
 | `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
-| `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too |
+| `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too. Deletes only when `RailsErrorDashboard::RetentionCleanupJob` runs, and nothing in the gem schedules it: see [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs) |
 
 ### Error Classification
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `custom_severity_rules` | Hash | `{}` | Custom error type → severity mappings |
-| `ignored_exceptions` | Array | `[]` | Exception classes/patterns to ignore |
+| `custom_severity_rules` | Hash | `{}` | Exact error class name (a String) → severity. See [Custom Severity Classification](#custom-severity-classification) |
+| `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings (subclasses included) or Regexps matched against the class name. Class objects are not matched |
 
 ### Performance Optimization
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `async_logging` | Boolean | `false` | Log errors asynchronously in background jobs |
-| `async_adapter` | Symbol | `:sidekiq` | Background job adapter (`:sidekiq`, `:solid_queue`, `:async`) |
-| `sampling_rate` | Float | `1.0` | Percentage of errors to log (0.0-1.0, critical always logged) |
-| `max_backtrace_lines` | Integer | `50` | Maximum backtrace lines to store |
+| `async_logging` | Boolean | `false` | Save errors in a background job. The generated initializer sets `true`. Needs a worker: see [Run a worker](../PRODUCTION.md#1-run-a-worker-for-reds-jobs) |
+| `async_adapter` | Symbol | `:sidekiq` | Only checked for a valid value (`:sidekiq`, `:solid_queue`, `:async`). It doesn't choose the backend: RED's jobs run on your app's `config.active_job.queue_adapter` |
+| `sampling_rate` | Float | `1.0` | Fraction of non-critical errors to log, from 0.0 to 1.0. Critical errors are always logged. Outside that range, boot fails |
+| `max_backtrace_lines` | Integer | `100` | Maximum backtrace lines to store |
 
-### API & Rate Limiting
+### Rate Limiting
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_rate_limiting` | Boolean | `false` | Enable API rate limiting (opt-in) |
-| `rate_limit_per_minute` | Integer | `100` | Max requests per minute per IP |
+| `enable_rate_limiting` | Boolean | `false` | Rate-limit requests to the dashboard, per IP (opt-in). Counts are kept in `Rails.cache` |
+| `rate_limit_per_minute` | Integer | `100` | Currently ignored: the limit is fixed at 300 requests per minute, per IP and per path |
 
 ### Enhanced Metrics
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `app_version` | String | `nil` | Application version (ENV: `APP_VERSION`) |
-| `git_sha` | String | `nil` | Git commit SHA (ENV: `GIT_SHA`) |
+| `app_version` | String | `nil` | Application version. When nil: ENV `APP_VERSION`, then a `VERSION` file in the app root |
+| `git_sha` | String | `nil` | Git commit SHA. When nil: ENV `GIT_SHA`, `HEROKU_SLUG_COMMIT` or `RENDER_GIT_COMMIT`, then the app's `.git` directory |
 | `git_repository_url` | String | `nil` | Git repository URL for commit links (ENV: `GIT_REPOSITORY_URL`) |
 | `total_users_for_impact` | Integer | `nil` | Total users for impact % calculation (auto-detected if nil) |
 
@@ -179,8 +209,8 @@ The burst cap exists for the bad deploy that produces hundreds of *distinct* new
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_baseline_alerts` | Boolean | `false` | Statistical anomaly detection and alerts |
-| `baseline_alert_threshold_std_devs` | Float | `2.0` | Standard deviations to trigger alert (ENV: `BASELINE_ALERT_THRESHOLD`) |
-| `baseline_alert_severities` | Array | `[:critical, :high]` | Severities to alert on |
+| `baseline_alert_threshold_std_devs` | Float | `2.0` | Standard deviations above the baseline at which a count is an anomaly (ENV: `BASELINE_ALERT_THRESHOLD`) |
+| `baseline_alert_severities` | Array | `[:critical, :high]` | Anomaly levels that send an alert. An anomaly is `:high` from 1 standard deviation above the threshold and `:critical` from 2 above it, so with the defaults alerts start at 3 standard deviations. The lowest level (`:elevated`) can't be selected. Needs `BaselineCalculationJob`: see [Baseline Anomaly Alerts](#baseline-anomaly-alerts) |
 | `baseline_alert_cooldown_minutes` | Integer | `120` | Minutes between alerts for same error (ENV: `BASELINE_ALERT_COOLDOWN`) |
 
 ### Source Code Integration (NEW!)
@@ -200,7 +230,7 @@ The burst cap exists for the bad deploy that produces hundreds of *distinct* new
 |--------|------|---------|-------------|
 | `enable_breadcrumbs` | Boolean | `false` | Capture request activity trail (SQL, controller, cache, etc.) |
 | `breadcrumb_buffer_size` | Integer | `40` | Max breadcrumbs per request (ring buffer) |
-| `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or `[:sql, :controller, :cache, :job, :mailer, :deprecation, :custom]`) |
+| `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or a subset of `[:sql, :controller, :cache, :job, :mailer, :deprecation, :custom, :action_cable, :active_storage, :rack_attack, :llm, :llm_tool]`). Symbols only: with Strings, no breadcrumb matches |
 | `enable_n_plus_one_detection` | Boolean | `true` | Detect N+1 query patterns in SQL breadcrumbs (display-time analysis) |
 | `n_plus_one_threshold` | Integer | `3` | Min repetitions to flag as N+1 (min: 2) |
 
@@ -277,8 +307,8 @@ One switch enables all platform integration: issue creation, auto-create, lifecy
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_issue_tracking` | Boolean | `false` | Master switch — enables all issue tracking features |
-| `issue_tracker_token` | String/Lambda | `ENV["RED_BOT_TOKEN"]` | API token. Supports lambda: `-> { Rails.application.credentials.dig(:github, :token) }` |
-| `issue_tracker_provider` | Symbol | auto-detected | `:github`, `:gitlab`, or `:codeberg`. Auto-detected from `git_repository_url` |
+| `issue_tracker_token` | String/Lambda | `ENV["RED_BOT_TOKEN"] \|\| ENV["ISSUE_TRACKER_TOKEN"]` | API token. Supports lambda: `-> { Rails.application.credentials.dig(:github, :token) }` |
+| `issue_tracker_provider` | Symbol | auto-detected | `:github`, `:gitlab`, `:codeberg` or `:linear`. Auto-detected from `git_repository_url`, except `:linear`, which you set yourself |
 | `issue_tracker_repo` | String | auto-detected | `"owner/repo"`. Auto-extracted from `git_repository_url` |
 | `issue_tracker_labels` | Array | `["bug"]` | Labels added to new issues |
 | `issue_tracker_api_url` | String | auto-detected | Custom API URL for self-hosted GitLab/Gitea/Forgejo |
@@ -297,14 +327,14 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook |
-| `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Directory must exist |
+| `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Created if missing |
 
 ### Internal Logging & Debugging
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_internal_logging` | Boolean | `false` | Enable internal gem logging for debugging |
-| `log_level` | Symbol | `:silent` | Log level (`:debug`, `:info`, `:warn`, `:error`, `:silent`) |
+| `enable_internal_logging` | Boolean | `false` | Turns on RED's debug, info and warn messages, at or above `log_level` |
+| `log_level` | Symbol | `:silent` | `:debug`, `:info`, `:warn`, `:error`, `:fatal` or `:silent`. RED's error messages are logged at `:error` and below, with or without `enable_internal_logging`. The default, `:silent`, logs nothing, failures included |
 
 ### Read-Only Attributes
 
@@ -330,8 +360,9 @@ APPLICATION_NAME=my-api
 ERROR_DASHBOARD_ENVIRONMENT=staging                 # Defaults to Rails.env
 ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS=production  # Comma-separated; unset = notify everywhere
 
-# Database
-USE_SEPARATE_ERROR_DB=true  # "true" or "false"
+# Database: only when the initializer doesn't set use_separate_database
+# (the generated one does), and config.database must be set too
+USE_SEPARATE_ERROR_DB=true
 
 # Notifications
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
@@ -350,6 +381,20 @@ GIT_REPOSITORY_URL=https://github.com/user/repo
 # Baseline Alerts
 BASELINE_ALERT_THRESHOLD=2.0  # Standard deviations
 BASELINE_ALERT_COOLDOWN=120   # Minutes
+
+# Issue tracking
+RED_BOT_TOKEN=...             # or ISSUE_TRACKER_TOKEN
+ISSUE_WEBHOOK_SECRET=...
+
+# AI help
+RED_LLM_PROVIDER=openai       # openai or anthropic; any other value fails boot
+RED_LLM_API_KEY=...
+RED_LLM_MODEL=gpt-5
+RED_LLM_OPENAI_ENDPOINT=auto  # auto, responses or chat_completions
+
+# Never set this at runtime: it turns off error capture. Docker images set it
+# on the assets:precompile command only (see Running in Production).
+# SECRET_KEY_BASE_DUMMY=1
 ```
 
 ---
@@ -366,21 +411,20 @@ config.log_level = :debug             # Verbose logging
 
 **For Production (Low Traffic):**
 ```ruby
-config.async_logging = true           # Background jobs
-config.async_adapter = :sidekiq       # Battle-tested
+config.async_logging = true           # Background jobs (run a worker)
 config.sampling_rate = 1.0            # Log all errors
-config.retention_days = 90            # 3 months
-config.max_backtrace_lines = 50       # Full context
+config.retention_days = 90            # 3 months (schedule RetentionCleanupJob)
+config.max_backtrace_lines = 100      # The default
 ```
 
 **For Production (High Traffic >1000 errors/day):**
 ```ruby
-config.async_logging = true           # REQUIRED
-config.async_adapter = :sidekiq       # Recommended
+config.async_logging = true           # REQUIRED (run a worker)
 config.sampling_rate = 0.1            # 10% (critical always logged)
-config.retention_days = 30            # 1 month
+config.retention_days = 30            # 1 month (schedule RetentionCleanupJob)
 config.max_backtrace_lines = 20       # Reduce storage
 config.use_separate_database = true   # Isolate errors
+config.database = :error_dashboard    # Its config/database.yml entry
 ```
 
 ---
@@ -392,7 +436,7 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 **Tier 1 Features (Always ON):**
 - ✅ Error capture (controllers, jobs, middleware)
 - ✅ Dashboard UI with search and filtering
-- ✅ Real-time updates via Turbo Streams
+- ✅ Real-time updates via Turbo Streams (needs Action Cable with a cross-process adapter, such as Solid Cable or Redis)
 - ✅ Analytics and trend charts
 
 **Optional Features (17 total):**
@@ -625,19 +669,21 @@ Optimize performance and reduce database load with these features.
 
 ### Async Error Logging
 
-Log errors in background jobs for non-blocking performance.
+Save errors in a background job, so the request that raised them doesn't wait for the database
+write. The generated initializer turns this on.
 
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.async_logging = true
-  config.async_adapter = :sidekiq  # Options: :sidekiq, :solid_queue, :async
 end
 ```
 
-**Supported Adapters:**
-- `:sidekiq` - Battle-tested, recommended for production
-- `:solid_queue` - Rails 8.1+ built-in job backend
-- `:async` - Rails default (in-process, good for development)
+The job runs on your app's Active Job adapter (`config.active_job.queue_adapter`): Solid Queue
+(the default since Rails 8.0), Sidekiq, GoodJob, or Rails' in-process `:async` adapter. RED's
+`config.async_adapter` is only checked for a valid value; it doesn't choose the backend.
+
+A worker has to process RED's two queues, `default` and `error_notifications`. Without a worker,
+set `config.async_logging = false`. See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
 
 ### Error Sampling
 
@@ -658,10 +704,12 @@ Isolate error data in a dedicated database for better performance and separation
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.use_separate_database = true
+  config.database = :error_dashboard  # must match an entry in config/database.yml
 end
 ```
 
-Requires additional database configuration. See [Database Options Guide](DATABASE_OPTIONS.md) for setup instructions.
+Boot fails if `config.database` is missing. Every environment the app boots in also needs that
+entry in `config/database.yml`. See the [Database Options Guide](DATABASE_OPTIONS.md) for setup instructions.
 
 ---
 
@@ -676,11 +724,20 @@ Automatically detect when error rates exceed normal patterns using statistical a
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.enable_baseline_alerts = true
-  config.baseline_alert_threshold_std_devs = 2.0  # Alert when >2 std devs above baseline
-  config.baseline_alert_severities = [:critical, :high]  # Alert on these severities only
+  config.baseline_alert_threshold_std_devs = 2.0  # An anomaly starts 2 std devs above baseline
+  config.baseline_alert_severities = [:critical, :high]  # Anomaly levels that alert (see below)
   config.baseline_alert_cooldown_minutes = 120  # 2 hours between alerts for same error
 end
 ```
+
+Nothing alerts until `RailsErrorDashboard::BaselineCalculationJob` has calculated the baselines,
+and nothing in the gem schedules it. Run it daily: see
+[Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs).
+
+`baseline_alert_severities` lists anomaly levels, not error severities. A count from the threshold
+up to 1 standard deviation above it is `:elevated`, which can't be selected; from there to 2 above
+it is `:high`; beyond that it is `:critical`. With the defaults, alerts start at 3 standard
+deviations above the baseline.
 
 See [Baseline Monitoring Guide](../features/BASELINE_MONITORING.md) for details.
 
@@ -803,7 +860,7 @@ end
 - **Source Code Viewer**: View actual source code lines around the error
 - **Git Blame Integration**: See who last modified the code and when
 - **Repository Links**: Direct links to GitHub, GitLab, or Bitbucket
-- **Automatic Detection**: Detects repository URL from git remote
+- **Repository URL**: set `config.git_repository_url` (or `GIT_REPOSITORY_URL`); it isn't read from your git remote
 - **Security**: Only reads files within application root directory
 
 ### Requirements
@@ -862,7 +919,8 @@ RailsErrorDashboard.configure do |config|
   config.breadcrumb_buffer_size = 40
 
   # Limit which categories are captured (default: nil = all)
-  # Options: :sql, :controller, :cache, :job, :mailer, :deprecation, :custom
+  # Options: :sql, :controller, :cache, :job, :mailer, :deprecation, :custom,
+  # :action_cable, :active_storage, :rack_attack, :llm, :llm_tool (Symbols, not Strings)
   config.breadcrumb_categories = [ :sql, :controller ]  # Only SQL and controller events
 
   # N+1 query detection (analyzes SQL breadcrumbs at display time)
@@ -953,17 +1011,18 @@ end
 | Puma stats | `Puma.stats` | running, max_threads, pool_capacity, backlog (when available) |
 | RubyVM cache | `RubyVM.stat` | constant_cache invalidations, class serial, global state (when available) |
 | YJIT stats | `RubyVM::YJIT.runtime_stats` | compiled ISEQs, code region size, inline/outlined bytes (when YJIT enabled) |
+| Job queue depth | Sidekiq, Solid Queue or GoodJob | queries against the queue store, cached per process for `system_health_queue_stats_cache_seconds` (10). Off with `system_health_queue_stats = false` |
 
 ### Safety
 
 - **Default OFF** — opt-in only
-- **Sub-millisecond** — total snapshot < 1ms
+- **Sub-millisecond**, except the job-queue counts, which are database or Redis queries (cached per process)
 - **Every metric individually wrapped** in `rescue => nil`
 - **Top-level rescue** — returns `{ captured_at: ... }` if everything fails (never raises)
 - **No ObjectSpace scanning** — never calls `each_object` or `count_objects`
 - **No Thread backtraces** — only `.count`, never `.map(&:backtrace)`
 - **No subprocess** — memory via procfs only, no `ps`, no fork, no backtick
-- **No global state** — no Thread.current, no mutex, no memoization
+- **No Thread.current** — the only shared state is the per-process cache of queue counts, refreshed by one thread at a time
 
 ---
 
@@ -1093,7 +1152,7 @@ Run together, the two answer different questions — how many agents read the si
 
 ### Buffer overflow
 
-Events are buffered per thread, keyed on rule, match type, discriminator, path and method, and capped by `rack_attack_max_cache_size`. Past the cap the oldest entry is evicted, and its count is added to an overflow total rather than discarded — the dashboard reports it instead of silently showing a smaller number.
+Events are buffered per thread, keyed on rule, match type, discriminator, path, method and user agent, and capped by `rack_attack_max_cache_size`. Past the cap the oldest entry is evicted, and its count is added to an overflow total rather than discarded — the dashboard reports it instead of silently showing a smaller number.
 
 Tracking many clients (a crawler fleet on rotating IPs generates a distinct key per address) makes eviction more likely. Raise the cap if the page reports overflow:
 
@@ -1112,7 +1171,7 @@ Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook.
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.enable_crash_capture = true
-  config.crash_capture_path = nil    # nil = Dir.tmpdir; custom path must exist
+  config.crash_capture_path = nil    # nil = Dir.tmpdir; a custom path is created if missing
 end
 ```
 
@@ -1126,10 +1185,12 @@ Override default severity levels for specific error types. This is useful when y
 
 ### Default Severity Levels
 
-- **Critical**: `SecurityError`, `NoMemoryError`, `SystemStackError`, `ActiveRecord::StatementInvalid`
-- **High**: `ActiveRecord::RecordNotFound`, `ArgumentError`, `TypeError`, `NoMethodError`, `NameError`
-- **Medium**: `ActiveRecord::RecordInvalid`, `Timeout::Error`, `Net::ReadTimeout`, `Net::OpenTimeout`
+- **Critical**: `SecurityError`, `NoMemoryError`, `SystemStackError`, `SignalException`, `ActiveRecord::StatementInvalid`, `LoadError`, `SyntaxError`, `ActiveRecord::ConnectionNotEstablished`, `Redis::ConnectionError`, `OpenSSL::SSL::SSLError`
+- **High**: `ActiveRecord::RecordNotFound`, `ArgumentError`, `TypeError`, `NoMethodError`, `NameError`, `ZeroDivisionError`, `FloatDomainError`, `IndexError`, `KeyError`, `RangeError`
+- **Medium**: `ActiveRecord::RecordInvalid`, `Timeout::Error`, `Net::ReadTimeout`, `Net::OpenTimeout`, `ActiveRecord::RecordNotUnique`, `JSON::ParserError`, `CSV::MalformedCSVError`, `Errno::ECONNREFUSED`
 - **Low**: All other errors
+
+Each list matches the exact class name only, not subclasses.
 
 ### Configuration
 
@@ -1147,6 +1208,16 @@ RailsErrorDashboard.configure do |config|
     "MyApp::BusinessLogicError" => :medium
   }
 end
+```
+
+Each key is the exact class name, as a String. A Regexp or Symbol key never matches, a rule
+doesn't cover subclasses, and the order of the rules doesn't matter. A rule mapping to `:critical`
+also exempts that error from [sampling](#error-sampling).
+
+To check how an error type is classified:
+
+```ruby
+RailsErrorDashboard::Services::SeverityClassifier.classify("Stripe::CardError")  # => :critical
 ```
 
 ### Use Cases
@@ -1183,9 +1254,9 @@ end
 
 ### Features
 
-- **Exact Matching**: Specify exception class names as strings
-- **Regex Patterns**: Use regular expressions for flexible matching
-- **Inheritance Support**: Ignoring a parent class ignores all subclasses
+- **Class names as Strings**: `"ActiveRecord::RecordNotFound"` also ignores its subclasses. A class
+  object (`ActiveRecord::RecordNotFound` without quotes) is not matched, so always quote the name
+- **Regex Patterns**: matched against the exception's class name only, so they don't cover subclasses
 - **Early Exit**: Ignored exceptions skip all processing, saving resources
 
 ### Use Cases
@@ -1228,18 +1299,19 @@ end
 ### Behavior
 
 - **1.0 (100%)**: Log all errors - default behavior
-- **0.1 (10%)**: Log 10% of non-critical errors, 100% of critical errors
+- **0.1 (10%)**: Log about 10% of non-critical errors, and every critical error
 - **0.0 (0%)**: Skip all non-critical errors, log only critical errors
-- **> 1.0**: Treated as 100%
-- **< 0.0**: Treated as 0%
+- **Above 1.0 or below 0.0**: rejected; the app fails to boot with `RailsErrorDashboard::ConfigurationError`
+
+Between 0.0 and 1.0, the first occurrence of each error in each process is always logged, so
+sampling can't hide that an error exists. ("Each error" here means the exception class plus the
+first line of your app's code in the backtrace.)
 
 ### Critical Errors (Always Logged)
 
-These errors bypass sampling because they indicate serious system issues:
-- `SecurityError`
-- `NoMemoryError`
-- `SystemStackError`
-- `ActiveRecord::StatementInvalid`
+Critical errors bypass sampling: the ten types listed under
+[Default Severity Levels](#default-severity-levels), and any type you map to `:critical` in
+`custom_severity_rules`.
 
 ### Use Cases
 
@@ -1256,6 +1328,49 @@ config.sampling_rate = 1.0  # Log everything
 
 ---
 
+## Storm Protection
+
+When the error rate spikes, after a bad deploy or during a dependency outage, storm protection
+limits RED's own database writes so that error tracking doesn't add to the incident. It is on by
+default. Occurrences are always counted exactly; only per-event detail is sampled:
+
+1. Past `storm_fingerprint_full_per_minute` captures of one error in a minute, RED stops storing
+   context for it, then keeps only every `storm_occurrence_sample_keep_every`th occurrence row.
+2. Past `storm_shedding_threshold_per_second` errors per second, RED stops storing per-event
+   context for every error. Past `storm_open_threshold_per_second`, it only counts, for
+   `storm_cooldown_seconds`, then tries full capture again.
+3. Per-error notifications are replaced by one "storm in progress" notification.
+4. The buffered counts are written to the error records every `storm_flush_interval_seconds`.
+
+Every threshold is per process: each Puma worker and job process keeps its own counts. While
+storm protection is on, every option in the table must be a positive integer, and
+`storm_open_threshold_per_second` must be at least `storm_shedding_threshold_per_second`;
+otherwise the app fails to boot. With `enable_storm_protection = false`, none of this applies,
+including the cap on automatically created issues.
+
+---
+
+## Scheduled Digests
+
+A daily or weekly summary email of error activity. It is off by default, and nothing sends it
+until you schedule `RailsErrorDashboard::ScheduledDigestJob`.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_scheduled_digests = true
+  config.digest_recipients = ["team@example.com"]  # default: notification_email_recipients
+end
+```
+
+The job takes the period as an argument: `period: "daily"` (the default) or `period: "weekly"`.
+`digest_frequency` doesn't change what it sends. See
+[Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs) for a Solid Queue
+schedule and a cron line. The email goes through your app's Action Mailer setup, from
+`notification_email_from`. To send one now, `bin/rails error_dashboard:send_digest PERIOD=daily`
+queues the job for your worker.
+
+---
+
 ## Notification Callbacks
 
 Register custom Ruby blocks that execute when errors are logged or resolved. Perfect for integrating with external services.
@@ -1266,7 +1381,8 @@ Register custom Ruby blocks that execute when errors are logged or resolved. Per
 
 ```ruby
 RailsErrorDashboard.on_error_logged do |error_log|
-  # Called for every NEW error (not recurrences)
+  # Called when an error is first logged, and when a resolved error reopens.
+  # Not called for the other recurrences.
 
   # Send to custom logging service
   CustomLogger.log(
@@ -1285,7 +1401,7 @@ end
 
 ```ruby
 RailsErrorDashboard.on_critical_error do |error_log|
-  # Called ONLY for critical errors (in addition to on_error_logged)
+  # Called ONLY for critical errors (in addition to on_error_logged), at the same moments
 
   # Trigger PagerDuty incident
   PagerDuty.trigger(
@@ -1304,7 +1420,8 @@ end
 
 ```ruby
 RailsErrorDashboard.on_error_resolved do |error_log|
-  # Called when error is marked as resolved
+  # Called when one error is resolved (the Resolve button, or ResolveError).
+  # Not called for a batch resolve, or for a status change to "resolved".
 
   # Notify team
   Slack.post_message(
@@ -1341,11 +1458,11 @@ end
 
 ### Error Handling
 
-Callbacks are fail-safe - if one callback raises an error, it won't break error logging or prevent other callbacks from running:
+Callbacks are fail-safe - if one callback raises an error, it won't break error logging or prevent other callbacks from running. The failure is logged at error level, which you only see when `config.log_level` isn't `:silent` (the default):
 
 ```ruby
 RailsErrorDashboard.on_error_logged do |error_log|
-  raise "Callback error"  # Logged as warning, other callbacks still run
+  raise "Callback error"  # Logged at error level, other callbacks still run
 end
 
 RailsErrorDashboard.on_error_logged do |error_log|
@@ -1409,25 +1526,25 @@ Rails Error Dashboard emits standard Rails instrumentation events that can be su
 
 #### 1. `error_logged.rails_error_dashboard`
 
-Emitted when any error is logged (new errors only, not recurrences).
+Emitted when an error is first logged, and when a resolved error reopens. Not emitted for the other recurrences.
 
 ```ruby
 ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do |name, start, finish, id, payload|
   # Payload contains:
-  # - error_log: Full ErrorLog record
+  # - error_log: Full ErrorLog record (payload[:error_log].environment has the environment)
   # - error_id: Error ID
   # - error_type: Exception class name
   # - message: Error message
   # - severity: Error severity (:critical, :high, :medium, :low)
   # - platform: Platform (iOS, Android, API)
-  # - environment: Rails environment
   # - occurred_at: Timestamp
 
-  duration = finish - start
-  StatsD.timing("error_logging.duration", duration)
   StatsD.increment("errors.logged", tags: ["type:#{payload[:error_type]}"])
 end
 ```
+
+The events are sent after the error is saved, not around the save, so their duration is always
+about zero: they can't be used to time error logging.
 
 #### 2. `critical_error.rails_error_dashboard`
 
@@ -1474,7 +1591,6 @@ ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do 
   event = ActiveSupport::Notifications::Event.new(*args)
 
   puts "Event: #{event.name}"
-  puts "Duration: #{event.duration}ms"
   puts "Error Type: #{event.payload[:error_type]}"
   puts "Severity: #{event.payload[:severity]}"
 end
@@ -1541,7 +1657,7 @@ ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do 
       message: event.payload[:message],
       severity: event.payload[:severity],
       platform: event.payload[:platform],
-      environment: event.payload[:environment]
+      environment: event.payload[:error_log].environment
     }
   )
 end
@@ -1551,17 +1667,13 @@ end
 
 ## Async Error Logging (Revisited)
 
-Async logging is available and fully functional. See the [Async Error Logging](#async-error-logging) section above for complete configuration details.
-
-For quick reference:
+See [Async Error Logging](#async-error-logging) above. For quick reference:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Enable async logging
+  # Save errors in a background job on your app's Active Job adapter.
+  # A worker must process the default and error_notifications queues.
   config.async_logging = true
-
-  # Choose adapter: :sidekiq (default), :solid_queue, or :async
-  config.async_adapter = :sidekiq
 end
 ```
 
@@ -1573,11 +1685,11 @@ Control how many lines of backtrace are stored:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # Limit backtrace to 50 lines (default)
-  config.max_backtrace_lines = 50
-
-  # Store more for detailed debugging
+  # Limit backtrace to 100 lines (default)
   config.max_backtrace_lines = 100
+
+  # Store less for high-volume apps
+  config.max_backtrace_lines = 50
 
   # Minimal storage (just the first line)
   config.max_backtrace_lines = 1
@@ -1602,10 +1714,8 @@ RailsErrorDashboard.configure do |config|
   # ============================================================================
   # AUTHENTICATION (Always Required)
   # ============================================================================
-  # The defaults work in development and test only. Everywhere else, set
-  # ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD (see Dashboard Credentials).
-  config.dashboard_username = ENV.fetch("ERROR_DASHBOARD_USER", "gandalf")
-  config.dashboard_password = ENV.fetch("ERROR_DASHBOARD_PASSWORD", "youshallnotpass")
+  # Credentials come from ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD.
+  # Don't set them here (see Dashboard Credentials).
 
   # ============================================================================
   # CORE FEATURES (Always Enabled)
@@ -1619,26 +1729,29 @@ RailsErrorDashboard.configure do |config|
   # NOTIFICATION SETTINGS
   # ============================================================================
 
+  # Each channel is switched on only when its setting is present. A channel
+  # that is on without its URL, key or recipients stops the app booting.
+
   # Slack Notifications
-  config.enable_slack_notifications = true
   config.slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
+  config.enable_slack_notifications = config.slack_webhook_url.present?
 
   # Email Notifications
-  config.enable_email_notifications = true
-  config.notification_email_recipients = ENV.fetch("ERROR_NOTIFICATION_EMAILS", "").split(",").map(&:strip)
+  config.notification_email_recipients = ENV.fetch("ERROR_NOTIFICATION_EMAILS", "").split(",").map(&:strip).reject(&:empty?)
   config.notification_email_from = ENV.fetch("ERROR_NOTIFICATION_FROM", "errors@example.com")
+  config.enable_email_notifications = config.notification_email_recipients.any?
 
   # Discord Notifications
-  config.enable_discord_notifications = true
   config.discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
+  config.enable_discord_notifications = config.discord_webhook_url.present?
 
   # PagerDuty Integration (critical errors only)
-  config.enable_pagerduty_notifications = true
   config.pagerduty_integration_key = ENV["PAGERDUTY_INTEGRATION_KEY"]
+  config.enable_pagerduty_notifications = config.pagerduty_integration_key.present?
 
   # Generic Webhook Notifications
-  config.enable_webhook_notifications = true
   config.webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
+  config.enable_webhook_notifications = config.webhook_urls.any?
 
   # Dashboard base URL (used in notification links)
   config.dashboard_base_url = ENV["DASHBOARD_BASE_URL"]
@@ -1647,11 +1760,11 @@ RailsErrorDashboard.configure do |config|
   # PERFORMANCE & SCALABILITY
   # ============================================================================
 
-  # Async Error Logging
+  # Async Error Logging (on your app's Active Job adapter; run a worker
+  # for the default and error_notifications queues)
   config.async_logging = true
-  config.async_adapter = :sidekiq  # Options: :sidekiq, :solid_queue, :async
 
-  # Backtrace size limiting
+  # Backtrace size limiting (default: 100)
   config.max_backtrace_lines = 50
 
   # Error Sampling (10% - critical errors ALWAYS logged)
@@ -1668,12 +1781,13 @@ RailsErrorDashboard.configure do |config|
   # DATABASE CONFIGURATION
   # ============================================================================
   config.use_separate_database = false
+  # With true, also set config.database = :error_dashboard (its database.yml entry)
 
   # ============================================================================
   # ADVANCED ANALYTICS
   # ============================================================================
 
-  # Baseline Anomaly Alerts
+  # Baseline Anomaly Alerts (schedule RailsErrorDashboard::BaselineCalculationJob)
   config.enable_baseline_alerts = true
   config.baseline_alert_threshold_std_devs = 2.0
   config.baseline_alert_severities = [:critical, :high]
@@ -1760,7 +1874,7 @@ RailsErrorDashboard.configure do |config|
   # On-demand diagnostic dump
   config.enable_diagnostic_dump = true
 
-  # Rack Attack event tracking (requires breadcrumbs)
+  # Rack Attack event tracking (needs the rack-attack gem)
   config.enable_rack_attack_tracking = true
 
   # ActionCable connection monitoring (requires breadcrumbs)
@@ -1900,9 +2014,12 @@ end
 
 4. **Verify configuration is loaded**
    ```ruby
-   # In rails console
-   RailsErrorDashboard.configuration.inspect
+   # In rails console: read the options you changed, one by one
+   RailsErrorDashboard.configuration.async_logging
+   RailsErrorDashboard.configuration.sampling_rate
    ```
+   Don't print the whole `RailsErrorDashboard.configuration` object, or paste it into an issue:
+   it includes the dashboard password, webhook URLs and API keys.
 
 ### Environment Variables Not Working
 
@@ -1948,88 +2065,91 @@ end
      -d '{"text": "Test message"}'
    ```
 
-4. **Check background jobs are running**
+4. **Check background jobs are running, on both queues**
    ```bash
-   # With Sidekiq
-   bundle exec sidekiq
+   # With Sidekiq: Slack and email jobs use the error_notifications queue
+   bundle exec sidekiq -q default -q error_notifications
 
    # With Solid Queue
    bin/jobs
    ```
 
-5. **Check notification thresholds**
-   ```ruby
-   # Critical errors only go to PagerDuty
-   config.severity_thresholds[:pagerduty] = :critical
-   ```
+5. **Check what holds notifications back**
+   - `notification_minimum_severity` (default `:low`): errors below it don't notify.
+   - A recurring error notifies only at the `notification_threshold_alerts` counts
+     (10, 50, 100, 500, 1000), and a reopened one at most every `notification_cooldown_minutes` (5).
+   - `notification_burst_limit` (10 per 60 seconds, per process) replaces the rest of a burst of
+     new errors with one summary.
+   - `notification_environments`, when set, limits notifications to those environments.
+   - Muted errors, errors marked "Won't fix" and errors during an error storm don't notify.
+   - PagerDuty only ever receives critical errors.
 
 ### Custom Severity Rules Not Working
 
 **Problem**: Custom severity rules aren't being applied.
 
 **Solutions**:
-1. **Check rule format** - Use regex or symbol
+1. **Check rule format** - Keys are exact class names, as Strings
    ```ruby
    # Correct
+   config.custom_severity_rules = {
+     "ActiveRecord::RecordNotFound" => :low,
+     "Net::ReadTimeout" => :high
+   }
+
+   # Incorrect: Regexp and Symbol keys never match
    config.custom_severity_rules = {
      /ActiveRecord::RecordNotFound/ => :low,
      :timeout_error => :high
    }
-
-   # Incorrect (string won't match)
-   config.custom_severity_rules = {
-     "ActiveRecord::RecordNotFound" => :low
-   }
    ```
 
-2. **Test regex patterns**
+2. **Check the class name** - A rule covers that exact class only, not its subclasses, and the
+   order of the rules doesn't matter. To see how a type is classified:
    ```ruby
    # In rails console
-   error_class = "ActiveRecord::RecordNotFound"
-   /ActiveRecord::RecordNotFound/.match?(error_class)
-   # Should return true
+   RailsErrorDashboard::Services::SeverityClassifier.classify("ActiveRecord::RecordNotFound")
+   # => :low with the rule above
    ```
 
-3. **Check rule order** - First match wins
-   ```ruby
-   # More specific rules should come first
-   config.custom_severity_rules = {
-     /ActiveRecord::RecordNotFound.*User/ => :high,  # Specific
-     /ActiveRecord::RecordNotFound/ => :low          # General
-   }
-   ```
+3. **Restart the app** - The rules are read when each error is classified, but the initializer
+   only runs at boot.
 
 ### Background Jobs Not Processing
 
 **Problem**: Async logging enabled but errors not appearing.
 
 **Solutions**:
-1. **Check job adapter configuration**
+1. **Check which backend runs the jobs** - RED uses your app's Active Job adapter
    ```ruby
    # In rails console
-   RailsErrorDashboard.configuration.async_adapter
-   # Should return :sidekiq, :solid_queue, or :async
+   ActiveJob::Base.queue_adapter
+   # (RailsErrorDashboard.configuration.async_adapter doesn't choose it)
    ```
 
-2. **Verify job processor is running**
+2. **Verify job processor is running, on both queues**
    ```bash
-   # Sidekiq
+   # Sidekiq (must process default and error_notifications)
    ps aux | grep sidekiq
 
-   # Solid Queue
-   ps aux | grep solid_queue
+   # Solid Queue (process titles start with solid-queue)
+   ps aux | grep solid-queue
    ```
 
-3. **Check failed jobs**
+3. **Check queued and failed jobs**
    ```ruby
    # Sidekiq
    require 'sidekiq/api'
+   Sidekiq::Queue.new("default").size
    Sidekiq::RetrySet.new.size
    Sidekiq::DeadSet.new.size
 
    # Solid Queue
-   SolidQueue::Job.failed.count
+   SolidQueue::ReadyExecution.count
+   SolidQueue::FailedExecution.count
    ```
+   Most of RED's jobs retry three times and are then dropped with a log line ("discarded after 3
+   attempts"), so they don't stay in the failed set. The issue-tracker jobs are the exception.
 
 4. **Test with sync logging temporarily**
    ```ruby
@@ -2050,7 +2170,7 @@ end
 2. **Critical errors always logged** - Check severity
    ```ruby
    # Critical errors bypass sampling
-   config.severity_thresholds[:critical]
+   RailsErrorDashboard::Services::SeverityClassifier.critical?("MyError")
    ```
 
 3. **Adjust rate** - Start higher, tune down
@@ -2058,15 +2178,10 @@ end
    config.sampling_rate = 0.5  # Start with 50%
    ```
 
-4. **Use conditional sampling**
+4. **Always keep specific errors** - There is no per-exception sampling hook. Map the types you
+   always want to `:critical`, which bypasses sampling:
    ```ruby
-   config.before_log_callback = lambda do |exception, context|
-     # Always log payment errors
-     return true if exception.message.include?("Stripe")
-
-     # Sample others based on environment
-     Rails.env.production? ? rand < 0.1 : true
-   end
+   config.custom_severity_rules = { "Stripe::CardError" => :critical }
    ```
 
 ### Database Performance Issues
@@ -2081,20 +2196,24 @@ end
 
 2. **Use separate database**
    ```ruby
-   config.database = :errors
+   config.use_separate_database = true
+   config.database = :error_dashboard  # must match an entry in config/database.yml
    ```
+   See the [Database Options Guide](DATABASE_OPTIONS.md).
 
 3. **Add database indexes** - Already included in migrations
 
-4. **Increase backtrace limit**
+4. **Reduce backtrace limit**
    ```ruby
-   config.max_backtrace_lines = 20  # Default is 50
+   config.max_backtrace_lines = 20  # Default is 100
    ```
 
 5. **Configure retention policy**
    ```ruby
-   config.retention_days = 30  # Auto-cleanup old errors
+   config.retention_days = 30  # Deletes errors unseen for 30 days...
    ```
+   ...when `RailsErrorDashboard::RetentionCleanupJob` runs. Nothing schedules it for you: see
+   [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs).
 
 See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
 
@@ -2131,9 +2250,9 @@ See [Database Optimization Guide](DATABASE_OPTIMIZATION.md) for more.
 **Problem**: Errors from multiple apps not showing correctly.
 
 **Solutions**:
-1. **Set APP_NAME environment variable**
+1. **Set the APPLICATION_NAME environment variable**
    ```bash
-   APP_NAME=my-api rails server
+   APPLICATION_NAME=my-api rails server
    ```
 
 2. **Or configure manually**
@@ -2158,7 +2277,9 @@ See [Multi-App Support Guide](../MULTI_APP_PERFORMANCE.md) for more.
 
 ## Resetting Configuration
 
-For testing or dynamic reconfiguration:
+For tests only. `reset_configuration!` also drops every registered callback and the issue-tracker
+hooks, and the new values are not validated. Middleware and subscribers are set up at boot, so
+resetting doesn't change them in a running app.
 
 ```ruby
 # Reset to defaults
