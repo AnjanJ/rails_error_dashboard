@@ -9,6 +9,7 @@ RSpec.describe "Solid Queue config banner", type: :request do
   let(:check) { RailsErrorDashboard::Services::SolidQueueConfigCheck }
 
   before { RailsErrorDashboard.configuration.authenticate_with = -> { true } }
+  after { RailsErrorDashboard.reset_configuration! }
 
   it "warns, with each problem, when Solid Queue would never run RED's jobs" do
     allow(check).to receive(:current_problems).and_return([ "test: workers but no dispatcher" ])
