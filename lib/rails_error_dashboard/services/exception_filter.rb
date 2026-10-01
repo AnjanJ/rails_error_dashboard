@@ -28,7 +28,8 @@ module RailsErrorDashboard
       end
 
       # Check if exception is in the ignored exceptions list
-      # Supports both string class names and regex patterns
+      # Supports class-name strings and Class/Module objects (both match
+      # subclasses), and regex patterns (matched against the class name)
       # @param exception [Exception] The exception to check
       # @return [Boolean] true if the exception should be ignored
       def self.ignored?(exception)
@@ -41,6 +42,8 @@ module RailsErrorDashboard
           case ignored
           when String
             exception.is_a?(ignored.constantize)
+          when Module
+            exception.is_a?(ignored)
           when Regexp
             exception_class_name.match?(ignored)
           else
