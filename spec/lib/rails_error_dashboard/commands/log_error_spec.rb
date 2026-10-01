@@ -508,6 +508,9 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
         end
 
         context "when baseline exists and anomaly detected" do
+          # baseline_alert_severities filters on the ERROR's severity: ArgumentError is :high.
+          let(:exception) { create_unique_exception(ArgumentError, "Test error", 0) }
+
           before do
             # Stub the baseline_anomaly method to return an anomaly
             allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:baseline_anomaly).and_return({
@@ -536,23 +539,59 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
             described_class.call(exception, context)
           end
 
-          context "when anomaly level is not in alert severities" do
+          context "when the error's severity is not in alert severities" do
             before do
               RailsErrorDashboard.configure do |config|
-                config.baseline_alert_severities = [ :critical ] # Only critical
+                config.baseline_alert_severities = [ :critical ] # ArgumentError is :high
               end
 
-              # Stub with elevated anomaly (not in alert severities)
+              # Even the highest anomaly level doesn't matter: the filter is the error's severity
               allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:baseline_anomaly).and_return({
                 anomaly: true,
-                level: :elevated, # Not in [:critical]
+                level: :critical,
+                baseline_type: "hourly",
+                threshold: 4.0,
+                std_devs_above: 5.0
+              })
+            end
+
+            it "does not queue alert job" do
+              expect(RailsErrorDashboard::BaselineAlertJob).not_to receive(:perform_later)
+              described_class.call(exception, context)
+            end
+          end
+
+          context "when the anomaly is only just over the threshold (:elevated)" do
+            before do
+              allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:baseline_anomaly).and_return({
+                anomaly: true,
+                level: :elevated,
                 baseline_type: "hourly",
                 threshold: 4.0,
                 std_devs_above: 2.1
               })
             end
 
-            it "does not queue alert job" do
+            it "queues the alert for an error whose severity is listed" do
+              expect(RailsErrorDashboard::BaselineAlertJob).to receive(:perform_later)
+              described_class.call(exception, context)
+            end
+          end
+
+          context "when the error's own severity is low" do
+            let(:exception) { create_unique_exception(StandardError, "Test error", 0) }
+
+            before do
+              allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:baseline_anomaly).and_return({
+                anomaly: true,
+                level: :critical,
+                baseline_type: "hourly",
+                threshold: 4.0,
+                std_devs_above: 5.0
+              })
+            end
+
+            it "does not queue alert job, whatever the anomaly level" do
               expect(RailsErrorDashboard::BaselineAlertJob).not_to receive(:perform_later)
               described_class.call(exception, context)
             end

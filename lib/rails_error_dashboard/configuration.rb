@@ -388,7 +388,7 @@ module RailsErrorDashboard
       # Baseline alert defaults
       @enable_baseline_alerts = false  # OFF by default (opt-in)
       @baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
-      @baseline_alert_severities = [ :critical, :high ] # Alert on critical and high severity anomalies
+      @baseline_alert_severities = [ :critical, :high ] # Alert only for errors of these severities
       @baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i
 
       # Source code integration defaults - OFF by default (opt-in)
