@@ -41,13 +41,18 @@ See [Performance Guide](guides/ERROR_SAMPLING_AND_FILTERING.md).
 <details>
 <summary><strong>Can I use a separate database?</strong></summary>
 
-Yes! Configure in your initializer:
+Yes. Choose option 2 at the installer's database prompt, or pass `--separate-database`. The installer then writes both settings it needs:
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  config.database = :errors  # Use separate database
+  config.use_separate_database = true
+  config.database = :error_dashboard
 end
 ```
+
+It also prints the `config/database.yml` entry to add. Add it for every environment, with `migrations_paths: db/error_dashboard_migrate`, then run `bin/rails db:create`.
+
+Both settings matter: `config.database` on its own is ignored unless `use_separate_database` is true. And if `config/database.yml` has no entry for the current environment, RED logs a warning at boot and writes to your main database instead.
 
 See [Database Options Guide](guides/DATABASE_OPTIONS.md).
 </details>
@@ -78,17 +83,16 @@ See [API-only setup](guides/MOBILE_APP_INTEGRATION.md#backend-setup-rails-api).
 <details>
 <summary><strong>How do I track multiple Rails apps?</strong></summary>
 
-Automatic! Just set `APP_NAME` environment variable:
+Point every app at the same error database: choose option 3 (shared database) at each app's installer prompt. Apps share a dashboard only when they share that database.
 
-```bash
-# App 1
-APP_NAME=my-api rails server
+Each app's errors are recorded under its name. RED uses `config.application_name` if you set it, then the `APPLICATION_NAME` environment variable, and otherwise the app's module name (`MyApi` for `module MyApi` in `config/application.rb`):
 
-# App 2
-APP_NAME=my-admin rails server
+```ruby
+# config/initializers/rails_error_dashboard.rb
+config.application_name = "my-api"
 ```
 
-All apps share the same dashboard. See [Multi-App Guide](MULTI_APP_PERFORMANCE.md).
+The dashboard can filter by app. See [Multi-App Guide](MULTI_APP_PERFORMANCE.md).
 </details>
 
 <details>
@@ -111,7 +115,16 @@ See [Customization Guide](CUSTOMIZATION.md).
 <details>
 <summary><strong>How long are errors stored?</strong></summary>
 
-Forever by default (no automatic deletion). Manual cleanup with rake task:
+Until you delete them: the gem never deletes errors by itself.
+
+The generated initializer sets `config.retention_days = 90`. Errors not seen for that many days are deleted when retention cleanup runs. Run it by hand, or schedule it daily with your scheduler (Solid Queue's `config/recurring.yml`, sidekiq-cron, cron):
+
+```bash
+bin/rails error_dashboard:retention_cleanup
+# or schedule the job: RailsErrorDashboard::RetentionCleanupJob
+```
+
+To delete only resolved errors:
 
 ```bash
 # Delete resolved errors older than 90 days
