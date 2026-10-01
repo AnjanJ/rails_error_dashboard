@@ -13,6 +13,9 @@ Get Rails Error Dashboard up and running in 5 minutes!
 - Rails 7.0 or later (supports 7.0, 7.1, 7.2, 8.0, 8.1)
 - Ruby 3.2 or later (supports 3.2, 3.3, 3.4, 4.0)
 - SQLite, PostgreSQL, or MySQL database
+- `pagy ~> 43` and `groupdate ~> 6`. If your app pins an older Pagy or groupdate, upgrade it first, or `bundle install` fails.
+- **Rails before 8.1.4 or 7.2.4** (every 8.0, 7.1 and 7.0 release): add `gem "json", "< 3"` to your Gemfile. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](/rails_error_dashboard/docs/upgrading/#rails-before-814-or-724-pin-json-below-3).
+- **MySQL**: load the time-zone tables, or the charts fail: `mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql`.
 
 ## Installation
 
@@ -26,94 +29,26 @@ gem 'rails_error_dashboard'
 
 ```bash
 bundle install
-rails generate rails_error_dashboard:install
-rails db:migrate
+bin/rails generate rails_error_dashboard:install
+bin/rails db:migrate
 ```
 
-### Interactive Feature Selection
+**Chose a separate or shared database?** Add the `config/database.yml` entry the installer prints, for every environment, then run `bin/rails db:create` before `db:migrate`. See [Database Options](/rails_error_dashboard/docs/guides/database-options/).
 
-The installer will guide you through **optional features** organized in 4 categories:
+### What the Installer Asks
 
-**Notifications (5 features)**
-- Slack - Real-time error notifications to Slack channels
-- Email - Send error alerts via email
-- Discord - Push errors to Discord channels
-- PagerDuty - Critical error escalation for on-call teams
-- Webhooks - Send errors to custom endpoints
+Three groups of questions, then where to store errors:
 
-**Performance & Scalability (3 features)**
-- Async Logging - Non-blocking error capture via background jobs
-- Error Sampling - Reduce volume by sampling non-critical errors
-- Separate Database - Isolate error data in dedicated database
+1. **[1/3] Notifications** (default: no). Yes asks about each channel: Slack, email, Discord, PagerDuty and webhooks.
+2. **[2/3] Advanced Analytics** (default: yes). All seven together: baseline anomaly alerts, fuzzy error matching, co-occurring errors, error cascades, error correlation, platform comparison and occurrence patterns. They run in background jobs or when you open a dashboard page, not while your app serves a request.
+3. **[3/3] Advanced Options** (default: no). Yes asks about each: async logging, error sampling, breadcrumbs, system health snapshots, the source code viewer, git blame, swallowed exception detection (Ruby 3.3+), crash capture and diagnostic dumps. No keeps async logging on and the rest off.
+4. **Database Setup**: 1) your app's database (the default), 2) a separate database, or 3) a database shared with your other apps. For 2 and 3 the installer prints the `config/database.yml` entry to add.
 
-**Advanced Analytics (7 features)**
-- Baseline Anomaly Alerts - Detect unusual error patterns automatically
-- Fuzzy Error Matching - Find similar errors across different hashes
-- Co-occurring Errors - Identify errors that happen together
-- Error Cascades - Track parent→child error relationships
-- Error Correlation - Correlate errors with versions and users
-- Platform Comparison - Compare iOS vs Android vs API health
-- Occurrence Patterns - Detect cyclical patterns and error bursts
+The installer doesn't offer local variable capture, instance variable capture or Rack::Attack tracking. To use them, add `config.enable_local_variables = true`, `config.enable_instance_variables = true` or `config.enable_rack_attack_tracking = true` to the initializer.
 
-**Developer Tools (4 features)**
-- Source Code Integration - View actual source code in error backtraces with repository links
-- Git Blame - See who last modified the code that caused the error
-- Breadcrumbs - Capture request activity trail (SQL, controller, cache events) leading up to errors
-- System Health Snapshot - GC stats, memory, threads, connection pool, RubyVM, YJIT at error time
+**Without a terminal** (CI, Docker, a script) the installer asks nothing. Async logging is on, every other optional feature is off, and errors go to your app's database. Pass `--quick` instead to turn on the analytics, breadcrumbs, system health snapshots and 50% sampling of non-critical errors without any questions. Flags such as `--slack` or `--separate-database` also skip their question; `bin/rails generate rails_error_dashboard:install --help` lists them all.
 
-**Deep Debugging (6 features)** — v0.4.0
-- Local Variable Capture - See exact local variable values at exception point via TracePoint
-- Instance Variable Capture - See instance variables of the object that raised the exception
-- Swallowed Exception Detection - Find exceptions that are raised but silently rescued (Ruby 3.3+)
-- On-Demand Diagnostic Dump - Snapshot system state via dashboard button or rake task
-- Rack Attack Event Tracking - Track throttle/blocklist events as breadcrumbs
-- Process Crash Capture - Capture unhandled exceptions via at_exit hook
-
-**All features are opt-in** - you can say "no" to everything and just use the core dashboard, or enable specific features you need.
-
-### Example Installation Flow
-
-```bash
-$ rails generate rails_error_dashboard:install
-
-╔════════════════════════════════════════════════════════════════════╗
-║        Rails Error Dashboard - Interactive Installation            ║
-╚════════════════════════════════════════════════════════════════════╝
-
-This installer will help you configure optional features.
-Core features (error capture, dashboard UI, analytics) are always enabled.
-
-Choose the features you want to enable:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧  NOTIFICATIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[1/24] Slack Notifications
-    Send real-time error notifications to Slack channels
-    Enable? (y/N): y
-
-[2/24] Email Notifications
-    Send error alerts via email to your team
-    Enable? (y/N): n
-
-...
-
-✓ Installation complete!
-
-Enabled features:
-  ✓ Slack Notifications
-  ✓ Async Logging
-  ✓ Baseline Anomaly Alerts
-
-Next steps:
-  1. Edit config/initializers/rails_error_dashboard.rb
-  2. Set environment variables (if needed)
-  3. Run: rails db:migrate
-  4. Visit: http://localhost:3000/red
-```
-
-That's it! The dashboard is now available at `/error_dashboard` in your Rails app.
+That's it! The dashboard is now available at `/red` in your Rails app.
 
 ## First Steps
 
@@ -121,14 +56,17 @@ That's it! The dashboard is now available at `/error_dashboard` in your Rails ap
 
 Visit `http://localhost:3000/red` to see the error dashboard.
 
-Initially, you won't see any errors. Let's create one to test:
+Initially, you won't see any errors. The quickest test: open `/red/settings` and click **Send Test Error**. It sends a `RailsErrorDashboard::TestError` through capture and through any notifications you've set up.
+
+Errors raised at the Rails console prompt are not captured. To report one from the console:
 
 ```ruby
-# In rails console
-raise "Test error from console"
+Rails.error.report(RuntimeError.new("Test error from console"), handled: false)
 ```
 
-Or create a controller error:
+With async logging on (the default), leave the console open for a second or two so the background job can write it.
+
+Or raise one in a controller:
 
 ```ruby
 # app/controllers/home_controller.rb
@@ -139,7 +77,7 @@ class HomeController < ApplicationController
 end
 ```
 
-Visit the route and check `/error_dashboard` - you should see your test error!
+Visit the route, then check `/red`: you should see your test error.
 
 ### Configure Basic Settings
 
@@ -165,9 +103,8 @@ RailsErrorDashboard.configure do |config|
   # OPTIONAL FEATURES (Based on your selections during install)
   # ============================================================================
 
-  # Async Logging - ENABLED (if you selected it during install)
+  # Async Logging - ENABLED by default. Jobs run on your app's Active Job adapter.
   config.async_logging = true
-  config.async_adapter = :sidekiq  # Options: :sidekiq, :solid_queue, :async
 
   # Slack Notifications - ENABLED (if you selected it during install)
   config.enable_slack_notifications = true
@@ -230,8 +167,7 @@ config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 
 **Async Logging (Better Performance):**
 ```ruby
-config.async_logging = true
-config.async_adapter = :sidekiq  # or :solid_queue, :async
+config.async_logging = true  # jobs run on your app's Active Job adapter; production needs a worker
 ```
 
 **Error Sampling (High-Traffic Apps):**
@@ -261,16 +197,16 @@ See the [Complete Configuration Guide](/rails_error_dashboard/docs/guides/config
 
 ### Resolve an Error
 
-1. Go to `/error_dashboard`
+1. Go to `/red`
 2. Click on an error
 3. Click "Mark as Resolved"
-4. Add a resolution comment (optional)
+4. Add resolution notes (optional)
 
 ### Batch Delete Errors
 
-1. Go to `/error_dashboard`
+1. Go to `/red`
 2. Select errors using checkboxes
-3. Click "Bulk Actions" → "Delete Selected"
+3. Click "Delete"
 
 ### Filter Errors
 
@@ -293,30 +229,38 @@ Now that you have the basics working:
 ### "No errors showing up"
 
 **Check**:
-1. Errors are being logged: `rails console` → `raise "test"`
-2. Database migration ran: `rails db:migrate:status | grep error_dashboard`
-3. Middleware is active: Check `config/application.rb`
+1. Send a test error: `/red/settings` → **Send Test Error**. Errors raised at the console prompt are never captured, so don't test with `raise` there.
+2. Check the setup: `bin/rails error_dashboard:verify` checks the configuration, the database connection and RED's tables.
+3. Check the middleware is loaded: `bin/rails middleware | grep RailsErrorDashboard` should print `use RailsErrorDashboard::Middleware::ErrorCatcher`.
+4. With async logging on (the default), a background job writes each error. In production that needs a worker running your app's job backend.
 
-**Fix**:
+**Fix** missing tables or migrations:
 ```bash
-# Re-run the installer to copy migrations, then migrate
-rails generate rails_error_dashboard:install
-rails db:migrate
+# Re-run the installer to copy any missing migrations, then migrate
+bin/rails generate rails_error_dashboard:install --no-interactive
+bin/rails db:migrate
 ```
 
 ### "Dashboard returns 404"
 
 **Check routes**:
 ```bash
-rails routes | grep error
+bin/rails routes | grep RailsErrorDashboard::Engine
 ```
 
 **Should see**:
+```
+rails_error_dashboard      /red          RailsErrorDashboard::Engine
+```
+
+If not, add the mount to `config/routes.rb`:
 ```ruby
 Rails.application.routes.draw do
-  mount RailsErrorDashboard::Engine => "/error_dashboard"
+  mount RailsErrorDashboard::Engine => "/red"
 end
 ```
+
+Apps first installed before 0.5.8 mount the dashboard at `/error_dashboard`. See [Upgrading](/rails_error_dashboard/docs/upgrading/#old-mount-path-for-apps-installed-before-058).
 
 ### "Authentication not working"
 
@@ -350,39 +294,17 @@ config.enable_middleware = true
 config.enable_error_subscriber = true
 ```
 
-**Re-run the installer if needed**:
-```bash
-rails generate rails_error_dashboard:install
-```
+Then run `bin/rails error_dashboard:verify`.
 
 ## Performance Tips
 
 ### Use Async Logging
 
-For production apps, enable async logging:
+Async logging is on by default. RED enqueues each capture on your app's own Active Job adapter (`config.active_job.queue_adapter`), so whatever runs your other jobs runs RED's: Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`. `config.async_adapter` doesn't choose the backend.
 
-```ruby
-config.async_logging = true
-config.async_adapter = :sidekiq
-```
-
-**With Sidekiq**:
-```ruby
-# Gemfile
-gem 'sidekiq'
-
-# config/initializers/rails_error_dashboard.rb
-config.async_adapter = :sidekiq
-```
-
-**With SolidQueue**:
-```ruby
-# Gemfile
-gem 'solid_queue'
-
-# config/initializers/rails_error_dashboard.rb
-config.async_adapter = :solid_queue
-```
+- In production, run a worker for the `default` and `error_notifications` queues. With Solid Queue, see [Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/).
+- Rails' in-process `:async` adapter needs no worker, but captures still queued when the process restarts are lost.
+- With no worker at all, set `config.async_logging = false` to write each error during the request instead.
 
 ### Limit Backtrace Size
 
@@ -398,22 +320,23 @@ config.max_backtrace_lines = 50   # Smaller for high-volume apps
 For apps with >1000 errors/day:
 
 ```ruby
-config.sampling_rate = 0.1  # Log 10% of errors
+config.sampling_rate = 0.1  # Log 10% of non-critical errors
 ```
 
 ## Production Checklist
 
 Before deploying to production:
 
-- [ ] Change default username and password
-- [ ] Enable async logging (`async_logging = true`)
+- [ ] Set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` (outside development and test, the app won't boot on the defaults)
+- [ ] Run a worker for the `default` and `error_notifications` queues, or set `async_logging = false`
+- [ ] Run migrations on every deploy. With a separate database, add its `config/database.yml` entry for production too
 - [ ] Set up notifications (Slack, Email, PagerDuty)
 - [ ] Configure custom severity rules
 - [ ] Set backtrace limit (`max_backtrace_lines`, default: 100)
 - [ ] Consider sampling for high-traffic apps
-- [ ] Test error notifications
+- [ ] Test error notifications (`/red/settings` → **Send Test Error**)
 - [ ] Set up database backups
-- [ ] Configure data retention (delete old errors)
+- [ ] Schedule retention: `retention_days` (90 in the generated initializer) deletes nothing until `bin/rails error_dashboard:retention_cleanup` runs, or you schedule `RailsErrorDashboard::RetentionCleanupJob` daily
 
 ## Getting Help
 

@@ -102,7 +102,7 @@ and every later `db:migrate` stops at it. To recover:
 4. Run [the upgrade](#the-upgrade): the installer copies fixed versions of those migrations, and
    `db:migrate` runs them.
 
-## Apps installed before 0.5.8 use /error_dashboard
+## Old mount path for apps installed before 0.5.8
 
 Before 0.5.8 the installer mounted the dashboard at `/error_dashboard`. Since then it mounts it at
 `/red`. An upgrade never changes your route, so those apps keep `/error_dashboard`, and wherever
