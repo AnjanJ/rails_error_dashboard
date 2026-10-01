@@ -359,7 +359,7 @@ module RailsErrorDashboard
 
       # Rate limiting defaults
       @enable_rate_limiting = false # OFF by default (opt-in)
-      @rate_limit_per_minute = 100  # Requests per minute per IP for API endpoints
+      @rate_limit_per_minute = 300  # Requests per minute per IP, per dashboard path
 
       # Enhanced metrics defaults
       @app_version = ENV["APP_VERSION"]
