@@ -6,296 +6,236 @@ order: 6
 
 # Uninstalling Rails Error Dashboard
 
-This guide explains how to completely remove Rails Error Dashboard from your application.
+Removing RED has two parts: its data (RED's tables, and with a separate database, the database
+itself) and its code (the initializer, the route, the migrations, the schema and the gem).
 
-## Quick Start - Automated Uninstall (Recommended)
+**Drop the data first, while the gem is still installed.** The tools that drop it ship inside the
+gem. If you've already removed the gem, see [Already removed the gem?](#already-removed-the-gem).
 
-The fastest way to uninstall is using the automated uninstall generator:
-
-```bash
-rails generate rails_error_dashboard:uninstall
-```
-
-This will:
-- Show you what will be removed
-- Provide both manual and automated options
-- Ask for confirmation before making changes
-- Remove initializer, routes, and migrations
-- Optionally drop database tables (with confirmation)
-
-### Uninstall Options
+## The uninstaller (recommended)
 
 ```bash
-# Keep error data in database (don't drop tables)
-rails generate rails_error_dashboard:uninstall --keep-data
-
-# Skip confirmation prompts (USE WITH CAUTION)
-rails generate rails_error_dashboard:uninstall --skip-confirmation
-
-# Show manual instructions only (don't perform automated removal)
-rails generate rails_error_dashboard:uninstall --manual-only
+bin/rails generate rails_error_dashboard:uninstall
 ```
 
----
+It lists what it found, asks you to confirm, and then:
 
-## Manual Uninstall
+1. drops every RED table, in foreign-key order, on the database RED uses: your app's database, or
+   the separate one. First it asks you to type `DELETE ALL DATA`. If you type anything else, it
+   keeps the tables and removes only the files;
+2. removes `config/initializers/rails_error_dashboard.rb`;
+3. removes the `mount RailsErrorDashboard::Engine` line from `config/routes.rb`;
+4. deletes RED's migrations from `db/migrate/` and `db/error_dashboard_migrate/`.
 
-If you prefer to uninstall manually or the automated uninstaller doesn't work, follow these steps:
+If it can't drop the tables, it stops before removing any file, so the app still boots and you can
+try again. If it can't reach the error database at all, it stops before doing anything (see
+[Troubleshooting](#cant-reach-the-error-database-so-nothing-was-removed)).
 
-### Step 1: Remove from Gemfile
+Then finish by hand:
 
-Open your `Gemfile` and remove:
+1. Regenerate the schema file, or `db:schema:load` and `db:prepare` will recreate RED's tables:
+
+   ```bash
+   bin/rails db:schema:dump
+   ```
+
+2. Remove `gem "rails_error_dashboard"` from the `Gemfile` and run `bundle install`.
+3. With a separate database, finish with [Separate and shared databases](#separate-and-shared-databases).
+4. Restart the app.
+
+### Options
+
+```bash
+# Keep the tables and their data; remove only the files
+bin/rails generate rails_error_dashboard:uninstall --keep-data
+
+# Skip the yes/no question. Dropping the tables still asks you to type DELETE ALL DATA.
+bin/rails generate rails_error_dashboard:uninstall --skip-confirmation
+
+# Print the manual steps and change nothing
+bin/rails generate rails_error_dashboard:uninstall --manual-only
+```
+
+## Step by step
+
+To do each step yourself, keep this order:
+
+1. Drop the tables:
+
+   ```bash
+   bin/rails rails_error_dashboard:db:drop
+   ```
+
+   It lists each table with its row count, warns you if the database holds errors from more than
+   one app, and asks you to type `DELETE ALL DATA`. Like the uninstaller, it drops every RED table
+   in foreign-key order, on the error database if you use one.
+2. Delete `config/initializers/rails_error_dashboard.rb`.
+3. Remove the `mount RailsErrorDashboard::Engine => ...` line from `config/routes.rb`.
+4. Delete RED's migrations:
+
+   ```bash
+   rm db/migrate/*rails_error_dashboard*.rb
+   rm db/error_dashboard_migrate/*rails_error_dashboard*.rb   # separate database only
+   ```
+
+5. Run `bin/rails db:schema:dump`.
+6. Remove the gem from the `Gemfile` and run `bundle install`.
+7. With a separate database, finish with [Separate and shared databases](#separate-and-shared-databases).
+8. Restart the app.
+
+## Separate and shared databases
+
+**A separate database** (installer option 2). The uninstaller and the rake task drop RED's tables
+in the error database. That leaves the database itself, its entry in `config/database.yml`, and
+`db/error_dashboard_schema.rb`. After you remove the gem, drop the database if nothing else uses it:
+
+```bash
+bin/rails db:drop:error_dashboard
+```
+
+In production, Rails refuses to drop the database unless you also set
+`DISABLE_DATABASE_ENVIRONMENT_CHECK=1`. Then remove the `error_dashboard:` entry from every
+environment in `config/database.yml`, and delete `db/error_dashboard_schema.rb` and the empty
+`db/error_dashboard_migrate/` folder.
+
+**A shared database** (installer option 3). Several apps write to the same tables, so dropping them
+deletes every app's errors. The rake task warns you when it finds more than one app. To remove RED
+from one app while the others keep using it, run the uninstaller with `--keep-data`: it removes
+only this app's files. Drop the tables when you remove RED from the last app.
+
+## In production
+
+The commands above change files on your machine and data in one database. For a deployed app:
+
+1. **Drop the data in each environment first**, while the deployed app still has the gem. Run
+   `bin/rails rails_error_dashboard:db:drop` from a shell in that environment. It asks you to type
+   `DELETE ALL DATA`, so run it where you can answer. With a separate database you can instead drop the whole database afterwards, as
+   above.
+2. **Ship the code changes in one deploy**: the initializer, the route, the migrations, the schema
+   file, `Gemfile` and `Gemfile.lock`. That way no release runs the gem without its configuration.
+
+If you deploy the removal without step 1, the tables stay behind. Drop them as in
+[Already removed the gem?](#already-removed-the-gem).
+
+## Keep capturing errors, remove the dashboard
+
+Comment out the `mount RailsErrorDashboard::Engine` line in `config/routes.rb`:
 
 ```ruby
-gem 'rails_error_dashboard'
+# mount RailsErrorDashboard::Engine => "/red"
 ```
 
-Then run:
+RED inserts its middleware and error subscriber itself, so errors are still captured and
+notifications still go out; only the dashboard pages are gone. Comment the line out rather than
+deleting it: the installer adds a `/red` mount whenever `config/routes.rb` doesn't mention the
+engine, so after a deleted line the next upgrade would put the dashboard back. Leave
+`config.enable_middleware` and `config.enable_error_subscriber` on: turning them off stops
+capture.
+
+## Keep the data, remove the code
+
+`bin/rails generate rails_error_dashboard:uninstall --keep-data` removes the files and keeps the
+tables. To see the data again later, add the gem back and run:
 
 ```bash
-bundle install
+bin/rails generate rails_error_dashboard:install
+bin/rails db:migrate
 ```
 
-### Step 2: Remove Initializer
+The migrations the installer copies find the existing tables and skip them, so your errors are
+still there.
 
-Delete the configuration file:
+## Already removed the gem?
+
+If you removed the gem before dropping the data, RED's tables are still in the database, and the
+rake task went with the gem.
+
+1. Make sure `config/initializers/rails_error_dashboard.rb` and the mount line in
+   `config/routes.rb` are gone. The app can't boot while they refer to RED.
+2. **Same database:** drop the tables from `bin/rails console`. This finds every table named
+   `rails_error_dashboard_*` and drops each one after the tables that reference it:
+
+   ```ruby
+   connection = ActiveRecord::Base.connection
+   tables = connection.tables.grep(/\Arails_error_dashboard_/)
+   until tables.empty?
+     # A table can go once no other remaining RED table has a foreign key to it.
+     droppable = tables.reject do |table|
+       (tables - [table]).any? { |other| connection.foreign_keys(other).any? { |fk| fk.to_table == table } }
+     end
+     raise "foreign-key cycle among #{tables.join(', ')}" if droppable.empty?
+     droppable.each { |table| connection.drop_table(table) }
+     tables -= droppable
+   end
+   ```
+
+   **Separate database:** run `bin/rails db:drop:error_dashboard` (with
+   `DISABLE_DATABASE_ENVIRONMENT_CHECK=1` in production), then remove its entry from
+   `config/database.yml`.
+3. Delete RED's migrations and run `bin/rails db:schema:dump`, as in [Step by step](#step-by-step).
+
+## Check that it's gone
 
 ```bash
-rm config/initializers/rails_error_dashboard.rb
+# Both print nothing
+bin/rails runner 'puts ActiveRecord::Base.connection.tables.grep(/\Arails_error_dashboard_/)'
+grep -rn "rails_error_dashboard\|RailsErrorDashboard" Gemfile config db/schema.rb
 ```
 
-### Step 3: Remove Route
+## Troubleshooting
 
-Open `config/routes.rb` and remove:
+### "Can't reach the error database, so nothing was removed"
 
-```ruby
-mount RailsErrorDashboard::Engine => '/error_dashboard'
-```
+The uninstaller couldn't connect to the separate error database: `config/database.yml` has no
+`error_dashboard` entry for this environment, or the database server is down. It stops before
+removing anything, because without the initializer nothing would know where the tables are. Fix
+the entry (or start the server) and run it again, or pass `--keep-data` to remove only the files.
+The rake task also refuses, with its own message, before dropping anything.
 
-### Step 4: Remove Migrations
+### "Not dropping anything: these tables have foreign keys into RED's tables"
 
-Delete all Rails Error Dashboard migration files:
+One of your app's own tables has a foreign key to a RED table, so RED drops nothing. The message
+names each foreign key. Remove them, then run the uninstaller again.
+
+### RED's tables come back
+
+`db:schema:load` and `db:prepare` build the database from your schema file. Run
+`bin/rails db:schema:dump` after RED's tables are gone, and commit the result. With a separate
+database, also delete `db/error_dashboard_schema.rb`.
+
+### `NO FILE` rows in `db:migrate:status`
+
+The versions of RED's migrations stay in `schema_migrations` after you delete their files, so
+`db:migrate:status` lists them as `NO FILE`. They're harmless: there's nothing left to run.
+
+## Environment Variables
+
+After uninstalling you can remove these, wherever you set them:
 
 ```bash
-rm db/migrate/*rails_error_dashboard*.rb
-```
-
-Or manually delete these files from `db/migrate/`:
-- `*_create_rails_error_dashboard_error_logs.rb`
-- `*_add_better_tracking_to_error_logs.rb`
-- `*_add_controller_action_to_error_logs.rb`
-- `*_add_optimized_indexes_to_error_logs.rb`
-- `*_remove_environment_from_error_logs.rb`
-- `*_add_enhanced_metrics_to_error_logs.rb`
-- `*_add_similarity_tracking_to_error_logs.rb`
-- `*_create_error_occurrences.rb`
-- `*_create_cascade_patterns.rb`
-- `*_create_error_baselines.rb`
-- `*_add_workflow_fields_to_error_logs.rb`
-- `*_create_error_comments.rb`
-
-### Step 5: Drop Database Tables (⚠️ DESTRUCTIVE)
-
-**WARNING:** This will permanently delete all your error tracking data!
-
-#### Option A: Using Rake Task (Recommended)
-
-```bash
-rails rails_error_dashboard:db:drop
-```
-
-This will:
-- Show you how many records will be deleted
-- Ask for confirmation
-- Drop tables in the correct order (respects foreign keys)
-
-#### Option B: Manual SQL
-
-In Rails console or database client:
-
-```ruby
-# Rails console
-ActiveRecord::Base.connection.execute('DROP TABLE IF EXISTS rails_error_dashboard_error_comments CASCADE')
-ActiveRecord::Base.connection.execute('DROP TABLE IF EXISTS rails_error_dashboard_error_occurrences CASCADE')
-ActiveRecord::Base.connection.execute('DROP TABLE IF EXISTS rails_error_dashboard_cascade_patterns CASCADE')
-ActiveRecord::Base.connection.execute('DROP TABLE IF EXISTS rails_error_dashboard_error_baselines CASCADE')
-ActiveRecord::Base.connection.execute('DROP TABLE IF EXISTS rails_error_dashboard_error_logs CASCADE')
-```
-
-Or using ActiveRecord::Migration:
-
-```ruby
-ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_comments, if_exists: true)
-ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_occurrences, if_exists: true)
-ActiveRecord::Migration.drop_table(:rails_error_dashboard_cascade_patterns, if_exists: true)
-ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_baselines, if_exists: true)
-ActiveRecord::Migration.drop_table(:rails_error_dashboard_error_logs, if_exists: true)
-```
-
-### Step 6: Clean Up Environment Variables (Optional)
-
-Remove these environment variables from `.env` or your environment configuration:
-
-```bash
-# Authentication
 ERROR_DASHBOARD_USER
 ERROR_DASHBOARD_PASSWORD
-
-# Notifications
 SLACK_WEBHOOK_URL
 ERROR_NOTIFICATION_EMAILS
 DISCORD_WEBHOOK_URL
 PAGERDUTY_INTEGRATION_KEY
 WEBHOOK_URLS
-
-# Configuration
 DASHBOARD_BASE_URL
 USE_SEPARATE_ERROR_DB
 ```
 
-### Step 7: Restart Your Application
-
-```bash
-# Development
-rails restart
-
-# Or kill and restart your server
-kill -9 <pid>
-rails server
-
-# Production (depends on your setup)
-systemctl restart myapp
-# or
-touch tmp/restart.txt  # For Passenger
-```
-
----
-
-## Partial Uninstall Options
-
-### Keep Data, Remove Code
-
-If you want to keep your error data but stop tracking new errors:
-
-1. **Remove the gem** from Gemfile and run `bundle install`
-2. **Keep migrations and database tables** - your data remains accessible
-3. **Remove initializer and routes** - dashboard won't be accessible
-4. **Restart your application**
-
-Later, if you want to view historical data, reinstall the gem and run `rails db:migrate`.
-
-### Keep Tracking, Remove Dashboard UI
-
-If you want to keep error logging but remove the dashboard:
-
-1. **Keep the gem** in Gemfile
-2. **Remove the route** from `config/routes.rb`
-3. **Disable middleware** in initializer:
-   ```ruby
-   config.enable_middleware = false
-   config.enable_error_subscriber = false
-   ```
-
----
-
-## Verification
-
-After uninstalling, verify everything is removed:
-
-### Check Files
-
-```bash
-# Should return nothing
-grep -r "rails_error_dashboard" config/
-ls config/initializers/rails_error_dashboard.rb
-ls db/migrate/*rails_error_dashboard*.rb
-
-# Should not include the gem
-grep "rails_error_dashboard" Gemfile
-```
-
-### Check Database
-
-```bash
-# Rails console
-rails console
-
-# Should return false or raise error
-ActiveRecord::Base.connection.table_exists?('rails_error_dashboard_error_logs')
-```
-
-### Check Routes
-
-```bash
-# Should not include /error_dashboard
-rails routes | grep error_dashboard
-```
-
----
-
-## Troubleshooting
-
-### "Table doesn't exist" Errors After Uninstall
-
-If you're seeing errors about missing tables after uninstalling:
-
-1. Make sure you've removed the gem from Gemfile and run `bundle install`
-2. Check if migrations are still present in `db/migrate/`
-3. Restart your Rails server
-4. Check your `schema.rb` or `structure.sql` - you may need to regenerate it:
-   ```bash
-   rails db:schema:dump
-   ```
-
-### Cannot Drop Tables Due to Foreign Key Constraints
-
-Drop tables in this order:
-
-1. `rails_error_dashboard_error_comments`
-2. `rails_error_dashboard_error_occurrences`
-3. `rails_error_dashboard_cascade_patterns`
-4. `rails_error_dashboard_error_baselines`
-5. `rails_error_dashboard_error_logs` (drop last)
-
-Or use `CASCADE`:
-
-```sql
-DROP TABLE rails_error_dashboard_error_comments CASCADE;
-DROP TABLE rails_error_dashboard_error_occurrences CASCADE;
-DROP TABLE rails_error_dashboard_cascade_patterns CASCADE;
-DROP TABLE rails_error_dashboard_error_baselines CASCADE;
-DROP TABLE rails_error_dashboard_error_logs CASCADE;
-```
-
-### Migrations Still Running
-
-If you deleted migration files but Rails is still trying to run them:
-
-```bash
-# Reset migration status
-rails db:migrate:status
-
-# If you see pending Rails Error Dashboard migrations, mark them as down
-rails db:migrate:down VERSION=<version_number>
-```
-
----
-
 ## Reinstalling Later
 
-If you decide to reinstall Rails Error Dashboard later:
-
 ```bash
-# Add to Gemfile
+# Gemfile
 gem 'rails_error_dashboard'
 
-# Install
 bundle install
-rails generate rails_error_dashboard:install
-rails db:migrate
-
-# Your previous data will still be there if you kept the database tables
+bin/rails generate rails_error_dashboard:install
+bin/rails db:migrate
 ```
+
+If you kept the data, it's still there.
 
 ---
 

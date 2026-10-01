@@ -100,31 +100,32 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 ### Dashboard Not Mounted / 404 Error
 
-**Problem**: Visiting `/error_dashboard` returns 404.
+**Problem**: Visiting the dashboard returns 404.
+
+The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 mount it at `/error_dashboard`, and an upgrade keeps that path (see [Upgrading](/rails_error_dashboard/docs/upgrading/#old-mount-path-for-apps-installed-before-058)). Your path is the one in `config/routes.rb`.
 
 **Solutions**:
 
-1. **Verify mount in routes**:
+1. **Verify the mount in routes**:
    ```bash
-   rails routes | grep error_dashboard
-   # Should show multiple routes
+   bin/rails routes | grep RailsErrorDashboard::Engine
+   # Should show: rails_error_dashboard  /red  RailsErrorDashboard::Engine
    ```
 
 2. **Check config/routes.rb**:
    ```ruby
    # Should contain:
-   mount RailsErrorDashboard::Engine => "/error_dashboard"
+   mount RailsErrorDashboard::Engine => "/red"
    ```
 
-3. **Restart server after adding mount**:
+3. **Restart the server after adding the mount**:
    ```bash
-   rails server
+   bin/rails restart
    ```
 
-4. **Check for route conflicts**:
+4. **Check for route conflicts**: an earlier route matching the same path wins.
    ```bash
-   # Look for conflicting /error_dashboard routes
-   rails routes | grep /error
+   bin/rails routes | grep /red
    ```
 
 ---

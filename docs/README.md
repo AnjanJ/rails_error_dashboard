@@ -14,30 +14,30 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Quickstart Guide](QUICKSTART.md)** - Get up and running in 5 minutes
 - **[Installation](../README.md#quick-start)** - Detailed installation instructions
 - **[Configuration](guides/CONFIGURATION.md)** - Complete configuration reference
-- **[Migration & Upgrade Strategy](MIGRATION_STRATEGY.md)** - Squashed migrations and v0.2.0 upgrade guide
+- **[Upgrading](UPGRADING.md)** - The upgrade, and the releases that need a step
 - **[Uninstall Guide](UNINSTALL.md)** - Complete removal instructions (manual + automated)
 - **[FAQ](FAQ.md)** - Common questions answered
 
 ### Core Features
 - **[Error Tracking & Capture](FEATURES.md#error-tracking--capture)** - Understanding the main dashboard
-- **[Workflow Management](FEATURES.md#workflow-management)** - Managing and resolving errors
+- **[Workflow Management](FEATURES.md#resolution-workflow)** - Managing and resolving errors
 - **[Notifications](guides/NOTIFICATIONS.md)** - Setting up alerts (Slack, Email, Discord, PagerDuty)
 
 ### Monitoring & Health (v0.3)
-- **[System Health Snapshots](FEATURES.md#system-health-snapshot)** - GC stats, threads, connection pool, memory, RubyVM cache, YJIT stats
+- **[System Health Snapshots](FEATURES.md#system-health-snapshot-new)** - GC stats, threads, connection pool, memory, RubyVM cache, YJIT stats
 - **[N+1 Query Detection](FEATURES.md#n1-query-detection)** - Detect N+1 queries from breadcrumbs
-- **[Job Health](FEATURES.md#job-health)** - Job-queue stats captured at error time (Sidekiq, SolidQueue, GoodJob), aggregated across errors — not a live queue view
-- **[Database Health](FEATURES.md#database-health)** - PgHero-style live table and index stats (PostgreSQL-only) plus connection-pool state at error time
-- **[Cache Health](FEATURES.md#cache-health)** - Cache hit rates and miss patterns
-- **[Deprecation Tracking](FEATURES.md#deprecation-tracking)** - Track Rails deprecation warnings (the host's deprecation behaviour must include `:notify`)
+- **[Job Health](FEATURES.md#job-health-page)** - Job-queue stats captured at error time (Sidekiq, SolidQueue, GoodJob), aggregated across errors — not a live queue view
+- **[Database Health](FEATURES.md#database-health-page)** - PgHero-style live table and index stats (PostgreSQL-only) plus connection-pool state at error time
+- **[Cache Health](FEATURES.md#cache-health-analysis)** - Cache hit rates and miss patterns
+- **[Deprecation Tracking](FEATURES.md#deprecation-warnings)** - Track Rails deprecation warnings (the host's deprecation behaviour must include `:notify`)
 
 ### Deep Debugging (v0.4)
-- **[Local Variable Capture](FEATURES.md#local-variable-capture)** - Capture local variables at the point of exception via TracePoint
-- **[Instance Variable Capture](FEATURES.md#instance-variable-capture)** - Capture instance variables from the raising object
-- **[Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection)** - Detect silently rescued exceptions (Ruby 3.3+)
-- **[On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump)** - Snapshot system state on demand
-- **[Rack Attack Event Tracking](FEATURES.md#rack-attack-event-tracking)** - Track throttle/blocklist events as breadcrumbs
-- **[Process Crash Capture](FEATURES.md#process-crash-capture)** - Capture crashes via at_exit hook
+- **[Local Variable Capture](FEATURES.md#local-variable-capture-v040)** - Capture local variables at the point of exception via TracePoint
+- **[Instance Variable Capture](FEATURES.md#instance-variable-capture-v040)** - Capture instance variables from the raising object
+- **[Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040)** - Detect silently rescued exceptions (Ruby 3.3+)
+- **[On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump-v040)** - Snapshot system state on demand
+- **[Rack Attack Event Tracking](FEATURES.md#rack-attack-event-tracking-v040)** - Track throttle/blocklist events as breadcrumbs
+- **[Process Crash Capture](FEATURES.md#process-crash-capture-v040)** - Capture crashes via at_exit hook
 
 ### Advanced Analytics
 - **[Source Code Integration](SOURCE_CODE_INTEGRATION.md)** - View source code, git blame, and repository links in errors
@@ -69,6 +69,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ### Development
 - **[Changelog](../CHANGELOG.md)** - Version history and updates
+- **[Migration Strategy](MIGRATION_STRATEGY.md)** - How RED's migrations are built (for contributors)
 - **[Testing](development/TESTING.md)** - Running and writing tests
 - **[Troubleshooting](TROUBLESHOOTING.md)** - Common problems and solutions
 - **[Security Policy](../SECURITY.md)** - Report vulnerabilities and security best practices
@@ -81,14 +82,14 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 3. [Notifications](guides/NOTIFICATIONS.md) - Set up Slack alerts
 
 ### For Advanced Users
-1. [Local Variable Capture](FEATURES.md#local-variable-capture) - Debug with exact variable values
-2. [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection) - Find silently rescued exceptions
-3. [Diagnostic Dumps](FEATURES.md#on-demand-diagnostic-dump) - Snapshot system state on demand
+1. [Local Variable Capture](FEATURES.md#local-variable-capture-v040) - Debug with exact variable values
+2. [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040) - Find silently rescued exceptions
+3. [Diagnostic Dumps](FEATURES.md#on-demand-diagnostic-dump-v040) - Snapshot system state on demand
 4. [Plugin System](PLUGIN_SYSTEM.md) - Custom integrations
 
 ### For Developers
 1. [API Reference](API_REFERENCE.md) - Complete API docs
-2. [Plugin Development](PLUGIN_SYSTEM.md#creating-plugins) - Build plugins
+2. [Plugin Development](PLUGIN_SYSTEM.md#1-create-a-plugin) - Build plugins
 3. [Testing Guide](development/TESTING.md) - Test your setup
 
 ## Documentation by Use Case
@@ -100,7 +101,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 → [Customization Guide](CUSTOMIZATION.md#custom-severity-rules)
 
 ### "I want Slack notifications for critical errors"
-→ [Notifications Guide](guides/NOTIFICATIONS.md#slack-setup)
+→ [Notifications Guide](guides/NOTIFICATIONS.md#slack-notifications)
 
 ### "I need to track errors by app version"
 → [Error Correlation](features/ERROR_CORRELATION.md#release-correlation)
@@ -115,16 +116,16 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 → [Baseline Monitoring](features/BASELINE_MONITORING.md)
 
 ### "I want to see exact variable values when an exception occurs"
-→ [Local Variable Capture](FEATURES.md#local-variable-capture) (enable `enable_local_variables` and/or `enable_instance_variables`)
+→ [Local Variable Capture](FEATURES.md#local-variable-capture-v040) (enable `enable_local_variables` and/or `enable_instance_variables`)
 
 ### "I want to find exceptions that are silently rescued"
-→ [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection) (requires Ruby 3.3+)
+→ [Swallowed Exception Detection](FEATURES.md#swallowed-exception-detection-v040) (requires Ruby 3.3+)
 
 ### "I want to snapshot my app's system state on demand"
-→ [On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump) (dashboard button or rake task)
+→ [On-Demand Diagnostic Dump](FEATURES.md#on-demand-diagnostic-dump-v040) (dashboard button or rake task)
 
 ### "I want to capture errors from process crashes"
-→ [Process Crash Capture](FEATURES.md#process-crash-capture) (at_exit hook writes to disk, imported on next boot)
+→ [Process Crash Capture](FEATURES.md#process-crash-capture-v040) (at_exit hook writes to disk, imported on next boot)
 
 ### "I want to see source code directly in error details"
 → [Source Code Integration](SOURCE_CODE_INTEGRATION.md)
@@ -134,6 +135,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ### "I need to track multiple Rails applications"
 → [Multi-App Support](MULTI_APP_PERFORMANCE.md)
+
+### "I need to upgrade Rails Error Dashboard"
+→ [Upgrading](UPGRADING.md)
 
 ### "I need to uninstall Rails Error Dashboard"
 → [Uninstall Guide](UNINSTALL.md)
@@ -155,9 +159,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ## Documentation Versions
 
-This documentation is for **Rails Error Dashboard v0.11.0** (Latest).
-
-For version history, see the [Changelog](../CHANGELOG.md).
+This documentation follows the `main` branch. For what changed in each release, see the [Changelog](../CHANGELOG.md); before upgrading, see [Upgrading](UPGRADING.md).
 
 ---
 
