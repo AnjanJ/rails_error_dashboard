@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.3...rails_error_dashboard/v0.14.4) (2026-10-02)
+
+
+### 🐛 Bug Fixes
+
+* correct the installer and uninstaller messages ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* define every hook PluginRegistry dispatches on the base Plugin ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* fail verify when the error database has no database.yml entry ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* filter baseline alerts by the error's severity ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* honour rate_limit_per_minute, defaulting to 300 ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* let the rake confirmation prompts survive a closed stdin ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* make the installer's advanced-options question reachable ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* match Class objects in ignored_exceptions ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* pick the search SQL from RED's own database connection ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* redact secrets from Configuration#inspect ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* stop a migration replay from wiping every error's environment ([#269](https://github.com/AnjanJ/rails_error_dashboard/issues/269)) ([2075c6b](https://github.com/AnjanJ/rails_error_dashboard/commit/2075c6bdbb235aea243e08d9f8b2b4b2f2e09f81))
+* warn in verify when json 3 runs on a Rails it breaks ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* warn when Solid Queue would never run RED's jobs ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+
 ## [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.2...rails_error_dashboard/v0.14.3) (2026-09-29)
 
 
