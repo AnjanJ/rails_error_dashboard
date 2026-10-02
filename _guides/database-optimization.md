@@ -85,13 +85,17 @@ add_index :error_logs, [:error_hash, :resolved, :occurred_at]
 
 **Use case:** Error deduplication (happens on EVERY error log)
 ```ruby
-# Query optimized by this index (runs on every error):
+# Query optimized by this index (runs on every error). Simplified: the real
+# lookup also filters by application and environment and skips "Won't fix" errors.
 ErrorLog
   .where(error_hash: hash)
   .where(resolved: false)
   .where("occurred_at >= ?", 24.hours.ago)
   .first
 ```
+
+On PostgreSQL and SQLite, a unique index on the error group (`index_error_logs_on_group_identity`)
+also stops two processes from creating the same error twice.
 
 **Performance gain:** 1000x faster - this is the hot path
 **Impact:** Without this index, error logging slows down linearly with DB size
@@ -107,7 +111,7 @@ If you're using PostgreSQL (recommended for production), you get additional opti
 add_index :error_logs, :occurred_at, where: "resolved = false"
 ```
 
-**Why partial?** Only indexes unresolved errors (typically 90%+ of records)
+**Why partial?** Only indexes unresolved errors
 - **Smaller index** = faster queries
 - **Less maintenance** = faster writes
 - **Better caching** = more fits in memory
@@ -126,7 +130,6 @@ USING gin(to_tsvector('english',
 ```
 
 **What is GIN?** Generalized Inverted Index for full-text search
-- **Supports ranking** by relevance
 - **Case-insensitive** by default
 - **Handles word stemming** (searching "fail" finds "failed", "failing")
 
@@ -136,7 +139,7 @@ index only when the query's expression is identical to the index's — which is
 why the index covers exactly that concatenation and nothing else.
 ```ruby
 # Uses index_error_logs_on_searchable_text on PostgreSQL:
-ErrorsList.call(search: "payment failed")
+RailsErrorDashboard::Queries::ErrorsList.call(search: "payment failed")
 ```
 
 **Measured** (PostgreSQL 16, 200,000 error logs, a term present in one row,
@@ -145,8 +148,8 @@ term looks fast either way because the query stops at the first page of hits.
 
 **Upgrading:** installs created from the squashed migration before 0.11.8 had
 no usable search index (0.11.7 added one on `message` alone, which the search
-never matches). Run `rails rails_error_dashboard:install:migrations db:migrate`
-to get `index_error_logs_on_searchable_text`; the migration also drops the
+never matches). [Upgrade](/rails_error_dashboard/docs/upgrading/#the-upgrade) to 0.11.8 or later to
+get `index_error_logs_on_searchable_text`; the migration also drops the
 unused `message`-only index.
 
 ---
@@ -258,21 +261,20 @@ production:
 
 **Limitations:**
 - No partial indexes (indexes are larger)
-- No GIN indexes (search is slower)
-- Full-text search available but less powerful
+- No GIN or FULLTEXT index: the search box uses `LIKE`, which scans the table
 
 **Configuration:**
 ```ruby
 # config/database.yml
 production:
-  adapter: mysql2
+  adapter: trilogy  # or mysql2
   pool: 25
 
-  # MySQL-specific optimizations
+  # Session variables, in bytes. Rails sets these with SET @@SESSION, so
+  # server-wide settings such as innodb_buffer_pool_size belong in my.cnf.
   variables:
-    sort_buffer_size: 2M
-    read_buffer_size: 2M
-    innodb_buffer_pool_size: 2G
+    sort_buffer_size: 2097152
+    read_buffer_size: 2097152
 ```
 
 ---
@@ -286,7 +288,7 @@ production:
 
 **Limitations:**
 - No partial indexes
-- No GIN indexes
+- No GIN indexes: the search box uses `LIKE`
 - Limited concurrency
 - Not recommended for production high-volume apps
 
@@ -336,6 +338,7 @@ ErrorLog.where(error_type: "NoMethodError").order(occurred_at: :desc).limit(50)
 
 ### Deduplication Lookup (Hot Path)
 ```ruby
+# Simplified, as above
 ErrorLog.where(error_hash: hash, resolved: false).where("occurred_at >= ?", 24.hours.ago).first
 ```
 
@@ -355,57 +358,38 @@ ErrorLog.where("message LIKE ?", "%payment%")  # vs GIN index
 |----------|----------|----------------|---------|
 | PostgreSQL | LIKE query | 4000ms | 1x |
 | PostgreSQL | **GIN index** | **8ms** | **500x** |
-| MySQL | FULLTEXT index | 80ms | 50x |
 | SQLite | LIKE query | 6000ms | 1x |
+
+MySQL also uses a `LIKE` query: RED creates no FULLTEXT index.
 
 ---
 
 ## Migration Guide
 
-The optimization migration is included and will run automatically when you update the gem:
+Nothing runs automatically. New indexes arrive as migrations with each release: run
+[the upgrade](/rails_error_dashboard/docs/upgrading/#the-upgrade), which copies them into your app, then
+`bin/rails db:migrate`. With a separate error database, don't use
+`rails_error_dashboard:install:migrations`: it copies the migrations into `db/migrate/`, and
+`db:migrate` then builds RED's tables in your main database.
+
+### Checking Migration Status
 
 ```bash
-# Rails will run this automatically
-rails rails_error_dashboard:install:migrations
-rails db:migrate
+# RED's migrations (the name shows as "... rails error dashboard")
+bin/rails db:migrate:status | grep -i 'rails error dashboard'
+
+# With a separate error database
+bin/rails db:migrate:status:error_dashboard
 ```
 
-### Manual Migration (if needed)
+The installer gives each migration a new version number when it copies it into your app, so use
+the version this command shows for your app, not one from the gem's source.
 
-If you need to run migrations manually:
+### Large Tables
 
-```bash
-# Check pending migrations
-rails db:migrate:status | grep rails_error_dashboard
-
-# Run specific migration
-rails db:migrate VERSION=20251225071314
-```
-
-### Zero-Downtime Migration (PostgreSQL)
-
-For production databases with millions of records, create indexes concurrently:
-
-```ruby
-# Custom migration for production
-class AddOptimizedIndexesConcurrently < ActiveRecord::Migration[8.1]
-  disable_ddl_transaction!
-
-  def change
-    add_index :rails_error_dashboard_error_logs,
-              [:resolved, :occurred_at],
-              algorithm: :concurrently,
-              name: 'index_error_logs_on_resolved_and_occurred_at'
-
-    # ... repeat for other indexes
-  end
-end
-```
-
-**Benefits:**
-- No table locks
-- Application continues running
-- Takes longer but safe for production
+Every index the migrations need already exists after a normal install, so don't add RED's indexes
+by hand. On a large table, a release that adds an index can lock the table while it builds. Read
+the new migration files before you deploy, and run the migration when traffic is low.
 
 ---
 

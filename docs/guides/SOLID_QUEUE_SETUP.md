@@ -31,7 +31,7 @@ Check your config with:
 bin/rails error_dashboard:verify
 ```
 
-It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running.
+It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running. The line appears only when Solid Queue is in your bundle and `config/queue.yml` exists.
 
 ## Quick Start
 
@@ -49,32 +49,35 @@ Rails 8 apps come with Solid Queue set up. For an older app, follow [Solid Queue
 bin/rails error_dashboard:verify
 ```
 
-Run it again after any change to `config/queue.yml`: it checks every environment in the file.
+Run it again after any change to `config/queue.yml`: it checks the section for each environment your app defines in `config/environments/`.
 
 Solid Queue 1.6+ can also check its own config: `RAILS_ENV=production bin/jobs check`. That catches other mistakes, such as a typo in `config/recurring.yml`. It passes a section with workers and no dispatcher, though, so run both.
 
 ### 3. Configure ActiveJob Adapter
 
-In `config/application.rb` or environment-specific config:
+In `config/environments/production.rb` (a new Rails 8 app already has this):
 
 ```ruby
-# For all environments
 config.active_job.queue_adapter = :solid_queue
-
-# Or environment-specific in config/environments/production.rb
-config.active_job.queue_adapter = :solid_queue
+config.solid_queue.connects_to = { database: { writing: :queue } }  # with a separate queue database
 ```
+
+Set it in production only, unless you have also set up Solid Queue's database for development and
+test. Solid Queue's installer sets it up for production only, and with the adapter set in an
+environment that has no queue tables, every job fails to enqueue.
 
 ### 4. Enable Async Logging
 
-In `config/initializers/rails_error_dashboard.rb`:
+In `config/initializers/rails_error_dashboard.rb` (the installer already writes this):
 
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.async_logging = true
-  config.async_adapter = :solid_queue
 end
 ```
+
+RED's jobs then run on whatever `config.active_job.queue_adapter` says. `config.async_adapter` is
+only checked for a valid value; it doesn't choose the backend.
 
 ### 5. Start Workers
 
@@ -94,8 +97,17 @@ bundle exec rake solid_queue:start
 
 RailsErrorDashboard uses two queues:
 
-1. **`default`** - Async error logging (high volume, fast database operations)
-2. **`error_notifications`** - External notifications (lower volume, slower API calls)
+1. **`default`** - async error logging, Discord, PagerDuty and webhook notifications, storm and
+   baseline alerts, the scheduled jobs, and periodic flushes of buffered counts
+2. **`error_notifications`** - Slack and email notifications, and the issue-tracker jobs
+
+### Scheduled Jobs
+
+Nothing in the gem schedules `RetentionCleanupJob`, `BaselineCalculationJob` or
+`ScheduledDigestJob`. With Solid Queue, add them to `config/recurring.yml`: see
+[Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs) for the entries.
+Recurring tasks run only where Solid Queue's scheduler runs: `bin/jobs`, or Puma with
+`SOLID_QUEUE_IN_PUMA`.
 
 ### Environment-Specific Settings
 
@@ -127,19 +139,19 @@ production:
   <<: *default
 ```
 
-Run `bin/rails error_dashboard:verify` after editing: it checks every environment in the file.
+Run `bin/rails error_dashboard:verify` after editing.
 
 ## Performance Tuning
 
 ### Thread Count
 
 **For `default` queue (database operations):**
-- Start with 5 threads
+- Start with the example's 3 threads
 - Increase if you see job backlogs during error spikes
-- Database connection pool must be >= thread count
+- Each thread needs a database connection: see [Database Connection Pool](#database-connection-pool)
 
 **For `error_notifications` queue (external APIs):**
-- Start with 3 threads
+- Start with 2 or 3 threads
 - Too many threads can hit API rate limits (Slack, PagerDuty, etc.)
 - External APIs are slow - more threads = more concurrent API calls
 
@@ -165,62 +177,57 @@ Run `bin/rails error_dashboard:verify` after editing: it checks every environmen
 - ✅ Lower database load
 - ❌ Slower job pickup (higher latency)
 
-**Recommendations:**
-- Production: 0.5s (good balance)
-- Development: 1s (lower overhead)
-- Test: 0.1s (fast test execution)
+Solid Queue's current template uses 1s for workers and the dispatcher; when a worker sets no
+interval, Solid Queue uses 0.1s. The example above uses 0.1s for faster pickup. Raise it if polling
+load matters more than how quickly jobs start.
 
 ## Database Connection Pool
 
-Solid Queue uses database connections for job processing. Ensure your connection pool is large enough:
+Solid Queue uses database connections for job processing. `pool` in `config/database.yml` is per
+process, so size it for the biggest single process:
 
-```ruby
-# config/database.yml
-production:
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 10 } %>
-```
+- **The queue database:** each worker process needs `pool` ≥ its threads + 2.
+  `bin/jobs check` (Solid Queue 1.6+) warns when it is smaller.
+- **RED's database:** RED's jobs write errors through RED's connection: your main database, or
+  the error database with a separate one. Its `pool` must cover the worker's threads too.
 
-**Formula:**
-```text
-Required connections = (threads_per_worker × processes) + web_server_threads + 5
-```
-
-**Example:**
-- Default queue: 5 threads × 2 processes = 10
-- Error notifications: 3 threads × 1 process = 3
-- Web server: 5 threads
-- Buffer: 5
-- **Total: 23 connections minimum**
+The total across every process (workers, web servers, consoles) is what your database server's
+`max_connections` has to allow.
 
 ## Monitoring
 
 ### Check Job Status
 
-```bash
+```ruby
 # Rails console
-SolidQueue::Job.pending.count
-SolidQueue::Job.failed.count
-SolidQueue::Job.where(queue_name: 'default').count
+SolidQueue::ReadyExecution.count      # waiting for a worker
+SolidQueue::ScheduledExecution.count  # waiting for their time (retries, wait:)
+SolidQueue::FailedExecution.count     # failed for good
+SolidQueue::Job.where(queue_name: "default", finished_at: nil).count
+SolidQueue::Process.pluck(:kind, :hostname, :last_heartbeat_at)  # running processes
 ```
+
+`SolidQueue::Job` also keeps finished jobs (Solid Queue's `preserve_finished_jobs` is on by
+default), so count unfinished ones with `finished_at: nil`.
 
 ### View Failed Jobs
 
 ```ruby
 SolidQueue::Job.failed.each do |job|
-  puts "#{job.class_name}: #{job.exception_message}"
+  puts "#{job.class_name}: #{job.failed_execution.exception_class} #{job.failed_execution.message}"
 end
 ```
 
-### Retry Failed Jobs
+### Retries
 
-Solid Queue automatically retries failed jobs with exponential backoff.
+Solid Queue doesn't retry failed jobs by itself; retries come from each job's `retry_on`.
 
-Configuration in `config/solid_queue.yml`:
-```yaml
-production:
-  max_retries: 5
-  retry_delay: 10  # seconds
-```
+- Most of RED's jobs retry three times with a growing delay, then log
+  `Job ... discarded after 3 attempts` and are dropped. They don't stay in the failed set.
+- The issue-tracker jobs (create, close, reopen and comment on issues) retry and then fail
+  normally, so they do end up in `SolidQueue::Job.failed`. Retry them with
+  `job.failed_execution.retry`, or from Mission Control.
+- Delayed retries need a dispatcher (see the top of this page).
 
 ## Deployment
 
@@ -289,13 +296,10 @@ heroku ps:scale worker=1
 
 1. **Check workers are running:**
    ```bash
-   ps aux | grep solid_queue
+   ps aux | grep solid-queue
    ```
 
-2. **Check logs:**
-   ```bash
-   tail -f log/solid_queue.log
-   ```
+2. **Check logs:** Solid Queue logs to your app's log, for example `log/production.log`.
 
 3. **Verify configuration:**
    ```ruby
@@ -330,16 +334,16 @@ heroku ps:scale worker=1
 | **Setup complexity** | Simple | Moderate |
 | **Performance** | Good (DB-backed) | Excellent (memory-backed) |
 | **Reliability** | Excellent (ACID) | Very good |
-| **Monitoring** | Rails queries | Web UI (paid) |
+| **Monitoring** | Rails queries, Mission Control | Web UI (free) |
 | **Cost** | Free | Free + optional Pro |
 | **Best for** | Small-medium apps, simple deployments | High-volume, performance-critical |
 
 **Recommendation:**
-- **Use Solid Queue** for most Rails 8.1+ apps (simpler, fewer dependencies)
+- **Use Solid Queue** for most Rails 8.0+ apps (simpler, fewer dependencies)
 - **Use Sidekiq** if you need maximum performance or already use Redis
 
 ## Additional Resources
 
-- [Solid Queue GitHub](https://github.com/basecamp/solid_queue)
-- [Rails 8.1 Release Notes](https://edgeguides.rubyonrails.org/8_1_release_notes.html)
+- [Solid Queue GitHub](https://github.com/rails/solid_queue)
+- [Rails 8.0 Release Notes](https://guides.rubyonrails.org/8_0_release_notes.html)
 - [ActiveJob Documentation](https://guides.rubyonrails.org/active_job_basics.html)
