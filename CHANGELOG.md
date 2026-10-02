@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.3...rails_error_dashboard/v0.14.4) (2026-10-02)
+
+
+### 🐛 Bug Fixes
+
+* correct the installer and uninstaller messages ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* define every hook PluginRegistry dispatches on the base Plugin ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* fail verify when the error database has no database.yml entry ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* filter baseline alerts by the error's severity ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* honour rate_limit_per_minute, defaulting to 300 ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* let the rake confirmation prompts survive a closed stdin ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* make the installer's advanced-options question reachable ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* match Class objects in ignored_exceptions ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* pick the search SQL from RED's own database connection ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* redact secrets from Configuration#inspect ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* stop a migration replay from wiping every error's environment ([#269](https://github.com/AnjanJ/rails_error_dashboard/issues/269)) ([2075c6b](https://github.com/AnjanJ/rails_error_dashboard/commit/2075c6bdbb235aea243e08d9f8b2b4b2f2e09f81))
+* warn in verify when json 3 runs on a Rails it breaks ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+* warn when Solid Queue would never run RED's jobs ([62462ea](https://github.com/AnjanJ/rails_error_dashboard/commit/62462ea6118e732451bdd45c108032f07dc01aaf))
+
+### Upgrade instructions
+
+There are no new migrations. Update the gem, restart, and run verify, which checks two more things
+in this release:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails error_dashboard:verify
+```
+
+Nothing needs to change in your app, but three settings now do what their documentation always
+said. Check them if you set them:
+
+- **`baseline_alert_severities`** now filters by the error's own severity (critical, high, medium,
+  low). Before, it was compared with the anomaly's level, so with the defaults a baseline alert
+  needed a spike 3 standard deviations above normal instead of the configured 2, and `:medium` or
+  `:low` in the list never matched. **Expect more baseline alerts.** To get fewer, raise
+  `baseline_alert_threshold_std_devs`. PagerDuty still receives only the largest anomalies.
+- **`rate_limit_per_minute`** is now applied. Its default becomes 300, the limit that was already
+  in force, so nothing changes unless you set a value. If you did, that value now takes effect.
+- **`ignored_exceptions`** matches class objects (`[ActiveRecord::RecordNotFound]`) as well as
+  class-name Strings. Classes listed without quotes were silently not ignored before; now they
+  are, with their subclasses.
+
+### New checks
+
+- `error_dashboard:verify` **fails** when a separate error database has no `config/database.yml`
+  entry for the current environment, and boot logs it as an error. In that state RED falls back to
+  the main database and records nothing.
+- `error_dashboard:verify` warns when json 3 runs on a Rails it breaks (before 8.1.4 or 7.2.4).
+- When Solid Queue runs RED's jobs with a `config/queue.yml` that would never run them, RED logs one
+  error line at boot and shows a banner on every dashboard page. `verify` shows the fix.
+
+### Fixed: a second app joining a shared error database wiped every error's environment
+
+Installing RED in a second app that shares an error database replays every RED migration against
+the shared tables. One migration dropped the `environment` column whenever it existed, and a later
+one added it back empty. Every error already recorded lost its environment. The migration now
+removes only the original, NOT NULL column from RED's earliest releases.
+
+This protects apps installed from now on; an existing app's copy of the migration has already run
+and does nothing. If errors in a shared database lost their environment this way,
+`bin/rails rails_error_dashboard:backfill_environments` fills it in from each error's snapshot.
+That snapshot holds `Rails.env`, so a custom `ERROR_DASHBOARD_ENVIRONMENT` name can't be
+recovered.
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: json 3.0 breaks Rails before 8.1.4 and 7.2.4, and dashboard pages return
+500. Pin `gem "json", "< 3"` until you upgrade Rails. On Rails 7.2, check you really got 7.2.4:
+it caps `minitest` and `connection_pool`, so Bundler can keep an app on 7.2.3 while moving json to
+3.0. Require it with `gem "rails", "~> 7.2.4"`. See [Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
 ## [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.2...rails_error_dashboard/v0.14.3) (2026-09-29)
 
 
