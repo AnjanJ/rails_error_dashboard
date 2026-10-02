@@ -304,7 +304,7 @@ Async logging is on by default. RED enqueues each capture on your app's own Acti
 
 - In production, run a worker for the `default` and `error_notifications` queues. With Solid Queue, see [Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/).
 - Rails' in-process `:async` adapter needs no worker, but captures still queued when the process restarts are lost.
-- With no worker at all, set `config.async_logging = false` to write each error during the request instead.
+- With no worker at all, set `config.async_logging = false` to write each error during the request instead. Notifications still need a worker.
 
 ### Limit Backtrace Size
 
@@ -325,10 +325,10 @@ config.sampling_rate = 0.1  # Log 10% of non-critical errors
 
 ## Production Checklist
 
-Before deploying to production:
+Before deploying to production (each item is explained in [Running in Production](/rails_error_dashboard/docs/production/)):
 
 - [ ] Set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` (outside development and test, the app won't boot on the defaults)
-- [ ] Run a worker for the `default` and `error_notifications` queues, or set `async_logging = false`
+- [ ] Run a worker for the `default` and `error_notifications` queues. Without one, set `async_logging = false` (notifications still need a worker)
 - [ ] Run migrations on every deploy. With a separate database, add its `config/database.yml` entry for production too
 - [ ] Set up notifications (Slack, Email, PagerDuty)
 - [ ] Configure custom severity rules
@@ -336,7 +336,7 @@ Before deploying to production:
 - [ ] Consider sampling for high-traffic apps
 - [ ] Test error notifications (`/red/settings` → **Send Test Error**)
 - [ ] Set up database backups
-- [ ] Schedule retention: `retention_days` (90 in the generated initializer) deletes nothing until `bin/rails error_dashboard:retention_cleanup` runs, or you schedule `RailsErrorDashboard::RetentionCleanupJob` daily
+- [ ] Schedule the periodic jobs: `retention_days` (90 in the generated initializer) deletes nothing until `RailsErrorDashboard::RetentionCleanupJob` runs, and baseline alerts need `RailsErrorDashboard::BaselineCalculationJob`. See [Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs)
 
 ## Getting Help
 

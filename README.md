@@ -644,7 +644,7 @@ http://localhost:3000/red
 
 Default credentials: `gandalf` / `youshallnotpass`, for development and test only.
 
-**Before you deploy anywhere else**, set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` in that environment. Outside development and test, the app refuses to boot on the defaults. See [Dashboard Credentials](docs/guides/CONFIGURATION.md#dashboard-credentials).
+**Before you deploy anywhere else**, set `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD` in that environment. Outside development and test, the app refuses to boot on the defaults. See [Dashboard Credentials](docs/guides/CONFIGURATION.md#dashboard-credentials). For the rest of what production needs (a worker, scheduled jobs, migrations on deploy), see [Running in Production](docs/PRODUCTION.md).
 
 ### 4. Test it out
 
@@ -764,6 +764,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Quickstart Guide](docs/QUICKSTART.md)** — 5-minute setup
 - **[Configuration](docs/guides/CONFIGURATION.md)** — All configuration options
 - **[Upgrading](docs/UPGRADING.md)** — The upgrade, and the releases that need a step
+- **[Running in Production](docs/PRODUCTION.md)** — A worker, scheduled jobs and the other things RED needs before the first deploy
 - **[Uninstalling](docs/UNINSTALL.md)** — Clean removal
 
 ### Features
