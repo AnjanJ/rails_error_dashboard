@@ -45,7 +45,7 @@ Limit backtraces to the most useful lines (typically the first 20-50):
 ```ruby
 # config/initializers/rails_error_dashboard.rb
 RailsErrorDashboard.configure do |config|
-  config.max_backtrace_lines = 50  # Default
+  config.max_backtrace_lines = 100  # Default
 end
 ```
 
@@ -483,5 +483,5 @@ A: Yes, set `config.max_backtrace_lines = 10000` (or any very high number).
 ## Additional Resources
 
 - [Database Optimization Guide](/rails_error_dashboard/docs/guides/database-optimization/)
-- [Performance Tuning Guide](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#performance)
-- [Configuration Options](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#configuration)
+- [Performance & Optimization docs](/rails_error_dashboard/docs/documentation/#performance--optimization)
+- [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)

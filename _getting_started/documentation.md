@@ -15,6 +15,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Installation](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md#quick-start)** - Detailed installation instructions
 - **[Configuration](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration reference
 - **[Upgrading](/rails_error_dashboard/docs/upgrading/)** - The upgrade, and the releases that need a step
+- **[Running in Production](/rails_error_dashboard/docs/production/)** - What RED needs from your app before the first deploy
 - **[Uninstall Guide](/rails_error_dashboard/docs/reference/uninstall/)** - Complete removal instructions (manual + automated)
 - **[FAQ](/rails_error_dashboard/docs/reference/faq/)** - Common questions answered
 
@@ -135,6 +136,9 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 
 ### "I need to track multiple Rails applications"
 → [Multi-App Support](/rails_error_dashboard/docs/features/multi-app-performance/)
+
+### "I'm deploying to production"
+→ [Running in Production](/rails_error_dashboard/docs/production/)
 
 ### "I need to upgrade Rails Error Dashboard"
 → [Upgrading](/rails_error_dashboard/docs/upgrading/)

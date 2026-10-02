@@ -19,6 +19,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 - [Notification Issues](#notification-issues)
 - [Performance Problems](#performance-problems)
 - [Advanced Features Not Working](#advanced-features-not-working)
+- [Deep Debugging Issues](#deep-debugging-issues-v040)
 - [Source Code Integration Issues](#source-code-integration-issues)
 - [Database Issues](#database-issues)
 - [Multi-App Setup Problems](#multi-app-setup-problems)
@@ -35,10 +36,9 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 **Solutions**:
 
 1. **Verify middleware is installed**:
-   ```ruby
-   # In rails console
-   Rails.application.config.middleware.to_a.grep(/ErrorCatcher/)
-   # Should return: [RailsErrorDashboard::Middleware::ErrorCatcher]
+   ```bash
+   bin/rails middleware | grep ErrorCatcher
+   # Should print: use RailsErrorDashboard::Middleware::ErrorCatcher
    ```
 
 2. **Check if middleware is enabled**:
@@ -47,11 +47,13 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    # Should return: true
    ```
 
-3. **Manually trigger an error to test**:
+3. **Manually trigger an error to test**: open `/red/settings` and click **Send Test Error**. Or,
+   from the console (an error raised at the console prompt is never captured):
    ```ruby
    # In rails console
-   raise "Test error from console"
+   Rails.error.report(RuntimeError.new("Test error from console"), handled: false)
    ```
+   With async logging on, keep the console open for a second or two so the job can run.
 
 4. **Check Rails.error subscriber**:
    ```ruby
@@ -61,9 +63,14 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 5. **Verify database tables exist**:
    ```bash
-   rails db:migrate:status | grep error_dashboard
-   # Should show multiple migrations as "up"
+   bin/rails db:migrate:status | grep -i "rails error dashboard"
+   # Should show RED's migrations as "up"
    ```
+
+6. **Check a worker is running**: the installer turns on `config.async_logging`, so each error is
+   saved by a background job on the `default` queue. Without a worker, errors never appear. Run
+   one, or set `config.async_logging = false` (notifications still need a worker). See
+   [Run a worker for RED's jobs](PRODUCTION.md#1-run-a-worker-for-reds-jobs).
 
 ---
 
@@ -75,15 +82,15 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 1. **Check for existing tables**:
    ```bash
-   rails db
-   # Then: \dt error_dashboard*
+   bin/rails db
+   # Then (PostgreSQL): \dt rails_error_dashboard_*
    ```
 
-2. **Rollback and re-run**:
-   ```bash
-   rails db:rollback STEP=5
-   rails db:migrate
-   ```
+2. **Fix the reported error and re-run**: `bin/rails db:migrate` picks up where it stopped. Don't
+   roll back with `db:rollback STEP=N`: the count includes your app's own migrations, and four of
+   RED's migrations can't be rolled back. If an install of 0.4.0 to 0.8.1 stopped with
+   `duplicate column name: instance_variables`, see
+   [Stuck at db:migrate](UPGRADING.md#stuck-at-dbmigrate-after-installing-040-to-081).
 
 3. **Drop and recreate (DEVELOPMENT ONLY)**:
    ```bash
@@ -157,10 +164,11 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
 
 4. **Verify configuration is loaded**:
    ```ruby
-   # In rails console
-   RailsErrorDashboard.configuration.inspect
-   # Shows all current settings
+   # In rails console: read the options you changed, one by one
+   RailsErrorDashboard.configuration.async_logging
    ```
+   Don't print the whole `RailsErrorDashboard.configuration` object: it includes the dashboard
+   password, webhook URLs and API keys.
 
 ---
 
@@ -206,36 +214,30 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
 
 **Solutions**:
 
-1. **Use regex, not strings**:
+1. **Use exact class names, as Strings**:
    ```ruby
    # CORRECT
    config.custom_severity_rules = {
-     /ActiveRecord::RecordNotFound/ => :low,
+     "ActiveRecord::RecordNotFound" => :low,
+     "Stripe::CardError" => :critical
+   }
+
+   # INCORRECT (never matches)
+   config.custom_severity_rules = {
+     /ActiveRecord::RecordNotFound/ => :low,  # Regexp keys are not supported
      /Stripe::/ => :critical
    }
-
-   # INCORRECT (won't match)
-   config.custom_severity_rules = {
-     "ActiveRecord::RecordNotFound" => :low  # String won't match!
-   }
    ```
 
-2. **Test regex patterns**:
+2. **Check how a type is classified**:
    ```ruby
    # In rails console
-   error_class = "ActiveRecord::RecordNotFound"
-   /ActiveRecord::RecordNotFound/.match?(error_class)
-   # Should return: true
+   RailsErrorDashboard::Services::SeverityClassifier.classify("ActiveRecord::RecordNotFound")
+   # => :low with the rule above
    ```
 
-3. **Check rule order** (first match wins):
-   ```ruby
-   # More specific first
-   config.custom_severity_rules = {
-     /ActiveRecord::RecordNotFound.*User/ => :high,   # Specific
-     /ActiveRecord::RecordNotFound/ => :low           # General
-   }
-   ```
+3. **One rule per class**: a rule doesn't cover subclasses, so list each class you mean. The order
+   of the rules doesn't matter.
 
 ---
 
@@ -247,25 +249,25 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
 
 **Solutions**:
 
-1. **Check hash signature generation**:
+1. **Check the fingerprints**:
    ```ruby
    # In rails console
-   error = RailsErrorDashboard::ErrorLog.last
-   error.hash_signature
-   # Should be consistent SHA-256 hash
+   RailsErrorDashboard::ErrorLog.last(2).map(&:error_hash)
+   # The same error gets the same 16-character fingerprint
    ```
 
-2. **Verify deduplication is working**:
+2. **Know what counts as "the same error"**: the fingerprint covers the error class, the message
+   with numbers, quoted strings and object addresses masked, the file of the first backtrace line
+   outside your gems, and the controller and action. Two `RuntimeError`s raised in different files
+   are two errors. A repeat increments the existing record's `occurrence_count` only while that
+   record is unresolved, was first seen in the last 24 hours, and belongs to the same environment
+   and application. Otherwise the repeat starts a new record, which notifies like a new error:
    ```ruby
-   # Same error type should increment occurrence_count, not create new record
-   error = RailsErrorDashboard::ErrorLog.find_by(error_type: "RuntimeError")
-   error.occurrence_count
-   # Should be > 1 if error happened multiple times
+   RailsErrorDashboard::ErrorLog.where(error_type: "RuntimeError").pluck(:id, :occurrence_count, :occurred_at)
    ```
 
-3. **Check for race conditions**:
-   - Ensure pessimistic locking is working
-   - Check database transaction log for conflicts
+3. **A resolved error that happens again** reopens the same record. One marked "Won't fix" stays
+   closed and keeps counting.
 
 ---
 
@@ -280,27 +282,23 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
    config.enable_error_subscriber = true
    ```
 
-2. **Check job adapter error handling**:
-   ```ruby
-   # Sidekiq example
-   class YourJob < ApplicationJob
-     retry_on StandardError, wait: :polynomially_longer
+2. **Check for `retry_on`**: a job error is reported when it escapes the job. While `retry_on`
+   still has attempts left, it catches the error and schedules a retry, so nothing is reported
+   until the last attempt fails.
 
-     def perform
-       # Your code
-     end
-   end
-   ```
-
-3. **Manually log in job rescue blocks**:
+3. **Report errors you rescue yourself**: if you rescue an error and don't re-raise it, nothing
+   reports it. Report it explicitly:
    ```ruby
    def perform
      # Code
    rescue => e
-     RailsErrorDashboard::Commands::LogError.call(exception: e)
-     raise # Re-raise to let job adapter handle retry
+     Rails.error.report(e, severity: :error)
    end
    ```
+   In a rescue that re-raises, you don't need it: the job error is reported when it escapes. (On
+   Rails 7.0 it would be counted twice; 7.1 and later skip an exception that was already reported.)
+   `Rails.error.report` with the default severity (`:warning`, for a handled error) is ignored by
+   RED.
 
 ---
 
@@ -318,9 +316,9 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
 
 2. **Critical errors always logged** (bypass sampling):
    ```ruby
-   # Set error as critical to bypass sampling
+   # Set error as critical to bypass sampling (exact class names)
    config.custom_severity_rules = {
-     /Payment/ => :critical  # Always logged
+     "PaymentError" => :critical  # Always logged
    }
    ```
 
@@ -330,16 +328,9 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
    config.sampling_rate = 0.5  # 50%
    ```
 
-4. **Use conditional sampling**:
-   ```ruby
-   config.before_log_callback = lambda do |exception, context|
-     # Always log payment errors
-     return true if exception.message.include?("Stripe")
-
-     # Sample others
-     Rails.env.production? ? rand < 0.1 : true
-   end
-   ```
+4. **Know what sampling keeps**: below 1.0, the first occurrence of each error in each process is
+   always logged, so sampling never hides that an error exists. There is no per-exception sampling
+   hook: to keep every occurrence of a type, map it to `:critical` as in step 2.
 
 ---
 
@@ -421,34 +412,32 @@ Set it on that command only, never in the runtime environment: while it is set, 
 
 **Solutions**:
 
-1. **Enable async logging**:
-   ```ruby
-   config.async_logging = true
-   ```
-
-2. **Add database indexes** (should be automatic):
+1. **Check every migration has run** (they add the indexes):
    ```bash
-   rails db:migrate:status | grep add_indexes
-   # Should show "up"
+   bin/rails db:migrate:status | grep -i "rails error dashboard" | grep -v "^ *up"
+   # Should print nothing
    ```
 
-3. **Check for N+1 queries**:
+2. **Check for N+1 queries**:
    ```ruby
    # Enable query logging in development
    # config/environments/development.rb
    config.active_record.verbose_query_logs = true
    ```
 
-4. **Reduce retention period**:
+3. **Reduce retention period**:
    ```ruby
    config.retention_days = 30  # Instead of 90
    ```
+   Old errors are deleted only when `RailsErrorDashboard::RetentionCleanupJob` runs. See
+   [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs).
 
-5. **Use separate database**:
+4. **Use separate database**:
    ```ruby
    config.use_separate_database = true
-   config.database = :errors
+   config.database = :error_dashboard  # must match an entry in config/database.yml
    ```
+   See the [Database Options Guide](guides/DATABASE_OPTIONS.md).
 
 ---
 
@@ -481,32 +470,33 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Should receive message in Slack
    ```
 
-4. **Check background jobs are running**:
+4. **Check a worker processes the `error_notifications` queue**: Slack and email jobs run there,
+   not on `default`.
    ```bash
-   # Sidekiq
-   ps aux | grep sidekiq
+   # Sidekiq only processes "default" unless told otherwise
+   bundle exec sidekiq -q default -q error_notifications
 
-   # Solid Queue
-   ps aux | grep solid_queue
+   # Solid Queue (process titles start with solid-queue)
+   ps aux | grep solid-queue
    ```
 
-5. **Check failed jobs**:
-   ```ruby
-   # Sidekiq
-   require 'sidekiq/api'
-   Sidekiq::RetrySet.new.size  # Failed jobs
-   Sidekiq::DeadSet.new.size   # Dead jobs
+5. **Check the log, not the failed jobs**: the Slack job catches its own errors, so a failed send
+   never shows up as a failed job. Look in the Rails log for `Slack notification failed`,
+   `Slack HTTP request failed` or `Failed to send Slack notification`.
 
-   # Solid Queue
-   SolidQueue::Job.failed.count
-   ```
+6. **Check what holds notifications back**:
+   - `config.notification_minimum_severity` (default `:low`): new and reopened errors below it
+     don't notify. Milestone notifications ignore it.
+   - RED notifies on an error's first occurrence, when a resolved error reopens, and when the
+     occurrence count reaches one of `notification_threshold_alerts` (10, 50, 100, 500, 1000).
+     Raising the same error again within 24 hours of its first occurrence doesn't send another
+     notification.
+   - Muted errors, errors marked "Won't fix", environments outside `notification_environments`,
+     errors during an error storm, and new errors past `notification_burst_limit` don't notify.
 
-6. **Verify notification thresholds**:
-   ```ruby
-   # Check if error severity matches notification threshold
-   config.severity_thresholds[:slack]
-   # Returns minimum severity for Slack notifications
-   ```
+7. **Send a test**: open `/red/settings` and click **Send Test Error**. Every click logs the same
+   `TestError`, so only the first click notifies (or the first after you resolve it, or after 24
+   hours). It is classified `:low`, so a higher `notification_minimum_severity` blocks it.
 
 ---
 
@@ -541,9 +531,12 @@ Set it on that command only, never in the runtime environment: while it is set, 
 
 4. **Test email delivery**:
    ```ruby
-   # In rails console
-   TestMailer.test_email.deliver_now
+   # In rails console: sends the notification for the latest error, in this process
+   RailsErrorDashboard::EmailErrorNotificationJob.perform_now(RailsErrorDashboard::ErrorLog.last.id)
    ```
+
+5. **Check the sender address**: `notification_email_from` defaults to `errors@example.com`, which
+   most mail providers reject. Set it to an address your provider allows to send.
 
 ---
 
@@ -585,12 +578,13 @@ Set it on that command only, never in the runtime environment: while it is set, 
      }'
    ```
 
-3. **Check severity filtering** (PagerDuty only sends critical):
+3. **Check severity** (PagerDuty only receives critical errors, plus baseline alerts at the
+   `:critical` level, and there is no setting to change that):
    ```ruby
-   # PagerDuty only receives critical errors by default
-   config.severity_thresholds[:pagerduty]
-   # Should return: :critical
+   RailsErrorDashboard::ErrorLog.last.critical?
    ```
+
+4. **Check the worker**: Discord, PagerDuty and webhook jobs run on the `default` queue.
 
 ---
 
@@ -604,17 +598,26 @@ Set it on that command only, never in the runtime environment: while it is set, 
 
 1. **Configure retention policy**:
    ```ruby
-   config.retention_days = 30  # Auto-delete after 30 days
+   config.retention_days = 30  # Delete errors not seen for 30 days
    ```
+   Nothing is deleted until `RailsErrorDashboard::RetentionCleanupJob` runs, and the gem doesn't
+   schedule it. See [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs).
 
 2. **Manually clean old errors**:
    ```bash
-   rails rails_error_dashboard:cleanup_old_errors
+   # Delete errors not seen for retention_days (asks for confirmation)
+   bin/rails error_dashboard:retention_cleanup
+
+   # Delete resolved errors older than 30 days (asks for confirmation)
+   bin/rails error_dashboard:cleanup_resolved DAYS=30
+
+   # Unattended, e.g. from cron: no confirmation
+   bin/rails runner 'RailsErrorDashboard::RetentionCleanupJob.perform_now'
    ```
 
 3. **Limit backtrace lines**:
    ```ruby
-   config.max_backtrace_lines = 20  # Instead of 50
+   config.max_backtrace_lines = 20  # Instead of 100
    ```
 
 4. **Enable sampling**:
@@ -625,7 +628,7 @@ Set it on that command only, never in the runtime environment: while it is set, 
 5. **Use separate database**:
    ```ruby
    config.use_separate_database = true
-   config.database = :errors
+   config.database = :error_dashboard  # must match an entry in config/database.yml
    ```
 
 ---
@@ -636,10 +639,10 @@ Set it on that command only, never in the runtime environment: while it is set, 
 
 **Solutions**:
 
-1. **Check job processor is running**:
+1. **Check job processor is running, on both of RED's queues**:
    ```bash
    # Sidekiq
-   bundle exec sidekiq
+   bundle exec sidekiq -q default -q error_notifications
 
    # Solid Queue
    bin/jobs
@@ -655,10 +658,11 @@ Set it on that command only, never in the runtime environment: while it is set, 
    ```ruby
    # Sidekiq
    require 'sidekiq/api'
-   Sidekiq::Queue.new.size
+   Sidekiq::Queue.new("default").size
+   Sidekiq::Queue.new("error_notifications").size
 
    # Solid Queue
-   SolidQueue::Job.pending.count
+   SolidQueue::ReadyExecution.count
    ```
 
 4. **Consider sync logging temporarily**:
@@ -682,9 +686,13 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Should return: true
    ```
 
-2. **Verify minimum data exists**:
-   - Need at least 7 days of error history
-   - Need at least 10 occurrences of an error type
+2. **Check the baselines have been calculated**: nothing alerts until
+   `RailsErrorDashboard::BaselineCalculationJob` has run, and the gem doesn't schedule it. Run it
+   daily (see [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs)), or once by hand:
+   ```bash
+   bin/rails runner 'RailsErrorDashboard::BaselineCalculationJob.perform_now'
+   ```
+   An error whose history is completely flat (the same count every period) never alerts.
 
 3. **Check threshold settings**:
    ```ruby
@@ -699,12 +707,14 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Default: 120 (2 hours between alerts for same error)
    ```
 
-5. **Verify severity filter**:
+5. **Verify the level filter**:
    ```ruby
    config.baseline_alert_severities
    # Default: [:critical, :high]
-   # Only these severities trigger baseline alerts
    ```
+   These are anomaly levels, not error severities: `:high` starts 1 standard deviation above the
+   threshold and `:critical` 2 above it. So with the defaults, alerts start at 3 standard deviations
+   above the baseline. The lowest level, `:elevated`, can't be selected.
 
 ---
 
@@ -720,15 +730,11 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Should return: true
    ```
 
-2. **Verify enough errors exist**:
-   - Need at least 10 different error types
-   - Similarity requires variation in messages/backtraces
+2. **Verify there is something to compare**: similar errors are other errors on the same
+   platform. The score is 0.7 × backtrace similarity (Jaccard) + 0.3 × message similarity, and the
+   page lists errors scoring 0.6 or more.
 
-3. **Check similarity thresholds**:
-   - Jaccard similarity: 70% match required
-   - Levenshtein distance: Calculated proportionally
-
-4. **Manually trigger calculation**:
+3. **Manually trigger calculation**:
    ```ruby
    # In rails console
    error = RailsErrorDashboard::ErrorLog.last
@@ -754,13 +760,13 @@ Set it on that command only, never in the runtime environment: while it is set, 
    ```ruby
    # In rails console
    RailsErrorDashboard::ErrorLog.pluck(:platform).uniq
-   # Should return: ["iOS", "Android", "Web", etc.]
+   # For example: ["iOS", "Android", "API"]
    ```
 
-3. **Check platform detection**:
-   - Ensure errors are tagged with platform
-   - Mobile apps should send platform parameter
-   - Browser gem detects web platforms
+3. **Check platform detection**: the platform comes from the request's user agent: `iOS`,
+   `Android`, `Mobile` for Expo clients that name neither, and `API` for everything else, browsers
+   and other mobile clients included.
+   With only one platform there is nothing to compare.
 
 ---
 
@@ -927,14 +933,14 @@ RailsErrorDashboard.configuration.git_repository_url
 
 **Common Causes**:
 1. Repository URL not configured
-2. URL format incorrect (has .git suffix)
+2. URL in SSH form (`git@github.com:...`)
 3. Git branch strategy misconfigured
 
 **Solutions**:
 1. Set repository URL:
    ```ruby
    config.git_repository_url = "https://github.com/myorg/myapp"
-   # Remove .git suffix if present!
+   # A trailing .git is fine: it is removed automatically
    ```
 
 2. Choose branch strategy:
@@ -942,14 +948,14 @@ RailsErrorDashboard.configuration.git_repository_url
    config.git_branch_strategy = :current_branch  # or :commit_sha, :main
    ```
 
-3. Verify URL format (no .git):
+3. Verify URL format (HTTPS):
    ```ruby
    # ✅ Correct:
    "https://github.com/user/repo"
+   "https://github.com/user/repo.git"  # .git is stripped
    "https://gitlab.com/user/repo"
 
    # ❌ Wrong:
-   "https://github.com/user/repo.git"  # Remove .git!
    "git@github.com:user/repo.git"      # Use HTTPS format
    ```
 
@@ -1005,11 +1011,11 @@ ls -la app/controllers/users_controller.rb
 2. Clear browser cache:
    - Chrome/Firefox: Cmd+Shift+R (Mac) or Ctrl+F5 (Windows)
 
-3. Verify dark mode CSS loaded:
+3. Verify dark mode is active:
    ```javascript
    // In browser console
-   document.body.classList.contains('dark-mode')
-   // Should return: true when dark mode is active
+   document.documentElement.dataset.theme
+   // Should return: "dark" when dark mode is active
    ```
 
 ---
@@ -1048,13 +1054,18 @@ ls -la app/controllers/users_controller.rb
 
 **Problem**: Seeing old/stale source code after making changes.
 
-**Quick Fix**:
+Source code is cached for `source_code_cache_ttl` seconds (one hour by default), under keys
+starting with `source_code/`; git blame under keys starting with `git_blame/`.
+
+**Quick Fix**: wait for the cache to expire, or delete those keys:
 ```ruby
-# In Rails console
-Rails.cache.clear
-# Or specifically:
+# In Rails console. Works on the memory, file and Redis stores. Solid Cache, the
+# Rails 8 default, doesn't support delete_matched: there, wait for the TTL.
 Rails.cache.delete_matched("source_code/*")
+Rails.cache.delete_matched("git_blame/*")
 ```
+
+Don't run `Rails.cache.clear` in production: it empties your whole app's cache.
 
 **Development Setup**:
 ```ruby
@@ -1100,22 +1111,31 @@ Includes solutions for:
 2. **Use separate database with dedicated pool**:
    ```ruby
    config.use_separate_database = true
-   config.database = :errors
+   config.database = :error_dashboard
    ```
 
    ```yaml
-   # config/database.yml
-   errors:
-     <<: *default
-     database: errors_production
-     pool: 10
+   # config/database.yml: nested under every environment
+   production:
+     primary:
+       <<: *default
+       database: myapp_production
+     error_dashboard:
+       <<: *default
+       database: myapp_errors_production
+       migrations_paths: db/error_dashboard_migrate
+       pool: 10
    ```
+   See the [Database Options Guide](guides/DATABASE_OPTIONS.md).
 
 3. **Check for connection leaks**:
    ```ruby
    # In rails console
    ActiveRecord::Base.connection_pool.stat
    # Shows: size, connections, busy, dead, idle, waiting
+
+   # With a separate error database, check its pool too
+   RailsErrorDashboard::ErrorLogsRecord.connection_pool.stat
    ```
 
 ---
@@ -1128,24 +1148,23 @@ Includes solutions for:
 
 1. **Verify indexes exist**:
    ```sql
-   -- PostgreSQL
-   \d error_dashboard_error_logs
-   # Should show multiple indexes
+   -- PostgreSQL (in bin/rails db)
+   \d rails_error_dashboard_error_logs
+   -- Should show multiple indexes
    ```
 
 2. **Analyze slow queries**:
    ```sql
    -- PostgreSQL
    EXPLAIN ANALYZE
-   SELECT * FROM error_dashboard_error_logs
+   SELECT * FROM rails_error_dashboard_error_logs
    WHERE occurred_at > NOW() - INTERVAL '7 days';
    ```
 
-3. **Add composite indexes if missing**:
-   ```ruby
-   # Should already exist from migrations
-   add_index :error_dashboard_error_logs, [:application_id, :occurred_at]
-   add_index :error_dashboard_error_logs, [:hash_signature]
+3. **Check every RED migration has run**: the indexes come from them, so don't add them by hand.
+   ```bash
+   bin/rails db:migrate:status | grep -i "rails error dashboard" | grep -v "^ *up"
+   # Should print nothing
    ```
 
 ---
@@ -1169,10 +1188,10 @@ Includes solutions for:
    - Look for application dropdown in dashboard
    - Ensure correct app is selected
 
-3. **Verify APP_NAME is set correctly**:
+3. **Verify APPLICATION_NAME is set correctly**:
    ```bash
-   # Each app should have unique APP_NAME
-   echo $APP_NAME
+   # Each app should have a unique APPLICATION_NAME (or config.application_name)
+   echo $APPLICATION_NAME
    # Should output: my-api, my-admin, etc.
    ```
 
@@ -1221,13 +1240,15 @@ See what Rails Error Dashboard is doing internally:
 # config/initializers/rails_error_dashboard.rb
 RailsErrorDashboard.configure do |config|
   config.enable_internal_logging = true
-  config.log_level = :debug  # :debug, :info, :warn, :error, :silent
+  config.log_level = :debug  # :debug, :info, :warn, :error, :fatal, :silent
 end
 ```
 
+Both lines are needed: `log_level` defaults to `:silent`, which logs nothing.
+
 Restart server, then check logs:
 ```bash
-tail -f log/development.log | grep "RailsErrorDashboard"
+tail -f log/development.log | grep -i "rails.\?error.\?dashboard"
 ```
 
 ---
@@ -1239,43 +1260,40 @@ tail -f log/development.log | grep "RailsErrorDashboard"
 begin
   raise "Manual test error"
 rescue => e
-  RailsErrorDashboard::Commands::LogError.call(
-    exception: e,
-    occurred_at: Time.current,
-    platform: "test",
-    severity: :high
-  )
+  RailsErrorDashboard::Commands::LogError.call(e, { platform: "test" })
 end
 
 # Check if logged
 RailsErrorDashboard::ErrorLog.last
 ```
 
+`LogError.call` takes the exception and a context Hash, both positional. With `async_logging` on,
+it queues a job instead of saving, so the error appears once a worker runs it. The severity comes
+from the error class (see
+[Custom Severity Classification](guides/CONFIGURATION.md#custom-severity-classification)).
+
 ---
 
 ### Check Configuration Values
 
 ```ruby
-# In rails console
+# In rails console: read the options you need, one at a time
 config = RailsErrorDashboard.configuration
-
-# View all settings
-config.instance_variables.each do |var|
-  puts "#{var}: #{config.instance_variable_get(var).inspect}"
-end
+config.async_logging
+config.sampling_rate
+config.notification_minimum_severity
 ```
+
+Don't dump every setting: the configuration holds the dashboard password, webhook URLs and API
+keys. The [Settings page](guides/SETTINGS.md) (`/red/settings`) shows the current values.
 
 ---
 
 ### Verify Middleware Stack
 
-```ruby
-# In rails console
-Rails.application.config.middleware.to_a.each do |middleware|
-  puts middleware.inspect
-end
-
-# Look for: RailsErrorDashboard::Middleware::ErrorCatcher
+```bash
+bin/rails middleware
+# Look for: use RailsErrorDashboard::Middleware::ErrorCatcher
 ```
 
 ---
@@ -1283,15 +1301,21 @@ end
 ### Test Notifications Directly
 
 ```ruby
+# In rails console: each job takes the error's id, positionally
+id = RailsErrorDashboard::ErrorLog.last.id
+
 # Slack
-RailsErrorDashboard::SlackNotificationJob.perform_now(error_log_id: 123)
+RailsErrorDashboard::SlackErrorNotificationJob.perform_now(id)
 
 # Email
-RailsErrorDashboard::EmailNotificationJob.perform_now(error_log_id: 123)
+RailsErrorDashboard::EmailErrorNotificationJob.perform_now(id)
 
 # Discord
-RailsErrorDashboard::DiscordNotificationJob.perform_now(error_log_id: 123)
+RailsErrorDashboard::DiscordErrorNotificationJob.perform_now(id)
 ```
+
+The jobs catch their own errors and log them, so check the log for the result. Or use the
+Settings page's **Send Test Error** button.
 
 ---
 
@@ -1306,7 +1330,7 @@ If you've tried the solutions above and still have issues:
    - Ruby version
    - Gem version
    - Error message (full backtrace)
-   - Configuration (sanitize secrets!)
+   - The configuration options involved (not the whole configuration object: it holds secrets)
    - Steps to reproduce
 
 4. **Security Issues**: See [SECURITY.md](../SECURITY.md) - DO NOT open public issue
@@ -1322,4 +1346,4 @@ If you've tried the solutions above and still have issues:
 
 ---
 
-**Pro Tip**: Enable internal logging (`enable_internal_logging = true`) when debugging issues. It reveals exactly what Rails Error Dashboard is doing internally.
+**Pro Tip**: When debugging, set both `enable_internal_logging = true` and `log_level = :debug`. With the default `log_level` (`:silent`), internal logging shows nothing.

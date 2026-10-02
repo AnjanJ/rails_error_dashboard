@@ -517,7 +517,6 @@ RailsErrorDashboard.configure do |config|
 
   # Performance
   config.async_logging = true
-  config.async_adapter = :sidekiq
   config.max_backtrace_lines = 50
   config.sampling_rate = 1.0
 
@@ -579,7 +578,6 @@ RailsErrorDashboard.configure do |config|
 
   # Performance (high traffic)
   config.async_logging = true
-  config.async_adapter = :sidekiq
   config.sampling_rate = 0.5  # Log 50% of errors
 
   # Critical errors
