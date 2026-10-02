@@ -72,7 +72,8 @@ RSpec.describe "sticky wont_fix" do
 
     it "sends no baseline alert for a wont_fix error" do
       RailsErrorDashboard.configuration.enable_baseline_alerts = true
-      RailsErrorDashboard.configuration.baseline_alert_severities = [ :critical ]
+      # The filter is the error's own severity; boom is a StandardError, :low.
+      RailsErrorDashboard.configuration.baseline_alert_severities = [ :low ]
       allow_any_instance_of(logs).to receive(:baseline_anomaly).and_return({ anomaly: true, level: :critical })
 
       # Positive control: the same stubbed anomaly does alert while the error is open.

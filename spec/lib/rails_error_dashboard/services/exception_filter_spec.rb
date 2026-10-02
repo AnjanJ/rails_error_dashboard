@@ -49,6 +49,23 @@ RSpec.describe RailsErrorDashboard::Services::ExceptionFilter do
       expect(described_class.ignored?(ArgumentError.new("bad"))).to be true
     end
 
+    it "matches a Class object, including its subclasses" do
+      RailsErrorDashboard.configure { |c| c.ignored_exceptions = [ StandardError ] }
+
+      expect(described_class.ignored?(StandardError.new("base"))).to be true
+      expect(described_class.ignored?(ArgumentError.new("subclass"))).to be true
+      expect(described_class.ignored?(Exception.new("parent"))).to be false
+    end
+
+    it "matches a Module mixed into the exception" do
+      tag = Module.new
+      tagged = Class.new(StandardError) { include tag }
+      RailsErrorDashboard.configure { |c| c.ignored_exceptions = [ tag ] }
+
+      expect(described_class.ignored?(tagged.new("tagged"))).to be true
+      expect(described_class.ignored?(StandardError.new("untagged"))).to be false
+    end
+
     it "handles invalid class names gracefully" do
       RailsErrorDashboard.configure { |c| c.ignored_exceptions = [ "NonExistentClass" ] }
 

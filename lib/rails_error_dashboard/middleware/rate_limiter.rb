@@ -2,12 +2,11 @@
 
 module RailsErrorDashboard
   module Middleware
-    # Rate limiting middleware for Rails Error Dashboard routes
-    # Protects both dashboard UI and API endpoints from abuse
+    # Rate limiting middleware for Rails Error Dashboard routes: at most
+    # config.rate_limit_per_minute requests per IP per path, per minute.
     class RateLimiter
-      # Rate limits by endpoint type (relative to engine mount path)
-      API_LIMIT = { limit: 100, period: 60 }.freeze   # 100 req/min
-      DASHBOARD_LIMIT = { limit: 300, period: 60 }.freeze # 300 req/min
+      PERIOD = 60 # seconds
+      DEFAULT_LIMIT = 300 # requests per PERIOD, when rate_limit_per_minute isn't a positive number
 
       def initialize(app)
         @app = app
@@ -22,16 +21,14 @@ module RailsErrorDashboard
         # Only apply rate limiting to error dashboard routes
         return @app.call(env) unless error_dashboard_route?(request.path)
 
-        # Find matching rate limit configuration
-        limit_config = find_limit_config(request.path)
-        return @app.call(env) unless limit_config
+        limit_config = { limit: configured_limit, period: PERIOD }
 
         # Check rate limit
-        key = rate_limit_key(request)
+        key = rate_limit_key(request, limit_config)
         current_count = @cache.read(key).to_i
 
         if current_count >= limit_config[:limit]
-          return rate_limit_response(request, limit_config)
+          return html_rate_limit_response(limit_config)
         end
 
         # Increment counter with expiration
@@ -46,6 +43,12 @@ module RailsErrorDashboard
         RailsErrorDashboard.configuration.enable_rate_limiting
       end
 
+      # nil passes validation, and a limit of 0 would refuse every request.
+      def configured_limit
+        limit = RailsErrorDashboard.configuration.rate_limit_per_minute.to_i
+        limit.positive? ? limit : DEFAULT_LIMIT
+      end
+
       def engine_mount_path
         @engine_mount_path ||= RailsErrorDashboard.configuration.engine_mount_path
       rescue
@@ -56,43 +59,12 @@ module RailsErrorDashboard
         path.start_with?(engine_mount_path)
       end
 
-      def find_limit_config(path)
-        if path.start_with?("#{engine_mount_path}/api")
-          API_LIMIT
-        else
-          DASHBOARD_LIMIT
-        end
-      end
-
-      def rate_limit_key(request)
-        # Key format: rate_limit:IP:path_prefix:time_window
+      def rate_limit_key(request, limit_config)
+        # Key format: rate_limit:IP:path:time_window
         # Time window ensures keys expire and reset
-        limit_config = find_limit_config(request.path)
         time_window = Time.now.to_i / limit_config[:period]
 
         "rate_limit:#{request.ip}:#{request.path}:#{time_window}"
-      end
-
-      def rate_limit_response(request, limit_config)
-        # Return JSON for API requests, HTML for dashboard
-        if request.path.start_with?("#{engine_mount_path}/api")
-          json_rate_limit_response(limit_config)
-        else
-          html_rate_limit_response(limit_config)
-        end
-      end
-
-      def json_rate_limit_response(limit_config)
-        [
-          429,
-          {
-            "Content-Type" => "application/json",
-            "Retry-After" => limit_config[:period].to_s,
-            "X-RateLimit-Limit" => limit_config[:limit].to_s,
-            "X-RateLimit-Period" => "#{limit_config[:period]} seconds"
-          },
-          [ { error: "Rate limit exceeded. Please try again later." }.to_json ]
-        ]
       end
 
       def html_rate_limit_response(limit_config)

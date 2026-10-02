@@ -86,6 +86,10 @@ ja:
           と <code>ERROR_DASHBOARD_PASSWORD</code> を設定するか、イニシャライザで <code>authenticate_with</code>
           を設定してください。
         dismiss: このセッションでは表示しない
+      solid_queue:
+        label: "Solid Queue は RED のジョブを実行しません。"
+        body_html: "<code>config/queue.yml</code> を修正するまで、バックグラウンドで記録されたエラーと通知はキューで待機します。<code>bin/rails error_dashboard:verify</code> を実行して修正方法を確認し、再起動してください。"
+        guide: "RED が Solid Queue に必要とするもの"
       storm:
         active_title: エラーストームが発生中です
         recent_title: ストーム保護が最近作動しました

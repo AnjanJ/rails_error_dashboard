@@ -11,10 +11,11 @@ module RailsErrorDashboard
 
           # Guard: skip connects_to if the database config doesn't exist yet in database.yml.
           # This happens during `rails generate` when the initializer was just created but
-          # the user hasn't added the database.yml entry yet.
-          db_configs = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
-          unless db_configs.any? { |c| c.name == database_name.to_s }
-            Rails.logger.warn "[Rails Error Dashboard] Separate database '#{database_name}' is not configured in database.yml for the '#{Rails.env}' environment. Skipping connects_to. See https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/DATABASE_OPTIONS.md"
+          # the user hasn't added the database.yml entry yet. Logged at error level:
+          # RED then uses the main database, and unless that has RED's tables no
+          # error is recorded. error_dashboard:verify reports it as FAILED.
+          unless RailsErrorDashboard.configuration.separate_database_entry?
+            Rails.logger.error "[Rails Error Dashboard] Separate database '#{database_name}' is not configured in database.yml for the '#{Rails.env}' environment. Skipping connects_to: errors are not recorded until it is added. See https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/DATABASE_OPTIONS.md"
             next
           end
 
@@ -75,6 +76,11 @@ module RailsErrorDashboard
       # raises) so that no capture ever pays for it. Skipped when the SHA is
       # configured: then it is never consulted.
       RailsErrorDashboard.detected_git_sha if RailsErrorDashboard.configuration.git_sha.blank?
+
+      # One error-level line if Solid Queue runs RED's jobs with a
+      # config/queue.yml that never would (no dispatcher, no worker for RED's
+      # queues). Reads the file once; never raises. The dashboard shows a banner.
+      RailsErrorDashboard::Services::SolidQueueConfigCheck.log_current_problems
 
       if RailsErrorDashboard.configuration.enable_error_subscriber
         Rails.error.subscribe(RailsErrorDashboard::ErrorReporter.new)

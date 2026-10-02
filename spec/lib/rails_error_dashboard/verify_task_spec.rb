@@ -165,6 +165,80 @@ RSpec.describe "error_dashboard:verify rake task" do
     end
   end
 
+  # With a separate database, a missing database.yml entry for this environment
+  # makes the engine skip connects_to: RED then uses the main database, and
+  # unless that has RED's tables no error is recorded. verify has to say so.
+  describe "error database entry check" do
+    before do
+      RailsErrorDashboard.configuration.use_separate_database = true
+      RailsErrorDashboard.configuration.database = :error_dashboard
+    end
+
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "fails when config/database.yml has no entry for this environment" do
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("Error database entry... FAILED")
+      expect(output).to include("no 'error_dashboard' entry for the 'test' environment")
+      expect(output).to include("Status: NEEDS ATTENTION")
+    end
+
+    it "passes when the entry exists" do
+      entry = instance_double(ActiveRecord::DatabaseConfigurations::HashConfig, name: "error_dashboard")
+      allow(ActiveRecord::Base.configurations).to receive(:configs_for).and_call_original
+      allow(ActiveRecord::Base.configurations).to receive(:configs_for).with(env_name: "test").and_return([ entry ])
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("Error database entry... OK")
+    end
+
+    it "isn't checked without a separate database" do
+      RailsErrorDashboard.configuration.use_separate_database = false
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).not_to include("Error database entry...")
+    end
+  end
+
+  # json 3.0 breaks Rails before 8.1.4 / 7.2.4: dashboard pages return 500 and
+  # captures can fail, with no error message. verify is the place to say so.
+  describe "json gem check" do
+    def with_json(version)
+      specs = Gem.loaded_specs.merge("json" => instance_double(Gem::Specification, version: Gem::Version.new(version)))
+      allow(Gem).to receive(:loaded_specs).and_return(specs)
+    end
+
+    it "warns when json 3 runs on a Rails it breaks" do
+      with_json("3.0.2")
+      allow(Rails).to receive(:version).and_return("8.0.4")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("json gem... WARNING")
+      expect(output).to include('gem "json", "< 3"')
+    end
+
+    it "is OK when json 3 runs on a fixed Rails" do
+      with_json("3.0.2")
+      allow(Rails).to receive(:version).and_return("8.1.4")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).to include("json gem... OK")
+    end
+
+    it "says nothing with json 2" do
+      with_json("2.21.2")
+
+      output = capture_stdout { task.invoke }
+
+      expect(output).not_to include("json gem...")
+    end
+  end
+
   describe "retention policy check" do
     it "shows OK with retention_days when configured" do
       output = capture_stdout { task.invoke }

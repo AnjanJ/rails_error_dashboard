@@ -41,7 +41,7 @@ Three groups of questions, then where to store errors:
 
 1. **[1/3] Notifications** (default: no). Yes asks about each channel: Slack, email, Discord, PagerDuty and webhooks.
 2. **[2/3] Advanced Analytics** (default: yes). All seven together: baseline anomaly alerts, fuzzy error matching, co-occurring errors, error cascades, error correlation, platform comparison and occurrence patterns.
-3. **[3/3] Advanced Options**: listed, but currently not asked. Async logging stays on, and error sampling, breadcrumbs, system health snapshots, the source code viewer, git blame, swallowed exception detection (Ruby 3.3+), crash capture and diagnostic dumps stay off. Turn them on with flags (`--breadcrumbs`, `--system-health` and so on) or later in the initializer.
+3. **[3/3] Advanced Options**: one yes/no (default no) that opens a question for each: async logging (default yes), error sampling, breadcrumbs, system health snapshots, the source code viewer, git blame, swallowed exception detection (Ruby 3.3+), crash capture and diagnostic dumps (each default no). If you skip it, async logging stays on and the rest stay off. Before 0.14.4 this question was never asked. Flags such as `--breadcrumbs` or `--no-async-logging` skip it too.
 4. **Database Setup**: 1) your app's database (the default), 2) a separate database, or 3) a database shared with your other apps. For 2 and 3 the installer prints the `config/database.yml` entry to add.
 
 The installer doesn't offer local variable capture, instance variable capture or Rack::Attack tracking. To use them, add `config.enable_local_variables = true`, `config.enable_instance_variables = true` or `config.enable_rack_attack_tracking = true` to the initializer.

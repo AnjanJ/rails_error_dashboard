@@ -196,4 +196,73 @@ RSpec.describe RailsErrorDashboard::Services::SolidQueueConfigCheck do
       ENV["SOLID_QUEUE_CONFIG"] = original if original
     end
   end
+  # The running app's own verdict, for the dashboard banner and one boot log
+  # line: worked out once per process, never raises.
+  describe ".current_problems" do
+    let(:generator_config) { Pathname(File.join(fixtures, "red_generator_queue.yml")) }
+
+    before { described_class.reset_current_problems! }
+    after { described_class.reset_current_problems! }
+
+    def with_adapter(name)
+      allow(RailsErrorDashboard::ApplicationJob).to receive(:queue_adapter_name).and_return(name)
+    end
+
+    it "reports this environment's problems when Solid Queue runs RED's jobs" do
+      with_adapter("solid_queue")
+      allow(described_class).to receive(:config_path).and_return(generator_config)
+
+      expect(described_class.current_problems)
+        .to contain_exactly(a_string_starting_with("test:").and(including("no dispatcher")))
+    end
+
+    it "is empty when another adapter runs RED's jobs" do
+      with_adapter("async")
+      allow(described_class).to receive(:config_path).and_return(generator_config)
+
+      expect(described_class.current_problems).to eq([])
+    end
+
+    it "is empty when there is no config/queue.yml" do
+      with_adapter("solid_queue")
+      allow(described_class).to receive(:config_path).and_return(Pathname(Dir.tmpdir).join("no-such-queue.yml"))
+
+      expect(described_class.current_problems).to eq([])
+    end
+
+    it "reads the file once per process" do
+      with_adapter("solid_queue")
+      allow(described_class).to receive(:config_path).and_return(generator_config)
+      allow(described_class).to receive(:call).and_call_original
+
+      2.times { described_class.current_problems }
+
+      expect(described_class).to have_received(:call).once
+    end
+
+    it "never raises" do
+      allow(RailsErrorDashboard::ApplicationJob).to receive(:queue_adapter_name).and_raise(RuntimeError, "boom")
+
+      expect(described_class.current_problems).to eq([])
+    end
+
+    it "logs the problems once, at error level, at boot" do
+      with_adapter("solid_queue")
+      allow(described_class).to receive(:config_path).and_return(generator_config)
+      logger = instance_double(ActiveSupport::Logger, error: nil)
+
+      described_class.log_current_problems(logger)
+
+      expect(logger).to have_received(:error).once.with(/Solid Queue won't run RED's jobs in test: .*no dispatcher/)
+    end
+
+    it "logs nothing when there is no problem" do
+      with_adapter("async")
+      logger = instance_double(ActiveSupport::Logger, error: nil)
+
+      described_class.log_current_problems(logger)
+
+      expect(logger).not_to have_received(:error)
+    end
+  end
 end

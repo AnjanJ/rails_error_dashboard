@@ -878,8 +878,11 @@ module RailsErrorDashboard
         # Return if no anomaly detected
         return unless anomaly[:anomaly]
 
-        # Check if severity level should trigger alert
-        return unless config.baseline_alert_severities.include?(anomaly[:level])
+        # baseline_alert_severities lists ERROR severities (critical/high/
+        # medium/low, as validated), not anomaly levels. Comparing it with
+        # anomaly[:level] (elevated/high/critical) skipped every anomaly below
+        # threshold + 1 sigma, and :medium/:low never matched at all.
+        return unless config.baseline_alert_severities.include?(error_log.severity)
 
         # Enqueue alert job (which will handle throttling)
         BaselineAlertJob.perform_later(error_log.id, anomaly, ApplicationJob.enqueue_locale)

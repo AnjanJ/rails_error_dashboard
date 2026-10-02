@@ -57,6 +57,53 @@ module RailsErrorDashboard
           .sort
       end
 
+      # The running app's verdict: the problems that would stop RED's jobs in
+      # this environment, or [] when Solid Queue doesn't run them or there is
+      # no config file. Worked out once per process (it reads and parses a
+      # file); the dashboard banner and the boot log line both ask. Never raises.
+      #
+      # @return [Array<String>]
+      def self.current_problems
+        return @current_problems if defined?(@current_problems)
+
+        @current_problems = compute_current_problems.freeze
+      end
+
+      # One error-level line at boot when there is a problem.
+      #
+      # @param logger [Logger]
+      # @return [void]
+      def self.log_current_problems(logger = Rails.logger)
+        problems = current_problems
+        return if problems.empty?
+
+        logger.error(
+          "[Rails Error Dashboard] Solid Queue won't run RED's jobs in #{problems.join('; ')}. " \
+          "Errors captured in the background and notifications wait in the queue until " \
+          "config/queue.yml is fixed: bin/rails error_dashboard:verify shows how. Guide: #{GUIDE_URL}"
+        )
+      rescue StandardError
+        nil
+      end
+
+      # For specs.
+      def self.reset_current_problems!
+        remove_instance_variable(:@current_problems) if defined?(@current_problems)
+      end
+
+      def self.compute_current_problems
+        return [] unless RailsErrorDashboard::ApplicationJob.queue_adapter_name.to_s == "solid_queue"
+
+        path = config_path(Rails.root)
+        return [] unless path.exist?
+
+        result = call(path, environments: [ Rails.env.to_s ])
+        result[:skipped] ? [] : result[:problems]
+      rescue StandardError, ScriptError
+        []
+      end
+      private_class_method :compute_current_problems
+
       # The queues RED's jobs are enqueued on, as this app names them
       # (queue_name_prefix included).
       #

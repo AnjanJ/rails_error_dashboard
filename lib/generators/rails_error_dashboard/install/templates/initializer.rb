@@ -186,7 +186,8 @@ RailsErrorDashboard.configure do |config|
 <% if @enable_error_sampling -%>
   # Error Sampling - ENABLED
   # Samples non-critical errors to reduce storage volume.
-  # Critical and high severity errors are ALWAYS logged at 100% regardless of this setting.
+  # Critical errors are always logged, regardless of this setting. So is the first
+  # occurrence of each error in each process.
   # 0.5 = log 50% of non-critical occurrences — halves storage while keeping
   # occurrence counts meaningful and error patterns visible.
   # Tune lower (e.g. 0.1) if one error is flooding the DB; set to 1.0 to log everything.
@@ -244,7 +245,7 @@ RailsErrorDashboard.configure do |config|
   # Automatically detect when error rates exceed normal patterns
   config.enable_baseline_alerts = true
   config.baseline_alert_threshold_std_devs = 2.0  # Alert when > 2 std devs above baseline
-  config.baseline_alert_severities = [ :critical, :high ]
+  config.baseline_alert_severities = [ :critical, :high ]  # Only errors of these severities alert
   config.baseline_alert_cooldown_minutes = 120  # 2 hours between alerts
   # To disable: Set config.enable_baseline_alerts = false
 
@@ -253,7 +254,7 @@ RailsErrorDashboard.configure do |config|
   # To enable: Set config.enable_baseline_alerts = true
   config.enable_baseline_alerts = false
   # config.baseline_alert_threshold_std_devs = 2.0
-  # config.baseline_alert_severities = [ :critical, :high ]
+  # config.baseline_alert_severities = [ :critical, :high ]  # Only errors of these severities alert
   # config.baseline_alert_cooldown_minutes = 120
 
 <% end -%>

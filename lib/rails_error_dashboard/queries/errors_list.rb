@@ -150,8 +150,10 @@ module RailsErrorDashboard
         end
       end
 
+      # RED's own connection: with a separate error database, the main
+      # database can use a different adapter.
       def postgresql?
-        ActiveRecord::Base.connection.adapter_name.downcase == "postgresql"
+        ErrorLogsRecord.connection.adapter_name.downcase == "postgresql"
       end
 
       def filter_by_severity(query)

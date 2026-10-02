@@ -18,8 +18,10 @@ stop the app; it loses errors, notifications or scheduled cleanups without telli
 6. [Set the dashboard credentials](#6-set-the-dashboard-credentials)
 
 Then run `bin/rails error_dashboard:verify` in production. It checks the configuration, the
-database and its tables, the credentials and, on Solid Queue, `config/queue.yml`. It can't tell
-whether a worker or a scheduler is running.
+database, its tables and (with a separate database) its `config/database.yml` entry, the
+credentials, json 3 against your Rails version and, on Solid Queue, `config/queue.yml`. It can't
+tell whether a worker or a scheduler is running. Since 0.14.4 the dashboard also shows a banner when
+Solid Queue's config would never run RED's jobs.
 
 ## 1. Run a worker for RED's jobs
 
@@ -117,7 +119,7 @@ production:
     migrations_paths: db/error_dashboard_migrate
 ```
 
-If an environment has no `error_dashboard` entry, RED logs a warning at boot and uses the main
+If an environment has no `error_dashboard` entry, RED logs an error at boot and uses the main
 database, which has no RED tables, so that environment's errors are not recorded anywhere. See the
 [Database Setup Guide](/rails_error_dashboard/docs/guides/database-options/).
 

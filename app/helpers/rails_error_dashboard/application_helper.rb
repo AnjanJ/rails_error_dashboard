@@ -1,5 +1,13 @@
 module RailsErrorDashboard
   module ApplicationHelper
+    # Problems in config/queue.yml that stop RED's jobs in this environment:
+    # empty when the config is fine, or when Solid Queue doesn't run RED's jobs.
+    def red_solid_queue_problems
+      Services::SolidQueueConfigCheck.current_problems
+    rescue StandardError
+      []
+    end
+
     # Returns the host app's CSP nonce (if any) so inline <script> tags pass strict CSP.
     # Falls back to nil when the host has no CSP configured — in that case the script tag
     # works without a nonce attribute. Strict CSPs (script-src 'self' 'nonce-...') require

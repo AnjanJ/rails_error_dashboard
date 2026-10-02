@@ -87,6 +87,10 @@ de:
           <code>ERROR_DASHBOARD_PASSWORD</code> oder konfigurieren Sie <code>authenticate_with</code>
           in Ihrem Initializer.
         dismiss: Für diese Sitzung ausblenden
+      solid_queue:
+        label: "Solid Queue führt die Jobs von RED nicht aus."
+        body_html: "Im Hintergrund erfasste Fehler und Benachrichtigungen warten in der Warteschlange, bis <code>config/queue.yml</code> korrigiert ist. Führen Sie <code>bin/rails error_dashboard:verify</code> aus, um die Korrektur zu sehen, und starten Sie die App danach neu."
+        guide: "Was RED von Solid Queue braucht"
       storm:
         active_title: Fehlersturm im Gange
         recent_title: Sturmschutz war kürzlich aktiv

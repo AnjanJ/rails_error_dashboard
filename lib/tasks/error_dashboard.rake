@@ -34,6 +34,25 @@ namespace :error_dashboard do
     end
     checks_passed += 1
 
+    # 2b. Separate database: the database.yml entry for this environment. Without
+    # it the engine skips connects_to and RED uses the main database, which
+    # usually has no RED tables, so nothing is recorded.
+    if config.use_separate_database
+      print "  Error database entry... "
+      db_name = config.database || :error_dashboard
+      if config.separate_database_entry?
+        puts "OK"
+        checks_passed += 1
+      else
+        puts "FAILED"
+        puts "    config/database.yml has no '#{db_name}' entry for the '#{Rails.env}' environment."
+        puts "    RED is using the main database instead, so errors are not recorded in the error database."
+        puts "    Add '#{db_name}:' under '#{Rails.env}:' with migrations_paths: db/error_dashboard_migrate"
+        puts "    (see docs/guides/DATABASE_OPTIONS.md), then restart."
+        checks_failed += 1
+      end
+    end
+
     # 3. Database connection
     print "  Database connection... "
     begin
@@ -218,6 +237,28 @@ namespace :error_dashboard do
       end
     end
 
+    # 10. json 3.0 breaks Rails before 8.1.4 and 7.2.4: dashboard pages return
+    # 500 and captures can fail, with no error message. The bug is in Rails.
+    json_version = Gem.loaded_specs["json"]&.version
+    if json_version && json_version >= Gem::Version.new("3")
+      print "  json gem... "
+      rails_version = Gem::Version.new(Rails.version)
+      series = rails_version.segments.first(2)
+      json3_ok = (series == [ 8, 1 ] && rails_version >= Gem::Version.new("8.1.4")) ||
+                 (series == [ 7, 2 ] && rails_version >= Gem::Version.new("7.2.4")) ||
+                 (series <=> [ 8, 1 ]) == 1
+      if json3_ok
+        puts "OK (json #{json_version}, Rails #{Rails.version})"
+        checks_passed += 1
+      else
+        puts "WARNING"
+        puts "    json #{json_version} breaks Rails #{Rails.version} (fixed in Rails 8.1.4 and 7.2.4):"
+        puts "    dashboard pages return 500 and errors can fail to be captured."
+        puts "    Add gem \"json\", \"< 3\" to your Gemfile and run bundle update json, or upgrade Rails."
+        warnings += 1
+      end
+    end
+
     # Summary
     puts "\n" + "-" * 70
     puts "  Results: #{checks_passed} passed, #{checks_failed} failed, #{warnings} warnings"
@@ -324,7 +365,7 @@ namespace :error_dashboard do
 
     # Confirm before proceeding
     print "\nProceed with backfill? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n✗ Backfill cancelled"
@@ -569,7 +610,7 @@ namespace :error_dashboard do
     end
 
     print "\n  Proceed with deletion? (y/N): "
-    confirmation = $stdin.gets.chomp.downcase
+    confirmation = $stdin.gets.to_s.chomp.downcase
 
     unless confirmation == "y" || confirmation == "yes"
       puts "\n  Cleanup cancelled"

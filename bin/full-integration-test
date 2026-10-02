@@ -87,9 +87,13 @@ create_app() {
 
   echo "" >> "$app_dir/Gemfile"
   echo "gem 'rails_error_dashboard', path: '$GEM_DIR'" >> "$app_dir/Gemfile"
-  # Same pin as the gem's Gemfile: released Rails 8.1 cannot decode the
-  # session cookie under json 3.0, so every dashboard page would 500.
-  echo "gem 'json', '< 3'" >> "$app_dir/Gemfile"
+  # Same rule as the gem's Gemfile: json 3.0 breaks Rails before 8.1.4 and
+  # 7.2.4 (every dashboard page would 500), so pin it only for those.
+  local rails_v
+  rails_v=$(rails -v 2>/dev/null | awk '{print $2}')
+  if ! ruby -e 'v = Gem::Version.new(ARGV[0].to_s); s = v.segments; exit((s[0..1] == [ 8, 1 ] && v >= Gem::Version.new("8.1.4")) || (s[0..1] == [ 7, 2 ] && v >= Gem::Version.new("7.2.4")) || s[0].to_i > 8 || (s[0] == 8 && s[1].to_i > 1))' "$rails_v"; then
+    echo "gem 'json', '< 3'" >> "$app_dir/Gemfile"
+  fi
 
   log_step "Running bundle install..."
   (cd "$app_dir" && bundle install 2>&1 | tail -3)

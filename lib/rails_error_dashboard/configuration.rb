@@ -8,6 +8,14 @@ module RailsErrorDashboard
     DEFAULT_DASHBOARD_USERNAME = "gandalf"
     DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
 
+    # Settings that hold credentials. #inspect masks them, so printing the
+    # configuration in a console (IRB shows results with pp, which uses
+    # #inspect) or pasting it into an issue doesn't leak them.
+    SECRET_ATTRIBUTES = %i[
+      dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
+      webhook_urls issue_tracker_token issue_webhook_secret llm_api_key
+    ].freeze
+
     # Dashboard authentication (always required)
     attr_accessor :dashboard_username
     attr_accessor :dashboard_password
@@ -351,7 +359,7 @@ module RailsErrorDashboard
 
       # Rate limiting defaults
       @enable_rate_limiting = false # OFF by default (opt-in)
-      @rate_limit_per_minute = 100  # Requests per minute per IP for API endpoints
+      @rate_limit_per_minute = 300  # Requests per minute per IP, per dashboard path
 
       # Enhanced metrics defaults
       @app_version = ENV["APP_VERSION"]
@@ -380,7 +388,7 @@ module RailsErrorDashboard
       # Baseline alert defaults
       @enable_baseline_alerts = false  # OFF by default (opt-in)
       @baseline_alert_threshold_std_devs = ENV.fetch("BASELINE_ALERT_THRESHOLD", "2.0").to_f
-      @baseline_alert_severities = [ :critical, :high ] # Alert on critical and high severity anomalies
+      @baseline_alert_severities = [ :critical, :high ] # Alert only for errors of these severities
       @baseline_alert_cooldown_minutes = ENV.fetch("BASELINE_ALERT_COOLDOWN", "120").to_i
 
       # Source code integration defaults - OFF by default (opt-in)
@@ -520,6 +528,30 @@ module RailsErrorDashboard
     # Reset configuration to defaults
     def reset!
       initialize
+    end
+
+    # Whether config/database.yml has the entry config.database names for this
+    # environment. Without it the engine skips connects_to and RED uses the
+    # main database, where its tables usually don't exist, so nothing is
+    # recorded. The engine and error_dashboard:verify both ask this.
+    #
+    # @param env_name [String] the Rails environment
+    # @return [Boolean]
+    def separate_database_entry?(env_name = Rails.env)
+      name = (database || :error_dashboard).to_s
+      ActiveRecord::Base.configurations.configs_for(env_name: env_name.to_s).any? { |config| config.name == name }
+    end
+
+    # Like Object#inspect, with every credential in SECRET_ATTRIBUTES replaced
+    # by [FILTERED] when set. Unset ones still show nil or [], which is useful
+    # when checking why a channel stays off.
+    def inspect
+      attributes = instance_variables.map do |ivar|
+        value = instance_variable_get(ivar)
+        secret = SECRET_ATTRIBUTES.include?(ivar.to_s.delete_prefix("@").to_sym) && value.present?
+        "#{ivar}=#{secret ? '[FILTERED]' : value.inspect}"
+      end
+      "#<#{self.class.name} #{attributes.join(', ')}>"
     end
 
     # Validate configuration values

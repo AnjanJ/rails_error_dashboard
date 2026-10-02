@@ -58,7 +58,7 @@ module RailsErrorDashboard
 
         if quick_mode?
           @selected_features = build_quick_defaults
-          say "  Using sensible defaults (analytics ON, notifications OFF, breadcrumbs OFF)", :green
+          say "  Using sensible defaults (analytics, breadcrumbs ON, system health ON, 50% sampling; notifications OFF)", :green
           return
         end
 
@@ -131,7 +131,10 @@ module RailsErrorDashboard
         advanced_keys = %i[async_logging error_sampling breadcrumbs system_health
                            source_code_integration git_blame swallowed_exceptions
                            crash_capture diagnostic_dump]
-        any_advanced_cli_flag = advanced_keys.any? { |k| options[k] }
+        # A flag the user passed, not an option left at its default: async_logging
+        # defaults to true, so "is any of these set?" was always yes and this
+        # question was never asked.
+        any_advanced_cli_flag = advanced_keys.any? { |k| options[k] != self.class.class_options[k]&.default }
 
         say "\n[3/3] Advanced Options (performance tuning & diagnostics)", :cyan
         say "    Async logging, error sampling, breadcrumbs, system health,", :white
@@ -169,8 +172,10 @@ module RailsErrorDashboard
             advanced_features.each do |f|
               say "\n    #{f[:name]}", :cyan
               say "    #{f[:desc]}", :white
-              r = ask("    Enable? (y/N):", :yellow, limited_to: [ "y", "Y", "n", "N", "" ])
-              @selected_features[f[:key]] = r.downcase == "y"
+              # Async logging is on unless declined, as it is without this question.
+              default_on = f[:key] == :async_logging
+              r = ask("    Enable? (#{default_on ? 'Y/n' : 'y/N'}):", :yellow, limited_to: [ "y", "Y", "n", "N", "" ])
+              @selected_features[f[:key]] = default_on ? r.downcase != "n" : r.downcase == "y"
               if @selected_features[f[:key]] && f[:key] == :swallowed_exceptions && RUBY_VERSION < "3.3"
                 say "    ⚠ Requires Ruby 3.3+ (you have #{RUBY_VERSION}) — will activate after upgrade", :yellow
               end
@@ -293,7 +298,9 @@ module RailsErrorDashboard
         @enable_webhooks = @selected_features&.dig(:webhooks) || options[:webhooks]
 
         # Performance
-        @enable_async_logging = @selected_features&.dig(:async_logging) || options[:async_logging]
+        # An answer, when there was one, wins: `answer || default` turned a "no"
+        # into the default's "yes".
+        @enable_async_logging = @selected_features&.key?(:async_logging) ? @selected_features[:async_logging] : options[:async_logging]
         @enable_error_sampling = @selected_features&.dig(:error_sampling) || options[:error_sampling]
 
         # Database mode (set by select_database_mode or CLI flags)
@@ -493,12 +500,12 @@ module RailsErrorDashboard
         say "Next Steps:", :cyan
         if @enable_separate_database
           say "  1. Add the database.yml entry shown above"
-          say "  2. Run: rails db:create:error_dashboard"
+          say "  2. Run: rails db:create:#{@database_name}"
           if @enable_multi_app
             say "  3. Run migrations (only needed on the FIRST app):"
-            say "     rails db:migrate:error_dashboard"
+            say "     rails db:migrate:#{@database_name}"
           else
-            say "  3. Run: rails db:migrate:error_dashboard"
+            say "  3. Run: rails db:migrate:#{@database_name}"
           end
           say "  4. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
           say "  5. Restart your Rails server"
@@ -595,33 +602,23 @@ module RailsErrorDashboard
           say "  # Separate error database", :white
         end
 
-        say "\n  development:", :cyan
-        say "    primary:", :white
-        say "      <<: *default", :white
-        say "      database: #{app_name_snake}_development", :white
-        say "    error_dashboard:", :white
-        say "      <<: *default", :white
-        if @enable_multi_app
-          shared_db_base = @shared_db_name || "shared_errors"
-          say "      database: #{shared_db_base}_development", :white
-        else
-          say "      database: #{app_name_snake}_errors_development", :white
+        # Every environment the app boots in needs the entry, test included:
+        # without it RED falls back to the main database and records nothing.
+        %w[development test production].each do |env|
+          say "\n  #{env}:", :cyan
+          say "    primary:", :white
+          say "      <<: *default", :white
+          say "      database: #{app_name_snake}_#{env}", :white
+          say "    #{@database_name}:", :white
+          say "      <<: *default", :white
+          if @enable_multi_app
+            shared_db_base = @shared_db_name || "shared_errors"
+            say "      database: #{shared_db_base}_#{env}", :white
+          else
+            say "      database: #{app_name_snake}_errors_#{env}", :white
+          end
+          say "      migrations_paths: db/error_dashboard_migrate", :white
         end
-        say "      migrations_paths: db/error_dashboard_migrate", :white
-
-        say "\n  production:", :cyan
-        say "    primary:", :white
-        say "      <<: *default", :white
-        say "      database: #{app_name_snake}_production", :white
-        say "    error_dashboard:", :white
-        say "      <<: *default", :white
-        if @enable_multi_app
-          shared_db_base = @shared_db_name || "shared_errors"
-          say "      database: #{shared_db_base}_production", :white
-        else
-          say "      database: #{app_name_snake}_errors_production", :white
-        end
-        say "      migrations_paths: db/error_dashboard_migrate", :white
         say "\n"
 
         if @enable_multi_app

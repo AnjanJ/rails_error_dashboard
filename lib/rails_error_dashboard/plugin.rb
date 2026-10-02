@@ -54,9 +54,39 @@ module RailsErrorDashboard
       # Override in subclass to handle event
     end
 
+    # Called when a resolved error occurs again and is reopened
+    # @param error_log [ErrorLog] The reopened error log
+    def on_error_reopened(error_log)
+      # Override in subclass to handle event
+    end
+
     # Called when an error is resolved
     # @param error_log [ErrorLog] The resolved error log
     def on_error_resolved(error_log)
+      # Override in subclass to handle event
+    end
+
+    # Called when an error is muted
+    # @param error_log [ErrorLog] The muted error log
+    def on_error_muted(error_log)
+      # Override in subclass to handle event
+    end
+
+    # Called when an error is unmuted
+    # @param error_log [ErrorLog] The unmuted error log
+    def on_error_unmuted(error_log)
+      # Override in subclass to handle event
+    end
+
+    # Called when errors are batch muted
+    # @param error_logs [Array<ErrorLog>] The muted error logs
+    def on_errors_batch_muted(error_logs)
+      # Override in subclass to handle event
+    end
+
+    # Called when errors are batch unmuted
+    # @param error_logs [Array<ErrorLog>] The unmuted error logs
+    def on_errors_batch_unmuted(error_logs)
       # Override in subclass to handle event
     end
 

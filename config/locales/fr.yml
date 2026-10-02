@@ -87,6 +87,10 @@ fr:
           et <code>ERROR_DASHBOARD_PASSWORD</code>, ou configurez <code>authenticate_with</code>
           dans votre initializer.
         dismiss: Masquer pour cette session
+      solid_queue:
+        label: "Solid Queue n'exécutera pas les tâches de RED."
+        body_html: "Les erreurs capturées en arrière-plan et les notifications restent en file d'attente tant que <code>config/queue.yml</code> n'est pas corrigé. Lancez <code>bin/rails error_dashboard:verify</code> pour voir la correction, puis redémarrez."
+        guide: "Ce dont RED a besoin de Solid Queue"
       storm:
         active_title: Tempête d'erreurs en cours
         recent_title: La protection anti-tempête s'est déclenchée récemment

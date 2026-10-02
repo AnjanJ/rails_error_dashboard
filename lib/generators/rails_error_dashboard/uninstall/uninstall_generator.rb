@@ -236,13 +236,22 @@ module RailsErrorDashboard
         say "Remaining manual steps:", :cyan
         say "\n"
 
-        say "1. Remove from Gemfile:", :yellow
+        unless options[:keep_data]
+          say "1. Regenerate the schema file:", :yellow
+          say "   Run: bin/rails db:schema:dump (otherwise db:schema:load recreates the tables)"
+          say "\n"
+
+          say "2. Separate database only: remove its entry from config/database.yml", :yellow
+          say "\n"
+        end
+
+        say "#{options[:keep_data] ? 1 : 3}. Remove from Gemfile:", :yellow
         say "   Open: Gemfile"
         say "   Remove: gem 'rails_error_dashboard'"
         say "   Run: bundle install"
         say "\n"
 
-        say "2. Restart your application:", :yellow
+        say "#{options[:keep_data] ? 2 : 4}. Restart your application:", :yellow
         say "   Run: rails restart"
         say "   Or: kill and restart your server process"
         say "\n"
