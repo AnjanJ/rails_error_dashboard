@@ -166,7 +166,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `custom_severity_rules` | Hash | `{}` | Exact error class name (a String) → severity. See [Custom Severity Classification](#custom-severity-classification) |
-| `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings (subclasses included) or Regexps matched against the class name. Class objects are not matched |
+| `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings or Class objects (both cover subclasses), or Regexps matched against the class name. Class objects are matched since 0.14.4 |
 
 ### Performance Optimization
 
@@ -182,7 +182,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_rate_limiting` | Boolean | `false` | Rate-limit requests to the dashboard, per IP (opt-in). Counts are kept in `Rails.cache` |
-| `rate_limit_per_minute` | Integer | `100` | Currently ignored: the limit is fixed at 300 requests per minute, per IP and per path |
+| `rate_limit_per_minute` | Integer | `300` | Most requests per minute, per IP and per dashboard path. Applied since 0.14.4 (before that, ignored, with 300 fixed) |
 
 ### Enhanced Metrics
 
@@ -210,7 +210,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 |--------|------|---------|-------------|
 | `enable_baseline_alerts` | Boolean | `false` | Statistical anomaly detection and alerts |
 | `baseline_alert_threshold_std_devs` | Float | `2.0` | Standard deviations above the baseline at which a count is an anomaly (ENV: `BASELINE_ALERT_THRESHOLD`) |
-| `baseline_alert_severities` | Array | `[:critical, :high]` | Anomaly levels that send an alert. An anomaly is `:high` from 1 standard deviation above the threshold and `:critical` from 2 above it, so with the defaults alerts start at 3 standard deviations. The lowest level (`:elevated`) can't be selected. Needs `BaselineCalculationJob`: see [Baseline Anomaly Alerts](#baseline-anomaly-alerts) |
+| `baseline_alert_severities` | Array | `[:critical, :high]` | Error severities that send a baseline alert. Since 0.14.4 this is the error's own severity, so alerts start at the threshold; before, it was compared with the anomaly's level and the default started at 3 standard deviations. Needs `BaselineCalculationJob`: see [Baseline Anomaly Alerts](#baseline-anomaly-alerts) |
 | `baseline_alert_cooldown_minutes` | Integer | `120` | Minutes between alerts for same error (ENV: `BASELINE_ALERT_COOLDOWN`) |
 
 ### Source Code Integration (NEW!)
@@ -725,7 +725,7 @@ Automatically detect when error rates exceed normal patterns using statistical a
 RailsErrorDashboard.configure do |config|
   config.enable_baseline_alerts = true
   config.baseline_alert_threshold_std_devs = 2.0  # An anomaly starts 2 std devs above baseline
-  config.baseline_alert_severities = [:critical, :high]  # Anomaly levels that alert (see below)
+  config.baseline_alert_severities = [:critical, :high]  # Error severities that alert
   config.baseline_alert_cooldown_minutes = 120  # 2 hours between alerts for same error
 end
 ```
@@ -734,10 +734,11 @@ Nothing alerts until `RailsErrorDashboard::BaselineCalculationJob` has calculate
 and nothing in the gem schedules it. Run it daily: see
 [Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs).
 
-`baseline_alert_severities` lists anomaly levels, not error severities. A count from the threshold
-up to 1 standard deviation above it is `:elevated`, which can't be selected; from there to 2 above
-it is `:high`; beyond that it is `:critical`. With the defaults, alerts start at 3 standard
-deviations above the baseline.
+`baseline_alert_severities` lists error severities: an anomaly in a `:critical` or `:high` error
+alerts as soon as it passes the threshold. Before 0.14.4 the option was compared with the anomaly's
+level (elevated, high, critical) instead, so with the defaults alerts started at 3 standard
+deviations, and `:medium` or `:low` never matched. PagerDuty still receives only anomalies 2 or
+more standard deviations past the threshold (the `:critical` level).
 
 See [Baseline Monitoring Guide](/rails_error_dashboard/docs/features/baseline-monitoring/) for details.
 
@@ -1254,8 +1255,9 @@ end
 
 ### Features
 
-- **Class names as Strings**: `"ActiveRecord::RecordNotFound"` also ignores its subclasses. A class
-  object (`ActiveRecord::RecordNotFound` without quotes) is not matched, so always quote the name
+- **Class names or classes**: `"ActiveRecord::RecordNotFound"` or `ActiveRecord::RecordNotFound`,
+  either way including its subclasses. (Before 0.14.4 a class object was not matched; quote the
+  name if your app still runs an older version.)
 - **Regex Patterns**: matched against the exception's class name only, so they don't cover subclasses
 - **Early Exit**: Ignored exceptions skip all processing, saving resources
 

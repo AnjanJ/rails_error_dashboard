@@ -52,7 +52,7 @@ end
 
 It also prints the `config/database.yml` entry to add. Add it for every environment, with `migrations_paths: db/error_dashboard_migrate`, then run `bin/rails db:create`.
 
-Both settings matter: `config.database` on its own is ignored unless `use_separate_database` is true. And if `config/database.yml` has no entry for the current environment, RED logs a warning at boot and falls back to your main database, where its tables don't exist, so errors in that environment are not recorded.
+Both settings matter: `config.database` on its own is ignored unless `use_separate_database` is true. And if `config/database.yml` has no entry for the current environment, RED logs an error at boot, `bin/rails error_dashboard:verify` fails, and RED falls back to your main database, where its tables don't exist, so errors in that environment are not recorded.
 
 See [Database Options Guide](guides/DATABASE_OPTIONS.md).
 </details>

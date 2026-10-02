@@ -707,14 +707,14 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Default: 120 (2 hours between alerts for same error)
    ```
 
-5. **Verify the level filter**:
+5. **Verify the severity filter**:
    ```ruby
    config.baseline_alert_severities
    # Default: [:critical, :high]
    ```
-   These are anomaly levels, not error severities: `:high` starts 1 standard deviation above the
-   threshold and `:critical` 2 above it. So with the defaults, alerts start at 3 standard deviations
-   above the baseline. The lowest level, `:elevated`, can't be selected.
+   Only errors of these severities alert. Before 0.14.4 the list was compared with the anomaly's
+   level instead, so with the defaults alerts started at 3 standard deviations above the baseline,
+   not at the threshold.
 
 ---
 

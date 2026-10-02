@@ -59,9 +59,9 @@ end
 ### Step 2: Add database.yml entry
 
 The key name (`error_dashboard:`) must match `config.database`. Add it to **every environment the
-app boots in**, test included. In an environment without it, RED logs a warning at boot and falls
-back to the main database, which has no RED tables, so that environment's errors are not recorded
-anywhere.
+app boots in**, test included. In an environment without it, RED logs an error at boot,
+`bin/rails error_dashboard:verify` fails, and RED falls back to the main database, which has no RED
+tables, so that environment's errors are not recorded anywhere.
 
 ```yaml
 # config/database.yml
@@ -191,8 +191,9 @@ The database already exists, and App 1 has migrated it. Install RED in App 2 wit
 `bin/rails generate rails_error_dashboard:install --separate-database`, but **don't run App 2's
 migrations against the shared database**. The installer gives App 2's copies their own version
 numbers, so the shared database's `schema_migrations` doesn't list them, and `db:migrate` would
-replay every RED migration over App 1's tables. One of them removes the `environment` column and a
-later one adds it back empty, so every error loses its environment.
+replay every RED migration over App 1's tables. Up to 0.14.3, one of them removes the `environment`
+column and a later one adds it back empty, so every error loses its environment. 0.14.4 fixed that
+migration, but recording the copies as run is still the safe way: it replays nothing.
 
 Before App 2's first `db:migrate`, record its copies as already run. With both apps on the same RED
 version, run this once in App 2's `bin/rails console`:
@@ -286,7 +287,7 @@ bin/rails db:create:error_dashboard
 Copy the tables as they are, structure included, into the empty database, together with
 `schema_migrations`. The copied `schema_migrations` tells the new database that RED's migrations
 have already run. Without it, the next step would replay every RED migration over the copied
-tables, and one of them deletes every error's environment.
+tables. Up to 0.14.3, one of them deletes every error's environment.
 
 If you don't need the errors you already have, skip this step: the next one builds empty tables.
 

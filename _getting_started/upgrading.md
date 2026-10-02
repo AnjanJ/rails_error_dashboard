@@ -51,8 +51,9 @@ the installer, as above. On an app without a separate database, the two copy the
   `bin/rails db:prepare`, which is what the Docker entrypoint of a new Rails app runs.
 - With a separate database, every environment in `config/database.yml` needs the
   `error_dashboard` entry, with `migrations_paths: db/error_dashboard_migrate`. If an environment
-  has no entry, RED logs a warning at boot and falls back to the main database, which has no RED
-  tables, so that environment's errors are not recorded anywhere.
+  has no entry, RED logs an error at boot and falls back to the main database, which has no RED
+  tables, so that environment's errors are not recorded anywhere. `bin/rails error_dashboard:verify`
+  reports it.
 
 ## Releases that need a step
 
@@ -71,6 +72,8 @@ links to its full notes in the [CHANGELOG](https://github.com/AnjanJ/rails_error
 | [0.14.2](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0142-2026-09-27) | **Can stop your app booting.** Outside `development` and `test`, RED also refuses to boot when a credential is blank, or when the password falls back to the published default (for example, when only `ERROR_DASHBOARD_USER` is set). The error names the problem. Set both variables to real values, or use an `authenticate_with` lambda. |
 | [0.14.3](https://github.com/AnjanJ/rails_error_dashboard/blob/main/CHANGELOG.md#0143-2026-09-29) | If you ever ran `rails generate rails_error_dashboard:solid_queue`, replace the `config/queue.yml` it wrote: until you do, Solid Queue runs none of your app's delayed jobs. See [Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/). On Rails before 8.1.4 or 7.2.4, [pin json below 3](#rails-before-814-or-724-pin-json-below-3). |
 
+| 0.14.4 | No action, but three settings now do what their docs said, which can change behavior. `rate_limit_per_minute` is applied (default 300, the limit already in force, so only a value you set changes anything). `baseline_alert_severities` filters by the error's own severity, so baseline alerts start at the threshold (2 standard deviations by default) instead of 3. `ignored_exceptions` matches class objects as well as names. `error_dashboard:verify` now fails when a separate error database has no `config/database.yml` entry. |
+
 ## Rails before 8.1.4 or 7.2.4: pin json below 3
 
 json 3.0, released in September 2026, rejects options that older Rails versions still pass. On an
@@ -85,6 +88,11 @@ gem "json", "< 3"
 ```
 
 Then run `bundle update json`. Remove the pin once you're on Rails 8.1.4, 7.2.4 or newer.
+
+On Rails 7.2, check that you really got 7.2.4: it caps `minitest` below 6 and `connection_pool`
+below 3, which 7.2.3 doesn't, so Bundler can keep you on 7.2.3 while it moves json to 3.0. Require
+it with `gem "rails", "~> 7.2.4"`. Since 0.14.4, `bin/rails error_dashboard:verify` warns when json
+3 runs on a Rails it breaks.
 
 ## Stuck at db:migrate after installing 0.4.0 to 0.8.1
 
