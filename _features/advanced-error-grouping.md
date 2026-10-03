@@ -176,11 +176,12 @@ Identifies parent-child relationships between errors:
 
 ### How It Works
 
-The system automatically detects cascades using background jobs:
+Cascades are found by `CascadeDetector`. Nothing in the gem runs it: call it from your scheduler
+(hourly works well), or there are no cascades to show.
 
 ```ruby
-# Manual cascade detection (runs hourly by default)
-RailsErrorDashboard::Services::CascadeDetector.call
+# Look for cascades in the last 24 hours (run it on a schedule)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 
 # Access cascade patterns for an error
 error = RailsErrorDashboard::ErrorLog.find(123)
@@ -459,14 +460,13 @@ error.error_cascades(min_probability: 0.5)
 ### Services::CascadeDetector.call
 
 ```ruby
-RailsErrorDashboard::Services::CascadeDetector.call(
-  lookback_hours: 24,
-  window_seconds: 60,
-  min_frequency: 3,
-  min_probability: 0.7
-)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 # Returns: { detected: 5, updated: 3 }
 ```
+
+`lookback_hours` is its only option. A cascade is a child error that follows its parent within 60
+seconds, at least 3 times; both are constants, not options. Each cascade's probability is stored,
+and `error_cascades(min_probability:)` filters on it.
 
 ## Further Reading
 

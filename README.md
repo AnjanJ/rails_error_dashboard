@@ -570,14 +570,18 @@ config.enable_crash_capture = true
 <details>
 <summary><strong>Plugin System</strong></summary>
 
-Event-driven extensibility with hooks for `on_error_logged`, `on_error_resolved`, `on_threshold_exceeded`. Built-in examples for Jira integration, metrics tracking, and audit logging.
+Event-driven extensibility with hooks such as `on_error_logged`, `on_error_reopened` and `on_error_resolved` (eleven in all). Built-in examples for Jira integration, metrics tracking, and audit logging.
 
 ```ruby
 class MyPlugin < RailsErrorDashboard::Plugin
+  def name = "My Plugin"
+
   def on_error_logged(error_log)
     # Your custom logic
   end
 end
+
+RailsErrorDashboard.register_plugin(MyPlugin.new)
 ```
 
 [Plugin System guide →](docs/PLUGIN_SYSTEM.md)
