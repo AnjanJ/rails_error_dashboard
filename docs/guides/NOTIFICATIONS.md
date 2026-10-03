@@ -491,11 +491,12 @@ You can mute individual errors to suppress all notifications while still trackin
 **How to mute:**
 - Click the "Mute" button on the error detail page sidebar
 - Optionally provide your name and a reason (reason is saved as a comment)
-- Use batch mute from the error list toolbar for multiple errors
+- For several errors, use a batch mute from a script or the console (the error list's toolbar has
+  only Resolve and Delete); see [Batch Operations](BATCH_OPERATIONS.md)
 
 **How to unmute:**
 - Click the "Unmute" button on the error detail page sidebar
-- Use batch unmute from the error list toolbar
+- For several errors, use a batch unmute from a script or the console
 
 **Mute vs Snooze:**
 

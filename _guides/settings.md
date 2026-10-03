@@ -6,414 +6,149 @@ order: 12
 
 # Settings Dashboard
 
-The Settings page provides a read-only view of your Rails Error Dashboard configuration, making it easy to verify which features are enabled and review current settings without digging through initializer files.
+The Settings page shows the configuration your running app loaded, read-only. Use it to check
+which features are on after a deploy, without reading the initializer and the environment
+variables it uses.
 
 ---
 
-## Accessing Settings
+## Opening the page
 
-Navigate to the Settings page from the main dashboard:
-
-1. Click the **gear icon** (⚙️) in the navigation bar
-2. Or visit `/error_dashboard/settings` directly
-
-**Authentication**: Requires authentication (HTTP Basic Auth or custom `authenticate_with` lambda)
+Click **Settings**, with the sliders icon, at the bottom of the dashboard's sidebar (on a phone, it
+is in the menu). Or open `/red/settings`. Like the rest of the dashboard, it needs the dashboard
+login.
 
 ---
 
-## Settings Overview
+## What the page shows
 
-The Settings page is organized into eight sections:
+The page lists options by group. Each row has the option's name as you write it in the initializer,
+its current value, and a one-line description. Click a group's heading to fold it; the first time,
+it takes two clicks.
 
-### 1. Core Features
+The values are the ones the app loaded at boot: your initializer, the environment variables it
+reads, and RED's defaults for everything you didn't set. After you change the initializer or an
+environment variable, restart the app before checking here.
 
-Shows the status of fundamental dashboard features:
+Some rows appear only when their feature is on. For example, `slack_webhook_url` appears only
+while `enable_slack_notifications` is on.
 
-- **Error Middleware**: Whether the error-catching middleware is active
-- **Rails.error Subscriber**: Whether Rails 7+ error reporter integration is active
-- **Authentication**: Confirms authentication is always enforced (HTTP Basic Auth or custom lambda)
-- **Data Retention**: Number of days an error may go unseen before it is auto-deleted (an error that keeps occurring is kept)
-- **Max Backtrace Lines**: Stack trace depth limit
-- **Sampling Rate**: Percentage of errors being logged (100% = all errors)
+Some rows show what RED worked out rather than what you wrote: `application_name`, `user_model` and
+`total_users_for_impact` are detected when you leave them unset (the last from a live count of your
+users), and the issue tracker's provider and repository come from `git_repository_url` when you
+leave them unset.
 
-**Example Display:**
-```text
-Error Middleware                 ✓ Enabled
-Rails.error Subscriber          ✓ Enabled
-Authentication                   🔒 Always Required
-Data Retention                   90 days
-Max Backtrace Lines              50 lines
-Sampling Rate                    100%
-```
+| Group | Options |
+|---|---|
+| Core Features | `enable_middleware`, `enable_error_subscriber`, `retention_days`, `max_backtrace_lines`, `sampling_rate` |
+| Multi-App Support | `application_name`, `environment`, `database`, `use_separate_database` |
+| User Integration | `user_model`, `total_users_for_impact` |
+| Performance Settings | `async_logging`, `async_adapter`, `enable_rate_limiting`, `rate_limit_per_minute` |
+| Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, PagerDuty, webhooks) its switch and its URL, key or recipients; then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
+| Advanced Analytics Features | `enable_similar_errors`, `enable_co_occurring_errors`, `enable_error_cascades`, `enable_error_correlation`, `enable_platform_comparison`, `enable_occurrence_patterns`, `enable_baseline_alerts`, `baseline_alert_threshold_std_devs`, `baseline_alert_severities`, `baseline_alert_cooldown_minutes` |
+| Source Code Integration | `enable_source_code_integration`, `source_code_context_lines`, `enable_git_blame`, `source_code_cache_ttl`, `only_show_app_code_source`, `git_branch_strategy` |
+| Breadcrumbs | `enable_breadcrumbs`, `breadcrumb_buffer_size`, `enable_n_plus_one_detection`, `n_plus_one_threshold` |
+| System Health | `enable_system_health` |
+| Enhanced Metrics | `app_version`, `git_sha`, `git_repository_url`, `dashboard_base_url` |
+| Issue Tracking | `enable_issue_tracking`, `issue_tracker_token`, `issue_tracker_provider`, `issue_tracker_repo`, `issue_tracker_labels`, `issue_webhook_secret` |
+| Deep Debugging | `enable_local_variables`, `enable_instance_variables`, `detect_swallowed_exceptions`, `enable_diagnostic_dump`, `enable_crash_capture`, `enable_coverage_tracking` |
+| Event Tracking | `enable_rack_attack_tracking`, `enable_actioncable_tracking`, `enable_activestorage_tracking` |
+| Advanced Configuration | `custom_severity_rules`, `ignored_exceptions` |
+| Internal Logging | `enable_internal_logging`, `log_level` |
 
----
+Not every option is on the page. The LLM observability options, for one, aren't shown. The
+[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) has them all.
 
-### 2. Performance Settings
+After the groups come two cards:
 
-Displays async logging and database optimization settings:
+- **Active Plugins** lists the plugins you registered, with their name, version, description, and
+  whether each is active. See the [Plugin System](/rails_error_dashboard/docs/features/plugin-system/).
+- **Test Notifications** has a **Send Test Error** button. After you confirm, it records a
+  `RailsErrorDashboard::TestError`, which is notified like any new error: through Slack, email,
+  Discord and webhooks, subject to `notification_minimum_severity` and `notification_environments`.
+  PagerDuty doesn't get it, because PagerDuty only takes critical errors. Only the first click
+  notifies: a second test error counts as a repeat of the first, so delete the test error before
+  testing again.
 
-- **Async Logging**: Whether errors are logged in background jobs
-  - Shows the adapter being used in parentheses (e.g., "Sidekiq", ":async")
-- **Separate Database**: Whether errors use a dedicated database
+### How values are shown
 
-**Example Display:**
-```text
-Async Logging                    ✓ Enabled (Sidekiq)
-Separate Database                ✗ Disabled
-```
+| Kind | Shown as |
+|---|---|
+| Switches | **Enabled** or **Disabled** |
+| Numbers | The number, with its unit where it has one: "100 lines", "3600 seconds", "2.0σ" |
+| Lists and rules | A count: "3 items", "2 rules" |
+| Symbols and strings | The value, such as `:silent` |
+| Unset values | **Not set**; an empty list shows **Empty** |
+| `issue_tracker_token`, `issue_webhook_secret` | Only **Set** or **Not set** |
 
-**When separate database is enabled:**
-```text
-Separate Database                ✓ Enabled
-```
+> **Webhook URLs and the PagerDuty key are shown in full.** `slack_webhook_url`,
+> `discord_webhook_url` and `pagerduty_integration_key` appear as written whenever their channel is
+> on, and anyone who can log in to the dashboard can read them. A long URL looks cut off on screen,
+> but the full value is in the page. Give the dashboard login only to people who may see these.
 
----
+### Rows that need a second look
 
-### 3. Notification Channels
-
-Shows which notification channels are configured and active:
-
-- **Slack Notifications**: Webhook URL (masked) and status
-- **Email Notifications**: Recipients count and status
-- **Discord Notifications**: Webhook URL (masked) and status
-- **PagerDuty Notifications**: Integration key (masked) and status
-- **Custom Webhooks**: Number of configured webhooks
-
-**Example Display:**
-```text
-Slack Notifications              ✓ Enabled (https://hooks.slack...T123)
-Email Notifications              ✓ Enabled (3 recipients)
-Discord Notifications            ✗ Disabled
-PagerDuty Notifications          ✓ Enabled (Critical errors only)
-Custom Webhooks                  2 configured
-```
-
-**Security Note**: Webhook URLs and sensitive keys are partially masked for security (e.g., `https://hooks.slack.com/services/...T123`).
-
----
-
-### 4. Advanced Analytics Features
-
-Displays the status of all 7 advanced analytics features:
-
-- **Similar Errors (Fuzzy Matching)**: Fuzzy error matching with Jaccard/Levenshtein algorithms
-- **Co-occurring Errors**: Errors happening together detection
-- **Error Cascades**: Parent→child error relationship tracking
-- **Error Correlation**: Version/user/time correlation analysis
-- **Platform Comparison**: iOS vs Android analytics and health comparison
-- **Occurrence Patterns**: Cyclical and burst pattern detection
-- **Baseline Alerts**: Statistical anomaly detection (shows threshold in standard deviations)
-
-**Example Display:**
-```text
-Similar Errors                   ✓ Enabled
-Co-occurring Errors              ✓ Enabled
-Error Cascades                   ✗ Disabled
-Error Correlation                ✓ Enabled
-Platform Comparison              ✓ Enabled
-Occurrence Patterns              ✗ Disabled
-Baseline Alerts                  ✓ Enabled (2.0 std devs)
-```
-
-**Baseline Alert Details:**
-When baseline alerts are enabled, additional information is shown:
-- Threshold (standard deviations)
-- Cooldown period (minutes between alerts)
-- Severities being monitored
+- **`retention_days`** shows the number of days, "Manual cleanup required", and a
+  `rails error_dashboard:cleanup_resolved` command. That task is a different rule: it deletes
+  *resolved* errors by when they were resolved. Retention deletes errors not seen for that many days,
+  and only when you schedule `RetentionCleanupJob`. See
+  [Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs).
+- **`async_adapter`** is only checked for a valid value. RED's jobs run on your app's Active Job
+  adapter. See [Run a worker for RED's jobs](/rails_error_dashboard/docs/production/#1-run-a-worker-for-reds-jobs).
+- **`digest_frequency`** is shown, but the digest job doesn't read it. Digests go out as often as you
+  schedule `ScheduledDigestJob`.
+- **Enabled doesn't mean working.** A switch can be on while its jobs never run, or before there is
+  enough data to show. To check the setup itself, run `bin/rails error_dashboard:verify`.
 
 ---
 
-### 5. Active Plugins
+## Reading the configuration in code
 
-Shows registered custom plugins and their status:
-
-- **Plugin Name**: The name of the plugin
-- **Version**: Plugin version number
-- **Description**: Brief description of what the plugin does
-- **Status**: Whether the plugin is active or inactive
-
-**Example Display:**
-
-| Plugin Name    | Version | Description              | Status   |
-|----------------|---------|--------------------------|----------|
-| Jira Plugin    | 1.0.0   | Create Jira tickets      | ✓ Active |
-| Metrics Plugin | 1.0.0   | Export to DataDog        | ✓ Active |
-| Audit Log      | 1.0.0   | Track all changes        | ⏸ Inactive |
-
-**When no plugins are registered:**
-```text
-No plugins are currently registered. You can create custom plugins to extend functionality.
-```
-
-See [Plugin System Guide](/rails_error_dashboard/docs/features/plugin-system/) for how to create custom plugins.
-
----
-
-### 6. Breadcrumbs
-
-Shows breadcrumb (request activity trail) configuration:
-
-- **Breadcrumbs**: Whether breadcrumb collection is enabled
-- **Buffer Size**: Maximum breadcrumbs per request (shown when breadcrumbs enabled)
-
-**Example Display:**
-```text
-Breadcrumbs                      ✓ Enabled
-Buffer Size                      40 events
-```
-
----
-
-### 7. Enhanced Metrics
-
-Displays additional context being tracked with errors (shown only if any of these are configured):
-
-- **App Version**: Application version string
-- **Git SHA**: Git commit SHA being tracked (with clickable link if git_repo_url configured)
-- **Total Users**: User count for impact percentage calculations
-
-**Example Display:**
-```text
-App Version                      1.2.3
-Git SHA                          abc123d (linked to commit)
-Total Users                      10,000
-```
-
-**Note**: This section only appears when at least one of these values is configured in your initializer.
-
----
-
-### 8. Internal Logging
-
-Shows gem debugging and logging settings:
-
-- **Internal Logging**: Whether the gem outputs debug logs
-- **Log Level**: Verbosity level (INFO, DEBUG, WARN, ERROR)
-
-**Example Display:**
-```text
-Internal Logging                 ✗ Disabled
-Log Level                        INFO
-```
-
-**When enabled (not recommended for production):**
-```text
-Internal Logging                 ⚠ Enabled
-Log Level                        DEBUG
-```
-
-### 9. Deep Debugging (v0.4.0)
-
-Shows v0.4.0 deep debugging feature settings:
-
-- **Local Variable Capture**: Whether local variables are captured via TracePoint at exception time
-- **Instance Variable Capture**: Whether instance variables are captured from the raising object
-- **Swallowed Exception Detection**: Whether silently rescued exceptions are detected (requires Ruby 3.3+)
-- **Diagnostic Dump**: Whether on-demand system state snapshots are available
-- **Rack Attack Tracking**: Whether Rack::Attack events are tracked as breadcrumbs
-- **Process Crash Capture**: Whether at_exit hook captures crashes
-
-**Example Display:**
-```text
-Local Variables                  ✓ Enabled (max: 15, depth: 3)
-Instance Variables               ✓ Enabled (max: 20)
-Swallowed Exception Detection    ✓ Enabled (threshold: 0.95, Ruby 3.3+)
-Diagnostic Dump                  ✓ Enabled
-Rack Attack Tracking             ✗ Disabled (requires breadcrumbs)
-Process Crash Capture            ✓ Enabled (path: /tmp)
-```
-
----
-
-## Use Cases
-
-### 1. Verify Feature Activation
-
-**Scenario**: You enabled baseline alerts in the initializer but want to confirm it's active.
-
-**Solution**: Check the "Advanced Analytics Features" section (Section 4) for "Baseline Alerts" status.
-
----
-
-### 2. Audit Production Configuration
-
-**Scenario**: Before deploying to production, verify which features are enabled.
-
-**Solution**: Review all sections to ensure:
-- Async logging is enabled
-- Appropriate notification channels are active
-- Sampling rate is configured correctly
-- Database settings match infrastructure
-
----
-
-### 3. Troubleshoot Notification Issues
-
-**Scenario**: Slack notifications aren't arriving.
-
-**Solution**: Check the "Notification Channels" section (Section 3) to verify:
-1. Slack Notifications shows "Enabled"
-2. Webhook URL is present and partially visible (matches your configured webhook)
-3. Email also shows recipients if configured
-
----
-
-### 4. Review Data Retention Policy
-
-**Scenario**: Database growing too large, want to check retention settings.
-
-**Solution**: Check "Core Features" section for "Data Retention" setting. If it's 90 days and you want less, update initializer to 30 days.
-
----
-
-### 5. Verify Advanced Analytics Features
-
-**Scenario**: Correlation analysis isn't showing data.
-
-**Solution**: Check the "Advanced Analytics Features" section (Section 4) - if "Error Correlation" shows "Disabled", enable it in the initializer.
-
----
-
-## Important Notes
-
-### Read-Only View
-
-The Settings page is **read-only**. To change settings:
-
-1. Edit `config/initializers/rails_error_dashboard.rb`
-2. Restart your Rails server
-3. Refresh the Settings page to see updated values
-
-**Example:**
 ```ruby
-# config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  config.enable_baseline_alerts = true  # Change this
-end
+config = RailsErrorDashboard.configuration
+config.async_logging   # => true
+config.retention_days  # => 90
 ```
 
-After restarting, Settings page will show:
-```text
-Baseline Alerts                  ✓ Enabled (2.0 std devs)
-```
-
----
-
-### Security Considerations
-
-**Masked Sensitive Data:**
-- Webhook URLs show only protocol and last 4 characters
-- API keys show only last 4 characters
-- Passwords are never displayed
-
-**Access Control:**
-- Settings page requires authentication (HTTP Basic Auth or custom `authenticate_with` lambda)
-- No API endpoint for programmatic access (security by design)
-- Only accessible to authenticated dashboard users
-
----
-
-### Configuration Validation
-
-The Settings page shows **current active configuration**, not what's in the file. This is useful for:
-
-1. **Environment Variable Overrides**: If ENV vars override initializer, Settings shows actual active value
-2. **Default Values**: Shows what defaults are being used when not explicitly configured
-3. **Feature Detection**: Confirms which optional features are actually loaded
-
-**Example:**
-If your initializer has:
-```ruby
-config.slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
-```
-
-Settings page will show:
-- "Not configured" if `SLACK_WEBHOOK_URL` is not set
-- Masked webhook URL if the environment variable is present
+There is no JSON endpoint for it. Inspecting the configuration object (`p config`) shows `[FILTERED]`
+in place of passwords, tokens, keys and webhook URLs.
 
 ---
 
 ## Troubleshooting
 
-### Settings Page Shows Different Values Than Initializer
+### The page shows a different value than the initializer
 
-**Cause**: Environment variables might be overriding initializer values.
+The initializer probably reads an environment variable, and the page shows what that variable held
+when the app booted:
 
-**Solution**: Check for ENV var usage in initializer:
 ```ruby
-# This will use ENV var if present, initializer value as fallback
-config.option = ENV.fetch("OPTION", "default_value")
+config.slack_webhook_url = ENV["SLACK_WEBHOOK_URL"]
 ```
 
-Run `echo $OPTION` in your shell to see actual environment value.
+Check the variable in the environment the app runs in, then restart the app.
 
----
+### A feature shows Enabled but does nothing
 
-### Feature Shows "Enabled" But Not Working
+- **Jobs aren't running.** Saving errors with `async_logging`, notifications and the periodic jobs
+  need a worker. See [Running in Production](/rails_error_dashboard/docs/production/).
+- **A channel has no URL.** A channel's row for its URL or key shows **Not set**.
+- **Not enough data yet.** Analytics pages say so when they have too little to show.
 
-**Possible Causes:**
+### You can't open the page
 
-1. **Background Jobs Not Running**:
-   - Async logging enabled but Sidekiq/Solid Queue not running
-   - Check: `ps aux | grep sidekiq`
-
-2. **Missing Dependencies**:
-   - Notification channel enabled but webhook URL not configured
-   - Check: Settings page shows "Not configured" for webhook
-
-3. **Insufficient Data**:
-   - Advanced analytics enabled but minimum data not available yet
-   - Check: Analytics pages for "Insufficient data" messages
-
----
-
-### Cannot Access Settings Page
-
-**Problem**: 401 Unauthorized or 403 Forbidden.
-
-**Solution for HTTP Basic Auth (401)**:
-1. Verify credentials in initializer match what you're entering
-2. Check for browser cached credentials (clear browser cache)
-3. Try incognito/private browsing window
-4. Verify `dashboard_username` and `dashboard_password` are set
-
-**Solution for custom auth (403)**:
-1. Verify your `authenticate_with` lambda returns truthy for authorized users
-2. Check logs for `[RailsErrorDashboard] authenticate_with lambda raised` — this means the lambda is erroring
-3. Use `warden` instead of `current_user` — Devise helpers are not available in the engine controller (see [Custom Authentication](/rails_error_dashboard/docs/guides/configuration/#custom-authentication))
-
----
-
-## Navigating from Settings
-
-From the Settings page, you can:
-
-- **Back to Dashboard**: Click "Back to Dashboard" button
-- **Main navigation**: Use navbar to access other sections
-- **Direct links**: Settings page has no direct links to other pages (read-only view)
-
----
-
-## API Access
-
-**Note**: There is no API endpoint for accessing settings programmatically. This is intentional for security reasons.
-
-**Alternative**: If you need programmatic access to configuration:
-```ruby
-# In Rails console or application code
-config = RailsErrorDashboard.configuration
-config.async_logging  # => true
-config.retention_days  # => 90
-```
+- **401:** the HTTP Basic login is wrong. Check `ERROR_DASHBOARD_USER` and
+  `ERROR_DASHBOARD_PASSWORD` in the environment the app runs in; see
+  [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials). A browser can keep an old login:
+  try a private window.
+- **403:** your `authenticate_with` block returned false. If the log has
+  `[RailsErrorDashboard] authenticate_with lambda raised`, the block itself fails. See
+  [Custom Authentication](/rails_error_dashboard/docs/guides/configuration/#custom-authentication).
 
 ---
 
 ## Related Documentation
 
-- **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration options
+- **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Every option
 - **[Configuration Defaults Reference](/rails_error_dashboard/docs/guides/configuration/#configuration-defaults-reference)** - All defaults in one table
-- **[Troubleshooting](/rails_error_dashboard/docs/guides/configuration/#troubleshooting)** - Configuration-related issues
-
----
-
-**Pro Tip**: Bookmark the Settings page URL (`/error_dashboard/settings`) for quick configuration verification during deployments.
+- **[Running in Production](/rails_error_dashboard/docs/production/)** - Workers and scheduled jobs

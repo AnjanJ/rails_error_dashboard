@@ -6,960 +6,464 @@ order: 1
 
 # API Reference
 
-Complete API documentation for Rails Error Dashboard.
+RED has no JSON API, and no HTTP endpoint that accepts errors. Its HTTP routes are the dashboard
+itself: HTML pages, and the forms on them that post back. This page lists those routes, for when you
+script the dashboard, put it behind a proxy, or want to know why a request was refused. Errors reach
+RED from Ruby code running in your app; the [Ruby API](#ruby-api) covers that.
 
-## Table of Contents
-
-1. [HTTP API](#http-api) - REST endpoints for error logging and management
-2. [Ruby API](#ruby-api) - Commands, Queries, and Models
-3. [Configuration API](#configuration-api) - Setup and customization
+1. [Sending errors to RED](#sending-errors-to-red)
+2. [HTTP routes](#http-routes)
+3. [Ruby API](#ruby-api)
 
 ---
 
-# HTTP API
+## Sending errors to RED
 
-The Rails Error Dashboard provides HTTP endpoints for error logging and management. These endpoints can be used by mobile apps, frontend applications, or other services to log errors programmatically.
+- **Unhandled exceptions** in requests and background jobs are captured without any code.
+- **From your own Ruby code:** report a rescued exception with
+  [`Rails.error.report`](#railserrorreport). Report something that isn't a Ruby exception with
+  [`ManualErrorReporter.report`](#manualerrorreporterreport).
+- **From a browser or a mobile app:** RED has no endpoint for them. Add a route to your own app that
+  receives the error and calls `ManualErrorReporter.report`. The
+  [Mobile App Integration guide](/rails_error_dashboard/docs/guides/mobile-app-integration/) has a complete controller.
 
-## Base URL
+---
 
-All HTTP endpoints are mounted under `/error_dashboard` by default (configurable).
+## HTTP routes
 
-```text
-https://your-app.com/error_dashboard
+### Mount path
+
+The installer mounts the dashboard at `/red`, and every path below is relative to that mount:
+`/errors` means `/red/errors`. Apps first installed before 0.5.8 are mounted at `/error_dashboard`
+instead (see [Old mount path](/rails_error_dashboard/docs/upgrading/#old-mount-path-for-apps-installed-before-058)). Your
+`config/routes.rb` has the real value:
+
+```ruby
+mount RailsErrorDashboard::Engine => "/red"
 ```
 
-## Authentication
+### Authentication
 
-The dashboard supports HTTP Basic Authentication:
+Every route except the [issue-tracker webhooks](#issue-tracker-webhooks) needs the dashboard's
+authentication:
+
+- **HTTP Basic** with the dashboard credentials, `ERROR_DASHBOARD_USER` and
+  `ERROR_DASHBOARD_PASSWORD` (see [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials)).
+  A missing or wrong login gets `401`.
+- **Your `config.authenticate_with` block**, when you set one. It replaces HTTP Basic. A false
+  result gets `403` with the body `Access Denied`, and so does a block that raises.
+
+### Formats
+
+Pages render HTML only. Asking a page for another format, with `.json` on the path or an
+`Accept: application/json` header, gets `406`. The actions that change something are form POSTs
+that answer with a redirect. Two routes differ: `ai_help` streams
+[server-sent events](#actions-on-one-error), and the webhooks answer with an empty body.
+
+### Posting from a script
+
+The dashboard's forms are protected against cross-site request forgery. A POST needs the session
+cookie and the token from a page the same session loaded, so a plain `curl -X POST -u ...` gets
+`422`. To script an action, load a page first, keep its cookie, and send its token:
 
 ```bash
-curl -u username:password https://your-app.com/error_dashboard/errors
+BASE=https://your-app.example.com/red
+JAR=$(mktemp)
+
+# 1. Load a page: it sets the session cookie and carries the token
+TOKEN=$(curl -s -u "$RED_USER:$RED_PASSWORD" -c "$JAR" "$BASE/errors" \
+  | sed -n 's/.*name="csrf-token" content="\([^"]*\)".*/\1/p')
+
+# 2. Post with the same cookie and the token
+curl -s -o /dev/null -w '%{http_code}\n' -u "$RED_USER:$RED_PASSWORD" -b "$JAR" \
+  --data-urlencode "authenticity_token=$TOKEN" \
+  --data-urlencode "resolved_by_name=deploy-bot" \
+  "$BASE/errors/42/resolve"
+# => 302
 ```
 
-Use the dashboard's credentials, `ERROR_DASHBOARD_USER` and `ERROR_DASHBOARD_PASSWORD`. They must be set in every environment except development and test. See [Dashboard Credentials](/rails_error_dashboard/docs/guides/configuration/#dashboard-credentials). If you configure `authenticate_with` instead, these endpoints use it too.
+### Rate limiting
 
-## Rate Limiting
+Rate limiting is off by default. Turn it on in the initializer; it takes effect at boot:
 
-API endpoints are protected by rate limiting (configurable):
-
-- **Dashboard Pages**: 300 requests/minute per IP
-- **API Endpoints**: 100 requests/minute per IP
-
-Rate limit exceeded returns `429 Too Many Requests`:
-
-```json
-{
-  "error": "Rate limit exceeded. Please try again later."
-}
+```ruby
+config.enable_rate_limiting = true
+config.rate_limit_per_minute = 300 # the default
 ```
 
-Configure rate limits:
+- **What is counted:** each client IP gets `rate_limit_per_minute` requests per minute to each
+  path, counted per exact path, so `/red/errors/1` and `/red/errors/2` have separate counts.
+  Webhooks and requests that fail authentication count too, because the limit runs before
+  authentication.
+- **Which paths:** every path that starts with the mount path. With `/red`, that includes your
+  app's own paths that start with the same letters, such as `/redirect`.
+- **Over the limit:** `429` with an HTML page, `Retry-After: 60`, `X-RateLimit-Limit` and
+  `X-RateLimit-Period`. There is no JSON variant.
+- **Where counts live:** in `Rails.cache`. With `:null_store`, nothing is ever limited. With more
+  than one process (Puma workers, or several servers), each process counts on its own unless the
+  cache store is shared, such as Redis, Solid Cache or Memcached. Counting isn't atomic, so under
+  many concurrent requests the limit is approximate.
+
+### Response codes
+
+| Code | When |
+|---|---|
+| `200` | A page; `ai_help`'s event stream; a webhook that passed its signature check |
+| `302` | Every form POST except `ai_help`. Also a page whose feature is off: it redirects to `/errors` with a message saying so |
+| `303` | A `per_page` that isn't a positive number, or a `page` past the end of the error list: it redirects to the same page without `page` and `per_page`, keeping the other parameters |
+| `400` | A malformed request |
+| `401` | No or wrong HTTP Basic login. For webhooks: a missing or wrong signature, or an unknown provider |
+| `403` | Your `authenticate_with` block returned false or raised |
+| `404` | No error with that ID. Webhooks while issue tracking or the webhook secret isn't set. `ai_help` with no LLM configured |
+| `406` | A page asked for in a format other than HTML |
+| `422` | A POST without a valid CSRF token. `ai_help` with a blank question or one over 4,000 characters |
+| `429` | Over the [rate limit](#rate-limiting) |
+| `500` | Anything else that fails inside the dashboard. It renders a "Something went wrong" page; your app is unaffected |
+
+Until a request is authenticated, these error responses are plain text with no details.
+
+### Pages
+
+All are `GET`. Pages that take `days` accept 1 to 365 and default to 30, except Platform Comparison
+(7). Pages that list rows take `page` and `per_page` (default 25, at most 100). `application_id`
+limits most pages to one application.
+
+| Path | Page | Takes | Needs |
+|---|---|---|---|
+| `/` and `/overview` | Overview | | |
+| `/errors` | The error list ([filters](#filtering-the-error-list)) | `page`, `per_page` | |
+| `/errors/:id` | One error | | |
+| `/errors/analytics` | Analytics | `days` | |
+| `/errors/platform_comparison` | Platform comparison | `days` | `enable_platform_comparison` |
+| `/errors/correlation` | Error correlation | `days` | `enable_error_correlation` |
+| `/errors/releases` | Releases | `days`, `page`, `per_page` | |
+| `/errors/storms` | Error storms | | |
+| `/errors/user_impact` | User impact | `days`, `page`, `per_page` | |
+| `/errors/deprecations` | Deprecations | `days`, `page`, `per_page` | `enable_breadcrumbs` |
+| `/errors/n_plus_one_summary` | N+1 queries | `days`, `page`, `per_page` | `enable_breadcrumbs` |
+| `/errors/cache_health_summary` | Cache health | `days`, `page`, `per_page` | `enable_breadcrumbs` |
+| `/errors/job_health_summary` | Job health | `days`, `page`, `per_page` | `enable_system_health` |
+| `/errors/database_health_summary` | Database health | `days`, `page`, `per_page` | `enable_system_health` |
+| `/errors/swallowed_exceptions` | Swallowed exceptions | `days`, `page`, `per_page` | `detect_swallowed_exceptions` (Ruby 3.3+) |
+| `/errors/rack_attack_summary` | Rack Attack events | `days`, `page`, `per_page` | `enable_rack_attack_tracking` |
+| `/errors/actioncable_health_summary` | ActionCable health | `days`, `page`, `per_page` | `enable_actioncable_tracking` and `enable_breadcrumbs` |
+| `/errors/activestorage_health_summary` | ActiveStorage health | `days`, `page`, `per_page` | `enable_activestorage_tracking` and `enable_breadcrumbs` |
+| `/errors/llm_health_summary` | LLM health | `days`, `page`, `per_page` | `enable_llm_observability` and `enable_breadcrumbs` |
+| `/errors/diagnostic_dumps` | Diagnostic dumps | `page`, `per_page` | `enable_diagnostic_dump` |
+| `/settings` | Your configuration, read-only | | |
+
+When a page's option is off, the page redirects to `/errors` with a message saying the feature is off;
+the **Needs** column gives the option. The LLM health page is the exception: it renders and says the
+feature is off.
+
+### Actions on one error
+
+All are `POST /errors/:id/<action>`. All except `ai_help` redirect back to the error.
+
+| Action | Params | What it does |
+|---|---|---|
+| `resolve` | `resolved_by_name`, `resolution_comment`, `resolution_reference`, all optional | Resolves the error from any status. Runs your `on_error_resolved` callbacks and plugins, and closes a linked issue when issue tracking is on |
+| `assign` | `assigned_to` (required) | Sets the assignee, and sets the status to `in_progress` |
+| `unassign` | | Clears the assignee. The status doesn't change |
+| `update_priority` | `priority_level`: `0` to `3` | See [priorities](#priority-and-status) |
+| `snooze` | `hours`: a whole number from 1 to 720 (required); `reason` | Marks the error snoozed until then. The list leaves it out when "Hide snoozed" is ticked (`hide_snoozed=1`). Notifications still go out. A reason is saved as a comment |
+| `unsnooze` | | |
+| `mute` | `muted_by`, `reason` | Stops the error's own notifications and its baseline alerts. Digests still include it |
+| `unmute` | | |
+| `update_status` | `status` (required), `comment` | Changes the status if the [transition](#priority-and-status) is allowed. The dashboard has no control for this; only a POST uses it |
+| `create_issue` | | Opens an issue in your tracker. Needs [issue tracking](/rails_error_dashboard/docs/guides/configuration/#issue-tracking--githubgitlabcodeberg-v058) |
+| `link_issue` | `issue_url` (required, `http` or `https`) | Links an existing issue |
+| `ai_help` | `question` (required, up to 4,000 characters) | Answers as server-sent events: `chunk` events, then `done` or `error`. Needs an LLM provider and key. Its refusals are JSON (`404`, `422`) |
+
+An invalid value (an unknown status, a priority of 4, `hours=0`) changes nothing. The redirect
+carries a message saying why.
+
+#### Priority and status
+
+| `priority_level` | Label |
+|---|---|
+| `3` | Critical (P0) |
+| `2` | High (P1) |
+| `1` | Medium (P2) |
+| `0` | Low (P3), every error's default |
+
+`status` is one of `new`, `in_progress`, `investigating`, `resolved` and `wont_fix`. `update_status`
+allows only these moves:
+
+| From | To |
+|---|---|
+| `new` | `in_progress`, `investigating`, `wont_fix` |
+| `in_progress` | `investigating`, `resolved`, `new` |
+| `investigating` | `resolved`, `in_progress`, `wont_fix` |
+| `resolved` | `new` |
+| `wont_fix` | `new` |
+
+Moving to `resolved` this way resolves the error, but doesn't run `on_error_resolved` callbacks or
+plugins. A `wont_fix` error still counts new occurrences, but sends no notifications for them.
+
+### Other actions
+
+All are `POST`.
+
+| Path | Params | What it does |
+|---|---|---|
+| `/errors/batch_action` | `error_ids[]`, `action_type`, and see below | Acts on several errors, then redirects to `/errors` |
+| `/errors/test_error` | | Logs a `RailsErrorDashboard::TestError`, to check your notification channels |
+| `/errors/create_diagnostic_dump` | `note` | Captures a snapshot of the process. Needs `enable_diagnostic_dump` |
+| `/errors/enable_coverage` | | Turns on line coverage for the source viewer. Needs `enable_coverage_tracking` and Ruby 3.2+ |
+| `/errors/disable_coverage` | | Turns it off |
+| `/locale` | `locale`: `de`, `en`, `es`, `fr`, `it`, `ja`, `pl`, `pt-BR`, `ru`, `uk` or `zh-CN` | Sets the dashboard's language for this session |
+
+`batch_action` takes `action_type`:
+
+| `action_type` | Extra params | Notes |
+|---|---|---|
+| `resolve` | `resolved_by_name`, `resolution_comment` | Doesn't run `on_error_resolved` callbacks, so linked issues stay open. Plugins get `on_errors_batch_resolved` |
+| `mute` | `muted_by`, `reason` | |
+| `unmute` | | |
+| `delete` | | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts |
+
+The list page offers only Resolve and Delete. IDs that don't exist are skipped.
+
+### Issue-tracker webhooks
+
+`POST /webhooks/:provider`, where `:provider` is `github`, `gitlab`, `codeberg` or `linear`. When
+someone closes a linked issue, RED resolves the error; when they reopen it, RED reopens the error.
+
+These routes skip the dashboard's login and CSRF check. They check a signature made with
+`config.issue_webhook_secret` instead:
+
+| Provider | Header | Value |
+|---|---|---|
+| GitHub | `X-Hub-Signature-256` | `sha256=` and the HMAC-SHA256 of the body |
+| GitLab | `X-Gitlab-Token` | the secret itself |
+| Codeberg | `X-Gitea-Signature` | the HMAC-SHA256 of the body |
+| Linear | `Linear-Signature` | the HMAC-SHA256 of the body |
+
+- `404` unless `enable_issue_tracking` is on and `issue_webhook_secret` is set.
+- `401` for a missing or wrong signature, or any other provider.
+- `200` once the signature checks out, even when the payload matches no error or fails to process,
+  so the tracker doesn't retry.
+
+### Filtering the error list
+
+`GET /errors` takes these query parameters. Each takes a single value.
+
+| Param | Values | Notes |
+|---|---|---|
+| `unresolved` | `0` or `false` shows all errors | **Defaults to unresolved only.** Add `unresolved=0` to see resolved ones |
+| `status` | `new`, `in_progress`, `investigating`, `resolved`, `wont_fix` | `status=resolved` also needs `unresolved=0` |
+| `error_type` | exact class name | |
+| `platform` | exact value, such as `iOS`, `Android`, `API` | |
+| `environment` | exact value, such as `production` | |
+| `application_id` | an application's ID | |
+| `user_id` | a user ID | |
+| `app_version`, `git_sha` | exact value | |
+| `search` | text | Searches the message, backtrace and error type. Full-text on PostgreSQL; a case-insensitive match elsewhere |
+| `severity` | `critical`, `high`, `medium`, `low` | Uses RED's built-in classification. `custom_severity_rules` don't apply to this filter |
+| `timeframe` | `last_hour`, `today`, `yesterday`, `last_7_days`, `last_30_days`, `last_90_days` | |
+| `frequency` | `once`, `few` (2-9), `frequent` (10-99), `very_frequent` (100+), `recurring` | `recurring` means more than 5 occurrences and seen in the last 24 hours |
+| `assigned_to` | `__unassigned__`, `__assigned__`, or a name | |
+| `assignee_name` | a name | |
+| `priority_level` | `0` to `3` | |
+| `hide_snoozed` | `1` | Only `1` works, not `true` |
+| `hide_muted` | `1` | Only `1` works, not `true` |
+| `reopened` | `true` | Only `true` works, not `1` |
+| `sort_by` | `occurred_at`, `first_seen_at`, `last_seen_at`, `created_at`, `resolved_at`, `occurrence_count`, `priority_score`, `error_type`, `platform`, `app_version`, `severity` | Defaults to `occurred_at` |
+| `sort_direction` | `asc`, `desc` | Defaults to `desc` |
+| `page`, `per_page` | numbers | `per_page` defaults to 25, at most 100. A `page` that isn't a positive number shows the first page |
+
+Unknown values for `severity`, `timeframe`, `frequency` and `sort_by` are ignored.
+
+```bash
+curl -s -u "$RED_USER:$RED_PASSWORD" \
+  "https://your-app.example.com/red/errors?platform=iOS&severity=critical&timeframe=last_7_days&hide_muted=1"
+```
+
+This returns the HTML page.
+
+---
+
+## Ruby API
+
+These are the parts of RED meant to be called from your app.
+
+### Configuration
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  config.enable_rate_limiting = true
-  config.rate_limit_per_minute = 100
+  config.enable_slack_notifications = true
 end
 ```
 
-## Error Logging
+Every option is in the [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/).
 
-While the gem doesn't provide built-in HTTP endpoints for error logging (to allow customization), you can easily create them in your application. See [Mobile App Integration Guide](/rails_error_dashboard/docs/guides/mobile-app-integration/) for complete examples.
+### Rails.error.report
 
-### Example: Creating a Custom Error Logging Endpoint
+RED subscribes to the Rails error reporter, so this records a rescued exception:
 
 ```ruby
-# app/controllers/api/v1/mobile_errors_controller.rb
-module Api
-  module V1
-    class MobileErrorsController < BaseController
-      # POST /api/v1/mobile_errors
-      def create
-        RailsErrorDashboard::Commands::LogError.call(
-          error_type: error_params[:error_type],
-          message: error_params[:message],
-          backtrace: error_params[:stack]&.split("\n"),
-          occurred_at: Time.current,
-          platform: error_params[:platform],
-          app_version: error_params[:app_version],
-          user_id: current_user&.id,
-          request_url: error_params[:url],
-          ip_address: request.remote_ip,
-          user_agent: request.user_agent
-        )
-
-        render json: { success: true }, status: :created
-      rescue => e
-        render json: { error: e.message }, status: :unprocessable_entity
-      end
-
-      private
-
-      def error_params
-        params.require(:error).permit(
-          :error_type, :message, :stack, :platform,
-          :app_version, :url, :component
-        )
-      end
-    end
-  end
+begin
+  charge_card!
+rescue PaymentGateway::Declined => e
+  Rails.error.report(e, handled: false, context: { user_id: current_user.id })
+  # ...
 end
 ```
 
-### Request Format
+Pass `handled: false` or `severity: :error`. RED skips reports that are handled warnings, which is
+what `Rails.error.handle { }` sends, and on Rails 7.1 and later a bare `Rails.error.report(e)` too
+(on Rails 7.0, `handled:` is required). `Rails.error.record { }` reports and re-raises, and RED
+records it.
 
-```bash
-curl -X POST https://your-app.com/api/v1/mobile_errors \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "error": {
-      "error_type": "TypeError",
-      "message": "Cannot read property of undefined",
-      "stack": "TypeError: Cannot read property...\n  at Component.render",
-      "platform": "ios",
-      "app_version": "2.1.0",
-      "url": "/recordings/new",
-      "component": "RecordingScreen"
-    }
-  }'
-```
+### ManualErrorReporter.report
 
-### Response Format
-
-**Success (201 Created):**
-```json
-{
-  "success": true
-}
-```
-
-**Error (422 Unprocessable Entity):**
-```json
-{
-  "error": "Validation failed: Message can't be blank"
-}
-```
-
-## Dashboard Endpoints
-
-These endpoints are used by the web dashboard UI but can also be accessed programmatically.
-
-### List Errors
-
-Get a paginated list of errors with optional filtering.
-
-**Endpoint:** `GET /error_dashboard/errors`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `page` | integer | Page number (default: 1) | `?page=2` |
-| `per_page` | integer | Items per page (default: 25) | `?per_page=50` |
-| `platform` | string | Filter by platform | `?platform=iOS` |
-| `error_type` | string | Filter by error type | `?error_type=NoMethodError` |
-| `severity` | string | Filter by severity | `?severity=critical` |
-| `status` | string | Filter by status | `?status=investigating` |
-| `assigned_to` | string | Filter by assignee | `?assigned_to=dev@example.com` |
-| `priority_level` | integer | Filter by priority (0-4) | `?priority_level=4` |
-| `unresolved` | boolean | Show only unresolved | `?unresolved=true` |
-| `hide_snoozed` | boolean | Hide snoozed errors | `?hide_snoozed=true` |
-| `search` | string | Search message/backtrace | `?search=payment` |
-| `timeframe` | string | Time filter | `?timeframe=today` |
-| `sort_by` | string | Sort field | `?sort_by=occurred_at` |
-| `sort_direction` | string | Sort direction (asc/desc) | `?sort_direction=desc` |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors?platform=iOS&unresolved=true&per_page=10"
-```
-
-### Get Error Details
-
-Get detailed information about a specific error.
-
-**Endpoint:** `GET /error_dashboard/errors/:id`
-
-**Example:**
-```bash
-curl -u admin:password https://your-app.com/error_dashboard/errors/123
-```
-
-### Resolve Error
-
-Mark an error as resolved.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/resolve`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `resolved_by_name` | string | No | Name of resolver |
-| `resolution_comment` | string | No | Resolution notes |
-| `resolution_reference` | string | No | PR/commit URL |
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "resolved_by_name=John Doe" \
-  -d "resolution_comment=Fixed in latest release" \
-  -d "resolution_reference=https://github.com/org/repo/pull/456" \
-  https://your-app.com/error_dashboard/errors/123/resolve
-```
-
-### Assign Error
-
-Assign an error to a team member.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/assign`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assigned_to` | string | Yes | Email of assignee |
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "assigned_to=dev@example.com" \
-  https://your-app.com/error_dashboard/errors/123/assign
-```
-
-### Unassign Error
-
-Remove assignment from an error.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/unassign`
-
-**Parameters:** None required.
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  https://your-app.com/error_dashboard/errors/123/unassign
-```
-
----
-
-### Update Priority
-
-Change error priority level.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/update_priority`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `priority_level` | integer | Yes | Priority (0-4) |
-
-Priority levels:
-- `0` - None
-- `1` - Low
-- `2` - Medium
-- `3` - High
-- `4` - Critical
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "priority_level=4" \
-  https://your-app.com/error_dashboard/errors/123/update_priority
-```
-
-### Snooze Error
-
-Temporarily hide an error from active view.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/snooze`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `hours` | integer | Yes | Snooze duration in hours |
-| `reason` | string | No | Reason for snoozing |
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "hours=24" \
-  -d "reason=Waiting for third-party API fix" \
-  https://your-app.com/error_dashboard/errors/123/snooze
-```
-
-### Unsnooze Error
-
-Resume showing a snoozed error (unsnooze before the snooze duration expires).
-
-**Endpoint:** `POST /error_dashboard/errors/:id/unsnooze`
-
-**Parameters:** None required.
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  https://your-app.com/error_dashboard/errors/123/unsnooze
-```
-
----
-
-### Update Status
-
-Change error workflow status.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/update_status`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `status` | string | Yes | New status |
-| `comment` | string | No | Status change comment |
-
-Available statuses:
-- `new`
-- `investigating`
-- `fixing`
-- `testing`
-- `deployed`
-- `closed`
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "status=investigating" \
-  -d "comment=Looking into root cause" \
-  https://your-app.com/error_dashboard/errors/123/update_status
-```
-
-### Add Comment
-
-Add a comment to an error.
-
-**Endpoint:** `POST /error_dashboard/errors/:id/add_comment`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `author_name` | string | Yes | Comment author |
-| `body` | string | Yes | Comment text |
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "author_name=John Doe" \
-  -d "body=This appears to be a race condition" \
-  https://your-app.com/error_dashboard/errors/123/add_comment
-```
-
-### Batch Actions
-
-Perform actions on multiple errors at once.
-
-**Endpoint:** `POST /error_dashboard/errors/batch_action`
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `error_ids[]` | array | Yes | Array of error IDs |
-| `action_type` | string | Yes | Action: "resolve" or "delete" |
-| `resolved_by_name` | string | No | For resolve action |
-| `resolution_comment` | string | No | For resolve action |
-
-**Example:**
-```bash
-curl -X POST -u admin:password \
-  -d "error_ids[]=123" \
-  -d "error_ids[]=124" \
-  -d "error_ids[]=125" \
-  -d "action_type=resolve" \
-  -d "resolved_by_name=John Doe" \
-  -d "resolution_comment=Fixed in batch update" \
-  https://your-app.com/error_dashboard/errors/batch_action
-```
-
-## Analytics Endpoints
-
-### Dashboard Overview
-
-Get high-level dashboard statistics.
-
-**Endpoint:** `GET /error_dashboard/overview`
-
-Returns:
-- Total errors (today, week, month)
-- Unresolved/resolved counts
-- Errors by platform
-- Top error types
-- Trend data
-- Critical alerts
-
-### Analytics
-
-Get detailed analytics data.
-
-**Endpoint:** `GET /error_dashboard/errors/analytics`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `days` | integer | Days of history | 30 |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors/analytics?days=7"
-```
-
-Returns:
-- Errors over time
-- Errors by type
-- Errors by platform
-- Errors by hour
-- Top affected users
-- Resolution rate
-- Mobile vs API errors
-- MTTR statistics
-- Recurring issues
-- Release correlation
-
-### Platform Comparison
-
-Compare error rates across platforms.
-
-**Endpoint:** `GET /error_dashboard/errors/platform_comparison`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `days` | integer | Days of history | 7 |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors/platform_comparison?days=14"
-```
-
-### Error Correlation
-
-Analyze error patterns and correlations.
-
-**Endpoint:** `GET /error_dashboard/errors/correlation`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `days` | integer | Days of history | 30 |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors/correlation?days=7"
-```
-
-### Settings
-
-View current configuration settings (read-only).
-
-**Endpoint:** `GET /error_dashboard/settings`
-
-**Parameters:** None
-
-**Example:**
-```bash
-curl -u admin:password \
-  https://your-app.com/error_dashboard/settings
-```
-
-**Note:** This endpoint returns HTML by default (web UI). For programmatic access to configuration, use the Ruby API (`RailsErrorDashboard.configuration`) instead. See [Settings Dashboard Guide](/rails_error_dashboard/docs/guides/settings/) for details.
-
-### Swallowed Exceptions (v0.4.0)
-
-View detected swallowed exceptions — exceptions that are raised but silently rescued.
-
-**Endpoint:** `GET /error_dashboard/errors/swallowed_exceptions`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `days` | integer | Time range filter (7, 30, 90) | `?days=30` |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors/swallowed_exceptions?days=30"
-```
-
-**Requires:** `config.detect_swallowed_exceptions = true` and Ruby 3.3+
-
-### Diagnostic Dumps (v0.4.0)
-
-View diagnostic dump history or capture a new dump.
-
-**List dumps:** `GET /error_dashboard/errors/diagnostic_dumps`
-
-**Capture new dump:** `POST /error_dashboard/errors/diagnostic_dumps`
-
-**Parameters (POST):**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `note` | string | No | Optional note to attach to the dump |
-
-**Example:**
-```bash
-# List dumps
-curl -u admin:password \
-  https://your-app.com/error_dashboard/errors/diagnostic_dumps
-
-# Capture a new dump
-curl -X POST -u admin:password \
-  -d "note=deploy check" \
-  https://your-app.com/error_dashboard/errors/diagnostic_dumps
-```
-
-**Requires:** `config.enable_diagnostic_dump = true`
-
-**Rake task alternative:** `rails error_dashboard:diagnostic_dump NOTE="deploy check"`
-
-### Rack Attack Summary (v0.4.0)
-
-View Rack Attack event summary (throttle, blocklist, track events).
-
-**Endpoint:** `GET /error_dashboard/errors/rack_attack_summary`
-
-**Query Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `days` | integer | Time range filter (7, 30, 90) | `?days=7` |
-
-**Example:**
-```bash
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors/rack_attack_summary?days=7"
-```
-
-**Requires:** `config.enable_rack_attack_tracking = true`
-
----
-
-## Error Response Codes
-
-| Code | Description |
-|------|-------------|
-| `200` | Success |
-| `201` | Created |
-| `302` | Redirect (after POST actions) |
-| `401` | Unauthorized (authentication required) |
-| `404` | Not Found |
-| `422` | Unprocessable Entity (validation error) |
-| `429` | Too Many Requests (rate limit exceeded) |
-| `500` | Internal Server Error |
-
-## Code Examples
-
-### JavaScript (Fetch)
-
-```javascript
-// Log error from React/React Native app
-async function reportError(error, component) {
-  try {
-    const response = await fetch('https://your-app.com/api/v1/mobile_errors', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({
-        error: {
-          error_type: error.name,
-          message: error.message,
-          stack: error.stack,
-          platform: Platform.OS, // 'ios' or 'android'
-          app_version: AppConfig.version,
-          component: component
-        }
-      })
-    });
-
-    const data = await response.json();
-    return data.success;
-  } catch (e) {
-    console.error('Failed to report error:', e);
-    return false;
-  }
-}
-
-// Usage in React component
-try {
-  // Your code
-} catch (error) {
-  await reportError(error, 'RecordingScreen');
-}
-```
-
-### Swift (iOS)
-
-```swift
-import Foundation
-
-struct ErrorReport: Codable {
-    let error: ErrorDetails
-}
-
-struct ErrorDetails: Codable {
-    let errorType: String
-    let message: String
-    let stack: String?
-    let platform: String
-    let appVersion: String
-    let component: String?
-
-    enum CodingKeys: String, CodingKey {
-        case errorType = "error_type"
-        case message
-        case stack
-        case platform
-        case appVersion = "app_version"
-        case component
-    }
-}
-
-func reportError(_ error: Error, component: String) {
-    let errorDetails = ErrorDetails(
-        errorType: String(describing: type(of: error)),
-        message: error.localizedDescription,
-        stack: Thread.callStackSymbols.joined(separator: "\n"),
-        platform: "ios",
-        appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown",
-        component: component
-    )
-
-    let report = ErrorReport(error: errorDetails)
-
-    guard let url = URL(string: "https://your-app.com/api/v1/mobile_errors"),
-          let jsonData = try? JSONEncoder().encode(report) else {
-        return
-    }
-
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-    request.httpBody = jsonData
-
-    URLSession.shared.dataTask(with: request) { data, response, error in
-        if let error = error {
-            print("Failed to report error: \(error)")
-        }
-    }.resume()
-}
-```
-
-### Kotlin (Android)
-
-```kotlin
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-
-@Serializable
-data class ErrorReport(val error: ErrorDetails)
-
-@Serializable
-data class ErrorDetails(
-    val error_type: String,
-    val message: String,
-    val stack: String?,
-    val platform: String,
-    val app_version: String,
-    val component: String?
-)
-
-suspend fun reportError(error: Throwable, component: String) = withContext(Dispatchers.IO) {
-    val errorDetails = ErrorDetails(
-        error_type = error::class.simpleName ?: "UnknownError",
-        message = error.message ?: "No message",
-        stack = error.stackTraceToString(),
-        platform = "android",
-        app_version = BuildConfig.VERSION_NAME,
-        component = component
-    )
-
-    val report = ErrorReport(errorDetails)
-    val json = Json.encodeToString(ErrorReport.serializer(), report)
-
-    val client = OkHttpClient()
-    val mediaType = "application/json; charset=utf-8".toMediaType()
-    val body = json.toRequestBody(mediaType)
-
-    val request = Request.Builder()
-        .url("https://your-app.com/api/v1/mobile_errors")
-        .addHeader("Authorization", "Bearer $authToken")
-        .post(body)
-        .build()
-
-    try {
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                println("Failed to report error: ${response.code}")
-            }
-        }
-    } catch (e: Exception) {
-        println("Failed to report error: ${e.message}")
-    }
-}
-```
-
-### cURL (Testing)
-
-```bash
-# Log an error
-curl -X POST https://your-app.com/api/v1/mobile_errors \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "error": {
-      "error_type": "NetworkError",
-      "message": "Failed to fetch user data",
-      "stack": "NetworkError: Failed to fetch\n  at fetchUser (api.js:42)",
-      "platform": "web",
-      "app_version": "2.1.0",
-      "component": "UserProfile"
-    }
-  }'
-
-# List errors
-curl -u admin:password \
-  "https://your-app.com/error_dashboard/errors?platform=iOS&unresolved=true"
-
-# Get error details
-curl -u admin:password \
-  https://your-app.com/error_dashboard/errors/123
-
-# Resolve error
-curl -X POST -u admin:password \
-  -d "resolved_by_name=John Doe" \
-  -d "resolution_comment=Fixed in v2.1.1" \
-  https://your-app.com/error_dashboard/errors/123/resolve
-```
-
----
-
-# Ruby API
-
-The Ruby API provides Commands, Queries, and Service objects for programmatic error management within Rails applications.
-
-## Configuration API
-
-### RailsErrorDashboard.configure
+Records an error that isn't a Ruby exception, such as one sent by a browser or a mobile app:
 
 ```ruby
-RailsErrorDashboard.configure do |config|
-  # See CUSTOMIZATION.md for all options
-end
-```
-
-## Commands API
-
-### LogError
-
-Log an error to the dashboard.
-
-```ruby
-RailsErrorDashboard::Commands::LogError.call(
-  error_type: "NoMethodError",
-  message: "undefined method 'name' for nil:NilClass",
-  backtrace: exception.backtrace,
-  occurred_at: Time.current,
-  platform: "iOS",  # or "Android", "API", "Web"
+RailsErrorDashboard::ManualErrorReporter.report(
+  error_type: "TypeError",
+  message: "Cannot read properties of undefined (reading 'id')",
+  backtrace: ["at renderCart (cart.js:42)", "at onClick (button.js:15)"],
+  platform: "Web",
+  user_id: current_user&.id,
   app_version: "2.1.0",
-  git_sha: "a3b4c5d6",
-  user_id: 123,
-  request_url: "/api/users",
-  request_params: { id: 1 },
-  ip_address: "192.168.1.1",
-  user_agent: "Mozilla/5.0..."
+  metadata: { component: "ShoppingCart" }
 )
 ```
 
-### ResolveError
+| Keyword | |
+|---|---|
+| `error_type:` | Required. Groups the error and decides its severity |
+| `message:` | Required |
+| `backtrace:` | An array of lines, or one string with a line per frame |
+| `platform:` | Stored as given. The dashboard's iOS and Android badges match exactly `"iOS"` and `"Android"`. Without it the platform is `"API"` |
+| `user_id:`, `app_version:` | Stored as given |
+| `request_url:`, `user_agent:`, `ip_address:` | Stored as given |
+| `metadata:` | A Hash. It is shown with the request params. Anything else is dropped |
+| `occurred_at:` | A `Time` or a date string; defaults to now. A time in the future becomes now. An older time is kept on the occurrence, which the charts read; the error's own `occurred_at` is set no further back than 24 hours |
+| `source:` | A label, such as `"mobile_app"`. Used as the request URL when `request_url:` is missing |
+| `severity:` | Ignored. Severity comes from `error_type` |
 
-Mark an error as resolved.
+It returns the `RailsErrorDashboard::ErrorLog`, or `nil`. It returns `nil` when
+`config.async_logging` is on (a job saves the error), and when the error is ignored, sampled out
+or held back by storm protection.
 
-```ruby
-RailsErrorDashboard::Commands::ResolveError.call(
-  error_id: 123,
-  resolved_by: "developer@example.com",
-  resolution_comment: "Fixed in PR #456",
-  resolution_reference: "https://github.com/org/repo/pull/456"
-)
-```
+### Callbacks and notifications
 
-### BatchDeleteErrors
-
-Delete multiple errors.
-
-```ruby
-RailsErrorDashboard::Commands::BatchDeleteErrors.call(
-  error_ids: [1, 2, 3, 4, 5]
-)
-```
-
-## Query Objects API
-
-### DashboardStats
+Run your own code when RED records or resolves an error:
 
 ```ruby
-stats = RailsErrorDashboard::Queries::DashboardStats.call
+# config/initializers/rails_error_dashboard.rb, after the configure block
+RailsErrorDashboard.on_error_logged do |error_log|
+  Rails.logger.info("RED: #{error_log.error_type}")
+end
 
-stats[:total_errors]          # Total error count
-stats[:errors_today]          # Errors today
-stats[:errors_last_7_days]    # Last 7 days
-stats[:errors_last_30_days]   # Last 30 days
-stats[:top_errors]            # Top 10 error types
-stats[:errors_by_platform]    # Grouped by platform
-stats[:resolved_count]        # Resolved errors
-stats[:unresolved_count]      # Unresolved errors
-```
+RailsErrorDashboard.on_critical_error do |error_log|
+  # ...
+end
 
-### ErrorsList
-
-```ruby
-errors = RailsErrorDashboard::Queries::ErrorsList.call(
-  platform: "iOS",
-  error_type: "NoMethodError",
-  unresolved: true,
-  search: "payment"
-)
-```
-
-### SimilarErrors
-
-```ruby
-similar = RailsErrorDashboard::Queries::SimilarErrors.call(
-  error_id: 123,
-  threshold: 0.6,  # 60% similarity
-  limit: 10
-)
-
-similar.each do |result|
-  result[:error]       # ErrorLog instance
-  result[:similarity]  # 0.0 - 1.0
+RailsErrorDashboard.on_error_resolved do |error_log|
+  # ...
 end
 ```
 
-### PlatformComparison
+- `on_error_logged` runs for a new error and for a resolved error that happens again, but not for
+  each repeat of an open error. An open error that keeps happening more than 24 hours after RED
+  first recorded it starts a new error record, so it runs again then. `on_critical_error` runs at
+  the same moments when the error is critical.
+- `on_error_resolved` runs when an error is resolved with the Resolve button, `ErrorLog#resolve!`
+  or a webhook. A batch resolve or a status change to `resolved` doesn't run it.
+- A callback that raises is rescued and doesn't stop the others.
+
+The same moments are published as `ActiveSupport::Notifications` events:
+`error_logged.rails_error_dashboard`, `critical_error.rails_error_dashboard` and
+`error_resolved.rails_error_dashboard`. Each payload has `error_log` and `error_id`.
 
 ```ruby
-comparison = RailsErrorDashboard::Queries::PlatformComparison.new(days: 7)
-
-comparison.error_rate_by_platform
-comparison.platform_stability_scores
-comparison.platform_health_summary("iOS")
-comparison.cross_platform_errors
+ActiveSupport::Notifications.subscribe("error_logged.rails_error_dashboard") do |event|
+  StatsD.increment("errors.#{event.payload[:severity]}")
+end
 ```
 
-### ErrorCorrelation
+For more events (every recurrence, mute, unmute, each batch action, and the error page being
+viewed), write a plugin. See the [Plugin System](/rails_error_dashboard/docs/features/plugin-system/).
+
+### Breadcrumbs
 
 ```ruby
-correlation = RailsErrorDashboard::Queries::ErrorCorrelation.new(days: 30)
-
-correlation.errors_by_version
-correlation.problematic_releases
-correlation.multi_error_users
-correlation.time_correlated_errors
+RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: cart.id })
 ```
 
-## Models API
+It adds a step to the current request's trail. It does nothing unless `config.enable_breadcrumbs`
+is on. See [Manual Breadcrumbs](/rails_error_dashboard/docs/guides/configuration/#manual-breadcrumbs).
 
-### ErrorLog
+### Jobs
+
+RED's periodic jobs need your scheduler: see
+[Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs). Cascade detection also
+needs one if you want it. Nothing in the gem runs it and there is no job class for it, so there is
+no cascade data until you do (the error page shows it when `enable_error_cascades` is on):
 
 ```ruby
-error = RailsErrorDashboard::ErrorLog.find(123)
-
-# Attributes
-error.error_type       # "NoMethodError"
-error.message          # Error message
-error.backtrace        # Stack trace
-error.platform         # "iOS", "Android", etc.
-error.app_version      # "2.1.0"
-error.occurrence_count # How many times occurred
-error.resolved?        # Boolean
-error.severity         # :critical, :high, :medium, :low
-
-# Associations
-error.similar_errors(threshold: 0.6)
-error.co_occurring_errors(window_minutes: 5)
-error.error_cascades(min_probability: 0.5)
-error.occurrence_pattern(days: 30)
-error.error_bursts(days: 7)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
+# => { detected: 2, updated: 5 }
 ```
 
-## Service Objects API
+With Solid Queue, a `command:` entry in `config/recurring.yml` runs it hourly:
 
-### PatternDetector
+```yaml
+production:
+  red_cascades:
+    command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
+    schedule: every hour
+```
+
+With cron: `bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
+
+### Reading and changing errors
+
+Errors are `RailsErrorDashboard::ErrorLog` records, stored in RED's database (your primary database,
+or the separate one if you set that up).
 
 ```ruby
-# Cyclical patterns
-pattern = RailsErrorDashboard::Services::PatternDetector.analyze_cyclical_pattern(
-  error_type: "NoMethodError",
-  platform: "iOS",
-  days: 30
-)
+errors = RailsErrorDashboard::ErrorLog.unresolved.by_platform("iOS").last_24_hours
 
-pattern[:pattern_type]        # :business_hours, :night, :weekend, :uniform
-pattern[:pattern_strength]    # 0.0 - 1.0
-pattern[:peak_hours]          # [9, 10, 11, 14, 15]
-pattern[:hourly_distribution] # { 0 => 5, 1 => 3, ... }
+error = RailsErrorDashboard::ErrorLog.find(42)
+error.error_type        # "NoMethodError"
+error.occurrence_count  # 17
+error.severity          # :critical, :high, :medium or :low
+error.critical?
 
-# Bursts
-bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(
-  error_type: "NoMethodError",
-  platform: "iOS",
-  days: 7
-)
+error.resolve!(resolved_by_name: "deploy-bot", resolution_comment: "Fixed in #456")
+error.mute!(muted_by: "ops", reason: "Known, fix scheduled")
+error.unmute!
 ```
 
-### CascadeDetector
+Scopes: `unresolved`, `resolved`, `recent`, `by_error_type`, `by_platform`, `by_environment`,
+`by_status`, `by_priority`, `by_assignee`, `assigned`, `unassigned`, `active` (not snoozed),
+`snoozed`, `muted`, `unmuted`, `last_24_hours`, `last_week`.
 
-```ruby
-result = RailsErrorDashboard::Services::CascadeDetector.call(
-  lookback_hours: 24
-)
+`resolve!` works like the Resolve button, including the callbacks. `mute!` and `unmute!` work like
+their buttons.
 
-result[:detected]  # Number of new cascades
-result[:updated]   # Number of updated cascades
-```
+### Internal classes
 
-### BaselineCalculator
+The `Commands`, `Queries` and `Services` classes back the dashboard's pages. They aren't a public
+API and can change in any release; `CascadeDetector`, above, is the one you need to call yourself.
+If you already call the others, these are their current signatures:
 
-```ruby
-RailsErrorDashboard::Services::BaselineCalculator.calculate_all_baselines
-```
+| Call | Returns |
+|---|---|
+| `Commands::LogError.call(exception, context = {})` | Used by RED's own capture. Use `ManualErrorReporter.report` instead |
+| `Commands::ResolveError.call(id, resolved_by_name: "me")`; the other keys are `resolution_comment` and `resolution_reference` | the `ErrorLog` |
+| `Commands::BatchDeleteErrors.call([1, 2, 3])` | `{ success:, count:, total:, errors: [] }` |
+| `Queries::DashboardStats.call(application_id: nil)` | a Hash: `total_today`, `total_week`, `total_month`, `unresolved`, `resolved`, `reopened`, `by_platform`, `top_errors` and more. Cached for a minute |
+| `Queries::ErrorsList.call(filters = {})` | an `ActiveRecord::Relation`; the filters are [the list's](#filtering-the-error-list) |
+| `Queries::SimilarErrors.call(id, threshold: 0.6, limit: 10)` | `[{ error:, similarity: }]` |
+| `Queries::PlatformComparison.new(days: 7)` | methods such as `error_rate_by_platform` and `platform_health_summary` (a Hash by platform) |
+| `Queries::ErrorCorrelation.new(days: 30)` | methods such as `errors_by_version` and `problematic_releases` |
+| `Services::PatternDetector.analyze_cyclical_pattern(timestamps:, days: 30)` | a Hash with `pattern_type`, `peak_hours` and more |
+| `Services::BaselineCalculator.calculate_all_baselines` | `{ calculated: }`. Schedule `BaselineCalculationJob` instead |
 
-## Complete Reference
-
-For more details, see the source code or inline documentation (YARD format).
-
-**Models**: `app/models/rails_error_dashboard/`
-**Commands**: `lib/rails_error_dashboard/commands/`
-**Queries**: `lib/rails_error_dashboard/queries/`
-**Services**: `lib/rails_error_dashboard/services/`
+The source is in `lib/rails_error_dashboard/` and `app/models/rails_error_dashboard/`.

@@ -6,424 +6,140 @@ order: 7
 
 # Batch Operations Guide
 
-Rails Error Dashboard supports batch operations to efficiently manage multiple errors at once.
-
-## Features
-
-- **Batch Resolve**: Mark multiple errors as resolved simultaneously
-- **Batch Delete**: Delete multiple errors in one operation
-- **Select All**: Quickly select all errors on the current page
-- **Visual Feedback**: Real-time selection count and toolbar
-- **Safe Operations**: Confirmation dialogs for destructive actions
+The error list can resolve or delete several errors at once. Muting and unmuting several errors is
+also possible, from a script or the Rails console.
 
 ---
 
-## Using Batch Operations
+## In the dashboard
 
-### 1. Accessing Batch Operations
+1. Open the error list, `/red/errors`.
+2. Tick the checkbox at the start of each error's row, or the checkbox in the table header to select
+   every error on the page. A toolbar appears above the table with the number selected and two
+   buttons, **Resolve** and **Delete**.
+3. Click **Resolve** or **Delete**.
 
-Batch operations are available on the main error listing page (`/error_dashboard/errors`).
+You land on the first page of the error list with a message such as "Successfully resolved 3
+errors". The filters you had set are cleared, except the application.
 
-### 2. Selecting Errors
+To clear the selection, untick the checkbox at the start of the toolbar, or the one in the table
+header.
 
-**Select Individual Errors:**
-- Click the checkbox in the leftmost column of any error row
-- The batch actions toolbar will appear automatically
+> **Delete doesn't ask for confirmation.** It deletes the selected errors straight away, together
+> with their occurrences and comments, and they can't be recovered.
 
-**Select All Errors on Page:**
-- Click the checkbox in the table header
-- All errors on the current page will be selected
+### What each action does
 
-**Clear Selection:**
-- Click the "Clear Selection" button in the toolbar
-- Or uncheck individual errors
+| Action | Effect |
+|---|---|
+| Resolve | Marks the errors resolved, with status `resolved`. It doesn't run your `on_error_resolved` callbacks, so linked issues in your issue tracker stay open. Plugins get `on_errors_batch_resolved` |
+| Delete | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts. Plugins get `on_errors_batch_deleted` with the IDs |
+| Mute (no button) | Mutes the errors, storing who and why. Unlike muting one error with a reason, no comment is added. Plugins get `on_errors_batch_muted` |
+| Unmute (no button) | Unmutes them. Plugins get `on_errors_batch_unmuted` |
 
-### 3. Batch Actions
+Every batch action needs the dashboard login, and anyone who can log in can use all of them.
 
-Once you've selected one or more errors, the batch actions toolbar appears with:
+### Limits
 
-#### Resolve Selected
-- **Button**: Green "Resolve Selected" button
-- **Action**: Marks all selected errors as resolved
-- **Fields**: Currently resolves without comment (instant resolution)
-- **Use Case**: Quickly resolve multiple errors after deploying a fix
-
-#### Delete Selected
-- **Button**: Red "Delete Selected" button
-- **Action**: Permanently deletes selected errors from the database
-- **Confirmation**: Shows confirmation dialog before deletion
-- **Use Case**: Clean up test errors or false positives
-
----
-
-## UI Workflow
-
-```text
-1. User visits /error_dashboard/errors
-   ↓
-2. User clicks checkboxes to select errors
-   ↓
-3. Batch toolbar appears showing "N selected"
-   ↓
-4. User clicks "Resolve Selected" or "Delete Selected"
-   ↓
-5. Confirmation dialog (for delete only)
-   ↓
-6. Batch operation executes
-   ↓
-7. Success/failure flash message appears
-   ↓
-8. Page redirects to error list
-```
+- **One page at a time.** The header checkbox selects the errors on the current page, and the
+  selection doesn't survive changing pages. The list shows 25 errors a page. To act on more at once,
+  add `per_page=100` to the URL (100 is the most), or use the console.
+- **No transaction.** Each error is saved on its own. If one fails partway through, the ones before
+  it stay changed.
 
 ---
 
-## Backend Architecture
+## From a script
 
-### Commands
-
-Batch operations use dedicated Command objects following the CQRS pattern:
-
-#### BatchResolveErrors Command
-
-**File**: `lib/rails_error_dashboard/commands/batch_resolve_errors.rb`
-
-**Usage:**
-```ruby
-# Resolve multiple errors
-result = RailsErrorDashboard::Commands::BatchResolveErrors.call(
-  [123, 456, 789],
-  resolved_by_name: "John Doe",
-  resolution_comment: "Fixed in PR #123"
-)
-
-# Returns:
-{
-  success: true,
-  count: 3,           # Number successfully resolved
-  total: 3,           # Total attempted
-  failed_ids: [],     # IDs that failed (if any)
-  errors: []          # Error messages (if any)
-}
-```
-
-**Features:**
-- Accepts array of error IDs
-- Optional resolver name and comment
-- Handles partial failures gracefully
-- Returns detailed result hash
-
-#### BatchDeleteErrors Command
-
-**File**: `lib/rails_error_dashboard/commands/batch_delete_errors.rb`
-
-**Usage:**
-```ruby
-# Delete multiple errors
-result = RailsErrorDashboard::Commands::BatchDeleteErrors.call([123, 456, 789])
-
-# Returns:
-{
-  success: true,
-  count: 3,           # Number successfully deleted
-  total: 3,           # Total attempted
-  errors: []          # Error messages (if any)
-}
-```
-
-**Features:**
-- Accepts array of error IDs
-- Uses `destroy_all` for efficiency
-- Returns detailed result hash
-
-### Controller Action
-
-**File**: `app/controllers/rails_error_dashboard/errors_controller.rb`
-
-**Route**: `POST /error_dashboard/errors/batch_action`
-
-**Parameters:**
-- `error_ids[]` - Array of error IDs to process
-- `action_type` - Either "resolve" or "delete"
-- `resolved_by_name` - (Optional) Name of person resolving
-- `resolution_comment` - (Optional) Comment about resolution
-
-**Response:**
-- Success: Redirects with flash notice
-- Failure: Redirects with flash alert
+The toolbar posts to `POST /red/errors/batch_action` with `error_ids[]` and `action_type`
+(`resolve`, `mute`, `unmute` or `delete`). The [API Reference](/rails_error_dashboard/docs/reference/api-reference/#other-actions)
+lists the extra fields, and [Posting from a script](/rails_error_dashboard/docs/reference/api-reference/#posting-from-a-script) shows
+how to get past the CSRF check.
 
 ---
 
-## JavaScript Implementation
+## From the Rails console
 
-The batch operations UI is powered by vanilla JavaScript (no dependencies).
-
-**File**: `app/views/rails_error_dashboard/errors/index.html.erb` (inline script)
-
-### Key Features
-
-1. **Select All Checkbox**
-   - Clicking selects/deselects all errors on page
-   - Shows indeterminate state when some (but not all) selected
-
-2. **Individual Checkboxes**
-   - Each error has its own checkbox
-   - Updates "select all" state automatically
-   - Shows/hides batch toolbar based on selection
-
-3. **Batch Toolbar**
-   - Hidden by default
-   - Appears when 1+ errors selected
-   - Shows count of selected errors
-   - Contains action buttons
-
-4. **Form Submission**
-   - Dynamically adds hidden inputs for selected error IDs
-   - Prevents submission if no errors selected
-   - Confirmation dialog for destructive actions
-
----
-
-## Examples
-
-### Example 1: Resolve Multiple Test Errors
+These commands are what the toolbar calls. They are internal classes and can change between
+releases.
 
 ```ruby
-# After deploying a fix for NoMethodError in UsersController
-# Go to error dashboard, filter by error type
-# Select all NoMethodError instances
-# Click "Resolve Selected"
-# ✅ All instances marked as resolved
-
-# Or via console:
-error_ids = RailsErrorDashboard::ErrorLog
-  .where(error_type: "NoMethodError")
-  .where(controller_name: "UsersController")
-  .pluck(:id)
+ids = RailsErrorDashboard::ErrorLog
+  .unresolved
+  .where(error_type: "NoMethodError", controller_name: "UsersController")
+  .ids
 
 RailsErrorDashboard::Commands::BatchResolveErrors.call(
-  error_ids,
+  ids,
   resolved_by_name: "Deploy Bot",
   resolution_comment: "Fixed in release v2.3.1"
 )
+# => { success: true, count: 12, total: 12, failed_ids: [], errors: [] }
 ```
 
-### Example 2: Delete Old Development Errors
+The others:
 
 ```ruby
-# Clean up errors from development environment
-dev_error_ids = RailsErrorDashboard::ErrorLog
+RailsErrorDashboard::Commands::BatchMuteErrors.call(ids, muted_by: "ops", reason: "Known issue")
+RailsErrorDashboard::Commands::BatchUnmuteErrors.call(ids)
+RailsErrorDashboard::Commands::BatchDeleteErrors.call(ids)
+```
+
+What the result means:
+
+- `count` is how many errors were saved, including any already in that state, and `total` is how
+  many IDs you passed.
+- IDs that don't exist are skipped without complaint: `count` is lower than `total`, and `success`
+  is still `true`.
+- `success` is `false` when saving an error raised. Then `errors` has a message. For resolve, mute
+  and unmute, `failed_ids` lists the errors that weren't changed; it is missing when an exception
+  stopped the whole batch.
+- With an empty list, the result is `{ success: false, count: 0, errors: ["No error IDs provided"] }`.
+
+To delete old errors, select by `last_seen_at`, which is when the error last happened.
+`occurred_at` is when RED first recorded it:
+
+```ruby
+old_ids = RailsErrorDashboard::ErrorLog
   .where(environment: "development")
-  .where("occurred_at < ?", 1.week.ago)
-  .pluck(:id)
+  .where("last_seen_at < ?", 1.week.ago)
+  .ids
 
-RailsErrorDashboard::Commands::BatchDeleteErrors.call(dev_error_ids)
-# Returns: { success: true, count: 45, total: 45, errors: [] }
-```
-
-### Example 3: Partial Failure Handling
-
-```ruby
-# Some errors might be locked or invalid
-result = RailsErrorDashboard::Commands::BatchResolveErrors.call([1, 2, 999999])
-
-if result[:success]
-  puts "All #{result[:count]} errors resolved"
-else
-  puts "Resolved #{result[:count]} of #{result[:total]}"
-  puts "Failed IDs: #{result[:failed_ids].join(', ')}"
-  puts "Errors: #{result[:errors].join(', ')}"
+old_ids.each_slice(100) do |batch|
+  result = RailsErrorDashboard::Commands::BatchDeleteErrors.call(batch)
+  puts "Deleted #{result[:count]} of #{result[:total]}"
 end
 ```
 
----
-
-## UI Screenshots (Workflow)
-
-### Step 1: Error List (No Selection)
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Recent Errors                            25 items      │
-├─────┬──────┬────────────┬─────────┬─────────┬──────────┤
-│  ☐  │ Time │ Error Type │ Message │ Platform│ Status   │
-├─────┼──────┼────────────┼─────────┼─────────┼──────────┤
-│  ☐  │ 10am │ NoMethod..  │ Error..  │ iOS     │ ⚠️       │
-│  ☐  │ 9am  │ Argument..  │ Error..  │ Android │ ⚠️       │
-│  ☐  │ 8am  │ Runtime..   │ Error..  │ API     │ ⚠️       │
-└─────┴──────┴────────────┴─────────┴─────────┴──────────┘
-```
-
-### Step 2: Errors Selected (Toolbar Appears)
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Recent Errors                            25 items      │
-├─────────────────────────────────────────────────────────┤
-│ 3 selected  [✓ Resolve Selected] [✗ Delete Selected]   │
-│                                    [Clear Selection]    │
-├─────┬──────┬────────────┬─────────┬─────────┬──────────┤
-│  ☑  │ Time │ Error Type │ Message │ Platform│ Status   │
-├─────┼──────┼────────────┼─────────┼─────────┼──────────┤
-│  ☑  │ 10am │ NoMethod..  │ Error..  │ iOS     │ ⚠️       │
-│  ☑  │ 9am  │ Argument..  │ Error..  │ Android │ ⚠️       │
-│  ☑  │ 8am  │ Runtime..   │ Error..  │ API     │ ⚠️       │
-└─────┴──────┴────────────┴─────────┴─────────┴──────────┘
-```
-
----
-
-## API Reference
-
-### BatchResolveErrors.call(error_ids, options)
-
-**Parameters:**
-- `error_ids` (Array<Integer>) - Array of error log IDs to resolve
-- `options` (Hash) - Optional parameters
-  - `resolved_by_name` (String) - Name of person/system resolving
-  - `resolution_comment` (String) - Comment about the resolution
-
-**Returns:**
-Hash with keys:
-- `success` (Boolean) - True if all errors resolved successfully
-- `count` (Integer) - Number of errors successfully resolved
-- `total` (Integer) - Total number of errors attempted
-- `failed_ids` (Array<Integer>) - IDs that failed to resolve
-- `errors` (Array<String>) - Error messages for failures
-
-**Example:**
-```ruby
-result = RailsErrorDashboard::Commands::BatchResolveErrors.call(
-  [1, 2, 3],
-  resolved_by_name: "Alice",
-  resolution_comment: "Fixed in PR #456"
-)
-# => { success: true, count: 3, total: 3, failed_ids: [], errors: [] }
-```
-
-### BatchDeleteErrors.call(error_ids)
-
-**Parameters:**
-- `error_ids` (Array<Integer>) - Array of error log IDs to delete
-
-**Returns:**
-Hash with keys:
-- `success` (Boolean) - True if all errors deleted successfully
-- `count` (Integer) - Number of errors successfully deleted
-- `total` (Integer) - Total number of errors attempted
-- `errors` (Array<String>) - Error messages for failures
-
-**Example:**
-```ruby
-result = RailsErrorDashboard::Commands::BatchDeleteErrors.call([1, 2, 3])
-# => { success: true, count: 3, total: 3, errors: [] }
-```
-
----
-
-## Performance Considerations
-
-### Scalability
-
-**Recommended Limits:**
-- **Per-page selection**: Up to 100 errors (default page size is 25)
-- **Large batch operations**: Use Rails console for 100+ errors
-- **Database impact**: Batch operations use ActiveRecord transactions
-
-### For Large Datasets
-
-If you need to process 100+ errors:
-
-```ruby
-# Use batching to avoid memory issues
-error_ids = RailsErrorDashboard::ErrorLog
-  .where(resolved: false)
-  .where("occurred_at < ?", 1.month.ago)
-  .pluck(:id)
-
-# Process in batches of 100
-error_ids.each_slice(100) do |batch|
-  result = RailsErrorDashboard::Commands::BatchResolveErrors.call(
-    batch,
-    resolved_by_name: "Automated Cleanup",
-    resolution_comment: "Auto-resolved old errors"
-  )
-
-  puts "Batch: #{result[:count]}/#{result[:total]} resolved"
-end
-```
-
----
-
-## Limitations
-
-1. **Page-level Selection**
-   - "Select All" only selects errors on current page
-   - Does not select across multiple pages
-   - For cross-page operations, use Rails console
-
-2. **No Undo**
-   - Batch operations are immediate and permanent
-   - Resolved errors can be un-resolved manually
-   - Deleted errors cannot be recovered
-
-3. **Permissions**
-   - Batch operations require dashboard authentication
-   - No role-based access control (RBAC) currently
-
----
-
-## Future Enhancements
-
-Planned features for future versions:
-
-- [ ] **Batch resolve with comments** - Add UI form for resolution details
-- [ ] **Select all across pages** - Select all matching filter criteria
-- [ ] **Batch unresolve** - Reopen resolved errors in batch
-- [ ] **Background job processing** - For very large batch operations
-- [ ] **Audit trail** - Track who performed batch operations
-- [ ] **Role-based permissions** - Restrict batch delete to admins
-- [ ] **Preview mode** - Show which errors will be affected before action
+For deleting old errors on a schedule, use `RetentionCleanupJob` instead. See
+[Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs).
 
 ---
 
 ## Troubleshooting
 
-### Toolbar Not Appearing
+### The toolbar doesn't appear
 
-**Problem**: Batch toolbar doesn't show when selecting errors
+- It appears only once you tick an error, and only when the list has errors.
+- It needs JavaScript. Look for errors in the browser console.
+- A Content Security Policy that blocks inline scripts stops it. RED adds your app's CSP nonce to its
+  scripts, so a policy with a nonce generator (`content_security_policy_nonce_generator`) works.
 
-**Solutions:**
-- Ensure JavaScript is enabled
-- Check browser console for errors
-- Verify Bootstrap CSS is loaded
-- Clear browser cache
+### "Batch operation failed"
 
-### Selection State Lost on Pagination
+The message after "Batch operation failed:" says why:
 
-**Problem**: Selections cleared when changing pages
+- **No error IDs provided**: nothing was selected.
+- **Invalid action type**: `action_type` wasn't `resolve`, `mute`, `unmute` or `delete`.
+- **Failed to resolve N errors** (or mute, unmute): saving those errors raised.
+- Anything else is the message of an exception that stopped the whole batch.
 
-**Expected Behavior**: Selections are per-page only. This is intentional.
-
-**Workaround**: Use filters to narrow down errors first, then select and batch process.
-
-### Batch Operation Failed
-
-**Problem**: Flash message shows "Batch operation failed"
-
-**Debug Steps:**
-1. Check Rails logs for error details
-2. Verify error IDs are valid
-3. Check database constraints
-4. Ensure errors aren't locked by another process
+RED logs the details only when `config.log_level` is `:error` or lower. The default is `:silent`.
 
 ---
 
 ## Related Documentation
 
-- [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md) - Overall gem documentation
+- [Documentation index](/rails_error_dashboard/docs/documentation/) - All the guides
 - [Notifications](/rails_error_dashboard/docs/guides/notifications/) - Notification setup
-
----
-
-**Batch operations are fully functional!** 🎉
-
-See the [Plugin System](/rails_error_dashboard/docs/features/plugin-system/) guide for building custom integrations.
+- [Plugin System](/rails_error_dashboard/docs/features/plugin-system/) - The batch plugin hooks

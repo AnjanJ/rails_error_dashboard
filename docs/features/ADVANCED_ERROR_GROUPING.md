@@ -176,11 +176,12 @@ Identifies parent-child relationships between errors:
 
 ### How It Works
 
-The system automatically detects cascades using background jobs:
+Cascades are found by `CascadeDetector`. Nothing in the gem runs it: call it from your scheduler
+(hourly works well), or there are no cascades to show.
 
 ```ruby
-# Manual cascade detection (runs hourly by default)
-RailsErrorDashboard::Services::CascadeDetector.call
+# Look for cascades in the last 24 hours (run it on a schedule)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 
 # Access cascade patterns for an error
 error = RailsErrorDashboard::ErrorLog.find(123)
@@ -199,13 +200,13 @@ end
 
 ### Detection Algorithm
 
-1. **Time Window**: Looks 0-60 seconds before/after each error
-2. **Pattern Tracking**: If A then B happens >70% of time = cascade
-3. **Probability Calculation**:
+1. **Time Window**: For each occurrence of error A, looks at the 60 seconds after it
+2. **Pattern Tracking**: Each time error B follows A within that window counts once
+3. **Minimum Frequency**: A pair seen 3+ times in the lookback is stored as a cascade
+4. **Probability Calculation**, stored with it:
    ```text
    probability = times_B_after_A / total_A_occurrences
    ```
-4. **Minimum Frequency**: Requires 3+ occurrences to confirm pattern
 
 ### Cascade Probability Levels
 
@@ -213,12 +214,20 @@ end
 - **Medium (50-70%)**: Moderate cascade relationship
 - **Low (<50%)**: Filtered out by default
 
-### Background Job
+### Scheduling
 
-Cascade detection runs automatically via `CascadeDetectionJob`:
-- **Frequency**: Hourly
-- **Lookback**: Last 24 hours
-- **Updates**: Existing patterns are updated with new data
+Nothing in the gem runs cascade detection, and there is no job class for it. Schedule
+`CascadeDetector.call` yourself; each run updates the patterns it already stored. With Solid Queue,
+in `config/recurring.yml`:
+
+```yaml
+production:
+  red_cascades:
+    command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
+    schedule: every hour
+```
+
+With cron: `bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
 
 ### Use Cases
 
@@ -253,16 +262,16 @@ end
 
 ### Cascade Detection Configuration
 
-```ruby
-# Cascade detection window (seconds)
-# Default: 60 seconds
-# Adjust via CascadeDetector parameters:
+The 60-second window and the minimum of 3 are constants. `lookback_hours` is the only option:
 
-RailsErrorDashboard::Services::CascadeDetector.call(
-  window_seconds: 120,  # 2-minute window
-  min_frequency: 5,     # Require 5+ occurrences
-  min_probability: 0.7  # 70% probability threshold
-)
+```ruby
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 48)
+```
+
+To see only strong cascades, filter by probability when you read them:
+
+```ruby
+error.error_cascades(min_probability: 0.7)
 ```
 
 ### Platform-Based Matching
@@ -388,14 +397,13 @@ Periodically:
 ### "Cascade detection not working"
 
 **Possible causes**:
-- Background job not running
-- ErrorOccurrence table doesn't exist (run migrations)
-- Window too short (errors happen >60s apart)
+- Nothing runs `CascadeDetector` (see [Scheduling](#scheduling))
+- `enable_error_cascades` is off, so the error page doesn't show them
+- The errors happen more than 60 seconds apart, or fewer than 3 times in the lookback
 
 **Solution**:
-- Check `rails_error_dashboard_cascade_patterns` table exists
-- Ensure background jobs are running (`rails jobs:work`)
-- Increase window_seconds if needed
+- Schedule `CascadeDetector.call`, or run it once from a console to check
+- Check the `rails_error_dashboard_cascade_patterns` table exists (run migrations)
 
 ## Database Schema
 
@@ -459,14 +467,13 @@ error.error_cascades(min_probability: 0.5)
 ### Services::CascadeDetector.call
 
 ```ruby
-RailsErrorDashboard::Services::CascadeDetector.call(
-  lookback_hours: 24,
-  window_seconds: 60,
-  min_frequency: 3,
-  min_probability: 0.7
-)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 # Returns: { detected: 5, updated: 3 }
 ```
+
+`lookback_hours` is its only option. A cascade is a child error that follows its parent within 60
+seconds, at least 3 times; both are constants, not options. Each cascade's probability is stored,
+and `error_cascades(min_probability:)` filters on it.
 
 ## Further Reading
 

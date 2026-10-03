@@ -58,7 +58,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Integration
 - **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
-- **[API Reference](API_REFERENCE.md)** - Complete API documentation
+- **[API Reference](API_REFERENCE.md)** - The dashboard's HTTP routes and the Ruby API
 - **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams live updates (requires `turbo-rails` + ActionCable in the host)
 - **[Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md)** - Configure Solid Queue for async logging
 
@@ -89,7 +89,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 4. [Plugin System](PLUGIN_SYSTEM.md) - Custom integrations
 
 ### For Developers
-1. [API Reference](API_REFERENCE.md) - Complete API docs
+1. [API Reference](API_REFERENCE.md) - The dashboard's HTTP routes and the Ruby API
 2. [Plugin Development](PLUGIN_SYSTEM.md#1-create-a-plugin) - Build plugins
 3. [Testing Guide](development/TESTING.md) - Test your setup
 
@@ -149,7 +149,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ## Searching the Documentation
 
 - **Configuration options**: See [Configuration Guide](guides/CONFIGURATION.md)
-- **API methods**: See [API Reference](API_REFERENCE.md)
+- **Ruby API and HTTP routes**: See [API Reference](API_REFERENCE.md)
 - **Term definitions**: See [Glossary](GLOSSARY.md)
 - **Code examples**: Most guides include code examples
 - **Troubleshooting**: Each guide has a troubleshooting section
