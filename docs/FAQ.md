@@ -77,7 +77,7 @@ Yes! The error logging works in API-only mode. The dashboard UI requires a brows
 - Run in a separate Rails instance pointing to the same database
 - Accessed via SSH tunnel
 
-See [API-only setup](guides/MOBILE_APP_INTEGRATION.md#backend-setup-rails-api).
+To report errors from your API's clients, see [the mobile endpoint](guides/MOBILE_APP_INTEGRATION.md#the-endpoint).
 </details>
 
 <details>
