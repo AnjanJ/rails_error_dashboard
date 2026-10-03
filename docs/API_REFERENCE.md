@@ -101,14 +101,15 @@ config.rate_limit_per_minute = 300 # the default
   `X-RateLimit-Period`. There is no JSON variant.
 - **Where counts live:** in `Rails.cache`. With `:null_store`, nothing is ever limited. With more
   than one process (Puma workers, or several servers), each process counts on its own unless the
-  cache store is shared, such as Redis, Solid Cache or Memcached.
+  cache store is shared, such as Redis, Solid Cache or Memcached. Counting isn't atomic, so under
+  many concurrent requests the limit is approximate.
 
 ### Response codes
 
 | Code | When |
 |---|---|
 | `200` | A page; `ai_help`'s event stream; a webhook that passed its signature check |
-| `302` | Every form POST. Also a page whose feature is off: it redirects to `/errors` with a message naming the option to turn on |
+| `302` | Every form POST except `ai_help`. Also a page whose feature is off: it redirects to `/errors` with a message saying so |
 | `303` | A `per_page` that isn't a positive number, or a `page` past the end of the error list: it redirects to the same page without `page` and `per_page`, keeping the other parameters |
 | `400` | A malformed request |
 | `401` | No or wrong HTTP Basic login. For webhooks: a missing or wrong signature, or an unknown provider |
@@ -151,12 +152,13 @@ limits most pages to one application.
 | `/errors/diagnostic_dumps` | Diagnostic dumps | `page`, `per_page` | `enable_diagnostic_dump` |
 | `/settings` | Your configuration, read-only | | |
 
-When a page's option is off, the page redirects to `/errors` with a message naming the option. The
-LLM health page is the exception: it renders and says the feature is off.
+When a page's option is off, the page redirects to `/errors` with a message saying the feature is off;
+the **Needs** column gives the option. The LLM health page is the exception: it renders and says the
+feature is off.
 
 ### Actions on one error
 
-All are `POST /errors/:id/<action>`, and all redirect back to the error.
+All are `POST /errors/:id/<action>`. All except `ai_help` redirect back to the error.
 
 | Action | Params | What it does |
 |---|---|---|
@@ -219,7 +221,7 @@ All are `POST`.
 | `resolve` | `resolved_by_name`, `resolution_comment` | Doesn't run `on_error_resolved` callbacks, so linked issues stay open. Plugins get `on_errors_batch_resolved` |
 | `mute` | `muted_by`, `reason` | |
 | `unmute` | | |
-| `delete` | | Deletes the errors with their occurrences and comments |
+| `delete` | | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts |
 
 The list page offers only Resolve and Delete. IDs that don't exist are skipped.
 
@@ -310,8 +312,9 @@ end
 ```
 
 Pass `handled: false` or `severity: :error`. RED skips reports that are handled warnings, which is
-what a bare `Rails.error.report(e)` and `Rails.error.handle { }` send. `Rails.error.record { }`
-reports and re-raises, and RED records it.
+what `Rails.error.handle { }` sends, and on Rails 7.1 and later a bare `Rails.error.report(e)` too
+(on Rails 7.0, `handled:` is required). `Rails.error.record { }` reports and re-raises, and RED
+records it.
 
 ### ManualErrorReporter.report
 
@@ -366,8 +369,9 @@ end
 ```
 
 - `on_error_logged` runs for a new error and for a resolved error that happens again, but not for
-  each repeat of an open error. `on_critical_error` runs at the same moments when the error is
-  critical.
+  each repeat of an open error. An open error that keeps happening more than 24 hours after RED
+  first recorded it starts a new error record, so it runs again then. `on_critical_error` runs at
+  the same moments when the error is critical.
 - `on_error_resolved` runs when an error is resolved with the Resolve button, `ErrorLog#resolve!`
   or a webhook. A batch resolve or a status change to `resolved` doesn't run it.
 - A callback that raises is rescued and doesn't stop the others.
@@ -392,19 +396,30 @@ RailsErrorDashboard.add_breadcrumb("checkout started", { cart_id: cart.id })
 ```
 
 It adds a step to the current request's trail. It does nothing unless `config.enable_breadcrumbs`
-is on. See [Breadcrumbs](guides/CONFIGURATION.md#breadcrumbs--request-activity-trail-new).
+is on. See [Manual Breadcrumbs](guides/CONFIGURATION.md#manual-breadcrumbs).
 
 ### Jobs
 
 RED's periodic jobs need your scheduler: see
 [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs). Cascade detection also
-needs one if you want it. Nothing in the gem runs it, so there is no cascade data until you do
-(the error page shows it when `enable_error_cascades` is on):
+needs one if you want it. Nothing in the gem runs it and there is no job class for it, so there is
+no cascade data until you do (the error page shows it when `enable_error_cascades` is on):
 
 ```ruby
 RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 # => { detected: 2, updated: 5 }
 ```
+
+With Solid Queue, a `command:` entry in `config/recurring.yml` runs it hourly:
+
+```yaml
+production:
+  red_cascades:
+    command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
+    schedule: every hour
+```
+
+With cron: `bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
 
 ### Reading and changing errors
 
@@ -435,7 +450,8 @@ their buttons.
 ### Internal classes
 
 The `Commands`, `Queries` and `Services` classes back the dashboard's pages. They aren't a public
-API and can change in any release. If you already call them, these are their current signatures:
+API and can change in any release; `CascadeDetector`, above, is the one you need to call yourself.
+If you already call the others, these are their current signatures:
 
 | Call | Returns |
 |---|---|

@@ -33,8 +33,8 @@ header.
 | Action | Effect |
 |---|---|
 | Resolve | Marks the errors resolved, with status `resolved`. It doesn't run your `on_error_resolved` callbacks, so linked issues in your issue tracker stay open. Plugins get `on_errors_batch_resolved` |
-| Delete | Deletes the errors with their occurrences, comments and cascade records. Plugins get `on_errors_batch_deleted` with the IDs |
-| Mute (no button) | Mutes the errors, storing who and why. Unlike muting one error, no comment is added. Plugins get `on_errors_batch_muted` |
+| Delete | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts. Plugins get `on_errors_batch_deleted` with the IDs |
+| Mute (no button) | Mutes the errors, storing who and why. Unlike muting one error with a reason, no comment is added. Plugins get `on_errors_batch_muted` |
 | Unmute (no button) | Unmutes them. Plugins get `on_errors_batch_unmuted` |
 
 Every batch action needs the dashboard login, and anyone who can log in can use all of them.
@@ -87,7 +87,8 @@ RailsErrorDashboard::Commands::BatchDeleteErrors.call(ids)
 
 What the result means:
 
-- `count` is how many errors changed, and `total` is how many IDs you passed.
+- `count` is how many errors were saved, including any already in that state, and `total` is how
+  many IDs you passed.
 - IDs that don't exist are skipped without complaint: `count` is lower than `total`, and `success`
   is still `true`.
 - `success` is `false` when saving an error raised. Then `errors` has a message. For resolve, mute

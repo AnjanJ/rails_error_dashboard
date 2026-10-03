@@ -23,10 +23,13 @@ default.
 ## What you get
 
 In the backtrace on an error's page, each line from your app's `app/` and `lib/` directories gets a
-**View Source** button. Lines from gems, Rails and Ruby don't. The button opens a viewer with:
+**View Source** button. Lines from gems, Rails and Ruby don't, with one exception: a gem that has
+its own `app/` directory, such as Devise or RED itself, gets the button too, and its viewer says
+"Invalid or unsafe file path". The button opens a viewer with:
 
-- **The code around the line**: 5 lines before and after by default, with line numbers, syntax
-  highlighting and the failing line highlighted.
+- **The code around the line**: 5 lines before and after by default, with syntax highlighting and
+  the failing line highlighted. The rows are numbered from 1, not with the file's line numbers; the
+  viewer's header gives the file and line.
 - **Git blame**, if you turn it on: the author of the last change to that line, how long ago it was,
   and its commit message.
 - **A link to your repository**, if you set its URL: a **View Source** button with an external-link
@@ -39,7 +42,8 @@ the code as it was; see [Which commit the links use](#which-commit-the-links-use
 
 With source code integration on, two other features use it:
 
-- **Copy for LLM** on an error's page adds 3 lines around each of the first three app lines.
+- **Copy for LLM** on an error's page adds a few lines of source around lines near the top of the
+  backtrace. It reads the files each time, without the cache.
 - **Line coverage**: with `enable_coverage_tracking`, the viewer can mark which lines ran.
 
 ---
@@ -121,7 +125,7 @@ on) and Render there is nothing to set. Elsewhere, set `GIT_SHA` at deploy time:
 - **Docker:** pass it at build time and keep it in the image:
 
   ```dockerfile
-  ARG GIT_SHA=unknown
+  ARG GIT_SHA
   ENV GIT_SHA=$GIT_SHA
   ```
 
@@ -236,7 +240,7 @@ Rails.application.configure do
     policy.script_src  :self, "https://cdn.jsdelivr.net"
     policy.style_src   :self, :unsafe_inline, "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"
     policy.font_src    :self, :data, "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"
-    policy.img_src     :self, :data
+    policy.img_src     :self, :data, :https # issue trackers' avatars
   end
   config.content_security_policy_nonce_generator = ->(request) { SecureRandom.base64(16) }
   config.content_security_policy_nonce_directives = %w[script-src]
@@ -250,7 +254,8 @@ end
 ### Source code not showing
 
 - **No View Source button:** check `enable_source_code_integration` is on, and restart the app.
-  Only lines in your app's `app/` and `lib/` get the button. An error you opened before turning it
+  Only lines in your app's `app/` and `lib/` (and gems with an `app/` directory) get the button. An
+  error you opened before turning it
   on shows its cached page until it happens again; [clear the cache](#clearing-the-cache) to see the
   button now.
 - **"Could not read source: File not found or not readable":** the file isn't at
@@ -259,9 +264,12 @@ end
 - **"Could not read source: Invalid or unsafe file path":** the path is outside `Rails.root`, has
   `..`, matches a sensitive-file pattern, or is gem or vendor code (see [Security](#security)).
 - **"File too large" or "Binary file cannot be displayed":** the file is over 10 MB, or not text.
+- **Every `lib/` or `config/` line says "File not found", on an app whose root is `/app`** (Heroku,
+  and many Docker images): RED stores `/app/lib/x.rb` as `app/lib/x.rb`, then looks for
+  `Rails.root/app/lib/x.rb`. Lines under `app/` read fine.
 
-RED logs why it refused a path only with `config.enable_internal_logging = true` and
-`config.log_level = :warn` (or `:debug`).
+With `config.enable_internal_logging = true` and `config.log_level = :debug`, RED logs why it
+refused a path. A missing file isn't logged.
 
 ### Git Blame Not Working
 
@@ -298,7 +306,8 @@ the working tree on the server, not the commit that raised the error.
 2. Check the strategy: with `:commit_sha`, the error needs a recorded commit. An error recorded
    before RED could find one (see [Which commit the links use](#which-commit-the-links-use)) links
    to `main`.
-3. Build a link from a console. `error` says why there is none:
+3. Build a link from a console. When there is no link, `error` says why, except when the URL is
+   blank: then both are `nil`.
 
    ```ruby
    generator = RailsErrorDashboard::Services::GithubLinkGenerator.new(

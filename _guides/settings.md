@@ -23,7 +23,8 @@ login.
 ## What the page shows
 
 The page lists options by group. Each row has the option's name as you write it in the initializer,
-its current value, and a one-line description. Click a group's heading to fold it.
+its current value, and a one-line description. Click a group's heading to fold it; the first time,
+it takes two clicks.
 
 The values are the ones the app loaded at boot: your initializer, the environment variables it
 reads, and RED's defaults for everything you didn't set. After you change the initializer or an
@@ -31,6 +32,11 @@ environment variable, restart the app before checking here.
 
 Some rows appear only when their feature is on. For example, `slack_webhook_url` appears only
 while `enable_slack_notifications` is on.
+
+Some rows show what RED worked out rather than what you wrote: `application_name`, `user_model` and
+`total_users_for_impact` are detected when you leave them unset (the last from a live count of your
+users), and the issue tracker's provider and repository come from `git_repository_url` when you
+leave them unset.
 
 | Group | Options |
 |---|---|
@@ -58,8 +64,11 @@ After the groups come two cards:
 - **Active Plugins** lists the plugins you registered, with their name, version, description, and
   whether each is active. See the [Plugin System](/rails_error_dashboard/docs/features/plugin-system/).
 - **Test Notifications** has a **Send Test Error** button. After you confirm, it records a
-  `RailsErrorDashboard::TestError` and sends it to your notification channels, so you can check they
-  work. It is a normal error: resolve or delete it afterwards.
+  `RailsErrorDashboard::TestError`, which is notified like any new error: through Slack, email,
+  Discord and webhooks, subject to `notification_minimum_severity` and `notification_environments`.
+  PagerDuty doesn't get it, because PagerDuty only takes critical errors. Only the first click
+  notifies: a second test error counts as a repeat of the first, so delete the test error before
+  testing again.
 
 ### How values are shown
 
@@ -69,7 +78,7 @@ After the groups come two cards:
 | Numbers | The number, with its unit where it has one: "100 lines", "3600 seconds", "2.0σ" |
 | Lists and rules | A count: "3 items", "2 rules" |
 | Symbols and strings | The value, such as `:silent` |
-| Unset values | **Not set** |
+| Unset values | **Not set**; an empty list shows **Empty** |
 | `issue_tracker_token`, `issue_webhook_secret` | Only **Set** or **Not set** |
 
 > **Webhook URLs and the PagerDuty key are shown in full.** `slack_webhook_url`,
@@ -101,7 +110,7 @@ config.async_logging   # => true
 config.retention_days  # => 90
 ```
 
-There is no HTTP endpoint for it. Inspecting the configuration object (`p config`) shows `[FILTERED]`
+There is no JSON endpoint for it. Inspecting the configuration object (`p config`) shows `[FILTERED]`
 in place of passwords, tokens, keys and webhook URLs.
 
 ---
@@ -124,7 +133,7 @@ Check the variable in the environment the app runs in, then restart the app.
 - **Jobs aren't running.** Saving errors with `async_logging`, notifications and the periodic jobs
   need a worker. See [Running in Production](/rails_error_dashboard/docs/production/).
 - **A channel has no URL.** A channel's row for its URL or key shows **Not set**.
-- **Not enough data yet.** Analytics pages say so, with "Not Enough Data".
+- **Not enough data yet.** Analytics pages say so when they have too little to show.
 
 ### You can't open the page
 

@@ -51,7 +51,7 @@ Define the hooks you need; the base class defines all of them as doing nothing.
 
 | Hook | Argument | Called when |
 |---|---|---|
-| `on_error_logged` | the `ErrorLog` | An error is recorded for the first time |
+| `on_error_logged` | the `ErrorLog` | An error is recorded for the first time. An open error that keeps happening more than 24 hours after RED first recorded it starts a new record, and calls this again |
 | `on_error_recurred` | the `ErrorLog` | An open error happens again, muted errors included |
 | `on_error_reopened` | the `ErrorLog` | A resolved error happens again, which reopens it |
 | `on_error_resolved` | the `ErrorLog` | An error is resolved with the Resolve button, `ErrorLog#resolve!`, or by its linked issue being closed |
@@ -128,8 +128,9 @@ end
 ```
 
 `name` is required. Without it, `register_plugin` raises `NotImplementedError`. If no other plugin
-is registered yet, the nameless one is added before the error, and every later plugin call raises
-too, until the app restarts.
+is registered yet, the nameless one is added before the error. Hooks still run, but until the app
+restarts, `register_plugin`, `unregister_plugin` and the registry's `names`, `info` and `find` raise,
+the Settings page fails with a 500, and any hook failure raises instead of being rescued.
 
 ### Registering
 
@@ -165,8 +166,11 @@ Register plugins in an initializer, so they are registered once, at boot.
   ```
 
 - **`enabled?` is not protected.** An exception raised in `enabled?` is not rescued. During capture,
-  RED gives up on the rest of that capture after the error is saved; in the dashboard, the page or
-  action fails with a 500. Keep `enabled?` simple.
+  RED gives up on the rest of that capture after the error is saved. In the dashboard, the error page
+  and the Resolve, Mute and Unmute actions fail with a 500; a batch action says "Batch operation
+  failed", although the errors were already changed. Keep `enabled?` simple.
+- **`on_register` is not protected either.** An exception there raises out of `register_plugin`, so
+  from an initializer it stops the app booting.
 - Exceptions that aren't `StandardError`s, such as `NotImplementedError`, aren't rescued anywhere.
 
 ---
@@ -232,7 +236,9 @@ RailsErrorDashboard.register_plugin(ErrorAuditPlugin.new)
 ### Tickets in another tracker (Jira)
 
 `ErrorLog` has no column for your own data, so keep the ticket key in a table of yours, here a
-`JiraTicketLink` model with `error_log_id` and `key` columns. Build the dashboard link with
+`JiraTicketLink` model with `error_hash` and `key` columns. Key it by `error_hash`, the error's
+fingerprint: an error that keeps happening for more than 24 hours gets a new record with the same
+fingerprint, and should reuse the ticket. Build the dashboard link with
 `NotificationHelpers.dashboard_url`, which uses `config.dashboard_base_url` and the path the
 dashboard is really mounted at.
 
@@ -249,6 +255,7 @@ class JiraTicketsPlugin < RailsErrorDashboard::Plugin
 
   def on_error_logged(error_log)
     return unless error_log.critical?
+    return if JiraTicketLink.exists?(error_hash: error_log.error_hash)
 
     CreateJiraTicketJob.perform_later(error_log.id) # the job calls create_ticket
   end
@@ -262,11 +269,11 @@ class JiraTicketsPlugin < RailsErrorDashboard::Plugin
                        "#{RailsErrorDashboard::Services::NotificationHelpers.dashboard_url(error_log)}",
       "issuetype" => { "name" => "Bug" }
     })
-    JiraTicketLink.create!(error_log_id: error_log.id, key: issue.key)
+    JiraTicketLink.create!(error_hash: error_log.error_hash, key: issue.key)
   end
 
   def on_error_resolved(error_log)
-    link = JiraTicketLink.find_by(error_log_id: error_log.id)
+    link = JiraTicketLink.find_by(error_hash: error_log.error_hash)
     @jira.Issue.find(link.key).transition("Done") if link
   end
 end
@@ -298,9 +305,9 @@ The gem ships three plugins as starting points. They aren't loaded until you req
 
 | Plugin | What it does |
 |---|---|
-| `Plugins::MetricsPlugin` | Writes a metric line for each event through RED's own logger, which logs nothing unless `enable_internal_logging` is on and `log_level` is `:info` or lower. The StatsD and Datadog calls are commented out |
-| `Plugins::AuditLogPlugin` | Writes a JSON line for each event to the logger you pass |
-| `Plugins::JiraIntegrationPlugin` | Logs what it would send to Jira for critical errors. The API call is commented out. It is enabled only when all four Jira settings are given |
+| `Plugins::MetricsPlugin` | Writes a metric line for new, repeated and resolved errors and for batch resolves and deletes, through RED's own logger, which logs nothing unless `enable_internal_logging` is on and `log_level` is `:info` or lower. The StatsD and Datadog calls are commented out |
+| `Plugins::AuditLogPlugin` | Writes a JSON line to the logger you pass for new, repeated, resolved and viewed errors and for batch resolves and deletes. Mute, unmute and reopen aren't logged |
+| `Plugins::JiraIntegrationPlugin` | Logs what it would send to Jira for critical errors, through RED's own logger (silent by default, as above). The API call is commented out. It is enabled only when all four Jira settings are given |
 
 ```ruby
 # config/initializers/error_dashboard_plugins.rb
@@ -337,7 +344,7 @@ Copy one into your app and change it, rather than relying on it as is.
 
 - **Keep hooks fast.** They run inside capture or a dashboard request. Use a job for anything slow.
 - **Use the batch hooks for batches.** One call for the whole batch, not one per error.
-- **Set up clients in `on_register`**, which runs once.
+- **Create clients when first used**, not in `on_register`: an exception there stops the app booting.
 - **Check dependencies in `enabled?`**, simply. It must not raise:
 
   ```ruby

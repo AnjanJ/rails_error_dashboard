@@ -23,7 +23,7 @@ post JSON.
 module Api
   module V1
     class MobileErrorsController < ActionController::API
-      # Authenticate the app here, the way your other API endpoints do.
+      before_action :authenticate_app!
       rate_limit to: 30, within: 1.minute # Rails 7.2+
 
       MAX_BATCH = 50
@@ -43,6 +43,11 @@ module Api
       end
 
       private
+
+      # Replace with your API's own check. As written, it lets in signed-in users only.
+      def authenticate_app!
+        head :unauthorized unless current_user
+      end
 
       def error_params(error)
         error.permit(:error_type, :message, :stack, :component, :timestamp, :platform, :app_version,
@@ -95,16 +100,20 @@ What each part is for:
 - **`current_user`:** whatever your API uses to know the signed-in user. Leave `user_id` out if the
   app has no users.
 - **The batch action** caps the number of errors per request, and answers only after reporting them,
-  so the app can treat a `201` as delivered.
+  so the app can treat a `201` as delivered. `accepted` counts the errors handed to RED, including
+  any it then ignores, samples out or only counts during a storm.
 - **Protect it.** The endpoint is part of your API, not of the dashboard: RED's
-  [rate limiting](/rails_error_dashboard/docs/reference/api-reference/#rate-limiting) covers only the dashboard. Authenticate it, and
-  limit it: `rate_limit` needs Rails 7.2 or later; on older Rails, use Rack::Attack. An
+  [rate limiting](/rails_error_dashboard/docs/reference/api-reference/#rate-limiting) covers only the dashboard. As written,
+  `authenticate_app!` refuses anyone who isn't signed in; replace it with your API's own check, such
+  as an app token, if you want errors from before sign-in. The client chooses `error_type`, and
+  severity comes from it, so an open endpoint lets anyone send critical alerts. Limit it too:
+  `rate_limit` needs Rails 7.2 or later; on older Rails, use Rack::Attack. An
   `ActionController::API` controller has no CSRF check; if yours inherits from
   `ActionController::Base`, add `skip_forgery_protection`.
 
 `ManualErrorReporter.report` returns the saved error, or `nil` when `config.async_logging` is on
-(a background job saves it) or when RED ignores or samples the error. The endpoint doesn't depend on
-the return value.
+(a background job saves it), or when RED ignores the error, samples it out, or only counts it during
+a storm. The endpoint doesn't depend on the return value.
 
 ---
 
@@ -177,6 +186,8 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
 ## Try it
 
+Add the header your API signs requests in with; without it, `authenticate_app!` answers `401`.
+
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/v1/mobile_errors \
   -H 'Content-Type: application/json' \
@@ -197,15 +208,16 @@ more than one platform. Filter by platform with `/red/errors?platform=iOS`.
 - **Component and context:** with the request params on the error's page.
 - **Backtrace:** the stack you sent, cut to `config.max_backtrace_lines` (100 by default).
 - **User:** the `user_id` you sent.
-- **Analytics:** the Analytics page counts mobile (iOS and Android) and API errors.
+- **Analytics:** the Analytics page's "Errors by Platform" chart, shown once errors come from more
+  than one platform, and resolution time by platform.
 
 ---
 
 ## Notifications
 
 Mobile errors go to the channels you set up, under the same rules as server errors. A Slack message
-has the application, error type, platform, environment, time and message, then the user, IP address
-and request URL (`mobile_app`, from `source:`, since there is no request URL), a **View Details**
+has the application, error type, platform, environment, time and message, then the user (when the
+error has one), IP address and request URL (`mobile_app`, from `source:`, since there is no request URL), a **View Details**
 button and the error's ID. An email has the platform, the first 10 backtrace lines and a link to the
 dashboard. See [Notifications](/rails_error_dashboard/docs/guides/notifications/).
 
@@ -215,8 +227,9 @@ dashboard. See [Notifications](/rails_error_dashboard/docs/guides/notifications/
 
 ### Errors don't appear in the dashboard
 
-1. Check the endpoint answers `201`, with the `curl` above. A `400` means the JSON has no `error` (or
-   `errors`) key. A `429` means the endpoint's rate limit.
+1. Check the endpoint answers `201`, with the `curl` above. A `401` means `authenticate_app!` didn't
+   find a signed-in user. A `400` means the JSON has no `error` (or `errors`) key. A `429` means the
+   endpoint's rate limit.
 2. With `config.async_logging` on, a background job saves each error, so a worker must be running.
    See [Run a worker for RED's jobs](/rails_error_dashboard/docs/production/#1-run-a-worker-for-reds-jobs).
 3. Check RED isn't dropping the error on purpose: `ignored_exceptions`, `sampling_rate`, or storm
@@ -228,7 +241,7 @@ The app didn't send `platform`, or sent a value the endpoint doesn't map. Send `
 
 ### The time is wrong
 
-The app sent `timestamp` in seconds, or as a string. The endpoint expects milliseconds.
+The app sent `timestamp` in seconds, or as a date string, instead of milliseconds since the epoch.
 
 ### Too many errors
 
