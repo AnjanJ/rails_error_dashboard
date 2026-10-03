@@ -633,53 +633,17 @@ puts new_pattern[:pattern_type]
 
 ## Configuration
 
-### Pattern Detection Settings
+There are no settings for pattern or burst detection. The rules are fixed in
+`PatternDetector`:
 
-```ruby
-# In error_log.rb or pattern_detector.rb
+| Rule | Value |
+|---|---|
+| Lookback | The `days:` you pass: 30 by default for patterns, 7 for bursts |
+| Peak hour | An hour with more than twice the average count per hour |
+| Burst | A run of 5 or more errors, each within 60 seconds of the one before |
+| Burst intensity | `:low` 5-9 errors, `:medium` 10-19, `:high` 20 or more |
 
-# Lookback period for pattern analysis
-PATTERN_LOOKBACK_DAYS = 30
-
-# Peak threshold (hours with count > avg * threshold)
-PEAK_THRESHOLD_MULTIPLIER = 1.5
-
-# Minimum errors for pattern detection
-MIN_ERRORS_FOR_PATTERN = 10
-```
-
-### Burst Detection Settings
-
-```ruby
-# In pattern_detector.rb
-
-# Inter-arrival threshold for bursts (seconds)
-BURST_INTER_ARRIVAL_THRESHOLD = 60
-
-# Minimum errors to qualify as burst
-BURST_MIN_ERROR_COUNT = 5
-
-# Burst intensity thresholds
-BURST_INTENSITY_THRESHOLDS = {
-  low: 10,
-  medium: 25,
-  high: 50
-}
-```
-
-### Customization
-
-To adjust burst detection sensitivity:
-
-```ruby
-# Stricter (fewer bursts detected)
-BURST_INTER_ARRIVAL_THRESHOLD = 30  # 30 seconds
-BURST_MIN_ERROR_COUNT = 10
-
-# More lenient (more bursts detected)
-BURST_INTER_ARRIVAL_THRESHOLD = 120  # 2 minutes
-BURST_MIN_ERROR_COUNT = 3
-```
+For other rules, analyse the occurrence timestamps yourself (see [Via Service](#via-service)).
 
 ## Best Practices
 
@@ -780,21 +744,15 @@ end
 
 ### "Pattern detection shows no data"
 
-**Cause**: Not enough errors to detect pattern
+**Cause**: `enable_occurrence_patterns` is off (`occurrence_pattern` returns `{}`), or there is
+nothing in the lookback (`pattern_type` is `:none`).
 
-**Requirements**:
-- At least 10 errors in lookback period
-- Errors must have occurred_at timestamps
+`occurrence_pattern` analyses one timestamp per error record, not per occurrence, so an error that
+happened many times can still have very little to analyse. Check the occurrences instead:
 
-**Solution**:
 ```ruby
-# Check error count
-ErrorLog.where(error_type: "YourError").count
-# If < 10, wait for more data
-
-# Check timestamps
-ErrorLog.where(error_type: "YourError").pluck(:occurred_at)
-# Ensure timestamps are present and varied
+ids = RailsErrorDashboard::ErrorLog.where(error_type: "YourError").ids
+RailsErrorDashboard::ErrorOccurrence.where(error_log_id: ids).where("occurred_at >= ?", 30.days.ago).count
 ```
 
 ### "Pattern type always shows 'uniform'"
@@ -807,14 +765,10 @@ pattern = error.occurrence_pattern
 puts pattern[:hourly_distribution]
 # If all hours have similar counts → truly uniform
 
-# If some hours have 0, some have many → check peak threshold
+# If some hours have 0, some have many, a peak hour still needs more than twice the average
 ```
 
-**Solution**: Adjust peak threshold if needed:
-```ruby
-# Lower threshold to detect weaker patterns
-PEAK_THRESHOLD_MULTIPLIER = 1.2  # Was 1.5
-```
+The thresholds are fixed. For a different rule, analyse the occurrence timestamps yourself.
 
 ### "Burst detection shows no bursts"
 
@@ -835,14 +789,9 @@ timestamps.each_with_index do |t, i|
 end
 ```
 
-**Solution**: Adjust burst parameters if appropriate:
-```ruby
-# Allow larger gaps
-BURST_INTER_ARRIVAL_THRESHOLD = 120  # 2 minutes
-
-# Require fewer errors
-BURST_MIN_ERROR_COUNT = 3
-```
+A burst needs 5 or more errors, each within 60 seconds of the one before; these are fixed.
+`error_bursts` reads one timestamp per error record, so pass the occurrence timestamps above to
+`PatternDetector.detect_bursts(timestamps:)` instead.
 
 ### "Heatmap visualization not showing"
 

@@ -852,7 +852,8 @@ RailsErrorDashboard.configuration.enable_source_code_integration
 **Common Causes**:
 1. Feature not enabled in configuration
 2. File path is outside Rails.root
-3. Frame category is not `:app` (gem frames don't show source)
+3. Frame category is not `:app` (gem frames don't show source, except gems with an `app/`
+   directory, whose viewer says "Invalid or unsafe file path")
 4. File doesn't exist or isn't readable
 
 **Solutions**:
@@ -874,7 +875,7 @@ RailsErrorDashboard.configuration.enable_source_code_integration
    # => /Users/you/myapp
    ```
 
-**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#troubleshooting) for 10+ specific scenarios and solutions.
+**Detailed Troubleshooting**: See [Source Code Integration Documentation](SOURCE_CODE_INTEGRATION.md#troubleshooting).
 
 ---
 
@@ -923,7 +924,7 @@ git --version
 
 ### Repository Links Not Generating
 
-**Problem**: No "View on GitHub" button appearing.
+**Problem**: No repository link: the **View Source** button with the external-link icon (tooltip "View on GitHub") is missing from the viewer's header.
 
 **Quick Check**:
 ```ruby
@@ -1052,20 +1053,24 @@ ls -la app/controllers/users_controller.rb
 
 ### Caching Issues (Stale Code)
 
-**Problem**: Seeing old/stale source code after making changes.
+**Problem**: Seeing old/stale source code, blame or links after making changes.
 
-Source code is cached for `source_code_cache_ttl` seconds (one hour by default), under keys
-starting with `source_code/`; git blame under keys starting with `git_blame/`.
+Two caches are involved. Each line's source and blame are cached for `source_code_cache_ttl`
+seconds (one hour by default), under keys starting with `source_code/` and `git_blame/`. And where
+fragment caching is on, as in production, each error's rendered details section, viewers included,
+is cached until the error changes (it happens again, or its status, assignee or priority changes).
 
-**Quick Fix**: wait for the cache to expire, or delete those keys:
+**Quick Fix**: wait for the error to change and the TTL to pass, or clear the cache. Deleting only
+the source and blame keys doesn't refresh an error page that is already cached:
 ```ruby
 # In Rails console. Works on the memory, file and Redis stores. Solid Cache, the
-# Rails 8 default, doesn't support delete_matched: there, wait for the TTL.
+# Rails 8 default, doesn't support delete_matched.
 Rails.cache.delete_matched("source_code/*")
 Rails.cache.delete_matched("git_blame/*")
 ```
 
-Don't run `Rails.cache.clear` in production: it empties your whole app's cache.
+`Rails.cache.clear` refreshes everything, but it empties your whole app's cache. See
+[Clearing the cache](SOURCE_CODE_INTEGRATION.md#clearing-the-cache).
 
 **Development Setup**:
 ```ruby
@@ -1079,17 +1084,9 @@ end
 
 ### Complete Troubleshooting Guide
 
-For comprehensive troubleshooting with 10+ scenarios, solutions, and examples, see:
-**[Source Code Integration Documentation - Troubleshooting Section](SOURCE_CODE_INTEGRATION.md#troubleshooting)**
-
-Includes solutions for:
-- File not found errors
-- Symlink issues
-- Docker volume problems
-- SELinux/AppArmor restrictions
-- Git blame showing wrong author
-- Configuration mistakes
-- And more...
+See **[Source Code Integration Documentation - Troubleshooting Section](SOURCE_CODE_INTEGRATION.md#troubleshooting)**
+for: no View Source button, "Could not read source" messages, `lib/` lines on an app at `/app`, git
+blame, repository links, links that 404, slow error pages, and clearing the cache.
 
 ---
 

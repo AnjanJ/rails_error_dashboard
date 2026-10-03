@@ -314,10 +314,9 @@ config.use_separate_database = true   # Separate database
 
 ### Batch Operations
 - **Bulk resolve** multiple errors at once
-- **Bulk delete** errors with confirmation
+- **Bulk delete** errors (no confirmation dialog: Delete acts at once)
 - **Checkbox selection** UI
 - **Action toolbar** for batch operations
-- **Confirmation dialogs** to prevent accidents
 - **Plugin events** triggered for batch actions
 
 ### Error Grouping
@@ -902,14 +901,10 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 - **Lifecycle hooks** throughout error handling
 
 ### Available Events
-- `before_error_logged` - Before error is saved
-- `after_error_logged` - After error is saved
-- `before_error_resolved` - Before marking resolved
-- `after_error_resolved` - After marking resolved
-- `before_batch_resolve` - Before bulk resolve
-- `after_batch_resolve` - After bulk resolve
-- `before_batch_delete` - Before bulk delete
-- `after_batch_delete` - After bulk delete
+- `on_error_logged`, `on_error_recurred`, `on_error_reopened` - An error is recorded, happens again, or reopens
+- `on_error_resolved`, `on_error_muted`, `on_error_unmuted` - One error is resolved, muted or unmuted
+- `on_errors_batch_resolved`, `on_errors_batch_muted`, `on_errors_batch_unmuted`, `on_errors_batch_deleted` - Batch actions
+- `on_error_viewed` - Someone opens the error's page
 
 ### Built-in Plugins (Examples)
 

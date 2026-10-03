@@ -390,7 +390,7 @@ config.git_repository_url = "https://github.com/user/repo"  # enables SHA links
 <details>
 <summary><strong>Source Code Integration + Git Blame</strong></summary>
 
-View actual source code directly in error backtraces with +/-7 lines of context. Git blame shows who last modified the code, when, and the commit message. Repository links jump to GitHub/GitLab/Bitbucket at the exact line.
+View actual source code directly in error backtraces, 5 lines before and after the error line by default. Git blame shows who last modified the code, when, and the commit message. Repository links jump to the exact line on GitHub, GitLab, Bitbucket or Codeberg.
 
 ```ruby
 config.enable_source_code_integration = true
