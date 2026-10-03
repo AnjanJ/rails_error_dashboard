@@ -1341,7 +1341,7 @@ If you've tried the solutions above and still have issues:
 
 - **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - All configuration options
 - **[Settings Dashboard](/rails_error_dashboard/docs/guides/settings/)** - Verify current configuration
-- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - API endpoints and Ruby API
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - The dashboard's HTTP routes and the Ruby API
 - **[QUICKSTART](/rails_error_dashboard/docs/quickstart/)** - Installation and setup
 
 ---

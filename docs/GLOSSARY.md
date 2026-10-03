@@ -463,7 +463,7 @@ Yet Another JIT compiler — Ruby's built-in JIT (Ruby 3.1+). `RubyVM::YJIT.runt
 
 - **[Configuration Guide](guides/CONFIGURATION.md)** - Complete configuration reference
 - **[Features Documentation](FEATURES.md)** - All feature details
-- **[API Reference](API_REFERENCE.md)** - API endpoint documentation
+- **[API Reference](API_REFERENCE.md)** - The dashboard's HTTP routes and the Ruby API
 - **[Plugin System](PLUGIN_SYSTEM.md)** - Building custom plugins
 
 ---

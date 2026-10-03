@@ -779,7 +779,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 ### Advanced
 - **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** — Track multiple applications
 - **[Plugin System](docs/PLUGIN_SYSTEM.md)** — Build custom integrations
-- **[API Reference](docs/API_REFERENCE.md)** — Complete API documentation
+- **[API Reference](docs/API_REFERENCE.md)** — The dashboard's HTTP routes and the Ruby API
 - **[Customization](docs/CUSTOMIZATION.md)** — Customize everything
 - **[Database Options](docs/guides/DATABASE_OPTIONS.md)** — Separate database setup
 - **[Database Optimization](docs/guides/DATABASE_OPTIMIZATION.md)** — Performance tuning

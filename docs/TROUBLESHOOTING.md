@@ -1341,7 +1341,7 @@ If you've tried the solutions above and still have issues:
 
 - **[Configuration Guide](guides/CONFIGURATION.md)** - All configuration options
 - **[Settings Dashboard](guides/SETTINGS.md)** - Verify current configuration
-- **[API Reference](API_REFERENCE.md)** - API endpoints and Ruby API
+- **[API Reference](API_REFERENCE.md)** - The dashboard's HTTP routes and the Ruby API
 - **[QUICKSTART](QUICKSTART.md)** - Installation and setup
 
 ---

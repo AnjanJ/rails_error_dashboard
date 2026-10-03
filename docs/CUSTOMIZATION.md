@@ -632,7 +632,7 @@ end
 
 - [Configuration Guide](guides/CONFIGURATION.md) - Complete reference
 - [Plugin System](PLUGIN_SYSTEM.md) - Build custom plugins
-- [API Reference](API_REFERENCE.md) - Full API documentation
+- [API Reference](API_REFERENCE.md) - The dashboard's HTTP routes and the Ruby API
 - [Database Options](guides/DATABASE_OPTIONS.md) - Separate database setup
 
 ---

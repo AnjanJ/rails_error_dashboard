@@ -453,7 +453,7 @@ Yet Another JIT compiler — Ruby's built-in JIT (Ruby 3.1+). `RubyVM::YJIT.runt
 
 - **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration reference
 - **[Features Documentation](/rails_error_dashboard/docs/features/)** - All feature details
-- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - API endpoint documentation
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - The dashboard's HTTP routes and the Ruby API
 - **[Plugin System](/rails_error_dashboard/docs/features/plugin-system/)** - Building custom plugins
 
 ---
