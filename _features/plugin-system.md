@@ -192,7 +192,8 @@ class ErrorMetricsPlugin < RailsErrorDashboard::Plugin
 
   def on_error_resolved(error_log)
     StatsD.increment("errors.resolved")
-    StatsD.timing("errors.time_to_resolve", error_log.resolved_at - error_log.first_seen_at)
+    seconds = error_log.resolved_at - error_log.first_seen_at
+    StatsD.timing("errors.time_to_resolve", (seconds * 1000).round) # timing takes milliseconds
   end
 
   private
@@ -274,10 +275,22 @@ class JiraTicketsPlugin < RailsErrorDashboard::Plugin
 
   def on_error_resolved(error_log)
     link = JiraTicketLink.find_by(error_hash: error_log.error_hash)
-    @jira.Issue.find(link.key).transition("Done") if link
+    CloseJiraTicketJob.perform_later(link.key) if link # the job calls close_ticket
+  end
+
+  def close_ticket(key)
+    issue = @jira.Issue.find(key)
+    done = issue.transitions.all.find { |transition| transition.name == "Done" }
+    issue.transitions.build.save!("transition" => { "id" => done.id }) if done
   end
 end
 ```
+
+Both Jira calls run in your jobs, which get the plugin with
+`RailsErrorDashboard::PluginRegistry.find("Jira Tickets")`. That keeps Jira's response time out of
+capture and out of the Resolve button, and a failed call fails the job, where you see it and it can
+be retried; inside a hook, RED would rescue it, and log nothing at the default `log_level`. Use the
+transition name your Jira workflow has.
 
 ### Production only
 
@@ -401,25 +414,25 @@ require "rails_helper"
 
 RSpec.describe MyCustomPlugin do
   let(:plugin) { described_class.new }
-  let(:error_log) do
-    RailsErrorDashboard.configuration.async_logging = false
-    RailsErrorDashboard::ManualErrorReporter.report(error_type: "StandardError", message: "test")
-  end
+  let(:error_log) { RailsErrorDashboard::ErrorLog.new(error_type: "NoMethodError", message: "test") }
 
   it "has a name" do
     expect(plugin.name).to eq("My Custom Plugin")
   end
 
-  it "doesn't raise when the service fails" do
-    allow(Rails.logger).to receive(:info).and_raise(StandardError, "down")
-    expect { plugin.safe_execute(:on_error_logged, error_log) }.not_to raise_error
+  it "logs the error type" do
+    allow(Rails.logger).to receive(:info)
+    plugin.on_error_logged(error_log)
+    expect(Rails.logger).to have_received(:info).with("New error: NoMethodError")
   end
 end
 ```
 
-The gem's own factories aren't part of the gem, so create errors with `ManualErrorReporter` or
-your own factory. Calling a hook directly, as `plugin.on_error_logged(error_log)`, skips the rescue;
-call it through `safe_execute` to test what RED does.
+Call hooks directly, as above, so a hook that raises fails the spec. Through `safe_execute`, RED
+rescues the exception and the spec passes anyway. An unsaved `ErrorLog.new` is enough for a hook
+that only reads the error. For one that needs a saved error, create it with your own factory (the
+gem's factories aren't part of the gem), or with `ManualErrorReporter` and `async_logging` off; if
+you change the configuration in a spec, set it back afterwards, because it is global.
 
 ---
 
