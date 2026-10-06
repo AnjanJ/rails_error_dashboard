@@ -177,7 +177,7 @@ Identifies parent-child relationships between errors:
 ### How It Works
 
 Cascades are found by `CascadeDetector`. Nothing in the gem runs it: call it from your scheduler
-(hourly works well), or there are no cascades to show.
+(see [Scheduling](#scheduling)), or there are no cascades to show.
 
 ```ruby
 # Look for cascades in the last 24 hours (run it on a schedule)
@@ -201,33 +201,44 @@ end
 ### Detection Algorithm
 
 1. **Time Window**: For each occurrence of error A, looks at the 60 seconds after it
-2. **Pattern Tracking**: Each time error B follows A within that window counts once
-3. **Minimum Frequency**: A pair seen 3+ times in the lookback is stored as a cascade
-4. **Probability Calculation**, stored with it:
+2. **Pattern Tracking**: Each occurrence of B in that window counts once for that A. One A followed
+   by three Bs counts 3, and so does one B that follows three As
+3. **Minimum Frequency**: A pair counted 3+ times in the lookback is stored as a cascade, with that
+   count as its frequency
+4. **Later runs**: Each later run that counts the pair 3+ times again adds 1 to its frequency,
+   however many it counted
+5. **Probability Calculation**, recalculated on every run that finds the pair:
    ```text
-   probability = times_B_after_A / total_A_occurrences
+   probability = frequency / all of A's stored occurrences
    ```
+
+Because several Bs after one A each count, the probability can be over 100%, even after one run.
+Read it as how strongly B follows A, not as a true percentage.
 
 ### Cascade Probability Levels
 
-- **High (70-100%)**: Strong cascade relationship
+- **High (70% and up)**: Strong cascade relationship
 - **Medium (50-70%)**: Moderate cascade relationship
 - **Low (<50%)**: Filtered out by default
 
 ### Scheduling
 
 Nothing in the gem runs cascade detection, and there is no job class for it. Schedule
-`CascadeDetector.call` yourself; each run updates the patterns it already stored. With Solid Queue,
-in `config/recurring.yml`:
+`CascadeDetector.call` yourself, with `lookback_hours` equal to the time between runs. Windows that
+overlap count the same errors again: an hourly run that looks back 24 hours finds the same pairs 24
+times a day, adds 1 to their frequency each time, and pushes the probability up with no new errors.
+
+With Solid Queue, in `config/recurring.yml`:
 
 ```yaml
 production:
   red_cascades:
     command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
-    schedule: every hour
+    schedule: every day at 5am
 ```
 
-With cron: `bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
+With cron, once a day:
+`bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
 
 ### Use Cases
 
@@ -262,7 +273,8 @@ end
 
 ### Cascade Detection Configuration
 
-The 60-second window and the minimum of 3 are constants. `lookback_hours` is the only option:
+The 60-second window and the minimum of 3 are constants. `lookback_hours` is the only option. Keep
+it equal to the time between runs (see [Scheduling](#scheduling)); for a run every two days:
 
 ```ruby
 RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 48)

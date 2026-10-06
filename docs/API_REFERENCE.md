@@ -410,16 +410,20 @@ RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 # => { detected: 2, updated: 5 }
 ```
 
-With Solid Queue, a `command:` entry in `config/recurring.yml` runs it hourly:
+Keep `lookback_hours` equal to the time between runs: each run adds 1 to the frequency of every
+cascade it finds again, so windows that overlap count the same errors twice (see
+[Scheduling](features/ADVANCED_ERROR_GROUPING.md#scheduling)). With Solid Queue, a `command:` entry in
+`config/recurring.yml` runs it daily:
 
 ```yaml
 production:
   red_cascades:
     command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
-    schedule: every hour
+    schedule: every day at 5am
 ```
 
-With cron: `bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
+With cron, once a day:
+`bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
 
 ### Reading and changing errors
 
