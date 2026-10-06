@@ -141,7 +141,7 @@ it.
 ### Check it works
 
 ```bash
-bin/rails runner 'c = RailsErrorDashboard.configuration; p [c.enable_source_code_integration, c.git_repository_url, c.git_branch_strategy, ENV["GIT_SHA"]]'
+bin/rails runner 'c = RailsErrorDashboard.configuration; p [ c.enable_source_code_integration, c.git_repository_url, c.git_branch_strategy, ENV["GIT_SHA"] ]'
 ```
 
 Then trigger an error in one of your controllers, open it in the dashboard, and click **View

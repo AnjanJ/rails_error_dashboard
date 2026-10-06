@@ -44,7 +44,7 @@ leave them unset.
 | Multi-App Support | `application_name`, `environment`, `database`, `use_separate_database` |
 | User Integration | `user_model`, `total_users_for_impact` |
 | Performance Settings | `async_logging`, `async_adapter`, `enable_rate_limiting`, `rate_limit_per_minute` |
-| Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, PagerDuty, webhooks) its switch and its URL, key or recipients; then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
+| Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, PagerDuty, webhooks) its switch and its URL, key or recipients (for email, also `notification_email_from`); then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
 | Advanced Analytics Features | `enable_similar_errors`, `enable_co_occurring_errors`, `enable_error_cascades`, `enable_error_correlation`, `enable_platform_comparison`, `enable_occurrence_patterns`, `enable_baseline_alerts`, `baseline_alert_threshold_std_devs`, `baseline_alert_severities`, `baseline_alert_cooldown_minutes` |
 | Source Code Integration | `enable_source_code_integration`, `source_code_context_lines`, `enable_git_blame`, `source_code_cache_ttl`, `only_show_app_code_source`, `git_branch_strategy` |
 | Breadcrumbs | `enable_breadcrumbs`, `breadcrumb_buffer_size`, `enable_n_plus_one_detection`, `n_plus_one_threshold` |
