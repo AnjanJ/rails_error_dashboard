@@ -58,29 +58,29 @@ Cyclical patterns are **repeating temporal rhythms** in error occurrences.
 The system analyzes error occurrence timestamps to detect patterns:
 
 ```ruby
-def analyze_cyclical_pattern(error_type:, platform:, days: 30)
-  # Step 1: Group errors by hour (0-23) and weekday (0-6)
+def analyze_cyclical_pattern(timestamps:, days: 30)
+  # Step 1: Group the timestamps by hour (0-23) and weekday (0-6)
   hourly_distribution = { 0 => 5, 1 => 3, ..., 9 => 45, ... }
   weekday_distribution = { 0 => 120, 1 => 95, ... }  # 0=Sunday, 1=Monday
 
-  # Step 2: Identify peak hours and days
-  peak_hours = hours where count > average * 1.5
-  peak_weekdays = weekdays where count > average * 1.5
+  # Step 2: Classify the pattern from the two distributions
+  pattern_type = determine_pattern_type(hourly_distribution, weekday_distribution)
+  # => :business_hours, :night, :weekend, :uniform (:none with no timestamps)
 
-  # Step 3: Classify pattern type
-  pattern_type = classify_pattern(peak_hours, peak_weekdays)
-  # => :business_hours, :night, :weekend, :uniform
+  # Step 3: Peak hours: hours with more than twice the average count
+  peak_hours = find_peak_hours(hourly_distribution)
 
-  # Step 4: Calculate pattern strength (0.0 - 1.0)
-  pattern_strength = coefficient_of_variation(hourly_distribution)
+  # Step 4: Pattern strength (0.0 - 1.0)
+  pattern_strength = calculate_pattern_strength(hourly_distribution)
 
   {
     pattern_type: pattern_type,
-    pattern_strength: pattern_strength,
     peak_hours: peak_hours,
-    peak_weekdays: peak_weekdays,
     hourly_distribution: hourly_distribution,
-    weekday_distribution: weekday_distribution
+    weekday_distribution: weekday_distribution,
+    pattern_strength: pattern_strength,
+    total_errors: timestamps.size,
+    analysis_days: days
   }
 end
 ```
@@ -241,7 +241,6 @@ pattern = error.occurrence_pattern(days: 30)
 puts "Pattern Type: #{pattern[:pattern_type]}"
 puts "Strength: #{pattern[:pattern_strength]}"
 puts "Peak Hours: #{pattern[:peak_hours].join(', ')}"
-puts "Peak Weekdays: #{pattern[:peak_weekdays].join(', ')}"
 
 # Hourly distribution
 pattern[:hourly_distribution].each do |hour, count|
@@ -249,11 +248,21 @@ pattern[:hourly_distribution].each do |hour, count|
 end
 ```
 
+`occurrence_pattern` returns `{}` unless `enable_occurrence_patterns` is on. It, `error_bursts`, and
+the error page's pattern section analyse one timestamp per error record of that type and platform:
+the time RED first recorded each one, not every occurrence. For a pattern over every occurrence,
+call the service with the occurrences' times.
+
 #### Via Service
 ```ruby
+logs = RailsErrorDashboard::ErrorLog.where(error_type: "NoMethodError", platform: "iOS")
+timestamps = RailsErrorDashboard::ErrorOccurrence
+  .where(error_log_id: logs.select(:id))
+  .where("occurred_at >= ?", 30.days.ago)
+  .pluck(:occurred_at)
+
 pattern = RailsErrorDashboard::Services::PatternDetector.analyze_cyclical_pattern(
-  error_type: "NoMethodError",
-  platform: "iOS",
+  timestamps: timestamps,
   days: 30
 )
 ```
@@ -289,9 +298,9 @@ Burst:
 ### Burst Detection Algorithm
 
 ```ruby
-def detect_bursts(error_type:, platform:, days: 7)
-  # Step 1: Get all occurrence timestamps, sorted
-  timestamps = get_all_occurrences.sort
+def detect_bursts(timestamps:)
+  # Step 1: Sort the timestamps
+  timestamps = timestamps.sort
 
   # Step 2: Detect bursts
   bursts = []
@@ -337,10 +346,9 @@ def finalize_burst(burst_data)
   {
     start_time: burst_data[:start_time],
     end_time: burst_data[:end_time],
-    duration_seconds: burst_data[:end_time] - burst_data[:start_time],
+    duration_seconds: (burst_data[:end_time] - burst_data[:start_time]).round(1),
     error_count: burst_data[:errors].count,
-    errors_per_second: burst_data[:errors].count / duration_seconds,
-    burst_intensity: classify_intensity(burst_data[:errors].count)
+    burst_intensity: classify_burst_intensity(burst_data[:errors].count)
   }
 end
 ```
@@ -351,19 +359,19 @@ Bursts are classified by severity:
 
 | Intensity | Error Count | Description |
 |-----------|-------------|-------------|
-| **Low** | 5-10 errors | Minor burst, monitor |
-| **Medium** | 11-25 errors | Moderate burst, investigate |
-| **High** | 26-50 errors | Significant burst, urgent |
-| **Critical** | 50+ errors | Severe burst, immediate action |
+| **Low** | 5-9 errors | Minor burst, monitor |
+| **Medium** | 10-19 errors | Moderate burst, investigate |
+| **High** | 20+ errors | Significant burst, urgent |
 
 **Calculation**:
 ```ruby
-def classify_intensity(count)
-  case count
-  when 0..10 then :low
-  when 11..25 then :medium
-  when 26..50 then :high
-  else :critical
+def classify_burst_intensity(count)
+  if count >= 20
+    :high
+  elsif count >= 10
+    :medium
+  else
+    :low
   end
 end
 ```
@@ -400,18 +408,19 @@ bursts.each do |burst|
   puts "Burst at #{burst[:start_time]}"
   puts "  Duration: #{burst[:duration_seconds]}s"
   puts "  Count: #{burst[:error_count]} errors"
-  puts "  Rate: #{burst[:errors_per_second]} errors/sec"
   puts "  Intensity: #{burst[:burst_intensity]}"
 end
 ```
 
 #### Via Service
 ```ruby
-bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(
-  error_type: "NoMethodError",
-  platform: "iOS",
-  days: 7
-)
+logs = RailsErrorDashboard::ErrorLog.where(error_type: "NoMethodError", platform: "iOS")
+timestamps = RailsErrorDashboard::ErrorOccurrence
+  .where(error_log_id: logs.select(:id))
+  .where("occurred_at >= ?", 7.days.ago)
+  .pluck(:occurred_at)
+
+bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps)
 ```
 
 ## Pattern Visualization
@@ -539,28 +548,38 @@ puts pattern[:peak_hours]
 
 ### Scenario 3: Responding to Error Burst
 
-**Problem**: "500 errors in 2 minutes, what happened?"
+**Problem**: "60 errors in 2 minutes, what happened?"
 
-**Analysis**:
+**Analysis**: a burst of one error is one error record with many occurrences, and
+`error_bursts` reads one timestamp per record, so read the occurrences:
+
 ```ruby
-error = ErrorLog.find_by(error_type: "NoMethodError")
-bursts = error.error_bursts(days: 1)
+error = RailsErrorDashboard::ErrorLog.find_by(error_type: "NoMethodError")
+logs = RailsErrorDashboard::ErrorLog.where(error_type: error.error_type, platform: error.platform)
+timestamps = RailsErrorDashboard::ErrorOccurrence
+  .where(error_log_id: logs.select(:id))
+  .where("occurred_at >= ?", 1.day.ago)
+  .pluck(:occurred_at)
+bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps)
 
-latest_burst = bursts.first
+latest_burst = bursts.last # bursts come oldest first
 puts latest_burst
 # => {
-#   start_time: "2025-12-25 14:30:00",
-#   duration_seconds: 120,
-#   error_count: 500,
-#   burst_intensity: :critical,
-#   errors_per_second: 4.2
+#   start_time: 2025-12-25 14:30:00 UTC,
+#   end_time: 2025-12-25 14:31:58 UTC,
+#   duration_seconds: 118.0,
+#   error_count: 60,
+#   burst_intensity: :high
 # }
 ```
 
 **Interpretation**:
-- Critical burst: 500 errors in 2 minutes
-- Very high rate: 4.2 errors/second
+- High-intensity burst: 60 errors in 2 minutes
+- About one error every 2 seconds
 - Indicates sudden failure, not gradual degradation
+
+In a bigger flood, storm protection keeps an occurrence for only some of the errors (by default,
+past 30 in a minute for one error, every 10th), so `error_count` can be lower than what happened.
 
 **Action**:
 1. Check deployment timeline (was there a release at 14:30?)
@@ -579,9 +598,6 @@ pattern = error.occurrence_pattern(days: 90)
 
 puts pattern[:pattern_type]
 # => :weekend
-
-puts pattern[:peak_weekdays]
-# => [0, 6]  # Sunday, Saturday
 
 puts pattern[:weekday_distribution]
 # => { 0 => 450, 1 => 120, 2 => 110, ..., 6 => 420 }
@@ -628,53 +644,17 @@ puts new_pattern[:pattern_type]
 
 ## Configuration
 
-### Pattern Detection Settings
+There are no settings for pattern or burst detection. The rules are fixed in
+`PatternDetector`:
 
-```ruby
-# In error_log.rb or pattern_detector.rb
+| Rule | Value |
+|---|---|
+| Lookback | The `days:` you pass: 30 by default for patterns, 7 for bursts |
+| Peak hour | An hour with more than twice the average count per hour |
+| Burst | A run of 5 or more errors, each within 60 seconds of the one before |
+| Burst intensity | `:low` 5-9 errors, `:medium` 10-19, `:high` 20 or more |
 
-# Lookback period for pattern analysis
-PATTERN_LOOKBACK_DAYS = 30
-
-# Peak threshold (hours with count > avg * threshold)
-PEAK_THRESHOLD_MULTIPLIER = 1.5
-
-# Minimum errors for pattern detection
-MIN_ERRORS_FOR_PATTERN = 10
-```
-
-### Burst Detection Settings
-
-```ruby
-# In pattern_detector.rb
-
-# Inter-arrival threshold for bursts (seconds)
-BURST_INTER_ARRIVAL_THRESHOLD = 60
-
-# Minimum errors to qualify as burst
-BURST_MIN_ERROR_COUNT = 5
-
-# Burst intensity thresholds
-BURST_INTENSITY_THRESHOLDS = {
-  low: 10,
-  medium: 25,
-  high: 50
-}
-```
-
-### Customization
-
-To adjust burst detection sensitivity:
-
-```ruby
-# Stricter (fewer bursts detected)
-BURST_INTER_ARRIVAL_THRESHOLD = 30  # 30 seconds
-BURST_MIN_ERROR_COUNT = 10
-
-# More lenient (more bursts detected)
-BURST_INTER_ARRIVAL_THRESHOLD = 120  # 2 minutes
-BURST_MIN_ERROR_COUNT = 3
-```
+For other rules, analyse the occurrence timestamps yourself (see [Via Service](#via-service)).
 
 ## Best Practices
 
@@ -756,17 +736,21 @@ Action: Monitor error rate %, not absolute count
 
 **Burst Detection Rules**:
 - Low/Medium intensity → Log, monitor
-- High intensity → Alert on-call engineer
-- Critical intensity → Page incident response team
+- High intensity (20+ errors) → Alert on-call engineer
 
-**Example**:
+**Example**, over the error's occurrences (`error_bursts` sees one timestamp per error record, so it
+misses a burst of one error):
 ```ruby
-bursts = error.error_bursts(days: 1)
-latest = bursts.first
+logs = RailsErrorDashboard::ErrorLog.where(error_type: error.error_type, platform: error.platform)
+timestamps = RailsErrorDashboard::ErrorOccurrence
+  .where(error_log_id: logs.select(:id))
+  .where("occurred_at >= ?", 1.day.ago)
+  .pluck(:occurred_at)
+latest = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps).last # oldest first
 
-if latest && latest[:burst_intensity] == :critical
+if latest && latest[:burst_intensity] == :high
   PagerDutyService.create_incident(
-    title: "Critical error burst detected",
+    title: "High-intensity error burst detected",
     details: latest
   )
 end
@@ -776,21 +760,15 @@ end
 
 ### "Pattern detection shows no data"
 
-**Cause**: Not enough errors to detect pattern
+**Cause**: `enable_occurrence_patterns` is off (`occurrence_pattern` returns `{}`), or there is
+nothing in the lookback (`pattern_type` is `:none`).
 
-**Requirements**:
-- At least 10 errors in lookback period
-- Errors must have occurred_at timestamps
+`occurrence_pattern` analyses one timestamp per error record, not per occurrence, so an error that
+happened many times can still have very little to analyse. Check the occurrences instead:
 
-**Solution**:
 ```ruby
-# Check error count
-ErrorLog.where(error_type: "YourError").count
-# If < 10, wait for more data
-
-# Check timestamps
-ErrorLog.where(error_type: "YourError").pluck(:occurred_at)
-# Ensure timestamps are present and varied
+logs = RailsErrorDashboard::ErrorLog.where(error_type: "YourError")
+RailsErrorDashboard::ErrorOccurrence.where(error_log_id: logs.select(:id)).where("occurred_at >= ?", 30.days.ago).count
 ```
 
 ### "Pattern type always shows 'uniform'"
@@ -803,14 +781,10 @@ pattern = error.occurrence_pattern
 puts pattern[:hourly_distribution]
 # If all hours have similar counts → truly uniform
 
-# If some hours have 0, some have many → check peak threshold
+# If some hours have 0, some have many, a peak hour still needs more than twice the average
 ```
 
-**Solution**: Adjust peak threshold if needed:
-```ruby
-# Lower threshold to detect weaker patterns
-PEAK_THRESHOLD_MULTIPLIER = 1.2  # Was 1.5
-```
+The thresholds are fixed. For a different rule, analyse the occurrence timestamps yourself.
 
 ### "Burst detection shows no bursts"
 
@@ -821,8 +795,9 @@ PEAK_THRESHOLD_MULTIPLIER = 1.2  # Was 1.5
 bursts = error.error_bursts
 puts "Found #{bursts.count} bursts"
 
-# Check raw timestamps
-timestamps = ErrorLog.where(error_type: "YourError").pluck(:occurred_at).sort
+# Check the raw occurrence timestamps
+logs = RailsErrorDashboard::ErrorLog.where(error_type: "YourError")
+timestamps = RailsErrorDashboard::ErrorOccurrence.where(error_log_id: logs.select(:id)).pluck(:occurred_at).sort
 timestamps.each_with_index do |t, i|
   next if i.zero?
   gap = t - timestamps[i-1]
@@ -830,14 +805,9 @@ timestamps.each_with_index do |t, i|
 end
 ```
 
-**Solution**: Adjust burst parameters if appropriate:
-```ruby
-# Allow larger gaps
-BURST_INTER_ARRIVAL_THRESHOLD = 120  # 2 minutes
-
-# Require fewer errors
-BURST_MIN_ERROR_COUNT = 3
-```
+A burst needs 5 or more errors, each within 60 seconds of the one before; these are fixed.
+`error_bursts` reads one timestamp per error record, so pass the occurrence timestamps above to
+`PatternDetector.detect_bursts(timestamps:)` instead.
 
 ### "Heatmap visualization not showing"
 
@@ -863,12 +833,13 @@ pattern = error.occurrence_pattern(days: 30)
 
 # Returns:
 {
-  pattern_type: :business_hours,  # or :night, :weekend, :uniform
-  pattern_strength: 0.85,
+  pattern_type: :business_hours,  # or :night, :weekend, :uniform, :none
   peak_hours: [9, 10, 11, 14, 15],
-  peak_weekdays: [1, 2, 3, 4, 5],  # Mon-Fri
   hourly_distribution: { 0 => 5, 1 => 3, ..., 23 => 6 },
-  weekday_distribution: { 0 => 120, 1 => 95, ..., 6 => 110 }
+  weekday_distribution: { 0 => 120, 1 => 95, ..., 6 => 110 },
+  pattern_strength: 0.85,
+  total_errors: 1250,
+  analysis_days: 30
 }
 ```
 
@@ -883,9 +854,8 @@ bursts = error.error_bursts(days: 7)
   {
     start_time: <Time>,
     end_time: <Time>,
-    duration_seconds: 120,
+    duration_seconds: 120.0,
     error_count: 35,
-    errors_per_second: 0.29,
     burst_intensity: :high
   },
   ...
@@ -895,19 +865,18 @@ bursts = error.error_bursts(days: 7)
 ### PatternDetector Service
 
 ```ruby
+# Both take the timestamps to analyse, for example an error type's occurrences
+logs = RailsErrorDashboard::ErrorLog.where(error_type: "NoMethodError", platform: "iOS")
+timestamps = RailsErrorDashboard::ErrorOccurrence.where(error_log_id: logs.select(:id)).pluck(:occurred_at)
+
 # Cyclical pattern analysis
 pattern = RailsErrorDashboard::Services::PatternDetector.analyze_cyclical_pattern(
-  error_type: "NoMethodError",
-  platform: "iOS",
+  timestamps: timestamps,
   days: 30
 )
 
 # Burst detection
-bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(
-  error_type: "NoMethodError",
-  platform: "iOS",
-  days: 7
-)
+bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps)
 ```
 
 ## Further Reading

@@ -247,10 +247,10 @@ NoMethodError: undefined method 'name' for nil:NilClass
 comparison = RailsErrorDashboard::Queries::PlatformComparison.new(days: 7)
 cross_platform = comparison.cross_platform_errors
 
-cross_platform.each do |error_type, data|
-  puts "#{error_type}:"
+cross_platform.each do |data|
+  puts "#{data[:error_type]}:"
   puts "  Platforms: #{data[:platforms].join(', ')}"
-  puts "  Total occurrences: #{data[:total_count]}"
+  puts "  Total occurrences: #{data[:total_occurrences]}"
 
   data[:platform_breakdown].each do |platform, count|
     puts "    #{platform}: #{count} errors"
@@ -261,7 +261,7 @@ end
 **Output**:
 ```text
 NoMethodError:
-  Platforms: iOS, Android, API
+  Platforms: API, Android, iOS
   Total occurrences: 450
     iOS: 200 errors
     Android: 150 errors
@@ -500,7 +500,7 @@ comparison = PlatformComparison.new(days: 90)
 comparison = RailsErrorDashboard::Queries::PlatformComparison.new(days: 14)
 
 # Get all metrics for a platform
-ios_health = comparison.platform_health_summary("iOS")
+ios_health = comparison.platform_health_summary["iOS"]
 # => { total_errors: 450, critical_errors: 12, stability_score: 75.5, ... }
 
 # Compare error rates
@@ -508,8 +508,8 @@ rates = comparison.error_rate_by_platform
 # => { "iOS" => 450, "Android" => 780, "API" => 320 }
 
 # Get top errors per platform
-top_errors = comparison.top_errors_by_platform(limit: 5)
-# => { "iOS" => [["NoMethodError", 120], ...], ... }
+top_errors = comparison.top_errors_by_platform
+# => { "iOS" => [{ id: 42, error_type: "NoMethodError", occurrence_count: 120, ... }, ...], ... } (10 per platform)
 ```
 
 ## Best Practices
@@ -645,16 +645,18 @@ comparison.resolution_time_by_platform
 comparison.platform_stability_scores
 # => { "iOS" => 85.3, "Android" => 62.1 }
 
-# Top errors per platform
-comparison.top_errors_by_platform(limit: 10)
-# => { "iOS" => [["NoMethodError", 120], ...], ... }
+# Top 10 errors per platform
+comparison.top_errors_by_platform
+# => { "iOS" => [{ id: 42, error_type: "NoMethodError", message: "...", severity: :high,
+#                  occurrence_count: 120, occurred_at: <Time> }, ...], ... }
 
-# Cross-platform errors
+# Errors seen on more than one platform, most frequent first
 comparison.cross_platform_errors
-# => { "NoMethodError" => { platforms: ["iOS", "Android"], total_count: 450 } }
+# => [{ error_type: "NoMethodError", platforms: ["Android", "iOS"], total_occurrences: 450,
+#       platform_breakdown: { "iOS" => 200, "Android" => 250 } }, ...]
 
-# Health summary for specific platform
-comparison.platform_health_summary("iOS")
+# Health summary, by platform
+comparison.platform_health_summary["iOS"]
 # => {
 #   total_errors: 450,
 #   critical_errors: 12,
@@ -665,8 +667,8 @@ comparison.platform_health_summary("iOS")
 #   health_status: :healthy
 # }
 
-# Error velocity (% change)
-comparison.platform_error_velocity
+# Error velocity (% change between the window's two halves) is in the summary
+comparison.platform_health_summary.transform_values { |h| h[:error_velocity] }
 # => { "iOS" => -15.2, "Android" => 23.5 }
 ```
 

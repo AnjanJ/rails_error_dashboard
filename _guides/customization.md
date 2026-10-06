@@ -632,7 +632,7 @@ end
 
 - [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) - Complete reference
 - [Plugin System](/rails_error_dashboard/docs/features/plugin-system/) - Build custom plugins
-- [API Reference](/rails_error_dashboard/docs/reference/api-reference/) - Full API documentation
+- [API Reference](/rails_error_dashboard/docs/reference/api-reference/) - The dashboard's HTTP routes and the Ruby API
 - [Database Options](/rails_error_dashboard/docs/guides/database-options/) - Separate database setup
 
 ---

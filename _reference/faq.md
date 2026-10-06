@@ -77,7 +77,7 @@ Yes! The error logging works in API-only mode. The dashboard UI requires a brows
 - Run in a separate Rails instance pointing to the same database
 - Accessed via SSH tunnel
 
-See [API-only setup](/rails_error_dashboard/docs/guides/mobile-app-integration/#backend-setup-rails-api).
+To report errors from your API's clients, see [the mobile endpoint](/rails_error_dashboard/docs/guides/mobile-app-integration/#the-endpoint).
 </details>
 
 <details>
@@ -161,20 +161,23 @@ Yes — with `turbo-rails` and a working ActionCable adapter in the host app, ne
 <details>
 <summary><strong>How do I report errors from mobile apps?</strong></summary>
 
-The gem ships no mobile SDK and no ingest endpoint. Add a small endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, then POST to it from the app; errors are tagged by platform from the User-Agent (iOS/Android) or from the `platform` you send:
+The gem ships no mobile SDK and no ingest endpoint. Add a small endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, then POST to it from the app. The platform is whatever the endpoint passes as `platform:`; RED doesn't work it out from a mobile app's User-Agent:
 
 ```javascript
-// React Native example — the endpoint is one you write (see the guide)
+// React Native: the endpoint is the one in the guide, with your API's own auth header
 fetch('https://api.example.com/api/v1/mobile_errors', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Basic ' + btoa('admin:password')
+    'Authorization': `Bearer ${apiToken}`
   },
   body: JSON.stringify({
-    error_class: 'TypeError',
-    message: 'Cannot read property...',
-    platform: 'iOS'
+    error: {
+      error_type: 'TypeError',
+      message: "Cannot read properties of undefined (reading 'id')",
+      platform: Platform.OS,
+      timestamp: Date.now()
+    }
   })
 });
 ```

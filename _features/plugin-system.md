@@ -6,420 +6,298 @@ order: 2
 
 # Plugin System Guide
 
-Rails Error Dashboard includes a powerful plugin system that allows you to extend functionality and integrate with external services.
-
-## Overview
-
-The plugin system provides event hooks throughout the error lifecycle, allowing you to:
-
-- 📊 **Track custom metrics** (StatsD, Datadog, Prometheus)
-- 📝 **Log audit trails** for compliance
-- 🎫 **Create tickets** in project management tools (Jira, Linear, GitHub Issues)
-- 📢 **Send custom notifications** beyond built-in backends
-- 🔍 **Analyze error patterns** with ML/AI services
-- 💾 **Store errors** in external databases or data warehouses
-- 🔔 **Trigger custom workflows** based on error events
+A plugin is a Ruby class that RED calls when something happens to an error: it is recorded, happens
+again, is resolved, muted, deleted, or viewed. Use one to send metrics, write an audit trail, or
+open tickets in a tracker RED doesn't support. (RED's own
+[issue tracking](/rails_error_dashboard/docs/guides/configuration/#issue-tracking--githubgitlabcodeberg-v058) covers GitHub,
+GitLab, Codeberg and Linear.)
 
 ## Quick Start
 
-### 1. Create a Plugin
+### 1. Create a plugin
 
 ```ruby
 # config/initializers/error_dashboard_plugins.rb
-
 class MyCustomPlugin < RailsErrorDashboard::Plugin
   def name
     "My Custom Plugin"
   end
 
   def description
-    "Does something awesome with errors"
+    "Does something with errors"
   end
 
   def on_error_logged(error_log)
-    # Called when a new error occurs
-    puts "New error: #{error_log.error_type}"
+    Rails.logger.info("New error: #{error_log.error_type}")
   end
 end
 ```
 
-### 2. Register the Plugin
+### 2. Register it
 
 ```ruby
-# config/initializers/error_dashboard_plugins.rb
-
+# config/initializers/error_dashboard_plugins.rb, after the class
 RailsErrorDashboard.register_plugin(MyCustomPlugin.new)
 ```
 
-That's it! Your plugin will now receive events whenever errors are logged.
+From then on, each new error calls `on_error_logged`. The plugin appears under **Active Plugins** on
+the [Settings page](/rails_error_dashboard/docs/guides/settings/).
 
 ---
 
-## Available Event Hooks
+## Event hooks
 
-The plugin system provides six event hooks:
+Define the hooks you need; the base class defines all of them as doing nothing.
 
-### 1. `on_error_logged(error_log)`
+| Hook | Argument | Called when |
+|---|---|---|
+| `on_error_logged` | the `ErrorLog` | An error is recorded for the first time. An open error that keeps happening more than 24 hours after RED first recorded it starts a new record, and calls this again |
+| `on_error_recurred` | the `ErrorLog` | An open error happens again, muted errors included |
+| `on_error_reopened` | the `ErrorLog` | A resolved error happens again, which reopens it |
+| `on_error_resolved` | the `ErrorLog` | An error is resolved with the Resolve button, `ErrorLog#resolve!`, or by its linked issue being closed |
+| `on_error_muted` | the `ErrorLog` | An error is muted (the Mute button or `ErrorLog#mute!`) |
+| `on_error_unmuted` | the `ErrorLog` | An error is unmuted |
+| `on_errors_batch_resolved` | an Array of the `ErrorLog`s resolved | A batch resolve |
+| `on_errors_batch_muted` | an Array of `ErrorLog`s | A batch mute |
+| `on_errors_batch_unmuted` | an Array of `ErrorLog`s | A batch unmute |
+| `on_errors_batch_deleted` | an Array of the deleted IDs | A batch delete |
+| `on_error_viewed` | the `ErrorLog` | Someone opens the error's page in the dashboard |
 
-**When**: A new error occurs (first occurrence)
+Two more methods are called on the plugin itself: `on_register`, once, when you register it, and
+`enabled?`, before every hook.
 
-**Parameters**:
-- `error_log` (ErrorLog) - The newly created error record
+Some changes call no hook:
 
-**Example**:
+- a batch resolve calls `on_errors_batch_resolved` only, never `on_error_resolved` for each error;
+- changing an error's status to `resolved` with a `POST` to `update_status`;
+- reopening an error when its linked issue is reopened;
+- errors that storm protection only counts, errors deleted by `RetentionCleanupJob`, and errors
+  that are ignored or sampled out.
+
+### Where hooks run
+
+Hooks run one plugin after another, in the order you registered them, in the same thread as the
+event:
+
+- **Capture hooks** (`on_error_logged`, `on_error_recurred`, `on_error_reopened`) run inside RED's
+  capture: in the request or job that raised the error, or, with `config.async_logging` on, in the
+  background job that saves it.
+- **Dashboard hooks** (resolve, mute, unmute, batch actions, viewed) run in the dashboard request.
+
+A slow hook slows down whatever it runs in. Hand slow work to a background job:
+
 ```ruby
 def on_error_logged(error_log)
-  # Send to metrics service
-  Metrics.increment("errors.new")
-
-  # Create Jira ticket for critical errors
-  if error_log.critical?
-    JiraService.create_ticket(error_log)
-  end
-end
-```
-
-### 2. `on_error_recurred(error_log)`
-
-**When**: An existing error occurs again (subsequent occurrences)
-
-**Parameters**:
-- `error_log` (ErrorLog) - The updated error record with incremented occurrence_count
-
-**Example**:
-```ruby
-def on_error_recurred(error_log)
-  # Alert if error occurs frequently
-  if error_log.occurrence_count > 10
-    AlertService.send_alert("Error #{error_log.id} has occurred #{error_log.occurrence_count} times!")
-  end
-end
-```
-
-### 3. `on_error_resolved(error_log)`
-
-**When**: An error is marked as resolved (single error)
-
-**Parameters**:
-- `error_log` (ErrorLog) - The resolved error record
-
-**Example**:
-```ruby
-def on_error_resolved(error_log)
-  # Update Jira ticket status
-  JiraService.resolve_ticket(error_log)
-
-  # Track resolution metrics
-  Metrics.increment("errors.resolved")
-  Metrics.timing("errors.time_to_resolve", error_log.resolved_at - error_log.first_seen_at)
-end
-```
-
-### 4. `on_errors_batch_resolved(error_logs)`
-
-**When**: Multiple errors are resolved via batch operation
-
-**Parameters**:
-- `error_logs` (Array<ErrorLog>) - Array of resolved error records
-
-**Example**:
-```ruby
-def on_errors_batch_resolved(error_logs)
-  # Log batch resolution for audit trail
-  AuditLog.create(
-    action: "batch_resolve",
-    count: error_logs.size,
-    error_ids: error_logs.map(&:id)
-  )
-end
-```
-
-### 5. `on_errors_batch_deleted(error_ids)`
-
-**When**: Multiple errors are deleted via batch operation
-
-**Parameters**:
-- `error_ids` (Array<Integer>) - Array of deleted error IDs
-
-**Example**:
-```ruby
-def on_errors_batch_deleted(error_ids)
-  # Archive deleted errors to external storage
-  ArchiveService.archive_errors(error_ids)
-
-  # Log for compliance
-  AuditLog.create(
-    action: "batch_delete",
-    count: error_ids.size
-  )
-end
-```
-
-### 6. `on_error_viewed(error_log)`
-
-**When**: An error is viewed in the dashboard
-
-**Parameters**:
-- `error_log` (ErrorLog) - The viewed error record
-
-**Example**:
-```ruby
-def on_error_viewed(error_log)
-  # Track error views for analytics
-  Analytics.track("error_viewed", {
-    error_id: error_log.id,
-    error_type: error_log.error_type
-  })
+  SendErrorJob.perform_later(error_log.id)
 end
 ```
 
 ---
 
-## Plugin API Reference
+## Plugin API
 
-### Base Plugin Class
+### The base class
 
 ```ruby
 class RailsErrorDashboard::Plugin
-  # Required: Plugin name (must be unique)
-  def name
-    raise NotImplementedError
+  def name                 # required, and unique among your plugins
+    raise NotImplementedError, "Plugin must implement #name"
   end
 
-  # Optional: Plugin description
-  def description
-    "No description provided"
-  end
+  def description = "No description provided"
+  def version = "1.0.0"
+  def on_register; end    # called once, at registration
+  def enabled? = true      # checked before every hook
 
-  # Optional: Plugin version
-  def version
-    "1.0.0"
-  end
-
-  # Optional: Called when plugin is registered
-  def on_register
-    # Initialization logic
-  end
-
-  # Optional: Check if plugin should run
-  def enabled?
-    true
-  end
-
-  # Event hooks (all optional, implement as needed)
+  # Event hooks, all optional
   def on_error_logged(error_log); end
   def on_error_recurred(error_log); end
+  def on_error_reopened(error_log); end
   def on_error_resolved(error_log); end
+  def on_error_muted(error_log); end
+  def on_error_unmuted(error_log); end
   def on_errors_batch_resolved(error_logs); end
+  def on_errors_batch_muted(error_logs); end
+  def on_errors_batch_unmuted(error_logs); end
   def on_errors_batch_deleted(error_ids); end
   def on_error_viewed(error_log); end
+
+  # Calls a hook and rescues what it raises (see "When a plugin fails")
+  def safe_execute(method_name, *args); end
 end
 ```
 
-### Registration Methods
+`name` is required. Without it, `register_plugin` raises `NotImplementedError`. If no other plugin
+is registered yet, the nameless one is added before the error. Hooks still run, but until the app
+restarts, `register_plugin`, `unregister_plugin` and the registry's `names`, `info` and `find` raise,
+the Settings page fails with a 500, and any hook failure raises instead of being rescued.
+
+### Registering
 
 ```ruby
-# Register a plugin
-RailsErrorDashboard.register_plugin(plugin_instance)
-# => true (success) or false (already registered)
+RailsErrorDashboard.register_plugin(MyCustomPlugin.new)
+# => true, or false when a plugin with the same name is already registered
 
-# Unregister a plugin by name
-RailsErrorDashboard.unregister_plugin("My Plugin Name")
+RailsErrorDashboard.register_plugin(Object.new)
+# => ArgumentError: Plugin must be an instance of RailsErrorDashboard::Plugin
 
-# Get all registered plugins
-RailsErrorDashboard.plugins
-# => [plugin1, plugin2, ...]
+RailsErrorDashboard.unregister_plugin("My Custom Plugin")
+RailsErrorDashboard.plugins # => [#<MyCustomPlugin>, ...]
 
-# Access plugin registry directly
-RailsErrorDashboard::PluginRegistry.count
-# => 3
-
-RailsErrorDashboard::PluginRegistry.names
-# => ["Plugin 1", "Plugin 2", "Plugin 3"]
-
+RailsErrorDashboard::PluginRegistry.names # => ["My Custom Plugin"]
 RailsErrorDashboard::PluginRegistry.info
-# => [{ name: "...", version: "...", description: "...", enabled: true }, ...]
+# => [{ name: "My Custom Plugin", version: "1.0.0", description: "...", enabled: true }]
+RailsErrorDashboard::PluginRegistry.find("My Custom Plugin") # => #<MyCustomPlugin>
 ```
+
+Register plugins in an initializer, so they are registered once, at boot.
+
+### When a plugin fails
+
+- An exception (a `StandardError`) raised inside a hook is rescued. The error is still recorded, and
+  the other plugins still run.
+- The failure is logged only when `config.log_level` is `:error` or lower; the default, `:silent`,
+  logs nothing. The log lines look like this:
+
+  ```text
+  [RailsErrorDashboard] [RailsErrorDashboard] Plugin 'My Custom Plugin' failed in on_error_logged: Errno::ECONNREFUSED - Connection refused
+  [RailsErrorDashboard] Plugin version: 1.0.0
+  [RailsErrorDashboard] /app/config/initializers/error_dashboard_plugins.rb:12:in 'on_error_logged'
+  ```
+
+- **`enabled?` is not protected.** An exception raised in `enabled?` is not rescued. During capture,
+  RED gives up on the rest of that capture after the error is saved. In the dashboard, the error page
+  and the Resolve, Mute and Unmute actions fail with a 500; a batch action says "Batch operation
+  failed", although the errors were already changed. Keep `enabled?` simple.
+- **`on_register` is not protected either.** An exception there raises out of `register_plugin`, so
+  from an initializer it stops the app booting.
+- Exceptions that aren't `StandardError`s, such as `NotImplementedError`, aren't rescued anywhere.
 
 ---
 
-## Example Plugins
+## Example plugins
 
-### Example 1: Metrics Tracking (StatsD/Datadog)
+### Metrics (StatsD, Datadog)
 
 ```ruby
-class MetricsPlugin < RailsErrorDashboard::Plugin
+class ErrorMetricsPlugin < RailsErrorDashboard::Plugin
   def name
-    "Metrics Tracker"
+    "Error Metrics"
   end
 
   def on_error_logged(error_log)
     StatsD.increment("errors.new")
-    StatsD.increment("errors.by_type.#{sanitize(error_log.error_type)}")
-    StatsD.increment("errors.by_platform.#{error_log.platform}")
+    StatsD.increment("errors.by_type.#{metric_name(error_log.error_type)}")
   end
 
   def on_error_resolved(error_log)
     StatsD.increment("errors.resolved")
-
-    # Track time to resolution
-    resolution_time = error_log.resolved_at - error_log.first_seen_at
-    StatsD.timing("errors.time_to_resolve", resolution_time)
+    seconds = error_log.resolved_at - error_log.first_seen_at
+    StatsD.timing("errors.time_to_resolve", (seconds * 1000).round) # timing takes milliseconds
   end
 
   private
 
-  def sanitize(name)
-    name.gsub('::', '.').downcase
+  def metric_name(name)
+    name.gsub("::", ".").downcase
   end
 end
 
-# Register
-RailsErrorDashboard.register_plugin(MetricsPlugin.new)
+RailsErrorDashboard.register_plugin(ErrorMetricsPlugin.new)
 ```
 
-### Example 2: Audit Logging
+### Audit log
 
 ```ruby
-class AuditLogPlugin < RailsErrorDashboard::Plugin
+class ErrorAuditPlugin < RailsErrorDashboard::Plugin
   def initialize(logger: Rails.logger)
     @logger = logger
   end
 
   def name
-    "Audit Logger"
-  end
-
-  def on_error_logged(error_log)
-    log_event("error_logged", error_log)
+    "Error Audit"
   end
 
   def on_error_resolved(error_log)
-    log_event("error_resolved", error_log, {
-      resolved_by: error_log.resolved_by_name,
-      resolution_comment: error_log.resolution_comment
-    })
+    @logger.info("[Audit] resolved #{error_log.id} by #{error_log.resolved_by_name}")
+  end
+
+  def on_error_muted(error_log)
+    @logger.info("[Audit] muted #{error_log.id} by #{error_log.muted_by}: #{error_log.muted_reason}")
   end
 
   def on_errors_batch_deleted(error_ids)
-    @logger.info("[Audit] Batch deleted #{error_ids.size} errors: #{error_ids.join(', ')}")
-  end
-
-  private
-
-  def log_event(event, error_log, extra = {})
-    @logger.info("[Audit] #{event}: #{error_log.id} (#{error_log.error_type}) #{extra.to_json}")
+    @logger.info("[Audit] deleted #{error_ids.size} errors: #{error_ids.join(', ')}")
   end
 end
 
-# Register
-RailsErrorDashboard.register_plugin(AuditLogPlugin.new)
+RailsErrorDashboard.register_plugin(ErrorAuditPlugin.new)
 ```
 
-### Example 3: Jira Integration
+### Tickets in another tracker (Jira)
+
+`ErrorLog` has no column for your own data, so keep the ticket key in a table of yours, here a
+`JiraTicketLink` model with `error_hash` and `key` columns. Key it by `error_hash`, the error's
+fingerprint: an error that keeps happening for more than 24 hours gets a new record with the same
+fingerprint, and should reuse the ticket. Build the dashboard link with
+`NotificationHelpers.dashboard_url`, which uses `config.dashboard_base_url` and the path the
+dashboard is really mounted at.
 
 ```ruby
-class JiraIntegrationPlugin < RailsErrorDashboard::Plugin
-  def initialize(jira_client:, project_key:, only_critical: true)
+class JiraTicketsPlugin < RailsErrorDashboard::Plugin
+  def initialize(jira_client:, project_key:)
     @jira = jira_client
     @project_key = project_key
-    @only_critical = only_critical
   end
 
   def name
-    "Jira Integration"
-  end
-
-  def enabled?
-    @jira.present?
+    "Jira Tickets"
   end
 
   def on_error_logged(error_log)
-    return if @only_critical && !error_log.critical?
+    return unless error_log.critical?
+    return if JiraTicketLink.exists?(error_hash: error_log.error_hash)
 
-    create_jira_issue(error_log)
+    CreateJiraTicketJob.perform_later(error_log.id) # the job calls create_ticket
+  end
+
+  def create_ticket(error_log)
+    issue = @jira.Issue.build
+    issue.save("fields" => {
+      "project" => { "key" => @project_key },
+      "summary" => "[#{error_log.environment}] #{error_log.error_type}",
+      "description" => "#{error_log.message}\n\n" \
+                       "#{RailsErrorDashboard::Services::NotificationHelpers.dashboard_url(error_log)}",
+      "issuetype" => { "name" => "Bug" }
+    })
+    JiraTicketLink.create!(error_hash: error_log.error_hash, key: issue.key)
   end
 
   def on_error_resolved(error_log)
-    # Find related Jira ticket and resolve it
-    resolve_jira_issue(error_log)
+    link = JiraTicketLink.find_by(error_hash: error_log.error_hash)
+    CloseJiraTicketJob.perform_later(link.key) if link # the job calls close_ticket
   end
 
-  private
-
-  def create_jira_issue(error_log)
-    issue = @jira.Issue.build
-    issue.save({
-      "fields" => {
-        "project" => { "key" => @project_key },
-        "summary" => "[#{error_log.environment}] #{error_log.error_type}",
-        "description" => build_description(error_log),
-        "issuetype" => { "name" => "Bug" },
-        "priority" => { "name" => jira_priority(error_log) }
-      }
-    })
-
-    # Store Jira ticket ID in error metadata
-    error_log.update(metadata: error_log.metadata.merge(jira_ticket: issue.key))
-  end
-
-  def build_description(error_log)
-    <<~DESC
-      Error Type: #{error_log.error_type}
-      Message: #{error_log.message}
-      Platform: #{error_log.platform}
-      Environment: #{error_log.environment}
-
-      View in Dashboard: #{dashboard_url(error_log)}
-    DESC
-  end
-
-  def jira_priority(error_log)
-    case error_log.severity.to_s
-    when "critical" then "Highest"
-    when "high" then "High"
-    when "medium" then "Medium"
-    else "Low"
-    end
-  end
-
-  def dashboard_url(error_log)
-    "#{RailsErrorDashboard.configuration.dashboard_base_url}/error_dashboard/errors/#{error_log.id}"
-  end
-
-  def resolve_jira_issue(error_log)
-    ticket_key = error_log.metadata&.dig("jira_ticket")
-    return unless ticket_key
-
-    issue = @jira.Issue.find(ticket_key)
-    issue.transition("Done")
+  def close_ticket(key)
+    issue = @jira.Issue.find(key)
+    done = issue.transitions.all.find { |transition| transition.name == "Done" }
+    issue.transitions.build.save!("transition" => { "id" => done.id }) if done
   end
 end
-
-# Register with Jira client
-jira_client = JIRA::Client.new(
-  username: ENV['JIRA_USERNAME'],
-  password: ENV['JIRA_API_TOKEN'],
-  site: ENV['JIRA_URL'],
-  context_path: '',
-  auth_type: :basic
-)
-
-RailsErrorDashboard.register_plugin(
-  JiraIntegrationPlugin.new(
-    jira_client: jira_client,
-    project_key: "MYPROJECT",
-    only_critical: true
-  )
-)
 ```
 
-### Example 4: Conditional Plugin (Production Only)
+Both Jira calls run in your jobs, which get the plugin with
+`RailsErrorDashboard::PluginRegistry.find("Jira Tickets")`. That keeps Jira's response time out of
+capture and out of the Resolve button, and a failed call fails the job, where you see it and it can
+be retried; inside a hook, RED would rescue it, and log nothing at the default `log_level`. Use the
+transition name your Jira workflow has.
+
+### Production only
 
 ```ruby
-class ProductionOnlyPlugin < RailsErrorDashboard::Plugin
+class ProductionAlertPlugin < RailsErrorDashboard::Plugin
   def name
-    "Production Alert Plugin"
+    "Production Alerts"
   end
 
   def enabled?
@@ -427,586 +305,178 @@ class ProductionOnlyPlugin < RailsErrorDashboard::Plugin
   end
 
   def on_error_logged(error_log)
-    # Only runs in production
     ProductionAlertService.send_alert(error_log)
   end
 end
-
-RailsErrorDashboard.register_plugin(ProductionOnlyPlugin.new)
-```
-
-### Example 5: ML Error Classification
-
-```ruby
-class ErrorClassificationPlugin < RailsErrorDashboard::Plugin
-  def name
-    "ML Error Classifier"
-  end
-
-  def on_error_logged(error_log)
-    # Use ML to classify error severity/category
-    classification = MLService.classify_error(
-      error_type: error_log.error_type,
-      message: error_log.message,
-      backtrace: error_log.backtrace
-    )
-
-    # Store ML insights in metadata
-    error_log.update(
-      metadata: error_log.metadata.merge(
-        ml_category: classification[:category],
-        ml_confidence: classification[:confidence],
-        ml_similar_errors: classification[:similar_ids]
-      )
-    )
-  end
-end
-
-RailsErrorDashboard.register_plugin(ErrorClassificationPlugin.new)
 ```
 
 ---
 
-## Built-in Example Plugins
+## Built-in example plugins
 
-Rails Error Dashboard includes three example plugins you can use as templates:
+The gem ships three plugins as starting points. They aren't loaded until you require them.
 
-### 1. MetricsPlugin
-
-**Location**: `lib/rails_error_dashboard/plugins/metrics_plugin.rb`
-
-**Purpose**: Track error metrics and send to monitoring services
-
-**Usage**:
-```ruby
-require 'rails_error_dashboard/plugins/metrics_plugin'
-
-RailsErrorDashboard.register_plugin(
-  RailsErrorDashboard::Plugins::MetricsPlugin.new
-)
-```
-
-### 2. AuditLogPlugin
-
-**Location**: `lib/rails_error_dashboard/plugins/audit_log_plugin.rb`
-
-**Purpose**: Log all error dashboard activities for compliance
-
-**Usage**:
-```ruby
-require 'rails_error_dashboard/plugins/audit_log_plugin'
-
-RailsErrorDashboard.register_plugin(
-  RailsErrorDashboard::Plugins::AuditLogPlugin.new(logger: Rails.logger)
-)
-```
-
-### 3. JiraIntegrationPlugin
-
-**Location**: `lib/rails_error_dashboard/plugins/jira_integration_plugin.rb`
-
-**Purpose**: Automatically create Jira tickets for critical errors
-
-**Usage**:
-```ruby
-require 'rails_error_dashboard/plugins/jira_integration_plugin'
-
-RailsErrorDashboard.register_plugin(
-  RailsErrorDashboard::Plugins::JiraIntegrationPlugin.new(
-    jira_url: ENV['JIRA_URL'],
-    jira_username: ENV['JIRA_USERNAME'],
-    jira_api_token: ENV['JIRA_API_TOKEN'],
-    jira_project_key: ENV['JIRA_PROJECT_KEY'],
-    only_critical: true
-  )
-)
-```
-
----
-
-## Best Practices
-
-### 1. Error Handling
-
-Always handle errors gracefully in plugins to prevent breaking the main application:
-
-```ruby
-def on_error_logged(error_log)
-  send_to_external_service(error_log)
-rescue => e
-  # Plugin errors are automatically logged by safe_execute
-  # But you can add custom handling
-  Rails.logger.error("My plugin failed: #{e.message}")
-end
-```
-
-**Note**: The base `Plugin` class includes `safe_execute` that wraps all event hooks with error handling.
-
-### 2. Conditional Execution
-
-Use `enabled?` to control when plugins run:
-
-```ruby
-def enabled?
-  # Only run if configuration present
-  ENV['EXTERNAL_SERVICE_API_KEY'].present? &&
-  # Only run in production
-  Rails.env.production? &&
-  # Only run during business hours
-  Time.current.hour.between?(9, 17)
-end
-```
-
-### 3. Async Processing
-
-For slow operations, use background jobs:
-
-```ruby
-def on_error_logged(error_log)
-  # Don't block error logging with slow API calls
-  ExternalServiceJob.perform_later(error_log.id)
-end
-```
-
-### 4. Initialization
-
-Use `on_register` for one-time setup:
-
-```ruby
-def on_register
-  @client = ExternalService::Client.new(api_key: ENV['API_KEY'])
-  @cache = Rails.cache
-
-  Rails.logger.info("#{name} initialized successfully")
-end
-```
-
-### 5. Plugin Dependencies
-
-Check for required gems/services:
-
-```ruby
-def enabled?
-  return false unless defined?(Datadog)
-
-  ENV['DATADOG_API_KEY'].present?
-end
-```
-
----
-
-## Configuration Examples
-
-### Multi-Plugin Setup
+| Plugin | What it does |
+|---|---|
+| `Plugins::MetricsPlugin` | Writes a metric line for new, repeated and resolved errors and for batch resolves and deletes, through RED's own logger, which logs nothing unless `enable_internal_logging` is on and `log_level` is `:info` or lower. The StatsD and Datadog calls are commented out |
+| `Plugins::AuditLogPlugin` | Writes a JSON line to the logger you pass for new, repeated, resolved and viewed errors and for batch resolves and deletes. Mute, unmute and reopen aren't logged |
+| `Plugins::JiraIntegrationPlugin` | Logs what it would send to Jira for critical errors, through RED's own logger (silent by default, as above). The API call is commented out. It is enabled only when all four Jira settings are given |
 
 ```ruby
 # config/initializers/error_dashboard_plugins.rb
+require "rails_error_dashboard/plugins/metrics_plugin"
+require "rails_error_dashboard/plugins/audit_log_plugin"
+require "rails_error_dashboard/plugins/jira_integration_plugin"
 
-Rails.application.configure do
-  # Metrics tracking
-  RailsErrorDashboard.register_plugin(
-    RailsErrorDashboard::Plugins::MetricsPlugin.new
+RailsErrorDashboard.register_plugin(RailsErrorDashboard::Plugins::MetricsPlugin.new)
+
+RailsErrorDashboard.register_plugin(
+  RailsErrorDashboard::Plugins::AuditLogPlugin.new(
+    logger: Logger.new(Rails.root.join("log", "error_audit.log"))
   )
+)
 
-  # Audit logging
+if Rails.env.production?
   RailsErrorDashboard.register_plugin(
-    RailsErrorDashboard::Plugins::AuditLogPlugin.new(
-      logger: Logger.new(Rails.root.join('log', 'error_audit.log'))
+    RailsErrorDashboard::Plugins::JiraIntegrationPlugin.new(
+      jira_url: ENV["JIRA_URL"],
+      jira_username: ENV["JIRA_USERNAME"],
+      jira_api_token: ENV["JIRA_API_TOKEN"],
+      jira_project_key: ENV["JIRA_PROJECT_KEY"],
+      only_critical: true
     )
   )
-
-  # Jira integration (production only)
-  if Rails.env.production?
-    RailsErrorDashboard.register_plugin(
-      RailsErrorDashboard::Plugins::JiraIntegrationPlugin.new(
-        jira_url: ENV['JIRA_URL'],
-        jira_username: ENV['JIRA_USERNAME'],
-        jira_api_token: ENV['JIRA_API_TOKEN'],
-        jira_project_key: 'PROD',
-        only_critical: true
-      )
-    )
-  end
 end
 ```
 
-### Environment-Specific Plugins
-
-```ruby
-# config/initializers/error_dashboard_plugins.rb
-
-Rails.application.configure do
-  case Rails.env
-  when 'production'
-    # Production: Full monitoring stack
-    RailsErrorDashboard.register_plugin(DatadogPlugin.new)
-    RailsErrorDashboard.register_plugin(PagerDutyPlugin.new)
-    RailsErrorDashboard.register_plugin(JiraPlugin.new)
-
-  when 'staging'
-    # Staging: Metrics only
-    RailsErrorDashboard.register_plugin(MetricsPlugin.new)
-
-  when 'development'
-    # Development: Console logging only
-    RailsErrorDashboard.register_plugin(ConsoleLoggerPlugin.new)
-  end
-end
-```
+Copy one into your app and change it, rather than relying on it as is.
 
 ---
 
-## Debugging Plugins
+## Best practices
 
-### Check Registered Plugins
+- **Keep hooks fast.** They run inside capture or a dashboard request. Use a job for anything slow.
+- **Use the batch hooks for batches.** One call for the whole batch, not one per error.
+- **Create clients when first used**, not in `on_register`: an exception there stops the app booting.
+- **Check dependencies in `enabled?`**, simply. It must not raise:
+
+  ```ruby
+  def enabled?
+    defined?(Datadog) && ENV["DATADOG_API_KEY"].present?
+  end
+  ```
+
+- **Filter what you send out.** Error messages and backtraces can contain personal data or
+  secrets.
+- **Read credentials from the environment**, not from the source.
+
+---
+
+## Debugging plugins
+
+### See what is registered
 
 ```ruby
-# Rails console
-
-# List all plugins
-RailsErrorDashboard.plugins
-# => [#<MetricsPlugin>, #<AuditLogPlugin>]
-
-# Get plugin names
 RailsErrorDashboard::PluginRegistry.names
-# => ["Metrics Tracker", "Audit Logger"]
-
-# Get plugin info
 RailsErrorDashboard::PluginRegistry.info
-# => [
-#   { name: "Metrics Tracker", version: "1.0.0", description: "...", enabled: true },
-#   { name: "Audit Logger", version: "1.0.0", description: "...", enabled: true }
-# ]
-
-# Find specific plugin
-RailsErrorDashboard::PluginRegistry.find("Metrics Tracker")
-# => #<MetricsPlugin>
+RailsErrorDashboard::PluginRegistry.find("My Custom Plugin").enabled?
 ```
 
-### Test Plugin Events
+The Settings page lists the same under **Active Plugins**.
+
+### Trigger a hook
+
+Recording an error calls `on_error_logged` for you; don't dispatch it again by hand:
 
 ```ruby
-# Rails console
-
-# Create test error
-error = begin
-  raise StandardError, "Test error"
-rescue => e
-  e
-end
-
-error_log = RailsErrorDashboard::Commands::LogError.call(error, {
-  controller_name: "TestController",
-  action_name: "test"
-})
-
-# Manually trigger plugin events
-RailsErrorDashboard::PluginRegistry.dispatch(:on_error_logged, error_log)
-
-# Check plugin is enabled
-plugin = RailsErrorDashboard::PluginRegistry.find("My Plugin")
-plugin.enabled?
-# => true/false
+RailsErrorDashboard.configuration.async_logging = false # this console only
+RailsErrorDashboard::ManualErrorReporter.report(error_type: "PluginTestError", message: "plugin test")
 ```
 
-### Plugin Logs
+To call one plugin's hook on an existing error, the way RED does (with the rescue):
 
-Plugin errors are automatically logged:
-
-```text
-# log/production.log
-Plugin 'My Plugin' failed in on_error_logged: Connection refused
-/path/to/plugin.rb:45:in `send_to_service'
-/path/to/plugin.rb:12:in `on_error_logged'
+```ruby
+plugin = RailsErrorDashboard::PluginRegistry.find("My Custom Plugin")
+plugin.safe_execute(:on_error_logged, RailsErrorDashboard::ErrorLog.last)
 ```
+
+### See failures
+
+Set `config.log_level = :error` and look for `Plugin '...' failed in` in the log.
 
 ---
 
-## Performance Considerations
-
-### 1. Async Operations
-
-Plugins run synchronously during error logging. Keep operations fast:
+## Testing plugins
 
 ```ruby
-# Bad: Slow synchronous API call
-def on_error_logged(error_log)
-  SlowExternalAPI.send_error(error_log) # Blocks error logging
-end
+# spec/plugins/my_custom_plugin_spec.rb
+require "rails_helper"
 
-# Good: Async job
-def on_error_logged(error_log)
-  SendErrorJob.perform_later(error_log.id) # Non-blocking
-end
-```
-
-### 2. Bulk Operations
-
-Use batch hooks efficiently:
-
-```ruby
-# Good: Single API call for batch
-def on_errors_batch_resolved(error_logs)
-  ExternalAPI.bulk_update(error_logs.map(&:id))
-end
-
-# Bad: N API calls
-def on_errors_batch_resolved(error_logs)
-  error_logs.each do |error_log|
-    ExternalAPI.update(error_log.id) # N+1 API calls
-  end
-end
-```
-
-### 3. Caching
-
-Cache expensive operations:
-
-```ruby
-def on_error_logged(error_log)
-  client = Rails.cache.fetch("external_api_client", expires_in: 1.hour) do
-    ExternalAPI::Client.new(api_key: ENV['API_KEY'])
-  end
-
-  client.send_error(error_log)
-end
-```
-
----
-
-## Security Considerations
-
-### 1. Sensitive Data
-
-Be careful with error messages and backtraces:
-
-```ruby
-def on_error_logged(error_log)
-  # Filter sensitive data before sending externally
-  sanitized_message = sanitize_sensitive_data(error_log.message)
-
-  ExternalService.send(
-    error_type: error_log.error_type,
-    message: sanitized_message
-    # Don't send: passwords, tokens, API keys, PII
-  )
-end
-
-private
-
-def sanitize_sensitive_data(message)
-  message
-    .gsub(/password[=:]\s*\S+/i, 'password=REDACTED')
-    .gsub(/token[=:]\s*\S+/i, 'token=REDACTED')
-    .gsub(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, 'EMAIL_REDACTED')
-end
-```
-
-### 2. API Keys
-
-Store credentials securely:
-
-```ruby
-# Good: Environment variables
-def initialize
-  @api_key = ENV['EXTERNAL_SERVICE_API_KEY']
-end
-
-# Bad: Hardcoded
-def initialize
-  @api_key = "secret_key_123" # Never do this
-end
-```
-
-### 3. Rate Limiting
-
-Implement rate limiting to prevent abuse:
-
-```ruby
-def on_error_logged(error_log)
-  # Only send first 100 errors per hour to external service
-  count = Rails.cache.increment("plugin_events:#{Time.current.hour}", 1, expires_in: 1.hour)
-
-  return if count > 100
-
-  ExternalService.send(error_log)
-end
-```
-
----
-
-## Testing Plugins
-
-### RSpec Example
-
-```ruby
-# spec/plugins/my_plugin_spec.rb
-
-RSpec.describe MyPlugin do
+RSpec.describe MyCustomPlugin do
   let(:plugin) { described_class.new }
-  let(:error_log) { create(:error_log, error_type: "StandardError") }
+  let(:error_log) { RailsErrorDashboard::ErrorLog.new(error_type: "NoMethodError", message: "test") }
 
-  describe "#name" do
-    it "returns plugin name" do
-      expect(plugin.name).to eq("My Plugin")
-    end
+  it "has a name" do
+    expect(plugin.name).to eq("My Custom Plugin")
   end
 
-  describe "#enabled?" do
-    it "is enabled when API key is present" do
-      allow(ENV).to receive(:[]).with('API_KEY').and_return('key123')
-      expect(plugin.enabled?).to be true
-    end
-
-    it "is disabled when API key is missing" do
-      allow(ENV).to receive(:[]).with('API_KEY').and_return(nil)
-      expect(plugin.enabled?).to be false
-    end
-  end
-
-  describe "#on_error_logged" do
-    it "sends error to external service" do
-      expect(ExternalService).to receive(:send).with(error_log)
-      plugin.on_error_logged(error_log)
-    end
-
-    it "handles errors gracefully" do
-      allow(ExternalService).to receive(:send).and_raise(StandardError, "API error")
-
-      expect {
-        plugin.on_error_logged(error_log)
-      }.not_to raise_error
-    end
+  it "logs the error type" do
+    allow(Rails.logger).to receive(:info)
+    plugin.on_error_logged(error_log)
+    expect(Rails.logger).to have_received(:info).with("New error: NoMethodError")
   end
 end
 ```
 
-### Integration Testing
-
-```ruby
-# spec/integration/plugin_system_spec.rb
-
-RSpec.describe "Plugin System" do
-  before do
-    RailsErrorDashboard::PluginRegistry.clear
-  end
-
-  it "dispatches events to registered plugins" do
-    plugin = MyPlugin.new
-    RailsErrorDashboard.register_plugin(plugin)
-
-    expect(plugin).to receive(:on_error_logged)
-
-    error = begin
-      raise StandardError, "Test"
-    rescue => e
-      e
-    end
-
-    RailsErrorDashboard::Commands::LogError.call(error, {})
-  end
-end
-```
+Call hooks directly, as above, so a hook that raises fails the spec. Through `safe_execute`, RED
+rescues the exception and the spec passes anyway. An unsaved `ErrorLog.new` is enough for a hook
+that only reads the error. For one that needs a saved error, create it with your own factory (the
+gem's factories aren't part of the gem), or with `ManualErrorReporter` and `async_logging` off; if
+you change the configuration in a spec, set it back afterwards, because it is global.
 
 ---
 
 ## FAQ
 
-### Q: Can plugins modify error_log records?
+### Can a plugin change the error record?
 
-**A**: Yes, plugins can call `error_log.update(...)` to add custom data:
+It can update the error's existing columns, but `ErrorLog` has no column for your own data. Keep
+plugin data in your own table, keyed by `error_log.id`.
 
-```ruby
-def on_error_logged(error_log)
-  error_log.update(
-    metadata: error_log.metadata.merge(
-      external_ticket_id: create_ticket(error_log)
-    )
-  )
-end
-```
+### What happens if a plugin crashes?
 
-### Q: What happens if a plugin crashes?
+See [When a plugin fails](#when-a-plugin-fails).
 
-**A**: Plugins are wrapped in `safe_execute` which catches errors and logs them without breaking the main application:
+### Can plugins depend on each other?
 
-```text
-Plugin 'My Plugin' failed in on_error_logged: Connection refused
-```
+No. Each is called on its own. Put shared logic in a class they both use.
 
-### Q: Can I use background jobs in plugins?
+### Is there a limit on plugins?
 
-**A**: Yes, recommended for slow operations:
-
-```ruby
-def on_error_logged(error_log)
-  MyPluginJob.perform_later(error_log.id)
-end
-```
-
-### Q: How do I unregister a plugin?
-
-**A**:
-```ruby
-RailsErrorDashboard.unregister_plugin("Plugin Name")
-```
-
-### Q: Can plugins depend on each other?
-
-**A**: Not directly. Keep plugins independent. If you need shared logic, extract it to a service class.
-
-### Q: How many plugins can I register?
-
-**A**: No hard limit, but be mindful of performance. Each event dispatches to all enabled plugins.
+No, but every event calls every enabled plugin, in turn.
 
 ---
 
 ## Troubleshooting
 
-### Plugin Not Receiving Events
+### A plugin receives no events
 
-1. Check plugin is registered:
-```ruby
-RailsErrorDashboard::PluginRegistry.names
-```
-
+1. Check it is registered: `RailsErrorDashboard::PluginRegistry.names`.
 2. Check `enabled?` returns true:
-```ruby
-plugin = RailsErrorDashboard::PluginRegistry.find("My Plugin")
-plugin.enabled?
-```
+   `RailsErrorDashboard::PluginRegistry.find("My Custom Plugin").enabled?`.
+3. Check the event calls a hook at all (see [Event hooks](#event-hooks)).
+4. Set `config.log_level = :error` and look for `failed in` in the log.
 
-3. Check for errors in logs:
-```bash
-tail -f log/production.log | grep "Plugin"
-```
+### Registering twice
 
-### Plugin Registered Multiple Times
-
-Plugins are only registered once. Subsequent registrations with the same name are ignored:
-
-```ruby
-RailsErrorDashboard.register_plugin(MyPlugin.new) # Registered
-RailsErrorDashboard.register_plugin(MyPlugin.new) # Skipped (logs warning)
-```
-
-### Performance Issues
-
-If plugins slow down error logging:
-
-1. Move slow operations to background jobs
-2. Use `enabled?` to conditionally run plugins
-3. Cache expensive operations
-4. Profile plugin code
+A second plugin with the same name isn't registered: `register_plugin` returns `false`. RED logs a
+warning about it only when `enable_internal_logging` is on and `log_level` is `:warn` or lower.
 
 ---
 
 ## Related Documentation
 
-- [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md) - Overall gem documentation
-- [Notifications](/rails_error_dashboard/docs/guides/notifications/) - Built-in notification backends
-- [Batch Operations](/rails_error_dashboard/docs/guides/batch-operations/) - Batch operations
-
----
-
-**Plugin system is fully functional!** 🎉
+- [Documentation index](/rails_error_dashboard/docs/documentation/) - All the guides
+- [Notifications](/rails_error_dashboard/docs/guides/notifications/) - Built-in notification channels
+- [Batch Operations](/rails_error_dashboard/docs/guides/batch-operations/) - What fires the batch hooks
+- [API Reference](/rails_error_dashboard/docs/reference/api-reference/#callbacks-and-notifications) - Callbacks and `ActiveSupport::Notifications` events

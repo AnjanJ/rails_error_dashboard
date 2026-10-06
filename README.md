@@ -390,7 +390,7 @@ config.git_repository_url = "https://github.com/user/repo"  # enables SHA links
 <details>
 <summary><strong>Source Code Integration + Git Blame</strong></summary>
 
-View actual source code directly in error backtraces with +/-7 lines of context. Git blame shows who last modified the code, when, and the commit message. Repository links jump to GitHub/GitLab/Bitbucket at the exact line.
+View actual source code directly in error backtraces, 5 lines before and after the error line by default. Git blame shows who last modified the code, when, and the commit message. Repository links jump to the exact line on GitHub, GitLab, Bitbucket or Codeberg.
 
 ```ruby
 config.enable_source_code_integration = true
@@ -570,14 +570,18 @@ config.enable_crash_capture = true
 <details>
 <summary><strong>Plugin System</strong></summary>
 
-Event-driven extensibility with hooks for `on_error_logged`, `on_error_resolved`, `on_threshold_exceeded`. Built-in examples for Jira integration, metrics tracking, and audit logging.
+Event-driven extensibility with hooks such as `on_error_logged`, `on_error_reopened` and `on_error_resolved` (eleven in all). Built-in examples for Jira integration, metrics tracking, and audit logging.
 
 ```ruby
 class MyPlugin < RailsErrorDashboard::Plugin
+  def name = "My Plugin"
+
   def on_error_logged(error_log)
     # Your custom logic
   end
 end
+
+RailsErrorDashboard.register_plugin(MyPlugin.new)
 ```
 
 [Plugin System guide →](docs/PLUGIN_SYSTEM.md)
@@ -779,7 +783,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 ### Advanced
 - **[Multi-App Support](docs/MULTI_APP_PERFORMANCE.md)** — Track multiple applications
 - **[Plugin System](docs/PLUGIN_SYSTEM.md)** — Build custom integrations
-- **[API Reference](docs/API_REFERENCE.md)** — Complete API documentation
+- **[API Reference](docs/API_REFERENCE.md)** — The dashboard's HTTP routes and the Ruby API
 - **[Customization](docs/CUSTOMIZATION.md)** — Customize everything
 - **[Database Options](docs/guides/DATABASE_OPTIONS.md)** — Separate database setup
 - **[Database Optimization](docs/guides/DATABASE_OPTIMIZATION.md)** — Performance tuning

@@ -264,15 +264,13 @@ Custom extension that hooks into error dashboard lifecycle events. Used for cust
 Central registry managing all registered plugins. Ensures plugins execute safely without breaking error logging.
 
 ### Lifecycle Hooks
-Events that trigger plugin callbacks:
-- `on_error_logged`: When an error is first captured
-- `on_error_resolved`: When an error is marked as resolved
-- `on_error_ignored`: When an error is marked as ignored
-- `on_error_assigned`: When an error is assigned to someone
-- `on_error_reopened`: When a resolved error occurs again
+Events that call plugin hooks: a new error (`on_error_logged`), a repeat (`on_error_recurred`), a
+resolved error happening again (`on_error_reopened`), resolve, mute and unmute, each batch action,
+and someone viewing an error. Eleven hooks in all; see [Event hooks](/rails_error_dashboard/docs/features/plugin-system/#event-hooks).
 
 ### Safe Execution
-Plugin methods wrapped in error handling to prevent plugin failures from breaking core functionality.
+Plugin hooks are wrapped in error handling, so a hook that raises doesn't break error capture. A
+plugin's `enabled?` isn't; see [When a plugin fails](/rails_error_dashboard/docs/features/plugin-system/#when-a-plugin-fails).
 
 ---
 
@@ -370,18 +368,18 @@ Test that verifies multiple components working together. Example: Error capture 
 
 ## API
 
-### REST API
-HTTP-based API following REST principles. Dashboard provides endpoints for:
-- Creating errors
-- Querying errors
-- Updating error status
-- Retrieving statistics
+### HTTP Routes
+The dashboard's HTML pages and the forms on them. There is no JSON API, and no HTTP endpoint that
+accepts errors. See the [API Reference](/rails_error_dashboard/docs/reference/api-reference/).
 
-### API Authentication
-HTTP Basic Auth required for all API endpoints. Same credentials as dashboard UI.
+### Dashboard Authentication
+HTTP Basic with the dashboard credentials, or your `authenticate_with` block, on every route except
+the issue-tracker webhooks, which check a signature instead.
 
-### JSON Response
-Structured data format for API responses. Includes status codes, data payload, and error messages.
+### Ruby API
+How your code reports errors to RED: `Rails.error.report` for a rescued exception, and
+`RailsErrorDashboard::ManualErrorReporter.report` for errors that aren't Ruby exceptions, such as a
+mobile app's.
 
 ---
 
@@ -453,7 +451,7 @@ Yet Another JIT compiler — Ruby's built-in JIT (Ruby 3.1+). `RubyVM::YJIT.runt
 
 - **[Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)** - Complete configuration reference
 - **[Features Documentation](/rails_error_dashboard/docs/features/)** - All feature details
-- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - API endpoint documentation
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - The dashboard's HTTP routes and the Ruby API
 - **[Plugin System](/rails_error_dashboard/docs/features/plugin-system/)** - Building custom plugins
 
 ---

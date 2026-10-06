@@ -6,408 +6,276 @@ permalink: /docs/guides/MOBILE_APP_INTEGRATION
 
 # Mobile App Error Reporting Integration
 
-This guide shows how to report errors from a React Native/Expo app through an endpoint you add to your own Rails app — the gem itself ships no mobile SDK.
+RED has no mobile SDK and no endpoint that accepts errors. To see a mobile app's errors in the
+dashboard, add a small endpoint to your own Rails app that receives them and passes each one to
+`RailsErrorDashboard::ManualErrorReporter.report`. They are then stored with your server's errors,
+shown in the same dashboard, and sent to the same notification channels.
 
-## Overview
+This guide uses a React Native app as the client, but the endpoint works for any client that can
+post JSON.
 
-The gem does not ship a mobile SDK or an ingest endpoint. This guide shows how to add a small API endpoint to your own Rails app that calls `RailsErrorDashboard::ManualErrorReporter`, so that mobile errors are:
-- Reported to an endpoint you add to your app (example below)
-- Stored in the same database as server errors
-- Displayed in the same dashboard with platform detection (iOS/Android)
-- Trigger the same notification system (Slack + Email)
+---
 
-## Benefits
-
-✅ **Centralized error tracking** - All errors (API + iOS + Android) in one place
-✅ **Platform detection** - Automatically tagged as iOS or Android
-✅ **Real-time notifications** - Team gets alerted via Slack/Email
-✅ **Offline support** - Errors stored locally and synced when online
-✅ **Batch processing** - Multiple errors sent efficiently
-✅ **User context** - Errors associated with logged-in user
-
-## Backend Setup (Rails API)
-
-### 1. Create Mobile Errors Controller
+## The endpoint
 
 ```ruby
 # app/controllers/api/v1/mobile_errors_controller.rb
 module Api
   module V1
-    class MobileErrorsController < BaseController
+    class MobileErrorsController < ActionController::API
+      rate_limit to: 30, within: 1.minute # Rails 7.2+; first, so refused logins count too
+      before_action :authenticate_app!
+
+      MAX_BATCH = 50
+      PLATFORMS = { "ios" => "iOS", "android" => "Android" }.freeze
+
       # POST /api/v1/mobile_errors
       def create
-        mobile_error = MobileError.new(error_params)
-
-        RailsErrorDashboard::Commands::LogError.call(
-          mobile_error,
-          {
-            current_user: current_user,
-            request: request,
-            source: :mobile_app,
-            additional_context: {
-              component: error_params[:component],
-              device_info: error_params[:device_info]
-            }
-          }
-        )
-
-        render json: { success: true }, status: :created
+        report(error_params(params.require(:error)))
+        head :created
       end
 
       # POST /api/v1/mobile_errors/batch
       def batch
-        # Handle batch error reporting
-        # See full implementation in the gem's example
+        errors = Array(params.require(:errors))
+        return head 413 if errors.size > MAX_BATCH
+
+        errors.each { |error| report(error_params(error)) }
+        render json: { accepted: errors.size }, status: :created
       end
 
       private
 
-      def error_params
-        params.require(:error).permit(
-          :error_type, :message, :stack, :component, :timestamp,
-          device_info: [:platform, :version]
-        )
+      # Replace with your API's own check. As written, it lets in signed-in users only.
+      def authenticate_app!
+        head :unauthorized unless current_user
       end
 
-      class MobileError < StandardError
-        attr_reader :mobile_data
+      def error_params(error)
+        error.permit(:error_type, :message, :stack, :component, :timestamp, :platform, :app_version,
+                     context: {})
+      end
 
-        def initialize(data)
-          @mobile_data = data
-          super(data[:message] || 'Mobile app error')
-        end
-
-        def name
-          @mobile_data[:error_type] || 'MobileError'
-        end
-
-        def backtrace
-          @mobile_data[:stack]&.split("\n") || []
-        end
+      def report(error)
+        RailsErrorDashboard::ManualErrorReporter.report(
+          error_type: error[:error_type].presence || "MobileError",
+          message: error[:message].presence || "Mobile app error",
+          backtrace: error[:stack],
+          platform: PLATFORMS.fetch(error[:platform].to_s.downcase, error[:platform]),
+          app_version: error[:app_version],
+          user_id: current_user&.id,
+          occurred_at: error[:timestamp].present? ? Time.at(error[:timestamp].to_i / 1000.0) : nil,
+          user_agent: request.user_agent,
+          ip_address: request.remote_ip,
+          metadata: { component: error[:component], context: error[:context]&.to_h }.compact_blank,
+          source: "mobile_app"
+        )
       end
     end
   end
 end
 ```
-
-### 2. Add Routes
 
 ```ruby
 # config/routes.rb
 namespace :api do
   namespace :v1 do
-    resources :mobile_errors, only: [:create] do
-      collection do
-        post 'batch'
-      end
+    resources :mobile_errors, only: [ :create ] do
+      post :batch, on: :collection
     end
   end
 end
 ```
 
-## Mobile App Setup (React Native/Expo)
+What each part is for:
 
-### 1. Add Error Reporting Methods to API Client
+- **`platform`:** React Native's `Platform.OS` gives `"ios"` and `"android"`. The dashboard's iOS and
+  Android badges, and its mobile counts, match only `"iOS"` and `"Android"`, so the endpoint maps
+  them. RED doesn't work the platform out from the User-Agent here: without `platform:`, the error
+  is stored as `"API"`.
+- **`occurred_at`:** the app sends milliseconds since the epoch. `ManualErrorReporter` takes a
+  `Time` or a date string; it ignores a bare number and uses the current time. An error the app
+  saved while offline keeps its real time on its occurrence; see
+  [`ManualErrorReporter.report`](../API_REFERENCE.md#manualerrorreporterreport).
+- **`metadata`:** it must be a plain Hash; RED drops anything else. Permitted params aren't one,
+  hence the `.to_h` on `context`. RED shows it with the request params on the error's page.
+- **`current_user`:** whatever your API uses to know the signed-in user. Leave `user_id` out if the
+  app has no users.
+- **The batch action** refuses more than 50 errors in one request with a `413`, and answers only
+  after reporting them, so a `201` means every error in the batch was delivered.
+  `accepted` counts the errors handed to RED, including any it then ignores, samples out or only
+  counts during a storm.
+- **Protect it.** The endpoint is part of your API, not of the dashboard: RED's
+  [rate limiting](../API_REFERENCE.md#rate-limiting) covers only the dashboard. As written,
+  `authenticate_app!` refuses anyone who isn't signed in; replace it with your API's own check, such
+  as an app token, if you want errors from before sign-in. The client chooses `error_type`, and
+  severity comes from it, so an open endpoint lets anyone send critical alerts. Limit it too:
+  `rate_limit` needs Rails 7.2 or later; on older Rails, use Rack::Attack. Declare it before
+  `authenticate_app!`: callbacks run in order, so a limit declared after it never counts the
+  requests that fail authentication. An
+  `ActionController::API` controller has no CSRF check; if yours inherits from
+  `ActionController::Base`, add `skip_forgery_protection`.
 
-```typescript
-// src/services/api.ts
-class APIClient {
-  // ... existing code ...
-
-  async reportError(errorData: {
-    error_type: string;
-    message: string;
-    stack?: string;
-    component?: string;
-    timestamp: number;
-    device_info: {
-      platform: string;
-      version: string;
-    };
-  }): Promise<{ success: boolean; message: string }> {
-    const response = await this.client.post('/mobile_errors', {
-      error: errorData
-    });
-    return response.data;
-  }
-
-  async reportErrorsBatch(errors: Array<{...}>): Promise<{...}> {
-    const response = await this.client.post('/mobile_errors/batch', { errors });
-    return response.data;
-  }
-}
-```
-
-### 2. Update Error Logger Service
-
-```typescript
-// src/services/errorLogger.ts
-import { api } from './api';
-
-class ErrorLogger {
-  async syncErrors(): Promise<void> {
-    const unsyncedErrors = (await this.getLocalErrors()).filter(e => !e.synced);
-
-    if (unsyncedErrors.length === 0) return;
-
-    const batches = this.chunkArray(unsyncedErrors, 10);
-
-    for (const batch of batches) {
-      try {
-        // Send to backend
-        const result = await api.reportErrorsBatch(batch.map(error => ({
-          error_type: error.error_type,
-          message: error.message,
-          stack: error.stack,
-          component: error.component,
-          timestamp: error.timestamp,
-          device_info: error.device_info,
-        })));
-
-        // Mark as synced
-        await this.markErrorsAsSynced(batch);
-      } catch (e) {
-        console.error('Failed to sync batch:', e);
-      }
-    }
-  }
-}
-```
-
-### 3. Use Error Logger Throughout App
-
-```typescript
-// In components
-import { errorLogger } from '../services/errorLogger';
-
-try {
-  // Your code
-} catch (error) {
-  await errorLogger.logError(
-    error as Error,
-    'RecordingScreen',
-    { action: 'startRecording' }
-  );
-}
-```
-
-### 4. Add Global Error Boundary
-
-```typescript
-// src/components/common/ErrorBoundary.tsx
-import React from 'react';
-import { errorLogger } from '../../services/errorLogger';
-
-class ErrorBoundary extends React.Component {
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    errorLogger.logError(error, 'ErrorBoundary', {
-      componentStack: errorInfo.componentStack,
-    });
-  }
-
-  render() {
-    return this.props.children;
-  }
-}
-```
-
-## Error Flow
-
-```text
-┌─────────────────┐
-│   Mobile App    │
-│   Error Occurs  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  ErrorLogger        │
-│  - Store locally    │
-│  - Sync to API      │
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────────────────┐
-│  Rails API                      │
-│  POST /api/v1/mobile_errors     │
-└────────┬────────────────────────┘
-         │
-         ▼
-┌───────────────────────────────────┐
-│  Rails Error Dashboard Gem       │
-│  RailsErrorDashboard::           │
-│    Commands::LogError.call       │
-└────────┬──────────────────────────┘
-         │
-         ├────────────────┬──────────────────┐
-         ▼                ▼                  ▼
-┌─────────────┐  ┌──────────────┐  ┌────────────────┐
-│  Database   │  │ Slack Alert  │  │  Email Alert   │
-│  Storage    │  │  (async job) │  │  (async job)   │
-└─────────────┘  └──────────────┘  └────────────────┘
-         │
-         ▼
-┌─────────────────────────┐
-│  Error Dashboard        │
-│  /error_dashboard       │
-│  - View by platform     │
-│  - iOS/Android filters  │
-│  - Analytics            │
-└─────────────────────────┘
-```
-
-## Features in Dashboard
-
-Once integrated, you'll see:
-
-- **Platform Badges**: iOS 📱 or Android 🤖 tags on errors
-- **Device Info**: OS version, app version
-- **Component Context**: Which screen/component errored
-- **Stack Traces**: Full JavaScript stack traces
-- **User Context**: Which user experienced the error
-- **Filtering**: Filter dashboard by platform (iOS/Android/API)
-- **Analytics**: Charts showing errors by platform
-
-## Notifications
-
-When a mobile error occurs:
-
-### Slack Notification:
-```text
-🚨 Error Alert
-━━━━━━━━━━━━━━━━━━━━━
-Error Type: TypeError
-Environment: Production
-Platform: 📱 iOS
-Occurred: December 24, 2025 at 10:30 AM
-
-Message:
-Cannot read property 'id' of undefined
-
-User: user@example.com
-Component: RecordingScreen
-
-[View Details] → Dashboard link
-```
-
-### Email Notification:
-- Beautiful HTML email with error details
-- Platform badge (iOS/Android)
-- Stack trace (first 10 lines)
-- Link to dashboard
-- Sent to configured recipients
-
-## Testing
-
-### 1. Test Error Logging
-```typescript
-// In your app
-errorLogger.logError(
-  new Error('Test mobile error'),
-  'TestScreen',
-  { test: true }
-);
-```
-
-### 2. Check Local Storage
-```typescript
-const stats = await errorLogger.getStats();
-console.log('Errors:', stats.total, 'Synced:', stats.synced);
-```
-
-### 3. Verify in Dashboard
-1. Open `http://localhost:3000/red`
-2. Filter by platform: iOS or Android
-3. Check error details
-4. Verify user association
-5. Check notifications (Slack/Email)
-
-## Best Practices
-
-### 1. Error Context
-Always provide component name and relevant context:
-```typescript
-await errorLogger.logError(error, 'RecordingScreen', {
-  action: 'startRecording',
-  recordingId: recording.id,
-  duration: 120,
-});
-```
-
-### 2. Sync Strategy
-- Sync immediately for critical errors
-- Batch sync for non-critical errors
-- Periodic sync every 15 minutes (default)
-- Sync on app foreground
-
-### 3. Storage Management
-- Keep max 50 errors locally
-- Clean up synced errors > 20
-- Implement exponential backoff for failed syncs
-
-### 4. Privacy
-- Don't log sensitive user data
-- Sanitize error messages
-- Avoid logging tokens/passwords
-
-## Configuration
-
-### Backend
-```ruby
-# config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  config.enable_slack_notifications = true
-  config.enable_email_notifications = true
-  config.notification_email_recipients = ['dev@example.com']
-  config.dashboard_base_url = 'https://myapp.com'
-end
-```
-
-### Mobile App
-```typescript
-// Start periodic sync when app loads
-errorLogger.startPeriodicSync(15); // Every 15 minutes
-
-// Stop sync when app closes
-errorLogger.stopPeriodicSync();
-```
-
-## Troubleshooting
-
-### Errors not appearing in dashboard?
-1. Check API endpoint is accessible
-2. Verify authentication token is valid
-3. Check Rails logs for controller errors
-4. Verify error format matches expected params
-
-### Notifications not sending?
-1. Check notification settings in initializer
-2. Verify Slack webhook URL is valid
-3. Check email recipients are configured
-4. Check background job queue is running
-
-### High error volume?
-1. Implement client-side error deduplication
-2. Add rate limiting to error reporting
-3. Filter out known/handled errors
-4. Set up error grouping by type
-
-## Security
-
-- ✅ Error endpoints require authentication
-- ✅ Rate limiting on error reporting endpoints
-- ✅ Input validation and sanitization
-- ✅ No PII in error messages
-- ✅ Secure token storage on mobile
-
-## Performance
-
-- ✅ Async error reporting (non-blocking)
-- ✅ Batch processing (max 10 errors per request)
-- ✅ Local storage with cleanup
-- ✅ Background job processing
-- ✅ Minimal app overhead
+`ManualErrorReporter.report` returns the saved error, or `nil` when `config.async_logging` is on
+(a background job saves it), or when RED ignores the error, samples it out, or only counts it during
+a storm. The endpoint doesn't depend on the return value.
 
 ---
 
-**Made with ❤️  by Anjan for the Rails community**
+## The React Native client
+
+These are the parts that talk to the endpoint. Storing errors while offline and deciding when to
+sync are up to your app.
+
+### Sending errors
+
+```typescript
+// src/services/errorReporter.ts
+import { Platform } from 'react-native';
+import { api } from './api'; // your HTTP client, with the base URL and auth
+
+export type ReportedError = {
+  error_type: string;
+  message: string;
+  stack?: string;
+  component?: string;
+  timestamp: number; // Date.now()
+  platform: string;  // Platform.OS
+  app_version: string;
+  context?: Record<string, unknown>;
+};
+
+export function toReport(error: Error, component?: string, context?: Record<string, unknown>): ReportedError {
+  return {
+    error_type: error.name,
+    message: error.message,
+    stack: error.stack,
+    component,
+    timestamp: Date.now(),
+    platform: Platform.OS,
+    app_version: '2.1.0', // e.g. from expo-application or react-native-device-info
+    context,
+  };
+}
+
+export async function reportError(report: ReportedError): Promise<void> {
+  await api.post('/api/v1/mobile_errors', { error: report });
+}
+
+// Send up to 50 stored errors, the endpoint's cap. Returns how many were delivered: drop that many
+// from the front of storage, and call it again while any are left.
+export async function reportBatch(reports: ReportedError[]): Promise<number> {
+  const batch = reports.slice(0, 50);
+  const response = await api.post('/api/v1/mobile_errors/batch', { errors: batch });
+  return response.status === 201 ? batch.length : 0;
+}
+```
+
+### Catching render errors
+
+```typescript
+// src/components/ErrorBoundary.tsx
+import React from 'react';
+import { reportError, toReport } from '../services/errorReporter';
+
+type Props = { children: React.ReactNode; fallback: React.ReactNode };
+type State = { hasError: boolean };
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  state: State = { hasError: false };
+
+  // Swap in the fallback, so the error stops here instead of unmounting the app.
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    reportError(toReport(error, 'ErrorBoundary', { componentStack: info.componentStack }))
+      .catch(() => {}); // offline: store the report for reportBatch instead
+  }
+
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}
+```
+
+Wrap a screen, or the whole app, and give it what to show instead:
+`<ErrorBoundary fallback={<CrashScreen />}>`.
+
+---
+
+## Try it
+
+Add the header your API signs requests in with; without it, `authenticate_app!` answers `401`.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/v1/mobile_errors \
+  -H 'Content-Type: application/json' \
+  -d '{"error":{"error_type":"TypeError","message":"Cannot read properties of undefined (reading '"'"'id'"'"')","stack":"at renderCart (cart.js:42)\nat onPress (button.js:15)","component":"CartScreen","timestamp":1767225600000,"platform":"ios","app_version":"2.1.0","context":{"cartId":7}}}'
+# => 201
+```
+
+Then open the dashboard. The error is in the list, with the iOS badge when your errors come from
+more than one platform. Filter by platform with `/red/errors?platform=iOS`.
+
+---
+
+## What the dashboard shows
+
+- **Platform:** iOS and Android badges in the error list, which shows a Platform column once errors
+  come from more than one platform. Filter with `?platform=iOS`.
+- **App version:** the `app_version` you sent, also used by the Releases page.
+- **Component and context:** with the request params on the error's page.
+- **Backtrace:** the stack you sent, cut to `config.max_backtrace_lines` (100 by default).
+- **User:** the `user_id` you sent.
+- **Analytics:** the Analytics page's "Errors by Platform" chart, shown once errors come from more
+  than one platform, and resolution time by platform.
+
+---
+
+## Notifications
+
+Mobile errors go to the channels you set up, under the same rules as server errors. A Slack message
+has the application, error type, platform, environment, time and message; the user and IP address,
+only when the error has a user; the request URL (`mobile_app`, from `source:`, since there is no
+request URL); a **View Details** button and the error's ID. An email has the platform, the first 10
+backtrace lines and a link to the dashboard. See [Notifications](NOTIFICATIONS.md).
+
+---
+
+## Troubleshooting
+
+### Errors don't appear in the dashboard
+
+1. Check the endpoint answers `201`, with the `curl` above. A `401` means `authenticate_app!` didn't
+   find a signed-in user. A `400` means the JSON has no `error` (or `errors`) key. A `413` means a
+   batch of more than 50. A `429` means the endpoint's rate limit.
+2. With `config.async_logging` on, a background job saves each error, so a worker must be running.
+   See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
+3. Check RED isn't dropping the error on purpose: `ignored_exceptions`, `sampling_rate`, or storm
+   protection during a flood.
+
+### Errors show the platform as API
+
+The app didn't send `platform`, or sent a value the endpoint doesn't map. Send `Platform.OS`.
+
+### The time is wrong
+
+The app sent `timestamp` in seconds, or as a date string, instead of milliseconds since the epoch.
+
+### Too many errors
+
+The endpoint's rate limit and batch cap bound what one client can send. RED's storm protection also
+counts floods of errors without saving each one. On the client, don't report the same error over
+and over in a loop.
+
+---
+
+## Security
+
+- The endpoint is yours: authenticate the app and rate-limit it.
+- Error messages and context end up in the dashboard and in notifications. Don't send tokens,
+  passwords or personal data.
+- Treat what the app sends as untrusted input: the endpoint permits only known fields and caps the
+  batch.
