@@ -23,8 +23,8 @@ post JSON.
 module Api
   module V1
     class MobileErrorsController < ActionController::API
+      rate_limit to: 30, within: 1.minute # Rails 7.2+; first, so refused logins count too
       before_action :authenticate_app!
-      rate_limit to: 30, within: 1.minute # Rails 7.2+
 
       MAX_BATCH = 50
       PLATFORMS = { "ios" => "iOS", "android" => "Android" }.freeze
@@ -37,7 +37,9 @@ module Api
 
       # POST /api/v1/mobile_errors/batch
       def batch
-        errors = Array(params.require(:errors)).first(MAX_BATCH)
+        errors = Array(params.require(:errors))
+        return head 413 if errors.size > MAX_BATCH
+
         errors.each { |error| report(error_params(error)) }
         render json: { accepted: errors.size }, status: :created
       end
@@ -99,15 +101,18 @@ What each part is for:
   hence the `.to_h` on `context`. RED shows it with the request params on the error's page.
 - **`current_user`:** whatever your API uses to know the signed-in user. Leave `user_id` out if the
   app has no users.
-- **The batch action** caps the number of errors per request, and answers only after reporting them,
-  so the app can treat a `201` as delivered. `accepted` counts the errors handed to RED, including
-  any it then ignores, samples out or only counts during a storm.
+- **The batch action** refuses more than 50 errors in one request with a `413`, and answers only
+  after reporting them, so a `201` means every error in the batch was delivered.
+  `accepted` counts the errors handed to RED, including any it then ignores, samples out or only
+  counts during a storm.
 - **Protect it.** The endpoint is part of your API, not of the dashboard: RED's
   [rate limiting](../API_REFERENCE.md#rate-limiting) covers only the dashboard. As written,
   `authenticate_app!` refuses anyone who isn't signed in; replace it with your API's own check, such
   as an app token, if you want errors from before sign-in. The client chooses `error_type`, and
   severity comes from it, so an open endpoint lets anyone send critical alerts. Limit it too:
-  `rate_limit` needs Rails 7.2 or later; on older Rails, use Rack::Attack. An
+  `rate_limit` needs Rails 7.2 or later; on older Rails, use Rack::Attack. Declare it before
+  `authenticate_app!`: callbacks run in order, so a limit declared after it never counts the
+  requests that fail authentication. An
   `ActionController::API` controller has no CSRF check; if yours inherits from
   `ActionController::Base`, add `skip_forgery_protection`.
 
@@ -157,10 +162,12 @@ export async function reportError(report: ReportedError): Promise<void> {
   await api.post('/api/v1/mobile_errors', { error: report });
 }
 
-// Send stored errors; drop them from storage only after a 201.
-export async function reportBatch(reports: ReportedError[]): Promise<boolean> {
-  const response = await api.post('/api/v1/mobile_errors/batch', { errors: reports.slice(0, 50) });
-  return response.status === 201;
+// Send up to 50 stored errors, the endpoint's cap. Returns how many were delivered: drop that many
+// from the front of storage, and call it again while any are left.
+export async function reportBatch(reports: ReportedError[]): Promise<number> {
+  const batch = reports.slice(0, 50);
+  const response = await api.post('/api/v1/mobile_errors/batch', { errors: batch });
+  return response.status === 201 ? batch.length : 0;
 }
 ```
 
@@ -171,16 +178,30 @@ export async function reportBatch(reports: ReportedError[]): Promise<boolean> {
 import React from 'react';
 import { reportError, toReport } from '../services/errorReporter';
 
-export class ErrorBoundary extends React.Component<{ children: React.ReactNode }> {
+type Props = { children: React.ReactNode; fallback: React.ReactNode };
+type State = { hasError: boolean };
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  state: State = { hasError: false };
+
+  // Swap in the fallback, so the error stops here instead of unmounting the app.
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
+
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    reportError(toReport(error, 'ErrorBoundary', { componentStack: info.componentStack }));
+    reportError(toReport(error, 'ErrorBoundary', { componentStack: info.componentStack }))
+      .catch(() => {}); // offline: store the report for reportBatch instead
   }
 
   render() {
-    return this.props.children;
+    return this.state.hasError ? this.props.fallback : this.props.children;
   }
 }
 ```
+
+Wrap a screen, or the whole app, and give it what to show instead:
+`<ErrorBoundary fallback={<CrashScreen />}>`.
 
 ---
 
@@ -216,10 +237,10 @@ more than one platform. Filter by platform with `/red/errors?platform=iOS`.
 ## Notifications
 
 Mobile errors go to the channels you set up, under the same rules as server errors. A Slack message
-has the application, error type, platform, environment, time and message, then the user (when the
-error has one), IP address and request URL (`mobile_app`, from `source:`, since there is no request URL), a **View Details**
-button and the error's ID. An email has the platform, the first 10 backtrace lines and a link to the
-dashboard. See [Notifications](NOTIFICATIONS.md).
+has the application, error type, platform, environment, time and message; the user and IP address,
+only when the error has a user; the request URL (`mobile_app`, from `source:`, since there is no
+request URL); a **View Details** button and the error's ID. An email has the platform, the first 10
+backtrace lines and a link to the dashboard. See [Notifications](NOTIFICATIONS.md).
 
 ---
 
@@ -228,8 +249,8 @@ dashboard. See [Notifications](NOTIFICATIONS.md).
 ### Errors don't appear in the dashboard
 
 1. Check the endpoint answers `201`, with the `curl` above. A `401` means `authenticate_app!` didn't
-   find a signed-in user. A `400` means the JSON has no `error` (or `errors`) key. A `429` means the
-   endpoint's rate limit.
+   find a signed-in user. A `400` means the JSON has no `error` (or `errors`) key. A `413` means a
+   batch of more than 50. A `429` means the endpoint's rate limit.
 2. With `config.async_logging` on, a background job saves each error, so a worker must be running.
    See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
 3. Check RED isn't dropping the error on purpose: `ignored_exceptions`, `sampling_rate`, or storm
