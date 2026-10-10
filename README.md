@@ -238,6 +238,8 @@ config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
 config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true
 ```
 
+**Health Check** — `GET /error_dashboard/health` answers in JSON whether the dashboard itself can still capture and show errors: the error database (`SELECT 1`, tables present), last capture time, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, so an uptime monitor can watch the watchmen. Authenticated like every other route. [Reference →](docs/API_REFERENCE.md#health-check)
+
 [Complete documentation →](docs/FEATURES.md#job-health-page)
 </details>
 

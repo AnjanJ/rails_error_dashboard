@@ -62,6 +62,48 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
+## Health Check
+
+Can the dashboard itself still capture and show errors? `GET /error_dashboard/health` answers in JSON, for an uptime monitor. "Who watches the watchmen."
+
+**Endpoint:** `GET /error_dashboard/health`
+
+**Authentication:** the same as every other dashboard route (Basic auth, or your `authenticate_with` lambda). The body names the database adapter and the queue backend, so it is not anonymous.
+
+```bash
+curl -u monitor:password https://your-app.com/error_dashboard/health
+```
+
+```json
+{
+  "status": "ok",
+  "version": "0.15.0",
+  "timestamp": "2026-10-10T10:00:00Z",
+  "checks": {
+    "database": { "status": "ok", "adapter": "PostgreSQL", "separate_database": false, "tables_present": true, "latency_ms": 0.42 },
+    "errors": { "status": "ok", "last_error_at": "2026-10-10T09:58:12Z", "last_24h": 17 },
+    "queue": { "status": "ok", "async_logging": true, "adapter": "solid_queue", "problems": [] },
+    "storm_protection": { "status": "ok", "enabled": true, "state": "closed" }
+  },
+  "duration_ms": 1.9
+}
+```
+
+| `status` | HTTP | Meaning |
+|----------|------|---------|
+| `ok` | 200 | Every check passed |
+| `degraded` | 200 | The dashboard works, with a caveat: a storm is being shed or counted (`storm_protection.state` is not `closed`), or Solid Queue's `config/queue.yml` will not run RED's jobs (`queue.problems`) |
+| `down` | 503 | The error database did not answer `SELECT 1`, or RED's tables are missing (`database.reason: "missing_tables"`). Nothing is being recorded |
+
+**What is checked:**
+
+- `database` — one `SELECT 1` on the **error** database (so `use_separate_database` is honoured), the adapter name, and whether RED's tables exist. Only this check can make the answer `down`. On failure only the exception class is reported, never its message, which can carry a host name
+- `errors` — time of the last capture and the number of errors in the last 24 hours. Both are served by the `occurred_at` index; there is no `COUNT(*)` over the whole table. Skipped when the database is down
+- `queue` — the Active Job adapter RED's jobs run on, whether captures are asynchronous (`config.async_logging`), and the problems the boot-time Solid Queue config check found (memoised; no file is read per request)
+- `storm_protection` — whether it is enabled and the circuit breaker's current state (`closed`, `shedding`, `open`, `half_open`)
+
+The response is `Cache-Control: no-store`. A failure inside the check itself still answers JSON (`{"status":"down","error":"..."}`, 503), never the HTML error page.
+
 ## Error Logging
 
 While the gem doesn't provide built-in HTTP endpoints for error logging (to allow customization), you can easily create them in your application. See [Mobile App Integration Guide](/rails_error_dashboard/docs/guides/mobile-app-integration/) for complete examples.

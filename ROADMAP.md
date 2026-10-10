@@ -539,8 +539,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Low-effort, high-visibility feature that makes the gem feel "enterprise-ready"
 - **Effort:** 1-2 days
 
-### 14. Health Check Endpoint
+### 14. Health Check Endpoint — DONE
 - **What:** Add `/error_dashboard/health` that returns JSON with: database connectivity, error count, last error timestamp, queue status
+- **Status:** Shipped. `GET /health` under the engine mount (authenticated like every dashboard route) reports the error database (`SELECT 1` on `ErrorLogsRecord`'s pool, so a separate database is probed, plus table presence), last capture time and last-24h count, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, 200 with `status: degraded` for a storm or a queue misconfiguration. `Queries::HealthStatus`; documented in docs/API_REFERENCE.md
 - **Why:** "Who watches the watchmen?" If the error dashboard itself is broken, you need to know
 - **Community impact:** Small feature, big signal of production maturity
 - **Effort:** Half day
@@ -683,7 +684,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
-| Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
 | ActiveStorage service health (U) | Half day | Operational + | |
 | Missing-translation tracking | Half day | Unique ++ | Newly relevant — we now ship 11 locales and have a private I18n backend to hook |
