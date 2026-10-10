@@ -872,7 +872,7 @@ A missing translation is not an error. Rails renders `translation missing: en.us
 
 ### How It Works
 
-RED wraps `I18n.exception_handler` with a transparent decorator and delegates to the handler your app already had. That handler is the one place every miss passes through: `I18n.t` calls it directly, and the view helper `t()` calls it before rendering the "translation missing" span. There is no `ActiveSupport::Notifications` event for a miss, so subscribing, as the deprecation tracker does, is not an option.
+RED wraps `I18n.exception_handler` with a transparent decorator and delegates to the handler your app already had; `I18n.t` calls that handler for every miss. The view helper `t()` is different: before Rails 8.1 it looks the key up with a sentinel default (so I18n never misses) and renders the "translation missing" span itself, and only Rails 8.1 added an exception-handler call there. Templates are where most misses live, so RED also prepends a small hook onto `ActionView::Helpers::TranslationHelper#missing_translation` that counts the miss on every Rails version, once (a thread flag stops 8.1 from counting it twice). There is no `ActiveSupport::Notifications` event for a miss, so subscribing, as the deprecation tracker does, is not an option.
 
 Each miss is counted in a thread-local buffer by (locale, key); the first time a key is seen on a thread its host call site is read from the stack (`app/views/users/show.html.erb:12` — compiled templates keep the template path and line). The buffer is written to the `rails_error_dashboard_missing_translations` table at the end of the request or job that filled it (`Rails.application.executor.to_complete`, after the response body is closed, interval-gated to one write per thread per 5 seconds). An `at_exit` hook drains threads that are still alive; Puma joins its workers before it runs, so at most the last 5 seconds of misses on a worker are lost at a restart. One row per (locale, key, application) carries the count, the first and last time it was seen, and the first source.
 
@@ -884,7 +884,7 @@ Each miss is counted in a thread-local buffer by (locale, key); the first time a
 
 ### Safety
 
-- **Opt-in** — this is the one place RED touches global I18n state. Off by default; the handler wrap is installed in `after_initialize` so the handler your initializers configured is the one wrapped, and it is delegated to unchanged (a Symbol handler is dispatched the way I18n itself would). `MissingTranslationHandler.uninstall!` puts the original back
+- **Opt-in** — these are the only places RED touches global I18n and ActionView state. Off by default; the handler wrap is installed in `after_initialize` so the handler your initializers configured is the one wrapped, and it is delegated to unchanged (a Symbol handler is dispatched the way I18n itself would). `MissingTranslationHandler.uninstall!` puts the original back
 - **Transparent** — the wrapper changes no return value and swallows no exception the original would have raised; counting is rescued on its own, so a failure there still delegates
 - **Zero I/O in the request path** — a hash increment per miss, one `caller_locations` scan per new key per thread, and no database access until the request has been answered
 - **Bounded memory** — 500 distinct keys per thread; further new keys are counted in an overflow bucket the page reports, so the total is never silently understated

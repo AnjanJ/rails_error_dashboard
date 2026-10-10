@@ -80,14 +80,45 @@ RSpec.describe RailsErrorDashboard::Services::MissingTranslationHandler do
       expect(counts[[ "de", "users.show.greeting" ]][0]).to eq(1)
     end
 
-    it "records a miss the view helper reports" do
+    # Before Rails 8.1 the view helper never reaches the exception handler
+    # (it looks up with a sentinel default and renders the span itself); 8.1
+    # calls the handler from inside missing_translation. The prepended view
+    # hook must count once on every version, never twice.
+    it "records a miss the view helper reports, exactly once" do
       view = ActionView::Base.empty
       allow(ActionView::Base).to receive(:debug_missing_translation).and_return(true)
 
       html = I18n.with_locale(:en) { view.translate("users.show.greeting") }
 
       expect(html).to include("translation_missing")
-      expect(tracker.buffered_counts.keys.map { |k| tracker.parse_key(k) }).to eq([ [ "en", "users.show.greeting" ] ])
+      counts = tracker.buffered_counts.transform_keys { |k| tracker.parse_key(k) }
+      expect(counts.keys).to eq([ [ "en", "users.show.greeting" ] ])
+      expect(counts[[ "en", "users.show.greeting" ]][0]).to eq(1)
+    end
+
+    it "records a view miss with the explicit locale and scope options" do
+      view = ActionView::Base.empty
+
+      view.translate(:greeting, scope: [ :users, :show ], locale: :fr)
+
+      expect(tracker.buffered_counts.keys.map { |k| tracker.parse_key(k) }).to eq([ [ "fr", "users.show.greeting" ] ])
+    end
+
+    it "clears the view-hook flag afterwards so a later I18n.t miss is counted" do
+      ActionView::Base.empty.translate("users.show.greeting", locale: :en)
+      I18n.t("users.show.greeting", locale: :en)
+
+      key = tracker.buffered_counts.keys.find { |k| tracker.parse_key(k) == [ "en", "users.show.greeting" ] }
+      expect(tracker.buffered_counts[key][0]).to eq(2)
+    end
+
+    it "does not count view misses once uninstalled, even though the hook stays prepended" do
+      described_class.uninstall!
+
+      ActionView::Base.empty.translate("users.show.greeting", locale: :en)
+
+      expect(tracker.buffered_counts).to be_empty
+      expect(ActionView::Helpers::TranslationHelper.ancestors).to include(described_class::ViewHelperHook)
     end
 
     it "does not count a lookup that had a default" do
