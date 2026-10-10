@@ -40,6 +40,19 @@ RSpec.describe RailsErrorDashboard::NotificationBurstSummaryJob do
     expect(body_of(discord_url)).to have_key("content")
   end
 
+  it "posts a plain sendMessage to Telegram" do
+    config.enable_telegram_notifications = true
+    config.telegram_bot_token = "222:burst-token"
+    config.telegram_chat_id = "@ops"
+    telegram_url = "https://api.telegram.org/bot222:burst-token/sendMessage"
+    stub_request(:post, telegram_url).to_return(status: 200, body: '{"ok":true}')
+
+    described_class.perform_now(limit: 3, window_seconds: 60)
+
+    expect(body_of(telegram_url)).to include("chat_id" => "@ops")
+    expect(body_of(telegram_url)["text"]).to be_present
+  end
+
   it "posts a machine-readable event to every custom webhook" do
     config.enable_webhook_notifications = true
     config.webhook_urls = [ webhook_url ]
@@ -85,7 +98,7 @@ RSpec.describe RailsErrorDashboard::NotificationBurstSummaryJob do
     expect { described_class.perform_now(limit: 3, window_seconds: 60) }.not_to raise_error
 
     expect(WebMock).not_to have_requested(:post, /.*/)
-    expect(Rails.logger).to have_received(:warn).with(/no Slack, Discord or webhook channel is enabled/)
+    expect(Rails.logger).to have_received(:warn).with(/no Slack, Discord, Telegram or webhook channel is enabled/)
   end
 
   it "never raises when a channel is down" do

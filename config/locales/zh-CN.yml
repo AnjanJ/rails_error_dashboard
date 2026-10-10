@@ -1047,6 +1047,10 @@ zh-CN:
         notification_email_from: 发件人地址
         enable_discord_notifications: 通过 Discord webhook 通知
         discord_webhook_url: Discord webhook 地址
+        enable_telegram_notifications: "Telegram Bot API 通知"
+        telegram_bot_token: "来自 @BotFather 的机器人令牌（设置环境变量 TELEGRAM_BOT_TOKEN）"
+        telegram_chat_id: "机器人发送消息的聊天、群组或频道"
+        telegram_api_base_url: "Bot API 服务器（仅在使用代理或自建服务器时更改）"
         enable_pagerduty_notifications: 严重错误升级
         pagerduty_integration_key: PagerDuty API 密钥
         enable_webhook_notifications: 通用 webhook 地址

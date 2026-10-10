@@ -128,6 +128,21 @@ RailsErrorDashboard.configure do |config|
   # config.discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
 
 <% end -%>
+<% if @enable_telegram -%>
+  # Telegram Notifications - ENABLED
+  config.enable_telegram_notifications = true
+  config.telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+  config.telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+  # To disable: Set config.enable_telegram_notifications = false
+
+<% else -%>
+  # Telegram Notifications - DISABLED
+  # To enable: Set config.enable_telegram_notifications = true and configure a bot token and chat id
+  config.enable_telegram_notifications = false
+  # config.telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+  # config.telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+
+<% end -%>
 <% if @enable_pagerduty -%>
   # PagerDuty Integration - ENABLED (critical errors only)
   config.enable_pagerduty_notifications = true

@@ -27,7 +27,7 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | GitHub Stars | 92 | 488 | 87 | 25 | 2,173 |
 | Last Commit | 2026-09-25 (active) | 2025-11-24 (stale) | 2026-05-14 (slowing) | 2026-02-25 (active) | 2025-03-22 (dormant) |
 | Dashboard UI | Yes (Bootstrap 5) | Yes (minimal) | Yes (Tailwind) | Yes | No |
-| Notifications | Slack, Email, Discord, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
+| Notifications | Slack, Email, Discord, Telegram, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
 | Issue Trackers | GitHub, GitLab, Codeberg, Linear | No | No | No | No |
 | i18n | 11 locales (v0.9.0) | No | No | No | No |
 | OpenTelemetry | Exports its own spans; consumes GenAI spans (v0.7.0/v0.8.0) | No | No | No | No |
@@ -40,7 +40,7 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | GitHub Issues | Yes (GitHub, GitLab, Codeberg, Linear) | No | Yes | No | No |
 | Auto-Reopen | Yes | No | Yes | No | N/A |
 | Copy for LLM | Yes (v0.5.3+) | No | No | No | No |
-| Telegram | Not yet (7a, open) | No | Yes | No | No |
+| Telegram | Yes (v0.15.0) | No | Yes | No | No |
 | Performance Monitoring | Deferred, see (Z) | No | No | Yes (Redis-based) | No |
 
 > RED's downloads, stars and last commit re-verified against RubyGems and the GitHub API on 2026-09-25.
@@ -491,7 +491,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Power users care deeply about this. Frequent source of complaints with every error tracker
 - **Effort:** 2-3 days
 
-### 7a. Telegram Notifications
+### 7a. Telegram Notifications — DONE (v0.15.0)
+- **Shipped:** `config.enable_telegram_notifications`, `telegram_bot_token`, `telegram_chat_id` (and `telegram_api_base_url` for a self-hosted Bot API server). `TelegramErrorNotificationJob` posts one HTML-formatted `sendMessage` per error through `Services::TelegramDelivery`, which also carries storm, burst-summary and baseline alerts and redacts the token from every log line. HTML parse mode rather than MarkdownV2: MarkdownV2 reserves eighteen characters and one unescaped `_` in a class name fails the whole message. `--telegram` on the installer, Settings page group, 11 locales, NOTIFICATIONS and CONFIGURATION guides.
 - **What:** Add Telegram Bot API integration for error notifications. Configure with `config.enable_telegram_notifications = true` and `config.telegram_bot_token` / `config.telegram_chat_id`. Send formatted error alerts to Telegram channels or groups
 - **Why:** Faultline has Telegram and we don't. Telegram is the dominant messaging platform in Eastern Europe, CIS countries, and parts of Asia. Adding it closes a competitive gap and opens the gem to a large developer community
 - **Implementation:** `TelegramErrorNotificationJob` using the Telegram Bot API (`https://api.telegram.org/bot<token>/sendMessage`). No gem dependency needed, just HTTP POST via `Net::HTTP` (already in stdlib). Format with Markdown, include error type, message, URL, and severity badge
@@ -687,7 +688,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 
 | Item | Effort | Impact | Note |
 |------|--------|--------|------|
-| Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
@@ -736,7 +736,7 @@ principle (see its entry above).
 ### What Needs Work
 - API (3/10) — no JSON endpoints at all (ICEBOX)
 - User management (7/10) — HTTP Basic Auth + custom lambda (Devise/Warden/session), no RBAC yet
-- Integrations (8.5/10) — four issue trackers (GitHub/GitLab/Codeberg/Linear) with manual + auto-create + lifecycle sync + webhooks. **No Telegram** — the one competitive gap vs Faultline that still stands
+- Integrations (8.5/10) — four issue trackers (GitHub/GitLab/Codeberg/Linear) with manual + auto-create + lifecycle sync + webhooks, and Telegram since v0.15.0 (7a), which closed the last channel gap vs Faultline
 - Translation quality (unscored) — nine locales are machine-translated and unreviewed. Mechanically verified, honestly labelled, but a native speaker has reviewed only French (v0.11.5, #201). Issues #156–#165, less the closed #158, are the open invitation
 - Performance monitoring (0/10) — no request timing or slow query tracking. Deferred on principle, not backlog (see Z)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN + functional indexes added

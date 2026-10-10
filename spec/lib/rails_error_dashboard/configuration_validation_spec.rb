@@ -355,6 +355,35 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       end
     end
 
+    describe "Telegram notifications" do
+      it "requires a bot token when enabled" do
+        config.enable_telegram_notifications = true
+        config.telegram_bot_token = nil
+        config.telegram_chat_id = "-100123"
+        expect { config.validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError,
+          /telegram_bot_token is required when enable_telegram_notifications is true/
+        )
+      end
+
+      it "requires a chat id when enabled" do
+        config.enable_telegram_notifications = true
+        config.telegram_bot_token = "123:abc"
+        config.telegram_chat_id = "  "
+        expect { config.validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError,
+          /telegram_chat_id is required when enable_telegram_notifications is true/
+        )
+      end
+
+      it "accepts a token and a chat id" do
+        config.enable_telegram_notifications = true
+        config.telegram_bot_token = "123:abc"
+        config.telegram_chat_id = "@ops"
+        expect { config.validate! }.not_to raise_error
+      end
+    end
+
     describe "PagerDuty notifications" do
       it "requires integration key when enabled" do
         config.enable_pagerduty_notifications = true
@@ -1253,6 +1282,13 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     it "skips Discord webhook validation during builds" do
       config.enable_discord_notifications = true
       config.discord_webhook_url = nil
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "skips Telegram credential validation during builds" do
+      config.enable_telegram_notifications = true
+      config.telegram_bot_token = nil
+      config.telegram_chat_id = nil
       expect { config.validate! }.not_to raise_error
     end
 

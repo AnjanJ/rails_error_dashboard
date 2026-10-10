@@ -1238,6 +1238,10 @@ ru:
         notification_email_from: Адрес отправителя
         enable_discord_notifications: Уведомления через webhook Discord
         discord_webhook_url: Адрес webhook Discord
+        enable_telegram_notifications: "Уведомления Telegram через Bot API"
+        telegram_bot_token: "Токен бота от @BotFather (задайте переменную окружения TELEGRAM_BOT_TOKEN)"
+        telegram_chat_id: "Чат, группа или канал, куда пишет бот"
+        telegram_api_base_url: "Сервер Bot API (менять только для прокси или собственного сервера)"
         enable_pagerduty_notifications: Эскалация критических ошибок
         pagerduty_integration_key: API-ключ PagerDuty
         enable_webhook_notifications: Произвольные webhook-адреса

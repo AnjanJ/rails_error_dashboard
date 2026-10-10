@@ -22,8 +22,8 @@ Core features that are always enabled - no configuration needed:
 ### Optional Features (Opt-in)
 **More than 30 optional features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
-**📧 Notifications (5 features)**
-- Slack, Email, Discord, PagerDuty, Webhooks
+**📧 Notifications (6 features)**
+- Slack, Email, Discord, Telegram, PagerDuty, Webhooks
 
 **⚡ Performance (3 features)**
 - Async Logging, Error Sampling, Separate Database
@@ -181,6 +181,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 config.enable_slack_notifications = true
 config.enable_email_notifications = true
 config.enable_discord_notifications = true
+config.enable_telegram_notifications = true
 config.enable_pagerduty_notifications = true
 config.enable_webhook_notifications = true
 ```
@@ -208,6 +209,14 @@ config.enable_webhook_notifications = true
 - **Error metadata** in embed fields
 - **Backtrace snippets**
 - **Webhook-based** (no bot required)
+
+### Telegram Integration
+- **Bot API** (`sendMessage`), no gem dependency
+- **HTML-formatted messages** with every value escaped
+- **Error metadata** (application, environment, platform, occurrences, controller, action, first seen, location)
+- **Dashboard link** on every message
+- **Storm, burst-summary and baseline alerts** delivered too
+- **Token never logged**: redacted from every failure line
 
 ### PagerDuty Integration
 - **Critical errors only** (to avoid alert fatigue)
@@ -1474,6 +1483,7 @@ rails generate rails_error_dashboard:install \
 - `--slack` - Enable Slack notifications
 - `--email` - Enable email notifications
 - `--discord` - Enable Discord notifications
+- `--telegram` - Enable Telegram notifications
 - `--pagerduty` - Enable PagerDuty notifications
 - `--webhooks` - Enable webhook notifications
 - `--async_logging` - Enable async error logging

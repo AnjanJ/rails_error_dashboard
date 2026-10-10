@@ -17,7 +17,8 @@ RSpec.describe RailsErrorDashboard::Configuration, "#inspect" do
       webhook_signing_secret: "webhook-signing-secret",
       issue_tracker_token: "ghp_issue-tracker-secret",
       issue_webhook_secret: "issue-webhook-secret",
-      llm_api_key: "sk-llm-secret"
+      llm_api_key: "sk-llm-secret",
+      telegram_bot_token: "123456:telegram-bot-secret"
     }
   end
 

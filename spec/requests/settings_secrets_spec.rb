@@ -17,7 +17,8 @@ RSpec.describe "Settings page credentials", type: :request do
       webhook_signing_secret: "webhook-signing-secret-value",
       issue_tracker_token: "ghp_issue-tracker-secret-token",
       issue_webhook_secret: "issue-webhook-secret-value",
-      llm_api_key: "sk-llm-secret-key"
+      llm_api_key: "sk-llm-secret-key",
+      telegram_bot_token: "123456:telegram-bot-secret-token"
     }
   end
 
@@ -26,6 +27,8 @@ RSpec.describe "Settings page credentials", type: :request do
     config.authenticate_with = -> { true }
     config.enable_slack_notifications = true
     config.enable_discord_notifications = true
+    config.enable_telegram_notifications = true
+    config.telegram_chat_id = "-1001234567890"
     config.enable_pagerduty_notifications = true
     config.enable_webhook_notifications = true
     config.enable_issue_tracking = true
@@ -47,7 +50,9 @@ RSpec.describe "Settings page credentials", type: :request do
         expect(response.body).not_to include(v), "#{v} appeared on the settings page"
       end
     end
-    expect(response.body).not_to include("slack-secret-token", "discord-secret-token", "custom-webhook-secret")
+    expect(response.body).not_to include("slack-secret-token", "discord-secret-token", "custom-webhook-secret", "telegram-bot-secret")
+    # The chat id is an address, not a credential, and stays readable.
+    expect(response.body).to include("-1001234567890")
     # One Set badge per visible secret (the dashboard password and the LLM key
     # are on the page too; issue-tracker rows need enable_issue_tracking).
     expect(response.body.scan(/bi-check-circle"><\/i>\s*Set\b/).size).to be >= 5

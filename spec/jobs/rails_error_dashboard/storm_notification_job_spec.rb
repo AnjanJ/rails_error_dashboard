@@ -81,6 +81,37 @@ RSpec.describe RailsErrorDashboard::StormNotificationJob do
       end
     end
 
+    context "with Telegram configured" do
+      let(:telegram_url) { "https://api.telegram.org/bot111:storm-token/sendMessage" }
+
+      before do
+        RailsErrorDashboard.configuration.enable_telegram_notifications = true
+        RailsErrorDashboard.configuration.telegram_bot_token = "111:storm-token"
+        RailsErrorDashboard.configuration.telegram_chat_id = "-100555"
+      end
+
+      it "sends the sentence as a plain sendMessage to the configured chat" do
+        stub_request(:post, telegram_url).to_return(status: 200, body: '{"ok":true}')
+
+        described_class.perform_now(started_at: started_at)
+
+        expect(WebMock).to have_requested(:post, telegram_url).with { |req|
+          body = JSON.parse(req.body)
+          body["chat_id"] == "-100555" && body["text"].include?("Error storm detected") && !body.key?("parse_mode")
+        }.once
+      end
+
+      it "logs a failed post with the token redacted and still finishes" do
+        stub_request(:post, telegram_url).to_raise(SocketError.new("down: #{telegram_url}"))
+        allow(Rails.logger).to receive(:error)
+
+        expect { described_class.perform_now(started_at: started_at) }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:error).with(/Telegram post failed: down: .*bot\[FILTERED\]/)
+        expect(Rails.logger).not_to have_received(:error).with(/storm-token/)
+      end
+    end
+
     context "with generic webhooks configured" do
       before do
         RailsErrorDashboard.configuration.enable_webhook_notifications = true

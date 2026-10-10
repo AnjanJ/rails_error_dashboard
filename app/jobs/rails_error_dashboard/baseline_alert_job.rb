@@ -59,6 +59,11 @@ module RailsErrorDashboard
         send_discord_notification(error_log, anomaly_data, config, locale)
       end
 
+      # Telegram notification
+      if Services::TelegramDelivery.configured?(config)
+        send_telegram_notification(error_log, anomaly_data, config, locale)
+      end
+
       # Webhook notification
       if config.enable_webhook_notifications && config.webhook_urls.any?
         send_webhook_notification(error_log, anomaly_data, config, locale)
@@ -94,6 +99,14 @@ module RailsErrorDashboard
       post_json(config.discord_webhook_url, payload)
     rescue => e
       Rails.logger.error("Failed to send baseline alert to Discord: #{e.message}")
+    end
+
+    def send_telegram_notification(error_log, anomaly_data, _config, locale)
+      payload = Services::BaselineAlertPayloadBuilder.telegram_payload(error_log, anomaly_data, locale: locale)
+
+      Services::TelegramDelivery.post(payload)
+    rescue => e
+      Rails.logger.error("Failed to send baseline alert to Telegram: #{Services::TelegramDelivery.redact(e.message)}")
     end
 
     def send_webhook_notification(error_log, anomaly_data, config, locale)
