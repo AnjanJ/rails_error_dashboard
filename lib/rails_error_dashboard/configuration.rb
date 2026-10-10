@@ -234,6 +234,12 @@ module RailsErrorDashboard
     attr_accessor :rack_attack_max_cache_size           # Max buffered keys per thread (default: 1000)
     attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 5)
 
+    # Missing-translation tracking — counts the HOST app's I18n misses by
+    # locale and key in their own table. Wraps I18n.exception_handler
+    # (delegating to the handler the app already had); the one place RED
+    # touches global I18n state, so it is opt-in.
+    attr_accessor :enable_missing_translation_tracking  # Master switch (default: false)
+
     # ActionCable event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
     # ActiveStorage event tracking (requires enable_breadcrumbs = true)
@@ -489,6 +495,10 @@ module RailsErrorDashboard
       # Limits page can be, not a per-request cost. A flood still collapses to
       # roughly one write per thread per interval.
       @rack_attack_flush_interval = 5    # Seconds between DB flushes
+
+      # Missing-translation tracking - OFF by default (opt-in). Persists to its
+      # own table; does NOT require breadcrumbs.
+      @enable_missing_translation_tracking = false
 
       # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_actioncable_tracking = false

@@ -597,6 +597,28 @@ curl -u admin:password \
 
 ---
 
+### Missing Translations
+
+The I18n keys the host app looked up and did not have, by locale, most-missed first.
+
+**Endpoint:** `GET /error_dashboard/errors/missing_translations`
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `days` | integer | Time range filter (7, 30, 90) | `?days=7` |
+
+**Example:**
+```bash
+curl -u admin:password \
+  "https://your-app.com/error_dashboard/errors/missing_translations?days=7"
+```
+
+**Requires:** `config.enable_missing_translation_tracking = true` and the `rails_error_dashboard_missing_translations` migration
+
+---
+
 ## Error Response Codes
 
 | Code | Description |

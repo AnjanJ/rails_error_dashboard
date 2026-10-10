@@ -60,6 +60,7 @@ it:
       llm: LLM
       n_plus_one: Query N+1
       deprecations: Deprecations
+      missing_translations: "Traduzioni"
       swallowed: Soppresse
       diagnostic_dumps: Diagnostica
       storms: Tempeste
@@ -850,6 +851,29 @@ it:
         view_unrescued: Vedi gli errori %{exception} non intercettati finiti in error_log
         footer_tip: Le eccezioni soppresse vengono sollevate e poi intercettate in
           silenzio. Possono nascondere bug reali.
+      missing_translations_page:
+        title: "Traduzioni mancanti"
+        empty_title: "Nessuna traduzione mancante registrata"
+        empty_body: "Nessuna chiave di traduzione mancante è stata registrata negli ultimi %{days} giorni."
+        how_title: "Come vengono tracciate le traduzioni mancanti:"
+        how_enabled_html: "Il tracciamento deve essere attivo (%{option})"
+        how_hooked: "RED avvolge I18n.exception_handler e delega all'handler che la tua app aveva già; nient'altro cambia nella tua configurazione I18n"
+        how_recorded: "Ogni ricerca che arriva all'handler — sia da I18n.t sia dall'helper di vista t() — viene contata per locale e chiave, insieme al primo punto di chiamata osservato"
+        how_not_seen: "Una ricerca con :default non fallisce mai, e una fatta con raise_on_missing_translations solleva un'eccezione prima che qualsiasi handler venga eseguito, quindi nessuna delle due è contata qui"
+        how_buffered: "I fallimenti vengono contati in memoria e scritti alla fine della richiesta o del job, quindi attendi un breve ritardo prima che compaiano"
+        missing_keys: "Chiavi mancanti"
+        total_misses: "Fallimenti totali"
+        locales_affected: "Locale interessati"
+        all_title: "Chiavi di traduzione mancanti"
+        column_key: "Chiave"
+        column_locale: "Locale"
+        column_source: "Visto prima in"
+        column_misses: "Fallimenti"
+        column_first_seen: "Prima occorrenza"
+        overflow_notice: "%{count} fallimenti non sono stati attribuiti a una chiave perché il buffer del tracker (%{limit} chiavi per thread) era pieno."
+        footer_tip: "Aggiungi la chiave al file di locale, oppure passa un :default. Le chiavi effettivamente incontrate dagli utenti sono elencate per prime."
+        docs: "Guida i18n di Rails"
+
       rack_attack_page:
         title: Eventi di limite di richieste
         missing_title: Rack Attack non è installato
@@ -1215,6 +1239,7 @@ it:
         enable_crash_capture: Hook at_exit per i crash non gestiti
         enable_coverage_tracking: Modalità diagnostica — abilitala dal pannello per
           vedere le righe eseguite nella vista del codice (Ruby 3.2+)
+        enable_missing_translation_tracking: "Conta i fallimenti I18n dell'app per locale e chiave (avvolge I18n.exception_handler)"
         enable_rack_attack_tracking: Registra gli eventi throttle/blocklist in una
           tabella dedicata
         enable_actioncable_tracking: Traccia gli eventi dei canali WebSocket come
@@ -1272,6 +1297,7 @@ it:
         breadcrumbs: Breadcrumbs
         system_health: Stato del sistema
         swallowed_exceptions: Rilevamento delle eccezioni soppresse
+        missing_translations: "Tracciamento delle traduzioni mancanti"
         rack_attack: Tracciamento di Rack Attack
         actioncable: Tracciamento di ActionCable
         activestorage: Tracciamento di ActiveStorage

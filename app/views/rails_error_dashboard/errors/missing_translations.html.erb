@@ -1,0 +1,143 @@
+<% content_for :page_title, red_t("red.errors.missing_translations_page.title") %>
+
+<div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
+      <i class="bi bi-translate me-2"></i>
+      <%= red_t("red.errors.missing_translations_page.title") %>
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to missing_translations_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.7") %>
+      <% end %>
+      <%= link_to missing_translations_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.30") %>
+      <% end %>
+      <%= link_to missing_translations_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.90") %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @unique_keys == 0 %>
+    <div class="red-empty-state">
+      <i class="bi bi-translate display-1 text-success mb-3"></i>
+      <div class="red-empty-state-title"><%= red_t("red.errors.missing_translations_page.empty_title") %></div>
+      <p class="text-muted">
+        <%= red_t("red.errors.missing_translations_page.empty_body", days: @days) %>
+      </p>
+      <div class="card mx-auto" style="max-width: 560px;">
+        <div class="card-body text-start">
+          <h6><%= red_t("red.errors.missing_translations_page.how_title") %></h6>
+          <ul class="mb-0">
+            <li><%= red_t("red.errors.missing_translations_page.how_enabled_html", option: content_tag(:code, "enable_missing_translation_tracking = true")) %></li>
+            <li><%= red_t("red.errors.missing_translations_page.how_hooked") %></li>
+            <li><%= red_t("red.errors.missing_translations_page.how_recorded") %></li>
+            <li><%= red_t("red.errors.missing_translations_page.how_not_seen") %></li>
+            <li><%= red_t("red.errors.missing_translations_page.how_buffered") %></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= @unique_keys %></div>
+            <small class="text-muted"><%= red_t("red.errors.missing_translations_page.missing_keys") %></small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @total_misses %></div>
+            <small class="text-muted"><%= red_t("red.errors.missing_translations_page.total_misses") %></small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @locale_count %></div>
+            <small class="text-muted"><%= red_t("red.errors.missing_translations_page.locales_affected") %></small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <% if @overflow_count.to_i.positive? %>
+      <div class="alert alert-warning d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <div>
+          <%= red_t("red.errors.missing_translations_page.overflow_notice",
+                    count: @overflow_count,
+                    limit: RailsErrorDashboard::Services::MissingTranslationTracker::MAX_BUFFERED_KEYS) %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-translate text-warning me-2"></i>
+          <%= red_t("red.errors.missing_translations_page.all_title") %>
+          <span class="badge bg-warning text-dark"><%= @unique_keys %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th><%= red_t("red.errors.missing_translations_page.column_key") %></th>
+                <th width="90"><%= red_t("red.errors.missing_translations_page.column_locale") %></th>
+                <th width="90"><%= red_t("red.errors.missing_translations_page.column_misses") %></th>
+                <th><%= red_t("red.errors.missing_translations_page.column_source") %></th>
+                <th width="140"><%= red_t("red.errors.missing_translations_page.column_first_seen") %></th>
+                <th width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @entries.each do |entry| %>
+                <tr>
+                  <td><code><%= entry[:key] %></code></td>
+                  <%# A locale tag is a machine value, shown as-is. %>
+                  <td><span class="badge bg-light text-dark"><%= entry[:locale] %></span></td>
+                  <td><strong><%= entry[:count] %></strong></td>
+                  <td>
+                    <% if entry[:source].present? %>
+                      <code><%= entry[:source] %></code>
+                    <% else %>
+                      <span class="text-muted">&mdash;</span>
+                    <% end %>
+                  </td>
+                  <td><%= local_time_ago(entry[:first_seen]) %></td>
+                  <td><%= local_time_ago(entry[:last_seen]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
+        <div>
+          <small class="text-muted">
+            <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.missing_translations_page.footer_tip") %>
+          </small>
+          <small class="ms-3">
+            <a href="https://guides.rubyonrails.org/i18n.html" target="_blank" rel="noopener" class="text-decoration-none">
+              <i class="bi bi-book"></i> <%= red_t("red.errors.missing_translations_page.docs") %> <i class="bi bi-box-arrow-up-right" style="font-size: 0.7em;"></i>
+            </a>
+          </small>
+        </div>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

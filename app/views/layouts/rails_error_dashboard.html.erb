@@ -1156,6 +1156,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <% if RailsErrorDashboard.configuration.enable_storm_protection %>
             <% diag_items << { path: storms_errors_path(nav_params), icon: 'bi-cloud-lightning-rain', label: red_t("red.nav.storms") } %>
           <% end %>
+          <% if RailsErrorDashboard.configuration.enable_missing_translation_tracking %>
+            <% diag_items << { path: missing_translations_errors_path(nav_params), icon: 'bi-translate', label: red_t("red.nav.missing_translations") } %>
+          <% end %>
 
           <% if diag_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navDiagSection">

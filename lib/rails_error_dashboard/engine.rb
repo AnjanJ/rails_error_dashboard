@@ -133,6 +133,25 @@ module RailsErrorDashboard
         at_exit { RailsErrorDashboard::Services::RackAttackTracker.flush_all_threads! }
       end
 
+      # Count the host app's missing translations. The handler wrap is the one
+      # place RED touches global I18n state, so it runs only when opted in,
+      # and here in after_initialize so the handler the host's own
+      # initializers configured is the one being wrapped (and delegated to).
+      #
+      # Same drain points as Rack Attack tracking: to_complete fires after the
+      # response body is closed (never delays a request, safety rule 2) and is
+      # interval-gated; at_exit catches what the Puma threads still hold at
+      # SIGTERM. at_exit, not Signal.trap (safety rule 9).
+      if RailsErrorDashboard.configuration.enable_missing_translation_tracking
+        RailsErrorDashboard::Services::MissingTranslationHandler.install!
+
+        Rails.application.executor.to_complete do
+          RailsErrorDashboard::Services::MissingTranslationTracker.flush_if_due!
+        end
+
+        at_exit { RailsErrorDashboard::Services::MissingTranslationTracker.flush_all_threads! }
+      end
+
       # Drain the storm count buffer at the end of every request and job, and
       # again at process exit.
       #

@@ -60,6 +60,7 @@ ja:
       llm: LLM
       n_plus_one: N+1 クエリ
       deprecations: 非推奨
+      missing_translations: "翻訳"
       swallowed: 握りつぶし
       diagnostic_dumps: 診断
       storms: ストーム
@@ -756,6 +757,29 @@ ja:
         column_ratio: 比率
         view_unrescued: error_log に記録された未 rescue の%{exception}エラーを表示
         footer_tip: 握りつぶされた例外とは、raise された後に暗黙的に rescue された例外です。実際の不具合を隠している可能性があります。
+      missing_translations_page:
+        title: "翻訳の欠落"
+        empty_title: "欠落した翻訳は記録されていません"
+        empty_body: "過去 %{days} 日間に欠落した翻訳キーは記録されていません。"
+        how_title: "翻訳の欠落を追跡する仕組み:"
+        how_enabled_html: "追跡を有効にする必要があります（%{option}）"
+        how_hooked: "RED は I18n.exception_handler をラップし、アプリが元々使っていたハンドラーに処理を委譲します。それ以外の I18n 設定は変更しません"
+        how_recorded: "ハンドラーに到達した検索は、I18n.t でもビューヘルパー t() でも、ロケールとキーごとに、最初に観測された呼び出し元とともに数えられます"
+        how_not_seen: ":default を指定した検索は欠落になりません。raise_on_missing_translations を使った検索はハンドラーが動く前に例外を投げるため、どちらもここでは数えられません"
+        how_buffered: "欠落はメモリ上で数えられ、リクエストまたはジョブの終了時に書き込まれるため、表示されるまで少し時間がかかります"
+        missing_keys: "欠落キー"
+        total_misses: "欠落の合計"
+        locales_affected: "影響を受けたロケール"
+        all_title: "欠落している翻訳キー"
+        column_key: "キー"
+        column_locale: "ロケール"
+        column_source: "最初の検出箇所"
+        column_misses: "欠落数"
+        column_first_seen: "初回検出"
+        overflow_notice: "トラッカーのバッファ（スレッドあたり %{limit} キー）が満杯だったため、%{count} 件の欠落をキーに割り当てられませんでした。"
+        footer_tip: "ロケールファイルにキーを追加するか、:default を渡してください。実際にユーザーが遭遇したキーが先に表示されます。"
+        docs: "Rails i18n ガイド"
+
       rack_attack_page:
         title: レート制限イベント
         missing_title: Rack Attack がインストールされていません
@@ -1050,6 +1074,7 @@ ja:
         enable_crash_capture: 未処理のクラッシュを捕捉する at_exit フック
         enable_coverage_tracking: 診断モード — ダッシュボードから有効にすると、ソース表示で実行された行を確認できます (Ruby
           3.2 以上)
+        enable_missing_translation_tracking: "アプリの I18n 欠落をロケールとキーごとに数えます（I18n.exception_handler をラップ）"
         enable_rack_attack_tracking: throttle/blocklist イベントを専用テーブルに記録します
         enable_actioncable_tracking: WebSocket のチャネルイベントを breadcrumb として記録します
         enable_activestorage_tracking: アップロード/ダウンロード/削除を breadcrumb として記録します
@@ -1095,6 +1120,7 @@ ja:
         breadcrumbs: Breadcrumb
         system_health: システムヘルス
         swallowed_exceptions: 握りつぶされた例外の検出
+        missing_translations: "翻訳欠落の追跡"
         rack_attack: Rack Attack トラッキング
         actioncable: ActionCable トラッキング
         activestorage: ActiveStorage トラッキング

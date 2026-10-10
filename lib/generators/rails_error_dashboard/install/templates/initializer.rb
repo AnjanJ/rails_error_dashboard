@@ -412,6 +412,14 @@ RailsErrorDashboard.configure do |config|
   # config.swallowed_exception_threshold = 0.95
 
 <% end -%>
+  # Missing-Translation Tracking - DISABLED
+  # Counts every I18n key your app looked up and did not have, by locale, with
+  # the first call site, on its own dashboard page (/errors/missing_translations).
+  # Wraps I18n.exception_handler and delegates to the handler you already had —
+  # the one place RED touches global I18n state, which is why it is opt-in.
+  # To enable: Set config.enable_missing_translation_tracking = true
+  config.enable_missing_translation_tracking = false
+
 <% if @enable_diagnostic_dump -%>
   # Diagnostic Dump - ENABLED
   # On-demand system state snapshot via rake task or dashboard button

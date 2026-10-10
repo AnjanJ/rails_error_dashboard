@@ -673,6 +673,7 @@ shift is deliberate. Depth before breadth.
 | **Verifying** | Chart locale fixes for #178 | #170 confirmed and closed. #178 fixed again in v0.11.4 (#199) and left open for @gmarziou to confirm and close. Still open on 2026-09-25, with no reply since the maintainer's 2026-08-30 comment announcing the fix |
 | **Demo** | Live demo tracks each gem release | On v0.14.0 (checked 2026-09-25). A scheduled workflow in the demo repo (`update-demo-release.yml` in `AnjanJ/rails_error_dashboard_demo_app`) moves it to each newly published version |
 | **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open and unmerged as of 2026-09-25 |
+| **Done** | Health check endpoint (14), webhook HMAC signatures (20), missing-translation tracking | Landed on main after v0.14.4, unreleased as of 2026-10-10. `GET /health`; `config.webhook_signing_secret`; `config.enable_missing_translation_tracking` (wraps `I18n.exception_handler`, own table, own page). Each is a `feat:` commit, so release-please cuts them as v0.15.0 |
 | **Done** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Assigned: CVE-2026-94549 (on the advisory since 2026-09-22). The maintainer has notified the reporter |
 | **Community-owned** | Native-speaker review of the remaining 9 locales (#156–#165 less #158) | Open by design — the contribution path, not a backlog. First one landed: @gmarziou on French (#201, shipped in v0.11.5, closing #158) |
 
@@ -685,8 +686,7 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
-| ActiveStorage service health (U) | Half day | Operational + | |
-| Missing-translation tracking | Half day | Unique ++ | Newly relevant — we now ship 11 locales and have a private I18n backend to hook |
+| ActiveStorage service health (U) | Half day | Operational + | Partly shipped: the breadcrumb-based ActiveStorage Health page (`Queries::ActiveStorageSummary`, v0.5) covers operation counts and durations. Still open: the live reachability probe (`service.exist?`) on the health panel |
 | Lazy backtrace via `Thread.each_caller_location` (Y) | Half day | Performance + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |

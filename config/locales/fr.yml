@@ -60,6 +60,7 @@ fr:
       llm: LLM
       n_plus_one: Requêtes N+1
       deprecations: Dépréciations
+      missing_translations: "Traductions"
       swallowed: Avalées
       diagnostic_dumps: Diagnostics
       storms: Tempêtes
@@ -857,6 +858,29 @@ fr:
           dans error_log
         footer_tip: Les exceptions avalées sont levées puis rattrapées silencieusement.
           Elles peuvent masquer de vrais bugs.
+      missing_translations_page:
+        title: "Traductions manquantes"
+        empty_title: "Aucune traduction manquante enregistrée"
+        empty_body: "Aucune clé de traduction manquante n'a été enregistrée au cours des %{days} derniers jours."
+        how_title: "Comment les traductions manquantes sont suivies :"
+        how_enabled_html: "Le suivi doit être activé (%{option})"
+        how_hooked: "RED enveloppe I18n.exception_handler et délègue au handler que votre application avait déjà ; rien d'autre ne change dans votre configuration I18n"
+        how_recorded: "Chaque recherche qui aboutit au handler — via I18n.t comme via le helper de vue t() — est comptée par locale et par clé, avec le premier point d'appel observé"
+        how_not_seen: "Une recherche avec :default n'échoue jamais, et une recherche avec raise_on_missing_translations lève une exception avant tout handler ; aucune des deux n'est comptée ici"
+        how_buffered: "Les échecs sont comptés en mémoire et écrits à la fin de la requête ou du job ; comptez un court délai avant qu'ils n'apparaissent"
+        missing_keys: "Clés manquantes"
+        total_misses: "Échecs au total"
+        locales_affected: "Locales concernées"
+        all_title: "Clés de traduction manquantes"
+        column_key: "Clé"
+        column_locale: "Locale"
+        column_source: "Vu d'abord dans"
+        column_misses: "Échecs"
+        column_first_seen: "Première occurrence"
+        overflow_notice: "%{count} échecs n'ont pas pu être attribués à une clé parce que le tampon du suivi (%{limit} clés par thread) était plein."
+        footer_tip: "Ajoutez la clé au fichier de locale, ou passez un :default. Les clés réellement rencontrées par les utilisateurs sont listées en premier."
+        docs: "Guide i18n de Rails"
+
       rack_attack_page:
         title: Événements de limitation de débit
         missing_title: Rack Attack n'est pas installé
@@ -1225,6 +1249,7 @@ fr:
         enable_crash_capture: Hook at_exit pour les plantages non gérés
         enable_coverage_tracking: Mode diagnostic — à activer depuis le tableau de
           bord pour voir les lignes exécutées dans la vue du code source (Ruby 3.2+)
+        enable_missing_translation_tracking: "Compte les échecs I18n de l'app par locale et par clé (enveloppe I18n.exception_handler)"
         enable_rack_attack_tracking: Enregistrer les événements throttle/blocklist
           dans leur propre table
         enable_actioncable_tracking: Suivre les événements des canaux WebSocket sous
@@ -1282,6 +1307,7 @@ fr:
         breadcrumbs: Breadcrumbs
         system_health: État du système
         swallowed_exceptions: Détection des exceptions avalées
+        missing_translations: "Suivi des traductions manquantes"
         rack_attack: Suivi de Rack Attack
         actioncable: Suivi d'ActionCable
         activestorage: Suivi d'ActiveStorage

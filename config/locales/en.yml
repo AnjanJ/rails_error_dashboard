@@ -116,6 +116,7 @@ en:
       llm: "LLM"
       n_plus_one: "N+1 Queries"
       deprecations: "Deprecations"
+      missing_translations: "Translations"
       swallowed: "Swallowed"
       diagnostic_dumps: "Diagnostics"
       storms: "Storms"
@@ -1185,6 +1186,33 @@ en:
         view_unrescued: "View any unrescued %{exception} errors that leaked into error_log"
         footer_tip: "Swallowed exceptions are raised then silently rescued. They may hide real bugs."
 
+      missing_translations_page:
+        title: "Missing Translations"
+        empty_title: "No Missing Translations Recorded"
+        # %{days} is the selected day range.
+        empty_body: "No missing translation keys were recorded over the last %{days} days."
+        how_title: "How missing translations are tracked:"
+        # %{option} is a config option name as a <code> element.
+        how_enabled_html: "Tracking must be enabled (%{option})"
+        # I18n.exception_handler, I18n.t, t(), :default and raise_on_missing_translations are Ruby/Rails API names, not prose.
+        how_hooked: "RED wraps I18n.exception_handler and delegates to the handler your app already had; nothing else in your I18n configuration changes"
+        how_recorded: "Every lookup that falls through to the handler — I18n.t and the t() view helper alike — is counted by locale and key, with the first call site seen"
+        how_not_seen: "A lookup given a :default never misses, and one made with raise_on_missing_translations raises before any handler runs, so neither is counted here"
+        how_buffered: "Misses are counted in memory and written at the end of the request or job, so allow a short delay before they appear"
+        missing_keys: "Missing Keys"
+        total_misses: "Total Misses"
+        locales_affected: "Locales Affected"
+        all_title: "Missing Translation Keys"
+        column_key: "Key"
+        column_locale: "Locale"
+        column_source: "First Seen In"
+        column_misses: "Misses"
+        column_first_seen: "First Seen"
+        # %{count} is a number of misses, %{limit} the per-thread buffer size.
+        overflow_notice: "%{count} misses could not be attributed to a key because the tracker's buffer (%{limit} keys per thread) was full."
+        footer_tip: "Add the key to the locale file, or pass a :default. Keys users actually hit are listed first."
+        docs: "Rails i18n guide"
+
       rack_attack_page:
         title: "Rate Limit Events"
         missing_title: "Rack Attack Is Not Installed"
@@ -1609,6 +1637,7 @@ en:
         enable_diagnostic_dump: "On-demand system state snapshots"
         enable_crash_capture: "at_exit hook for unhandled crashes"
         enable_coverage_tracking: "Diagnostic mode — enable via dashboard to see executed lines in source view (Ruby 3.2+)"
+        enable_missing_translation_tracking: "Count the app's I18n misses by locale and key (wraps I18n.exception_handler)"
         enable_rack_attack_tracking: "Record throttle/blocklist events to their own table"
         enable_actioncable_tracking: "Track WebSocket channel events as breadcrumbs"
         enable_activestorage_tracking: "Track uploads/downloads/deletes as breadcrumbs"
@@ -1688,6 +1717,7 @@ en:
         breadcrumbs: "Breadcrumbs"
         system_health: "System health"
         swallowed_exceptions: "Swallowed exception detection"
+        missing_translations: "Missing-translation tracking"
         rack_attack: "Rack Attack tracking"
         actioncable: "ActionCable tracking"
         activestorage: "ActiveStorage tracking"

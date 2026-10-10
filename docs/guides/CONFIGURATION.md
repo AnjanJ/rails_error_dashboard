@@ -289,6 +289,12 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `rack_attack_max_cache_size` | Integer | `1000` | Max buffered event keys per thread before LRU eviction |
 | `rack_attack_flush_interval` | Integer | `5` | Maximum age of buffered events before they are written to the database |
 
+### Missing Translation Tracking
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_missing_translation_tracking` | Boolean | `false` | Count the app's I18n misses by locale and key in their own table (`rails rails_error_dashboard:install:migrations` adds it). Wraps `I18n.exception_handler`, delegating to the handler the app already had; does not require breadcrumbs |
+
 ### ActionCable Connection Monitoring (v0.5.0)
 
 | Option | Type | Default | Description |
