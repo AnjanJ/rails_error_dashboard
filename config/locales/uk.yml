@@ -1739,6 +1739,13 @@ uk:
           guide_link: Посібник з ActionCable
       activestorage:
         title: Стан ActiveStorage
+        probe:
+          title: "Доступність сервісу"
+          reachable: "Доступний"
+          unreachable: "Недоступний"
+          service: "Сервіс: %{name}"
+          latency: "%{ms} мс туди й назад"
+          how: "Одна перевірка існування ключа, який ніколи не зберігається, під час завантаження цієї сторінки. GET /health виконує ту саму перевірку."
         empty:
           title: Подій ActiveStorage не знайдено
           message: За останні %{days} днів у breadcrumbs помилок не виявлено операцій

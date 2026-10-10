@@ -307,6 +307,8 @@ On by default. See [Storm Protection](#storm-protection) below.
 |--------|------|---------|-------------|
 | `enable_activestorage_tracking` | Boolean | `false` | Track ActiveStorage service operations (uploads, downloads, deletes, existence checks) as breadcrumbs. Works with any backend (Disk, S3, GCS, Azure). Requires `enable_breadcrumbs = true` |
 
+Live reachability needs no option: when `config.active_storage.service` is set, the ActiveStorage Health page and `GET /health` run one existence check for a never-stored key against that service (see the [API reference](/rails_error_dashboard/docs/reference/api-reference/#health-check)).
+
 ### Issue Tracking — GitHub/GitLab/Codeberg (v0.5.8+)
 
 One switch enables all platform integration: issue creation, auto-create, lifecycle sync, platform state mirroring, and comment display. When enabled, workflow controls (Resolve, Assign, Priority) are replaced by platform state.

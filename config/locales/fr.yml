@@ -1724,6 +1724,13 @@ fr:
           guide_link: Guide d'ActionCable
       activestorage:
         title: État d'ActiveStorage
+        probe:
+          title: "Joignabilité du service"
+          reachable: "Joignable"
+          unreachable: "Injoignable"
+          service: "Service : %{name}"
+          latency: "%{ms} ms aller-retour"
+          how: "Une vérification d’existence d’une clé jamais stockée, faite au chargement de cette page. GET /health exécute la même sonde."
         empty:
           title: Aucun événement ActiveStorage trouvé
           message: Aucune opération de service ActiveStorage n'a été détectée dans

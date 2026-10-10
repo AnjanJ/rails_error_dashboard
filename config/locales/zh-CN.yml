@@ -1477,6 +1477,13 @@ zh-CN:
           guide_link: ActionCable 指南
       activestorage:
         title: ActiveStorage 状态
+        probe:
+          title: "服务可达性"
+          reachable: "可达"
+          unreachable: "不可达"
+          service: "服务：%{name}"
+          latency: "往返 %{ms} ms"
+          how: "加载本页时对一个永远不会存储的键做一次存在性检查。GET /health 执行同样的探测。"
         empty:
           title: 未找到 ActiveStorage 事件
           message: 最近 %{days} 天的错误 breadcrumbs 中未检测到 ActiveStorage 的服务操作。

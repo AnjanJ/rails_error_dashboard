@@ -234,7 +234,7 @@ Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `
 config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
 ```
 
-**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors.
+**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors. The page opens with a live reachability card (one `exist?` for a key that is never stored, against the configured service), and `GET /error_dashboard/health` reports the same probe as its `active_storage` check.
 
 ```ruby
 config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true

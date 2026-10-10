@@ -2262,6 +2262,15 @@ en:
 
       activestorage:
         title: "ActiveStorage Health"
+        probe:
+          # Live reachability card. %{name} is the service name from
+          # config/storage.yml and %{ms} a number of milliseconds.
+          title: "Service reachability"
+          reachable: "Reachable"
+          unreachable: "Unreachable"
+          service: "Service: %{name}"
+          latency: "%{ms} ms round trip"
+          how: "One existence check for a key that is never stored, made when this page loads. GET /health runs the same probe."
 
         empty:
           title: "No ActiveStorage Events Found"

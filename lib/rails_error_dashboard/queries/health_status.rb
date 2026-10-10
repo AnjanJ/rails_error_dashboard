@@ -22,6 +22,11 @@ module RailsErrorDashboard
     #                    captures are async, and the Solid Queue config
     #                    problems the boot check found (memoised per process).
     #   storm_protection the circuit breaker's current state.
+    #   active_storage   one existence check against the host's configured
+    #                    storage service (Services::ActiveStorageProbe).
+    #                    Storage is the app's dependency, not RED's, so a
+    #                    failure here degrades the answer rather than taking
+    #                    it down; "skipped" when ActiveStorage is not set up.
     #
     # Budget: one DB round trip plus two indexed queries. No COUNT(*) over the
     # whole table (unbounded on a large install), no file reads (the Solid
@@ -30,6 +35,8 @@ module RailsErrorDashboard
       OK = "ok"
       DEGRADED = "degraded"
       DOWN = "down"
+      # A check that does not apply to this host: neutral for the overall answer.
+      SKIPPED = "skipped"
 
       def self.call
         new.call
@@ -45,7 +52,8 @@ module RailsErrorDashboard
           # again, slower, against a server that is not answering.
           errors: database[:status] == DOWN ? skipped("database unreachable") : check_errors,
           queue: check_queue,
-          storm_protection: check_storm_protection
+          storm_protection: check_storm_protection,
+          active_storage: check_active_storage
         }
 
         {
@@ -141,6 +149,20 @@ module RailsErrorDashboard
           enabled: enabled,
           state: state
         }
+      rescue StandardError => e
+        { status: DEGRADED, error: e.class.name }
+      end
+
+      def check_active_storage
+        probe = Services::ActiveStorageProbe.call
+        case probe[:status]
+        when Services::ActiveStorageProbe::OK
+          { status: OK, service: probe[:service], latency_ms: probe[:latency_ms] }
+        when Services::ActiveStorageProbe::SKIPPED
+          { status: SKIPPED, reason: probe[:reason] }
+        else
+          { status: DEGRADED, service: probe[:service], error: probe[:error] }
+        end
       rescue StandardError => e
         { status: DEGRADED, error: e.class.name }
       end

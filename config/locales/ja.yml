@@ -1489,6 +1489,13 @@ ja:
           guide_link: ActionCable ガイド
       activestorage:
         title: ActiveStorage の状態
+        probe:
+          title: "サービスの到達性"
+          reachable: "到達可能"
+          unreachable: "到達不能"
+          service: "サービス: %{name}"
+          latency: "往復 %{ms} ms"
+          how: "このページの読み込み時に、保存されることのないキーの存在確認を 1 回行います。GET /health も同じ検査を実行します。"
         empty:
           title: ActiveStorage のイベントが見つかりません
           message: 過去%{days}日間、エラーの breadcrumb から ActiveStorage のサービス操作は検出されませんでした。

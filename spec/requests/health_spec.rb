@@ -27,7 +27,7 @@ RSpec.describe "Health check endpoint", type: :request do
       expect(response.media_type).to eq("application/json")
       expect(body["status"]).to eq("ok")
       expect(body["version"]).to eq(RailsErrorDashboard::VERSION)
-      expect(body["checks"].keys).to contain_exactly("database", "errors", "queue", "storm_protection")
+      expect(body["checks"].keys).to contain_exactly("database", "errors", "queue", "storm_protection", "active_storage")
       expect(body["checks"]["database"]["status"]).to eq("ok")
     end
 

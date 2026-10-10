@@ -324,7 +324,8 @@ Environment:
 - **Effort:** Half day
 - **Impact:** Reliability + (prevents deploy surprises)
 
-### U. ActiveStorage Service Health
+### U. ActiveStorage Service Health — DONE
+- **Status (2026-10-10):** The breadcrumb-based page shipped in v0.5 (`Queries::ActiveStorageSummary`). The live reachability probe (`Services::ActiveStorageProbe`: one `exist?` for a never-stored key against `ActiveStorage::Blob.service`) now opens that page and is the `active_storage` check of `GET /health`, where an unreachable service degrades the answer rather than taking it down. Skipped on hosts without storage configured
 - **What:** Check storage service reachability (`ActiveStorage::Blob.service.exist?` with a known key) and capture blob stats. Surface storage health on the system health panel
 - **Why:** Storage service failures (S3 outage, disk full, permission issues) cause errors that are hard to diagnose without service health context
 - **Implementation:** Guard with `defined?(ActiveStorage)`, read service config, attempt lightweight health check. Add to diagnostic dump
@@ -687,7 +688,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
-| ActiveStorage service health (U) | Half day | Operational + | Partly shipped: the breadcrumb-based ActiveStorage Health page (`Queries::ActiveStorageSummary`, v0.5) covers operation counts and durations. Still open: the live reachability probe (`service.exist?`) on the health panel |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
 | Audit logging (12) | 1 day | Enterprise ++ | |

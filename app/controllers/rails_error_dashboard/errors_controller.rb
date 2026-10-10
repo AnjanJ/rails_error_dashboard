@@ -660,6 +660,9 @@ module RailsErrorDashboard
 
       days = days_param(default: 30)
       @days = days
+      # Live reachability of the configured service, shown above the
+      # historical breadcrumb stats. One existence check per page load.
+      @storage_probe = Services::ActiveStorageProbe.call
       result = Queries::ActiveStorageSummary.call(days, application_id: @current_application_id)
       all_services = result[:services]
 

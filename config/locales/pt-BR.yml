@@ -1707,6 +1707,13 @@ pt-BR:
           guide_link: Guia do ActionCable
       activestorage:
         title: Saúde do ActiveStorage
+        probe:
+          title: "Alcançabilidade do serviço"
+          reachable: "Alcançável"
+          unreachable: "Inalcançável"
+          service: "Serviço: %{name}"
+          latency: "%{ms} ms de ida e volta"
+          how: "Uma verificação de existência de uma chave que nunca é armazenada, feita ao carregar esta página. GET /health executa a mesma sonda."
         empty:
           title: Nenhum evento do ActiveStorage encontrado
           message: Nenhuma operação do serviço ActiveStorage foi detectada nos breadcrumbs

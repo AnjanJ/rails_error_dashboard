@@ -1667,6 +1667,13 @@ de:
           guide_link: ActionCable-Leitfaden
       activestorage:
         title: ActiveStorage-Zustand
+        probe:
+          title: "Erreichbarkeit des Dienstes"
+          reachable: "Erreichbar"
+          unreachable: "Nicht erreichbar"
+          service: "Dienst: %{name}"
+          latency: "%{ms} ms Umlaufzeit"
+          how: "Eine Existenzprüfung für einen Schlüssel, der nie gespeichert wird, beim Laden dieser Seite. GET /health führt dieselbe Prüfung aus."
         empty:
           title: Keine ActiveStorage-Ereignisse gefunden
           message: In den Fehler-Breadcrumbs der letzten %{days} Tage wurden keine

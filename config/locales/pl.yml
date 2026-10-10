@@ -1740,6 +1740,13 @@ pl:
           guide_link: Przewodnik po ActionCable
       activestorage:
         title: Stan ActiveStorage
+        probe:
+          title: "Osiągalność usługi"
+          reachable: "Osiągalna"
+          unreachable: "Nieosiągalna"
+          service: "Usługa: %{name}"
+          latency: "%{ms} ms w obie strony"
+          how: "Jedno sprawdzenie istnienia klucza, który nigdy nie jest zapisywany, wykonywane przy ładowaniu tej strony. GET /health wykonuje tę samą sondę."
         empty:
           title: Nie znaleziono zdarzeń ActiveStorage
           message: W ciągu ostatnich %{days} dni nie wykryto operacji usług ActiveStorage

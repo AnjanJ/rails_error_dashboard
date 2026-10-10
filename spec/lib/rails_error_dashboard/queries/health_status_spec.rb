@@ -123,6 +123,34 @@ RSpec.describe RailsErrorDashboard::Queries::HealthStatus do
     end
   end
 
+  describe "active storage" do
+    it "is skipped, and neutral for the overall answer, when no service is configured" do
+      allow_any_instance_of(RailsErrorDashboard::Services::ActiveStorageProbe).to receive(:configured?).and_return(false)
+
+      expect(result[:status]).to eq("ok")
+      expect(result[:checks][:active_storage]).to eq(status: "skipped", reason: "no_service_configured")
+    end
+
+    it "reports the service and latency when the probe answers" do
+      service = instance_double("ActiveStorage::Service::DiskService", name: "local", exist?: false)
+      allow_any_instance_of(RailsErrorDashboard::Services::ActiveStorageProbe).to receive(:storage_service).and_return(service)
+
+      check = result[:checks][:active_storage]
+      expect(check).to include(status: "ok", service: "local")
+      expect(check[:latency_ms]).to be_a(Numeric)
+    end
+
+    it "degrades, never downs, the overall answer when the service is unreachable" do
+      service = instance_double("ActiveStorage::Service::S3Service", name: "amazon")
+      allow(service).to receive(:exist?).and_raise(SocketError, "getaddrinfo")
+      allow_any_instance_of(RailsErrorDashboard::Services::ActiveStorageProbe).to receive(:storage_service).and_return(service)
+
+      expect(result[:status]).to eq("degraded")
+      expect(result[:checks][:active_storage]).to eq(status: "degraded", service: "amazon", error: "SocketError")
+      expect(described_class.http_status_for(result)).to eq(200)
+    end
+  end
+
   it "honours use_separate_database in the report" do
     RailsErrorDashboard.configuration.use_separate_database = true
 

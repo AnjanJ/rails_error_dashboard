@@ -83,7 +83,8 @@ curl -u monitor:password https://your-app.com/error_dashboard/health
     "database": { "status": "ok", "adapter": "PostgreSQL", "separate_database": false, "tables_present": true, "latency_ms": 0.42 },
     "errors": { "status": "ok", "last_error_at": "2026-10-10T09:58:12Z", "last_24h": 17 },
     "queue": { "status": "ok", "async_logging": true, "adapter": "solid_queue", "problems": [] },
-    "storm_protection": { "status": "ok", "enabled": true, "state": "closed" }
+    "storm_protection": { "status": "ok", "enabled": true, "state": "closed" },
+    "active_storage": { "status": "ok", "service": "amazon", "latency_ms": 48.3 }
   },
   "duration_ms": 1.9
 }
@@ -92,7 +93,7 @@ curl -u monitor:password https://your-app.com/error_dashboard/health
 | `status` | HTTP | Meaning |
 |----------|------|---------|
 | `ok` | 200 | Every check passed |
-| `degraded` | 200 | The dashboard works, with a caveat: a storm is being shed or counted (`storm_protection.state` is not `closed`), or Solid Queue's `config/queue.yml` will not run RED's jobs (`queue.problems`) |
+| `degraded` | 200 | The dashboard works, with a caveat: a storm is being shed or counted (`storm_protection.state` is not `closed`), Solid Queue's `config/queue.yml` will not run RED's jobs (`queue.problems`), or the app's ActiveStorage service did not answer (`active_storage.error`) |
 | `down` | 503 | The error database did not answer `SELECT 1`, or RED's tables are missing (`database.reason: "missing_tables"`). Nothing is being recorded |
 
 **What is checked:**
@@ -101,6 +102,7 @@ curl -u monitor:password https://your-app.com/error_dashboard/health
 - `errors` — time of the last capture and the number of errors in the last 24 hours. Both are served by the `occurred_at` index; there is no `COUNT(*)` over the whole table. Skipped when the database is down
 - `queue` — the Active Job adapter RED's jobs run on, whether captures are asynchronous (`config.async_logging`), and the problems the boot-time Solid Queue config check found (memoised; no file is read per request)
 - `storm_protection` — whether it is enabled and the circuit breaker's current state (`closed`, `shedding`, `open`, `half_open`)
+- `active_storage` — one existence check against the app's configured storage service (`ActiveStorage::Blob.service.exist?` for a key that is never stored): the service name from `config/storage.yml` and the round-trip latency, or the exception class when it did not answer. Storage is the app's dependency, not RED's, so a failure here is `degraded`, never `down`. `{"status":"skipped"}` when ActiveStorage is not loaded or no service is configured
 
 The response is `Cache-Control: no-store`. A failure inside the check itself still answers JSON (`{"status":"down","error":"..."}`, 503), never the HTML error page.
 

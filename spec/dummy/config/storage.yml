@@ -1,0 +1,6 @@
+# A Disk service so ActiveStorage::Blob can load in the dummy app (its
+# on_load hook raises without this file) and the live reachability probe
+# has something real to check. Nothing in the suite stores a blob.
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>

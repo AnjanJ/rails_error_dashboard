@@ -1740,6 +1740,13 @@ ru:
           guide_link: Руководство по ActionCable
       activestorage:
         title: Состояние ActiveStorage
+        probe:
+          title: "Доступность сервиса"
+          reachable: "Доступен"
+          unreachable: "Недоступен"
+          service: "Сервис: %{name}"
+          latency: "%{ms} мс туда и обратно"
+          how: "Одна проверка существования ключа, который никогда не сохраняется, при загрузке этой страницы. GET /health выполняет ту же проверку."
         empty:
           title: События ActiveStorage не найдены
           message: За последние %{days} дн. в breadcrumbs ошибок не обнаружено операций
