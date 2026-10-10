@@ -29,7 +29,7 @@ module RailsErrorDashboard
         end
 
         if config.enable_webhook_notifications && config.webhook_urls.present?
-          config.webhook_urls.each { |url| post_json(url, webhook_payload) }
+          config.webhook_urls.each { |url| post_webhook(url, webhook_payload) }
           delivered = true
         end
 
@@ -47,6 +47,16 @@ module RailsErrorDashboard
       def app_name(config)
         config.application_name || ENV["APPLICATION_NAME"] ||
           (defined?(Rails) && Rails.application.class.module_parent_name) || "Rails Application"
+      end
+
+      # Custom webhooks go through WebhookDelivery so they are signed when
+      # webhook_signing_secret is set. Slack and Discord stay on post_json:
+      # their payloads are not ours to sign. Same per-URL rescue as post_json,
+      # so one unreachable receiver does not stop the next.
+      def post_webhook(url, payload)
+        Services::WebhookDelivery.post(url, payload)
+      rescue => e
+        Rails.logger.error("[RailsErrorDashboard] #{self.class.name.demodulize} post failed: #{e.message}")
       end
 
       def post_json(url, payload)

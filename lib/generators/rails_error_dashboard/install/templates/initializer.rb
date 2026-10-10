@@ -145,6 +145,9 @@ RailsErrorDashboard.configure do |config|
   # Generic Webhook Notifications - ENABLED
   config.enable_webhook_notifications = true
   config.webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
+  # Sign every webhook (HMAC-SHA256 over timestamp + body) so receivers can
+  # verify it came from this app. Generate with: ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'
+  # config.webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"]
   # To disable: Set config.enable_webhook_notifications = false
 
 <% else -%>
@@ -152,6 +155,7 @@ RailsErrorDashboard.configure do |config|
   # To enable: Set config.enable_webhook_notifications = true and configure webhook URLs
   config.enable_webhook_notifications = false
   # config.webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
+  # config.webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"]  # HMAC-SHA256 signature headers
 
 <% end -%>
   # Dashboard base URL (used in notification links)

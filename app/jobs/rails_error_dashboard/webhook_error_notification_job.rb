@@ -31,34 +31,18 @@ module RailsErrorDashboard
 
     def send_webhook(url, payload, error_log)
       headers = {
-        "Content-Type" => "application/json",
-        "User-Agent" => "RailsErrorDashboard/1.0",
         "X-Error-Dashboard-Event" => "error.created",
         "X-Error-Dashboard-ID" => error_log.id.to_s
       }
 
-      response = post_json(url, payload, headers)
+      # Serialises, signs (when webhook_signing_secret is set) and posts.
+      response = Services::WebhookDelivery.post(url, payload, headers: headers)
 
       unless response_success?(response)
         Rails.logger.warn("[RailsErrorDashboard] Webhook failed for #{url}: #{response_code(response)}")
       end
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Webhook error for #{url}: #{e.message}")
-    end
-
-    def post_json(url, payload, headers)
-      if defined?(HTTParty)
-        HTTParty.post(url, body: payload.to_json, headers: headers, timeout: 10)
-      else
-        uri = URI(url)
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = uri.scheme == "https"
-        http.open_timeout = 5
-        http.read_timeout = 10
-        request = Net::HTTP::Post.new(uri.path, headers)
-        request.body = payload.to_json
-        http.request(request)
-      end
     end
 
     def response_success?(response)

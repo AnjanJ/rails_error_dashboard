@@ -1128,6 +1128,7 @@ de:
         pagerduty_integration_key: PagerDuty-API-Schlüssel
         enable_webhook_notifications: Allgemeine Webhook-Endpunkte
         webhook_urls: Eigene Webhook-Endpunkte
+        webhook_signing_secret: Signiert ausgehende Webhooks mit HMAC-SHA256 (Umgebungsvariable WEBHOOK_SIGNING_SECRET setzen)
         enable_scheduled_digests: Tägliche/wöchentliche Zusammenfassungs-E-Mails.
           Planung über SolidQueue, Sidekiq oder cron
         digest_frequency: Wie oft Zusammenfassungs-E-Mails gesendet werden

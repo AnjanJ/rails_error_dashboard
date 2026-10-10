@@ -13,7 +13,7 @@ module RailsErrorDashboard
     # #inspect) or pasting it into an issue doesn't leak them.
     SECRET_ATTRIBUTES = %i[
       dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
-      webhook_urls issue_tracker_token issue_webhook_secret llm_api_key
+      webhook_urls webhook_signing_secret issue_tracker_token issue_webhook_secret llm_api_key
     ].freeze
 
     # Dashboard authentication (always required)
@@ -53,6 +53,9 @@ module RailsErrorDashboard
     # Generic webhook notifications
     attr_accessor :webhook_urls
     attr_accessor :enable_webhook_notifications
+    # When set, every POST to webhook_urls carries an HMAC-SHA256 signature
+    # (X-Error-Dashboard-Signature-256) and a timestamp the receiver can verify.
+    attr_accessor :webhook_signing_secret
 
     # Scheduled digests (daily/weekly summary emails)
     attr_accessor :enable_scheduled_digests         # Master switch (default: false)
@@ -316,6 +319,10 @@ module RailsErrorDashboard
       # Generic webhook settings (array of URLs)
       @webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
       @enable_webhook_notifications = false
+      # nil leaves outbound webhooks unsigned, as before. Secret-only (no
+      # separate "enable" flag): a secret with nothing to apply it to is the
+      # one combination that has no sensible meaning.
+      @webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"].presence
 
       # Scheduled digest defaults - OFF by default (opt-in)
       @enable_scheduled_digests = false

@@ -1193,6 +1193,7 @@ ru:
         pagerduty_integration_key: API-ключ PagerDuty
         enable_webhook_notifications: Произвольные webhook-адреса
         webhook_urls: Свои webhook-адреса
+        webhook_signing_secret: Подписывает исходящие webhook-запросы HMAC-SHA256 (задайте переменную окружения WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Ежедневные/еженедельные сводки. Планирование через
           SolidQueue, Sidekiq или cron
         digest_frequency: Как часто отправлять сводки

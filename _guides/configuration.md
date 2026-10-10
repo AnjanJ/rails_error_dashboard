@@ -106,6 +106,7 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `enable_webhook_notifications` | Boolean | `false` | Enable custom webhooks |
 | `webhook_urls` | Array | `[]` | Custom webhook URLs (ENV: `WEBHOOK_URLS`, comma-separated) |
+| `webhook_signing_secret` | String | `nil` | HMAC-SHA256 signing secret for outbound webhooks (ENV: `WEBHOOK_SIGNING_SECRET`). When set, every POST to `webhook_urls` carries `X-Error-Dashboard-Signature-256` and `X-Error-Dashboard-Timestamp` headers — see the [Notifications Guide](/rails_error_dashboard/docs/guides/notifications/#signing-hmac-sha256) |
 
 ### Notifications - Environment Filter (v0.11.0)
 
@@ -372,6 +373,7 @@ DASHBOARD_BASE_URL=https://dashboard.example.com
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 PAGERDUTY_INTEGRATION_KEY=abc123...
 WEBHOOK_URLS=https://hook1.example.com,https://hook2.example.com
+WEBHOOK_SIGNING_SECRET=...     # Optional: HMAC-SHA256 signature headers on every custom webhook
 
 # Enhanced Metrics
 APP_VERSION=1.2.3
@@ -651,6 +653,9 @@ RailsErrorDashboard.configure do |config|
     'https://yourapp.com/hooks/errors',
     'https://zapier.com/hooks/catch/123456/abcdef'
   ]
+  # Optional: sign every POST (HMAC-SHA256 over timestamp + body) so the
+  # receiver can reject forged or replayed requests.
+  config.webhook_signing_secret = ENV['WEBHOOK_SIGNING_SECRET']
 end
 ```
 

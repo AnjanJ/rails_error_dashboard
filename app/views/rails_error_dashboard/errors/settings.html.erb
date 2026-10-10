@@ -60,6 +60,7 @@
         pagerduty_integration_key: { type: :string, show_if: :enable_pagerduty_notifications },
         enable_webhook_notifications: { type: :boolean },
         webhook_urls: { type: :array, show_if: :enable_webhook_notifications },
+        webhook_signing_secret: { type: :secret, show_if: :enable_webhook_notifications },
         enable_scheduled_digests: { type: :boolean },
         digest_frequency: { type: :symbol, show_if: :enable_scheduled_digests },
         digest_recipients: { type: :array, show_if: :enable_scheduled_digests }

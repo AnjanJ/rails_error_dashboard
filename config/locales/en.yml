@@ -1565,6 +1565,7 @@ en:
         pagerduty_integration_key: "PagerDuty API key"
         enable_webhook_notifications: "Generic webhook endpoints"
         webhook_urls: "Custom webhook endpoints"
+        webhook_signing_secret: "Signs outbound webhooks with HMAC-SHA256 (set WEBHOOK_SIGNING_SECRET env var)"
         enable_scheduled_digests: "Daily/weekly summary emails. Schedule via SolidQueue, Sidekiq, or cron"
         digest_frequency: "How often to send digest emails"
         digest_recipients: "Email addresses (falls back to notification recipients)"

@@ -1007,6 +1007,7 @@ ja:
         pagerduty_integration_key: PagerDuty の API キー
         enable_webhook_notifications: 汎用の webhook エンドポイント
         webhook_urls: カスタム webhook エンドポイント
+        webhook_signing_secret: 送信 webhook に HMAC-SHA256 署名を付けます（環境変数 WEBHOOK_SIGNING_SECRET を設定）
         enable_scheduled_digests: 日次/週次のサマリーメール。SolidQueue、Sidekiq、cron でスケジュールします
         digest_frequency: ダイジェストメールの送信頻度
         digest_recipients: メールアドレス (未設定の場合は通知の宛先を使用)

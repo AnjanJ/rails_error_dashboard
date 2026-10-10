@@ -439,6 +439,8 @@ config.enable_slack_notifications = true
 config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 ```
 
+Custom webhooks can carry an HMAC-SHA256 signature (`config.webhook_signing_secret`) so the receiver can verify the sender and reject replays.
+
 [Notification setup guide →](docs/guides/NOTIFICATIONS.md)
 </details>
 

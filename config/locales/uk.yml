@@ -1189,6 +1189,7 @@ uk:
         pagerduty_integration_key: Ключ API PagerDuty
         enable_webhook_notifications: Довільні кінцеві точки webhook
         webhook_urls: Власні кінцеві точки webhook
+        webhook_signing_secret: Підписує вихідні webhook-запити HMAC-SHA256 (задайте змінну середовища WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Щоденні/щотижневі підсумкові листи. Плануйте через
           SolidQueue, Sidekiq або cron
         digest_frequency: Як часто надсилати підсумкові листи

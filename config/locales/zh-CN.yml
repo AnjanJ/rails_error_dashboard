@@ -1002,6 +1002,7 @@ zh-CN:
         pagerduty_integration_key: PagerDuty API 密钥
         enable_webhook_notifications: 通用 webhook 地址
         webhook_urls: 自定义 webhook 地址
+        webhook_signing_secret: 使用 HMAC-SHA256 签名发出的 webhook（设置环境变量 WEBHOOK_SIGNING_SECRET）
         enable_scheduled_digests: 每日/每周摘要邮件。可通过 SolidQueue、Sidekiq 或 cron 调度
         digest_frequency: 摘要邮件的发送频率
         digest_recipients: 邮件地址（默认使用通知收件人）

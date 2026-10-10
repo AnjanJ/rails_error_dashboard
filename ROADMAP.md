@@ -586,8 +586,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Useful for sprint retros and weekly standups
 - **Effort:** 1-2 days
 
-### 20. Webhook Signature Verification (HMAC)
+### 20. Webhook Signature Verification (HMAC) — DONE
 - **What:** Sign outbound webhook payloads with HMAC-SHA256 so receivers can verify authenticity
+- **Status:** Shipped. `config.webhook_signing_secret` (ENV `WEBHOOK_SIGNING_SECRET`) adds `X-Error-Dashboard-Signature-256` (`sha256=HMAC(secret, "timestamp.body")`) and `X-Error-Dashboard-Timestamp` to every POST to `webhook_urls` — per-error, storm, burst-summary and baseline alerts alike. `Services::WebhookSigner.valid?` is the receiver-side check; docs/guides/NOTIFICATIONS.md has Ruby and Node examples
 - **Why:** Without signatures, anyone who discovers the webhook URL can send fake error notifications. Standard practice for production webhooks
 - **Community impact:** Security-conscious teams won't use unsigned webhooks
 - **Effort:** Half day
@@ -683,7 +684,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
-| Webhook HMAC signatures (20) | Half day | Security + | Standard practice for outbound webhooks |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
 | ActiveStorage service health (U) | Half day | Operational + | |
 | Missing-translation tracking | Half day | Unique ++ | Newly relevant — we now ship 11 locales and have a private I18n backend to hook |
