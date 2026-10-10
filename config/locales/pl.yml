@@ -61,6 +61,7 @@ pl:
       n_plus_one: Zapytania N+1
       deprecations: Deprecations
       missing_translations: "Tłumaczenia"
+      boot_errors: "Błędy startu"
       swallowed: Wyciszone
       diagnostic_dumps: Diagnostyka
       storms: Sztormy
@@ -889,6 +890,30 @@ pl:
         footer_tip: "Dodaj klucz do pliku locale albo przekaż :default. Klucze, na które użytkownicy faktycznie trafili, są wymienione jako pierwsze."
         docs: "Przewodnik i18n Rails"
 
+      boot_errors_page:
+        title: "Błędy startu"
+        empty_title: "Nie zarejestrowano błędów startu"
+        empty_body: "W ciągu ostatnich %{days} dni żaden proces nie zginął podczas startu."
+        how_title: "Jak przechwytywane są błędy startu:"
+        how_enabled_html: "Przechwytywanie awarii musi być włączone (%{option})"
+        how_hooked: "RED rejestruje swój hook at_exit zaraz po Twoich initializerach i przed eager loadingiem Rails, więc awaria podczas startu jest widziana, mimo że aplikacja nigdy nie wystartowała do końca"
+        how_captured_html: "%{zeitwerk} z pliku definiującego niewłaściwą stałą, %{syntax} w modelu, initializer zgłaszający wyjątek: wszystko, co zabija proces, zanim obsłuży żądanie"
+        how_imported: "Awaria jest zapisywana na dysk, bo bazy danych jeszcze nie ma, i importowana przy następnym udanym starcie"
+        how_never: "Procesu zabitego przez SIGKILL lub segfault at_exit nigdy nie zobaczy, w żadnym narzędziu"
+        unresolved: "Nierozwiązane"
+        boot_crashes: "Awarie startu"
+        failed_boots: "Nieudane starty"
+        all_title: "Awarie startu według błędu"
+        column_error: "Błąd"
+        column_file: "Plik"
+        column_constant: "Stała"
+        column_boots: "Starty"
+        column_first_seen: "Pierwsze wystąpienie"
+        column_status: "Status"
+        status_open: "Otwarty"
+        status_resolved: "Rozwiązany"
+        footer_tip: "Awaria startu oznacza, że proces nigdy nie obsłużył żądania. Napraw ją przed następnym wdrożeniem; wiersz rozwiązuje się jak każdy inny błąd."
+
       rack_attack_page:
         title: Zdarzenia limitu żądań
         missing_title: Rack Attack nie jest zainstalowany
@@ -1328,6 +1353,7 @@ pl:
         system_health: Stan systemu
         swallowed_exceptions: Wykrywanie wyciszonych wyjątków
         missing_translations: "Śledzenie brakujących tłumaczeń"
+        boot_errors: "Przechwytywanie błędów startu"
         rack_attack: Śledzenie Rack Attack
         actioncable: Śledzenie ActionCable
         activestorage: Śledzenie ActiveStorage

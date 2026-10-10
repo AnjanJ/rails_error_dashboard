@@ -335,7 +335,7 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook |
+| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook, including crashes during boot (eager loading, initializers), which the Boot Errors page lists |
 | `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Created if missing |
 
 ### Internal Logging & Debugging

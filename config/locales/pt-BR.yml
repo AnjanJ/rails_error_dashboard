@@ -61,6 +61,7 @@ pt-BR:
       n_plus_one: Consultas N+1
       deprecations: Deprecations
       missing_translations: "Traduções"
+      boot_errors: "Erros de inicialização"
       swallowed: Engolidas
       diagnostic_dumps: Diagnóstico
       storms: Tempestades
@@ -879,6 +880,30 @@ pt-BR:
         footer_tip: "Adicione a chave ao arquivo de locale ou passe um :default. As chaves que os usuários realmente encontraram aparecem primeiro."
         docs: "Guia i18n do Rails"
 
+      boot_errors_page:
+        title: "Erros de inicialização"
+        empty_title: "Nenhum erro de inicialização registrado"
+        empty_body: "Nenhum processo morreu ao iniciar nos últimos %{days} dias."
+        how_title: "Como os erros de inicialização são capturados:"
+        how_enabled_html: "A captura de falhas precisa estar ativada (%{option})"
+        how_hooked: "O RED registra seu hook at_exit logo após seus initializers e antes do eager loading do Rails, então uma falha durante a inicialização é vista mesmo que o app nunca termine de subir"
+        how_captured_html: "Um %{zeitwerk} de um arquivo que define a constante errada, um %{syntax} em um model, um initializer que lançou exceção: qualquer coisa que mate o processo antes de atender uma requisição"
+        how_imported: "A falha é gravada em disco, porque ainda não há banco de dados, e importada na próxima inicialização bem-sucedida"
+        how_never: "Um processo morto por SIGKILL ou por um segfault nunca é visto pelo at_exit, em nenhuma ferramenta"
+        unresolved: "Não resolvidos"
+        boot_crashes: "Falhas de inicialização"
+        failed_boots: "Inicializações com falha"
+        all_title: "Falhas de inicialização por erro"
+        column_error: "Erro"
+        column_file: "Arquivo"
+        column_constant: "Constante"
+        column_boots: "Inicializações"
+        column_first_seen: "Primeira ocorrência"
+        column_status: "Status"
+        status_open: "Aberto"
+        status_resolved: "Resolvido"
+        footer_tip: "Uma falha de inicialização significa que o processo nunca atendeu uma requisição. Corrija antes do próximo deploy; a linha é resolvida como qualquer outro erro."
+
       rack_attack_page:
         title: Eventos de limite de taxa
         missing_title: O Rack Attack não está instalado
@@ -1299,6 +1324,7 @@ pt-BR:
         system_health: Saúde do sistema
         swallowed_exceptions: Detecção de exceções engolidas
         missing_translations: "Rastreamento de traduções ausentes"
+        boot_errors: "Captura de erros de inicialização"
         rack_attack: Monitoramento do Rack Attack
         actioncable: Monitoramento do ActionCable
         activestorage: Monitoramento do ActiveStorage

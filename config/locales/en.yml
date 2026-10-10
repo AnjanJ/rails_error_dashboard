@@ -117,6 +117,7 @@ en:
       n_plus_one: "N+1 Queries"
       deprecations: "Deprecations"
       missing_translations: "Translations"
+      boot_errors: "Boot Errors"
       swallowed: "Swallowed"
       diagnostic_dumps: "Diagnostics"
       storms: "Storms"
@@ -1213,6 +1214,34 @@ en:
         footer_tip: "Add the key to the locale file, or pass a :default. Keys users actually hit are listed first."
         docs: "Rails i18n guide"
 
+      boot_errors_page:
+        title: "Boot Errors"
+        empty_title: "No Boot Errors Recorded"
+        # %{days} is the selected day range.
+        empty_body: "No process died while booting over the last %{days} days."
+        how_title: "How boot errors are captured:"
+        # %{option} is a config option name as a <code> element.
+        how_enabled_html: "Crash capture must be enabled (%{option})"
+        # at_exit, SIGKILL and segfault are Ruby/OS terms, not prose.
+        how_hooked: "RED registers its at_exit hook right after your initializers run and before Rails eager-loads, so a crash during boot is seen even though the app never finished starting"
+        # %{zeitwerk} and %{syntax} are exception class names as <code> elements.
+        how_captured_html: "%{zeitwerk} from a file that defines the wrong constant, a %{syntax} in a model, an initializer that raised: anything that kills the process before it serves a request"
+        how_imported: "The crash is written to disk, because there is no database yet, and imported on the next boot that succeeds"
+        how_never: "A process killed by SIGKILL or a segfault is never seen by at_exit, in any tool"
+        unresolved: "Unresolved"
+        boot_crashes: "Boot Crashes"
+        failed_boots: "Failed Boots"
+        all_title: "Boot Crashes by Error"
+        column_error: "Error"
+        column_file: "File"
+        column_constant: "Constant"
+        column_boots: "Boots"
+        column_first_seen: "First Seen"
+        column_status: "Status"
+        status_open: "Open"
+        status_resolved: "Resolved"
+        footer_tip: "A boot crash means the process never served a request. Fix it before the next deploy; the row resolves like any other error."
+
       rack_attack_page:
         title: "Rate Limit Events"
         missing_title: "Rack Attack Is Not Installed"
@@ -1718,6 +1747,7 @@ en:
         system_health: "System health"
         swallowed_exceptions: "Swallowed exception detection"
         missing_translations: "Missing-translation tracking"
+        boot_errors: "Boot error capture"
         rack_attack: "Rack Attack tracking"
         actioncable: "ActionCable tracking"
         activestorage: "ActiveStorage tracking"

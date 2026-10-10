@@ -48,6 +48,22 @@ module RailsErrorDashboard
       end
     end
 
+    # Register the crash-capture at_exit hook as soon as the host's
+    # config/initializers have run (so enable_crash_capture is known) and
+    # BEFORE Rails' :eager_load! finisher. Every engine initializer runs ahead
+    # of the finishers, so this is early enough for a Zeitwerk::NameError, a
+    # SyntaxError in a model or a raising initializer to be captured; the old
+    # place, config.after_initialize, runs AFTER eager loading and was never
+    # reached by exactly the crashes a boot check exists for. The import of
+    # earlier crash files stays in after_initialize, where the database is.
+    initializer "rails_error_dashboard.crash_capture", after: :load_config_initializers do
+      next if ENV["SECRET_KEY_BASE_DUMMY"].present?
+
+      if RailsErrorDashboard.configuration.enable_crash_capture
+        RailsErrorDashboard::Services::CrashCapture.enable!
+      end
+    end
+
     # Validate configuration after initialization
     initializer "rails_error_dashboard.validate_config", after: :load_config_initializers do
       config.after_initialize do
@@ -246,7 +262,10 @@ module RailsErrorDashboard
         end
       end
 
-      # Import crash files from previous process death, then register at_exit hook
+      # Import crash files from a previous process death. The at_exit hook
+      # itself is registered by the "rails_error_dashboard.crash_capture"
+      # initializer above, before eager loading; enable! here is a no-op when
+      # that ran and a fallback when the configuration was only set later.
       if RailsErrorDashboard.configuration.enable_crash_capture
         RailsErrorDashboard::Services::CrashCapture.import!
         RailsErrorDashboard::Services::CrashCapture.enable!

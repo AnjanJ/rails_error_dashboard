@@ -61,6 +61,7 @@ zh-CN:
       n_plus_one: N+1 查询
       deprecations: Deprecations
       missing_translations: "翻译"
+      boot_errors: "启动错误"
       swallowed: 被吞异常
       diagnostic_dumps: 诊断
       storms: 风暴
@@ -777,6 +778,30 @@ zh-CN:
         footer_tip: "把该键加入语言文件，或传入 :default。用户实际遇到的键排在最前。"
         docs: "Rails i18n 指南"
 
+      boot_errors_page:
+        title: "启动错误"
+        empty_title: "未记录到启动错误"
+        empty_body: "最近 %{days} 天内没有进程在启动时崩溃。"
+        how_title: "启动错误的捕获方式:"
+        how_enabled_html: "必须启用崩溃捕获（%{option}）"
+        how_hooked: "RED 在你的 initializer 运行之后、Rails 预加载之前注册 at_exit 钩子，因此即使应用从未完成启动，启动期间的崩溃也会被捕获"
+        how_captured_html: "文件定义了错误常量导致的 %{zeitwerk}、模型中的 %{syntax}、抛出异常的 initializer：任何在处理请求之前就终止进程的问题"
+        how_imported: "此时还没有数据库，所以崩溃先写入磁盘，并在下一次成功启动时导入"
+        how_never: "被 SIGKILL 或段错误终止的进程，任何工具的 at_exit 都看不到"
+        unresolved: "未解决"
+        boot_crashes: "启动崩溃"
+        failed_boots: "失败的启动"
+        all_title: "按错误分组的启动崩溃"
+        column_error: "错误"
+        column_file: "文件"
+        column_constant: "常量"
+        column_boots: "启动次数"
+        column_first_seen: "首次出现"
+        column_status: "状态"
+        status_open: "未处理"
+        status_resolved: "已解决"
+        footer_tip: "启动崩溃意味着进程从未处理过请求。请在下次部署前修复；该行会像其他错误一样被标记为已解决。"
+
       rack_attack_page:
         title: 限流事件
         missing_title: 尚未安装 Rack Attack
@@ -1115,6 +1140,7 @@ zh-CN:
         system_health: 系统状态
         swallowed_exceptions: 被吞异常检测
         missing_translations: "缺失翻译跟踪"
+        boot_errors: "启动错误捕获"
         rack_attack: Rack Attack 跟踪
         actioncable: ActionCable 跟踪
         activestorage: ActiveStorage 跟踪

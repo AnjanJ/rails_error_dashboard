@@ -345,6 +345,43 @@ RUBY
 }
 
 # ---------------------------------------------------------------------------
+# Boot-error capture (roadmap T): inject a model whose file defines the wrong
+# constant, boot the app in production (eager_load = true) and REQUIRE that
+# boot to die with Zeitwerk::NameError, then remove the file. The next boot
+# (phase O, run by the caller) imports the crash CrashCapture wrote at exit.
+# Args: app_dir
+# ---------------------------------------------------------------------------
+inject_boot_error_and_crash() {
+  local app_dir=$1
+
+  log_step "Injecting a misnamed model and booting (must fail with Zeitwerk::NameError)..."
+  cat > "$app_dir/app/models/zeitwerk_bad.rb" << 'RUBY'
+# Defines ZeitwerkWrongName where Zeitwerk expects ZeitwerkBad.
+class ZeitwerkWrongName; end
+RUBY
+
+  local output
+  local exit_code=0
+  output=$(cd "$app_dir" && bin/rails runner 'nil' 2>&1) || exit_code=$?
+  rm -f "$app_dir/app/models/zeitwerk_bad.rb"
+
+  if [ "$exit_code" -eq 0 ]; then
+    log_error "Boot with a misnamed model succeeded; eager loading is not on or Zeitwerk did not raise"
+    return 1
+  fi
+  if ! echo "$output" | grep -q "Zeitwerk::NameError\|expected file"; then
+    log_error "Boot failed, but not with Zeitwerk::NameError:"
+    echo "$output" | tail -5
+    return 1
+  fi
+  if ! ls "$app_dir"/tmp/red_crashes/red_crash_*.json >/dev/null 2>&1; then
+    log_error "Boot died with Zeitwerk::NameError but CrashCapture wrote no crash file"
+    return 1
+  fi
+  log_success "Boot died with Zeitwerk::NameError and the crash file was written"
+}
+
+# ---------------------------------------------------------------------------
 # Inject test controller, model, migration, and routes for Phase F
 # Args: app_dir
 # ---------------------------------------------------------------------------
@@ -519,8 +556,10 @@ test_full_sync() {
 
   create_app "full_sync_app"
   install_gem "$TEST_DIR/full_sync_app" "$TEMPLATES_DIR/full_sync_initializer.rb"
+  inject_boot_error_and_crash "$TEST_DIR/full_sync_app" || exit 1
 
   run_chaos_tests "$TEST_DIR/full_sync_app" \
+    "$CHAOS_DIR/phase_o_boot_errors.rb" \
     "$CHAOS_DIR/phase_e_error_capture.rb" \
     "$CHAOS_DIR/phase_a_data_integrity.rb" \
     "$CHAOS_DIR/phase_b_edge_cases.rb" \

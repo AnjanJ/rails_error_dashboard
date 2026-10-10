@@ -61,6 +61,7 @@ fr:
       n_plus_one: Requêtes N+1
       deprecations: Dépréciations
       missing_translations: "Traductions"
+      boot_errors: "Erreurs de démarrage"
       swallowed: Avalées
       diagnostic_dumps: Diagnostics
       storms: Tempêtes
@@ -881,6 +882,30 @@ fr:
         footer_tip: "Ajoutez la clé au fichier de locale, ou passez un :default. Les clés réellement rencontrées par les utilisateurs sont listées en premier."
         docs: "Guide i18n de Rails"
 
+      boot_errors_page:
+        title: "Erreurs de démarrage"
+        empty_title: "Aucune erreur de démarrage enregistrée"
+        empty_body: "Aucun processus n’est mort au démarrage au cours des %{days} derniers jours."
+        how_title: "Comment les erreurs de démarrage sont capturées :"
+        how_enabled_html: "La capture des plantages doit être activée (%{option})"
+        how_hooked: "RED enregistre son hook at_exit juste après vos initializers et avant l’eager loading de Rails, si bien qu’un plantage au démarrage est vu même si l’application n’a jamais fini de démarrer"
+        how_captured_html: "Une %{zeitwerk} due à un fichier qui définit la mauvaise constante, une %{syntax} dans un modèle, un initializer qui lève une exception : tout ce qui tue le processus avant qu’il serve une requête"
+        how_imported: "Le plantage est écrit sur disque, faute de base de données à ce stade, puis importé au prochain démarrage réussi"
+        how_never: "Un processus tué par SIGKILL ou un segfault n’est jamais vu par at_exit, dans aucun outil"
+        unresolved: "Non résolus"
+        boot_crashes: "Plantages au démarrage"
+        failed_boots: "Démarrages échoués"
+        all_title: "Plantages au démarrage par erreur"
+        column_error: "Erreur"
+        column_file: "Fichier"
+        column_constant: "Constante"
+        column_boots: "Démarrages"
+        column_first_seen: "Première occurrence"
+        column_status: "Statut"
+        status_open: "Ouvert"
+        status_resolved: "Résolu"
+        footer_tip: "Un plantage au démarrage signifie que le processus n’a jamais servi de requête. Corrigez-le avant le prochain déploiement ; la ligne se résout comme n’importe quelle autre erreur."
+
       rack_attack_page:
         title: Événements de limitation de débit
         missing_title: Rack Attack n'est pas installé
@@ -1308,6 +1333,7 @@ fr:
         system_health: État du système
         swallowed_exceptions: Détection des exceptions avalées
         missing_translations: "Suivi des traductions manquantes"
+        boot_errors: "Capture des erreurs de démarrage"
         rack_attack: Suivi de Rack Attack
         actioncable: Suivi d'ActionCable
         activestorage: Suivi d'ActiveStorage

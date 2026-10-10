@@ -317,7 +317,8 @@ Environment:
 - **Config:** `enable_actioncable_tracking = true` (requires `enable_breadcrumbs = true`)
 - **Shipped:** v0.5.0 (March 24, 2026)
 
-### T. Zeitwerk Loading Error Capture
+### T. Zeitwerk Loading Error Capture — DONE
+- **Status (2026-10-10):** Shipped as part of crash capture rather than as a new flag. The at_exit hook moved from `config.after_initialize` (which runs after `:eager_load!` and was never reached by a boot crash) to an engine initializer that runs after the host's initializers and before eager loading. A crash while `Rails.application.initialized?` is false is marked `phase: "boot"`, a `Zeitwerk::NameError`'s file and constant are parsed out, and the import lands on `platform: "boot_crash"` through find-or-increment (which also fixed a unique-index collision on the second identical crash). The Boot Errors page under Diagnostics lists them; `Zeitwerk::NameError` classifies as critical. Proven by a chaos step that injects a misnamed model, boots, and asserts the row
 - **What:** Capture `Zeitwerk::NameError` events during `eager_load!` — when a file doesn't define the expected constant. Surface on a "Boot Errors" panel
 - **Why:** Autoloading errors are silent in development (lazy loading) but crash in production (eager loading). Catching them at boot and surfacing them prevents deploy surprises
 - **Implementation:** Guard with `defined?(Zeitwerk)`, register callback via `Rails.autoloaders.main.on_load` or rescue `Zeitwerk::NameError`
@@ -687,7 +688,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
-| Zeitwerk boot-error capture (T) | Half day | Reliability + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
 | Audit logging (12) | 1 day | Enterprise ++ | |

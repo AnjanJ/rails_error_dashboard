@@ -609,6 +609,26 @@ module RailsErrorDashboard
       @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
     end
 
+    def boot_errors
+      unless RailsErrorDashboard.configuration.enable_crash_capture
+        flash[:alert] = feature_disabled_message("boot_errors", options: "enable_crash_capture = true", set: true)
+        redirect_to errors_path(**app_context_params)
+        return
+      end
+
+      days = days_param(default: 30)
+      @days = days
+      result = Queries::BootErrors.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @entry_count = all_entries.size
+      @unresolved_count = result[:unresolved_count]
+      @total_occurrences = all_entries.sum { |e| e[:count] }
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
+    end
+
     def actioncable_health_summary
       unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs

@@ -562,7 +562,8 @@ config.enable_rack_attack_tracking = true
 Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook — the last line of defense.
 
 - Disk-based fallback: writes crash data to disk because the database may be unavailable during shutdown
-- Imported automatically on next boot
+- Imported automatically on next boot; a crash that repeats on every restart is one row with a count
+- Boot crashes too: the hook is registered before Rails eager-loads, so a `Zeitwerk::NameError` or a `SyntaxError` that kills the process before it serves a request lands on the **Boot Errors** page under Diagnostics, with the file and constant it names
 - Captures exception details, backtrace, uptime, GC stats, thread count, and cause chain
 - Honeybadger, Bugsnag and AppSignal have `at_exit` reporters too; RED's writes to disk and imports at next boot because the database may already be gone during shutdown
 

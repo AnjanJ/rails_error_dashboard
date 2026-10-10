@@ -19,6 +19,7 @@ module RailsErrorDashboard
         ActiveRecord::ConnectionNotEstablished
         Redis::ConnectionError
         OpenSSL::SSL::SSLError
+        Zeitwerk::NameError
       ].freeze
 
       HIGH_SEVERITY_ERROR_TYPES = %w[

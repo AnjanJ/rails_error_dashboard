@@ -61,6 +61,7 @@ uk:
       n_plus_one: Запити N+1
       deprecations: Deprecations
       missing_translations: "Переклади"
+      boot_errors: "Помилки запуску"
       swallowed: Придушені
       diagnostic_dumps: Діагностика
       storms: Шторми
@@ -890,6 +891,30 @@ uk:
         footer_tip: "Додайте ключ до файлу локалі або передайте :default. Ключі, на які справді натрапили користувачі, йдуть першими."
         docs: "Посібник Rails з i18n"
 
+      boot_errors_page:
+        title: "Помилки запуску"
+        empty_title: "Помилки запуску не зафіксовано"
+        empty_body: "За останні %{days} дн. жоден процес не впав під час запуску."
+        how_title: "Як перехоплюються помилки запуску:"
+        how_enabled_html: "Перехоплення аварій має бути ввімкнено (%{option})"
+        how_hooked: "RED реєструє свій хук at_exit одразу після ваших ініціалізаторів і до eager loading у Rails, тому аварія під час запуску видима, навіть якщо застосунок так і не запустився"
+        how_captured_html: "%{zeitwerk} із файлу, що визначає не ту константу, %{syntax} у моделі, ініціалізатор з винятком: усе, що вбиває процес до обробки першого запиту"
+        how_imported: "Аварія записується на диск, бо бази даних ще немає, і імпортується під час наступного успішного запуску"
+        how_never: "Процес, убитий SIGKILL або segfault, at_exit не побачить у жодному інструменті"
+        unresolved: "Невирішені"
+        boot_crashes: "Аварії під час запуску"
+        failed_boots: "Невдалі запуски"
+        all_title: "Аварії під час запуску за помилкою"
+        column_error: "Помилка"
+        column_file: "Файл"
+        column_constant: "Константа"
+        column_boots: "Запуски"
+        column_first_seen: "Уперше помічено"
+        column_status: "Статус"
+        status_open: "Відкрита"
+        status_resolved: "Вирішена"
+        footer_tip: "Аварія під час запуску означає, що процес не обробив жодного запиту. Виправте її до наступного розгортання; рядок закривається як будь-яка інша помилка."
+
       rack_attack_page:
         title: Події обмеження запитів
         missing_title: Rack Attack не встановлено
@@ -1326,6 +1351,7 @@ uk:
         system_health: Стан системи
         swallowed_exceptions: Виявлення придушених винятків
         missing_translations: "Відстеження відсутніх перекладів"
+        boot_errors: "Перехоплення помилок запуску"
         rack_attack: Відстеження Rack Attack
         actioncable: Відстеження ActionCable
         activestorage: Відстеження ActiveStorage
