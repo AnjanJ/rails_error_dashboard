@@ -140,8 +140,11 @@ module RailsErrorDashboard
       #
       # Same drain points as Rack Attack tracking: to_complete fires after the
       # response body is closed (never delays a request, safety rule 2) and is
-      # interval-gated; at_exit catches what the Puma threads still hold at
-      # SIGTERM. at_exit, not Signal.trap (safety rule 9).
+      # interval-gated; at_exit drains whatever buffers are still on live
+      # threads. Puma joins its worker threads before at_exit runs, so what a
+      # worker held at SIGTERM (at most FLUSH_INTERVAL seconds of misses) is
+      # lost with it; the hook still covers the main thread, runners and
+      # console sessions. at_exit, not Signal.trap (safety rule 9).
       if RailsErrorDashboard.configuration.enable_missing_translation_tracking
         RailsErrorDashboard::Services::MissingTranslationHandler.install!
 

@@ -31,7 +31,8 @@ module RailsErrorDashboard
     # - Bounded: at most MAX_BUFFERED_KEYS entries per thread; further new keys
     #   are counted in an overflow bucket rather than dropped silently
     # - The buffer drains only off the request path (executor to_complete,
-    #   after the response body is closed) and at process exit
+    #   after the response body is closed) and, for threads still alive, at
+    #   process exit
     class MissingTranslationTracker
       COUNTS_THREAD_KEY = :red_missing_translation_counts
 
@@ -148,10 +149,13 @@ module RailsErrorDashboard
           nil
         end
 
-        # Flush every live thread's buffer, not just the caller's. At process
-        # exit the buffers sit on the Puma threads that served the requests,
-        # and the exiting thread's own buffer is empty. Rescued per thread so
-        # one failing write does not strand the rest.
+        # Flush every live thread's buffer, not just the caller's. Called from
+        # at_exit, where the exiting thread's own buffer is usually empty.
+        # Threads that are already gone cannot be drained: Puma joins its
+        # worker threads before at_exit runs, so a worker's last
+        # FLUSH_INTERVAL seconds of misses go with it (measured, same as the
+        # Rack Attack tracker). Rescued per thread so one failing write does
+        # not strand the rest.
         def flush_all_threads!
           Thread.list.each do |thread|
             begin
