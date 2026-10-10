@@ -371,7 +371,8 @@ Environment:
 - **Effort (actual):** foundation 2-3 days · extraction + tooling ~14 days · locales ~4 days · verification and release ~2 days
 - **Impact:** Reach ++ (adoption in non-English-speaking teams)
 
-### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+)
+### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+) — DONE (as far as it applies)
+- **Status (2026-10-10):** Re-verified against the code: `LocalVariableCapturer` and `SwallowedExceptionTracker` never walk the stack — both read `tp.path`/`tp.lineno` straight off the TracePoint, and `ErrorHashGenerator` reads `exception.backtrace_locations`, which Ruby has already materialised at raise time. The one real stack walk in the gem was `MissingTranslationTracker#host_call_site` (added with 0.15.0's missing-translation tracking); it now uses `Thread.each_caller_location` with an early return, so a new key costs the frames down to the host's call site rather than a 40-element Location array. Nothing else to convert
 - **What:** Use `Thread.each_caller_location` (Ruby 3.2+) as a more efficient alternative to `caller_locations`. Stops iterating after finding the first app-code frame instead of generating the full backtrace
 - **Why:** `caller_locations` generates the entire call stack as an array. `Thread.each_caller_location` is lazy — it yields frames one by one and can stop early. For deep stacks (100+ frames), this reduces allocation and speeds up app-frame detection
 - **Implementation:** Guard with Ruby version check. Use in `LocalVariableCapturer` and `SwallowedExceptionTracker` for faster app-frame filtering
@@ -687,7 +688,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
 | ActiveStorage service health (U) | Half day | Operational + | Partly shipped: the breadcrumb-based ActiveStorage Health page (`Queries::ActiveStorageSummary`, v0.5) covers operation counts and durations. Still open: the live reachability probe (`service.exist?`) on the health panel |
-| Lazy backtrace via `Thread.each_caller_location` (Y) | Half day | Performance + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
 | Audit logging (12) | 1 day | Enterprise ++ | |

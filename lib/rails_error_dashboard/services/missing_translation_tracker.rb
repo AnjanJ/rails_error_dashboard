@@ -25,7 +25,7 @@ module RailsErrorDashboard
     #
     # SAFETY RULES (HOST_APP_SAFETY.md):
     # - Zero I/O in the record path: a hash lookup, an increment, and (for a
-    #   key seen for the first time on this thread) one caller_locations scan
+    #   key seen for the first time on this thread) one lazy stack scan
     # - Never raises: every public method rescues
     # - Thread-local state, no mutex
     # - Bounded: at most MAX_BUFFERED_KEYS entries per thread; further new keys
@@ -79,6 +79,10 @@ module RailsErrorDashboard
       # Frames from other gems, Ruby itself and its internals are not the
       # host's call site either. Only consulted for frames outside Rails.root.
       FOREIGN_FRAME = %r{/gems/|/ruby/\d|<internal:}
+
+      # How deep host_call_site looks before giving up. The host frame of a
+      # view miss sits a handful of frames below the I18n/ActionView ones.
+      MAX_FRAMES_SCANNED = 40
 
       class << self
         # Record one miss. Called by MissingTranslationHandler on every
@@ -260,11 +264,22 @@ module RailsErrorDashboard
         # the template path and line). Failing that, the first frame that is
         # neither this gem's nor another gem's nor Ruby's own. Frames are
         # judged by where they are, never by what the directory is called.
+        #
+        # Thread.each_caller_location (Ruby 3.2+, the gemspec floor) yields
+        # frames one at a time from this method's caller outwards and stops
+        # the moment the block breaks or the method returns.
+        # caller_locations(1, 40) materialised a 40-element array of Location
+        # objects for every new key; the host frame usually sits within the
+        # first ten, so most of that array was allocated to be thrown away.
         def host_call_site
           root = rails_root
           fallback = nil
+          seen = 0
 
-          caller_locations(1, 40)&.each do |frame|
+          Thread.each_caller_location do |frame|
+            # Bounded: a pathological stack must not turn into a long scan.
+            break if (seen += 1) > MAX_FRAMES_SCANNED
+
             path = frame.path.to_s
             next if path.empty? || GEM_ROOTS.any? { |gem_dir| path.start_with?(gem_dir) }
 
