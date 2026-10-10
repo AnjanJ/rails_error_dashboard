@@ -559,7 +559,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ## Tier 4 — Differentiators (stand out from the crowd)
 
-### 15a. Ruby 4.0 in the CI test matrix — OPEN
+### 15a. Ruby 4.0 in the CI test matrix — DONE
+- **Status (2026-10-10):** `.github/workflows/test.yml` runs Ruby 3.2, 3.3, 3.4 and 4.0 against Rails 7.0–8.1; every pair is green, no `exclude:` needed. The one blocker was `rdoc` (no longer a default gem on 4.0; the gemspec-description spec needs it), now in the dev bundle. The README caveat is gone
 - **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1 (re-checked 2026-09-25: the matrix is still `['3.2', '3.3', '3.4']`). Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
 - **Why:** The README beta note currently has to say "CI runs Ruby 3.2–3.4; Ruby 4.0 is verified by the maintainer" — an honest caveat, but one that should not need to exist. Known blockers to check first: `ostruct` is no longer a default gem on 4.0 and sqlite3 2.8.1 does not compile on macOS (see CLAUDE.md gotchas); the Linux runner may not hit the second
 - **Effort:** Half a day

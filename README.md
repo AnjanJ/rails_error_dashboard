@@ -23,7 +23,7 @@ Open `/red`, then send a test error from its Settings page. No monitoring accoun
 
 [Try the live demo](https://rails-error-dashboard.anjan.dev) (`gandalf` / `youshallnotpass`) · [Read the documentation](https://anjanj.github.io/rails_error_dashboard/) · [View on RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
-> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs Ruby 3.2–3.4 against every supported Rails version; Ruby 4.0 is verified by the maintainer).
+> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs every Ruby from 3.2 to 4.0 against every supported Rails version).
 
 ## See the Ruby state and Rails runtime health behind every exception
 
