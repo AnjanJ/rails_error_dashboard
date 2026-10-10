@@ -539,8 +539,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Low-effort, high-visibility feature that makes the gem feel "enterprise-ready"
 - **Effort:** 1-2 days
 
-### 14. Health Check Endpoint
+### 14. Health Check Endpoint — DONE
 - **What:** Add `/error_dashboard/health` that returns JSON with: database connectivity, error count, last error timestamp, queue status
+- **Status:** Shipped. `GET /health` under the engine mount (authenticated like every dashboard route) reports the error database (`SELECT 1` on `ErrorLogsRecord`'s pool, so a separate database is probed, plus table presence), last capture time and last-24h count, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, 200 with `status: degraded` for a storm or a queue misconfiguration. `Queries::HealthStatus`; documented in docs/API_REFERENCE.md
 - **Why:** "Who watches the watchmen?" If the error dashboard itself is broken, you need to know
 - **Community impact:** Small feature, big signal of production maturity
 - **Effort:** Half day
@@ -586,8 +587,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Useful for sprint retros and weekly standups
 - **Effort:** 1-2 days
 
-### 20. Webhook Signature Verification (HMAC)
+### 20. Webhook Signature Verification (HMAC) — DONE
 - **What:** Sign outbound webhook payloads with HMAC-SHA256 so receivers can verify authenticity
+- **Status:** Shipped. `config.webhook_signing_secret` (ENV `WEBHOOK_SIGNING_SECRET`) adds `X-Error-Dashboard-Signature-256` (`sha256=HMAC(secret, "timestamp.body")`) and `X-Error-Dashboard-Timestamp` to every POST to `webhook_urls` — per-error, storm, burst-summary and baseline alerts alike. `Services::WebhookSigner.valid?` is the receiver-side check; docs/guides/NOTIFICATIONS.md has Ruby and Node examples
 - **Why:** Without signatures, anyone who discovers the webhook URL can send fake error notifications. Standard practice for production webhooks
 - **Community impact:** Security-conscious teams won't use unsigned webhooks
 - **Effort:** Half day
@@ -671,6 +673,7 @@ shift is deliberate. Depth before breadth.
 | **Verifying** | Chart locale fixes for #178 | #170 confirmed and closed. #178 fixed again in v0.11.4 (#199) and left open for @gmarziou to confirm and close. Still open on 2026-09-25, with no reply since the maintainer's 2026-08-30 comment announcing the fix |
 | **Demo** | Live demo tracks each gem release | On v0.14.0 (checked 2026-09-25). A scheduled workflow in the demo repo (`update-demo-release.yml` in `AnjanJ/rails_error_dashboard_demo_app`) moves it to each newly published version |
 | **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open and unmerged as of 2026-09-25 |
+| **Done** | Health check endpoint (14), webhook HMAC signatures (20), missing-translation tracking | Landed on main after v0.14.4, unreleased as of 2026-10-10. `GET /health`; `config.webhook_signing_secret`; `config.enable_missing_translation_tracking` (wraps `I18n.exception_handler`, own table, own page). Each is a `feat:` commit, so release-please cuts them as v0.15.0 |
 | **Done** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Assigned: CVE-2026-94549 (on the advisory since 2026-09-22). The maintainer has notified the reporter |
 | **Community-owned** | Native-speaker review of the remaining 9 locales (#156–#165 less #158) | Open by design — the contribution path, not a backlog. First one landed: @gmarziou on French (#201, shipped in v0.11.5, closing #158) |
 
@@ -682,11 +685,8 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
-| Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
-| Webhook HMAC signatures (20) | Half day | Security + | Standard practice for outbound webhooks |
 | Zeitwerk boot-error capture (T) | Half day | Reliability + | |
-| ActiveStorage service health (U) | Half day | Operational + | |
-| Missing-translation tracking | Half day | Unique ++ | Newly relevant — we now ship 11 locales and have a private I18n backend to hook |
+| ActiveStorage service health (U) | Half day | Operational + | Partly shipped: the breadcrumb-based ActiveStorage Health page (`Queries::ActiveStorageSummary`, v0.5) covers operation counts and durations. Still open: the live reachability probe (`service.exist?`) on the health panel |
 | Lazy backtrace via `Thread.each_caller_location` (Y) | Half day | Performance + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |

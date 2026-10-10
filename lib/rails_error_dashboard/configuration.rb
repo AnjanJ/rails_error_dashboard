@@ -13,7 +13,7 @@ module RailsErrorDashboard
     # #inspect) or pasting it into an issue doesn't leak them.
     SECRET_ATTRIBUTES = %i[
       dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
-      webhook_urls issue_tracker_token issue_webhook_secret llm_api_key
+      webhook_urls webhook_signing_secret issue_tracker_token issue_webhook_secret llm_api_key
     ].freeze
 
     # Dashboard authentication (always required)
@@ -53,6 +53,9 @@ module RailsErrorDashboard
     # Generic webhook notifications
     attr_accessor :webhook_urls
     attr_accessor :enable_webhook_notifications
+    # When set, every POST to webhook_urls carries an HMAC-SHA256 signature
+    # (X-Error-Dashboard-Signature-256) and a timestamp the receiver can verify.
+    attr_accessor :webhook_signing_secret
 
     # Scheduled digests (daily/weekly summary emails)
     attr_accessor :enable_scheduled_digests         # Master switch (default: false)
@@ -231,6 +234,12 @@ module RailsErrorDashboard
     attr_accessor :rack_attack_max_cache_size           # Max buffered keys per thread (default: 1000)
     attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 5)
 
+    # Missing-translation tracking — counts the HOST app's I18n misses by
+    # locale and key in their own table. Wraps I18n.exception_handler
+    # (delegating to the handler the app already had); the one place RED
+    # touches global I18n state, so it is opt-in.
+    attr_accessor :enable_missing_translation_tracking  # Master switch (default: false)
+
     # ActionCable event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
     # ActiveStorage event tracking (requires enable_breadcrumbs = true)
@@ -316,6 +325,10 @@ module RailsErrorDashboard
       # Generic webhook settings (array of URLs)
       @webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
       @enable_webhook_notifications = false
+      # nil leaves outbound webhooks unsigned, as before. Secret-only (no
+      # separate "enable" flag): a secret with nothing to apply it to is the
+      # one combination that has no sensible meaning.
+      @webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"].presence
 
       # Scheduled digest defaults - OFF by default (opt-in)
       @enable_scheduled_digests = false
@@ -482,6 +495,10 @@ module RailsErrorDashboard
       # Limits page can be, not a per-request cost. A flood still collapses to
       # roughly one write per thread per interval.
       @rack_attack_flush_interval = 5    # Seconds between DB flushes
+
+      # Missing-translation tracking - OFF by default (opt-in). Persists to its
+      # own table; does NOT require breadcrumbs.
+      @enable_missing_translation_tracking = false
 
       # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_actioncable_tracking = false

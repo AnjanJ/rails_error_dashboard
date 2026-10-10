@@ -7,6 +7,10 @@ RailsErrorDashboard::Engine.routes.draw do
   # Settings page
   get "settings", to: "errors#settings", as: :settings
 
+  # Health check (JSON): error database, queue, storm breaker, gem version.
+  # 200 when the dashboard can do its job, 503 when the error DB is unreachable.
+  get "health", to: "health#show", as: :health
+
   # Per-user dashboard language, persisted in the session (P5-T1).
   # POST only: changing it is a state change, and a GET would let any link or
   # prefetch alter the user's language.
@@ -41,6 +45,7 @@ RailsErrorDashboard::Engine.routes.draw do
       get :database_health_summary
       get :swallowed_exceptions
       get :rack_attack_summary
+      get :missing_translations
       get :actioncable_health_summary
       get :activestorage_health_summary
       get :llm_health_summary

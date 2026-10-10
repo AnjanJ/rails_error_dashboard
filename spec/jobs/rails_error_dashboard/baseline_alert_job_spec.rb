@@ -166,13 +166,15 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
           ]
         end
 
+        # Custom webhooks go through WebhookDelivery (so they can be signed);
+        # Slack and Discord above still use the job's own post_json.
         it "sends notifications to all webhook URLs" do
-          expect_any_instance_of(described_class).to receive(:post_json).with(
+          expect(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).with(
             "https://example.com/webhook1",
             anything
           )
 
-          expect_any_instance_of(described_class).to receive(:post_json).with(
+          expect(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).with(
             "https://example.com/webhook2",
             anything
           )
@@ -182,7 +184,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
 
         it "includes structured payload" do
           captured_payload = nil
-          allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+          allow(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post) do |_url, payload|
             captured_payload = payload
           end
 
@@ -195,7 +197,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         end
 
         it "handles webhook errors gracefully" do
-          allow_any_instance_of(described_class).to receive(:post_json).and_raise(StandardError.new("Network error"))
+          allow(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).and_raise(StandardError.new("Network error"))
 
           expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to webhook/).and_call_original
           allow(Rails.logger).to receive(:error).and_call_original

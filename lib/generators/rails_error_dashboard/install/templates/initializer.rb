@@ -145,6 +145,9 @@ RailsErrorDashboard.configure do |config|
   # Generic Webhook Notifications - ENABLED
   config.enable_webhook_notifications = true
   config.webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
+  # Sign every webhook (HMAC-SHA256 over timestamp + body) so receivers can
+  # verify it came from this app. Generate with: ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'
+  # config.webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"]
   # To disable: Set config.enable_webhook_notifications = false
 
 <% else -%>
@@ -152,6 +155,7 @@ RailsErrorDashboard.configure do |config|
   # To enable: Set config.enable_webhook_notifications = true and configure webhook URLs
   config.enable_webhook_notifications = false
   # config.webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
+  # config.webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"]  # HMAC-SHA256 signature headers
 
 <% end -%>
   # Dashboard base URL (used in notification links)
@@ -408,6 +412,14 @@ RailsErrorDashboard.configure do |config|
   # config.swallowed_exception_threshold = 0.95
 
 <% end -%>
+  # Missing-Translation Tracking - DISABLED
+  # Counts every I18n key your app looked up and did not have, by locale, with
+  # the first call site, on its own dashboard page (/errors/missing_translations).
+  # Wraps I18n.exception_handler and delegates to the handler you already had —
+  # the one place RED touches global I18n state, which is why it is opt-in.
+  # To enable: Set config.enable_missing_translation_tracking = true
+  config.enable_missing_translation_tracking = false
+
 <% if @enable_diagnostic_dump -%>
   # Diagnostic Dump - ENABLED
   # On-demand system state snapshot via rake task or dashboard button

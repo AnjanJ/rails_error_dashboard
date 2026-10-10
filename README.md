@@ -208,6 +208,8 @@ Cross-error N+1 detection grouped by SQL fingerprint, and aggregate deprecation 
 
 Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `ActiveSupport::Deprecation` behaviour includes `:notify` (the production default does not) and only inside requests that later raised.
 
+**Missing translations** — opt in with `config.enable_missing_translation_tracking = true` and RED counts every key your app looked up and did not have, by locale, with the first call site, on its own page. No breadcrumbs needed; it wraps `I18n.exception_handler` and delegates to the handler you already had. [Details →](docs/FEATURES.md#missing-translation-tracking)
+
 [Complete documentation →](docs/FEATURES.md#n1-query-detection)
 </details>
 
@@ -237,6 +239,8 @@ config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
 ```ruby
 config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true
 ```
+
+**Health Check** — `GET /error_dashboard/health` answers in JSON whether the dashboard itself can still capture and show errors: the error database (`SELECT 1`, tables present), last capture time, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, so an uptime monitor can watch the watchmen. Authenticated like every other route. [Reference →](docs/API_REFERENCE.md#health-check)
 
 [Complete documentation →](docs/FEATURES.md#job-health-page)
 </details>
@@ -438,6 +442,8 @@ Multi-channel alerting with severity filters, per-error cooldown, milestone thre
 config.enable_slack_notifications = true
 config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 ```
+
+Custom webhooks can carry an HMAC-SHA256 signature (`config.webhook_signing_secret`) so the receiver can verify the sender and reject replays.
 
 [Notification setup guide →](docs/guides/NOTIFICATIONS.md)
 </details>
@@ -721,7 +727,7 @@ Users can also switch language per-session from the picker in the dashboard navb
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every unreviewed locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
 
-RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
+RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched. The one exception is opt-in: `enable_missing_translation_tracking` wraps `I18n.exception_handler` to count *your* app's missing keys, and delegates every call to the handler you had.
 
 [Translations guide →](docs/guides/TRANSLATIONS.md) — how the system works, how to correct a string, and how to add a locale.
 

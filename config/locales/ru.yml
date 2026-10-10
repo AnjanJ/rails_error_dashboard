@@ -60,6 +60,7 @@ ru:
       llm: LLM
       n_plus_one: N+1 запросы
       deprecations: Устаревшее
+      missing_translations: "Переводы"
       swallowed: Подавленные
       diagnostic_dumps: Диагностика
       storms: Штормы
@@ -868,6 +869,29 @@ ru:
           error_log
         footer_tip: Подавленные исключения возбуждаются, а затем молча перехватываются.
           Они могут скрывать настоящие ошибки.
+      missing_translations_page:
+        title: "Отсутствующие переводы"
+        empty_title: "Отсутствующие переводы не зафиксированы"
+        empty_body: "За последние %{days} дн. отсутствующие ключи перевода не зафиксированы."
+        how_title: "Как отслеживаются отсутствующие переводы:"
+        how_enabled_html: "Отслеживание должно быть включено (%{option})"
+        how_hooked: "RED оборачивает I18n.exception_handler и передаёт вызов обработчику, который уже был в приложении; больше ничего в настройках I18n не меняется"
+        how_recorded: "Каждый запрос, дошедший до обработчика — как через I18n.t, так и через хелпер t() во view — считается по локали и ключу вместе с первым замеченным местом вызова"
+        how_not_seen: "Запрос с :default никогда не даёт промаха, а запрос с raise_on_missing_translations выбрасывает исключение до вызова любого обработчика, поэтому здесь не учитываются ни тот, ни другой"
+        how_buffered: "Промахи считаются в памяти и записываются в конце запроса или задания, так что они появятся с небольшой задержкой"
+        missing_keys: "Отсутствующие ключи"
+        total_misses: "Всего промахов"
+        locales_affected: "Затронутые локали"
+        all_title: "Отсутствующие ключи перевода"
+        column_key: "Ключ"
+        column_locale: "Локаль"
+        column_source: "Впервые замечен в"
+        column_misses: "Промахи"
+        column_first_seen: "Впервые замечен"
+        overflow_notice: "%{count} промахов не удалось отнести к ключу: буфер трекера (%{limit} ключей на поток) был заполнен."
+        footer_tip: "Добавьте ключ в файл локали или передайте :default. Ключи, на которые действительно наткнулись пользователи, идут первыми."
+        docs: "Руководство Rails по i18n"
+
       rack_attack_page:
         title: События ограничения частоты
         missing_title: Rack Attack не установлен
@@ -1193,6 +1217,7 @@ ru:
         pagerduty_integration_key: API-ключ PagerDuty
         enable_webhook_notifications: Произвольные webhook-адреса
         webhook_urls: Свои webhook-адреса
+        webhook_signing_secret: Подписывает исходящие webhook-запросы HMAC-SHA256 (задайте переменную окружения WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Ежедневные/еженедельные сводки. Планирование через
           SolidQueue, Sidekiq или cron
         digest_frequency: Как часто отправлять сводки
@@ -1241,6 +1266,7 @@ ru:
         enable_crash_capture: Хук at_exit для необработанных аварийных завершений
         enable_coverage_tracking: Диагностический режим — включите в панели, чтобы
           видеть выполненные строки в исходном коде (Ruby 3.2+)
+        enable_missing_translation_tracking: "Считает промахи I18n приложения по локали и ключу (оборачивает I18n.exception_handler)"
         enable_rack_attack_tracking: Записывать события throttle/blocklist в отдельную
           таблицу
         enable_actioncable_tracking: Отслеживать события каналов WebSocket как breadcrumbs
@@ -1300,6 +1326,7 @@ ru:
         breadcrumbs: Breadcrumbs
         system_health: Состояние системы
         swallowed_exceptions: Обнаружение подавленных исключений (swallowed exception)
+        missing_translations: "Отслеживание отсутствующих переводов"
         rack_attack: Отслеживание Rack Attack
         actioncable: Отслеживание ActionCable
         activestorage: Отслеживание ActiveStorage

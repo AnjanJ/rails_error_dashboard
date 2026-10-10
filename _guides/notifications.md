@@ -267,6 +267,70 @@ X-Error-Dashboard-Event: error.created
 X-Error-Dashboard-ID: 123
 ```
 
+### Signing (HMAC-SHA256)
+
+Anyone who learns a webhook URL can POST a fake "error" to it. Set a signing secret and every POST to `webhook_urls` carries two extra headers the receiver can verify:
+
+```ruby
+# config/initializers/rails_error_dashboard.rb
+config.webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"]
+# Generate one with: ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'
+```
+
+```text
+X-Error-Dashboard-Timestamp:     1760090400
+X-Error-Dashboard-Signature-256: sha256=5d41402abc4b2a76b9719d911017c592...
+```
+
+The signature is `HMAC-SHA256(secret, "<timestamp>.<raw body>")`, hex-encoded. The timestamp (Unix seconds) is part of the signed string, so a captured request cannot be replayed later with a fresh timestamp. Without a secret the headers are absent and the webhook is sent exactly as before.
+
+Every event RED posts to `webhook_urls` is signed the same way: `error.created`, `error_storm_detected`, `new_error_notifications_suppressed` and `baseline_anomaly`. Slack, Discord and PagerDuty posts are not signed; those services define their own payloads.
+
+**Verifying in Ruby** (the gem ships the check, or copy the three lines inside it):
+
+```ruby
+# A Rails receiver
+class ErrorHooksController < ApplicationController
+  skip_before_action :verify_authenticity_token
+
+  def create
+    body = request.body.read
+    valid = RailsErrorDashboard::Services::WebhookSigner.valid?(
+      body,
+      timestamp: request.headers["X-Error-Dashboard-Timestamp"],
+      signature: request.headers["X-Error-Dashboard-Signature-256"],
+      secret: ENV.fetch("WEBHOOK_SIGNING_SECRET"),
+      tolerance: 300  # seconds; reject anything older
+    )
+    return head :unauthorized unless valid
+
+    payload = JSON.parse(body)
+    # ...
+    head :ok
+  end
+end
+
+# Without the gem on the receiving side:
+expected = "sha256=" + OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{body}")
+ActiveSupport::SecurityUtils.secure_compare(expected, signature) && (Time.now.to_i - timestamp.to_i).abs <= 300
+```
+
+**Verifying in Node.js:**
+
+```js
+const crypto = require("crypto");
+
+function verify(rawBody, headers, secret, toleranceSeconds = 300) {
+  const timestamp = headers["x-error-dashboard-timestamp"];
+  const signature = headers["x-error-dashboard-signature-256"] || "";
+  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > toleranceSeconds) return false;
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
+  return expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+```
+
+Verify against the **raw** request body, before any JSON parsing or re-serialisation: a single reordered key or changed whitespace produces a different digest.
+
 ### Timeout
 
 Webhook requests timeout after 10 seconds to prevent blocking.

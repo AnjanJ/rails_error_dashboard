@@ -60,6 +60,7 @@ de:
       llm: LLM
       n_plus_one: N+1-Abfragen
       deprecations: Deprecations
+      missing_translations: "Übersetzungen"
       swallowed: Verschluckt
       diagnostic_dumps: Diagnose
       storms: Fehlerstürme
@@ -828,6 +829,29 @@ de:
           gelangt sind
         footer_tip: Verschluckte Exceptions werden ausgelöst und dann still abgefangen.
           Sie können echte Fehler verbergen.
+      missing_translations_page:
+        title: "Fehlende Übersetzungen"
+        empty_title: "Keine fehlenden Übersetzungen erfasst"
+        empty_body: "In den letzten %{days} Tagen wurden keine fehlenden Übersetzungsschlüssel erfasst."
+        how_title: "So werden fehlende Übersetzungen erfasst:"
+        how_enabled_html: "Die Erfassung muss aktiviert sein (%{option})"
+        how_hooked: "RED umhüllt I18n.exception_handler und reicht an den Handler weiter, den Ihre App bereits hatte; sonst ändert sich nichts an Ihrer I18n-Konfiguration"
+        how_recorded: "Jede Abfrage, die beim Handler landet – über I18n.t ebenso wie über den View-Helper t() – wird nach Locale und Schlüssel gezählt, zusammen mit der zuerst gesehenen Aufrufstelle"
+        how_not_seen: "Eine Abfrage mit :default schlägt nie fehl, und eine mit raise_on_missing_translations löst eine Ausnahme aus, bevor ein Handler läuft; beide werden hier nicht gezählt"
+        how_buffered: "Fehlschläge werden im Speicher gezählt und am Ende der Anfrage oder des Jobs geschrieben; rechnen Sie mit einer kurzen Verzögerung, bis sie erscheinen"
+        missing_keys: "Fehlende Schlüssel"
+        total_misses: "Fehlschläge gesamt"
+        locales_affected: "Betroffene Locales"
+        all_title: "Fehlende Übersetzungsschlüssel"
+        column_key: "Schlüssel"
+        column_locale: "Locale"
+        column_source: "Zuerst gesehen in"
+        column_misses: "Fehlschläge"
+        column_first_seen: "Zuerst gesehen"
+        overflow_notice: "%{count} Fehlschläge konnten keinem Schlüssel zugeordnet werden, weil der Puffer des Trackers (%{limit} Schlüssel pro Thread) voll war."
+        footer_tip: "Fügen Sie den Schlüssel der Locale-Datei hinzu oder übergeben Sie ein :default. Schlüssel, auf die Nutzer tatsächlich gestoßen sind, stehen zuerst."
+        docs: "Rails-i18n-Leitfaden"
+
       rack_attack_page:
         title: Rate-Limit-Ereignisse
         missing_title: Rack Attack ist nicht installiert
@@ -1128,6 +1152,7 @@ de:
         pagerduty_integration_key: PagerDuty-API-Schlüssel
         enable_webhook_notifications: Allgemeine Webhook-Endpunkte
         webhook_urls: Eigene Webhook-Endpunkte
+        webhook_signing_secret: Signiert ausgehende Webhooks mit HMAC-SHA256 (Umgebungsvariable WEBHOOK_SIGNING_SECRET setzen)
         enable_scheduled_digests: Tägliche/wöchentliche Zusammenfassungs-E-Mails.
           Planung über SolidQueue, Sidekiq oder cron
         digest_frequency: Wie oft Zusammenfassungs-E-Mails gesendet werden
@@ -1180,6 +1205,7 @@ de:
         enable_crash_capture: at_exit-Hook für unbehandelte Abstürze
         enable_coverage_tracking: Diagnosemodus — über das Dashboard aktivieren, um
           ausgeführte Zeilen in der Quellcodeansicht zu sehen (Ruby 3.2+)
+        enable_missing_translation_tracking: "Zählt die I18n-Fehlschläge der App nach Locale und Schlüssel (umhüllt I18n.exception_handler)"
         enable_rack_attack_tracking: Throttle- und Blocklist-Ereignisse in einer eigenen
           Tabelle erfassen
         enable_actioncable_tracking: WebSocket-Kanalereignisse als Breadcrumbs erfassen
@@ -1235,6 +1261,7 @@ de:
         breadcrumbs: Breadcrumbs
         system_health: Systemzustand
         swallowed_exceptions: Erkennung verschluckter Exceptions
+        missing_translations: "Erfassung fehlender Übersetzungen"
         rack_attack: Rack-Attack-Erfassung
         actioncable: ActionCable-Erfassung
         activestorage: ActiveStorage-Erfassung

@@ -99,8 +99,13 @@ module RailsErrorDashboard
     def send_webhook_notification(error_log, anomaly_data, config, locale)
       payload = Services::BaselineAlertPayloadBuilder.webhook_payload(error_log, anomaly_data, locale: locale)
 
+      # Signed when webhook_signing_secret is set; Slack and Discord above
+      # keep post_json because their payloads are not ours to sign. Rescued
+      # per URL so one unreachable receiver does not stop the next.
       config.webhook_urls.each do |url|
-        post_json(url, payload)
+        Services::WebhookDelivery.post(url, payload)
+      rescue => e
+        Rails.logger.error("Failed to send baseline alert to webhook: #{e.message}")
       end
     rescue => e
       Rails.logger.error("Failed to send baseline alert to webhook: #{e.message}")
@@ -116,7 +121,7 @@ module RailsErrorDashboard
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = 5
         http.read_timeout = 10
-        request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
+        request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" })
         request.body = payload.to_json
         http.request(request)
       end

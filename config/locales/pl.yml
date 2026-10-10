@@ -60,6 +60,7 @@ pl:
       llm: LLM
       n_plus_one: Zapytania N+1
       deprecations: Deprecations
+      missing_translations: "Tłumaczenia"
       swallowed: Wyciszone
       diagnostic_dumps: Diagnostyka
       storms: Sztormy
@@ -865,6 +866,29 @@ pl:
           error_log
         footer_tip: Wyciszone wyjątki są podnoszone, a następnie po cichu przechwytywane.
           Mogą ukrywać prawdziwe błędy.
+      missing_translations_page:
+        title: "Brakujące tłumaczenia"
+        empty_title: "Nie zarejestrowano brakujących tłumaczeń"
+        empty_body: "W ciągu ostatnich %{days} dni nie zarejestrowano brakujących kluczy tłumaczeń."
+        how_title: "Jak śledzone są brakujące tłumaczenia:"
+        how_enabled_html: "Śledzenie musi być włączone (%{option})"
+        how_hooked: "RED opakowuje I18n.exception_handler i przekazuje wywołanie do handlera, który aplikacja już miała; nic więcej w konfiguracji I18n się nie zmienia"
+        how_recorded: "Każde wyszukanie, które trafia do handlera — zarówno z I18n.t, jak i z helpera widoku t() — jest liczone według locale i klucza, wraz z pierwszym zaobserwowanym miejscem wywołania"
+        how_not_seen: "Wyszukanie z :default nigdy nie kończy się brakiem, a wyszukanie z raise_on_missing_translations zgłasza wyjątek, zanim uruchomi się jakikolwiek handler, więc żadne z nich nie jest tu liczone"
+        how_buffered: "Braki są liczone w pamięci i zapisywane na końcu żądania lub zadania, więc mogą pojawić się z niewielkim opóźnieniem"
+        missing_keys: "Brakujące klucze"
+        total_misses: "Łącznie braków"
+        locales_affected: "Dotknięte locale"
+        all_title: "Brakujące klucze tłumaczeń"
+        column_key: "Klucz"
+        column_locale: "Locale"
+        column_source: "Pierwszy raz w"
+        column_misses: "Braki"
+        column_first_seen: "Pierwsze wystąpienie"
+        overflow_notice: "%{count} braków nie udało się przypisać do klucza, ponieważ bufor trackera (%{limit} kluczy na wątek) był pełny."
+        footer_tip: "Dodaj klucz do pliku locale albo przekaż :default. Klucze, na które użytkownicy faktycznie trafili, są wymienione jako pierwsze."
+        docs: "Przewodnik i18n Rails"
+
       rack_attack_page:
         title: Zdarzenia limitu żądań
         missing_title: Rack Attack nie jest zainstalowany
@@ -1191,6 +1215,7 @@ pl:
         pagerduty_integration_key: Klucz API PagerDuty
         enable_webhook_notifications: Dowolne punkty końcowe webhooków
         webhook_urls: Własne punkty końcowe webhooków
+        webhook_signing_secret: Podpisuje wychodzące webhooki algorytmem HMAC-SHA256 (ustaw zmienną środowiskową WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Dzienne/tygodniowe e-maile podsumowujące. Planuj
           przez SolidQueue, Sidekiq lub cron
         digest_frequency: Jak często wysyłać e-maile podsumowujące
@@ -1242,6 +1267,7 @@ pl:
         enable_crash_capture: Hak at_exit dla nieobsłużonych awarii
         enable_coverage_tracking: Tryb diagnostyczny — włącz w panelu, aby widzieć
           wykonane linie w podglądzie kodu (Ruby 3.2+)
+        enable_missing_translation_tracking: "Zlicza braki I18n aplikacji według locale i klucza (opakowuje I18n.exception_handler)"
         enable_rack_attack_tracking: Zapisuj zdarzenia throttle/blocklist w osobnej
           tabeli
         enable_actioncable_tracking: Śledź zdarzenia kanałów WebSocket jako breadcrumbs
@@ -1301,6 +1327,7 @@ pl:
         breadcrumbs: Breadcrumbs
         system_health: Stan systemu
         swallowed_exceptions: Wykrywanie wyciszonych wyjątków
+        missing_translations: "Śledzenie brakujących tłumaczeń"
         rack_attack: Śledzenie Rack Attack
         actioncable: Śledzenie ActionCable
         activestorage: Śledzenie ActiveStorage

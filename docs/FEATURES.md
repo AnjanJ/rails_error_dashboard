@@ -928,6 +928,42 @@ The page at `/errors/rack_attack_summary` shows event breakdown with time range 
 
 ---
 
+## Missing Translation Tracking
+
+**⚙️ Optional Feature** - Disabled by default. Enable it to see every I18n key your app looked up and did not have, by locale, with the call site that first hit it:
+
+```ruby
+config.enable_missing_translation_tracking = true
+```
+
+Then run the migration the feature ships with: `rails rails_error_dashboard:install:migrations && rails db:migrate` (adds `rails_error_dashboard_missing_translations`). Until the table exists the tracker counts and discards, and the page shows its empty state; nothing raises.
+
+### Why
+
+A missing translation is not an error. Rails renders `translation missing: en.users.show.greeting` (or the humanized key) and the request succeeds, so the miss never reaches `error_logs` and no error tracker sees it. With 11 locales in a typical app the misses pile up quietly: a key added in English and forgotten in `pt-BR`, a key renamed in a view and not in the locale file, a key built from user input that never resolves. This page is the list of what your users have actually seen untranslated, most-missed first.
+
+### How It Works
+
+RED wraps `I18n.exception_handler` with a transparent decorator and delegates to the handler your app already had; `I18n.t` calls that handler for every miss. The view helper `t()` is different: before Rails 8.1 it looks the key up with a sentinel default (so I18n never misses) and renders the "translation missing" span itself, and only Rails 8.1 added an exception-handler call there. Templates are where most misses live, so RED also prepends a small hook onto `ActionView::Helpers::TranslationHelper#missing_translation` that counts the miss on every Rails version, once (a thread flag stops 8.1 from counting it twice). There is no `ActiveSupport::Notifications` event for a miss, so subscribing, as the deprecation tracker does, is not an option.
+
+Each miss is counted in a thread-local buffer by (locale, key); the first time a key is seen on a thread its host call site is read from the stack (`app/views/users/show.html.erb:12` — compiled templates keep the template path and line). The buffer is written to the `rails_error_dashboard_missing_translations` table at the end of the request or job that filled it (`Rails.application.executor.to_complete`, after the response body is closed, interval-gated to one write per thread per 5 seconds). An `at_exit` hook drains threads that are still alive; Puma joins its workers before it runs, so at most the last 5 seconds of misses on a worker are lost at a restart. One row per (locale, key, application) carries the count, the first and last time it was seen, and the first source.
+
+**Not counted, by design:** a lookup given a `:default` never misses; and with `config.i18n.raise_on_missing_translations = true` (or `raise: true`) I18n raises before any handler runs, so that miss surfaces as an exception, which RED captures as an error anyway. RED's own dashboard strings never reach the handler either: `I18nStore` resolves them in a private backend.
+
+### Dashboard Page
+
+`/errors/missing_translations` lists keys most-missed first with locale, miss count, first call site, first and last seen, over 7, 30 or 90 days. Fixing a key is adding it to the locale file or passing a `:default`; the row ages out of the window once the key stops missing, and retention cleanup (`retention_days`) deletes it.
+
+### Safety
+
+- **Opt-in** — these are the only places RED touches global I18n and ActionView state. Off by default; the handler wrap is installed in `after_initialize` so the handler your initializers configured is the one wrapped, and it is delegated to unchanged (a Symbol handler is dispatched the way I18n itself would). `MissingTranslationHandler.uninstall!` puts the original back
+- **Transparent** — the wrapper changes no return value and swallows no exception the original would have raised; counting is rescued on its own, so a failure there still delegates
+- **Zero I/O in the request path** — a hash increment per miss, one `caller_locations` scan per new key per thread, and no database access until the request has been answered
+- **Bounded memory** — 500 distinct keys per thread; further new keys are counted in an overflow bucket the page reports, so the total is never silently understated
+- **Degrades cleanly** — without the migration, or if the error database is unreachable, the flush logs at debug and drops the batch; the host's lookup result is never affected
+
+---
+
 ## ActionCable Connection Monitoring (v0.5.0)
 
 **⚙️ Optional Feature** - ActionCable tracking is disabled by default. **Requires breadcrumbs to be enabled.** Enable it to monitor WebSocket channel health:

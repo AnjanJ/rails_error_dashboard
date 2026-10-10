@@ -70,6 +70,7 @@ module RailsErrorDashboard
       # errors — clean them up BEFORE the early return below, which fires
       # whenever no error logs happen to be expired.
       cleanup_rack_attack_events(cutoff)
+      cleanup_missing_translations(cutoff)
       cleanup_storm_flush_batches(cutoff)
       cleanup_diagnostic_dumps(cutoff)
       cleanup_swallowed_exceptions(cutoff)
@@ -208,6 +209,31 @@ module RailsErrorDashboard
     rescue => e
       RailsErrorDashboard::Logger.debug(
         "[RailsErrorDashboard] Event timing gap retention cleanup failed: #{e.class} - #{e.message}"
+      )
+    end
+
+    # Expire missing-translation rows not seen since the cutoff. A key that
+    # is still missing is still being seen, so it keeps its row (and its
+    # first_seen_at); only keys that stopped missing age out.
+    #
+    # Not gated on the feature flag: rows collected while tracking was on
+    # must still age out after it is turned off.
+    def cleanup_missing_translations(cutoff)
+      return unless MissingTranslation.table_exists?
+
+      deleted = 0
+      MissingTranslation.where("last_seen_at < ?", cutoff).in_batches(of: 1000) do |batch|
+        deleted += batch.delete_all
+      end
+
+      if deleted > 0
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} missing translations"
+        )
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug(
+        "[RailsErrorDashboard] Missing translation retention cleanup failed: #{e.class} - #{e.message}"
       )
     end
 

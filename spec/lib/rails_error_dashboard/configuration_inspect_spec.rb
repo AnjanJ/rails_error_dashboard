@@ -14,6 +14,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#inspect" do
       discord_webhook_url: "https://discord.com/api/webhooks/1/discord-secret",
       pagerduty_integration_key: "pagerduty-secret-key",
       webhook_urls: [ "https://example.com/hook?token=webhook-secret" ],
+      webhook_signing_secret: "webhook-signing-secret",
       issue_tracker_token: "ghp_issue-tracker-secret",
       issue_webhook_secret: "issue-webhook-secret",
       llm_api_key: "sk-llm-secret"

@@ -60,6 +60,7 @@ zh-CN:
       llm: LLM
       n_plus_one: N+1 查询
       deprecations: Deprecations
+      missing_translations: "翻译"
       swallowed: 被吞异常
       diagnostic_dumps: 诊断
       storms: 风暴
@@ -753,6 +754,29 @@ zh-CN:
         column_ratio: 比例
         view_unrescued: 查看未被捕获、已进入 error_log 的 %{exception} 错误
         footer_tip: 被吞异常先被抛出，随后被静默捕获，可能掩盖真正的缺陷。
+      missing_translations_page:
+        title: "缺失的翻译"
+        empty_title: "未记录到缺失的翻译"
+        empty_body: "最近 %{days} 天内未记录到缺失的翻译键。"
+        how_title: "缺失翻译的跟踪方式:"
+        how_enabled_html: "必须启用跟踪（%{option}）"
+        how_hooked: "RED 会包装 I18n.exception_handler，并把调用交给应用原有的处理器；I18n 配置的其他部分不会改变"
+        how_recorded: "每一次到达处理器的查找——无论来自 I18n.t 还是视图助手 t()——都会按语言区域和键计数，并记录首次观测到的调用位置"
+        how_not_seen: "提供了 :default 的查找永远不会缺失；使用 raise_on_missing_translations 的查找会在任何处理器运行前抛出异常，因此两者都不会在此计数"
+        how_buffered: "缺失在内存中计数，并在请求或任务结束时写入，因此显示会有短暂延迟"
+        missing_keys: "缺失的键"
+        total_misses: "缺失总数"
+        locales_affected: "受影响的语言区域"
+        all_title: "缺失的翻译键"
+        column_key: "键"
+        column_locale: "语言区域"
+        column_source: "首次出现于"
+        column_misses: "缺失次数"
+        column_first_seen: "首次出现"
+        overflow_notice: "由于跟踪器的缓冲区（每线程 %{limit} 个键）已满，有 %{count} 次缺失无法归到具体的键。"
+        footer_tip: "把该键加入语言文件，或传入 :default。用户实际遇到的键排在最前。"
+        docs: "Rails i18n 指南"
+
       rack_attack_page:
         title: 限流事件
         missing_title: 尚未安装 Rack Attack
@@ -1002,6 +1026,7 @@ zh-CN:
         pagerduty_integration_key: PagerDuty API 密钥
         enable_webhook_notifications: 通用 webhook 地址
         webhook_urls: 自定义 webhook 地址
+        webhook_signing_secret: 使用 HMAC-SHA256 签名发出的 webhook（设置环境变量 WEBHOOK_SIGNING_SECRET）
         enable_scheduled_digests: 每日/每周摘要邮件。可通过 SolidQueue、Sidekiq 或 cron 调度
         digest_frequency: 摘要邮件的发送频率
         digest_recipients: 邮件地址（默认使用通知收件人）
@@ -1043,6 +1068,7 @@ zh-CN:
         enable_diagnostic_dump: 按需生成系统状态快照
         enable_crash_capture: 用 at_exit 钩子捕获未处理的崩溃
         enable_coverage_tracking: 诊断模式 — 在面板中启用后，可在源码视图中看到已执行的行（Ruby 3.2+）
+        enable_missing_translation_tracking: "按语言区域和键统计应用的 I18n 缺失（包装 I18n.exception_handler）"
         enable_rack_attack_tracking: 将 throttle/blocklist 事件记录到独立数据表
         enable_actioncable_tracking: 将 WebSocket 频道事件记录为 breadcrumbs
         enable_activestorage_tracking: 将上传/下载/删除记录为 breadcrumbs
@@ -1088,6 +1114,7 @@ zh-CN:
         breadcrumbs: Breadcrumbs
         system_health: 系统状态
         swallowed_exceptions: 被吞异常检测
+        missing_translations: "缺失翻译跟踪"
         rack_attack: Rack Attack 跟踪
         actioncable: ActionCable 跟踪
         activestorage: ActiveStorage 跟踪

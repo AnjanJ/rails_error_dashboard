@@ -583,6 +583,32 @@ module RailsErrorDashboard
       @pagy, @events = pagy(:offset, all_events, limit: per_page_param)
     end
 
+    def missing_translations
+      unless RailsErrorDashboard.configuration.enable_missing_translation_tracking
+        flash[:alert] = feature_disabled_message("missing_translations", options: "enable_missing_translation_tracking = true", set: true)
+        redirect_to errors_path(**app_context_params)
+        return
+      end
+
+      days = days_param(default: 30)
+      @days = days
+      result = Queries::MissingTranslationSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination). The list is one row per
+      # (locale, key), so the badge and pagination count rows; the tile
+      # counts distinct keys, which is what "how many keys are missing" means.
+      @entry_count = all_entries.size
+      @unique_keys = all_entries.map { |e| e[:key] }.uniq.size
+      @total_misses = all_entries.sum { |e| e[:count] }
+      @locale_count = result[:locales].size
+      # Misses the tracker's bounded buffer dropped; shown so the total above
+      # is never silently understated.
+      @overflow_count = result[:overflow_count].to_i
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
+    end
+
     def actioncable_health_summary
       unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs

@@ -32,7 +32,7 @@ module RailsErrorDashboard
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = 5
         http.read_timeout = 10
-        request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
+        request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" })
         request.body = payload.to_json
         http.request(request)
       end
