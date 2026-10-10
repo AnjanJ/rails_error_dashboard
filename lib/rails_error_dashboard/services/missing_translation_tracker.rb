@@ -16,6 +16,13 @@ module RailsErrorDashboard
     # I18nStore resolves them in a private backend that never reaches the
     # global handler.
     #
+    # STORAGE: Thread#thread_variable_get/set, not Thread.current[]. The
+    # latter is fiber-local: a streaming template (render stream: true) runs
+    # in a Fiber, so misses counted there would vanish with the fiber and the
+    # executor hook on the root fiber would find nothing to write. Thread
+    # variables are shared by every fiber of the thread, which is what "per
+    # thread" has to mean for the drain point and the record point to agree.
+    #
     # SAFETY RULES (HOST_APP_SAFETY.md):
     # - Zero I/O in the record path: a hash lookup, an increment, and (for a
     #   key seen for the first time on this thread) one caller_locations scan
@@ -58,9 +65,19 @@ module RailsErrorDashboard
       # a locale and will not appear in a sane translation key.
       KEY_SEPARATOR = "\x1F"
 
-      # Frames whose path matches none of these are the host's own code. The
-      # first such frame is recorded as the miss's source.
-      FOREIGN_FRAME = %r{/gems/|/ruby/\d|<internal:|/rails_error_dashboard/(lib|app)/}
+      # This gem's own code directories, wherever the gem lives and whatever
+      # its directory is called (a `path:` Gemfile entry, vendor/bundle, a
+      # fork). Frames under them are never the host's call site. lib/ and
+      # app/ rather than the whole install root: in this gem's own checkout
+      # the spec suite sits beside them and is the "host" being tested.
+      GEM_ROOTS = [
+        "#{File.expand_path('../..', __dir__)}/",        # <gem>/lib/
+        "#{File.expand_path('../../../app', __dir__)}/"  # <gem>/app/
+      ].freeze
+
+      # Frames from other gems, Ruby itself and its internals are not the
+      # host's call site either. Only consulted for frames outside Rails.root.
+      FOREIGN_FRAME = %r{/gems/|/ruby/\d|<internal:}
 
       class << self
         # Record one miss. Called by MissingTranslationHandler on every
@@ -74,12 +91,12 @@ module RailsErrorDashboard
           return unless enabled?
 
           buffer_key = build_key(truncate(locale, MAX_LOCALE_LENGTH), truncate(key, MAX_KEY_LENGTH))
-          counts = (Thread.current[COUNTS_THREAD_KEY] ||= {})
+          counts = counts_for(Thread.current)
 
           # Seed the deadline the moment the buffer goes from empty to
           # non-empty, so "never older than FLUSH_INTERVAL" holds for a buffer
           # that receives exactly one miss.
-          Thread.current[DEADLINE_THREAD_KEY] ||= monotonic_now if counts.empty?
+          Thread.current.thread_variable_set(DEADLINE_THREAD_KEY, monotonic_now) if counts.empty?
 
           entry = counts[buffer_key]
           if entry
@@ -104,14 +121,7 @@ module RailsErrorDashboard
         # Write this thread's buffer out, synchronously. Clears the buffer
         # first so a failed write cannot double-count on the next flush.
         def flush!
-          counts = Thread.current[COUNTS_THREAD_KEY]
-          return if counts.nil? || counts.empty?
-
-          snapshot = counts.dup
-          counts.clear
-          Thread.current[DEADLINE_THREAD_KEY] = nil
-
-          Commands::FlushMissingTranslations.call(counts: snapshot)
+          drain(Thread.current)
           nil
         rescue => e
           RailsErrorDashboard::Logger.debug(
@@ -145,14 +155,7 @@ module RailsErrorDashboard
         def flush_all_threads!
           Thread.list.each do |thread|
             begin
-              counts = thread[COUNTS_THREAD_KEY]
-              next if counts.nil? || counts.empty?
-
-              snapshot = counts.dup
-              counts.clear
-              thread[DEADLINE_THREAD_KEY] = nil
-
-              Commands::FlushMissingTranslations.call(counts: snapshot)
+              drain(thread)
             rescue => e
               RailsErrorDashboard::Logger.debug(
                 "[RailsErrorDashboard] MissingTranslationTracker.flush_all_threads! skipped a thread: #{e.class} - #{e.message}"
@@ -169,8 +172,8 @@ module RailsErrorDashboard
 
         # Clear thread-local state without persisting (specs, thread teardown).
         def reset!
-          Thread.current[COUNTS_THREAD_KEY] = nil
-          Thread.current[DEADLINE_THREAD_KEY] = nil
+          Thread.current.thread_variable_set(COUNTS_THREAD_KEY, nil)
+          Thread.current.thread_variable_set(DEADLINE_THREAD_KEY, nil)
           nil
         rescue => e
           nil
@@ -178,9 +181,19 @@ module RailsErrorDashboard
 
         # Non-destructive copy of this thread's buffer: { buffer_key => [count, source] }.
         def buffered_counts
-          (Thread.current[COUNTS_THREAD_KEY] || {}).transform_values(&:dup)
+          (Thread.current.thread_variable_get(COUNTS_THREAD_KEY) || {}).transform_values(&:dup)
         rescue => e
           {}
+        end
+
+        # The deadline clock of this thread's buffer, for specs that need to
+        # move it rather than wait out the interval.
+        def deadline
+          Thread.current.thread_variable_get(DEADLINE_THREAD_KEY)
+        end
+
+        def deadline=(value)
+          Thread.current.thread_variable_set(DEADLINE_THREAD_KEY, value)
         end
 
         # @return [Array<String>] [locale, translation_key]
@@ -197,10 +210,10 @@ module RailsErrorDashboard
         # Monotonic clock: a wall-clock step backwards would defer the flush
         # indefinitely.
         def flush_due?
-          deadline = Thread.current[DEADLINE_THREAD_KEY]
-          return false if deadline.nil?
+          started = deadline
+          return false if started.nil?
 
-          (monotonic_now - deadline) >= FLUSH_INTERVAL
+          (monotonic_now - started) >= FLUSH_INTERVAL
         rescue => e
           false
         end
@@ -213,6 +226,23 @@ module RailsErrorDashboard
           false
         end
 
+        def counts_for(thread)
+          thread.thread_variable_get(COUNTS_THREAD_KEY) ||
+            thread.thread_variable_set(COUNTS_THREAD_KEY, {})
+        end
+
+        # Snapshot and clear one thread's buffer, then write the snapshot.
+        def drain(thread)
+          counts = thread.thread_variable_get(COUNTS_THREAD_KEY)
+          return if counts.nil? || counts.empty?
+
+          snapshot = counts.dup
+          counts.clear
+          thread.thread_variable_set(DEADLINE_THREAD_KEY, nil)
+
+          Commands::FlushMissingTranslations.call(counts: snapshot)
+        end
+
         def build_key(*parts)
           parts.map(&:to_s).join(KEY_SEPARATOR)
         end
@@ -221,24 +251,35 @@ module RailsErrorDashboard
           Process.clock_gettime(Process::CLOCK_MONOTONIC)
         end
 
-        # The first stack frame that belongs to the host app, relative to
-        # Rails.root when it is under it: "app/views/users/show.html.erb:12".
-        # Compiled templates keep the template path and line, so a view miss
-        # points at the ERB line, not at ActionView.
+        # The host's call site: the first frame under Rails.root, relative to
+        # it ("app/views/users/show.html.erb:12" -- compiled templates keep
+        # the template path and line). Failing that, the first frame that is
+        # neither this gem's nor another gem's nor Ruby's own. Frames are
+        # judged by where they are, never by what the directory is called.
         def host_call_site
-          root = defined?(Rails) && Rails.respond_to?(:root) && Rails.root ? "#{Rails.root}/" : nil
+          root = rails_root
+          fallback = nil
 
-          # Start at 1 (this method's caller) and let FOREIGN_FRAME skip RED's
-          # own frames, the i18n gem and ActionView; counting frames by hand
-          # would break the first time the call chain changed length.
           caller_locations(1, 40)&.each do |frame|
             path = frame.path.to_s
-            next if path.empty? || path.match?(FOREIGN_FRAME)
+            next if path.empty? || GEM_ROOTS.any? { |gem_dir| path.start_with?(gem_dir) }
 
-            path = path.delete_prefix(root) if root
-            return "#{path}:#{frame.lineno}"
+            if root && path.start_with?(root)
+              return "#{path.delete_prefix(root)}:#{frame.lineno}"
+            end
+
+            fallback ||= "#{path}:#{frame.lineno}" unless path.match?(FOREIGN_FRAME)
           end
+
+          fallback
+        rescue => e
           nil
+        end
+
+        def rails_root
+          return nil unless defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+
+          "#{Rails.root}/"
         rescue => e
           nil
         end

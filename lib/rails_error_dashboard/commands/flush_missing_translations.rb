@@ -46,32 +46,48 @@ module RailsErrorDashboard
 
       private
 
-      def upsert(locale:, translation_key:, source:, count:, app_id:, now:, retried: false)
-        record = MissingTranslation.find_or_initialize_by(
-          locale: locale,
-          translation_key: translation_key,
-          application_id: app_id
-        )
+      # Insert on first sight; otherwise an atomic SQL increment. A
+      # read-modify-write (load miss_count, add, save) would lose increments
+      # when two threads flush the same hot key at once, and with per-thread
+      # buffers flushing every few seconds that is the common case, not a race
+      # worth ignoring.
+      def upsert(locale:, translation_key:, source:, count:, app_id:, now:)
+        identity = { locale: locale, translation_key: translation_key, application_id: app_id }
+        clean_source = Services::EncodingSanitizer.scrub(source.to_s).presence
 
-        record.first_seen_at ||= now
-        record.last_seen_at = now
-        record.miss_count = (record.miss_count || 0) + count
-        # First-write-wins: the first call site seen is the one worth showing,
-        # and overwriting it on every flush would make the column flicker
-        # between callers of the same key.
-        record.source = Services::EncodingSanitizer.scrub(source.to_s).presence if record.source.blank?
-        record.save!
-      rescue ActiveRecord::RecordNotUnique
-        # Another thread created the row between our read and our insert.
-        # Once more as an update; a second collision is not worth a loop.
-        raise if retried
+        record = MissingTranslation.find_by(identity)
+        if record
+          increment(record, count: count, source: clean_source, now: now)
+        else
+          begin
+            MissingTranslation.create!(identity.merge(
+              miss_count: count, source: clean_source, first_seen_at: now, last_seen_at: now
+            ))
+          rescue ActiveRecord::RecordNotUnique
+            # Another thread inserted the row between our read and our insert:
+            # it exists now, so add to it. A NULL application_id lets both
+            # inserts through on every database; the query merges those rows.
+            record = MissingTranslation.find_by(identity)
+            raise unless record
 
-        upsert(locale: locale, translation_key: translation_key, source: source,
-               count: count, app_id: app_id, now: now, retried: true)
+            increment(record, count: count, source: clean_source, now: now)
+          end
+        end
       rescue => e
         RailsErrorDashboard::Logger.debug(
           "[RailsErrorDashboard] FlushMissingTranslations.upsert failed for #{locale}.#{translation_key}: #{e.class} - #{e.message}"
         )
+      end
+
+      def increment(record, count:, source:, now:)
+        updates = [ "miss_count = miss_count + ?, last_seen_at = ?", count, now ]
+        # First-write-wins: the first call site seen is the one worth showing,
+        # and overwriting it on every flush would make the column flicker
+        # between callers of the same key. Filled in only while still blank.
+        if record.source.blank? && source
+          updates = [ "miss_count = miss_count + ?, last_seen_at = ?, source = ?", count, now, source ]
+        end
+        MissingTranslation.where(id: record.id).update_all(updates)
       end
 
       def current_application_id

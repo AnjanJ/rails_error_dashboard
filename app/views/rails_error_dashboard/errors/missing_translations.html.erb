@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <% if @unique_keys == 0 %>
+  <% if @entry_count == 0 %>
     <div class="red-empty-state">
       <i class="bi bi-translate display-1 text-success mb-3"></i>
       <div class="red-empty-state-title"><%= red_t("red.errors.missing_translations_page.empty_title") %></div>
@@ -84,7 +84,7 @@
         <h5 class="mb-0">
           <i class="bi bi-translate text-warning me-2"></i>
           <%= red_t("red.errors.missing_translations_page.all_title") %>
-          <span class="badge bg-warning text-dark"><%= @unique_keys %></span>
+          <span class="badge bg-warning text-dark"><%= @entry_count %></span>
         </h5>
         <small class="text-muted"><%== @pagy.info_tag %></small>
       </div>

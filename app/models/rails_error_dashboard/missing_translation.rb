@@ -13,9 +13,10 @@ module RailsErrorDashboard
     # Not a translation key: a synthetic row holding the misses the tracker
     # dropped because its per-thread buffer was full, kept so the totals the
     # dashboard shows are never silently understated. Stored under a locale
-    # no real lookup uses.
-    OVERFLOW_KEY = "__overflow__"
-    OVERFLOW_LOCALE = "*"
+    # no real lookup uses. The tracker owns the values; aliased here so the
+    # writer and the scopes below cannot drift apart.
+    OVERFLOW_KEY = Services::MissingTranslationTracker::OVERFLOW_KEY
+    OVERFLOW_LOCALE = Services::MissingTranslationTracker::OVERFLOW_LOCALE
 
     belongs_to :application, optional: true
 

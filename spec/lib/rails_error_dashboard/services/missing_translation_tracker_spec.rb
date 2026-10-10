@@ -155,14 +155,14 @@ RSpec.describe RailsErrorDashboard::Services::MissingTranslationTracker do
 
     it "flushes once the buffer has waited the interval" do
       described_class.record(locale: "en", key: "k")
-      Thread.current[described_class::DEADLINE_THREAD_KEY] -= described_class::FLUSH_INTERVAL
+      described_class.deadline -= described_class::FLUSH_INTERVAL
 
       expect { described_class.flush_if_due! }.to change(model, :count).by(1)
     end
 
     it "does nothing when tracking is disabled" do
       described_class.record(locale: "en", key: "k")
-      Thread.current[described_class::DEADLINE_THREAD_KEY] -= described_class::FLUSH_INTERVAL
+      described_class.deadline -= described_class::FLUSH_INTERVAL
       RailsErrorDashboard.configuration.enable_missing_translation_tracking = false
 
       expect { described_class.flush_if_due! }.not_to change(model, :count)
@@ -178,7 +178,7 @@ RSpec.describe RailsErrorDashboard::Services::MissingTranslationTracker do
       sleep 0.01 until other.status == "sleep"
 
       expect { described_class.flush_all_threads! }.to change(model, :count).by(1)
-      expect(other[described_class::COUNTS_THREAD_KEY]).to be_empty
+      expect(other.thread_variable_get(described_class::COUNTS_THREAD_KEY)).to be_empty
     ensure
       other&.kill
     end

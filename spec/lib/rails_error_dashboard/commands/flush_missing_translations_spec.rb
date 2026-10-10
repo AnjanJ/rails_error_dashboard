@@ -88,13 +88,13 @@ RSpec.describe RailsErrorDashboard::Commands::FlushMissingTranslations do
     RailsErrorDashboard.configuration.application_name = "Shop"
 
     calls = 0
-    allow(model).to receive(:find_or_initialize_by).and_wrap_original do |m, *args, **kw|
+    allow(model).to receive(:find_by).and_wrap_original do |m, *args, **kw|
       calls += 1
       if calls == 1
-        # Simulate the race: the row appears after our read and our save hits the unique index.
+        # Simulate the race: the row appears after our read, so our insert hits the unique index.
         model.create!(locale: "en", translation_key: "k", application_id: app.id, miss_count: 10,
                       first_seen_at: Time.current, last_seen_at: Time.current)
-        model.new(locale: "en", translation_key: "k", application_id: app.id)
+        nil
       else
         m.call(*args, **kw)
       end
@@ -105,6 +105,16 @@ RSpec.describe RailsErrorDashboard::Commands::FlushMissingTranslations do
     expect(calls).to eq(2)
     expect(model.count).to eq(1)
     expect(model.last.miss_count).to eq(11)
+  end
+
+  it "increments atomically in SQL rather than read-modify-write" do
+    row = model.create!(locale: "en", translation_key: "k", miss_count: 5, first_seen_at: 1.day.ago, last_seen_at: 1.day.ago)
+    expect(model).not_to receive(:find_or_initialize_by)
+    expect_any_instance_of(model).not_to receive(:save!)
+
+    described_class.call(counts: { key("en", "k") => [ 2, nil ] })
+
+    expect(row.reload.miss_count).to eq(7)
   end
 
   it "does nothing without the table, and never raises" do

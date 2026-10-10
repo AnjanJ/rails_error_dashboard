@@ -21,13 +21,45 @@ module RailsErrorDashboard
 
       # @return [Hash] entries: [{locale:, key:, source:, count:, first_seen:, last_seen:}],
       #   overflow_count: Integer, locales: [String]
+      # One pluck of every in-window row; entries, the locale set and the
+      # overflow total all come out of it, so a page view is two statements
+      # (table_exists? and this) whatever the row count.
       def call
         return empty unless MissingTranslation.table_exists?
 
+        merged = {}
+        overflow = 0
+
+        base_query.pluck(:locale, :translation_key, :source, :miss_count, :first_seen_at, :last_seen_at)
+          .each do |locale, key, source, count, first_seen, last_seen|
+            # Misses the tracker could not attribute to a key because its
+            # buffer was full: kept out of the listing (they belong to no
+            # key) but totalled, so the page never silently understates.
+            if key == MissingTranslation::OVERFLOW_KEY
+              overflow += count.to_i
+              next
+            end
+
+            # Merged by (locale, key) rather than trusted to be unique: the
+            # upsert index includes application_id, and a NULL there (no
+            # application_name configured) lets two threads' first writes of
+            # the same key both land, on every database. Two rows for one key
+            # would read as two problems; summing them reads as one.
+            entry = merged[[ locale.to_s, key.to_s ]] ||= {
+              locale: locale.to_s, key: key.to_s, source: nil, count: 0, first_seen: nil, last_seen: nil
+            }
+            entry[:count] += count.to_i
+            entry[:source] ||= source.presence
+            entry[:first_seen] = [ entry[:first_seen], first_seen ].compact.min
+            entry[:last_seen] = [ entry[:last_seen], last_seen ].compact.max
+          end
+
+        entries = merged.values.sort_by { |e| [ -e[:count], -(e[:last_seen]&.to_f || 0) ] }
+
         {
           entries: entries,
-          overflow_count: overflow_count,
-          locales: locales
+          overflow_count: overflow,
+          locales: entries.map { |e| e[:locale] }.uniq.sort
         }
       rescue => e
         Rails.logger.error("[RailsErrorDashboard] MissingTranslationSummary query failed: #{e.class}: #{e.message}")
@@ -44,44 +76,6 @@ module RailsErrorDashboard
         scope = MissingTranslation.seen_since(@start_date)
         scope = scope.for_application(@application_id) if @application_id.present?
         scope
-      end
-
-      # Merged in Ruby by (locale, key) rather than trusted to be unique: the
-      # upsert index includes application_id, and a NULL there (no
-      # application_name configured) lets two threads' first writes of the
-      # same key both land, on every database. Two rows for one key would
-      # read as two problems; summing them reads as one.
-      def entries
-        rows = base_query.real
-          .pluck(:locale, :translation_key, :source, :miss_count, :first_seen_at, :last_seen_at)
-
-        merged = {}
-        rows.each do |locale, key, source, count, first_seen, last_seen|
-          entry = merged[[ locale.to_s, key.to_s ]] ||= {
-            locale: locale.to_s, key: key.to_s, source: nil, count: 0, first_seen: nil, last_seen: nil
-          }
-          entry[:count] += count.to_i
-          entry[:source] ||= source.presence
-          entry[:first_seen] = [ entry[:first_seen], first_seen ].compact.min
-          entry[:last_seen] = [ entry[:last_seen], last_seen ].compact.max
-        end
-
-        merged.values.sort_by { |e| [ -e[:count], -(e[:last_seen]&.to_f || 0) ] }
-      end
-
-      # Misses the tracker could not attribute to a key because its buffer was
-      # full. Kept out of the listing (they belong to no key) but reported so
-      # the page never silently understates the total.
-      def overflow_count
-        base_query.overflow.sum(:miss_count).to_i
-      rescue => e
-        0
-      end
-
-      def locales
-        base_query.real.distinct.pluck(:locale).map(&:to_s).sort
-      rescue => e
-        []
       end
     end
   end

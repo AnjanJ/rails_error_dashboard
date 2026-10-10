@@ -270,8 +270,8 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
         expect(RailsErrorDashboard::SwallowedException.exists?(old_swallowed.id)).to be false
       end
 
-      it "prunes missing translations not seen since the cutoff, keeping ones still being hit" do
-        RailsErrorDashboard.configuration.enable_missing_translation_tracking = true
+      it "prunes missing translations not seen since the cutoff, keeping ones still being hit, even with tracking off" do
+        RailsErrorDashboard.configuration.enable_missing_translation_tracking = false
         rows = {
           stale: RailsErrorDashboard::MissingTranslation.create!(
             locale: "en", translation_key: "old.key", miss_count: 3, first_seen_at: 200.days.ago, last_seen_at: 120.days.ago
@@ -285,8 +285,6 @@ RSpec.describe RailsErrorDashboard::RetentionCleanupJob, type: :job do
 
         expect(RailsErrorDashboard::MissingTranslation.exists?(rows[:stale].id)).to be false
         expect(RailsErrorDashboard::MissingTranslation.exists?(rows[:live].id)).to be true
-      ensure
-        RailsErrorDashboard.configuration.enable_missing_translation_tracking = false
       end
 
       it "still cleans up error logs when pruning one of these tables fails" do

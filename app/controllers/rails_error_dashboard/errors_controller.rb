@@ -595,7 +595,10 @@ module RailsErrorDashboard
       result = Queries::MissingTranslationSummary.call(days, application_id: @current_application_id)
       all_entries = result[:entries]
 
-      # Summary stats (computed before pagination)
+      # Summary stats (computed before pagination). The list is one row per
+      # (locale, key), so the badge and pagination count rows; the tile
+      # counts distinct keys, which is what "how many keys are missing" means.
+      @entry_count = all_entries.size
       @unique_keys = all_entries.map { |e| e[:key] }.uniq.size
       @total_misses = all_entries.sum { |e| e[:count] }
       @locale_count = result[:locales].size

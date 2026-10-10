@@ -215,8 +215,10 @@ module RailsErrorDashboard
     # Expire missing-translation rows not seen since the cutoff. A key that
     # is still missing is still being seen, so it keeps its row (and its
     # first_seen_at); only keys that stopped missing age out.
+    #
+    # Not gated on the feature flag: rows collected while tracking was on
+    # must still age out after it is turned off.
     def cleanup_missing_translations(cutoff)
-      return unless RailsErrorDashboard.configuration.enable_missing_translation_tracking
       return unless MissingTranslation.table_exists?
 
       deleted = 0

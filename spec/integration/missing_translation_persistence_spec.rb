@@ -34,7 +34,7 @@ RSpec.describe "Missing translation persistence", type: :request do
     expect(model.count).to eq(0)
 
     # What the engine registers on Rails.application.executor.to_complete.
-    Thread.current[tracker::DEADLINE_THREAD_KEY] -= tracker::FLUSH_INTERVAL
+    tracker.deadline -= tracker::FLUSH_INTERVAL
     tracker.flush_if_due!
 
     rows = model.order(:locale).to_a
