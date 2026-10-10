@@ -1216,6 +1216,10 @@ fr:
         notification_email_from: Adresse de l'expéditeur
         enable_discord_notifications: Notifications par webhook Discord
         discord_webhook_url: Point de terminaison du webhook Discord
+        enable_telegram_notifications: "Notifications Telegram via l'API Bot"
+        telegram_bot_token: "Jeton du bot fourni par @BotFather (définir la variable d'environnement TELEGRAM_BOT_TOKEN)"
+        telegram_chat_id: "Discussion, groupe ou canal où le bot publie"
+        telegram_api_base_url: "Serveur de l'API Bot (à modifier seulement pour un proxy ou un serveur auto-hébergé)"
         enable_pagerduty_notifications: Escalade des erreurs critiques
         pagerduty_integration_key: Clé API PagerDuty
         enable_webhook_notifications: Points de terminaison webhook génériques

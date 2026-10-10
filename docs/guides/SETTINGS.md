@@ -73,10 +73,10 @@ Separate Database                ✓ Enabled
 
 Shows which notification channels are configured and active:
 
-- **Slack Notifications**: Webhook URL (masked) and status
+- **Slack Notifications**: Webhook URL (shown only as Set / Not set) and status
 - **Email Notifications**: Recipients count and status
-- **Discord Notifications**: Webhook URL (masked) and status
-- **PagerDuty Notifications**: Integration key (masked) and status
+- **Discord Notifications**: Webhook URL (shown only as Set / Not set) and status
+- **PagerDuty Notifications**: Integration key (shown only as Set / Not set) and status
 - **Custom Webhooks**: Number of configured webhooks
 
 **Example Display:**
@@ -88,7 +88,7 @@ PagerDuty Notifications          ✓ Enabled (Critical errors only)
 Custom Webhooks                  2 configured
 ```
 
-**Security Note**: Webhook URLs and sensitive keys are partially masked for security (e.g., `https://hooks.slack.com/services/...T123`).
+**Security Note**: credentials (webhook URLs, API keys and tokens, the dashboard password) never appear on the page. Every option in `RailsErrorDashboard::Configuration::SECRET_ATTRIBUTES` renders only as **Set** or **Not set**, the same list `Configuration#inspect` masks.
 
 ---
 

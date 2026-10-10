@@ -93,6 +93,15 @@ recycled Puma thread would render in whatever language the host app last used.
 | `enable_discord_notifications` | Boolean | `false` | Enable Discord webhooks |
 | `discord_webhook_url` | String | `nil` | Discord webhook URL (ENV: `DISCORD_WEBHOOK_URL`) |
 
+### Notifications - Telegram
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_telegram_notifications` | Boolean | `false` | Enable Telegram Bot API notifications |
+| `telegram_bot_token` | String | `nil` | Bot token from @BotFather (ENV: `TELEGRAM_BOT_TOKEN`). Masked everywhere RED prints configuration |
+| `telegram_chat_id` | String | `nil` | Chat, group or channel id, or `@channelusername` (ENV: `TELEGRAM_CHAT_ID`) |
+| `telegram_api_base_url` | String | `"https://api.telegram.org"` | Bot API server, for a proxy or self-hosted server (ENV: `TELEGRAM_API_BASE_URL`) |
+
 ### Notifications - PagerDuty
 
 | Option | Type | Default | Description |
@@ -124,7 +133,7 @@ recycled Puma thread would render in whatever language the host app last used.
 | `notification_burst_limit` | Integer | `10` | Most notifications for **new** errors per window, **per process**. When it is exceeded, one summary message replaces the rest of the window. Every error is still recorded. `0` disables the cap |
 | `notification_burst_window_seconds` | Integer | `60` | Length of that window |
 
-The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
+The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord, Telegram and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
 
 ### Notifications - Scheduled Digests
 
@@ -379,6 +388,8 @@ ERROR_NOTIFICATION_EMAILS=team@example.com,ops@example.com
 ERROR_NOTIFICATION_FROM=errors@myapp.com
 DASHBOARD_BASE_URL=https://dashboard.example.com
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+TELEGRAM_BOT_TOKEN=123456789:AAF...
+TELEGRAM_CHAT_ID=-1001234567890
 PAGERDUTY_INTEGRATION_KEY=abc123...
 WEBHOOK_URLS=https://hook1.example.com,https://hook2.example.com
 WEBHOOK_SIGNING_SECRET=...     # Optional: HMAC-SHA256 signature headers on every custom webhook
@@ -450,7 +461,7 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 - ✅ Analytics and trend charts
 
 **Optional Features (17 total):**
-- 📧 **5 Notification Channels** (Slack, Email, Discord, PagerDuty, Webhooks)
+- 📧 **6 Notification Channels** (Slack, Email, Discord, Telegram, PagerDuty, Webhooks)
 - ⚡ **3 Performance Features** (Async Logging, Error Sampling, Separate Database)
 - 📊 **7 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
 - 🔍 **2 Developer Tools** (Source Code Integration, Git Blame)
@@ -603,7 +614,7 @@ end
 
 ## Notification Features
 
-Rails Error Dashboard supports 5 notification channels, all disabled by default.
+Rails Error Dashboard supports 6 notification channels, all disabled by default.
 
 ### Slack Notifications
 
@@ -636,6 +647,18 @@ Push errors to Discord channels via webhooks.
 RailsErrorDashboard.configure do |config|
   config.enable_discord_notifications = true
   config.discord_webhook_url = ENV['DISCORD_WEBHOOK_URL']
+end
+```
+
+### Telegram Notifications
+
+Push errors to a Telegram chat, group or channel through the Bot API. Create the bot with @BotFather and find the chat id as described in the [Notifications guide](/rails_error_dashboard/docs/guides/notifications/#telegram-notifications).
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_telegram_notifications = true
+  config.telegram_bot_token = ENV['TELEGRAM_BOT_TOKEN']
+  config.telegram_chat_id = ENV['TELEGRAM_CHAT_ID']
 end
 ```
 
@@ -1766,6 +1789,11 @@ RailsErrorDashboard.configure do |config|
   config.discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
   config.enable_discord_notifications = config.discord_webhook_url.present?
 
+  # Telegram Notifications
+  config.telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+  config.telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+  config.enable_telegram_notifications = config.telegram_bot_token.present? && config.telegram_chat_id.present?
+
   # PagerDuty Integration (critical errors only)
   config.pagerduty_integration_key = ENV["PAGERDUTY_INTEGRATION_KEY"]
   config.enable_pagerduty_notifications = config.pagerduty_integration_key.present?
@@ -2063,7 +2091,7 @@ end
 
 ### Notifications Not Sending
 
-**Problem**: Slack/Discord notifications aren't working.
+**Problem**: Slack/Discord/Telegram notifications aren't working.
 
 **Solutions**:
 1. **Check notifications are enabled**

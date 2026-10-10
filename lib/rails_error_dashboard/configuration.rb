@@ -14,6 +14,7 @@ module RailsErrorDashboard
     SECRET_ATTRIBUTES = %i[
       dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
       webhook_urls webhook_signing_secret issue_tracker_token issue_webhook_secret llm_api_key
+      telegram_bot_token
     ].freeze
 
     # Dashboard authentication (always required)
@@ -45,6 +46,14 @@ module RailsErrorDashboard
     # Discord notifications
     attr_accessor :discord_webhook_url
     attr_accessor :enable_discord_notifications
+
+    # Telegram (Bot API: a bot token from @BotFather and the chat, group or
+    # channel the bot posts to). telegram_api_base_url exists for a local Bot
+    # API server or a proxy; nearly every install leaves it alone.
+    attr_accessor :enable_telegram_notifications
+    attr_accessor :telegram_bot_token
+    attr_accessor :telegram_chat_id
+    attr_accessor :telegram_api_base_url
 
     # PagerDuty notifications (critical errors only)
     attr_accessor :pagerduty_integration_key
@@ -317,6 +326,12 @@ module RailsErrorDashboard
       # Discord notification settings
       @discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
       @enable_discord_notifications = false
+
+      # Telegram notification settings
+      @enable_telegram_notifications = false
+      @telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+      @telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+      @telegram_api_base_url = ENV.fetch("TELEGRAM_API_BASE_URL", "https://api.telegram.org")
 
       # PagerDuty notification settings (critical errors only)
       @pagerduty_integration_key = ENV["PAGERDUTY_INTEGRATION_KEY"]
@@ -825,6 +840,15 @@ module RailsErrorDashboard
 
         if enable_discord_notifications && (discord_webhook_url.nil? || discord_webhook_url.strip.empty?)
           errors << "discord_webhook_url is required when enable_discord_notifications is true"
+        end
+
+        if enable_telegram_notifications
+          if telegram_bot_token.to_s.strip.empty?
+            errors << "telegram_bot_token is required when enable_telegram_notifications is true"
+          end
+          if telegram_chat_id.to_s.strip.empty?
+            errors << "telegram_chat_id is required when enable_telegram_notifications is true"
+          end
         end
 
         if enable_pagerduty_notifications && (pagerduty_integration_key.nil? || pagerduty_integration_key.strip.empty?)

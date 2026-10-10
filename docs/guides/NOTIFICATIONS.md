@@ -13,6 +13,7 @@ Rails Error Dashboard supports multiple notification backends to alert your team
 - ✅ **Email** - Send error notifications via email
 - ✅ **Slack** - Post errors to Slack channels
 - ✅ **Discord** - Post errors to Discord channels
+- ✅ **Telegram** - Post errors to a Telegram chat, group or channel
 - ✅ **PagerDuty** - Create incidents for critical errors
 - ✅ **Webhooks** - Send to any custom webhook URL
 
@@ -117,6 +118,52 @@ Discord notifications include:
   - Backtrace location
 - **Footer**: "Rails Error Dashboard"
 - **Timestamp**: When error occurred
+
+---
+
+## Telegram Notifications
+
+Post error notifications to a Telegram chat, group or channel through the Bot API. No gem dependency: one HTTPS POST per notification.
+
+### Setup
+
+1. Create a bot: open a chat with [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the token it gives you (it looks like `123456789:AAF...`).
+2. Find the chat id:
+   - For a **group or channel**, add the bot as a member (channels: as an administrator, so it can post), send one message there, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser and read `chat.id` from the JSON. Group and channel ids are negative numbers such as `-1001234567890`.
+   - A **public channel** can also be addressed by username: `@yourchannel`.
+   - For a **private chat** with yourself, message the bot first, then read `chat.id` from `getUpdates` the same way.
+3. Configure:
+
+```ruby
+# config/initializers/rails_error_dashboard.rb
+RailsErrorDashboard.configure do |config|
+  config.enable_telegram_notifications = true
+  config.telegram_bot_token = ENV['TELEGRAM_BOT_TOKEN']
+  config.telegram_chat_id = ENV['TELEGRAM_CHAT_ID']
+end
+```
+
+### Environment Variables
+
+```bash
+# .env
+TELEGRAM_BOT_TOKEN=123456789:AAF...
+TELEGRAM_CHAT_ID=-1001234567890
+# Only for a local Bot API server or a proxy; defaults to https://api.telegram.org
+# TELEGRAM_API_BASE_URL=https://api.telegram.org
+```
+
+The bot token is a credential: the Settings page shows it only as **Set** / **Not set**, `Configuration#inspect` masks it, and RED redacts it from every log line (it is part of the request URL, so a failed request would otherwise print it).
+
+### Telegram Message Format
+
+One message per error, in Telegram's HTML parse mode (every value is escaped, so an error message containing `<` or `&` cannot break the formatting):
+- **Heading** and the error class in bold
+- **Error message** in a code span (truncated to 500 characters)
+- **Fields**: Application, Environment (when known), Platform, Occurrences, Controller, Action, First Seen, Location (first backtrace line)
+- **Link** to the error in the dashboard (link preview disabled)
+
+Storm and burst-summary messages, and baseline anomaly alerts, go to Telegram too, like Slack and Discord. A message Telegram rejects (wrong chat id, bot removed from the group) is logged with Telegram's own description, for example `Bad Request: chat not found`.
 
 ---
 
@@ -284,7 +331,7 @@ X-Error-Dashboard-Signature-256: sha256=5d41402abc4b2a76b9719d911017c592...
 
 The signature is `HMAC-SHA256(secret, "<timestamp>.<raw body>")`, hex-encoded. The timestamp (Unix seconds) is part of the signed string, so a captured request cannot be replayed later with a fresh timestamp. Without a secret the headers are absent and the webhook is sent exactly as before.
 
-Every event RED posts to `webhook_urls` is signed the same way: `error.created`, `error_storm_detected`, `new_error_notifications_suppressed` and `baseline_anomaly`. Slack, Discord and PagerDuty posts are not signed; those services define their own payloads.
+Every event RED posts to `webhook_urls` is signed the same way: `error.created`, `error_storm_detected`, `new_error_notifications_suppressed` and `baseline_anomaly`. Slack, Discord, Telegram and PagerDuty posts are not signed; those services define their own payloads.
 
 **Verifying in Ruby** (the gem ships the check, or copy the three lines inside it):
 
@@ -363,6 +410,11 @@ RailsErrorDashboard.configure do |config|
   config.enable_discord_notifications = true
   config.discord_webhook_url = ENV['DISCORD_WEBHOOK_URL']
 
+  # Telegram notifications (for all errors)
+  config.enable_telegram_notifications = true
+  config.telegram_bot_token = ENV['TELEGRAM_BOT_TOKEN']
+  config.telegram_chat_id = ENV['TELEGRAM_CHAT_ID']
+
   # PagerDuty notifications (CRITICAL ERRORS ONLY)
   config.enable_pagerduty_notifications = true
   config.pagerduty_integration_key = ENV['PAGERDUTY_INTEGRATION_KEY']
@@ -391,6 +443,10 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 # Discord
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR/WEBHOOK/URL
+
+# Telegram
+TELEGRAM_BOT_TOKEN=123456789:AAF...
+TELEGRAM_CHAT_ID=-1001234567890
 
 # PagerDuty (critical errors only)
 PAGERDUTY_INTEGRATION_KEY=your_pagerduty_integration_key
@@ -549,7 +605,7 @@ You can mute individual errors to suppress all notifications while still trackin
 - Still appear in the dashboard (with a bell-slash icon)
 - Still get ingested, deduplicated, and counted
 - Still fire plugin events (`:on_error_logged`, `:on_error_recurred`)
-- Do **not** trigger any notifications (Slack, email, Discord, PagerDuty, webhooks)
+- Do **not** trigger any notifications (Slack, email, Discord, Telegram, PagerDuty, webhooks)
 - Do **not** trigger baseline anomaly alerts
 
 **How to mute:**

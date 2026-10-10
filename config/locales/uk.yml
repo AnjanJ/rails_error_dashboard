@@ -1234,6 +1234,10 @@ uk:
         notification_email_from: Адреса відправника
         enable_discord_notifications: Сповіщення через webhook у Discord
         discord_webhook_url: Кінцева точка webhook у Discord
+        enable_telegram_notifications: "Сповіщення Telegram через Bot API"
+        telegram_bot_token: "Токен бота від @BotFather (задайте змінну середовища TELEGRAM_BOT_TOKEN)"
+        telegram_chat_id: "Чат, група або канал, куди пише бот"
+        telegram_api_base_url: "Сервер Bot API (змінюйте лише для проксі або власного сервера)"
         enable_pagerduty_notifications: Ескалація критичних помилок
         pagerduty_integration_key: Ключ API PagerDuty
         enable_webhook_notifications: Довільні кінцеві точки webhook

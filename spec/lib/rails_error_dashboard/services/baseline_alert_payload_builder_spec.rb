@@ -87,6 +87,32 @@ RSpec.describe RailsErrorDashboard::Services::BaselineAlertPayloadBuilder do
     end
   end
 
+  describe ".telegram_payload" do
+    subject(:payload) { described_class.telegram_payload(error_log, anomaly_data) }
+
+    it "is an HTML sendMessage payload without chat_id" do
+      expect(payload).to include(parse_mode: "HTML", disable_web_page_preview: true)
+      expect(payload).not_to have_key(:chat_id)
+    end
+
+    it "carries the heading, the anomaly fields and the message in a code span" do
+      text = payload[:text]
+      expect(text).to start_with("<b>🚨 Baseline Anomaly Detected</b>")
+      expect(text).to include("<b>Application:</b> #{application.name}")
+      expect(text).to include("<b>Error Type:</b> TimeoutError")
+      expect(text).to include("<b>Severity:</b> HIGH")
+      expect(text).to include("<b>Baseline Type:</b> daily")
+      expect(text).to include("<code>Request timed out after 30 seconds</code>")
+      expect(text).to include(%(<a href="), "/errors/#{error_log.id}")
+    end
+
+    it "escapes HTML in values" do
+      error_log.update!(error_type: "Foo<Bar>")
+
+      expect(payload[:text]).to include("<b>Error Type:</b> Foo&lt;Bar&gt;")
+    end
+  end
+
   describe ".webhook_payload" do
     subject(:payload) { described_class.webhook_payload(error_log, anomaly_data) }
 

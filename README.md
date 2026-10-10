@@ -434,7 +434,7 @@ config.llm_model = "gpt-5"
 </details>
 
 <details>
-<summary><strong>Notifications — Slack, Discord, PagerDuty, Email, Webhooks</strong></summary>
+<summary><strong>Notifications — Slack, Discord, Telegram, PagerDuty, Email, Webhooks</strong></summary>
 
 Multi-channel alerting with severity filters, per-error cooldown, milestone threshold alerts, and a per-environment allowlist (`config.notification_environments = %w[production]`) so a staging deploy never pages anyone.
 

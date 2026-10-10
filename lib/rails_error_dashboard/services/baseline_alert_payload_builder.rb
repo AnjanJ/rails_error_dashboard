@@ -9,6 +9,7 @@ module RailsErrorDashboard
     # @example
     #   BaselineAlertPayloadBuilder.slack_payload(error_log, anomaly_data)
     #   BaselineAlertPayloadBuilder.discord_payload(error_log, anomaly_data)
+    #   BaselineAlertPayloadBuilder.telegram_payload(error_log, anomaly_data)
     #   BaselineAlertPayloadBuilder.webhook_payload(error_log, anomaly_data)
     class BaselineAlertPayloadBuilder
       ANOMALY_EMOJIS = {
@@ -140,6 +141,30 @@ module RailsErrorDashboard
         }
       end
 
+      # Build the Telegram sendMessage payload for a baseline anomaly. HTML
+      # parse mode with every value escaped; see TelegramPayloadBuilder for
+      # why HTML and not MarkdownV2.
+      # @return [Hash] sendMessage payload without chat_id
+      def self.telegram_payload(error_log, anomaly_data, locale: I18nStore::DEFAULT_LOCALE)
+        tg = TelegramPayloadBuilder
+        lines = [
+          tg.bold(NotificationHelpers.t("red.notifications.baseline_alert.heading", locale)),
+          tg.field(:application, NotificationHelpers.app_name(error_log), locale),
+          tg.field(:error_type, error_log.error_type, locale),
+          tg.field(:platform, error_log.platform || NotificationHelpers.unknown(locale), locale),
+          telegram_field(:severity, anomaly_level(anomaly_data[:level], locale), locale),
+          telegram_field(:std_devs, std_devs_text(anomaly_data, locale), locale),
+          telegram_field(:threshold, threshold_text(anomaly_data, locale), locale),
+          telegram_field(:baseline_type, anomaly_data[:baseline_type] || NotificationHelpers.not_available(locale), locale),
+          tg.field(:message, NotificationHelpers.truncate_message(error_log.message, 200), locale, code: true),
+          "",
+          tg.link(NotificationHelpers.dashboard_url(error_log),
+                  NotificationHelpers.t("red.notifications.error_alert.view_in_dashboard", locale))
+        ]
+
+        tg.html_payload(lines.join("\n"))
+      end
+
       # Build generic webhook payload for baseline anomaly
       # @param error_log [ErrorLog] The error
       # @param anomaly_data [Hash] Anomaly information
@@ -177,6 +202,11 @@ module RailsErrorDashboard
       # appear on an ordinary error alert.
       def self.baseline_label(label, locale)
         NotificationHelpers.t("red.notifications.baseline_alert.labels.#{label}", locale)
+      end
+
+      # Telegram's "<b>Label:</b> value" shape, for a baseline-only label.
+      def self.telegram_field(label, value, locale)
+        "#{TelegramPayloadBuilder.bold("#{baseline_label(label, locale)}:")} #{TelegramPayloadBuilder.escape(value)}"
       end
 
       # Slack's bold-label-newline-value shape, for a baseline-only label.

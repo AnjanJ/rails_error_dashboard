@@ -1052,6 +1052,10 @@ ja:
         notification_email_from: 送信元アドレス
         enable_discord_notifications: Discord の webhook 通知
         discord_webhook_url: Discord の webhook エンドポイント
+        enable_telegram_notifications: "Telegram Bot API 通知"
+        telegram_bot_token: "@BotFather のボットトークン（環境変数 TELEGRAM_BOT_TOKEN を設定）"
+        telegram_chat_id: "ボットが投稿するチャット・グループ・チャンネル"
+        telegram_api_base_url: "Bot API サーバー（プロキシやセルフホストの場合のみ変更）"
         enable_pagerduty_notifications: 重大なエラーのエスカレーション
         pagerduty_integration_key: PagerDuty の API キー
         enable_webhook_notifications: 汎用の webhook エンドポイント
