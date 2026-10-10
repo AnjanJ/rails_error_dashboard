@@ -61,6 +61,7 @@ es:
       n_plus_one: Consultas N+1
       deprecations: Deprecations
       missing_translations: "Traducciones"
+      boot_errors: "Errores de arranque"
       swallowed: Silenciadas
       diagnostic_dumps: Diagnóstico
       storms: Tormentas
@@ -882,6 +883,30 @@ es:
         footer_tip: "Añada la clave al archivo de locale o pase un :default. Las claves que los usuarios realmente encontraron aparecen primero."
         docs: "Guía i18n de Rails"
 
+      boot_errors_page:
+        title: "Errores de arranque"
+        empty_title: "No se registraron errores de arranque"
+        empty_body: "Ningún proceso murió al arrancar en los últimos %{days} días."
+        how_title: "Cómo se capturan los errores de arranque:"
+        how_enabled_html: "La captura de fallos debe estar activada (%{option})"
+        how_hooked: "RED registra su hook at_exit justo después de sus initializers y antes del eager loading de Rails, así que un fallo durante el arranque se ve aunque la app nunca termine de arrancar"
+        how_captured_html: "Un %{zeitwerk} por un archivo que define la constante equivocada, un %{syntax} en un modelo, un initializer que lanza una excepción: cualquier cosa que mate el proceso antes de atender una petición"
+        how_imported: "El fallo se escribe en disco, porque aún no hay base de datos, y se importa en el siguiente arranque que tenga éxito"
+        how_never: "Un proceso terminado con SIGKILL o por un segfault nunca es visto por at_exit, en ninguna herramienta"
+        unresolved: "Sin resolver"
+        boot_crashes: "Fallos de arranque"
+        failed_boots: "Arranques fallidos"
+        all_title: "Fallos de arranque por error"
+        column_error: "Error"
+        column_file: "Archivo"
+        column_constant: "Constante"
+        column_boots: "Arranques"
+        column_first_seen: "Visto por primera vez"
+        column_status: "Estado"
+        status_open: "Abierto"
+        status_resolved: "Resuelto"
+        footer_tip: "Un fallo de arranque significa que el proceso nunca atendió una petición. Corríjalo antes del próximo despliegue; la fila se resuelve como cualquier otro error."
+
       rack_attack_page:
         title: Eventos de límite de tasa
         missing_title: Rack Attack no está instalado
@@ -1308,6 +1333,7 @@ es:
         system_health: Estado del sistema
         swallowed_exceptions: Detección de excepciones silenciadas
         missing_translations: "Seguimiento de traducciones faltantes"
+        boot_errors: "Captura de errores de arranque"
         rack_attack: Seguimiento de Rack Attack
         actioncable: Seguimiento de ActionCable
         activestorage: Seguimiento de ActiveStorage
@@ -1721,6 +1747,13 @@ es:
           guide_link: Guía de ActionCable
       activestorage:
         title: Estado de ActiveStorage
+        probe:
+          title: "Accesibilidad del servicio"
+          reachable: "Accesible"
+          unreachable: "Inaccesible"
+          service: "Servicio: %{name}"
+          latency: "%{ms} ms de ida y vuelta"
+          how: "Una comprobación de existencia de una clave que nunca se almacena, hecha al cargar esta página. GET /health ejecuta la misma comprobación."
         empty:
           title: No se encontraron eventos de ActiveStorage
           message: No se detectaron operaciones del servicio ActiveStorage en los

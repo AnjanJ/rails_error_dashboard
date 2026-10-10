@@ -13,7 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.2', '3.3', '3.4']
+        # Every Ruby the README and gemspec claim. Ruby 4.0 is exercised here
+        # rather than only on the maintainer's machine (roadmap 15a).
+        ruby: ['3.2', '3.3', '3.4', '4.0']
         rails: ['7.0', '7.1', '7.2', '8.0', '8.1']
 
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}

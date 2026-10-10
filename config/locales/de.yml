@@ -61,6 +61,7 @@ de:
       n_plus_one: N+1-Abfragen
       deprecations: Deprecations
       missing_translations: "Übersetzungen"
+      boot_errors: "Startfehler"
       swallowed: Verschluckt
       diagnostic_dumps: Diagnose
       storms: Fehlerstürme
@@ -852,6 +853,30 @@ de:
         footer_tip: "Fügen Sie den Schlüssel der Locale-Datei hinzu oder übergeben Sie ein :default. Schlüssel, auf die Nutzer tatsächlich gestoßen sind, stehen zuerst."
         docs: "Rails-i18n-Leitfaden"
 
+      boot_errors_page:
+        title: "Startfehler"
+        empty_title: "Keine Startfehler erfasst"
+        empty_body: "In den letzten %{days} Tagen ist kein Prozess beim Starten abgestürzt."
+        how_title: "So werden Startfehler erfasst:"
+        how_enabled_html: "Die Absturzerfassung muss aktiviert sein (%{option})"
+        how_hooked: "RED registriert seinen at_exit-Hook direkt nach Ihren Initializern und vor dem Eager Loading von Rails, sodass ein Absturz beim Start erfasst wird, obwohl die App nie fertig gestartet ist"
+        how_captured_html: "%{zeitwerk} aus einer Datei, die die falsche Konstante definiert, ein %{syntax} in einem Model, ein Initializer, der eine Ausnahme auslöst: alles, was den Prozess beendet, bevor er eine Anfrage bedient"
+        how_imported: "Der Absturz wird auf die Festplatte geschrieben, weil es noch keine Datenbank gibt, und beim nächsten erfolgreichen Start importiert"
+        how_never: "Ein per SIGKILL beendeter oder abgestürzter (Segfault) Prozess wird von at_exit nie gesehen, in keinem Werkzeug"
+        unresolved: "Ungelöst"
+        boot_crashes: "Startabstürze"
+        failed_boots: "Fehlgeschlagene Starts"
+        all_title: "Startabstürze nach Fehler"
+        column_error: "Fehler"
+        column_file: "Datei"
+        column_constant: "Konstante"
+        column_boots: "Starts"
+        column_first_seen: "Zuerst gesehen"
+        column_status: "Status"
+        status_open: "Offen"
+        status_resolved: "Gelöst"
+        footer_tip: "Ein Startabsturz bedeutet, dass der Prozess nie eine Anfrage bedient hat. Beheben Sie ihn vor dem nächsten Deploy; die Zeile wird wie jeder andere Fehler gelöst."
+
       rack_attack_page:
         title: Rate-Limit-Ereignisse
         missing_title: Rack Attack ist nicht installiert
@@ -1262,6 +1287,7 @@ de:
         system_health: Systemzustand
         swallowed_exceptions: Erkennung verschluckter Exceptions
         missing_translations: "Erfassung fehlender Übersetzungen"
+        boot_errors: "Erfassung von Startfehlern"
         rack_attack: Rack-Attack-Erfassung
         actioncable: ActionCable-Erfassung
         activestorage: ActiveStorage-Erfassung
@@ -1667,6 +1693,13 @@ de:
           guide_link: ActionCable-Leitfaden
       activestorage:
         title: ActiveStorage-Zustand
+        probe:
+          title: "Erreichbarkeit des Dienstes"
+          reachable: "Erreichbar"
+          unreachable: "Nicht erreichbar"
+          service: "Dienst: %{name}"
+          latency: "%{ms} ms Umlaufzeit"
+          how: "Eine Existenzprüfung für einen Schlüssel, der nie gespeichert wird, beim Laden dieser Seite. GET /health führt dieselbe Prüfung aus."
         empty:
           title: Keine ActiveStorage-Ereignisse gefunden
           message: In den Fehler-Breadcrumbs der letzten %{days} Tage wurden keine

@@ -46,6 +46,7 @@ RailsErrorDashboard::Engine.routes.draw do
       get :swallowed_exceptions
       get :rack_attack_summary
       get :missing_translations
+      get :boot_errors
       get :actioncable_health_summary
       get :activestorage_health_summary
       get :llm_health_summary

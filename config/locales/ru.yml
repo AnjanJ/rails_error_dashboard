@@ -61,6 +61,7 @@ ru:
       n_plus_one: N+1 запросы
       deprecations: Устаревшее
       missing_translations: "Переводы"
+      boot_errors: "Ошибки запуска"
       swallowed: Подавленные
       diagnostic_dumps: Диагностика
       storms: Штормы
@@ -892,6 +893,30 @@ ru:
         footer_tip: "Добавьте ключ в файл локали или передайте :default. Ключи, на которые действительно наткнулись пользователи, идут первыми."
         docs: "Руководство Rails по i18n"
 
+      boot_errors_page:
+        title: "Ошибки запуска"
+        empty_title: "Ошибки запуска не зафиксированы"
+        empty_body: "За последние %{days} дн. ни один процесс не упал при запуске."
+        how_title: "Как перехватываются ошибки запуска:"
+        how_enabled_html: "Перехват аварий должен быть включён (%{option})"
+        how_hooked: "RED регистрирует свой хук at_exit сразу после ваших инициализаторов и до eager loading в Rails, поэтому авария при запуске видна, даже если приложение так и не запустилось"
+        how_captured_html: "%{zeitwerk} из файла, определяющего не ту константу, %{syntax} в модели, инициализатор с исключением: всё, что убивает процесс до обработки первого запроса"
+        how_imported: "Авария записывается на диск, потому что базы данных ещё нет, и импортируется при следующем успешном запуске"
+        how_never: "Процесс, убитый SIGKILL или упавший с segfault, at_exit не увидит ни в одном инструменте"
+        unresolved: "Нерешённые"
+        boot_crashes: "Аварии при запуске"
+        failed_boots: "Неудачные запуски"
+        all_title: "Аварии при запуске по ошибке"
+        column_error: "Ошибка"
+        column_file: "Файл"
+        column_constant: "Константа"
+        column_boots: "Запуски"
+        column_first_seen: "Впервые замечена"
+        column_status: "Статус"
+        status_open: "Открыта"
+        status_resolved: "Решена"
+        footer_tip: "Авария при запуске означает, что процесс не обработал ни одного запроса. Исправьте её до следующего деплоя; строка закрывается как любая другая ошибка."
+
       rack_attack_page:
         title: События ограничения частоты
         missing_title: Rack Attack не установлен
@@ -1327,6 +1352,7 @@ ru:
         system_health: Состояние системы
         swallowed_exceptions: Обнаружение подавленных исключений (swallowed exception)
         missing_translations: "Отслеживание отсутствующих переводов"
+        boot_errors: "Перехват ошибок запуска"
         rack_attack: Отслеживание Rack Attack
         actioncable: Отслеживание ActionCable
         activestorage: Отслеживание ActiveStorage
@@ -1740,6 +1766,13 @@ ru:
           guide_link: Руководство по ActionCable
       activestorage:
         title: Состояние ActiveStorage
+        probe:
+          title: "Доступность сервиса"
+          reachable: "Доступен"
+          unreachable: "Недоступен"
+          service: "Сервис: %{name}"
+          latency: "%{ms} мс туда и обратно"
+          how: "Одна проверка существования ключа, который никогда не сохраняется, при загрузке этой страницы. GET /health выполняет ту же проверку."
         empty:
           title: События ActiveStorage не найдены
           message: За последние %{days} дн. в breadcrumbs ошибок не обнаружено операций

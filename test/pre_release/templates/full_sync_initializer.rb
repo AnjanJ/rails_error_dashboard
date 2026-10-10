@@ -52,6 +52,10 @@ RailsErrorDashboard.configure do |config|
 
   # Breadcrumbs + LLM observability (Phase L exercises this stack)
   config.enable_breadcrumbs = true
+
+  # Boot/process crash capture (phase O injects a misnamed model and boots)
+  config.enable_crash_capture = true
+  config.crash_capture_path = Rails.root.join("tmp", "red_crashes").to_s
   config.enable_llm_observability = true
 
   # Rack::Attack event persistence (Phase N exercises this stack)

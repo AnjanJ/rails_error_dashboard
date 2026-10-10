@@ -1018,7 +1018,13 @@ config.enable_crash_capture = true
 
 Registers an `at_exit` hook that fires when the Ruby process exits. If the exit is caused by an unhandled exception (`$!` is set), the crash data is written to a JSON file on disk — because the database may be unavailable during process shutdown.
 
-On the next boot, the gem automatically imports any crash files and creates error log records with `platform: "crash_capture"` and `severity: "fatal"`.
+On the next boot, the gem imports any crash files through the same find-or-increment path as every other capture, so a crash that repeats on every restart is one row with a count. Runtime crashes get `platform: "crash_capture"`; boot crashes get `platform: "boot_crash"`. Severity follows the error class like any other row (`Zeitwerk::NameError` is critical).
+
+### Boot Errors
+
+The hook is registered from an engine initializer that runs right after your `config/initializers` and before Rails' `eager_load!` finisher. That ordering is what makes boot crashes visible: a `Zeitwerk::NameError` from a file that defines the wrong constant, a `SyntaxError` in a model, an initializer that raised — all of them kill the process before `config.after_initialize` runs, so a hook registered there (as this one was until 0.15) never saw exactly the crashes a boot check exists for. "Works in development, crashes in production" is this class of failure: autoloading is lazy in development and eager in production.
+
+A crash captured while `Rails.application.initialized?` is still false is marked `phase: "boot"`, with the file and the constant for a `Zeitwerk::NameError` (parsed from its message and made relative to `Rails.root`) or the first application frame for anything else. The **Boot Errors** page under Diagnostics (`/errors/boot_errors`) lists them with file, constant, how many boots failed and first/last seen, each linking to the full error. A process killed by `SIGKILL` or a segfault is never seen by `at_exit`, in any tool.
 
 ### What Gets Captured
 

@@ -1159,6 +1159,9 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
           <% if RailsErrorDashboard.configuration.enable_missing_translation_tracking %>
             <% diag_items << { path: missing_translations_errors_path(nav_params), icon: 'bi-translate', label: red_t("red.nav.missing_translations") } %>
           <% end %>
+          <% if RailsErrorDashboard.configuration.enable_crash_capture %>
+            <% diag_items << { path: boot_errors_errors_path(nav_params), icon: 'bi-power', label: red_t("red.nav.boot_errors") } %>
+          <% end %>
 
           <% if diag_items.any? %>
             <div style="margin-bottom: var(--space-2);" id="navDiagSection">

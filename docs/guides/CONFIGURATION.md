@@ -307,6 +307,8 @@ On by default. See [Storm Protection](#storm-protection) below.
 |--------|------|---------|-------------|
 | `enable_activestorage_tracking` | Boolean | `false` | Track ActiveStorage service operations (uploads, downloads, deletes, existence checks) as breadcrumbs. Works with any backend (Disk, S3, GCS, Azure). Requires `enable_breadcrumbs = true` |
 
+Live reachability needs no option: when `config.active_storage.service` is set, the ActiveStorage Health page and `GET /health` run one existence check for a never-stored key against that service (see the [API reference](API_REFERENCE.md#health-check)).
+
 ### Issue Tracking — GitHub/GitLab/Codeberg (v0.5.8+)
 
 One switch enables all platform integration: issue creation, auto-create, lifecycle sync, platform state mirroring, and comment display. When enabled, workflow controls (Resolve, Assign, Priority) are replaced by platform state.
@@ -333,7 +335,7 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook |
+| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook, including crashes during boot (eager loading, initializers), which the Boot Errors page lists |
 | `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Created if missing |
 
 ### Internal Logging & Debugging

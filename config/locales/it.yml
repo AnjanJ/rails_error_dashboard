@@ -61,6 +61,7 @@ it:
       n_plus_one: Query N+1
       deprecations: Deprecations
       missing_translations: "Traduzioni"
+      boot_errors: "Errori di avvio"
       swallowed: Soppresse
       diagnostic_dumps: Diagnostica
       storms: Tempeste
@@ -874,6 +875,30 @@ it:
         footer_tip: "Aggiungi la chiave al file di locale, oppure passa un :default. Le chiavi effettivamente incontrate dagli utenti sono elencate per prime."
         docs: "Guida i18n di Rails"
 
+      boot_errors_page:
+        title: "Errori di avvio"
+        empty_title: "Nessun errore di avvio registrato"
+        empty_body: "Nessun processo è morto durante l’avvio negli ultimi %{days} giorni."
+        how_title: "Come vengono catturati gli errori di avvio:"
+        how_enabled_html: "La cattura dei crash deve essere attiva (%{option})"
+        how_hooked: "RED registra il suo hook at_exit subito dopo i tuoi initializer e prima dell’eager loading di Rails, così un crash durante l’avvio viene visto anche se l’app non ha mai finito di partire"
+        how_captured_html: "Un %{zeitwerk} da un file che definisce la costante sbagliata, un %{syntax} in un modello, un initializer che solleva un’eccezione: qualsiasi cosa uccida il processo prima che serva una richiesta"
+        how_imported: "Il crash viene scritto su disco, perché non c’è ancora un database, e importato al successivo avvio riuscito"
+        how_never: "Un processo terminato da SIGKILL o da un segfault non viene mai visto da at_exit, in nessuno strumento"
+        unresolved: "Non risolti"
+        boot_crashes: "Crash all’avvio"
+        failed_boots: "Avvii falliti"
+        all_title: "Crash all’avvio per errore"
+        column_error: "Errore"
+        column_file: "File"
+        column_constant: "Costante"
+        column_boots: "Avvii"
+        column_first_seen: "Prima occorrenza"
+        column_status: "Stato"
+        status_open: "Aperto"
+        status_resolved: "Risolto"
+        footer_tip: "Un crash all’avvio significa che il processo non ha mai servito una richiesta. Correggilo prima del prossimo deploy; la riga si risolve come qualsiasi altro errore."
+
       rack_attack_page:
         title: Eventi di limite di richieste
         missing_title: Rack Attack non è installato
@@ -1298,6 +1323,7 @@ it:
         system_health: Stato del sistema
         swallowed_exceptions: Rilevamento delle eccezioni soppresse
         missing_translations: "Tracciamento delle traduzioni mancanti"
+        boot_errors: "Cattura degli errori di avvio"
         rack_attack: Tracciamento di Rack Attack
         actioncable: Tracciamento di ActionCable
         activestorage: Tracciamento di ActiveStorage
@@ -1709,6 +1735,13 @@ it:
           guide_link: Guida ad ActionCable
       activestorage:
         title: Stato di ActiveStorage
+        probe:
+          title: "Raggiungibilità del servizio"
+          reachable: "Raggiungibile"
+          unreachable: "Non raggiungibile"
+          service: "Servizio: %{name}"
+          latency: "%{ms} ms andata e ritorno"
+          how: "Un controllo di esistenza su una chiave mai memorizzata, eseguito al caricamento di questa pagina. GET /health esegue la stessa verifica."
         empty:
           title: Nessun evento ActiveStorage trovato
           message: Negli ultimi %{days} giorni non sono state rilevate operazioni

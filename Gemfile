@@ -47,6 +47,12 @@ gem "lefthook", "~> 2.0", require: false
 # Security audit for dependencies
 gem "bundler-audit", require: false
 
+# spec/gemspec_description_spec.rb renders the gemspec description the way
+# rubygems.org does, with RDoc::Markup. rdoc stopped being a default gem in
+# Ruby 4.0, and only the Rails 7.1+ bundles pull it in transitively, so the
+# Ruby 4.0 / Rails 7.0 CI row failed to load the spec without this line.
+gem "rdoc", require: false
+
 # Optional gem dependencies — needed in development/test for full feature coverage
 gem "browser", "~> 6.0"
 gem "chartkick", "~> 5.0"

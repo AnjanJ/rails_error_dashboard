@@ -61,6 +61,7 @@ ja:
       n_plus_one: N+1 クエリ
       deprecations: 非推奨
       missing_translations: "翻訳"
+      boot_errors: "起動エラー"
       swallowed: 握りつぶし
       diagnostic_dumps: 診断
       storms: ストーム
@@ -780,6 +781,30 @@ ja:
         footer_tip: "ロケールファイルにキーを追加するか、:default を渡してください。実際にユーザーが遭遇したキーが先に表示されます。"
         docs: "Rails i18n ガイド"
 
+      boot_errors_page:
+        title: "起動エラー"
+        empty_title: "起動エラーは記録されていません"
+        empty_body: "過去 %{days} 日間に起動中に終了したプロセスはありません。"
+        how_title: "起動エラーを捕捉する仕組み:"
+        how_enabled_html: "クラッシュ捕捉を有効にする必要があります（%{option}）"
+        how_hooked: "RED は initializer の直後、Rails の eager load の前に at_exit フックを登録するため、アプリが起動し切る前のクラッシュも捕捉されます"
+        how_captured_html: "誤った定数を定義したファイルによる %{zeitwerk}、モデル内の %{syntax}、例外を投げた initializer など、リクエストを処理する前にプロセスを終了させるもの"
+        how_imported: "この時点ではデータベースがないためクラッシュはディスクに書き込まれ、次に起動が成功したときに取り込まれます"
+        how_never: "SIGKILL やセグメンテーション違反で終了したプロセスは、どのツールでも at_exit では捕捉できません"
+        unresolved: "未解決"
+        boot_crashes: "起動クラッシュ"
+        failed_boots: "失敗した起動"
+        all_title: "エラー別の起動クラッシュ"
+        column_error: "エラー"
+        column_file: "ファイル"
+        column_constant: "定数"
+        column_boots: "起動回数"
+        column_first_seen: "初回検出"
+        column_status: "状態"
+        status_open: "未対応"
+        status_resolved: "解決済み"
+        footer_tip: "起動クラッシュはプロセスが一度もリクエストを処理しなかったことを意味します。次のデプロイ前に修正してください。行は他のエラーと同様に解決できます。"
+
       rack_attack_page:
         title: レート制限イベント
         missing_title: Rack Attack がインストールされていません
@@ -1121,6 +1146,7 @@ ja:
         system_health: システムヘルス
         swallowed_exceptions: 握りつぶされた例外の検出
         missing_translations: "翻訳欠落の追跡"
+        boot_errors: "起動エラーの捕捉"
         rack_attack: Rack Attack トラッキング
         actioncable: ActionCable トラッキング
         activestorage: ActiveStorage トラッキング
@@ -1489,6 +1515,13 @@ ja:
           guide_link: ActionCable ガイド
       activestorage:
         title: ActiveStorage の状態
+        probe:
+          title: "サービスの到達性"
+          reachable: "到達可能"
+          unreachable: "到達不能"
+          service: "サービス: %{name}"
+          latency: "往復 %{ms} ms"
+          how: "このページの読み込み時に、保存されることのないキーの存在確認を 1 回行います。GET /health も同じ検査を実行します。"
         empty:
           title: ActiveStorage のイベントが見つかりません
           message: 過去%{days}日間、エラーの breadcrumb から ActiveStorage のサービス操作は検出されませんでした。

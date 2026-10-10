@@ -317,14 +317,16 @@ Environment:
 - **Config:** `enable_actioncable_tracking = true` (requires `enable_breadcrumbs = true`)
 - **Shipped:** v0.5.0 (March 24, 2026)
 
-### T. Zeitwerk Loading Error Capture
+### T. Zeitwerk Loading Error Capture — DONE
+- **Status (2026-10-10):** Shipped as part of crash capture rather than as a new flag. The at_exit hook moved from `config.after_initialize` (which runs after `:eager_load!` and was never reached by a boot crash) to an engine initializer that runs after the host's initializers and before eager loading. A crash while `Rails.application.initialized?` is false is marked `phase: "boot"`, a `Zeitwerk::NameError`'s file and constant are parsed out, and the import lands on `platform: "boot_crash"` through find-or-increment (which also fixed a unique-index collision on the second identical crash). The Boot Errors page under Diagnostics lists them; `Zeitwerk::NameError` classifies as critical. Proven by a chaos step that injects a misnamed model, boots, and asserts the row
 - **What:** Capture `Zeitwerk::NameError` events during `eager_load!` — when a file doesn't define the expected constant. Surface on a "Boot Errors" panel
 - **Why:** Autoloading errors are silent in development (lazy loading) but crash in production (eager loading). Catching them at boot and surfacing them prevents deploy surprises
 - **Implementation:** Guard with `defined?(Zeitwerk)`, register callback via `Rails.autoloaders.main.on_load` or rescue `Zeitwerk::NameError`
 - **Effort:** Half day
 - **Impact:** Reliability + (prevents deploy surprises)
 
-### U. ActiveStorage Service Health
+### U. ActiveStorage Service Health — DONE
+- **Status (2026-10-10):** The breadcrumb-based page shipped in v0.5 (`Queries::ActiveStorageSummary`). The live reachability probe (`Services::ActiveStorageProbe`: one `exist?` for a never-stored key against `ActiveStorage::Blob.service`) now opens that page and is the `active_storage` check of `GET /health`, where an unreachable service degrades the answer rather than taking it down. Skipped on hosts without storage configured
 - **What:** Check storage service reachability (`ActiveStorage::Blob.service.exist?` with a known key) and capture blob stats. Surface storage health on the system health panel
 - **Why:** Storage service failures (S3 outage, disk full, permission issues) cause errors that are hard to diagnose without service health context
 - **Implementation:** Guard with `defined?(ActiveStorage)`, read service config, attempt lightweight health check. Add to diagnostic dump
@@ -371,7 +373,8 @@ Environment:
 - **Effort (actual):** foundation 2-3 days · extraction + tooling ~14 days · locales ~4 days · verification and release ~2 days
 - **Impact:** Reach ++ (adoption in non-English-speaking teams)
 
-### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+)
+### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+) — DONE (as far as it applies)
+- **Status (2026-10-10):** Re-verified against the code: `LocalVariableCapturer` and `SwallowedExceptionTracker` never walk the stack — both read `tp.path`/`tp.lineno` straight off the TracePoint, and `ErrorHashGenerator` reads `exception.backtrace_locations`, which Ruby has already materialised at raise time. The one real stack walk in the gem was `MissingTranslationTracker#host_call_site` (added with 0.15.0's missing-translation tracking); it now uses `Thread.each_caller_location` with an early return, so a new key costs the frames down to the host's call site rather than a 40-element Location array. Nothing else to convert
 - **What:** Use `Thread.each_caller_location` (Ruby 3.2+) as a more efficient alternative to `caller_locations`. Stops iterating after finding the first app-code frame instead of generating the full backtrace
 - **Why:** `caller_locations` generates the entire call stack as an array. `Thread.each_caller_location` is lazy — it yields frames one by one and can stop early. For deep stacks (100+ frames), this reduces allocation and speeds up app-frame detection
 - **Implementation:** Guard with Ruby version check. Use in `LocalVariableCapturer` and `SwallowedExceptionTracker` for faster app-frame filtering
@@ -556,7 +559,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ## Tier 4 — Differentiators (stand out from the crowd)
 
-### 15a. Ruby 4.0 in the CI test matrix — OPEN
+### 15a. Ruby 4.0 in the CI test matrix — DONE
+- **Status (2026-10-10):** `.github/workflows/test.yml` runs Ruby 3.2, 3.3, 3.4 and 4.0 against Rails 7.0–8.1; every pair is green, no `exclude:` needed. The one blocker was `rdoc` (no longer a default gem on 4.0; the gemspec-description spec needs it), now in the dev bundle. The README caveat is gone
 - **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1 (re-checked 2026-09-25: the matrix is still `['3.2', '3.3', '3.4']`). Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
 - **Why:** The README beta note currently has to say "CI runs Ruby 3.2–3.4; Ruby 4.0 is verified by the maintainer" — an honest caveat, but one that should not need to exist. Known blockers to check first: `ostruct` is no longer a default gem on 4.0 and sqlite3 2.8.1 does not compile on macOS (see CLAUDE.md gotchas); the Linux runner may not hit the second
 - **Effort:** Half a day
@@ -685,9 +689,6 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 |------|--------|--------|------|
 | Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
-| Zeitwerk boot-error capture (T) | Half day | Reliability + | |
-| ActiveStorage service health (U) | Half day | Operational + | Partly shipped: the breadcrumb-based ActiveStorage Health page (`Queries::ActiveStorageSummary`, v0.5) covers operation counts and durations. Still open: the live reachability probe (`service.exist?`) on the health panel |
-| Lazy backtrace via `Thread.each_caller_location` (Y) | Half day | Performance + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
 | Audit logging (12) | 1 day | Enterprise ++ | |

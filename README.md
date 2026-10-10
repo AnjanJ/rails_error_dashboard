@@ -23,7 +23,7 @@ Open `/red`, then send a test error from its Settings page. No monitoring accoun
 
 [Try the live demo](https://rails-error-dashboard.anjan.dev) (`gandalf` / `youshallnotpass`) · [Read the documentation](https://anjanj.github.io/rails_error_dashboard/) · [View on RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
-> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs Ruby 3.2–3.4 against every supported Rails version; Ruby 4.0 is verified by the maintainer).
+> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs every Ruby from 3.2 to 4.0 against every supported Rails version).
 
 ## See the Ruby state and Rails runtime health behind every exception
 
@@ -234,7 +234,7 @@ Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `
 config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
 ```
 
-**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors.
+**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors. The page opens with a live reachability card (one `exist?` for a key that is never stored, against the configured service), and `GET /error_dashboard/health` reports the same probe as its `active_storage` check.
 
 ```ruby
 config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true
@@ -562,7 +562,8 @@ config.enable_rack_attack_tracking = true
 Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook — the last line of defense.
 
 - Disk-based fallback: writes crash data to disk because the database may be unavailable during shutdown
-- Imported automatically on next boot
+- Imported automatically on next boot; a crash that repeats on every restart is one row with a count
+- Boot crashes too: the hook is registered before Rails eager-loads, so a `Zeitwerk::NameError` or a `SyntaxError` that kills the process before it serves a request lands on the **Boot Errors** page under Diagnostics, with the file and constant it names
 - Captures exception details, backtrace, uptime, GC stats, thread count, and cause chain
 - Honeybadger, Bugsnag and AppSignal have `at_exit` reporters too; RED's writes to disk and imports at next boot because the database may already be gone during shutdown
 
