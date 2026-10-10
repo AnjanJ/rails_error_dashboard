@@ -204,12 +204,18 @@
             should_show = show_if_key.nil? || @config.send(show_if_key)
             next unless should_show
             value = @config.send(setting_meta[:method] || setting_key)
+            # A credential is shown as Set / Not set whatever shape it has. The
+            # per-row :type documents the value's shape; this one rule is what
+            # keeps a webhook URL or an API key off the page, the same list
+            # Configuration#inspect masks, so a new secret cannot leak by a
+            # forgotten per-row type.
+            badge_type = RailsErrorDashboard::Configuration::SECRET_ATTRIBUTES.include?(setting_key) ? :secret : setting_meta[:type]
           %>
           <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--border-primary); font-size: 13px;">
             <span style="font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-weight: 500; width: 240px; flex-shrink: 0;"><%= setting_key %></span>
             <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 500; width: 180px; flex-shrink: 0;">
               <%= render partial: 'rails_error_dashboard/errors/settings/value_badge',
-                         locals: { value: value, type: setting_meta[:type], unit: setting_meta[:unit] } %>
+                         locals: { value: value, type: badge_type, unit: setting_meta[:unit] } %>
             </span>
             <%# Keyed by the config option's own name, so a key is greppable
                 from the initializer that sets it. %>
