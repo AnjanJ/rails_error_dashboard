@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.4...rails_error_dashboard/v0.15.0) (2026-10-11)
+
+
+### ✨ Features
+
+* boot-crash capture, ActiveStorage reachability probe, Ruby 4.0 in CI, lazy call-site walk ([#275](https://github.com/AnjanJ/rails_error_dashboard/issues/275)) ([aa28cd5](https://github.com/AnjanJ/rails_error_dashboard/commit/aa28cd5d6785ab06967f3457100047b10dba57a2))
+* health check endpoint, signed outbound webhooks, missing-translation tracking ([#273](https://github.com/AnjanJ/rails_error_dashboard/issues/273)) ([e0943a3](https://github.com/AnjanJ/rails_error_dashboard/commit/e0943a3cc6793cf87c2dcde8d4fa5db860b68ba1))
+* Telegram notifications, and credentials masked on the Settings page ([#276](https://github.com/AnjanJ/rails_error_dashboard/issues/276)) ([83c4eb7](https://github.com/AnjanJ/rails_error_dashboard/commit/83c4eb76cdcff027c90caad7e4e42a9dfb8e6f0d))
+
+
+### 🐛 Bug Fixes
+
+* the nine 0.14.5 findings from the docs audit ([#277](https://github.com/AnjanJ/rails_error_dashboard/issues/277)) ([d1ac5a4](https://github.com/AnjanJ/rails_error_dashboard/commit/d1ac5a4884f76f00273722540d6e380da58278be))
+
 ## [0.14.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.3...rails_error_dashboard/v0.14.4) (2026-10-02)
 
 
