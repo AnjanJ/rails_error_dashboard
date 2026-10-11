@@ -12,10 +12,15 @@ module RailsErrorDashboard
   class ScheduledDigestJob < ApplicationJob
     queue_as :default
 
+    # @param period [String, Symbol, nil] "daily" or "weekly"; nil takes
+    #   config.digest_frequency, which was shown on the Settings page but
+    #   read by nothing until now.
     # @param locale [String, nil] resolved at enqueue time. nil for jobs
     #   enqueued by a pre-Phase-4 version still draining from the queue.
-    def perform(period: "daily", application_id: nil, locale: nil)
+    def perform(period: nil, application_id: nil, locale: nil)
       return unless RailsErrorDashboard.configuration.enable_scheduled_digests
+
+      period ||= RailsErrorDashboard.configuration.digest_frequency || :daily
 
       recipients = effective_recipients
       return if recipients.blank?

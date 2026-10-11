@@ -176,11 +176,13 @@ Identifies parent-child relationships between errors:
 
 ### How It Works
 
-The system automatically detects cascades using background jobs:
+Cascades are detected by `RailsErrorDashboard::CascadeDetectionJob`. Nothing in the gem schedules
+it: add it to your scheduler alongside the other periodic jobs (see the Production guide), hourly
+with `lookback_hours: 1`, so each run scans only the occurrences since the last one.
 
 ```ruby
-# Manual cascade detection (runs hourly by default)
-RailsErrorDashboard::Services::CascadeDetector.call
+# What the job runs; from a console, for one window
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 1)
 
 # Access cascade patterns for an error
 error = RailsErrorDashboard::ErrorLog.find(123)

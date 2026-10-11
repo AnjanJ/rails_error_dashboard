@@ -20,7 +20,11 @@ module RailsErrorDashboard
         Redis::ConnectionError
         OpenSSL::SSL::SSLError
         Zeitwerk::NameError
+        RailsErrorDashboard::TestError
       ].freeze
+      # RailsErrorDashboard::TestError is the Settings page's Send Test Error.
+      # The button promises delivery to every channel, and PagerDuty only
+      # takes critical errors, so the test error is one.
 
       HIGH_SEVERITY_ERROR_TYPES = %w[
         ActiveRecord::RecordNotFound
@@ -67,6 +71,53 @@ module RailsErrorDashboard
       # @return [Boolean]
       def self.critical?(error_type)
         classify(error_type) == :critical
+      end
+
+      BUILT_IN_TYPES = {
+        critical: CRITICAL_ERROR_TYPES,
+        high: HIGH_SEVERITY_ERROR_TYPES,
+        medium: MEDIUM_SEVERITY_ERROR_TYPES
+      }.freeze
+
+      # The error types that classify as +severity+, for a SQL IN filter: the
+      # built-in list for that level, minus any type a custom rule moves
+      # elsewhere, plus any type a custom rule moves here. Filtering on the
+      # bare constants showed CustomPaymentError => :critical under "low" and
+      # a demoted built-in type still under "critical", while every badge on
+      # the page said otherwise.
+      #
+      # :low has no list of its own (it is "everything else"); callers use
+      # `where.not(error_type: categorized_error_types)` for it.
+      #
+      # @param severity [Symbol, String] :critical, :high or :medium
+      # @return [Array<String>]
+      def self.error_types_for(severity)
+        level = severity.to_sym
+        rules = custom_rules
+        built_in = BUILT_IN_TYPES.fetch(level, [])
+
+        (built_in - rules.keys) + rules.select { |_type, sev| sev == level }.keys
+      end
+
+      # Every error type that classifies as something other than :low, so
+      # "low" is `where.not(error_type: categorized_error_types)`.
+      # @return [Array<String>]
+      def self.categorized_error_types
+        rules = custom_rules
+        built_in = BUILT_IN_TYPES.values.flatten
+        promoted = rules.reject { |_type, sev| sev == :low }.keys
+        demoted  = rules.select { |_type, sev| sev == :low }.keys
+
+        (built_in - demoted) | promoted
+      end
+
+      # custom_severity_rules with String keys and Symbol values, whatever the
+      # initializer used.
+      def self.custom_rules
+        (RailsErrorDashboard.configuration.custom_severity_rules || {})
+          .to_h { |type, sev| [ type.to_s, sev.to_s.to_sym ] }
+      rescue StandardError
+        {}
       end
     end
   end

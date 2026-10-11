@@ -7,6 +7,57 @@ module RailsErrorDashboard
     # one view context.
     include I18nHelper
 
+    # The brand name for a repository link's tooltip, from the URL's host.
+    # A substring test on the whole URL called every non-GitHub, non-GitLab
+    # host "Bitbucket", Codeberg included, and a path containing "github"
+    # mislabelled any host.
+    def repository_host_label(url)
+      host = URI.parse(url.to_s).host.to_s.downcase
+      case host
+      when /github/    then "GitHub"
+      when /gitlab/    then "GitLab"
+      when /bitbucket/ then "Bitbucket"
+      when /codeberg/  then "Codeberg"
+      when /gitea/     then "Gitea"
+      when /forgejo/   then "Forgejo"
+      else host.presence || "Repository"
+      end
+    rescue URI::InvalidURIError
+      "Repository"
+    end
+
+    # The error-info fragment renders the source viewer, blame, repository
+    # links and the coverage overlay, none of which come from the error row
+    # the fragment is keyed on. These three helpers put the rest of the key's
+    # inputs in: the configuration those parts depend on, the source cache
+    # TTL as the fragment's lifetime, and no caching at all while coverage is
+    # active, because that overlay is live data.
+    def source_view_cache_key
+      config = RailsErrorDashboard.configuration
+      parts = [
+        config.enable_source_code_integration, config.enable_git_blame, config.only_show_app_code_source,
+        config.git_repository_url, config.git_branch_strategy
+      ]
+      Digest::SHA1.hexdigest(parts.map(&:to_s).join("|"))[0, 12]
+    rescue StandardError
+      "nocfg"
+    end
+
+    def source_view_cacheable?
+      !(defined?(Services::CoverageTracker) && Services::CoverageTracker.active?)
+    rescue StandardError
+      true
+    end
+
+    def source_view_cache_options
+      config = RailsErrorDashboard.configuration
+      return {} unless config.enable_source_code_integration
+
+      { expires_in: (config.source_code_cache_ttl || 3600).to_i.seconds }
+    rescue StandardError
+      {}
+    end
+
     # Language mapping for syntax highlighting
     LANGUAGE_MAP = {
       ".rb" => "ruby",

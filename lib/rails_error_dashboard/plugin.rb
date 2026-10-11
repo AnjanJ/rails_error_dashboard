@@ -121,11 +121,27 @@ module RailsErrorDashboard
 
       send(method_name, *args)
     rescue => e
-      # Log plugin failures but never propagate - plugins must not break the app
-      RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Plugin '#{name}' failed in #{method_name}: #{e.class} - #{e.message}")
-      RailsErrorDashboard::Logger.error("Plugin version: #{version}")
+      # Log plugin failures but never propagate - plugins must not break the app.
+      # name and version are plugin code too, so the log line must not depend
+      # on them answering.
+      RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Plugin '#{safe_label}' failed in #{method_name}: #{e.class} - #{e.message}")
+      RailsErrorDashboard::Logger.error("Plugin version: #{safe_version}")
       RailsErrorDashboard::Logger.error(e.backtrace&.first(10)&.join("\n")) if e.backtrace
       nil # Explicitly return nil, never raise
+    end
+
+    private
+
+    def safe_label
+      name.to_s
+    rescue StandardError, NotImplementedError
+      self.class.name
+    end
+
+    def safe_version
+      version.to_s
+    rescue StandardError, NotImplementedError
+      "unknown"
     end
   end
 end

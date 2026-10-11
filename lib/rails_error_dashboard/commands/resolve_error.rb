@@ -31,21 +31,8 @@ module RailsErrorDashboard
         # Dispatch plugin event for resolved error
         PluginRegistry.dispatch(:on_error_resolved, error)
 
-        # Trigger notification callbacks
-        RailsErrorDashboard.configuration.notification_callbacks[:error_resolved].each do |callback|
-          callback.call(error)
-        rescue => e
-          RailsErrorDashboard::Logger.error("Error in error_resolved callback: #{e.message}")
-        end
-
-        # Emit ActiveSupport::Notifications instrumentation event
-        ActiveSupport::Notifications.instrument("error_resolved.rails_error_dashboard", {
-          error_log: error,
-          error_id: error.id,
-          error_type: error.error_type,
-          resolved_by: @resolution_data[:resolved_by_name],
-          resolved_at: error.resolved_at
-        })
+        # Host callbacks (issue-tracker close) and the instrumentation event.
+        Services::ResolutionCallbacks.call(error, resolved_by: @resolution_data[:resolved_by_name])
 
         error
       end

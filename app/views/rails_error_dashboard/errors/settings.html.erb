@@ -105,7 +105,7 @@
         enable_breadcrumbs: { type: :boolean },
         breadcrumb_buffer_size: { type: :integer, show_if: :enable_breadcrumbs, unit: :events },
         enable_n_plus_one_detection: { type: :boolean, show_if: :enable_breadcrumbs },
-        n_plus_one_threshold: { type: :integer, show_if: :enable_n_plus_one_detection, unit: :queries }
+        n_plus_one_threshold: { type: :integer, show_if: [ :enable_breadcrumbs, :enable_n_plus_one_detection ], unit: :queries }
       }
     },
     :system_health => {
@@ -172,7 +172,9 @@
       color: "light",
       settings: {
         enable_internal_logging: { type: :boolean },
-        log_level: { type: :symbol, show_if: :enable_internal_logging }
+        # Not gated on enable_internal_logging: Logger.error honours log_level
+        # whether or not internal logging is on.
+        log_level: { type: :symbol }
       }
     }
   }
@@ -204,8 +206,8 @@
       <div>
         <% group_config[:settings].each do |setting_key, setting_meta| %>
           <%
-            show_if_key = setting_meta[:show_if]
-            should_show = show_if_key.nil? || @config.send(show_if_key)
+            # One flag, or every flag in an array, must be on for the row to show.
+            should_show = Array(setting_meta[:show_if]).all? { |flag| @config.send(flag) }
             next unless should_show
             value = @config.send(setting_meta[:method] || setting_key)
             # A credential is shown as Set / Not set whatever shape it has. The

@@ -55,13 +55,14 @@ that raised them. Notifications still need a worker.
 
 ## 2. Schedule the periodic jobs
 
-Nothing in the gem schedules these three jobs. Run them from your app's scheduler:
+Nothing in the gem schedules these four jobs. Run them from your app's scheduler:
 
 | Job | Without it |
 |---|---|
 | `RailsErrorDashboard::RetentionCleanupJob` | Nothing is ever deleted. It deletes errors not seen for `config.retention_days` (90 by default, `nil` keeps everything). |
 | `RailsErrorDashboard::BaselineCalculationJob` | No baselines are calculated, so baseline alerts never fire. |
 | `RailsErrorDashboard::ScheduledDigestJob` | No digest emails. It sends only when `config.enable_scheduled_digests` is on and there are recipients. |
+| `RailsErrorDashboard::CascadeDetectionJob` | The Cascades card on the error page stays empty. It runs only when `config.enable_error_cascades` is on; give it a lookback equal to its interval. |
 
 With Solid Queue, add them to `config/recurring.yml`, under the same environment key as the tasks
 already there:
@@ -78,6 +79,10 @@ production:
     class: RailsErrorDashboard::ScheduledDigestJob
     args: [ { period: "daily" } ]
     schedule: every day at 8am
+  red_cascades:
+    class: RailsErrorDashboard::CascadeDetectionJob
+    args: [ { lookback_hours: 1 } ]
+    schedule: every hour
 ```
 
 For a weekly digest, use `args: [ { period: "weekly" } ]` and `schedule: every monday at 8am`.
@@ -91,6 +96,7 @@ process, with no worker involved:
 bin/rails runner 'RailsErrorDashboard::RetentionCleanupJob.perform_now'
 bin/rails runner 'RailsErrorDashboard::BaselineCalculationJob.perform_now'
 bin/rails runner 'RailsErrorDashboard::ScheduledDigestJob.perform_now(period: "daily")'
+bin/rails runner 'RailsErrorDashboard::CascadeDetectionJob.perform_now(lookback_hours: 1)'   # hourly
 ```
 
 Don't schedule the `error_dashboard:retention_cleanup` rake task: it asks for confirmation before

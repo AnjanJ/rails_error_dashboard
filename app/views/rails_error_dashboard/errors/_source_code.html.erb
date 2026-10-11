@@ -20,17 +20,11 @@
           </div>
 
           <% if repo_link %>
-            <%
-              # Repository host names are brands and stay English; only the
-              # sentence around the name is translated.
-              repo_host = if repo_link.include?("github") then "GitHub"
-              elsif repo_link.include?("gitlab") then "GitLab"
-              else "Bitbucket"
-              end
-            %>
+            <%# Repository host names are brands and stay English; only the
+                sentence around the name is translated. %>
             <%= link_to repo_link, target: "_blank", rel: "noopener",
                 class: "btn btn-sm btn-primary",
-                title: red_t("red.errors.source_code.view_on", host: repo_host) do %>
+                title: red_t("red.errors.source_code.view_on", host: repository_host_label(repo_link)) do %>
               <i class="bi bi-box-arrow-up-right"></i> <%= red_t("red.errors.source_code.view_source") %>
             <% end %>
           <% end %>

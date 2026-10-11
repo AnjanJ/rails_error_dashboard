@@ -812,6 +812,9 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
+Detection runs in `RailsErrorDashboard::CascadeDetectionJob`, which you schedule hourly with the
+other periodic jobs; with the flag on and no schedule, the Cascades card stays empty.
+
 See [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) for details.
 
 ### Error Correlation

@@ -1558,7 +1558,11 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
     });
 
     if (typeof hljs.lineNumbersBlock === 'function') {
-      codeBlocks.forEach(function(block) { hljs.lineNumbersBlock(block); });
+      // The gutter shows the file's own line numbers: the excerpt starts at
+      // data-start-line, not at 1.
+      codeBlocks.forEach(function(block) {
+        hljs.lineNumbersBlock(block, { startFrom: parseInt(block.dataset.startLine) || 1 });
+      });
     } else if (typeof hljs.initLineNumbersOnLoad === 'function') {
       hljs.initLineNumbersOnLoad();
     }

@@ -31,6 +31,45 @@ RSpec.describe RailsErrorDashboard::Queries::ErrorsList do
       end
     end
 
+    describe "filtering by severity" do
+      let!(:builtin_critical) { create(:error_log, error_type: "SecurityError") }
+      let!(:custom_critical)  { create(:error_log, error_type: "CustomPaymentError") }
+      let!(:demoted)          { create(:error_log, error_type: "NoMethodError") }
+      let!(:plain_low)        { create(:error_log, error_type: "SomethingElseError") }
+
+      before do
+        RailsErrorDashboard.configuration.custom_severity_rules = {
+          "CustomPaymentError" => :critical,
+          "NoMethodError" => "low"
+        }
+      end
+
+      after { RailsErrorDashboard.reset_configuration! }
+
+      # The filter used the bare built-in constants: a type a custom rule made
+      # critical showed under "low", and a demoted built-in type under "high".
+      it "honours custom_severity_rules for a level" do
+        critical = described_class.call(severity: "critical")
+        expect(critical).to include(builtin_critical, custom_critical)
+        expect(critical).not_to include(demoted, plain_low)
+        expect(described_class.call(severity: "high")).not_to include(demoted)
+      end
+
+      it "treats low as everything the classifier calls low, custom rules included" do
+        low = described_class.call(severity: "low")
+        expect(low).to include(demoted, plain_low)
+        expect(low).not_to include(builtin_critical, custom_critical)
+      end
+
+      it "agrees with the classifier for every row" do
+        %w[critical high medium low].each do |level|
+          described_class.call(severity: level).each do |row|
+            expect(RailsErrorDashboard::Services::SeverityClassifier.classify(row.error_type)).to eq(level.to_sym)
+          end
+        end
+      end
+    end
+
     describe "filtering by error_type" do
       it "filters by NoMethodError" do
         result = described_class.call(error_type: "NoMethodError")

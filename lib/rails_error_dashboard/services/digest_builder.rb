@@ -93,9 +93,7 @@ module RailsErrorDashboard
         unresolved = scope.where(resolved: false).count
         # Severity is computed from error_type via SeverityClassifier (not a DB column).
         # Count critical+high by matching known error type patterns via SQL WHERE IN.
-        critical_types = Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
-                         Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
-        critical_high = scope.where(error_type: critical_types).count
+        critical_high = scope.where(error_type: critical_and_high_types).count
 
         total = resolved + unresolved
         resolution_rate = total > 0 ? (resolved.to_f / total * 100).round(1) : 0
@@ -141,11 +139,9 @@ module RailsErrorDashboard
       end
 
       def critical_unresolved
-        critical_types = Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
-                         Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
         base_scope
           .where(resolved: false)
-          .where(error_type: critical_types)
+          .where(error_type: critical_and_high_types)
           .order(occurred_at: :desc)
           .limit(5)
           .map do |error|
@@ -161,6 +157,13 @@ module RailsErrorDashboard
         []
       end
 
+
+      # Built-in lists adjusted by custom_severity_rules, so the digest's
+      # "critical/high" agrees with the dashboard's badges.
+      def critical_and_high_types
+        Services::SeverityClassifier.error_types_for(:critical) +
+          Services::SeverityClassifier.error_types_for(:high)
+      end
       def build_comparison
         previous_start = (@days * 2).days.ago
         previous_end = @start_date

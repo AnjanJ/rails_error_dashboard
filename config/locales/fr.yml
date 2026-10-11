@@ -1179,7 +1179,7 @@ fr:
         unable_to_detect: Détection impossible
         no_user_model: Aucun modèle User détecté
         unable_to_query_count: Impossible d'interroger le nombre
-        manual_cleanup_required: Nettoyage manuel requis
+        retention_enforced_by_job: "Supprimés par RetentionCleanupJob dès que votre planificateur l'exécute"
         keep_forever: Conserver indéfiniment
         no_automatic_deletion: Aucune suppression automatique
         run_command: 'Exécuter :'
@@ -1187,8 +1187,7 @@ fr:
       options:
         enable_middleware: Intercepte les exceptions non gérées
         enable_error_subscriber: S'abonne aux événements d'erreur de Rails
-        retention_days: 'Nettoyage manuel uniquement (exécuter : rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Supprimer les erreurs non vues depuis ce nombre de jours. Appliqué par RetentionCleanupJob, que la gem ne planifie pas elle-même"
         max_backtrace_lines: Profondeur maximale du backtrace
         sampling_rate: Pourcentage d'erreurs capturées
         application_name: Nom de cette application (détecté automatiquement si non
@@ -1207,7 +1206,7 @@ fr:
           si non défini)
         async_logging: Traitement par jobs en arrière-plan
         async_adapter: Adaptateur de file d'attente des jobs
-        enable_rate_limiting: Limiter le débit des requêtes API
+        enable_rate_limiting: "Limiter les requêtes du tableau de bord par IP et par chemin"
         rate_limit_per_minute: Requêtes par minute et par IP
         enable_slack_notifications: Notifications en temps réel
         slack_webhook_url: Point de terminaison du webhook Slack
@@ -1244,7 +1243,7 @@ fr:
         source_code_context_lines: Lignes avant et après la ligne ciblée
         enable_git_blame: Afficher les informations git blame
         source_code_cache_ttl: Durée de mise en cache du code source
-        only_show_app_code_source: Masquer les gems et la stdlib par sécurité
+        only_show_app_code_source: "Masquer le code des gems et de vendor dans le visualiseur de code"
         git_branch_strategy: Stratégie de résolution de la branche
         enable_breadcrumbs: Capturer le fil d'activité de la requête
         breadcrumb_buffer_size: Nombre maximal de breadcrumbs par requête

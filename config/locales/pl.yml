@@ -1199,7 +1199,7 @@ pl:
         unable_to_detect: Nie udało się wykryć
         no_user_model: Nie wykryto modelu User
         unable_to_query_count: Nie udało się odczytać liczby
-        manual_cleanup_required: Wymagane ręczne czyszczenie
+        retention_enforced_by_job: "Usuwane przez RetentionCleanupJob, gdy uruchomi go Twój harmonogram"
         keep_forever: Przechowuj bezterminowo
         no_automatic_deletion: Bez automatycznego usuwania
         run_command: 'Uruchom:'
@@ -1207,8 +1207,7 @@ pl:
       options:
         enable_middleware: Przechwytuje nieobsłużone wyjątki
         enable_error_subscriber: Subskrybuje zdarzenia błędów Rails
-        retention_days: 'Tylko ręczne czyszczenie (uruchom: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Usuwaj błędy niewidziane przez tyle dni. Wykonuje to RetentionCleanupJob, którego gem sam nie planuje"
         max_backtrace_lines: Limit głębokości śladu stosu
         sampling_rate: Odsetek przechwytywanych błędów
         application_name: Nazwa tej aplikacji (wykrywana automatycznie, jeśli nie
@@ -1227,7 +1226,7 @@ pl:
           nie ustawiono)
         async_logging: Przetwarzanie w zadaniach w tle
         async_adapter: Adapter kolejki zadań
-        enable_rate_limiting: Ogranicza żądania do API
+        enable_rate_limiting: "Ograniczaj żądania do panelu według IP i ścieżki"
         rate_limit_per_minute: Żądań na minutę z jednego IP
         enable_slack_notifications: Powiadomienia w czasie rzeczywistym
         slack_webhook_url: Punkt końcowy webhooka Slack
@@ -1264,7 +1263,7 @@ pl:
         source_code_context_lines: Linie przed i po linii docelowej
         enable_git_blame: Pokazuj informacje git blame
         source_code_cache_ttl: Czas buforowania kodu źródłowego
-        only_show_app_code_source: Ukryj gems/stdlib ze względów bezpieczeństwa
+        only_show_app_code_source: "Ukryj kod gemów i vendor w podglądzie źródeł"
         git_branch_strategy: Strategia ustalania gałęzi
         enable_breadcrumbs: Przechwytuj ślad aktywności żądania
         breadcrumb_buffer_size: Maksymalna liczba breadcrumbs na żądanie

@@ -1136,7 +1136,7 @@ de:
         unable_to_detect: Erkennung nicht möglich
         no_user_model: Kein User-Modell erkannt
         unable_to_query_count: Anzahl konnte nicht abgefragt werden
-        manual_cleanup_required: Manuelle Bereinigung erforderlich
+        retention_enforced_by_job: "Wird vom RetentionCleanupJob gelöscht, sobald Ihr Scheduler ihn ausführt"
         keep_forever: Dauerhaft behalten
         no_automatic_deletion: Keine automatische Löschung
         run_command: 'Ausführen:'
@@ -1144,8 +1144,7 @@ de:
       options:
         enable_middleware: Fängt unbehandelte Exceptions ab
         enable_error_subscriber: Abonniert Rails-Fehlerereignisse
-        retention_days: 'Nur manuelle Bereinigung (ausführen: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Fehler löschen, die so viele Tage nicht mehr aufgetreten sind. Durchgesetzt vom RetentionCleanupJob, den das Gem selbst nicht einplant"
         max_backtrace_lines: Maximale Backtrace-Tiefe
         sampling_rate: Anteil der erfassten Fehler
         application_name: Name dieser Anwendung (wird automatisch erkannt, wenn nicht
@@ -1164,7 +1163,7 @@ de:
           erkannt, wenn nicht gesetzt)
         async_logging: Verarbeitung über Hintergrund-Jobs
         async_adapter: Adapter für die Job-Warteschlange
-        enable_rate_limiting: API-Anfragen drosseln
+        enable_rate_limiting: "Dashboard-Anfragen pro IP und Pfad drosseln"
         rate_limit_per_minute: Anfragen pro Minute und IP
         enable_slack_notifications: Echtzeit-Benachrichtigungen
         slack_webhook_url: Slack-Webhook-Endpunkt
@@ -1202,7 +1201,7 @@ de:
         source_code_context_lines: Zeilen vor und nach der Zielzeile
         enable_git_blame: git-blame-Informationen anzeigen
         source_code_cache_ttl: Cache-Dauer für den Quellcode
-        only_show_app_code_source: Gems und stdlib aus Sicherheitsgründen ausblenden
+        only_show_app_code_source: "Gem- und Vendor-Code im Quelltext-Viewer ausblenden"
         git_branch_strategy: Strategie zur Branch-Auflösung
         enable_breadcrumbs: Aktivitätsverlauf der Anfrage erfassen
         breadcrumb_buffer_size: Maximale Anzahl Breadcrumbs pro Anfrage

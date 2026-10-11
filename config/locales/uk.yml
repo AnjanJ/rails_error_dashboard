@@ -1198,7 +1198,7 @@ uk:
         unable_to_detect: Не вдалося визначити
         no_user_model: Модель User не виявлено
         unable_to_query_count: Не вдалося отримати кількість
-        manual_cleanup_required: Потрібне ручне очищення
+        retention_enforced_by_job: "Видаляються RetentionCleanupJob, коли його запускає ваш планувальник"
         keep_forever: Зберігати назавжди
         no_automatic_deletion: Без автоматичного видалення
         run_command: 'Виконайте:'
@@ -1206,8 +1206,7 @@ uk:
       options:
         enable_middleware: Перехоплює необроблені винятки
         enable_error_subscriber: Підписується на події помилок Rails
-        retention_days: 'Лише ручне очищення (виконайте: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Видаляти помилки, яких не було стільки днів. Виконує RetentionCleanupJob, який гем сам не планує"
         max_backtrace_lines: Обмеження глибини стеку викликів
         sampling_rate: Відсоток захоплених помилок
         application_name: Назва цього застосунку (визначається автоматично, якщо не
@@ -1225,7 +1224,7 @@ uk:
           якщо не задано)
         async_logging: Обробка у фонових завданнях
         async_adapter: Адаптер черги завдань
-        enable_rate_limiting: Обмежувати запити до API
+        enable_rate_limiting: "Обмежувати запити до панелі за IP і шляхом"
         rate_limit_per_minute: Запитів за хвилину з однієї IP-адреси
         enable_slack_notifications: Сповіщення в реальному часі
         slack_webhook_url: Кінцева точка webhook у Slack
@@ -1263,7 +1262,7 @@ uk:
         source_code_context_lines: Рядків до та після цільового рядка
         enable_git_blame: Показувати дані git blame
         source_code_cache_ttl: Тривалість кешування вихідного коду
-        only_show_app_code_source: Приховати gems/stdlib з міркувань безпеки
+        only_show_app_code_source: "Приховувати код гемів і vendor у переглядачі коду"
         git_branch_strategy: Стратегія визначення гілки
         enable_breadcrumbs: Захоплювати послідовність дій у запиті
         breadcrumb_buffer_size: Максимум breadcrumbs на запит

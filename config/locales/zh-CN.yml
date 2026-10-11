@@ -1016,7 +1016,7 @@ zh-CN:
         unable_to_detect: 无法检测
         no_user_model: 未检测到 User 模型
         unable_to_query_count: 无法查询数量
-        manual_cleanup_required: 需要手动清理
+        retention_enforced_by_job: "由 RetentionCleanupJob 在您的调度器运行它时删除"
         keep_forever: 永久保留
         no_automatic_deletion: 不自动删除
         run_command: 执行：
@@ -1024,7 +1024,7 @@ zh-CN:
       options:
         enable_middleware: 捕获未处理的异常
         enable_error_subscriber: 订阅 Rails 错误事件
-        retention_days: 仅手动清理（执行：rails error_dashboard:cleanup_resolved DAYS=90）
+        retention_days: "删除这么多天内未再出现的错误。由 RetentionCleanupJob 执行，gem 本身不会安排它运行"
         max_backtrace_lines: 堆栈跟踪深度上限
         sampling_rate: 错误捕获的采样比例
         application_name: 本应用的名称（未设置时自动检测）
@@ -1038,7 +1038,7 @@ zh-CN:
         total_users_for_impact: 用于计算影响百分比（未设置时自动检测）
         async_logging: 在后台任务中处理
         async_adapter: 任务队列适配器
-        enable_rate_limiting: 对 API 请求限流
+        enable_rate_limiting: "按 IP 和路径限制仪表盘请求"
         rate_limit_per_minute: 每个 IP 每分钟的请求数
         enable_slack_notifications: 实时通知
         slack_webhook_url: Slack webhook 地址
@@ -1073,7 +1073,7 @@ zh-CN:
         source_code_context_lines: 目标行前后显示的行数
         enable_git_blame: 显示 git blame 信息
         source_code_cache_ttl: 源代码缓存时长
-        only_show_app_code_source: 出于安全考虑隐藏 gems/stdlib
+        only_show_app_code_source: "在源码查看器中隐藏 gem 和 vendor 代码"
         git_branch_strategy: 分支解析策略
         enable_breadcrumbs: 记录请求的活动轨迹
         breadcrumb_buffer_size: 每个请求最多记录的 breadcrumbs 数
