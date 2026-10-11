@@ -94,15 +94,21 @@ module RailsErrorDashboard
       end
 
       def app_code?(file_path)
-        # Match /app/ or app/ (shortened paths start without leading /)
-        return true if file_path.include?("/app/") || file_path.start_with?("app/")
+        # A gem's own app/ or lib/ (an engine's models, a gem's lib) is not
+        # the host's code: it got the View Source button and a link into the
+        # host's repository for a file that is not there.
+        return false if gem_code?(file_path) || ruby_code?(file_path)
 
-        # Match /lib/ or lib/ but exclude gems and ruby stdlib
-        lib_path = file_path.include?("/lib/") || file_path.start_with?("lib/")
-        return false unless lib_path
+        # Match /app/ or app/ (shortened paths start without leading /), and
+        # the other host directories a Rails.root-relative frame can start with
+        return true if file_path.include?("/app/") || file_path.start_with?("app/", "config/", "db/")
 
-        !file_path.include?("/gems/") && !file_path.include?("/ruby/") &&
-          !file_path.start_with?("gems/") && !file_path.start_with?("ruby/")
+        # Match /lib/ or lib/ (the host's lib/, gems and stdlib excluded above)
+        file_path.include?("/lib/") || file_path.start_with?("lib/")
+      end
+
+      def ruby_code?(file_path)
+        file_path.include?("/ruby/") || file_path.start_with?("ruby/")
       end
 
       def gem_code?(file_path)

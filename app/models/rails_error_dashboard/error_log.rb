@@ -415,13 +415,8 @@ module RailsErrorDashboard
       return {} unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return {} unless defined?(Services::PatternDetector)
 
-      timestamps = self.class
-        .where(error_type: error_type, platform: platform)
-        .where("occurred_at >= ?", days.days.ago)
-        .pluck(:occurred_at)
-
       Services::PatternDetector.analyze_cyclical_pattern(
-        timestamps: timestamps,
+        timestamps: pattern_timestamps(days: days),
         days: days
       )
     end
@@ -433,13 +428,42 @@ module RailsErrorDashboard
       return [] unless RailsErrorDashboard.configuration.enable_occurrence_patterns
       return [] unless defined?(Services::PatternDetector)
 
-      timestamps = self.class
-        .where(error_type: error_type, platform: platform)
-        .where("occurred_at >= ?", days.days.ago)
-        .order(:occurred_at)
-        .pluck(:occurred_at)
+      Services::PatternDetector.detect_bursts(timestamps: pattern_timestamps(days: days))
+    end
 
-      Services::PatternDetector.detect_bursts(timestamps: timestamps)
+    # The most recent occurrence timestamps a Pattern Insights sample reads.
+    # A grouped row holds one occurred_at for hundreds of events, so the
+    # pattern used to be computed from one timestamp per error: the per-event
+    # rows are what a daily or weekly rhythm is visible in. Capped so an error
+    # with a million occurrences does not load a million Time objects to
+    # bucket them by hour; the newest PATTERN_SAMPLE_LIMIT are enough for a
+    # distribution and for the bursts of the last week.
+    PATTERN_SAMPLE_LIMIT = 10_000
+
+    def pattern_timestamps(days:)
+      since = days.days.ago
+      grouped = self.class.where(error_type: error_type, platform: platform)
+
+      if occurrence_rows_available?
+        timestamps = ErrorOccurrence.where(error_log_id: grouped.select(:id))
+                                    .where("occurred_at >= ?", since)
+                                    .order(occurred_at: :desc)
+                                    .limit(PATTERN_SAMPLE_LIMIT)
+                                    .pluck(:occurred_at)
+                                    .reverse
+        return timestamps if timestamps.any?
+      end
+
+      # No per-event rows: an install from before the occurrences table, or
+      # rows captured while a storm was being shed. The grouped rows are the
+      # only timestamps there are.
+      grouped.where("occurred_at >= ?", since).order(:occurred_at).pluck(:occurred_at)
+    end
+
+    def occurrence_rows_available?
+      defined?(ErrorOccurrence) && ErrorOccurrence.table_exists?
+    rescue StandardError
+      false
     end
 
     private

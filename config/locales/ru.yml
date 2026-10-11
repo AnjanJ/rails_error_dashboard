@@ -1202,7 +1202,7 @@ ru:
         unable_to_detect: Не удалось определить
         no_user_model: Модель User не обнаружена
         unable_to_query_count: Не удалось получить количество
-        manual_cleanup_required: Требуется ручная очистка
+        retention_enforced_by_job: "Удаляются RetentionCleanupJob, когда его запускает ваш планировщик"
         keep_forever: Хранить всегда
         no_automatic_deletion: Автоматическое удаление отключено
         run_command: 'Выполните:'
@@ -1210,8 +1210,7 @@ ru:
       options:
         enable_middleware: Перехватывает необработанные исключения
         enable_error_subscriber: Подписывается на события ошибок Rails
-        retention_days: 'Только ручная очистка (выполните: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Удалять ошибки, не встречавшиеся столько дней. Выполняет RetentionCleanupJob, который гем сам не планирует"
         max_backtrace_lines: Ограничение глубины backtrace
         sampling_rate: Доля захватываемых ошибок
         application_name: Имя этого приложения (определяется автоматически, если не
@@ -1229,7 +1228,7 @@ ru:
           если не задано)
         async_logging: Обработка в фоновых задачах
         async_adapter: Адаптер очереди задач
-        enable_rate_limiting: Ограничивать частоту API-запросов
+        enable_rate_limiting: "Ограничивать запросы к панели по IP и пути"
         rate_limit_per_minute: Запросов в минуту на IP
         enable_slack_notifications: Уведомления в реальном времени
         slack_webhook_url: Адрес webhook Slack
@@ -1265,7 +1264,7 @@ ru:
         source_code_context_lines: Строк до и после целевой строки
         enable_git_blame: Показывать сведения git blame
         source_code_cache_ttl: Время жизни кэша исходного кода
-        only_show_app_code_source: Скрывать gem-ы и stdlib в целях безопасности
+        only_show_app_code_source: "Скрывать код гемов и vendor в просмотрщике исходников"
         git_branch_strategy: Стратегия определения ветки
         enable_breadcrumbs: Записывать след активности запроса
         breadcrumb_buffer_size: Максимум breadcrumbs на запрос

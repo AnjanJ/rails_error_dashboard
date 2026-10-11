@@ -44,10 +44,18 @@ module RailsErrorDashboard
           end
         end
 
-        # Dispatch plugin event for batch resolved errors
         Services::AnalyticsCacheManager.clear if resolved_count.positive?
 
+        # Dispatch plugin event for batch resolved errors
         PluginRegistry.dispatch(:on_errors_batch_resolved, resolved_errors) if resolved_errors.any?
+
+        # Each error resolved here is as resolved as one resolved on its own
+        # page: the host's error_resolved callbacks (the issue tracker closes
+        # the linked issue from one) and the instrumentation event fire per
+        # error. Only the plugin event is batch-shaped, by design.
+        resolved_errors.each do |error|
+          Services::ResolutionCallbacks.call(error, resolved_by: @resolved_by_name)
+        end
 
         {
           success: failed_ids.empty?,

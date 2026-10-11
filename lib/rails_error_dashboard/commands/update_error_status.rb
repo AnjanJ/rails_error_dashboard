@@ -44,6 +44,13 @@ module RailsErrorDashboard
         # The stat cards are cached; a user action must show up at once.
         Services::AnalyticsCacheManager.clear
 
+        # Moving to "resolved" through the dropdown is a resolution like any
+        # other: the linked issue closes and subscribers hear about it.
+        if @status == "resolved"
+          PluginRegistry.dispatch(:on_error_resolved, error)
+          Services::ResolutionCallbacks.call(error, resolved_by: error.assigned_to)
+        end
+
         { success: true, error: error }
       end
 

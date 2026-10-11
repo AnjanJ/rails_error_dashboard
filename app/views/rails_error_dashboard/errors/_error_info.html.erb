@@ -1,7 +1,9 @@
       <%# The locale is part of the cache key: this fragment now contains
           translated text, and without it the first locale to render an error
           would be served to every other one. %>
-      <% cache [error, 'error_details_v2', red_locale] do %>
+      <%# Plus the source-integration configuration and a TTL, and not at all
+          while coverage is live: see BacktraceHelper#source_view_cache_key. %>
+      <% cache_if source_view_cacheable?, [error, 'error_details_v3', red_locale, source_view_cache_key], **source_view_cache_options do %>
       <div class="card mb-4" id="section-error-info">
         <div class="card-header bg-danger text-white">
           <div class="d-flex justify-content-between align-items-center">

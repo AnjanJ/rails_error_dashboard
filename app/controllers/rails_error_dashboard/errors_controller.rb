@@ -768,7 +768,17 @@ module RailsErrorDashboard
       )
       exception.set_backtrace(caller)
 
-      Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
+      started_at = Time.current
+      error_log = Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
+
+      # The capture path notifies on a first occurrence and then on the
+      # 10th, 50th... A second click within 24 hours is occurrence two of the
+      # same row, so it used to notify nobody, which reads as "notifications
+      # are broken". This button exists to prove delivery: if the capture
+      # path did not claim a notification in this request, send one now.
+      if error_log && !notified_since?(error_log, started_at)
+        Services::ErrorNotificationDispatcher.call(error_log)
+      end
 
       flash[:notice] = red_t("red.flash.test_error.logged")
       redirect_to errors_path(**app_context_params)
@@ -834,7 +844,14 @@ module RailsErrorDashboard
     end
 
     def filter_params
-      params.permit(*FILTERABLE_PARAMS).to_h.symbolize_keys
+      scalar_params(FILTERABLE_PARAMS)
+    end
+
+    # True when NotificationThrottler claimed a notification for this error
+    # at or after +since+. The claim is an update_all, so the row is re-read.
+    def notified_since?(error_log, since)
+      stamp = error_log.class.where(id: error_log.id).pick(:last_notified_at)
+      stamp.present? && stamp >= since
     end
 
     # Coerce params[:days] into a sane integer in [1, 365]. Without clamping,

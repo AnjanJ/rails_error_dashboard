@@ -31,6 +31,28 @@ RSpec.describe "Workflow Commands" do
         expect(result.status).to eq("in_progress")
       end
 
+      # in_progress with resolved: true was matched by neither the unresolved
+      # nor the resolved lookup, so the next recurrence opened a new row.
+      it "reopens a resolved error when someone is assigned to it" do
+        error_log.update!(resolved: true, resolved_at: 1.hour.ago, status: "resolved")
+
+        result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
+
+        expect(result.status).to eq("in_progress")
+        expect(result.resolved).to be(false)
+        expect(result.resolved_at).to be_nil
+        expect(RailsErrorDashboard::ErrorLog.unresolved).to include(result)
+      end
+
+      it "records the assignee on a wont_fix error without changing its status" do
+        error_log.update!(status: "wont_fix")
+
+        result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
+
+        expect(result.assigned_to).to eq("gandalf")
+        expect(result.status).to eq("wont_fix")
+      end
+
       it "returns the updated error" do
         result = described_class.call(error_log.id, assigned_to: "gandalf")[:error]
 

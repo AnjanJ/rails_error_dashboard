@@ -57,6 +57,12 @@ module RailsErrorDashboard
         # Strip everything before /lib/ruby/ (Ruby stdlib)
         elsif line.include?("/lib/ruby/")
           line.sub(%r{^.*/lib/ruby/}, "ruby/")
+        # A frame under Rails.root is that path relative to it, whatever the
+        # root is called. The /app/ heuristic below cannot tell a root named
+        # /app from the app/ directory: /app/lib/foo.rb became app/lib/foo.rb,
+        # which the source reader then looked for at /app/app/lib/foo.rb.
+        elsif (root = rails_root_prefix) && line.start_with?(root)
+          line.delete_prefix(root)
         # Strip everything before /app/ (application code)
         elsif line.include?("/app/")
           line.sub(%r{^.*/app/}, "app/")
@@ -68,6 +74,15 @@ module RailsErrorDashboard
         end
       end
       # Keep public — used by LogError for cause chain backtrace shortening too.
+
+      # "#{Rails.root}/", or nil outside Rails.
+      def self.rails_root_prefix
+        return nil unless defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+
+        "#{Rails.root}/"
+      rescue StandardError
+        nil
+      end
 
       # Calculate a signature hash from backtrace for fuzzy similarity matching
       # Extracts file paths and method names, ignoring line numbers,

@@ -65,6 +65,34 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
   # per_page came straight from the query string into LIMIT, so one request
   # could ask the database for every row and render them all.
   describe "per_page upper bound" do
+    # Integer() refused these, so the raw string reached Pagy, whose to_i read
+    # them as 150 and 999: over the cap, with no redirect either.
+    it "clamps a decimal per_page" do
+      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "150.5" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(sql).to include("100")
+      expect(sql).not_to include("150")
+    end
+
+    it "clamps a zero-padded or trailing-garbage per_page" do
+      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "0999" } }
+      expect(response).to have_http_status(:ok)
+      expect(sql).to include("100")
+      expect(sql).not_to include("999")
+
+      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "150abc" } }
+      expect(response).to have_http_status(:ok)
+      expect(sql).not_to include("150")
+    end
+
+    it "still redirects for a per_page Pagy rejects" do
+      get "/error_dashboard/errors", params: { per_page: "abc" }
+
+      expect(response).to have_http_status(:see_other)
+      expect(response.location).not_to include("per_page")
+    end
+
     # The limit may be inlined or sent as a bind, depending on the adapter.
     def limits_for
       seen = []

@@ -272,7 +272,7 @@
           <%= button_tag type: "submit", name: "action_type", value: "resolve", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px;" do %>
             <i class="bi bi-check-circle"></i> <%= red_t("red.errors.index.batch.resolve") %>
           <% end %>
-          <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { confirm: red_t("red.errors.index.batch.confirm_delete") } do %>
+          <%= button_tag type: "submit", name: "action_type", value: "delete", class: "btn btn-sm", style: "padding: 4px 12px; font-size: 12px; color: var(--status-critical);", data: { red_action: "confirm-submit", red_confirm_message: red_t("red.errors.index.batch.confirm_delete") } do %>
             <i class="bi bi-trash"></i> <%= red_t("red.errors.index.batch.delete") %>
           <% end %>
         <% end %>

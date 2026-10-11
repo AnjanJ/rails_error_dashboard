@@ -1021,7 +1021,7 @@ ja:
         unable_to_detect: 検出できません
         no_user_model: User モデルが見つかりません
         unable_to_query_count: 件数を取得できません
-        manual_cleanup_required: 手動でのクリーンアップが必要です
+        retention_enforced_by_job: "スケジューラーが RetentionCleanupJob を実行すると削除されます"
         keep_forever: 無期限に保持
         no_automatic_deletion: 自動削除は行いません
         run_command: '実行:'
@@ -1029,7 +1029,7 @@ ja:
       options:
         enable_middleware: 未処理の例外を捕捉します
         enable_error_subscriber: Rails のエラーイベントを購読します
-        retention_days: '手動クリーンアップのみ (実行: rails error_dashboard:cleanup_resolved DAYS=90)'
+        retention_days: "この日数の間発生しなかったエラーを削除します。RetentionCleanupJob が実行しますが、gem 自体はスケジュールしません"
         max_backtrace_lines: スタックトレースの深さの上限
         sampling_rate: エラーを記録する割合
         application_name: このアプリケーションの名前 (未設定の場合は自動検出)
@@ -1043,7 +1043,7 @@ ja:
         total_users_for_impact: 影響率の算出に使用 (未設定の場合は自動検出)
         async_logging: バックグラウンドジョブで処理します
         async_adapter: ジョブキューのアダプタ
-        enable_rate_limiting: API リクエストを制限します
+        enable_rate_limiting: "ダッシュボードへのリクエストを IP とパスごとに制限します"
         rate_limit_per_minute: IP ごとの1分あたりのリクエスト数
         enable_slack_notifications: リアルタイム通知
         slack_webhook_url: Slack の webhook エンドポイント
@@ -1078,7 +1078,7 @@ ja:
         source_code_context_lines: 対象行の前後に表示する行数
         enable_git_blame: git blame の情報を表示します
         source_code_cache_ttl: ソースコードのキャッシュ保持時間
-        only_show_app_code_source: セキュリティのため gem/標準ライブラリを非表示にします
+        only_show_app_code_source: "ソースビューアーで gem と vendor のコードを非表示にします"
         git_branch_strategy: ブランチの解決方法
         enable_breadcrumbs: リクエストの操作履歴を記録します
         breadcrumb_buffer_size: リクエストあたりの breadcrumb の最大数

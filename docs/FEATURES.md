@@ -1239,7 +1239,7 @@ config.enable_git_blame = true               # Git blame integration (NEW!)
 - **Detect when one error is followed by another** — temporal association, not proven causation
 - **Average delay calculation** between related errors
 - **Cascade probability scoring**
-- **Background analysis job** (runs hourly)
+- **Background analysis job** — `RailsErrorDashboard::CascadeDetectionJob`, scheduled by you like the other periodic jobs (hourly, with a one-hour lookback)
 
 ### Baseline Monitoring & Anomaly Detection
 - **Statistical baseline calculation** (hourly, daily, weekly)
