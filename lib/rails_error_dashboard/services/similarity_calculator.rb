@@ -80,19 +80,13 @@ module RailsErrorDashboard
       end
 
       # Extract meaningful frames from backtrace
-      # Format: "file.rb:123:in `method_name`" => "file.rb:method_name"
+      # "file.rb:123:in `name'" (Ruby 3.3) or "file.rb:123:in 'Class#name'"
+      # (Ruby 3.4) => "file.rb:name", via BacktraceProcessor.frame_key
       def extract_frames(backtrace)
         return [] if backtrace.blank?
 
         lines = backtrace.is_a?(String) ? backtrace.split("\n") : backtrace
-        lines.first(20).map do |line|  # Only consider first 20 frames
-          # Extract file path and method name, ignore line numbers
-          if line =~ %r{([^/]+\.rb):.*?in `(.+)'$}
-            "#{Regexp.last_match(1)}:#{Regexp.last_match(2)}"
-          elsif line =~ %r{([^/]+\.rb)}
-            Regexp.last_match(1)
-          end
-        end.compact.uniq
+        lines.first(20).map { |line| BacktraceProcessor.frame_key(line) }.compact.uniq  # Only consider first 20 frames
       end
 
       # Normalize message for comparison

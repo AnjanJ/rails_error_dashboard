@@ -99,18 +99,27 @@ module RailsErrorDashboard
         return nil if backtrace.blank?
 
         lines = backtrace.is_a?(String) ? backtrace.split("\n") : backtrace
-        frames = lines.first(20).map do |line|
-          if line =~ %r{([^/]+\.rb):.*?in `(.+)'$}
-            "#{Regexp.last_match(1)}:#{Regexp.last_match(2)}"
-          elsif line =~ %r{([^/]+\.rb)}
-            Regexp.last_match(1)
-          end
-        end.compact.uniq
+        frames = lines.first(20).map { |line| frame_key(line) }.compact.uniq
 
         return nil if frames.empty?
 
         file_paths = frames.map { |frame| frame.split(":").first }.sort
         Digest::SHA256.hexdigest(file_paths.join("|"))[0..15]
+      end
+
+      # "file.rb:method" for one backtrace line, the unit similar-error matching
+      # compares. It accepts Ruby 3.3's in `save' and Ruby 3.4's in 'User#save',
+      # and drops 3.4's class qualifier ("block in User#save" -> "block in
+      # save"), so a frame matches whichever Ruby recorded it.
+      #
+      # @param line [String]
+      # @return [String, nil]
+      def self.frame_key(line)
+        if line =~ %r{([^/]+\.rb):.*?in [`'](.+)'$}
+          "#{Regexp.last_match(1)}:#{Regexp.last_match(2).gsub(/\b[A-Z][\w:]*[#.]/, "")}"
+        elsif line =~ %r{([^/]+\.rb)}
+          Regexp.last_match(1)
+        end
       end
 
       # Calculate signature directly from Location objects
