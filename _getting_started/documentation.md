@@ -58,7 +58,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ### Integration
 - **[Mobile App Integration](/rails_error_dashboard/docs/guides/mobile-app-integration/)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](/rails_error_dashboard/docs/guides/batch-operations/)** - Bulk error management
-- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - Complete API documentation
+- **[API Reference](/rails_error_dashboard/docs/reference/api-reference/)** - The dashboard's HTTP routes and the Ruby API
 - **[Real-Time Updates](/rails_error_dashboard/docs/guides/real-time-updates/)** - Turbo Streams live updates (requires `turbo-rails` + ActionCable in the host)
 - **[Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/)** - Configure Solid Queue for async logging
 
@@ -89,7 +89,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 4. [Plugin System](/rails_error_dashboard/docs/features/plugin-system/) - Custom integrations
 
 ### For Developers
-1. [API Reference](/rails_error_dashboard/docs/reference/api-reference/) - Complete API docs
+1. [API Reference](/rails_error_dashboard/docs/reference/api-reference/) - The dashboard's HTTP routes and the Ruby API
 2. [Plugin Development](/rails_error_dashboard/docs/features/plugin-system/#1-create-a-plugin) - Build plugins
 3. [Testing Guide](/rails_error_dashboard/docs/reference/testing/) - Test your setup
 
@@ -149,7 +149,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 ## Searching the Documentation
 
 - **Configuration options**: See [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)
-- **API methods**: See [API Reference](/rails_error_dashboard/docs/reference/api-reference/)
+- **Ruby API and HTTP routes**: See [API Reference](/rails_error_dashboard/docs/reference/api-reference/)
 - **Term definitions**: See [Glossary](/rails_error_dashboard/docs/reference/glossary/)
 - **Code examples**: Most guides include code examples
 - **Troubleshooting**: Each guide has a troubleshooting section
