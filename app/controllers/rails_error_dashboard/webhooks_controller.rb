@@ -14,7 +14,12 @@ module RailsErrorDashboard
   class WebhooksController < ActionController::Base
     skip_before_action :verify_authenticity_token
 
+    PROVIDERS = %w[github gitlab codeberg linear].freeze
+
     before_action :verify_webhook_enabled
+    # Before the signature check: an unknown provider is a wrong URL, and a 401
+    # would send the sender looking at a secret that is fine
+    before_action :verify_provider
     before_action :verify_signature
 
     def receive
@@ -32,9 +37,6 @@ module RailsErrorDashboard
         handle_codeberg(payload)
       when "linear"
         handle_linear(payload)
-      else
-        head :not_found
-        return
       end
 
       head :ok
@@ -52,15 +54,14 @@ module RailsErrorDashboard
       end
     end
 
+    def verify_provider
+      head :not_found unless PROVIDERS.include?(params[:provider])
+    end
+
     def verify_signature
       provider = params[:provider]
+      # Present: verify_webhook_enabled answers 404 without it
       secret = RailsErrorDashboard.configuration.issue_webhook_secret
-
-      unless secret.present?
-        Rails.logger.warn("[RailsErrorDashboard] Webhook received but no issue_webhook_secret configured")
-        head :unauthorized
-        return
-      end
 
       body = request.body.read
       request.body.rewind
