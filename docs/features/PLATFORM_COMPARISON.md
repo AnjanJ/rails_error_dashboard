@@ -109,8 +109,8 @@ resolution_rate = (resolved.to_f / (resolved + unresolved) * 100).round(1)  # 0.
 - **70%** - The platform's share of all errors (a smaller share scores higher)
 - **30%** - Its average resolution time against the slowest platform's (faster scores higher)
 
-With fewer than two platforms there is no score: the card shows a grey **Not rated** badge and no
-score bar. See [Stability Scoring](#stability-scoring) for details.
+With errors on fewer than two platforms in the window there is no score: the card shows a grey
+**Not rated** badge and no score bar. See [Stability Scoring](#stability-scoring) for details.
 
 **Interpretation**: The score bar is green from 80, yellow from 60 to 80, and red below 60, the same
 thresholds as the health status.
@@ -150,7 +150,7 @@ end
 - **Healthy** (green) - Score 80 or more, and velocity 10% or less
 - **Warning** (yellow) - Score 60 or more, and velocity 50% or less
 - **Critical** (red) - A lower score, or a higher velocity
-- **Not rated** (grey) - Fewer than two platforms; `stability_score` is `nil`
+- **Not rated** (grey) - Fewer than two platforms with errors in the window; `stability_score` is `nil`
 
 ## Stability Scoring
 
@@ -159,8 +159,8 @@ end
 The stability score combines two factors (`platform_stability_scores`):
 
 ```ruby
-# A score compares platforms. With fewer than two there is none.
-return {} if platforms.size < 2
+# A score compares platforms: it needs two with errors in the window.
+return {} if error_rate_by_platform.size < 2
 
 total_errors = error_rate_by_platform.values.sum
 slowest = resolution_time_by_platform.values.compact.max
@@ -179,8 +179,9 @@ end
 ((error_score * 0.7) + (resolution_score * 0.3)) * 100  # rounded to 1 decimal
 ```
 
-`platforms` is every platform value on the application's errors, ever. A platform with no errors in
-the window still counts towards the two, and scores 100.
+`platforms` is every platform value on the application's errors, ever. The two needed for a score are
+platforms with errors in the window. Once two have, a platform with none in the window also gets a
+score, and scores 100.
 
 ### Why This Formula?
 
@@ -653,7 +654,7 @@ comparison.severity_distribution_by_platform
 comparison.resolution_time_by_platform
 # => { "iOS" => 24.0, "Android" => 48.0, "API" => nil }
 
-# Stability scores (0-100); {} with fewer than two platforms
+# Stability scores (0-100); {} with errors on fewer than two platforms
 comparison.platform_stability_scores
 # => { "iOS" => 71.0, "Android" => 28.0, "API" => 86.0 }
 
@@ -678,7 +679,7 @@ comparison.platform_health_summary["iOS"]
 #   critical_errors: 4,
 #   unresolved_errors: 12,
 #   resolution_rate: 70.0,
-#   stability_score: 71.0,        # nil with fewer than two platforms
+#   stability_score: 71.0,        # nil with errors on fewer than two platforms
 #   error_velocity: -10.0,
 #   health_status: :warning       # :healthy, :warning, :critical or :not_rated
 # }
@@ -717,11 +718,11 @@ RailsErrorDashboard::ManualErrorReporter.report(
 **Cause**: The scores compare platforms with each other.
 
 **Explanation**:
-- With fewer than two platforms there is no score: the platform shows "Not rated"
+- With errors on fewer than two platforms in the window there is no score: the platform shows "Not rated"
 - A platform's score moves when another platform's errors change
 - The slowest-resolving platform scores at most 70
 - A platform with no resolved errors in the window gets the full resolution term
-- A platform seen before but with no errors in the window scores 100
+- A platform seen before but with no errors in the window scores 100 (when two others have errors)
 
 ### "Cross-platform errors not showing"
 
