@@ -529,6 +529,14 @@ ru:
           few: "+ ещё %{count}"
           many: "+ ещё %{count}"
         view_errors: Смотреть ошибки
+      captured_occurrences:
+        title: "Сохранённые события"
+        hint: "Breadcrumbs, состояние системы и переменные хранятся для последних событий (occurrence_context_limit). Откройте событие, чтобы их увидеть."
+        column_occurrence: "Событие"
+        column_occurred_at: "Время"
+        column_version: "Версия"
+        view: "Открыть"
+        viewing: "Открыто"
       co_occurring:
         title: Сопутствующие ошибки
         badge: Временные закономерности

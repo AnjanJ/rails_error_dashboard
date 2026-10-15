@@ -36,7 +36,7 @@ migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
     - a foreign or missing id shows the latest snapshot and never the other error's
   - After: T4
   - Done when: `bundle exec rspec spec/requests/errors_show_occurrence_spec.rb` → all pass, and `bin/i18n-check` → no failures
-- [ ] **T6** "Captured occurrences" card in the History tab → REQ-8
+- [x] **T6** "Captured occurrences" card in the History tab → REQ-8
   - Files: app/views/rails_error_dashboard/errors/show.html.erb, app/views/rails_error_dashboard/errors/_captured_occurrences.html.erb, app/controllers/rails_error_dashboard/errors_controller.rb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/requests/errors_show_occurrence_spec.rb
   - Test: spec/requests/errors_show_occurrence_spec.rb (the card links each occurrence that has context to `?occurrence=ID`; occurrences without context are not linked; the list query never selects payload columns)
   - After: T5

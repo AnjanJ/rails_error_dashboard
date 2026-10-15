@@ -709,6 +709,15 @@ en:
           other: "+%{count} more"
         view_errors: "View Errors"
 
+      captured_occurrences:
+        title: "Captured occurrences"
+        hint: "Breadcrumbs, system health and variables are kept for the most recent occurrences (occurrence_context_limit). Open one to see them."
+        column_occurrence: "Occurrence"
+        column_occurred_at: "Occurred"
+        column_version: "Version"
+        view: "View"
+        viewing: "Viewing"
+
       co_occurring:
         title: "Co-occurring Errors"
         badge: "Time Patterns"

@@ -526,6 +526,14 @@ pl:
           few: "+%{count} więcej"
           many: "+%{count} więcej"
         view_errors: Zobacz błędy
+      captured_occurrences:
+        title: "Zapisane wystąpienia"
+        hint: "Breadcrumbs, stan systemu i zmienne są przechowywane dla najnowszych wystąpień (occurrence_context_limit). Otwórz jedno, aby je zobaczyć."
+        column_occurrence: "Wystąpienie"
+        column_occurred_at: "Wystąpiło"
+        column_version: "Wersja"
+        view: "Pokaż"
+        viewing: "Wyświetlane"
       co_occurring:
         title: Współwystępujące błędy
         badge: Wzorce czasowe

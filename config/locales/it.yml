@@ -519,6 +519,14 @@ it:
           other: "+%{count} altri"
           many: "+%{count} altri"
         view_errors: Vedi gli errori
+      captured_occurrences:
+        title: "Occorrenze acquisite"
+        hint: "Breadcrumbs, stato del sistema e variabili vengono conservati per le occorrenze più recenti (occurrence_context_limit). Aprine una per vederli."
+        column_occurrence: "Occorrenza"
+        column_occurred_at: "Avvenuta"
+        column_version: "Versione"
+        view: "Visualizza"
+        viewing: "In visualizzazione"
       co_occurring:
         title: Errori concomitanti
         badge: Schemi temporali

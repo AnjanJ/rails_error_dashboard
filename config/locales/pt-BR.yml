@@ -525,6 +525,14 @@ pt-BR:
           other: "+%{count} outros"
           many: "+%{count} outros"
         view_errors: Ver os erros
+      captured_occurrences:
+        title: "Ocorrências capturadas"
+        hint: "Breadcrumbs, saúde do sistema e variáveis são mantidos para as ocorrências mais recentes (occurrence_context_limit). Abra uma para vê-los."
+        column_occurrence: "Ocorrência"
+        column_occurred_at: "Ocorreu em"
+        column_version: "Versão"
+        view: "Ver"
+        viewing: "Em exibição"
       co_occurring:
         title: Erros concomitantes
         badge: Padrões temporais

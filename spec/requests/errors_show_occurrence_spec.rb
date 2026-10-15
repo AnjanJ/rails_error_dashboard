@@ -121,6 +121,61 @@ RSpec.describe "Error page for one occurrence", type: :request do
     expect_latest_snapshot
   end
 
+  describe "the Captured occurrences card" do
+    def card
+      Nokogiri::HTML(response.body).at_css("#section-captured-occurrences")
+    end
+
+    # occurrence-context-history/REQ-8
+    it "links each occurrence that has a stored context to its page, newest first" do
+      older = stored_context(error, "older", occurred_at: 3.hours.ago)
+      newer = stored_context(error, "newer", occurred_at: 1.hour.ago)
+      bare = create(:error_occurrence, error_log: error, occurred_at: 2.hours.ago)
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(card.css("a").map { |link| link["href"] }).to eq([
+        "/error_dashboard/errors/#{error.id}?occurrence=#{newer.id}",
+        "/error_dashboard/errors/#{error.id}?occurrence=#{older.id}"
+      ])
+      expect(card.css("code").map(&:text)).not_to include("##{bare.id}")
+    end
+
+    # occurrence-context-history/REQ-8
+    it "lists them without loading the stored context" do
+      stored_context(error, "older")
+      sql = []
+      collect = ->(*, payload) { sql << payload[:sql] if payload[:sql].include?("occurrence_contexts") }
+
+      ActiveSupport::Notifications.subscribed(collect, "sql.active_record") do
+        get "/error_dashboard/errors/#{error.id}"
+      end
+
+      expect(card).to be_present
+      expect(sql).not_to be_empty
+      expect(sql.join("\n")).not_to match(/breadcrumbs|system_health|local_variables|instance_variables|\.\*|SELECT \*/i)
+    end
+
+    it "marks the occurrence being viewed" do
+      older = stored_context(error, "older", occurred_at: 3.hours.ago)
+      newer = stored_context(error, "newer", occurred_at: 1.hour.ago)
+
+      get "/error_dashboard/errors/#{error.id}", params: { occurrence: older.id }
+
+      rows = card.css("tbody tr")
+      expect(rows.map { |row| row.at_css(".badge").present? }).to eq([ false, true ])
+      expect(rows.first.text).to include("##{newer.id}")
+    end
+
+    it "is left out when no occurrence has a stored context" do
+      create(:error_occurrence, error_log: error)
+
+      get "/error_dashboard/errors/#{error.id}"
+
+      expect(card).to be_nil
+    end
+  end
+
   # The copy that carries the occurrence's values is read-only: the page can
   # never write them over the error row
   it "leaves the error row's snapshot untouched" do

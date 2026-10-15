@@ -460,6 +460,14 @@ ja:
         more:
           other: 他%{count}件
         view_errors: エラーを表示
+      captured_occurrences:
+        title: "記録された発生"
+        hint: "Breadcrumb、システムヘルス、変数は最新の発生分だけ保持されます（occurrence_context_limit）。発生を開くと確認できます。"
+        column_occurrence: "発生"
+        column_occurred_at: "発生日時"
+        column_version: "バージョン"
+        view: "表示"
+        viewing: "表示中"
       co_occurring:
         title: 同時発生エラー
         badge: 時間パターン

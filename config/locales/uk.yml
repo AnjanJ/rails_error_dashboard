@@ -526,6 +526,14 @@ uk:
           few: "+%{count} ще"
           many: "+%{count} ще"
         view_errors: Переглянути помилки
+      captured_occurrences:
+        title: "Збережені події"
+        hint: "Breadcrumbs, стан системи та змінні зберігаються для останніх подій (occurrence_context_limit). Відкрийте подію, щоб їх побачити."
+        column_occurrence: "Подія"
+        column_occurred_at: "Час"
+        column_version: "Версія"
+        view: "Відкрити"
+        viewing: "Відкрито"
       co_occurring:
         title: Супутні помилки
         badge: Часові закономірності

@@ -122,6 +122,7 @@ module RailsErrorDashboard
       # ?occurrence=ID: the context cards show that occurrence's stored context
       @occurrence_context = find_occurrence_context(@error)
       @snapshot = @occurrence_context ? ValueObjects::OccurrenceSnapshot.build(@error, @occurrence_context) : @error
+      @captured_occurrences = captured_occurrences(@error)
 
       # Fetch platform issue state and comments if linked
       @platform_issue = fetch_platform_issue(@error)
@@ -912,6 +913,19 @@ module RailsErrorDashboard
       return unless ErrorOccurrenceContext.table_exists?
 
       error.occurrence_contexts.find_by(error_occurrence_id: params[:occurrence])
+    end
+
+    # This error's occurrences that still have a stored context, newest first.
+    # The context table is read for its occurrence ids only, so listing them
+    # never loads the stored payloads.
+    def captured_occurrences(error)
+      return [] unless ErrorOccurrenceContext.table_exists?
+
+      error.error_occurrences
+        .where(id: ErrorOccurrenceContext.where(error_log_id: error.id).select(:error_occurrence_id))
+        .order(occurred_at: :desc, id: :desc)
+        .select(:id, :occurred_at, :app_version, :git_sha)
+        .to_a
     end
 
     def fetch_platform_issue(error)

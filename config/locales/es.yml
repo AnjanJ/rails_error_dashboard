@@ -525,6 +525,14 @@ es:
           other: "+%{count} más"
           many: "+%{count} más"
         view_errors: Ver los errores
+      captured_occurrences:
+        title: "Apariciones capturadas"
+        hint: "Los breadcrumbs, el estado del sistema y las variables se conservan para las apariciones más recientes (occurrence_context_limit). Abra una para verlos."
+        column_occurrence: "Aparición"
+        column_occurred_at: "Ocurrió"
+        column_version: "Versión"
+        view: "Ver"
+        viewing: "En pantalla"
       co_occurring:
         title: Errores concurrentes
         badge: Patrones temporales

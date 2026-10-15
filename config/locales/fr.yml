@@ -525,6 +525,14 @@ fr:
           other: "+%{count} autres"
           many: "+%{count} autres"
         view_errors: Voir les erreurs
+      captured_occurrences:
+        title: "Occurrences capturées"
+        hint: "Les breadcrumbs, l'état du système et les variables sont conservés pour les occurrences les plus récentes (occurrence_context_limit). Ouvrez-en une pour les voir."
+        column_occurrence: "Occurrence"
+        column_occurred_at: "Survenue"
+        column_version: "Version"
+        view: "Voir"
+        viewing: "Affichée"
       co_occurring:
         title: Erreurs concomitantes
         badge: Motifs temporels

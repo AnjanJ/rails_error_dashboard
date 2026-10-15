@@ -156,6 +156,7 @@
 
       <!-- Tab: History -->
       <div id="panel-history">
+        <%= render "captured_occurrences", error: @error, occurrences: @captured_occurrences, current_id: @occurrence_context&.error_occurrence_id %>
         <%= render "timeline" %>
         <% unless RailsErrorDashboard.configuration.enable_issue_tracking %>
           <%= render "discussion", error: @error %>

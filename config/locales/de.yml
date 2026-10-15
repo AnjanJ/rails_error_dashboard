@@ -503,6 +503,14 @@ de:
           one: "+%{count} weiterer"
           other: "+%{count} weitere"
         view_errors: Fehler ansehen
+      captured_occurrences:
+        title: "Erfasste Vorkommen"
+        hint: "Breadcrumbs, Systemzustand und Variablen werden für die neuesten Vorkommen aufbewahrt (occurrence_context_limit). Öffnen Sie eines, um sie zu sehen."
+        column_occurrence: "Vorkommen"
+        column_occurred_at: "Aufgetreten"
+        column_version: "Version"
+        view: "Anzeigen"
+        viewing: "Angezeigt"
       co_occurring:
         title: Gemeinsam auftretende Fehler
         badge: Zeitliche Muster
