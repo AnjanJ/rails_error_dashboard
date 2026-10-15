@@ -177,8 +177,8 @@ Identifies parent-child relationships between errors:
 ### How It Works
 
 Cascades are detected by `RailsErrorDashboard::CascadeDetectionJob`. Nothing in the gem schedules
-it: add it to your scheduler alongside the other periodic jobs (see the Production guide), hourly
-with `lookback_hours: 1`, so each run scans only the occurrences since the last one.
+it: add it to your scheduler alongside the other periodic jobs (see [Scheduling](#scheduling)),
+hourly with `lookback_hours: 1`, so each run scans only the occurrences since the last one.
 
 ```ruby
 # What the job runs; from a console, for one window
@@ -201,26 +201,47 @@ end
 
 ### Detection Algorithm
 
-1. **Time Window**: Looks 0-60 seconds before/after each error
-2. **Pattern Tracking**: If A then B happens >70% of time = cascade
-3. **Probability Calculation**:
+1. **Time Window**: For each occurrence of error A, looks at the 60 seconds after it
+2. **Pattern Tracking**: Each occurrence of B in that window counts once for that A. One A followed
+   by three Bs counts 3, and so does one B that follows three As
+3. **Minimum Frequency**: A pair counted 3+ times in the lookback is stored as a cascade, with that
+   count as its frequency
+4. **Later runs**: Each later run that counts the pair 3+ times again adds 1 to its frequency,
+   however many it counted
+5. **Probability Calculation**, recalculated on every run that finds the pair:
    ```text
-   probability = times_B_after_A / total_A_occurrences
+   probability = frequency / all of A's stored occurrences
    ```
-4. **Minimum Frequency**: Requires 3+ occurrences to confirm pattern
+
+Because several Bs after one A each count, the probability can be over 100%, even after one run.
+Read it as how strongly B follows A, not as a true percentage.
 
 ### Cascade Probability Levels
 
-- **High (70-100%)**: Strong cascade relationship
+- **High (70% and up)**: Strong cascade relationship
 - **Medium (50-70%)**: Moderate cascade relationship
 - **Low (<50%)**: Filtered out by default
 
-### Background Job
+### Scheduling
 
-Cascade detection runs automatically via `CascadeDetectionJob`:
-- **Frequency**: Hourly
-- **Lookback**: Last 24 hours
-- **Updates**: Existing patterns are updated with new data
+Nothing in the gem schedules cascade detection. Since 0.15.0, schedule
+`RailsErrorDashboard::CascadeDetectionJob` with `lookback_hours` equal to the time between runs. It
+does nothing while `enable_error_cascades` is off. Windows that overlap count the same errors again:
+an hourly run that looks back 24 hours finds the same pairs 24 times a day, adds 1 to their
+frequency each time, and pushes the probability up with no new errors.
+
+With Solid Queue, in `config/recurring.yml` (as in [Running in Production](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs)):
+
+```yaml
+production:
+  red_cascades:
+    class: RailsErrorDashboard::CascadeDetectionJob
+    args: [ { lookback_hours: 1 } ]
+    schedule: every hour
+```
+
+With cron, once a day:
+`bin/rails runner 'RailsErrorDashboard::CascadeDetectionJob.perform_now(lookback_hours: 24)'`.
 
 ### Use Cases
 
@@ -255,16 +276,17 @@ end
 
 ### Cascade Detection Configuration
 
-```ruby
-# Cascade detection window (seconds)
-# Default: 60 seconds
-# Adjust via CascadeDetector parameters:
+The 60-second window and the minimum of 3 are constants. `lookback_hours` is the only option. Keep
+it equal to the time between runs (see [Scheduling](#scheduling)); for a run every two days:
 
-RailsErrorDashboard::Services::CascadeDetector.call(
-  window_seconds: 120,  # 2-minute window
-  min_frequency: 5,     # Require 5+ occurrences
-  min_probability: 0.7  # 70% probability threshold
-)
+```ruby
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 48)
+```
+
+To see only strong cascades, filter by probability when you read them:
+
+```ruby
+error.error_cascades(min_probability: 0.7)
 ```
 
 ### Platform-Based Matching
@@ -390,14 +412,14 @@ Periodically:
 ### "Cascade detection not working"
 
 **Possible causes**:
-- Background job not running
-- ErrorOccurrence table doesn't exist (run migrations)
-- Window too short (errors happen >60s apart)
+- Nothing runs `CascadeDetectionJob` (see [Scheduling](#scheduling))
+- `enable_error_cascades` is off: the job skips detection, and the error page doesn't show them
+- The errors happen more than 60 seconds apart, or fewer than 3 times in the lookback
 
 **Solution**:
-- Check `rails_error_dashboard_cascade_patterns` table exists
-- Ensure background jobs are running (`rails jobs:work`)
-- Increase window_seconds if needed
+- Schedule `CascadeDetectionJob`, or run `RailsErrorDashboard::CascadeDetectionJob.perform_now` once
+  from a console to check
+- Check the `rails_error_dashboard_cascade_patterns` table exists (run migrations)
 
 ## Database Schema
 
@@ -461,14 +483,13 @@ error.error_cascades(min_probability: 0.5)
 ### Services::CascadeDetector.call
 
 ```ruby
-RailsErrorDashboard::Services::CascadeDetector.call(
-  lookback_hours: 24,
-  window_seconds: 60,
-  min_frequency: 3,
-  min_probability: 0.7
-)
+RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
 # Returns: { detected: 5, updated: 3 }
 ```
+
+`lookback_hours` is its only option. A cascade is a child error that follows its parent within 60
+seconds, at least 3 times; both are constants, not options. Each cascade's probability is stored,
+and `error_cascades(min_probability:)` filters on it.
 
 ## Further Reading
 
