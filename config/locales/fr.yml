@@ -251,6 +251,10 @@ fr:
           inactive_body: activez pour voir les lignes exécutées
           enable: Activer
           disable: Désactiver
+        occurrence:
+          title: "Occurrence #%{id}"
+          body: "Les breadcrumbs, l'état du système et les variables proviennent de cette occurrence. Tout le reste montre la capture la plus récente."
+          show_latest: "Voir la plus récente"
         baselines:
           title: Statistiques de référence
           anomaly_label: 'Anomalie :'
@@ -521,6 +525,14 @@ fr:
           other: "+%{count} autres"
           many: "+%{count} autres"
         view_errors: Voir les erreurs
+      captured_occurrences:
+        title: "Occurrences capturées"
+        hint: "Les breadcrumbs, l'état du système et les variables sont conservés pour les occurrences les plus récentes (occurrence_context_limit). Ouvrez-en une pour les voir."
+        column_occurrence: "Occurrence"
+        column_occurred_at: "Survenue"
+        column_version: "Version"
+        view: "Voir"
+        viewing: "Affichée"
       co_occurring:
         title: Erreurs concomitantes
         badge: Motifs temporels
@@ -1141,6 +1153,10 @@ fr:
           one: "%{count} événement"
           other: "%{count} événements"
           many: "%{count} événements"
+        occurrences:
+          one: "%{count} occurrence"
+          other: "%{count} occurrences"
+          many: "%{count} occurrences"
         queries:
           one: "%{count} requête"
           other: "%{count} requêtes"
@@ -1190,6 +1206,7 @@ fr:
         enable_middleware: Intercepte les exceptions non gérées
         enable_error_subscriber: S'abonne aux événements d'erreur de Rails
         retention_days: "Supprimer les erreurs non vues depuis ce nombre de jours. Appliqué par RetentionCleanupJob, que la gem ne planifie pas elle-même"
+        occurrence_context_limit: "Nombre d'occurrences récentes par erreur dont les breadcrumbs, l'état du système et les variables sont conservés (0 = désactivé)"
         max_backtrace_lines: Profondeur maximale du backtrace
         sampling_rate: Pourcentage d'erreurs capturées
         application_name: Nom de cette application (détecté automatiquement si non

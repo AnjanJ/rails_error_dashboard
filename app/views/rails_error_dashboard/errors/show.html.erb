@@ -98,6 +98,8 @@
     </div>
   </div>
 
+  <%= render "occurrence_banner", error: @error, occurrence_context: @occurrence_context %>
+
   <!-- Main content: tabs + sidebar -->
   <div class="red-detail-grid">
     <!-- Left: tabbed content -->
@@ -142,18 +144,19 @@
         <% end %>
 
         <%= render "error_info", error: @error %>
-        <%= render "local_variables", error: @error %>
-        <%= render "instance_variables", error: @error %>
+        <%= render "local_variables", error: @snapshot %>
+        <%= render "instance_variables", error: @snapshot %>
       </div>
 
       <!-- Tab: Context -->
       <div id="panel-context">
         <%= render "request_context", error: @error %>
-        <%= render "breadcrumbs_group", error: @error %>
+        <%= render "breadcrumbs_group", error: @snapshot %>
       </div>
 
       <!-- Tab: History -->
       <div id="panel-history">
+        <%= render "captured_occurrences", error: @error, occurrences: @captured_occurrences, current_id: @occurrence_context&.error_occurrence_id %>
         <%= render "timeline" %>
         <% unless RailsErrorDashboard.configuration.enable_issue_tracking %>
           <%= render "discussion", error: @error %>
@@ -175,7 +178,7 @@
 
     <!-- Right: sidebar -->
     <div class="error-sidebar" style="display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; overflow-wrap: break-word;">
-      <%= render "sidebar_metadata", error: @error, related_errors: @related_errors %>
+      <%= render "sidebar_metadata", error: @snapshot, related_errors: @related_errors %>
 
       <%= render "llm_summary", error: @error %>
 

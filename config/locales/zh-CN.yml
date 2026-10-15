@@ -233,6 +233,10 @@ zh-CN:
           inactive_body: 启用后可查看已执行的行
           enable: 启用
           disable: 停用
+        occurrence:
+          title: "发生 #%{id}"
+          body: "Breadcrumbs、系统状态和变量来自这次发生。其余内容显示最新一次捕获。"
+          show_latest: "查看最新"
         baselines:
           title: 基线统计
           anomaly_label: 异常：
@@ -453,6 +457,14 @@ zh-CN:
         more:
           other: 另有 %{count} 项
         view_errors: 查看错误
+      captured_occurrences:
+        title: "已捕获的发生记录"
+        hint: "仅为最近的发生保留 Breadcrumbs、系统状态和变量（occurrence_context_limit）。打开某一条即可查看。"
+        column_occurrence: "发生"
+        column_occurred_at: "发生时间"
+        column_version: "版本"
+        view: "查看"
+        viewing: "正在查看"
       co_occurring:
         title: 同时出现的错误
         badge: 时间规律
@@ -988,6 +1000,8 @@ zh-CN:
           other: "%{count} 秒"
         events:
           other: "%{count} 个事件"
+        occurrences:
+          other: "%{count} 次发生"
         queries:
           other: "%{count} 条查询"
         std_devs: "%{count}σ"
@@ -1027,6 +1041,7 @@ zh-CN:
         enable_middleware: 捕获未处理的异常
         enable_error_subscriber: 订阅 Rails 错误事件
         retention_days: "删除这么多天内未再出现的错误。由 RetentionCleanupJob 执行，gem 本身不会安排它运行"
+        occurrence_context_limit: "每个错误保留 Breadcrumbs、系统状态和变量的最近发生次数（0 = 关闭）"
         max_backtrace_lines: 堆栈跟踪深度上限
         sampling_rate: 错误捕获的采样比例
         application_name: 本应用的名称（未设置时自动检测）

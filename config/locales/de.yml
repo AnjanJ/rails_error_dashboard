@@ -244,6 +244,10 @@ de:
           inactive_body: aktivieren, um ausgeführte Zeilen zu sehen
           enable: Aktivieren
           disable: Deaktivieren
+        occurrence:
+          title: "Vorkommen #%{id}"
+          body: "Breadcrumbs, Systemzustand und Variablen stammen aus diesem Vorkommen. Alles andere zeigt die neueste Erfassung."
+          show_latest: "Neueste anzeigen"
         baselines:
           title: Referenzstatistiken
           anomaly_label: 'Anomalie:'
@@ -499,6 +503,14 @@ de:
           one: "+%{count} weiterer"
           other: "+%{count} weitere"
         view_errors: Fehler ansehen
+      captured_occurrences:
+        title: "Erfasste Vorkommen"
+        hint: "Breadcrumbs, Systemzustand und Variablen werden für die neuesten Vorkommen aufbewahrt (occurrence_context_limit). Öffnen Sie eines, um sie zu sehen."
+        column_occurrence: "Vorkommen"
+        column_occurred_at: "Aufgetreten"
+        column_version: "Version"
+        view: "Anzeigen"
+        viewing: "Angezeigt"
       co_occurring:
         title: Gemeinsam auftretende Fehler
         badge: Zeitliche Muster
@@ -1103,6 +1115,9 @@ de:
         events:
           one: "%{count} Ereignis"
           other: "%{count} Ereignisse"
+        occurrences:
+          one: "%{count} Vorkommen"
+          other: "%{count} Vorkommen"
         queries:
           one: "%{count} Abfrage"
           other: "%{count} Abfragen"
@@ -1147,6 +1162,7 @@ de:
         enable_middleware: Fängt unbehandelte Exceptions ab
         enable_error_subscriber: Abonniert Rails-Fehlerereignisse
         retention_days: "Fehler löschen, die so viele Tage nicht mehr aufgetreten sind. Durchgesetzt vom RetentionCleanupJob, den das Gem selbst nicht einplant"
+        occurrence_context_limit: "Für wie viele der neuesten Vorkommen je Fehler Breadcrumbs, Systemzustand und Variablen aufbewahrt werden (0 = aus)"
         max_backtrace_lines: Maximale Backtrace-Tiefe
         sampling_rate: Anteil der erfassten Fehler
         application_name: Name dieser Anwendung (wird automatisch erkannt, wenn nicht

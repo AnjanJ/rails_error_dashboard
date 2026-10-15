@@ -248,6 +248,10 @@ it:
           inactive_body: abilita per vedere le righe eseguite
           enable: Abilita
           disable: Disabilita
+        occurrence:
+          title: "Occorrenza #%{id}"
+          body: "Breadcrumbs, stato del sistema e variabili provengono da questa occorrenza. Tutto il resto mostra l'acquisizione più recente."
+          show_latest: "Mostra la più recente"
         baselines:
           title: Statistiche della baseline
           anomaly_label: 'Anomalia:'
@@ -515,6 +519,14 @@ it:
           other: "+%{count} altri"
           many: "+%{count} altri"
         view_errors: Vedi gli errori
+      captured_occurrences:
+        title: "Occorrenze acquisite"
+        hint: "Breadcrumbs, stato del sistema e variabili vengono conservati per le occorrenze più recenti (occurrence_context_limit). Aprine una per vederli."
+        column_occurrence: "Occorrenza"
+        column_occurred_at: "Avvenuta"
+        column_version: "Versione"
+        view: "Visualizza"
+        viewing: "In visualizzazione"
       co_occurring:
         title: Errori concomitanti
         badge: Schemi temporali
@@ -1131,6 +1143,10 @@ it:
           one: "%{count} evento"
           other: "%{count} eventi"
           many: "%{count} eventi"
+        occurrences:
+          one: "%{count} occorrenza"
+          other: "%{count} occorrenze"
+          many: "%{count} occorrenze"
         queries:
           one: "%{count} query"
           other: "%{count} query"
@@ -1180,6 +1196,7 @@ it:
         enable_middleware: Intercetta le eccezioni non gestite
         enable_error_subscriber: Si iscrive agli eventi di errore di Rails
         retention_days: "Elimina gli errori non visti da questo numero di giorni. Applicato da RetentionCleanupJob, che la gem non pianifica da sola"
+        occurrence_context_limit: "Quante occorrenze recenti per errore conservano breadcrumbs, stato del sistema e variabili (0 = disattivato)"
         max_backtrace_lines: Limite di profondità dello stack trace
         sampling_rate: Percentuale di errori acquisiti
         application_name: Nome di questa applicazione (rilevato automaticamente se

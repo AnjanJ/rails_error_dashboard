@@ -116,6 +116,14 @@ latest values while the cards show the chosen occurrence. The banner has to say 
 
 **Decision.** Option 1. A banner names the occurrence and its time, says the context cards show
 that occurrence, and links back to the latest.
+
+**Amended in T5.** Not a `SimpleDelegator`: a read-only copy of the error row
+(`ErrorLog.instantiate` with the four values replaced, `ValueObjects::OccurrenceSnapshot`). The
+Context above was wrong for one card. `_instance_variables` reads
+`error.read_attribute(:instance_variables)` and `error.class.column_names`, because
+`Object#instance_variables` shadows the attribute reader. A delegator reaches neither of those, so
+it would have shown the row's latest instance variables. Copy for LLM still uses the error row,
+like the rest of the page outside the four cards; the banner says so.
 **Falsifiability.** We would split it into its own route if more than the four context cards and
 the banner ever need per-occurrence values.
 **Fired-if.** manual

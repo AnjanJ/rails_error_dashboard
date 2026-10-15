@@ -44,6 +44,11 @@ module RailsErrorDashboard
     def self.delete_with_dependents(scope)
       ids = scope.select(:id)
 
+      # Each occurrence's stored context. Named here for the same reason as the
+      # event counts below: delete_all fires no :dependent callback.
+      if ErrorOccurrenceContext.table_exists?
+        ErrorOccurrenceContext.where(error_log_id: ids).in_batches(of: 1000).delete_all
+      end
       ErrorOccurrence.where(error_log_id: ids).in_batches(of: 1000).delete_all
       # Hour buckets for storm-shed events. Listed explicitly because delete_all
       # does not fire the has_many :dependent callback on ErrorLog -- without

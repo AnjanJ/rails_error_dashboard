@@ -1,0 +1,12 @@
+<% if occurrence_context %>
+  <%# Only the context cards follow ?occurrence=; the rest of the page is the error row's latest capture %>
+  <div class="alert alert-info mb-3" id="occurrence-banner" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4);">
+    <div style="font-size: 12px;">
+      <i class="bi bi-clock-history"></i>
+      <strong><%= red_t("red.errors.show.occurrence.title", id: occurrence_context.error_occurrence_id) %></strong>
+      &middot; <%= local_time(occurrence_context.error_occurrence&.occurred_at || occurrence_context.created_at) %>
+      <div><%= red_t("red.errors.show.occurrence.body") %></div>
+    </div>
+    <%= link_to red_t("red.errors.show.occurrence.show_latest"), error_path(error, **app_context), class: "btn btn-sm" %>
+  </div>
+<% end %>

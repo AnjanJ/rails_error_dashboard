@@ -36,6 +36,8 @@ module RailsErrorDashboard
 
     # Association for tracking individual error occurrences
     has_many :error_occurrences, class_name: "RailsErrorDashboard::ErrorOccurrence", dependent: :destroy
+    # Deleted before the occurrences, without loading their payloads
+    has_many :occurrence_contexts, class_name: "RailsErrorDashboard::ErrorOccurrenceContext", dependent: :delete_all
 
     # Hour buckets for storm-shed events. delete_all, not destroy: these rows
     # are pure counters with no callbacks, and a group can own one per hour.

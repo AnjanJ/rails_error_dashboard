@@ -249,6 +249,10 @@ pt-BR:
           inactive_body: ative para ver as linhas executadas
           enable: Ativar
           disable: Desativar
+        occurrence:
+          title: "Ocorrência #%{id}"
+          body: "Breadcrumbs, saúde do sistema e variáveis vêm desta ocorrência. Todo o resto mostra a captura mais recente."
+          show_latest: "Ver a mais recente"
         baselines:
           title: Estatísticas de referência
           anomaly_label: 'Anomalia:'
@@ -521,6 +525,14 @@ pt-BR:
           other: "+%{count} outros"
           many: "+%{count} outros"
         view_errors: Ver os erros
+      captured_occurrences:
+        title: "Ocorrências capturadas"
+        hint: "Breadcrumbs, saúde do sistema e variáveis são mantidos para as ocorrências mais recentes (occurrence_context_limit). Abra uma para vê-los."
+        column_occurrence: "Ocorrência"
+        column_occurred_at: "Ocorreu em"
+        column_version: "Versão"
+        view: "Ver"
+        viewing: "Em exibição"
       co_occurring:
         title: Erros concomitantes
         badge: Padrões temporais
@@ -1135,6 +1147,10 @@ pt-BR:
           one: "%{count} evento"
           other: "%{count} eventos"
           many: "%{count} eventos"
+        occurrences:
+          one: "%{count} ocorrência"
+          other: "%{count} ocorrências"
+          many: "%{count} ocorrências"
         queries:
           one: "%{count} consulta"
           other: "%{count} consultas"
@@ -1184,6 +1200,7 @@ pt-BR:
         enable_middleware: Captura exceções não tratadas
         enable_error_subscriber: Assina os eventos de erro do Rails
         retention_days: "Excluir erros não vistos há este número de dias. Aplicado pelo RetentionCleanupJob, que a gem não agenda por conta própria"
+        occurrence_context_limit: "Quantas ocorrências recentes por erro mantêm breadcrumbs, saúde do sistema e variáveis (0 = desativado)"
         max_backtrace_lines: Profundidade máxima do backtrace
         sampling_rate: Porcentagem de erros capturados
         application_name: Nome desta aplicação (detectado automaticamente se não for

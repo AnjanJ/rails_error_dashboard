@@ -1,0 +1,45 @@
+      <!-- Captured occurrences: the ones whose context is still stored -->
+      <% if occurrences.any? %>
+        <div class="card mb-4" id="section-captured-occurrences">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-camera"></i> <%= red_t("red.errors.captured_occurrences.title") %>
+            </h5>
+            <small class="text-muted"><%= red_t("red.errors.captured_occurrences.hint") %></small>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th><%= red_t("red.errors.captured_occurrences.column_occurrence") %></th>
+                    <th><%= red_t("red.errors.captured_occurrences.column_occurred_at") %></th>
+                    <th><%= red_t("red.errors.captured_occurrences.column_version") %></th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% occurrences.each do |occurrence| %>
+                    <tr>
+                      <td>
+                        <code>#<%= occurrence.id %></code>
+                        <% if occurrence.id == current_id %>
+                          <span class="badge bg-info text-dark ms-1"><%= red_t("red.errors.captured_occurrences.viewing") %></span>
+                        <% end %>
+                      </td>
+                      <td><%= local_time(occurrence.occurred_at) %></td>
+                      <td>
+                        <% version = occurrence.app_version.presence || occurrence.git_sha.to_s.first(7).presence %>
+                        <small class="text-muted"><%= version || red_t("red.common.not_available") %></small>
+                      </td>
+                      <td class="text-end">
+                        <%= link_to red_t("red.errors.captured_occurrences.view"), error_path(error, occurrence: occurrence.id, **app_context), class: "btn btn-sm btn-outline-primary" %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% end %>

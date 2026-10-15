@@ -381,6 +381,11 @@ en:
           enable: "Enable"
           disable: "Disable"
 
+        occurrence:
+          title: "Occurrence #%{id}"
+          body: "Breadcrumbs, system health and variables are from this occurrence. Everything else shows the latest capture."
+          show_latest: "Show latest"
+
         baselines:
           title: "Baseline Statistics"
           # %{sigma} is a standard-deviation count, %{level} an anomaly level.
@@ -703,6 +708,15 @@ en:
           one: "+%{count} more"
           other: "+%{count} more"
         view_errors: "View Errors"
+
+      captured_occurrences:
+        title: "Captured occurrences"
+        hint: "Breadcrumbs, system health and variables are kept for the most recent occurrences (occurrence_context_limit). Open one to see them."
+        column_occurrence: "Occurrence"
+        column_occurred_at: "Occurred"
+        column_version: "Version"
+        view: "View"
+        viewing: "Viewing"
 
       co_occurring:
         title: "Co-occurring Errors"
@@ -1534,6 +1548,9 @@ en:
         events:
           one: "%{count} event"
           other: "%{count} events"
+        occurrences:
+          one: "%{count} occurrence"
+          other: "%{count} occurrences"
         queries:
           one: "%{count} query"
           other: "%{count} queries"
@@ -1598,6 +1615,7 @@ en:
         enable_middleware: "Catches unhandled exceptions"
         enable_error_subscriber: "Subscribes to Rails error events"
         retention_days: "Delete errors not seen for this many days. Enforced by RetentionCleanupJob, which nothing in the gem schedules"
+        occurrence_context_limit: "How many recent occurrences per error keep their breadcrumbs, system health and variables (0 = off)"
         max_backtrace_lines: "Stack trace depth limit"
         sampling_rate: "Percentage of errors captured"
         application_name: "Name of this application (auto-detected if not set)"

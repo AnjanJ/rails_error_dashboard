@@ -250,6 +250,10 @@ uk:
           inactive_body: увімкніть, щоб бачити виконані рядки
           enable: Увімкнути
           disable: Вимкнути
+        occurrence:
+          title: "Подія #%{id}"
+          body: "Breadcrumbs, стан системи та змінні належать до цієї події. Усе інше показує останнє захоплення."
+          show_latest: "Показати останню"
         baselines:
           title: Статистика базового рівня
           anomaly_label: 'Аномалія:'
@@ -522,6 +526,14 @@ uk:
           few: "+%{count} ще"
           many: "+%{count} ще"
         view_errors: Переглянути помилки
+      captured_occurrences:
+        title: "Збережені події"
+        hint: "Breadcrumbs, стан системи та змінні зберігаються для останніх подій (occurrence_context_limit). Відкрийте подію, щоб їх побачити."
+        column_occurrence: "Подія"
+        column_occurred_at: "Час"
+        column_version: "Версія"
+        view: "Відкрити"
+        viewing: "Відкрито"
       co_occurring:
         title: Супутні помилки
         badge: Часові закономірності
@@ -1155,6 +1167,11 @@ uk:
           other: "%{count} події"
           few: "%{count} події"
           many: "%{count} подій"
+        occurrences:
+          one: "%{count} подія"
+          other: "%{count} події"
+          few: "%{count} події"
+          many: "%{count} подій"
         queries:
           one: "%{count} запит"
           other: "%{count} запита"
@@ -1209,6 +1226,7 @@ uk:
         enable_middleware: Перехоплює необроблені винятки
         enable_error_subscriber: Підписується на події помилок Rails
         retention_days: "Видаляти помилки, яких не було стільки днів. Виконує RetentionCleanupJob, який гем сам не планує"
+        occurrence_context_limit: "Скільки останніх подій кожної помилки зберігають breadcrumbs, стан системи та змінні (0 = вимкнено)"
         max_backtrace_lines: Обмеження глибини стеку викликів
         sampling_rate: Відсоток захоплених помилок
         application_name: Назва цього застосунку (визначається автоматично, якщо не

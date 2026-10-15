@@ -171,6 +171,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `enable_middleware` | Boolean | `true` | Enable error catching middleware |
 | `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
 | `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too. Deletes only when `RailsErrorDashboard::RetentionCleanupJob` runs, and nothing in the gem schedules it: see [Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs) |
+| `occurrence_context_limit` | Integer | `25` | How many of an error's newest occurrences keep their own breadcrumbs, system health and variables, which the error page's History tab lists. `0` stops storing them. Must be an Integer of 0 or more |
 
 ### Error Classification
 

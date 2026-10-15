@@ -1338,4 +1338,26 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       end
     end
   end
+
+  # occurrence-context-history/REQ-3, occurrence-context-history/REQ-4: how many occurrences' contexts each
+  # error keeps; 0 keeps none.
+  describe "occurrence_context_limit" do
+    it "defaults to 25" do
+      expect(config.occurrence_context_limit).to eq(25)
+    end
+
+    it "accepts 0, which turns the history off" do
+      config.occurrence_context_limit = 0
+      expect { config.validate! }.not_to raise_error
+    end
+
+    [ -1, 2.5, "25", nil ].each do |value|
+      it "rejects #{value.inspect}" do
+        config.occurrence_context_limit = value
+        expect { config.validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError, /occurrence_context_limit must be a whole number of 0 or more/
+        )
+      end
+    end
+  end
 end

@@ -655,7 +655,10 @@ module RailsErrorDashboard
             occurrence_attrs[:app_version] = attributes[:app_version] if occurrence_columns.include?("app_version")
             occurrence_attrs[:git_sha] = attributes[:git_sha] if occurrence_columns.include?("git_sha")
             occurrence_attrs = Services::EncodingSanitizer.scrub_deep(occurrence_attrs)
-            ErrorOccurrence.create(ErrorOccurrence.clamp_string_attributes(occurrence_attrs))
+            occurrence = ErrorOccurrence.create(ErrorOccurrence.clamp_string_attributes(occurrence_attrs))
+            # This occurrence's own copy of the context the row just got. Never
+            # raises, so a failure here is never logged as the occurrence's.
+            RecordOccurrenceContext.call(occurrence, attributes) if occurrence.persisted?
           rescue => e
             RailsErrorDashboard::Logger.error("Failed to create error occurrence: #{e.message}")
           end

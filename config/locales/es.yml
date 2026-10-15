@@ -249,6 +249,10 @@ es:
           inactive_body: actívela para ver las líneas ejecutadas
           enable: Activar
           disable: Desactivar
+        occurrence:
+          title: "Aparición #%{id}"
+          body: "Los breadcrumbs, el estado del sistema y las variables provienen de esta aparición. Todo lo demás muestra la captura más reciente."
+          show_latest: "Ver la más reciente"
         baselines:
           title: Estadísticas de referencia
           anomaly_label: 'Anomalía:'
@@ -521,6 +525,14 @@ es:
           other: "+%{count} más"
           many: "+%{count} más"
         view_errors: Ver los errores
+      captured_occurrences:
+        title: "Apariciones capturadas"
+        hint: "Los breadcrumbs, el estado del sistema y las variables se conservan para las apariciones más recientes (occurrence_context_limit). Abra una para verlos."
+        column_occurrence: "Aparición"
+        column_occurred_at: "Ocurrió"
+        column_version: "Versión"
+        view: "Ver"
+        viewing: "En pantalla"
       co_occurring:
         title: Errores concurrentes
         badge: Patrones temporales
@@ -1140,6 +1152,10 @@ es:
           one: "%{count} evento"
           other: "%{count} eventos"
           many: "%{count} eventos"
+        occurrences:
+          one: "%{count} aparición"
+          other: "%{count} apariciones"
+          many: "%{count} apariciones"
         queries:
           one: "%{count} consulta"
           other: "%{count} consultas"
@@ -1189,6 +1205,7 @@ es:
         enable_middleware: Captura las excepciones no gestionadas
         enable_error_subscriber: Se suscribe a los eventos de error de Rails
         retention_days: "Eliminar errores no vistos durante estos días. Lo aplica RetentionCleanupJob, que la gema no programa por sí misma"
+        occurrence_context_limit: "Cuántas apariciones recientes por error conservan sus breadcrumbs, estado del sistema y variables (0 = desactivado)"
         max_backtrace_lines: Profundidad máxima del backtrace
         sampling_rate: Porcentaje de errores capturados
         application_name: Nombre de esta aplicación (se detecta automáticamente si
