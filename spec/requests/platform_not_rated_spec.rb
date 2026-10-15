@@ -31,6 +31,10 @@ RSpec.describe "Platform health for a lone platform", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Not rated")
-    expect(response.body).not_to include("/100")
+    # The score's own markup, not the raw body: an error link such as
+    # /errors/1003 also contains "/100" once ids pass 100, which they do on
+    # PostgreSQL and MySQL, where sequences survive the per-example rollback
+    scores = Nokogiri::HTML(response.body).css("strong").map { |node| node.text.strip }
+    expect(scores.grep(%r{\A\d+(\.\d+)?/100\z})).to be_empty
   end
 end
