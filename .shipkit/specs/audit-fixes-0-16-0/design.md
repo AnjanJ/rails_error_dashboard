@@ -43,6 +43,7 @@ Insights (the newest 10,000), and recent co-occurrence is what users act on.
 **Case against 1.** Co-occurrences older than the newest 500 events drop out of the panel.
 
 **Decision.** Option 1, with the cap as a constant, not a new option.
+**Amended 2026-10-15 (implementation).** The planned cache is not built. With the query count fixed at four, it isn't needed, and it would make the panel stale. The window query is plain `BETWEEN` ranges, so it is the same on SQLite, PostgreSQL and MySQL.
 **Falsifiability.** We would make the cap configurable if a user reports the panel missing a
 co-occurrence they rely on that lies outside the newest 500 occurrences.
 **Fired-if.** manual
@@ -68,6 +69,7 @@ example has to be rewritten (REQ-16 covers that page).
 **Decision.** Option 1.
 **Falsifiability.** We would move to absolute rates if users report ratings that disagree with
 their per-platform error rates after the change.
+**Amended 2026-10-15 (implementation).** "Two platforms" means two with errors in the window. The platform list is every platform ever seen, so an old error on a second platform let a lone active platform be rated Critical.
 **Fired-if.** manual
 
 ## Decision: fix the similarity regex everywhere, including the stored signature   (→ REQ-7)
@@ -93,6 +95,7 @@ won't match new ones (with method names) until the old rows age out, so "similar
 finds fewer matches.
 
 **Decision.** Option 1, with a CHANGELOG note.
+**Amended 2026-10-15 (implementation).** The stored `backtrace_signature` keeps only each frame's file name, which the old fallback already produced on Ruby 3.4. So it does not change, the case against above does not occur, and no CHANGELOG note is needed. One `BacktraceProcessor.frame_key` replaces the three regexes. It also drops 3.4's class qualifier, so the same frame gives the same key on either Ruby.
 **Falsifiability.** We would add a backfill task if a user reports "similar errors" coming up
 empty after upgrading on Ruby 3.4.
 **Fired-if.** manual

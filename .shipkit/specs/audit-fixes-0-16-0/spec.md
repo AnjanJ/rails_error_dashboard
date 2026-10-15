@@ -53,6 +53,8 @@ read-only check against main on 2026-10-15 re-verified 13 of them and found 3 mo
 - **REQ-18.** `ManualErrorReporter.report`'s `@return` shall list every case that returns `nil`.
   [untested: prose]
 - **REQ-19.** When `bin/pre-release-test` finishes, no server it started shall still be listening.
+  [untested: tooling with no spec; verified by running `bin/pre-release-test full_http`, then
+  `lsof -ti :3098`, which printed a listener before the fix and nothing after]
 
 ## Out of scope
 - New features. This spec only fixes defects and the docs that describe them.

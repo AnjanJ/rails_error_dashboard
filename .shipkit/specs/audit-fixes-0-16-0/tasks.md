@@ -3,37 +3,37 @@
 Tests cite `audit-fixes-0-16-0/REQ-N`. Host-app safety first. T6 and capture-source T4 both
 change `markdown_error_formatter.rb`, so do T6 before or after that spec, never in parallel.
 
-- [ ] **T1** No subprocess for `:current_branch` → REQ-1
+- [x] **T1** No subprocess for `:current_branch` → REQ-1
   - Files: app/helpers/rails_error_dashboard/backtrace_helper.rb, spec/helpers/backtrace_helper_spec.rb
   - Test: spec/helpers/backtrace_helper_spec.rb (with `:current_branch` and `config.git_sha = "abc1234"`, the link uses `/blob/abc1234/` and the helper never calls a backtick)
   - After: none
   - Done when: `bundle exec rspec spec/helpers/backtrace_helper_spec.rb` → all pass
-- [ ] **T2** Validate `git_branch_strategy` → REQ-9
+- [x] **T2** Validate `git_branch_strategy` → REQ-9
   - Files: lib/rails_error_dashboard/configuration.rb, app/helpers/rails_error_dashboard/backtrace_helper.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb, spec/helpers/backtrace_helper_spec.rb
   - Test: spec/lib/rails_error_dashboard/configuration_validation_spec.rb (`:master` is rejected; the String `"commit_sha"` behaves like the Symbol)
   - After: T1
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/configuration_validation_spec.rb spec/helpers/backtrace_helper_spec.rb` → all pass
-- [ ] **T3** Bound co-occurring errors → REQ-2
+- [x] **T3** Bound co-occurring errors → REQ-2
   - Files: lib/rails_error_dashboard/queries/co_occurring_errors.rb, spec/queries/co_occurring_errors_spec.rb
   - Test: spec/queries/co_occurring_errors_spec.rb (the query count is the same for an error with 20 and with 600 occurrences; the newest-500 window still finds a recent co-occurrence)
   - After: none
   - Done when: `bundle exec rspec spec/queries/co_occurring_errors_spec.rb` → all pass
-- [ ] **T4** One repository URL normalizer → REQ-3
+- [x] **T4** One repository URL normalizer → REQ-3
   - Files: lib/rails_error_dashboard/services/repository_url.rb, lib/rails_error_dashboard/services/github_link_generator.rb, lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard.rb, spec/services/repository_url_spec.rb, spec/services/github_link_generator_spec.rb
   - Test: spec/services/repository_url_spec.rb (`.git`, `.git/`, `/` and `//` all give `https://github.com/u/r`; `effective_issue_tracker_repo` is `u/r` for each)
   - After: T2
   - Done when: `bundle exec rspec spec/services/repository_url_spec.rb spec/services/github_link_generator_spec.rb` → all pass
-- [ ] **T5** Platform rating by share, not rated below two platforms → REQ-4
-  - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, app/views/rails_error_dashboard/errors/platform_comparison.html.erb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/queries/platform_comparison_spec.rb
-  - Test: spec/queries/platform_comparison_spec.rb (a single platform is not rated Critical; two equal platforms get equal, non-zero scores)
+- [x] **T5** Platform rating by share, not rated below two platforms → REQ-4
+  - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, app/views/rails_error_dashboard/errors/platform_comparison.html.erb, app/views/rails_error_dashboard/errors/overview.html.erb, app/helpers/rails_error_dashboard/overview_helper.rb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb, spec/requests/platform_not_rated_spec.rb
+  - Test: spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb (the spec already lived there; the overview renders platform health too, so its view and helper changed) (a single platform is not rated Critical; two equal platforms get equal, non-zero scores)
   - After: none
-  - Done when: `bundle exec rspec spec/queries/platform_comparison_spec.rb` → all pass, and `bin/i18n-check` → no failures
-- [ ] **T6** Copy for LLM uses application frames → REQ-5
+  - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb spec/requests/platform_not_rated_spec.rb` → all pass, and `bin/i18n-check` → no failures
+- [x] **T6** Copy for LLM uses application frames → REQ-5
   - Files: lib/rails_error_dashboard/services/markdown_error_formatter.rb, spec/services/markdown_error_formatter_spec.rb
   - Test: spec/services/markdown_error_formatter_spec.rb (with a stored backtrace of three `gems/…` frames then `app/models/user.rb`, the Source Code section holds user.rb and the Backtrace section has no `gems/` line)
   - After: none
   - Done when: `bundle exec rspec spec/services/markdown_error_formatter_spec.rb` → all pass
-- [ ] **T7** One resolved application name → REQ-6
+- [x] **T7** One resolved application name → REQ-6
   - Files: lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, db/migrate/20260106094256_backfill_application_for_existing_errors.rb, lib/tasks/error_dashboard.rake, lib/rails_error_dashboard/commands/flush_rack_attack_events.rb, lib/rails_error_dashboard/commands/flush_missing_translations.rb, lib/rails_error_dashboard/commands/flush_swallowed_exceptions.rb, spec/lib/rails_error_dashboard/resolved_application_name_spec.rb
   - Test: spec/lib/rails_error_dashboard/resolved_application_name_spec.rb, covering:
     - with `config.application_name = "Shop"` and no ENV, the backfill and the three flushers
@@ -41,62 +41,62 @@ change `markdown_error_formatter.rb`, so do T6 before or after that spec, never 
     - with neither set, they fall back the same way capture does
   - After: T4
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/resolved_application_name_spec.rb` → all pass
-- [ ] **T8** Similarity frames from both backtrace styles → REQ-7
+- [x] **T8** Similarity frames from both backtrace styles → REQ-7
   - Files: lib/rails_error_dashboard/services/similarity_calculator.rb, app/models/rails_error_dashboard/error_log.rb, lib/rails_error_dashboard/services/backtrace_processor.rb, spec/services/similarity_calculator_spec.rb
   - Test: spec/services/similarity_calculator_spec.rb (``in `bar'`` and `in 'Foo#bar'` give the same `file.rb:…` frame)
   - After: none
   - Done when: `bundle exec rspec spec/services/similarity_calculator_spec.rb` → all pass
-- [ ] **T9** Settings group folds on the first click → REQ-8
+- [x] **T9** Settings group folds on the first click → REQ-8
   - Files: app/views/layouts/rails_error_dashboard.html.erb, spec/system/settings_fold_spec.rb
   - Test: spec/system/settings_fold_spec.rb (one click on a group header hides its body)
   - After: none
   - Done when: `bundle exec rspec spec/system/settings_fold_spec.rb` → all pass
-- [ ] **T10** Count only shown Settings options → REQ-13
+- [x] **T10** Count only shown Settings options → REQ-13
   - Files: app/views/rails_error_dashboard/errors/settings.html.erb, spec/requests/settings_option_count_spec.rb
   - Test: spec/requests/settings_option_count_spec.rb (with async logging off, the Performance group's count drops by one)
   - After: none
   - Done when: `bundle exec rspec spec/requests/settings_option_count_spec.rb` → all pass
-- [ ] **T11** 404 for an unknown webhook provider → REQ-10
+- [x] **T11** 404 for an unknown webhook provider → REQ-10
   - Files: app/controllers/rails_error_dashboard/webhooks_controller.rb, spec/controllers/webhooks_controller_spec.rb, docs/API_REFERENCE.md, _reference/api-reference.md
   - Test: spec/controllers/webhooks_controller_spec.rb (an unknown provider gets 404; a known provider with a bad signature still gets 401)
   - After: none
   - Done when: `bundle exec rspec spec/controllers/webhooks_controller_spec.rb` → all pass
-- [ ] **T12** Report batch failures → REQ-11
+- [x] **T12** Report batch failures → REQ-11
   - Files: lib/rails_error_dashboard/commands/batch_mute_errors.rb, lib/rails_error_dashboard/commands/batch_unmute_errors.rb, lib/rails_error_dashboard/commands/batch_resolve_errors.rb, app/controllers/rails_error_dashboard/errors_controller.rb, spec/commands/batch_failure_reporting_spec.rb
   - Test: spec/commands/batch_failure_reporting_spec.rb (with `update!` raising for one id, the result names that id and message, and `Rails.logger` receives it under `log_level :silent`)
   - After: none
   - Done when: `bundle exec rspec spec/commands/batch_failure_reporting_spec.rb` → all pass
-- [ ] **T13** Batch mute writes the reason comment → REQ-12
+- [x] **T13** Batch mute writes the reason comment → REQ-12
   - Files: lib/rails_error_dashboard/commands/batch_mute_errors.rb, spec/commands/batch_mute_errors_spec.rb
   - Test: spec/commands/batch_mute_errors_spec.rb (a reason adds one "Muted notifications: x" comment per error; a blank reason adds none)
   - After: T12
   - Done when: `bundle exec rspec spec/commands/batch_mute_errors_spec.rb` → all pass
-- [ ] **T14** Drop the analytics counts nothing renders → REQ-14
+- [x] **T14** Drop the analytics counts nothing renders → REQ-14
   - Files: app/controllers/rails_error_dashboard/errors_controller.rb, lib/rails_error_dashboard/queries/analytics_stats.rb, spec/queries/analytics_stats_spec.rb
   - Test: spec/queries/analytics_stats_spec.rb (the result has no `mobile_errors` or `api_errors` keys, and the query count drops by two)
   - After: T12
   - Done when: `bundle exec rspec spec/queries/analytics_stats_spec.rb` → all pass
-- [ ] **T15** Devise helpers in `authenticate_with` → REQ-15
+- [x] **T15** Devise helpers in `authenticate_with` → REQ-15
   - Files: docs/guides/CONFIGURATION.md, _guides/configuration.md, docs/guides/SETTINGS.md, _guides/settings.md, docs/QUICKSTART.md, _getting_started/quickstart.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
   - Test: none (REQ-15 is prose; checked in a real Devise app)
   - After: none
   - Done when: no page or the template says `current_user` is unavailable, and a Devise app's `authenticate_with = -> { current_user&.admin? }` works
-- [ ] **T16** The three unaudited pages match the code → REQ-16
+- [x] **T16** The three unaudited pages match the code → REQ-16
   - Files: docs/features/ADVANCED_ERROR_GROUPING.md, _features/advanced-error-grouping.md, docs/features/PLATFORM_COMPARISON.md, _features/platform-comparison.md, docs/features/OCCURRENCE_PATTERNS.md, _features/occurrence-patterns.md
   - Test: none (REQ-16 is prose, read against the code)
   - After: T5
   - Done when: every claim the 2026-10-15 check listed matches the code, including PLATFORM_COMPARISON's worked example under the new scoring
-- [ ] **T17** Every doc link and anchor resolves → REQ-17
+- [x] **T17** Every doc link and anchor resolves → REQ-17
   - Files: spec/docs/links_spec.rb, docs/FEATURES.md, _getting_started/features.md, docs/guides/ERROR_SAMPLING_AND_FILTERING.md, _guides/error-sampling-and-filtering.md, docs/guides/CONFIGURATION.md
   - Test: spec/docs/links_spec.rb (every relative link and `#anchor` in the doc trees resolves)
   - After: T15
   - Done when: `bundle exec rspec spec/docs/links_spec.rb` → all pass
-- [ ] **T18** `ManualErrorReporter` lists its nil returns → REQ-18
+- [x] **T18** `ManualErrorReporter` lists its nil returns → REQ-18
   - Files: lib/rails_error_dashboard/manual_error_reporter.rb
   - Test: none (REQ-18 is prose)
   - After: none
   - Done when: the `@return` tag names the async, storm, filtered and failure cases
-- [ ] **T19** No server left running after the chaos tests → REQ-19
+- [x] **T19** No server left running after the chaos tests → REQ-19
   - Files: bin/pre-release-test
   - Test: bin/pre-release-test full_http, then `lsof -ti :3098` (the port was still held before the fix)
   - After: none
