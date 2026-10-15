@@ -34,7 +34,8 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
       user_id: nil,
       platform: "Web",
       app_version: nil,
-      git_sha: nil
+      git_sha: nil,
+      client_backtrace?: false
     }
     double("ErrorLog", defaults.merge(attrs))
   end
@@ -122,6 +123,24 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
 
           expect(result).to include("class User")
           expect(result).not_to include("not-for-the-dashboard")
+        end
+      end
+
+      # capture-source/REQ-5: Copy for LLM and AI help both come from here
+      it "reads no source for a backtrace a client sent" do
+        Dir.mktmpdir do |root|
+          FileUtils.mkdir_p(File.join(root, "app/models"))
+          File.write(File.join(root, "app/models/user.rb"), "class User\nend\n")
+          allow(Rails).to receive(:root).and_return(Pathname.new(root))
+          allow(RailsErrorDashboard.configuration).to receive(:enable_source_code_integration).and_return(true)
+          allow(RailsErrorDashboard::Services::SourceCodeReader).to receive(:new).and_call_original
+
+          client = described_class.call(make_error(backtrace: "app/models/user.rb:1:in 'save'", client_backtrace?: true))
+          server = described_class.call(make_error(backtrace: "app/models/user.rb:1:in 'save'"))
+
+          expect(client).to include("app/models/user.rb:1")
+          expect(client).not_to include("## Source Code", "class User")
+          expect(server).to include("## Source Code", "class User")
         end
       end
 

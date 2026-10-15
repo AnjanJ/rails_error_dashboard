@@ -789,6 +789,7 @@ uk:
             many: "%{count} кадрів"
           click_to_expand: "(натисніть, щоб розгорнути)"
           view_source: Переглянути код
+          client_report_note: "Ці фрейми надійшли зі звіту клієнта (ManualErrorReporter). Вони описують код, що виконувався на клієнті, тому RED не відкриває для них вихідні файли, не показує фрагменти й не запускає git blame."
           none: Backtrace недоступний
       row:
         new_badge: НОВА

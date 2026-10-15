@@ -781,6 +781,7 @@ pt-BR:
             many: "%{count} frames"
           click_to_expand: "(clique para expandir)"
           view_source: Ver o código-fonte
+          client_report_note: "Estes frames vieram de um relatório do cliente (ManualErrorReporter). Eles descrevem código executado no cliente, por isso o RED não abre arquivos-fonte, não mostra trechos nem executa git blame para eles."
           none: Nenhum backtrace disponível
       row:
         new_badge: NOVO

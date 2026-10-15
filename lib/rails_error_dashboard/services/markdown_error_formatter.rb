@@ -83,6 +83,8 @@ module RailsErrorDashboard
           RailsErrorDashboard.configuration.enable_source_code_integration
 
         return nil if @error.backtrace.blank? || app_frames.empty?
+        # A client's frames describe code that ran on the client
+        return nil if @error.client_backtrace?
 
         snippets = []
         app_frames.first(3).each do |frame|

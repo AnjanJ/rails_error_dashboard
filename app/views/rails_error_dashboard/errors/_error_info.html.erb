@@ -3,7 +3,7 @@
           would be served to every other one. %>
       <%# Plus the source-integration configuration and a TTL, and not at all
           while coverage is live: see BacktraceHelper#source_view_cache_key. %>
-      <% cache_if source_view_cacheable?, [error, 'error_details_v3', red_locale, source_view_cache_key], **source_view_cache_options do %>
+      <% cache_if source_view_cacheable?, [error, 'error_details_v3', red_locale, source_view_cache_key, error.client_backtrace?], **source_view_cache_options do %>
       <div class="card mb-4" id="section-error-info">
         <div class="card-header bg-danger text-white">
           <div class="d-flex justify-content-between align-items-center">
@@ -108,6 +108,8 @@
           <% if error.backtrace.present? %>
             <% frames = parse_backtrace(error.backtrace) %>
             <% app_frames = filter_app_code(frames) %>
+            <%# A client's frames describe code that ran on the client: no file is read for them %>
+            <% source_viewable = RailsErrorDashboard.configuration.enable_source_code_integration && !error.client_backtrace? %>
             <% framework_frames = filter_framework_code(frames) %>
 
             <% if app_frames.any? %>
@@ -122,6 +124,11 @@
                   </div>
                 </div>
                 <div class="card-body p-0">
+                  <% if RailsErrorDashboard.configuration.enable_source_code_integration && error.client_backtrace? %>
+                    <div class="alert alert-info m-3 mb-0" id="client-backtrace-note" style="font-size: 12px;">
+                      <i class="bi bi-phone"></i> <%= red_t("red.errors.info.backtrace.client_report_note") %>
+                    </div>
+                  <% end %>
                   <div class="code-block p-3" style="max-height: none; overflow-y: visible; overflow-x: auto;">
                     <% app_frames.each_with_index do |frame, index| %>
                       <div class="backtrace-frame-wrapper mb-2">
@@ -133,7 +140,7 @@
                               <%= frame_icon(frame[:category]) %> <%= frame[:short_path] %>:<%= frame[:line_number] %>
                             </span> in <span class="backtrace-method-name">`<%= frame[:method_name] %>'</span>
                           </div>
-                          <% if RailsErrorDashboard.configuration.enable_source_code_integration && frame[:category] == :app %>
+                          <% if source_viewable && frame[:category] == :app %>
                             <button class="btn btn-sm btn-outline-secondary" type="button"
                                     data-bs-toggle="collapse"
                                     data-bs-target="#source-code-<%= index %>"
@@ -145,7 +152,7 @@
                         </div>
 
                         <!-- Collapsible source code (only for app frames) -->
-                        <% if RailsErrorDashboard.configuration.enable_source_code_integration && frame[:category] == :app %>
+                        <% if source_viewable && frame[:category] == :app %>
                           <div class="collapse" id="source-code-<%= index %>">
                             <%= render "source_code", frame: frame, error: error, index: index %>
                           </div>

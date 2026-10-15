@@ -755,6 +755,7 @@ de:
             other: "%{count} Frames"
           click_to_expand: "(zum Aufklappen klicken)"
           view_source: Quellcode ansehen
+          client_report_note: "Diese Frames stammen aus einem Client-Bericht (ManualErrorReporter). Sie beschreiben Code, der auf dem Client lief, daher öffnet RED für sie keine Quelldatei, zeigt keinen Ausschnitt und führt kein git blame aus."
           none: Kein Backtrace verfügbar
       row:
         new_badge: NEU

@@ -1073,6 +1073,7 @@ en:
             other: "%{count} frames"
           click_to_expand: "(click to expand)"
           view_source: "View Source"
+          client_report_note: "These frames came from a client report (ManualErrorReporter). They describe code that ran on the client, so RED opens no source file, shows no snippet and runs no git blame for them."
           none: "No backtrace available"
 
       row:

@@ -31,7 +31,7 @@ the new behaviour without exploit detail (the residual of GHSA-q7r3-w7p3-95h5).
       from (client for a ManualErrorReporter report), and an entry without one reads as server
   - After: T2
   - Done when: `bundle exec rspec spec/commands/find_or_increment_error_capture_source_spec.rb` → all pass
-- [ ] **T4** Gate View Source, blame and the Markdown formatter → REQ-4, REQ-5, REQ-6
+- [x] **T4** Gate View Source, blame and the Markdown formatter → REQ-4, REQ-5, REQ-6
   - Files: app/models/rails_error_dashboard/error_log.rb, app/views/rails_error_dashboard/errors/_error_info.html.erb, lib/rails_error_dashboard/services/markdown_error_formatter.rb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/requests/errors_show_client_backtrace_spec.rb, spec/services/markdown_error_formatter_spec.rb
   - Test: spec/requests/errors_show_client_backtrace_spec.rb, covering:
     - a client report's page has no View Source toggle, reads no file, runs no blame, and shows

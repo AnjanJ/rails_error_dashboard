@@ -788,6 +788,7 @@ pl:
             many: "%{count} ramek"
           click_to_expand: "(kliknij, aby rozwinąć)"
           view_source: Zobacz kod
+          client_report_note: "Te ramki pochodzą z raportu klienta (ManualErrorReporter). Opisują kod uruchomiony po stronie klienta, więc RED nie otwiera dla nich plików źródłowych, nie pokazuje fragmentów kodu ani nie uruchamia git blame."
           none: Backtrace niedostępny
       row:
         new_badge: NOWY
