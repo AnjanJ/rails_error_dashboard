@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.15.0...rails_error_dashboard/v0.16.0) (2026-10-15)
+
+
+### ✨ Features
+
+* occurrence context history (ROADMAP C3) ([#290](https://github.com/AnjanJ/rails_error_dashboard/issues/290)) ([aa1063d](https://github.com/AnjanJ/rails_error_dashboard/commit/aa1063d5cdfeff0336f9febd9be2a804357da9c8))
+* record capture source; no file reads for client-sent backtraces ([#293](https://github.com/AnjanJ/rails_error_dashboard/issues/293)) ([6677422](https://github.com/AnjanJ/rails_error_dashboard/commit/6677422aa6066bd7f4c3016fc0a8b9fc1071df8f))
+
+
+### 🐛 Bug Fixes
+
+* the 0.16.0 audit fixes (host-app safety, correctness, docs) ([#288](https://github.com/AnjanJ/rails_error_dashboard/issues/288)) ([e0a1742](https://github.com/AnjanJ/rails_error_dashboard/commit/e0a174235370c44bb668e67f6ffdc6b4c9a0d0ae))
+* the middleware reports exceptions on Rails 7.0 ([#294](https://github.com/AnjanJ/rails_error_dashboard/issues/294)) ([52a1774](https://github.com/AnjanJ/rails_error_dashboard/commit/52a1774f753b8d7188924f67dd1dfcf4090b649c))
+
 ## [0.15.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.4...rails_error_dashboard/v0.15.0) (2026-10-15)
 
 
