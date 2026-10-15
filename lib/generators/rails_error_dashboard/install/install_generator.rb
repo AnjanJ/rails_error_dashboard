@@ -12,6 +12,7 @@ module RailsErrorDashboard
       class_option :slack, type: :boolean, default: false, desc: "Enable Slack notifications"
       class_option :email, type: :boolean, default: false, desc: "Enable email notifications"
       class_option :discord, type: :boolean, default: false, desc: "Enable Discord notifications"
+      class_option :telegram, type: :boolean, default: false, desc: "Enable Telegram notifications"
       class_option :pagerduty, type: :boolean, default: false, desc: "Enable PagerDuty notifications"
       class_option :webhooks, type: :boolean, default: false, desc: "Enable webhook notifications"
       # Performance options
@@ -71,13 +72,13 @@ module RailsErrorDashboard
         @selected_features = {}
 
         # =====================================================================
-        # QUESTION 1: Notifications (gated — one y/N opens 5 sub-questions)
+        # QUESTION 1: Notifications (gated — one y/N opens 6 sub-questions)
         # =====================================================================
-        notification_keys = %i[slack email discord pagerduty webhooks]
+        notification_keys = %i[slack email discord telegram pagerduty webhooks]
         any_notification_cli_flag = notification_keys.any? { |k| options[k] }
 
         say "[1/3] Notifications [background/dashboard only — zero request overhead]", :cyan
-        say "    Alert your team via Slack, email, Discord, PagerDuty, or webhooks.", :white
+        say "    Alert your team via Slack, email, Discord, Telegram, PagerDuty, or webhooks.", :white
 
         if any_notification_cli_flag
           # Individual CLI flags passed — respect them, skip the gate prompt
@@ -90,6 +91,7 @@ module RailsErrorDashboard
               { key: :slack,      name: "Slack",     hint: "SLACK_WEBHOOK_URL" },
               { key: :email,      name: "Email",     hint: "ERROR_NOTIFICATION_EMAILS" },
               { key: :discord,    name: "Discord",   hint: "DISCORD_WEBHOOK_URL" },
+              { key: :telegram,   name: "Telegram",  hint: "TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID" },
               { key: :pagerduty,  name: "PagerDuty", hint: "PAGERDUTY_INTEGRATION_KEY" },
               { key: :webhooks,   name: "Webhooks",  hint: "WEBHOOK_URLS" }
             ]
@@ -294,6 +296,7 @@ module RailsErrorDashboard
         @enable_slack = @selected_features&.dig(:slack) || options[:slack]
         @enable_email = @selected_features&.dig(:email) || options[:email]
         @enable_discord = @selected_features&.dig(:discord) || options[:discord]
+        @enable_telegram = @selected_features&.dig(:telegram) || options[:telegram]
         @enable_pagerduty = @selected_features&.dig(:pagerduty) || options[:pagerduty]
         @enable_webhooks = @selected_features&.dig(:webhooks) || options[:webhooks]
 
@@ -417,6 +420,7 @@ module RailsErrorDashboard
         notification_features << "Slack" if @enable_slack
         notification_features << "Email" if @enable_email
         notification_features << "Discord" if @enable_discord
+        notification_features << "Telegram" if @enable_telegram
         notification_features << "PagerDuty" if @enable_pagerduty
         notification_features << "Webhooks" if @enable_webhooks
 
@@ -481,6 +485,7 @@ module RailsErrorDashboard
         say "  → Set SLACK_WEBHOOK_URL in .env", :yellow if @enable_slack
         say "  → Set ERROR_NOTIFICATION_EMAILS in .env", :yellow if @enable_email
         say "  → Set DISCORD_WEBHOOK_URL in .env", :yellow if @enable_discord
+        say "  → Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env", :yellow if @enable_telegram
         say "  → Set PAGERDUTY_INTEGRATION_KEY in .env", :yellow if @enable_pagerduty
         say "  → Set WEBHOOK_URLS in .env", :yellow if @enable_webhooks
         if @enable_async_logging
@@ -569,7 +574,7 @@ module RailsErrorDashboard
           system_health: true,     # ~1ms per error — GC, memory, threads at exact error moment
           error_sampling: true,    # 50% sampling on non-critical errors — halves storage, still shows patterns
           # OFF — require credentials, config, or niche use case
-          slack: false, email: false, discord: false, pagerduty: false, webhooks: false,
+          slack: false, email: false, discord: false, telegram: false, pagerduty: false, webhooks: false,
           source_code_integration: false,
           git_blame: false,
           swallowed_exceptions: false,

@@ -126,12 +126,12 @@ RSpec.describe "Error show translations", type: :request do
       # form: the serialized ErrorLog carries a user_agent that can contain
       # almost any text, so a substring match for "en" passes by accident.
       info_key = written_keys.find do |key|
-        Array(key).flatten.any? { |part| part == "error_details_v2" }
+        Array(key).flatten.any? { |part| part == "error_details_v3" }
       end
       expect(info_key).to be_present, "expected the error_info fragment to be cached"
 
       parts = Array(info_key).flatten
-      expect(parts.last).to eq("en")
+      expect(parts[parts.index("error_details_v3") + 1]).to eq("en")
     end
 
     it "serves the cached fragment on a second request" do

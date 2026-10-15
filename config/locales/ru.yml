@@ -60,6 +60,8 @@ ru:
       llm: LLM
       n_plus_one: N+1 запросы
       deprecations: Устаревшее
+      missing_translations: "Переводы"
+      boot_errors: "Ошибки запуска"
       swallowed: Подавленные
       diagnostic_dumps: Диагностика
       storms: Штормы
@@ -868,6 +870,53 @@ ru:
           error_log
         footer_tip: Подавленные исключения возбуждаются, а затем молча перехватываются.
           Они могут скрывать настоящие ошибки.
+      missing_translations_page:
+        title: "Отсутствующие переводы"
+        empty_title: "Отсутствующие переводы не зафиксированы"
+        empty_body: "За последние %{days} дн. отсутствующие ключи перевода не зафиксированы."
+        how_title: "Как отслеживаются отсутствующие переводы:"
+        how_enabled_html: "Отслеживание должно быть включено (%{option})"
+        how_hooked: "RED оборачивает I18n.exception_handler и передаёт вызов обработчику, который уже был в приложении; больше ничего в настройках I18n не меняется"
+        how_recorded: "Каждый запрос, дошедший до обработчика — как через I18n.t, так и через хелпер t() во view — считается по локали и ключу вместе с первым замеченным местом вызова"
+        how_not_seen: "Запрос с :default никогда не даёт промаха, а запрос с raise_on_missing_translations выбрасывает исключение до вызова любого обработчика, поэтому здесь не учитываются ни тот, ни другой"
+        how_buffered: "Промахи считаются в памяти и записываются в конце запроса или задания, так что они появятся с небольшой задержкой"
+        missing_keys: "Отсутствующие ключи"
+        total_misses: "Всего промахов"
+        locales_affected: "Затронутые локали"
+        all_title: "Отсутствующие ключи перевода"
+        column_key: "Ключ"
+        column_locale: "Локаль"
+        column_source: "Впервые замечен в"
+        column_misses: "Промахи"
+        column_first_seen: "Впервые замечен"
+        overflow_notice: "%{count} промахов не удалось отнести к ключу: буфер трекера (%{limit} ключей на поток) был заполнен."
+        footer_tip: "Добавьте ключ в файл локали или передайте :default. Ключи, на которые действительно наткнулись пользователи, идут первыми."
+        docs: "Руководство Rails по i18n"
+
+      boot_errors_page:
+        title: "Ошибки запуска"
+        empty_title: "Ошибки запуска не зафиксированы"
+        empty_body: "За последние %{days} дн. ни один процесс не упал при запуске."
+        how_title: "Как перехватываются ошибки запуска:"
+        how_enabled_html: "Перехват аварий должен быть включён (%{option})"
+        how_hooked: "RED регистрирует свой хук at_exit сразу после ваших инициализаторов и до eager loading в Rails, поэтому авария при запуске видна, даже если приложение так и не запустилось"
+        how_captured_html: "%{zeitwerk} из файла, определяющего не ту константу, %{syntax} в модели, инициализатор с исключением: всё, что убивает процесс до обработки первого запроса"
+        how_imported: "Авария записывается на диск, потому что базы данных ещё нет, и импортируется при следующем успешном запуске"
+        how_never: "Процесс, убитый SIGKILL или упавший с segfault, at_exit не увидит ни в одном инструменте"
+        unresolved: "Нерешённые"
+        boot_crashes: "Аварии при запуске"
+        failed_boots: "Неудачные запуски"
+        all_title: "Аварии при запуске по ошибке"
+        column_error: "Ошибка"
+        column_file: "Файл"
+        column_constant: "Константа"
+        column_boots: "Запуски"
+        column_first_seen: "Впервые замечена"
+        column_status: "Статус"
+        status_open: "Открыта"
+        status_resolved: "Решена"
+        footer_tip: "Авария при запуске означает, что процесс не обработал ни одного запроса. Исправьте её до следующего деплоя; строка закрывается как любая другая ошибка."
+
       rack_attack_page:
         title: События ограничения частоты
         missing_title: Rack Attack не установлен
@@ -1153,7 +1202,7 @@ ru:
         unable_to_detect: Не удалось определить
         no_user_model: Модель User не обнаружена
         unable_to_query_count: Не удалось получить количество
-        manual_cleanup_required: Требуется ручная очистка
+        retention_enforced_by_job: "Удаляются RetentionCleanupJob, когда его запускает ваш планировщик"
         keep_forever: Хранить всегда
         no_automatic_deletion: Автоматическое удаление отключено
         run_command: 'Выполните:'
@@ -1161,8 +1210,7 @@ ru:
       options:
         enable_middleware: Перехватывает необработанные исключения
         enable_error_subscriber: Подписывается на события ошибок Rails
-        retention_days: 'Только ручная очистка (выполните: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Удалять ошибки, не встречавшиеся столько дней. Выполняет RetentionCleanupJob, который гем сам не планирует"
         max_backtrace_lines: Ограничение глубины backtrace
         sampling_rate: Доля захватываемых ошибок
         application_name: Имя этого приложения (определяется автоматически, если не
@@ -1180,7 +1228,7 @@ ru:
           если не задано)
         async_logging: Обработка в фоновых задачах
         async_adapter: Адаптер очереди задач
-        enable_rate_limiting: Ограничивать частоту API-запросов
+        enable_rate_limiting: "Ограничивать запросы к панели по IP и пути"
         rate_limit_per_minute: Запросов в минуту на IP
         enable_slack_notifications: Уведомления в реальном времени
         slack_webhook_url: Адрес webhook Slack
@@ -1189,10 +1237,15 @@ ru:
         notification_email_from: Адрес отправителя
         enable_discord_notifications: Уведомления через webhook Discord
         discord_webhook_url: Адрес webhook Discord
+        enable_telegram_notifications: "Уведомления Telegram через Bot API"
+        telegram_bot_token: "Токен бота от @BotFather (задайте переменную окружения TELEGRAM_BOT_TOKEN)"
+        telegram_chat_id: "Чат, группа или канал, куда пишет бот"
+        telegram_api_base_url: "Сервер Bot API (менять только для прокси или собственного сервера)"
         enable_pagerduty_notifications: Эскалация критических ошибок
         pagerduty_integration_key: API-ключ PagerDuty
         enable_webhook_notifications: Произвольные webhook-адреса
         webhook_urls: Свои webhook-адреса
+        webhook_signing_secret: Подписывает исходящие webhook-запросы HMAC-SHA256 (задайте переменную окружения WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Ежедневные/еженедельные сводки. Планирование через
           SolidQueue, Sidekiq или cron
         digest_frequency: Как часто отправлять сводки
@@ -1211,7 +1264,7 @@ ru:
         source_code_context_lines: Строк до и после целевой строки
         enable_git_blame: Показывать сведения git blame
         source_code_cache_ttl: Время жизни кэша исходного кода
-        only_show_app_code_source: Скрывать gem-ы и stdlib в целях безопасности
+        only_show_app_code_source: "Скрывать код гемов и vendor в просмотрщике исходников"
         git_branch_strategy: Стратегия определения ветки
         enable_breadcrumbs: Записывать след активности запроса
         breadcrumb_buffer_size: Максимум breadcrumbs на запрос
@@ -1241,6 +1294,7 @@ ru:
         enable_crash_capture: Хук at_exit для необработанных аварийных завершений
         enable_coverage_tracking: Диагностический режим — включите в панели, чтобы
           видеть выполненные строки в исходном коде (Ruby 3.2+)
+        enable_missing_translation_tracking: "Считает промахи I18n приложения по локали и ключу (оборачивает I18n.exception_handler)"
         enable_rack_attack_tracking: Записывать события throttle/blocklist в отдельную
           таблицу
         enable_actioncable_tracking: Отслеживать события каналов WebSocket как breadcrumbs
@@ -1300,6 +1354,8 @@ ru:
         breadcrumbs: Breadcrumbs
         system_health: Состояние системы
         swallowed_exceptions: Обнаружение подавленных исключений (swallowed exception)
+        missing_translations: "Отслеживание отсутствующих переводов"
+        boot_errors: "Перехват ошибок запуска"
         rack_attack: Отслеживание Rack Attack
         actioncable: Отслеживание ActionCable
         activestorage: Отслеживание ActiveStorage
@@ -1713,6 +1769,13 @@ ru:
           guide_link: Руководство по ActionCable
       activestorage:
         title: Состояние ActiveStorage
+        probe:
+          title: "Доступность сервиса"
+          reachable: "Доступен"
+          unreachable: "Недоступен"
+          service: "Сервис: %{name}"
+          latency: "%{ms} мс туда и обратно"
+          how: "Одна проверка существования ключа, который никогда не сохраняется, при загрузке этой страницы. GET /health выполняет ту же проверку."
         empty:
           title: События ActiveStorage не найдены
           message: За последние %{days} дн. в breadcrumbs ошибок не обнаружено операций

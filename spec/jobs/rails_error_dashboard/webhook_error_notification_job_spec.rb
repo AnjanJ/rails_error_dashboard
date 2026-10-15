@@ -254,6 +254,48 @@ RSpec.describe RailsErrorDashboard::WebhookErrorNotificationJob, type: :job do
         )
       end
 
+      context "with webhook_signing_secret configured" do
+        let(:secret) { "0123456789abcdef0123456789abcdef" }
+
+        before { RailsErrorDashboard.configuration.webhook_signing_secret = secret }
+
+        it "adds a timestamp and an HMAC-SHA256 signature the receiver can verify" do
+          stub_request(:post, webhook_url).to_return(status: 200)
+
+          described_class.new.perform(error_log.id)
+
+          expect(WebMock).to have_requested(:post, webhook_url).with { |req|
+            expect(req.headers["X-Error-Dashboard-Signature-256"]).to start_with("sha256=")
+            RailsErrorDashboard::Services::WebhookSigner.valid?(
+              req.body,
+              timestamp: req.headers["X-Error-Dashboard-Timestamp"],
+              signature: req.headers["X-Error-Dashboard-Signature-256"],
+              secret: secret
+            )
+          }
+        end
+
+        it "still sends the event and id headers" do
+          stub_request(:post, webhook_url).to_return(status: 200)
+
+          described_class.new.perform(error_log.id)
+
+          expect(WebMock).to have_requested(:post, webhook_url).with(
+            headers: { "X-Error-Dashboard-Event" => "error.created", "X-Error-Dashboard-ID" => error_log.id.to_s }
+          )
+        end
+      end
+
+      it "sends no signature headers without a secret" do
+        stub_request(:post, webhook_url).to_return(status: 200)
+
+        described_class.new.perform(error_log.id)
+
+        expect(WebMock).to have_requested(:post, webhook_url).with { |req|
+          req.headers.keys.none? { |h| h.casecmp?("X-Error-Dashboard-Signature-256") }
+        }
+      end
+
       context "with invalid request params JSON" do
         it "returns empty hash for invalid JSON" do
           error_log.update(request_params: "invalid json {")

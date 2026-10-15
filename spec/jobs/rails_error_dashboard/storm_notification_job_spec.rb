@@ -81,6 +81,37 @@ RSpec.describe RailsErrorDashboard::StormNotificationJob do
       end
     end
 
+    context "with Telegram configured" do
+      let(:telegram_url) { "https://api.telegram.org/bot111:storm-token/sendMessage" }
+
+      before do
+        RailsErrorDashboard.configuration.enable_telegram_notifications = true
+        RailsErrorDashboard.configuration.telegram_bot_token = "111:storm-token"
+        RailsErrorDashboard.configuration.telegram_chat_id = "-100555"
+      end
+
+      it "sends the sentence as a plain sendMessage to the configured chat" do
+        stub_request(:post, telegram_url).to_return(status: 200, body: '{"ok":true}')
+
+        described_class.perform_now(started_at: started_at)
+
+        expect(WebMock).to have_requested(:post, telegram_url).with { |req|
+          body = JSON.parse(req.body)
+          body["chat_id"] == "-100555" && body["text"].include?("Error storm detected") && !body.key?("parse_mode")
+        }.once
+      end
+
+      it "logs a failed post with the token redacted and still finishes" do
+        stub_request(:post, telegram_url).to_raise(SocketError.new("down: #{telegram_url}"))
+        allow(Rails.logger).to receive(:error)
+
+        expect { described_class.perform_now(started_at: started_at) }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:error).with(/Telegram post failed: down: .*bot\[FILTERED\]/)
+        expect(Rails.logger).not_to have_received(:error).with(/storm-token/)
+      end
+    end
+
     context "with generic webhooks configured" do
       before do
         RailsErrorDashboard.configuration.enable_webhook_notifications = true
@@ -97,6 +128,47 @@ RSpec.describe RailsErrorDashboard::StormNotificationJob do
           expect(WebMock).to have_requested(:post, url).with { |req|
             JSON.parse(req.body)["event"] == "error_storm_detected"
           }.once
+        end
+      end
+
+      it "keeps posting to the next URL when one receiver is down" do
+        stub_request(:post, webhook_url_a).to_raise(Errno::ECONNREFUSED)
+        stub_request(:post, webhook_url_b).to_return(status: 200)
+
+        expect { described_class.perform_now(started_at: started_at) }.not_to raise_error
+
+        expect(WebMock).to have_requested(:post, webhook_url_b).once
+      end
+
+      context "with a signing secret" do
+        let(:secret) { "storm-signing-secret" }
+
+        before do
+          RailsErrorDashboard.configuration.webhook_signing_secret = secret
+          RailsErrorDashboard.configuration.enable_slack_notifications = true
+          RailsErrorDashboard.configuration.slack_webhook_url = slack_url
+        end
+
+        it "signs the custom webhooks but not the Slack post" do
+          stub_request(:post, webhook_url_a).to_return(status: 200)
+          stub_request(:post, webhook_url_b).to_return(status: 200)
+          stub_request(:post, slack_url).to_return(status: 200)
+
+          described_class.perform_now(started_at: started_at)
+
+          [ webhook_url_a, webhook_url_b ].each do |url|
+            expect(WebMock).to have_requested(:post, url).with { |req|
+              RailsErrorDashboard::Services::WebhookSigner.valid?(
+                req.body,
+                timestamp: req.headers["X-Error-Dashboard-Timestamp"],
+                signature: req.headers["X-Error-Dashboard-Signature-256"],
+                secret: secret
+              )
+            }
+          end
+          expect(WebMock).to have_requested(:post, slack_url).with { |req|
+            req.headers.keys.none? { |h| h.casecmp?("X-Error-Dashboard-Signature-256") }
+          }
         end
       end
     end

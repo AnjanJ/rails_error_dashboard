@@ -10,10 +10,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Jobs take 1-5 minutes. A hung service container once sat in "Initialize
+    # containers" for 16 minutes; without a limit GitHub waits 6 hours.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.2', '3.3', '3.4']
+        # Every Ruby the README and gemspec claim. Ruby 4.0 is exercised here
+        # rather than only on the maintainer's machine (roadmap 15a).
+        ruby: ['3.2', '3.3', '3.4', '4.0']
         rails: ['7.0', '7.1', '7.2', '8.0', '8.1']
 
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
@@ -65,6 +70,7 @@ jobs:
   # SQLite-shaped spec/dummy/db/schema.rb.
   adapter-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -134,6 +140,7 @@ jobs:
   # indexes) on the adapter the schema file is written for.
   schema-parity:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: Schema parity (schema.rb vs db/migrate)
 
     steps:
@@ -160,6 +167,7 @@ jobs:
 
   system-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: System Tests (Chrome)
 
     steps:

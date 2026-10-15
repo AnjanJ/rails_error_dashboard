@@ -119,7 +119,8 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
     end
 
     context "when file is binary" do
-      let(:binary_file) { File.join(Rails.root, "test_binary.bin") }
+      # A source extension, or the reader refuses the file before reading it
+      let(:binary_file) { File.join(Rails.root, "test_binary.rb") }
 
       before do
         # Create a binary file with null bytes
@@ -318,6 +319,74 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
       allow(reader).to receive(:resolve_absolute_path).and_raise(StandardError, "Unexpected error")
 
       expect(reader.file_exists?).to be false
+    end
+  end
+
+  # A frame's path is whatever the stored backtrace says, so the reader decides
+  # which files are source. Rails.root is a temporary directory here.
+  describe "which files it reads" do
+    around do |example|
+      Dir.mktmpdir do |dir|
+        @root = File.join(dir, "app")
+        example.run
+      end
+    end
+
+    before { allow(Rails).to receive(:root).and_return(Pathname.new(@root)) }
+
+    def read(path)
+      absolute = path.start_with?("/") ? path : File.join(@root, path)
+      FileUtils.mkdir_p(File.dirname(absolute))
+      File.write(absolute, "line one\nline two\n")
+
+      reader = described_class.new(path, 1)
+      [ reader.read_lines, reader.error ]
+    end
+
+    %w[
+      app/models/user.rb app/views/users/show.html.erb app/views/users/show.json.jbuilder
+      app/views/users/index.haml lib/tasks/import.rake config.ru config/initializers/cors.rb
+      app/components/card_component.html.erb components/admin/app/views/admin/show.html.erb
+    ].each do |path|
+      it "reads #{path}" do
+        lines, error = read(path)
+
+        expect(error).to be_nil
+        expect(lines.map { |l| l[:content] }).to include("line one")
+      end
+    end
+
+    %w[config/application.yml config/settings.json log/production.log .npmrc Gemfile].each do |path|
+      it "does not read #{path}" do
+        lines, error = read(path)
+
+        expect(lines).to be_nil
+        expect(error).to eq("Invalid or unsafe file path")
+      end
+    end
+
+    # Outside an app/ directory a template extension is configuration, not a view
+    %w[config/database.yml.erb config/settings.yml.erb config/secrets.json.erb lib/templates/form.html.erb].each do |path|
+      it "does not read the template #{path}, which is outside app/" do
+        lines, error = read(path)
+
+        expect(lines).to be_nil
+        expect(error).to eq("Invalid or unsafe file path")
+      end
+    end
+
+    it "does not read source under a dot directory" do
+      lines, error = read(".git/hooks/helper.rb")
+
+      expect(lines).to be_nil
+      expect(error).to eq("Invalid or unsafe file path")
+    end
+
+    it "does not read a directory beside Rails.root whose name starts the same way" do
+      lines, error = read("#{@root}-old/app/models/user.rb")
+
+      expect(lines).to be_nil
+      expect(error).to eq("Invalid or unsafe file path")
     end
   end
 

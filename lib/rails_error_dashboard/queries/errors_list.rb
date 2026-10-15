@@ -159,26 +159,18 @@ module RailsErrorDashboard
       def filter_by_severity(query)
         return query unless @filters[:severity].present?
 
-        # Map severity levels to error types
-        error_types = case @filters[:severity].to_sym
-        when :critical
-          Services::SeverityClassifier::CRITICAL_ERROR_TYPES
-        when :high
-          Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
-        when :medium
-          Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
+        # Severity is not a column: it is classified from error_type, built-in
+        # lists plus config.custom_severity_rules. The classifier owns both, so
+        # the filter agrees with the badges by construction.
+        case @filters[:severity].to_sym
+        when :critical, :high, :medium
+          query.where(error_type: Services::SeverityClassifier.error_types_for(@filters[:severity]))
         when :low
           # Low severity = everything NOT in the other categories
-          all_categorized = Services::SeverityClassifier::CRITICAL_ERROR_TYPES +
-                           Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES +
-                           Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
-          # Use NOT IN to filter out categorized errors
-          return query.where.not(error_type: all_categorized)
+          query.where.not(error_type: Services::SeverityClassifier.categorized_error_types)
         else
-          return query
+          query
         end
-
-        query.where(error_type: error_types)
       end
 
       # Phase 3: Workflow filter methods

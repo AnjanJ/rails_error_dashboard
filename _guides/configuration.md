@@ -93,6 +93,15 @@ recycled Puma thread would render in whatever language the host app last used.
 | `enable_discord_notifications` | Boolean | `false` | Enable Discord webhooks |
 | `discord_webhook_url` | String | `nil` | Discord webhook URL (ENV: `DISCORD_WEBHOOK_URL`) |
 
+### Notifications - Telegram
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_telegram_notifications` | Boolean | `false` | Enable Telegram Bot API notifications |
+| `telegram_bot_token` | String | `nil` | Bot token from @BotFather (ENV: `TELEGRAM_BOT_TOKEN`). Masked everywhere RED prints configuration |
+| `telegram_chat_id` | String | `nil` | Chat, group or channel id, or `@channelusername` (ENV: `TELEGRAM_CHAT_ID`) |
+| `telegram_api_base_url` | String | `"https://api.telegram.org"` | Bot API server, for a proxy or self-hosted server (ENV: `TELEGRAM_API_BASE_URL`) |
+
 ### Notifications - PagerDuty
 
 | Option | Type | Default | Description |
@@ -106,6 +115,7 @@ recycled Puma thread would render in whatever language the host app last used.
 |--------|------|---------|-------------|
 | `enable_webhook_notifications` | Boolean | `false` | Enable custom webhooks |
 | `webhook_urls` | Array | `[]` | Custom webhook URLs (ENV: `WEBHOOK_URLS`, comma-separated) |
+| `webhook_signing_secret` | String | `nil` | HMAC-SHA256 signing secret for outbound webhooks (ENV: `WEBHOOK_SIGNING_SECRET`). When set, every POST to `webhook_urls` carries `X-Error-Dashboard-Signature-256` and `X-Error-Dashboard-Timestamp` headers — see the [Notifications Guide](/rails_error_dashboard/docs/guides/notifications/#signing-hmac-sha256) |
 
 ### Notifications - Environment Filter (v0.11.0)
 
@@ -123,7 +133,7 @@ recycled Puma thread would render in whatever language the host app last used.
 | `notification_burst_limit` | Integer | `10` | Most notifications for **new** errors per window, **per process**. When it is exceeded, one summary message replaces the rest of the window. Every error is still recorded. `0` disables the cap |
 | `notification_burst_window_seconds` | Integer | `60` | Length of that window |
 
-The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
+The burst cap exists for the bad deploy that produces hundreds of *distinct* new errors: each is a first occurrence, so the per-error cooldown never applies to it. The cap is per process, so the worst case is `notification_burst_limit` × the number of processes per window. The summary goes to Slack, Discord, Telegram and custom webhooks (event `new_error_notifications_suppressed`). A deployment with only email or PagerDuty enabled has no channel for it: the cap still applies and the summary is written to the Rails log at `warn`. With no notification channel enabled at all, the cap does nothing.
 
 ### Notifications - Scheduled Digests
 
@@ -288,6 +298,12 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `rack_attack_max_cache_size` | Integer | `1000` | Max buffered event keys per thread before LRU eviction |
 | `rack_attack_flush_interval` | Integer | `5` | Maximum age of buffered events before they are written to the database |
 
+### Missing Translation Tracking
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_missing_translation_tracking` | Boolean | `false` | Count the app's I18n misses by locale and key in their own table (`rails rails_error_dashboard:install:migrations` adds it). Wraps `I18n.exception_handler`, delegating to the handler the app already had; does not require breadcrumbs |
+
 ### ActionCable Connection Monitoring (v0.5.0)
 
 | Option | Type | Default | Description |
@@ -299,6 +315,8 @@ On by default. See [Storm Protection](#storm-protection) below.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enable_activestorage_tracking` | Boolean | `false` | Track ActiveStorage service operations (uploads, downloads, deletes, existence checks) as breadcrumbs. Works with any backend (Disk, S3, GCS, Azure). Requires `enable_breadcrumbs = true` |
+
+Live reachability needs no option: when `config.active_storage.service` is set, the ActiveStorage Health page and `GET /health` run one existence check for a never-stored key against that service (see the [API reference](/rails_error_dashboard/docs/reference/api-reference/#health-check)).
 
 ### Issue Tracking — GitHub/GitLab/Codeberg (v0.5.8+)
 
@@ -326,7 +344,7 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook |
+| `enable_crash_capture` | Boolean | `false` | Capture unhandled exceptions that crash the Ruby process via at_exit hook, including crashes during boot (eager loading, initializers), which the Boot Errors page lists |
 | `crash_capture_path` | String | `nil` | Directory for crash files. If nil, uses `Dir.tmpdir`. Created if missing |
 
 ### Internal Logging & Debugging
@@ -370,8 +388,11 @@ ERROR_NOTIFICATION_EMAILS=team@example.com,ops@example.com
 ERROR_NOTIFICATION_FROM=errors@myapp.com
 DASHBOARD_BASE_URL=https://dashboard.example.com
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+TELEGRAM_BOT_TOKEN=123456789:AAF...
+TELEGRAM_CHAT_ID=-1001234567890
 PAGERDUTY_INTEGRATION_KEY=abc123...
 WEBHOOK_URLS=https://hook1.example.com,https://hook2.example.com
+WEBHOOK_SIGNING_SECRET=...     # Optional: HMAC-SHA256 signature headers on every custom webhook
 
 # Enhanced Metrics
 APP_VERSION=1.2.3
@@ -440,7 +461,7 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 - ✅ Analytics and trend charts
 
 **Optional Features (17 total):**
-- 📧 **5 Notification Channels** (Slack, Email, Discord, PagerDuty, Webhooks)
+- 📧 **6 Notification Channels** (Slack, Email, Discord, Telegram, PagerDuty, Webhooks)
 - ⚡ **3 Performance Features** (Async Logging, Error Sampling, Separate Database)
 - 📊 **7 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
 - 🔍 **2 Developer Tools** (Source Code Integration, Git Blame)
@@ -593,7 +614,7 @@ end
 
 ## Notification Features
 
-Rails Error Dashboard supports 5 notification channels, all disabled by default.
+Rails Error Dashboard supports 6 notification channels, all disabled by default.
 
 ### Slack Notifications
 
@@ -629,6 +650,18 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
+### Telegram Notifications
+
+Push errors to a Telegram chat, group or channel through the Bot API. Create the bot with @BotFather and find the chat id as described in the [Notifications guide](/rails_error_dashboard/docs/guides/notifications/#telegram-notifications).
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.enable_telegram_notifications = true
+  config.telegram_bot_token = ENV['TELEGRAM_BOT_TOKEN']
+  config.telegram_chat_id = ENV['TELEGRAM_CHAT_ID']
+end
+```
+
 ### PagerDuty Integration
 
 Escalate critical errors to PagerDuty for on-call teams. **Only triggers for critical errors** to avoid alert fatigue.
@@ -651,6 +684,9 @@ RailsErrorDashboard.configure do |config|
     'https://yourapp.com/hooks/errors',
     'https://zapier.com/hooks/catch/123456/abcdef'
   ]
+  # Optional: sign every POST (HMAC-SHA256 over timestamp + body) so the
+  # receiver can reject forged or replayed requests.
+  config.webhook_signing_secret = ENV['WEBHOOK_SIGNING_SECRET']
 end
 ```
 
@@ -775,6 +811,9 @@ RailsErrorDashboard.configure do |config|
   config.enable_error_cascades = true
 end
 ```
+
+Detection runs in `RailsErrorDashboard::CascadeDetectionJob`, which you schedule hourly with the
+other periodic jobs; with the flag on and no schedule, the Cascades card stays empty.
 
 See [Advanced Error Grouping Guide](/rails_error_dashboard/docs/features/advanced-error-grouping/) for details.
 
@@ -1753,6 +1792,11 @@ RailsErrorDashboard.configure do |config|
   config.discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
   config.enable_discord_notifications = config.discord_webhook_url.present?
 
+  # Telegram Notifications
+  config.telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+  config.telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+  config.enable_telegram_notifications = config.telegram_bot_token.present? && config.telegram_chat_id.present?
+
   # PagerDuty Integration (critical errors only)
   config.pagerduty_integration_key = ENV["PAGERDUTY_INTEGRATION_KEY"]
   config.enable_pagerduty_notifications = config.pagerduty_integration_key.present?
@@ -2050,7 +2094,7 @@ end
 
 ### Notifications Not Sending
 
-**Problem**: Slack/Discord notifications aren't working.
+**Problem**: Slack/Discord/Telegram notifications aren't working.
 
 **Solutions**:
 1. **Check notifications are enabled**

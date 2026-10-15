@@ -177,6 +177,7 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
         expect(initializer_content).to include("config.enable_slack_notifications = false")
         expect(initializer_content).to include("config.enable_email_notifications = false")
         expect(initializer_content).to include("config.enable_discord_notifications = false")
+        expect(initializer_content).to include("config.enable_telegram_notifications = false")
         expect(initializer_content).to include("config.enable_pagerduty_notifications = false")
         expect(initializer_content).to include("config.enable_webhook_notifications = false")
 
@@ -328,6 +329,7 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
           "--slack",
           "--email",
           "--discord",
+          "--telegram",
           "--pagerduty",
           "--webhooks",
           "--async_logging",
@@ -349,6 +351,9 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
         expect(initializer_content).to include("config.enable_slack_notifications = true")
         expect(initializer_content).to include("config.enable_email_notifications = true")
         expect(initializer_content).to include("config.enable_discord_notifications = true")
+        expect(initializer_content).to include("config.enable_telegram_notifications = true")
+        expect(initializer_content).to include('config.telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]')
+        expect(initializer_content).to include('config.telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]')
         expect(initializer_content).to include("config.enable_pagerduty_notifications = true")
         expect(initializer_content).to include("config.enable_webhook_notifications = true")
       end
@@ -623,6 +628,7 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       expect(initializer_content).to include("config.enable_slack_notifications = false")
       expect(initializer_content).to include("config.enable_email_notifications = false")
       expect(initializer_content).to include("config.enable_discord_notifications = false")
+      expect(initializer_content).to include("config.enable_telegram_notifications = false")
       expect(initializer_content).to include("config.enable_pagerduty_notifications = false")
       expect(initializer_content).to include("config.enable_webhook_notifications = false")
     end

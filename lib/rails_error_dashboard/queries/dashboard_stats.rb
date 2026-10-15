@@ -305,19 +305,11 @@ module RailsErrorDashboard
       # breakdown makes them agree by construction instead of by luck --
       # asserted by spec/queries/dashboard_breakdowns_event_volume_spec.rb.
       def errors_by_severity_7d
-        critical = Services::SeverityClassifier::CRITICAL_ERROR_TYPES
-        high     = Services::SeverityClassifier::HIGH_SEVERITY_ERROR_TYPES
-        medium   = Services::SeverityClassifier::MEDIUM_SEVERITY_ERROR_TYPES
-
         totals = { critical: 0, high: 0, medium: 0, low: 0 }
         weekly_volume.by_group_attribute(:error_type).each do |error_type, count|
-          bucket =
-            if critical.include?(error_type) then :critical
-            elsif high.include?(error_type)  then :high
-            elsif medium.include?(error_type) then :medium
-            else :low
-            end
-          totals[bucket] += count
+          # classify honours custom_severity_rules; the bare constants did not.
+          bucket = Services::SeverityClassifier.classify(error_type)
+          totals[totals.key?(bucket) ? bucket : :low] += count
         end
         totals
       end

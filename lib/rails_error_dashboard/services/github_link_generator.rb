@@ -135,18 +135,34 @@ module RailsErrorDashboard
       def normalize_file_path
         path = file_path.strip
 
-        # Remove leading slash
-        path = path.sub(%r{^/}, "")
+        # A frame under Rails.root is that path relative to the root, exactly.
+        root = rails_root_prefix
+        path = path.delete_prefix(root) if root && path.start_with?(root)
 
-        # Remove Rails.root or app root prefix if present
-        # Handles paths like "/Users/foo/myapp/app/models/user.rb" -> "app/models/user.rb"
-        # Match pattern: look for one of the standard Rails directories
-        match = path.match(%r{.*/?((?:app|lib|config|db|spec|test)/.*)$})
-        if match
-          path = match[1]
+        if path.start_with?("/")
+          # An absolute path under some other root: the best guess is the
+          # last standard Rails directory in it ("/Users/foo/myapp/app/..." ->
+          # "app/...").
+          path = path.sub(%r{^/}, "")
+          match = path.match(%r{.*/((?:app|lib|config|db|spec|test)/.*)\z})
+        else
+          # Already relative (BacktraceProcessor stores frames that way): the
+          # FIRST standard directory at a segment boundary. The greedy guess
+          # above, applied here, linked app/services/config/loader.rb to
+          # config/loader.rb and app/models/contest/x.rb to test/x.rb.
+          match = path.match(%r{(?:\A|/)((?:app|lib|config|db|spec|test)/.*)\z})
         end
+        path = match[1] if match
 
         path
+      end
+
+      def rails_root_prefix
+        return nil unless defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+
+        "#{Rails.root}/"
+      rescue StandardError
+        nil
       end
 
       # Generate GitHub link

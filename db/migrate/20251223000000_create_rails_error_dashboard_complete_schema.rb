@@ -26,7 +26,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
       t.string :error_type, null: false
       t.text :message, null: false
       t.text :backtrace
-      t.integer :user_id
+      t.column :user_id, user_id_type
       t.text :request_url
       t.text :request_params
       t.text :user_agent
@@ -157,7 +157,7 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
     create_table :rails_error_dashboard_error_occurrences do |t|
       t.bigint :error_log_id, null: false
       t.datetime :occurred_at, null: false
-      t.integer :user_id
+      t.column :user_id, user_id_type
       t.string :request_id
       t.string :session_id
       t.timestamps
@@ -274,5 +274,13 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
     drop_table :rails_error_dashboard_error_occurrences, if_exists: true
     drop_table :rails_error_dashboard_error_logs, if_exists: true
     drop_table :rails_error_dashboard_applications, if_exists: true
+  end
+
+  private
+
+  # Same type as the app's primary keys, as ActiveStorage does for record_id.
+  def user_id_type
+    config = Rails.configuration.generators
+    config.options[config.orm][:primary_key_type] || :integer
   end
 end

@@ -31,6 +31,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Database Health](FEATURES.md#database-health-page)** - PgHero-style live table and index stats (PostgreSQL-only) plus connection-pool state at error time
 - **[Cache Health](FEATURES.md#cache-health-analysis)** - Cache hit rates and miss patterns
 - **[Deprecation Tracking](FEATURES.md#deprecation-warnings)** - Track Rails deprecation warnings (the host's deprecation behaviour must include `:notify`)
+- **[Missing Translation Tracking](FEATURES.md#missing-translation-tracking)** - Every I18n key your app looked up and did not have, by locale, with the call site (opt-in; wraps `I18n.exception_handler`)
 
 ### Deep Debugging (v0.4)
 - **[Local Variable Capture](FEATURES.md#local-variable-capture-v040)** - Capture local variables at the point of exception via TracePoint

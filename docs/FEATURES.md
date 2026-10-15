@@ -22,8 +22,8 @@ Core features that are always enabled - no configuration needed:
 ### Optional Features (Opt-in)
 **More than 30 optional features** you can enable during installation or anytime in the initializer (plus separate database via the database mode selector):
 
-**📧 Notifications (5 features)**
-- Slack, Email, Discord, PagerDuty, Webhooks
+**📧 Notifications (6 features)**
+- Slack, Email, Discord, Telegram, PagerDuty, Webhooks
 
 **⚡ Performance (3 features)**
 - Async Logging, Error Sampling, Separate Database
@@ -181,6 +181,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 config.enable_slack_notifications = true
 config.enable_email_notifications = true
 config.enable_discord_notifications = true
+config.enable_telegram_notifications = true
 config.enable_pagerduty_notifications = true
 config.enable_webhook_notifications = true
 ```
@@ -208,6 +209,14 @@ config.enable_webhook_notifications = true
 - **Error metadata** in embed fields
 - **Backtrace snippets**
 - **Webhook-based** (no bot required)
+
+### Telegram Integration
+- **Bot API** (`sendMessage`), no gem dependency
+- **HTML-formatted messages** with every value escaped
+- **Error metadata** (application, environment, platform, occurrences, controller, action, first seen, location)
+- **Dashboard link** on every message
+- **Storm, burst-summary and baseline alerts** delivered too
+- **Token never logged**: redacted from every failure line
 
 ### PagerDuty Integration
 - **Critical errors only** (to avoid alert fatigue)
@@ -927,6 +936,42 @@ The page at `/errors/rack_attack_summary` shows event breakdown with time range 
 
 ---
 
+## Missing Translation Tracking
+
+**⚙️ Optional Feature** - Disabled by default. Enable it to see every I18n key your app looked up and did not have, by locale, with the call site that first hit it:
+
+```ruby
+config.enable_missing_translation_tracking = true
+```
+
+Then run the migration the feature ships with: `rails rails_error_dashboard:install:migrations && rails db:migrate` (adds `rails_error_dashboard_missing_translations`). Until the table exists the tracker counts and discards, and the page shows its empty state; nothing raises.
+
+### Why
+
+A missing translation is not an error. Rails renders `translation missing: en.users.show.greeting` (or the humanized key) and the request succeeds, so the miss never reaches `error_logs` and no error tracker sees it. With 11 locales in a typical app the misses pile up quietly: a key added in English and forgotten in `pt-BR`, a key renamed in a view and not in the locale file, a key built from user input that never resolves. This page is the list of what your users have actually seen untranslated, most-missed first.
+
+### How It Works
+
+RED wraps `I18n.exception_handler` with a transparent decorator and delegates to the handler your app already had; `I18n.t` calls that handler for every miss. The view helper `t()` is different: before Rails 8.1 it looks the key up with a sentinel default (so I18n never misses) and renders the "translation missing" span itself, and only Rails 8.1 added an exception-handler call there. Templates are where most misses live, so RED also prepends a small hook onto `ActionView::Helpers::TranslationHelper#missing_translation` that counts the miss on every Rails version, once (a thread flag stops 8.1 from counting it twice). There is no `ActiveSupport::Notifications` event for a miss, so subscribing, as the deprecation tracker does, is not an option.
+
+Each miss is counted in a thread-local buffer by (locale, key); the first time a key is seen on a thread its host call site is read from the stack (`app/views/users/show.html.erb:12` — compiled templates keep the template path and line). The buffer is written to the `rails_error_dashboard_missing_translations` table at the end of the request or job that filled it (`Rails.application.executor.to_complete`, after the response body is closed, interval-gated to one write per thread per 5 seconds). An `at_exit` hook drains threads that are still alive; Puma joins its workers before it runs, so at most the last 5 seconds of misses on a worker are lost at a restart. One row per (locale, key, application) carries the count, the first and last time it was seen, and the first source.
+
+**Not counted, by design:** a lookup given a `:default` never misses; and with `config.i18n.raise_on_missing_translations = true` (or `raise: true`) I18n raises before any handler runs, so that miss surfaces as an exception, which RED captures as an error anyway. RED's own dashboard strings never reach the handler either: `I18nStore` resolves them in a private backend.
+
+### Dashboard Page
+
+`/errors/missing_translations` lists keys most-missed first with locale, miss count, first call site, first and last seen, over 7, 30 or 90 days. Fixing a key is adding it to the locale file or passing a `:default`; the row ages out of the window once the key stops missing, and retention cleanup (`retention_days`) deletes it.
+
+### Safety
+
+- **Opt-in** — these are the only places RED touches global I18n and ActionView state. Off by default; the handler wrap is installed in `after_initialize` so the handler your initializers configured is the one wrapped, and it is delegated to unchanged (a Symbol handler is dispatched the way I18n itself would). `MissingTranslationHandler.uninstall!` puts the original back
+- **Transparent** — the wrapper changes no return value and swallows no exception the original would have raised; counting is rescued on its own, so a failure there still delegates
+- **Zero I/O in the request path** — a hash increment per miss, one `caller_locations` scan per new key per thread, and no database access until the request has been answered
+- **Bounded memory** — 500 distinct keys per thread; further new keys are counted in an overflow bucket the page reports, so the total is never silently understated
+- **Degrades cleanly** — without the migration, or if the error database is unreachable, the flush logs at debug and drops the batch; the host's lookup result is never affected
+
+---
+
 ## ActionCable Connection Monitoring (v0.5.0)
 
 **⚙️ Optional Feature** - ActionCable tracking is disabled by default. **Requires breadcrumbs to be enabled.** Enable it to monitor WebSocket channel health:
@@ -981,7 +1026,13 @@ config.enable_crash_capture = true
 
 Registers an `at_exit` hook that fires when the Ruby process exits. If the exit is caused by an unhandled exception (`$!` is set), the crash data is written to a JSON file on disk — because the database may be unavailable during process shutdown.
 
-On the next boot, the gem automatically imports any crash files and creates error log records with `platform: "crash_capture"` and `severity: "fatal"`.
+On the next boot, the gem imports any crash files through the same find-or-increment path as every other capture, so a crash that repeats on every restart is one row with a count. Runtime crashes get `platform: "crash_capture"`; boot crashes get `platform: "boot_crash"`. Severity follows the error class like any other row (`Zeitwerk::NameError` is critical).
+
+### Boot Errors
+
+The hook is registered from an engine initializer that runs right after your `config/initializers` and before Rails' `eager_load!` finisher. That ordering is what makes boot crashes visible: a `Zeitwerk::NameError` from a file that defines the wrong constant, a `SyntaxError` in a model, an initializer that raised — all of them kill the process before `config.after_initialize` runs, so a hook registered there (as this one was until 0.15) never saw exactly the crashes a boot check exists for. "Works in development, crashes in production" is this class of failure: autoloading is lazy in development and eager in production.
+
+A crash captured while `Rails.application.initialized?` is still false is marked `phase: "boot"`, with the file and the constant for a `Zeitwerk::NameError` (parsed from its message and made relative to `Rails.root`) or the first application frame for anything else. The **Boot Errors** page under Diagnostics (`/errors/boot_errors`) lists them with file, constant, how many boots failed and first/last seen, each linking to the full error. A process killed by `SIGKILL` or a segfault is never seen by `at_exit`, in any tool.
 
 ### What Gets Captured
 
@@ -1183,7 +1234,7 @@ config.enable_git_blame = true               # Git blame integration (NEW!)
 - **Detect when one error is followed by another** — temporal association, not proven causation
 - **Average delay calculation** between related errors
 - **Cascade probability scoring**
-- **Background analysis job** (runs hourly)
+- **Background analysis job** — `RailsErrorDashboard::CascadeDetectionJob`, scheduled by you like the other periodic jobs (hourly, with a one-hour lookback)
 
 ### Baseline Monitoring & Anomaly Detection
 - **Statistical baseline calculation** (hourly, daily, weekly)
@@ -1427,6 +1478,7 @@ rails generate rails_error_dashboard:install \
 - `--slack` - Enable Slack notifications
 - `--email` - Enable email notifications
 - `--discord` - Enable Discord notifications
+- `--telegram` - Enable Telegram notifications
 - `--pagerduty` - Enable PagerDuty notifications
 - `--webhooks` - Enable webhook notifications
 - `--async_logging` - Enable async error logging

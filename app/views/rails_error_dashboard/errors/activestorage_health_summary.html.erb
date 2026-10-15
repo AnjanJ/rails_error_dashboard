@@ -20,6 +20,34 @@
     </div>
   </div>
 
+  <% probe = @storage_probe || {} %>
+  <% if probe[:status] && probe[:status] != "skipped" %>
+    <% reachable = probe[:status] == "ok" %>
+    <div class="card mb-4 border-<%= reachable ? "success" : "danger" %>">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h6 class="mb-1">
+            <i class="bi <%= reachable ? "bi-check-circle-fill text-success" : "bi-x-circle-fill text-danger" %> me-1"></i>
+            <%= red_t("red.health.activestorage.probe.title") %>
+            <span class="badge <%= reachable ? "bg-success" : "bg-danger" %> ms-1">
+              <%= reachable ? red_t("red.health.activestorage.probe.reachable") : red_t("red.health.activestorage.probe.unreachable") %>
+            </span>
+          </h6>
+          <small class="text-muted">
+            <%# The service name comes from config/storage.yml and the error is an exception class: machine values, shown as-is. %>
+            <%= red_t("red.health.activestorage.probe.service", name: probe[:service].presence || "?") %>
+            <% if reachable %>
+              &middot; <%= red_t("red.health.activestorage.probe.latency", ms: probe[:latency_ms]) %>
+            <% else %>
+              &middot; <code><%= probe[:error] %></code>
+            <% end %>
+          </small>
+        </div>
+        <small class="text-muted"><%= red_t("red.health.activestorage.probe.how") %></small>
+      </div>
+    </div>
+  <% end %>
+
   <% if @unique_services == 0 %>
     <div class="red-empty-state">
       <i class="bi bi-cloud-arrow-up display-1 text-success mb-3"></i>

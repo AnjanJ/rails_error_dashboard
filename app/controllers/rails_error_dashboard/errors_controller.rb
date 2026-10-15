@@ -583,6 +583,52 @@ module RailsErrorDashboard
       @pagy, @events = pagy(:offset, all_events, limit: per_page_param)
     end
 
+    def missing_translations
+      unless RailsErrorDashboard.configuration.enable_missing_translation_tracking
+        flash[:alert] = feature_disabled_message("missing_translations", options: "enable_missing_translation_tracking = true", set: true)
+        redirect_to errors_path(**app_context_params)
+        return
+      end
+
+      days = days_param(default: 30)
+      @days = days
+      result = Queries::MissingTranslationSummary.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination). The list is one row per
+      # (locale, key), so the badge and pagination count rows; the tile
+      # counts distinct keys, which is what "how many keys are missing" means.
+      @entry_count = all_entries.size
+      @unique_keys = all_entries.map { |e| e[:key] }.uniq.size
+      @total_misses = all_entries.sum { |e| e[:count] }
+      @locale_count = result[:locales].size
+      # Misses the tracker's bounded buffer dropped; shown so the total above
+      # is never silently understated.
+      @overflow_count = result[:overflow_count].to_i
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
+    end
+
+    def boot_errors
+      unless RailsErrorDashboard.configuration.enable_crash_capture
+        flash[:alert] = feature_disabled_message("boot_errors", options: "enable_crash_capture = true", set: true)
+        redirect_to errors_path(**app_context_params)
+        return
+      end
+
+      days = days_param(default: 30)
+      @days = days
+      result = Queries::BootErrors.call(days, application_id: @current_application_id)
+      all_entries = result[:entries]
+
+      # Summary stats (computed before pagination)
+      @entry_count = all_entries.size
+      @unresolved_count = result[:unresolved_count]
+      @total_occurrences = all_entries.sum { |e| e[:count] }
+
+      @pagy, @entries = pagy(:offset, all_entries, limit: per_page_param)
+    end
+
     def actioncable_health_summary
       unless RailsErrorDashboard.configuration.enable_actioncable_tracking &&
              RailsErrorDashboard.configuration.enable_breadcrumbs
@@ -634,6 +680,9 @@ module RailsErrorDashboard
 
       days = days_param(default: 30)
       @days = days
+      # Live reachability of the configured service, shown above the
+      # historical breadcrumb stats. One existence check per page load.
+      @storage_probe = Services::ActiveStorageProbe.call
       result = Queries::ActiveStorageSummary.call(days, application_id: @current_application_id)
       all_services = result[:services]
 
@@ -719,7 +768,17 @@ module RailsErrorDashboard
       )
       exception.set_backtrace(caller)
 
-      Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
+      started_at = Time.current
+      error_log = Commands::LogError.call(exception, { request: request, source: "dashboard.test_error" })
+
+      # The capture path notifies on a first occurrence and then on the
+      # 10th, 50th... A second click within 24 hours is occurrence two of the
+      # same row, so it used to notify nobody, which reads as "notifications
+      # are broken". This button exists to prove delivery: if the capture
+      # path did not claim a notification in this request, send one now.
+      if error_log && !notified_since?(error_log, started_at)
+        Services::ErrorNotificationDispatcher.call(error_log)
+      end
 
       flash[:notice] = red_t("red.flash.test_error.logged")
       redirect_to errors_path(**app_context_params)
@@ -785,7 +844,14 @@ module RailsErrorDashboard
     end
 
     def filter_params
-      params.permit(*FILTERABLE_PARAMS).to_h.symbolize_keys
+      scalar_params(FILTERABLE_PARAMS)
+    end
+
+    # True when NotificationThrottler claimed a notification for this error
+    # at or after +since+. The claim is an update_all, so the row is re-read.
+    def notified_since?(error_log, since)
+      stamp = error_log.class.where(id: error_log.id).pick(:last_notified_at)
+      stamp.present? && stamp >= since
     end
 
     # Coerce params[:days] into a sane integer in [1, 365]. Without clamping,

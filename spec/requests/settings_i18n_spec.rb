@@ -106,7 +106,7 @@ RSpec.describe "Settings translations", type: :request do
       text = response.body
       expect(text).to include("TracePoint(:raise)")
       expect(text).to include("at_exit")
-      expect(text).to include("rails error_dashboard:cleanup_resolved")
+      expect(text).to include("RailsErrorDashboard::RetentionCleanupJob")
     end
   end
 
@@ -172,13 +172,14 @@ RSpec.describe "Settings translations", type: :request do
       end
     end
 
-    it "renders the retention badge with its rake command untranslated" do
+    it "renders the retention badge naming the job that enforces it" do
       around_config(:retention_days, 90) do
         get "/error_dashboard/settings"
 
         expect(response.body).to include("90 days")
-        expect(response.body).to include("Manual cleanup required")
-        expect(response.body).to include("rails error_dashboard:cleanup_resolved DAYS=90")
+        expect(response.body).to include("RetentionCleanupJob")
+        expect(response.body).not_to include("Manual cleanup")
+        expect(response.body).not_to include("cleanup_resolved")
       end
     end
 

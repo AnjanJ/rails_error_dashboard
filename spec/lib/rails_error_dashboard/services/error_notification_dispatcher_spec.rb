@@ -63,6 +63,30 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
       }.to have_enqueued_job(RailsErrorDashboard::DiscordErrorNotificationJob).with(error_log.id, "en")
     end
 
+    it "enqueues Telegram notification when enabled with a token and chat id" do
+      RailsErrorDashboard.configure do |c|
+        c.enable_telegram_notifications = true
+        c.telegram_bot_token = "123:abc"
+        c.telegram_chat_id = "-100123"
+      end
+
+      expect {
+        described_class.call(error_log)
+      }.to have_enqueued_job(RailsErrorDashboard::TelegramErrorNotificationJob).with(error_log.id, "en")
+    end
+
+    it "does not enqueue Telegram notification without a chat id" do
+      RailsErrorDashboard.configure do |c|
+        c.enable_telegram_notifications = true
+        c.telegram_bot_token = "123:abc"
+        c.telegram_chat_id = nil
+      end
+
+      expect {
+        described_class.call(error_log)
+      }.not_to have_enqueued_job(RailsErrorDashboard::TelegramErrorNotificationJob)
+    end
+
     it "enqueues PagerDuty notification when enabled" do
       RailsErrorDashboard.configure do |c|
         c.enable_pagerduty_notifications = true
@@ -91,6 +115,21 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
       expect {
         described_class.call(error_log)
       }.not_to have_enqueued_job
+    end
+  end
+
+  describe ".any_channel?" do
+    it "counts a configured Telegram channel" do
+      RailsErrorDashboard.reset_configuration!
+      expect(described_class.any_channel?).to be(false)
+
+      RailsErrorDashboard.configure do |c|
+        c.enable_telegram_notifications = true
+        c.telegram_bot_token = "123:abc"
+        c.telegram_chat_id = "-100123"
+      end
+
+      expect(described_class.any_channel?).to be(true)
     end
   end
 end

@@ -227,15 +227,39 @@ module RailsErrorDashboard
     end
 
     # Page size for every paginated action. Only the upper bound is enforced
-    # here: a value that is not a positive integer is passed through unchanged
-    # so that Pagy rejects it and the rescue above redirects, as it always has.
+    # here: a value Pagy would reject (0, a negative number, a Hash) is passed
+    # on so that it does and the rescue above redirects, as it always has.
+    #
+    # Strings are read the way Pagy reads them, with to_i, so the cap sees the
+    # same number Pagy would use: Integer() refused "150.5" and "0999" and the
+    # raw string went through, where Pagy's to_i made them 150 and 999.
     def per_page_param
       raw = params[:per_page]
       return DEFAULT_PER_PAGE if raw.blank?
 
-      number = Integer(raw, exception: false) if raw.is_a?(String)
-      number && number > MAX_PER_PAGE ? MAX_PER_PAGE : raw
+      value = raw.is_a?(String) ? raw.to_i : raw
+      value.is_a?(Integer) && value > MAX_PER_PAGE ? MAX_PER_PAGE : value
     end
+
+    # The named query-string keys as a symbol-keyed Hash of their String values.
+    #
+    # Not params.permit: permit judges every key in the request, so a stray
+    # utm_source, or the `page` and `locale` the dashboard itself appends, was
+    # an "unpermitted parameter" on every index request. Under the default
+    # that is a log line; in a host with action_on_unpermitted_parameters =
+    # :raise it was a 500 on the errors page. Picking the keys we want and
+    # keeping only scalar values does what permit was meant to do here without
+    # passing judgement on the rest of the request.
+    #
+    # @param keys [Array<Symbol>]
+    # @return [Hash{Symbol => String}]
+    def scalar_params(keys)
+      keys.each_with_object({}) do |key, hash|
+        value = params[key]
+        hash[key] = value if value.is_a?(String)
+      end
+    end
+    helper_method :scalar_params
 
     def render_dashboard_error(icon:, title:, message:, detail: nil, icon_style: nil, status: :internal_server_error)
       # The styled page runs queries and names the host app's applications. A

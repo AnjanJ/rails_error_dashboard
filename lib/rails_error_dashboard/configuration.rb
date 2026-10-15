@@ -13,7 +13,8 @@ module RailsErrorDashboard
     # #inspect) or pasting it into an issue doesn't leak them.
     SECRET_ATTRIBUTES = %i[
       dashboard_password slack_webhook_url discord_webhook_url pagerduty_integration_key
-      webhook_urls issue_tracker_token issue_webhook_secret llm_api_key
+      webhook_urls webhook_signing_secret issue_tracker_token issue_webhook_secret llm_api_key
+      telegram_bot_token
     ].freeze
 
     # Dashboard authentication (always required)
@@ -46,6 +47,14 @@ module RailsErrorDashboard
     attr_accessor :discord_webhook_url
     attr_accessor :enable_discord_notifications
 
+    # Telegram (Bot API: a bot token from @BotFather and the chat, group or
+    # channel the bot posts to). telegram_api_base_url exists for a local Bot
+    # API server or a proxy; nearly every install leaves it alone.
+    attr_accessor :enable_telegram_notifications
+    attr_accessor :telegram_bot_token
+    attr_accessor :telegram_chat_id
+    attr_accessor :telegram_api_base_url
+
     # PagerDuty notifications (critical errors only)
     attr_accessor :pagerduty_integration_key
     attr_accessor :enable_pagerduty_notifications
@@ -53,6 +62,9 @@ module RailsErrorDashboard
     # Generic webhook notifications
     attr_accessor :webhook_urls
     attr_accessor :enable_webhook_notifications
+    # When set, every POST to webhook_urls carries an HMAC-SHA256 signature
+    # (X-Error-Dashboard-Signature-256) and a timestamp the receiver can verify.
+    attr_accessor :webhook_signing_secret
 
     # Scheduled digests (daily/weekly summary emails)
     attr_accessor :enable_scheduled_digests         # Master switch (default: false)
@@ -231,6 +243,12 @@ module RailsErrorDashboard
     attr_accessor :rack_attack_max_cache_size           # Max buffered keys per thread (default: 1000)
     attr_accessor :rack_attack_flush_interval           # Seconds between DB flushes (default: 5)
 
+    # Missing-translation tracking — counts the HOST app's I18n misses by
+    # locale and key in their own table. Wraps I18n.exception_handler
+    # (delegating to the handler the app already had); the one place RED
+    # touches global I18n state, so it is opt-in.
+    attr_accessor :enable_missing_translation_tracking  # Master switch (default: false)
+
     # ActionCable event tracking (requires enable_breadcrumbs = true)
     attr_accessor :enable_actioncable_tracking          # Master switch (default: false)
     # ActiveStorage event tracking (requires enable_breadcrumbs = true)
@@ -309,6 +327,12 @@ module RailsErrorDashboard
       @discord_webhook_url = ENV["DISCORD_WEBHOOK_URL"]
       @enable_discord_notifications = false
 
+      # Telegram notification settings
+      @enable_telegram_notifications = false
+      @telegram_bot_token = ENV["TELEGRAM_BOT_TOKEN"]
+      @telegram_chat_id = ENV["TELEGRAM_CHAT_ID"]
+      @telegram_api_base_url = ENV.fetch("TELEGRAM_API_BASE_URL", "https://api.telegram.org")
+
       # PagerDuty notification settings (critical errors only)
       @pagerduty_integration_key = ENV["PAGERDUTY_INTEGRATION_KEY"]
       @enable_pagerduty_notifications = false
@@ -316,6 +340,10 @@ module RailsErrorDashboard
       # Generic webhook settings (array of URLs)
       @webhook_urls = ENV.fetch("WEBHOOK_URLS", "").split(",").map(&:strip).reject(&:empty?)
       @enable_webhook_notifications = false
+      # nil leaves outbound webhooks unsigned, as before. Secret-only (no
+      # separate "enable" flag): a secret with nothing to apply it to is the
+      # one combination that has no sensible meaning.
+      @webhook_signing_secret = ENV["WEBHOOK_SIGNING_SECRET"].presence
 
       # Scheduled digest defaults - OFF by default (opt-in)
       @enable_scheduled_digests = false
@@ -482,6 +510,10 @@ module RailsErrorDashboard
       # Limits page can be, not a per-request cost. A flood still collapses to
       # roughly one write per thread per interval.
       @rack_attack_flush_interval = 5    # Seconds between DB flushes
+
+      # Missing-translation tracking - OFF by default (opt-in). Persists to its
+      # own table; does NOT require breadcrumbs.
+      @enable_missing_translation_tracking = false
 
       # ActionCable event tracking defaults - OFF by default (opt-in, requires breadcrumbs)
       @enable_actioncable_tracking = false
@@ -808,6 +840,15 @@ module RailsErrorDashboard
 
         if enable_discord_notifications && (discord_webhook_url.nil? || discord_webhook_url.strip.empty?)
           errors << "discord_webhook_url is required when enable_discord_notifications is true"
+        end
+
+        if enable_telegram_notifications
+          if telegram_bot_token.to_s.strip.empty?
+            errors << "telegram_bot_token is required when enable_telegram_notifications is true"
+          end
+          if telegram_chat_id.to_s.strip.empty?
+            errors << "telegram_chat_id is required when enable_telegram_notifications is true"
+          end
         end
 
         if enable_pagerduty_notifications && (pagerduty_integration_key.nil? || pagerduty_integration_key.strip.empty?)

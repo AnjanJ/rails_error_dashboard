@@ -32,7 +32,7 @@ module RailsErrorDashboard
       http.open_timeout = 5  # 5 seconds to establish connection
       http.read_timeout = 10  # 10 seconds to read response
 
-      request = Net::HTTP::Post.new(uri.path, { "Content-Type" => "application/json" })
+      request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" })
       request.body = Services::SlackPayloadBuilder.call(error_log, locale: locale).to_json
 
       response = http.request(request)

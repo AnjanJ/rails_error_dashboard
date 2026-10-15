@@ -187,8 +187,10 @@
                         </small>
                       <% end %>
                     </div>
+                    <%# data-red-action, not data-turbo-confirm: the layout runs with
+                        Turbo off and loads no UJS, so nothing read the old attribute. %>
                     <%= button_to unassign_error_path(error), method: :post, class: "btn btn-sm btn-outline-secondary",
-                        data: { turbo_confirm: red_t("red.errors.sidebar.remove_assignment") } do %>
+                        form: { data: { red_action: "confirm-submit", red_confirm_message: red_t("red.errors.sidebar.remove_assignment") } } do %>
                       <i class="bi bi-x"></i>
                     <% end %>
                   </div>

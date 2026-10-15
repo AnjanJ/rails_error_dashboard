@@ -5,6 +5,107 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.4...rails_error_dashboard/v0.15.0) (2026-10-15)
+
+
+### ✨ Features
+
+* boot-crash capture, ActiveStorage reachability probe, Ruby 4.0 in CI, lazy call-site walk ([#275](https://github.com/AnjanJ/rails_error_dashboard/issues/275)) ([aa28cd5](https://github.com/AnjanJ/rails_error_dashboard/commit/aa28cd5d6785ab06967f3457100047b10dba57a2))
+* health check endpoint, signed outbound webhooks, missing-translation tracking ([#273](https://github.com/AnjanJ/rails_error_dashboard/issues/273)) ([e0943a3](https://github.com/AnjanJ/rails_error_dashboard/commit/e0943a3cc6793cf87c2dcde8d4fa5db860b68ba1))
+* support UUID user IDs ([#279](https://github.com/AnjanJ/rails_error_dashboard/issues/279)) ([1157321](https://github.com/AnjanJ/rails_error_dashboard/commit/1157321c83fa61f6dc51f378082aa09d2fd088cb)), closes [#278](https://github.com/AnjanJ/rails_error_dashboard/issues/278)
+* Telegram notifications, and credentials masked on the Settings page ([#276](https://github.com/AnjanJ/rails_error_dashboard/issues/276)) ([83c4eb7](https://github.com/AnjanJ/rails_error_dashboard/commit/83c4eb76cdcff027c90caad7e4e42a9dfb8e6f0d))
+
+
+### 🐛 Bug Fixes
+
+* read view templates only under an app/ directory ([#283](https://github.com/AnjanJ/rails_error_dashboard/issues/283)) ([53fba53](https://github.com/AnjanJ/rails_error_dashboard/commit/53fba531f75cca163696eb45994ee4693d1241c6))
+* show source only for source files inside Rails.root ([#282](https://github.com/AnjanJ/rails_error_dashboard/issues/282)) ([b80dea3](https://github.com/AnjanJ/rails_error_dashboard/commit/b80dea3600656450bea56b65b0d172b15d10c2fb))
+* the nine 0.14.5 findings from the docs audit ([#277](https://github.com/AnjanJ/rails_error_dashboard/issues/277)) ([d1ac5a4](https://github.com/AnjanJ/rails_error_dashboard/commit/d1ac5a4884f76f00273722540d6e380da58278be))
+
+### Upgrade instructions
+
+This release has one new migration, which creates the table for missing-translation tracking. Run the
+installer to copy it, then migrate:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails generate rails_error_dashboard:install --no-interactive
+bin/rails db:migrate
+bin/rails error_dashboard:verify
+```
+
+Commit the new migration file with `Gemfile.lock`. With a separate error database it goes to
+`db/error_dashboard_migrate/`. Until it has run, missing-translation tracking counts and discards,
+and nothing else is affected.
+
+### Security
+
+- **Source code integration shows only source files.** With `enable_source_code_integration` on
+  (it is off by default), View Source, Copy for LLM and AI help read the files a stored backtrace
+  names. They now read only Ruby files (`.rb`, `.rake`, `.ru`) inside `Rails.root` and view
+  templates (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`) under an `app/` directory, and
+  nothing under a dot directory. Before, any other file in `Rails.root` that missed a short list
+  of sensitive names could be shown, including ERB-templated config such as
+  `config/database.yml.erb`, and so could a file in a directory beside `Rails.root` whose name
+  began the same way.
+  Backtraces reported through `ManualErrorReporter` come from your clients, so if you forward
+  frontend or mobile errors and have source code integration on, upgrade. Frames in `Gemfile`, a
+  YAML file or a template outside `app/` no longer get View Source.
+- **The Settings page masks credentials.** It showed the Slack and Discord webhook URLs and the
+  PagerDuty integration key in full to every dashboard user. Every secret setting now shows as
+  set or not set.
+
+### Behaviour changes worth checking
+
+- **Send Test Error reaches every channel on every click, PagerDuty included.** Test errors are
+  now critical, so warn whoever PagerDuty pages before you click it.
+- Batch resolve and the status dropdown now run your `error_resolved` callbacks and the
+  `error_resolved.rails_error_dashboard` event, as a single resolve always did. **Linked issues
+  close** when their errors are resolved in bulk.
+- Assigning a resolved error reopens it as in progress. Won't fix keeps its status.
+- `custom_severity_rules` now apply to the severity filter, the Overview's 7-day breakdown and the
+  digest.
+- `ScheduledDigestJob` defaults to your `digest_frequency`.
+- Batch Delete, and Unassign in the error sidebar, ask for confirmation. Before, they acted on the
+  first click.
+- The rate limiter throttles only RED's own paths. Mounted at `/red`, it no longer counts the
+  host's `/redirect`.
+- `per_page` is capped at 100 however it is written (`150.5`, `0999` and `150abc` slipped past
+  before).
+- Error cascades need a scheduled job. With `enable_error_cascades` on, schedule
+  `RailsErrorDashboard::CascadeDetectionJob`. Nothing ran the detector before. See
+  [Production](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/PRODUCTION.md).
+- A plugin whose `name` or `on_register` raises is logged and left unregistered, instead of
+  breaking every later registry call.
+
+### New
+
+All of these are off by default, or answer only to an authenticated dashboard user.
+
+- **Health check:** `GET /red/health` (under wherever RED is mounted) returns JSON for an uptime
+  monitor. It answers 503 when the
+  error database is down, and 200 with `degraded` during an error storm, for a queue
+  misconfiguration or when ActiveStorage is unreachable.
+- **Signed webhooks:** set `webhook_signing_secret` (or `WEBHOOK_SIGNING_SECRET`), and every
+  webhook POST carries `X-Error-Dashboard-Timestamp` and `X-Error-Dashboard-Signature-256`.
+- **Missing-translation tracking:** `enable_missing_translation_tracking = true` counts the I18n
+  keys your app looked up and didn't have, on a Diagnostics page.
+- **Boot crashes:** with `enable_crash_capture` on, a crash during boot, such as a
+  `Zeitwerk::NameError` from eager loading, is recorded and shown on a Boot Errors page after the
+  next successful boot.
+- **Telegram notifications:** `enable_telegram_notifications`, with `TELEGRAM_BOT_TOKEN` and
+  `TELEGRAM_CHAT_ID`.
+- **UUID user IDs:** in an app whose generators use `primary_key_type: :uuid`, a new install creates
+  `user_id` columns of that type. Existing installs keep an integer column, and a user ID it can't
+  hold is now stored as `nil` instead of a wrong number. See
+  [User IDs that are not integers](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/CONFIGURATION.md#user-ids-that-are-not-integers).
+- Ruby 4.0 is in the CI matrix.
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: pin `gem "json", "< 3"` until you upgrade Rails. See
+[Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
 ## [0.14.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.3...rails_error_dashboard/v0.14.4) (2026-10-02)
 
 

@@ -1,0 +1,130 @@
+<% content_for :page_title, red_t("red.errors.boot_errors_page.title") %>
+
+<div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size: 20px; font-weight: 700; margin: 0;">
+      <i class="bi bi-power me-2"></i>
+      <%= red_t("red.errors.boot_errors_page.title") %>
+    </h1>
+
+    <div class="btn-group" role="group">
+      <%= link_to boot_errors_errors_path(days: 7), class: "btn btn-sm #{@days == 7 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.7") %>
+      <% end %>
+      <%= link_to boot_errors_errors_path(days: 30), class: "btn btn-sm #{@days == 30 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.30") %>
+      <% end %>
+      <%= link_to boot_errors_errors_path(days: 90), class: "btn btn-sm #{@days == 90 ? 'btn-primary' : 'btn-outline-primary'}" do %>
+        <%= red_t("red.common.days_filter.90") %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @entry_count == 0 %>
+    <div class="red-empty-state">
+      <i class="bi bi-power display-1 text-success mb-3"></i>
+      <div class="red-empty-state-title"><%= red_t("red.errors.boot_errors_page.empty_title") %></div>
+      <p class="text-muted">
+        <%= red_t("red.errors.boot_errors_page.empty_body", days: @days) %>
+      </p>
+      <div class="card mx-auto" style="max-width: 560px;">
+        <div class="card-body text-start">
+          <h6><%= red_t("red.errors.boot_errors_page.how_title") %></h6>
+          <ul class="mb-0">
+            <li><%= red_t("red.errors.boot_errors_page.how_enabled_html", option: content_tag(:code, "enable_crash_capture = true")) %></li>
+            <li><%= red_t("red.errors.boot_errors_page.how_hooked") %></li>
+            <li><%= red_t("red.errors.boot_errors_page.how_captured_html", zeitwerk: content_tag(:code, "Zeitwerk::NameError"), syntax: content_tag(:code, "SyntaxError")) %></li>
+            <li><%= red_t("red.errors.boot_errors_page.how_imported") %></li>
+            <li><%= red_t("red.errors.boot_errors_page.how_never") %></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-danger"><%= @unresolved_count %></div>
+            <small class="text-muted"><%= red_t("red.errors.boot_errors_page.unresolved") %></small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-warning"><%= @entry_count %></div>
+            <small class="text-muted"><%= red_t("red.errors.boot_errors_page.boot_crashes") %></small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <div class="display-6 text-info"><%= @total_occurrences %></div>
+            <small class="text-muted"><%= red_t("red.errors.boot_errors_page.failed_boots") %></small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-power text-danger me-2"></i>
+          <%= red_t("red.errors.boot_errors_page.all_title") %>
+          <span class="badge bg-danger"><%= @entry_count %></span>
+        </h5>
+        <small class="text-muted"><%== @pagy.info_tag %></small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th><%= red_t("red.errors.boot_errors_page.column_error") %></th>
+                <th><%= red_t("red.errors.boot_errors_page.column_file") %></th>
+                <th width="140"><%= red_t("red.errors.boot_errors_page.column_constant") %></th>
+                <th width="90"><%= red_t("red.errors.boot_errors_page.column_boots") %></th>
+                <th width="140"><%= red_t("red.errors.boot_errors_page.column_first_seen") %></th>
+                <th width="140"><%= red_t("red.errors.pages.column_last_seen") %></th>
+                <th width="100"><%= red_t("red.errors.boot_errors_page.column_status") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @entries.each do |entry| %>
+                <tr>
+                  <td>
+                    <%# Exception class and message are machine values from the crash file, shown as-is. %>
+                    <%= link_to entry[:error_type], error_path(entry[:id]), class: "fw-semibold text-decoration-none" %>
+                    <div class="text-muted small text-truncate" style="max-width: 420px;" title="<%= entry[:message] %>"><%= entry[:message] %></div>
+                  </td>
+                  <td><% if entry[:file].present? %><code><%= entry[:file] %></code><% else %><span class="text-muted">&mdash;</span><% end %></td>
+                  <td><% if entry[:constant].present? %><code><%= entry[:constant] %></code><% else %><span class="text-muted">&mdash;</span><% end %></td>
+                  <td><strong><%= entry[:count] %></strong></td>
+                  <td><%= local_time_ago(entry[:first_seen]) %></td>
+                  <td><%= local_time_ago(entry[:last_seen]) %></td>
+                  <td>
+                    <% if entry[:resolved] %>
+                      <span class="badge bg-success"><%= red_t("red.errors.boot_errors_page.status_resolved") %></span>
+                    <% else %>
+                      <span class="badge bg-danger"><%= red_t("red.errors.boot_errors_page.status_open") %></span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer border-top d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="bi bi-lightbulb text-warning"></i> <%= red_t("red.errors.boot_errors_page.footer_tip") %>
+        </small>
+        <div>
+          <%== @pagy.series_nav(:bootstrap) if @pagy.pages > 1 %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

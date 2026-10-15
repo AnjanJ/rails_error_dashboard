@@ -24,7 +24,15 @@ RSpec.describe "analytics page counting units" do
   after { Rails.cache.clear }
 
   # One group, five events -- the shape that made the two pages disagree.
-  def recurring_group(count:, occurred_at: 2.hours.ago, **attrs)
+  #
+  # "Recently" must still be today: the Overview's total_today starts at
+  # midnight, so a fixed "2 hours ago" fell into yesterday for any run between
+  # 00:00 and 02:00 UTC and this file failed on its own clock.
+  def recently
+    [ 2.hours.ago, Time.current.beginning_of_day + 1.minute ].max
+  end
+
+  def recurring_group(count:, occurred_at: recently, **attrs)
     create(:error_log, application: application, occurrence_count: count, occurred_at: occurred_at, **attrs)
   end
 

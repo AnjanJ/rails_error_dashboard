@@ -163,8 +163,8 @@ module RailsErrorDashboard
     # @return [Hash] Whitelisted params for building URLs
     def permitted_filter_params(extra_keys: [])
       base_keys = RailsErrorDashboard::ErrorsController::FILTERABLE_PARAMS + %i[page per_page days]
-      allowed_keys = base_keys + Array(extra_keys)
-      params.permit(*allowed_keys).to_h.symbolize_keys
+      # scalar_params, not params.permit: see ApplicationController#scalar_params.
+      scalar_params(base_keys + Array(extra_keys))
     end
 
     # Generates a sortable column header link

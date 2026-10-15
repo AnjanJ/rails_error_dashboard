@@ -23,7 +23,7 @@ Open `/red`, then send a test error from its Settings page. No monitoring accoun
 
 [Try the live demo](https://rails-error-dashboard.anjan.dev) (`gandalf` / `youshallnotpass`) · [Read the documentation](https://anjanj.github.io/rails_error_dashboard/) · [View on RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
-> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs Ruby 3.2–3.4 against every supported Rails version; Ruby 4.0 is verified by the maintainer).
+> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs every Ruby from 3.2 to 4.0 against every supported Rails version).
 
 ## See the Ruby state and Rails runtime health behind every exception
 
@@ -208,6 +208,8 @@ Cross-error N+1 detection grouped by SQL fingerprint, and aggregate deprecation 
 
 Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `ActiveSupport::Deprecation` behaviour includes `:notify` (the production default does not) and only inside requests that later raised.
 
+**Missing translations** — opt in with `config.enable_missing_translation_tracking = true` and RED counts every key your app looked up and did not have, by locale, with the first call site, on its own page. No breadcrumbs needed; it wraps `I18n.exception_handler` and delegates to the handler you already had. [Details →](docs/FEATURES.md#missing-translation-tracking)
+
 [Complete documentation →](docs/FEATURES.md#n1-query-detection)
 </details>
 
@@ -232,11 +234,13 @@ Requires breadcrumbs to be enabled. Deprecations are seen only when the host's `
 config.enable_actioncable_tracking = true  # requires enable_breadcrumbs = true
 ```
 
-**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors.
+**ActiveStorage Health** — Track file uploads, downloads, deletes, and existence checks across storage services (Disk, S3, GCS, Azure — any ActiveStorage backend). Dashboard page at `/errors/activestorage_health_summary` with per-service operation counts, average and slowest durations. Helps identify slow storage operations correlating with errors. The page opens with a live reachability card (one `exist?` for a key that is never stored, against the configured service), and `GET /error_dashboard/health` reports the same probe as its `active_storage` check.
 
 ```ruby
 config.enable_activestorage_tracking = true  # requires enable_breadcrumbs = true
 ```
+
+**Health Check** — `GET /error_dashboard/health` answers in JSON whether the dashboard itself can still capture and show errors: the error database (`SELECT 1`, tables present), last capture time, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, so an uptime monitor can watch the watchmen. Authenticated like every other route. [Reference →](docs/API_REFERENCE.md#health-check)
 
 [Complete documentation →](docs/FEATURES.md#job-health-page)
 </details>
@@ -430,7 +434,7 @@ config.llm_model = "gpt-5"
 </details>
 
 <details>
-<summary><strong>Notifications — Slack, Discord, PagerDuty, Email, Webhooks</strong></summary>
+<summary><strong>Notifications — Slack, Discord, Telegram, PagerDuty, Email, Webhooks</strong></summary>
 
 Multi-channel alerting with severity filters, per-error cooldown, milestone threshold alerts, and a per-environment allowlist (`config.notification_environments = %w[production]`) so a staging deploy never pages anyone.
 
@@ -438,6 +442,8 @@ Multi-channel alerting with severity filters, per-error cooldown, milestone thre
 config.enable_slack_notifications = true
 config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 ```
+
+Custom webhooks can carry an HMAC-SHA256 signature (`config.webhook_signing_secret`) so the receiver can verify the sender and reject replays.
 
 [Notification setup guide →](docs/guides/NOTIFICATIONS.md)
 </details>
@@ -556,7 +562,8 @@ config.enable_rack_attack_tracking = true
 Capture unhandled exceptions that crash the Ruby process via an `at_exit` hook — the last line of defense.
 
 - Disk-based fallback: writes crash data to disk because the database may be unavailable during shutdown
-- Imported automatically on next boot
+- Imported automatically on next boot; a crash that repeats on every restart is one row with a count
+- Boot crashes too: the hook is registered before Rails eager-loads, so a `Zeitwerk::NameError` or a `SyntaxError` that kills the process before it serves a request lands on the **Boot Errors** page under Diagnostics, with the file and constant it names
 - Captures exception details, backtrace, uptime, GC stats, thread count, and cause chain
 - Honeybadger, Bugsnag and AppSignal have `at_exit` reporters too; RED's writes to disk and imports at next boot because the database may already be gone during shutdown
 
@@ -725,7 +732,7 @@ Users can also switch language per-session from the picker in the dashboard navb
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every unreviewed locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
 
-RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched.
+RED translates through its own private I18n backend, so it never reads, writes or mutates your application's `I18n` configuration — your locale and its `available_locales` are untouched. The one exception is opt-in: `enable_missing_translation_tracking` wraps `I18n.exception_handler` to count *your* app's missing keys, and delegates every call to the handler you had.
 
 [Translations guide →](docs/guides/TRANSLATIONS.md) — how the system works, how to correct a string, and how to add a locale.
 

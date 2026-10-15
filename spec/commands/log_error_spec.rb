@@ -67,6 +67,26 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
+    context 'with a UUID user_id and an integer user_id column' do
+      let(:context) { { user_id: '3f2a9c1e-8b4d-4c2a-9f1e-7d6b5a4c3b2a' } }
+
+      it 'stores no user_id rather than the number the UUID starts with' do
+        described_class.call(exception, context)
+        expect(RailsErrorDashboard::ErrorLog.last.user_id).to be_nil
+      end
+
+      it 'stores no user_id on the occurrence' do
+        described_class.call(exception, context)
+        expect(RailsErrorDashboard::ErrorOccurrence.last.user_id).to be_nil
+      end
+
+      it 'keeps the user of an earlier occurrence on the error' do
+        described_class.call(exception, { user_id: 123 })
+        described_class.call(exception, context)
+        expect(RailsErrorDashboard::ErrorLog.last.user_id).to eq(123)
+      end
+    end
+
     context 'with request context' do
       let(:request) do
         double('Request',

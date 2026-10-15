@@ -19,6 +19,7 @@ module RailsErrorDashboard
         (config.enable_slack_notifications && config.slack_webhook_url.present?) ||
           (config.enable_email_notifications && config.notification_email_recipients.present?) ||
           (config.enable_discord_notifications && config.discord_webhook_url.present?) ||
+          TelegramDelivery.configured?(config) ||
           (config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?) ||
           (config.enable_webhook_notifications && config.webhook_urls.present?) || false
       end
@@ -56,6 +57,11 @@ module RailsErrorDashboard
           if config.enable_discord_notifications && config.discord_webhook_url.present?
             DiscordErrorNotificationJob.perform_later(error_log.id, locale)
             fired << "discord"
+          end
+
+          if TelegramDelivery.configured?(config)
+            TelegramErrorNotificationJob.perform_later(error_log.id, locale)
+            fired << "telegram"
           end
 
           if config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?

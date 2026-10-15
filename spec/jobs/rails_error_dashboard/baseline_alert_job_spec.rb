@@ -22,6 +22,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
     RailsErrorDashboard.configuration.enable_slack_notifications = false
     RailsErrorDashboard.configuration.enable_email_notifications = false
     RailsErrorDashboard.configuration.enable_discord_notifications = false
+    RailsErrorDashboard.configuration.enable_telegram_notifications = false
     RailsErrorDashboard.configuration.enable_webhook_notifications = false
     RailsErrorDashboard.configuration.enable_pagerduty_notifications = false
     RailsErrorDashboard.configuration.baseline_alert_cooldown_minutes = 120
@@ -118,6 +119,43 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         end
       end
 
+      context "with Telegram notifications enabled" do
+        let(:telegram_url) { "https://api.telegram.org/bot333:baseline-token/sendMessage" }
+
+        before do
+          RailsErrorDashboard.configuration.enable_telegram_notifications = true
+          RailsErrorDashboard.configuration.telegram_bot_token = "333:baseline-token"
+          RailsErrorDashboard.configuration.telegram_chat_id = "-100777"
+        end
+
+        it "sends the anomaly as an HTML message with the dashboard link" do
+          stub_request(:post, telegram_url).to_return(status: 200, body: '{"ok":true}')
+
+          described_class.new.perform(error_log.id, anomaly_data)
+
+          expect(WebMock).to have_requested(:post, telegram_url).with { |req|
+            body = JSON.parse(req.body)
+            body["chat_id"] == "-100777" &&
+              body["parse_mode"] == "HTML" &&
+              body["text"].include?("Baseline Anomaly Detected") &&
+              body["text"].include?("NoMethodError") &&
+              body["text"].include?("/errors/#{error_log.id}")
+          }.once
+        end
+
+        it "handles Telegram errors gracefully, without the token in the log" do
+          stub_request(:post, telegram_url).to_raise(SocketError.new("down: #{telegram_url}"))
+
+          expect(Rails.logger).to receive(:error)
+            .with(/Failed to send baseline alert to Telegram: down: .*bot\[FILTERED\]/).and_call_original
+          allow(Rails.logger).to receive(:error).and_call_original
+
+          expect {
+            described_class.new.perform(error_log.id, anomaly_data)
+          }.not_to raise_error
+        end
+      end
+
       context "with Discord notifications enabled" do
         before do
           RailsErrorDashboard.configuration.enable_discord_notifications = true
@@ -166,13 +204,15 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
           ]
         end
 
+        # Custom webhooks go through WebhookDelivery (so they can be signed);
+        # Slack and Discord above still use the job's own post_json.
         it "sends notifications to all webhook URLs" do
-          expect_any_instance_of(described_class).to receive(:post_json).with(
+          expect(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).with(
             "https://example.com/webhook1",
             anything
           )
 
-          expect_any_instance_of(described_class).to receive(:post_json).with(
+          expect(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).with(
             "https://example.com/webhook2",
             anything
           )
@@ -182,7 +222,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
 
         it "includes structured payload" do
           captured_payload = nil
-          allow_any_instance_of(described_class).to receive(:post_json) do |_instance, _url, payload|
+          allow(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post) do |_url, payload|
             captured_payload = payload
           end
 
@@ -195,7 +235,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
         end
 
         it "handles webhook errors gracefully" do
-          allow_any_instance_of(described_class).to receive(:post_json).and_raise(StandardError.new("Network error"))
+          allow(RailsErrorDashboard::Services::WebhookDelivery).to receive(:post).and_raise(StandardError.new("Network error"))
 
           expect(Rails.logger).to receive(:error).with(/Failed to send baseline alert to webhook/).and_call_original
           allow(Rails.logger).to receive(:error).and_call_original

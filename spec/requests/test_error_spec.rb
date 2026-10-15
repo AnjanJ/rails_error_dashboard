@@ -32,6 +32,48 @@ RSpec.describe "Test Error action", type: :request do
       expect(response.body).to include("Test error logged successfully")
     end
 
+    it "is classified critical, so PagerDuty (critical-only) receives it too" do
+      expect(RailsErrorDashboard::Services::SeverityClassifier.classify("RailsErrorDashboard::TestError")).to eq(:critical)
+    end
+
+    context "with a channel enabled" do
+      before do
+        RailsErrorDashboard.configuration.enable_slack_notifications = true
+        RailsErrorDashboard.configuration.slack_webhook_url = "https://hooks.slack.com/services/T/B/test"
+        RailsErrorDashboard.configuration.enable_pagerduty_notifications = true
+        RailsErrorDashboard.configuration.pagerduty_integration_key = "pd-key"
+      end
+
+      after { RailsErrorDashboard.reset_configuration! }
+
+      it "notifies on the first click through the capture path" do
+        expect {
+          post "/error_dashboard/errors/test_error"
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob).once
+          .and have_enqueued_job(RailsErrorDashboard::PagerdutyErrorNotificationJob).once
+      end
+
+      # The second click is occurrence two of the same row: the capture path
+      # notifies on thresholds (10, 50, ...), so it used to notify nobody.
+      it "notifies again on a second click, exactly once" do
+        post "/error_dashboard/errors/test_error"
+
+        expect {
+          post "/error_dashboard/errors/test_error"
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob).once
+
+        expect(RailsErrorDashboard::ErrorLog.where(error_type: "RailsErrorDashboard::TestError").count).to eq(1)
+      end
+
+      it "notifies even when the capture path would have filtered the error out" do
+        RailsErrorDashboard.configuration.notification_environments = [ "production" ]
+
+        expect {
+          post "/error_dashboard/errors/test_error"
+        }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob).once
+      end
+    end
+
     it "preserves application_id context" do
       app = create(:application, name: "TestApp")
       post "/error_dashboard/errors/test_error", params: { application_id: app.id }

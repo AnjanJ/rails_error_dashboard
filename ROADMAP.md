@@ -27,7 +27,7 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | GitHub Stars | 92 | 488 | 87 | 25 | 2,173 |
 | Last Commit | 2026-09-25 (active) | 2025-11-24 (stale) | 2026-05-14 (slowing) | 2026-02-25 (active) | 2025-03-22 (dormant) |
 | Dashboard UI | Yes (Bootstrap 5) | Yes (minimal) | Yes (Tailwind) | Yes | No |
-| Notifications | Slack, Email, Discord, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
+| Notifications | Slack, Email, Discord, Telegram, PagerDuty, Webhooks | Email | Telegram, Slack, Email, Webhooks | Slack, Email, Discord, Webhooks | Email, Slack, many more |
 | Issue Trackers | GitHub, GitLab, Codeberg, Linear | No | No | No | No |
 | i18n | 11 locales (v0.9.0) | No | No | No | No |
 | OpenTelemetry | Exports its own spans; consumes GenAI spans (v0.7.0/v0.8.0) | No | No | No | No |
@@ -40,7 +40,7 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | GitHub Issues | Yes (GitHub, GitLab, Codeberg, Linear) | No | Yes | No | No |
 | Auto-Reopen | Yes | No | Yes | No | N/A |
 | Copy for LLM | Yes (v0.5.3+) | No | No | No | No |
-| Telegram | Not yet (7a, open) | No | Yes | No | No |
+| Telegram | Yes (v0.15.0) | No | Yes | No | No |
 | Performance Monitoring | Deferred, see (Z) | No | No | Yes (Redis-based) | No |
 
 > RED's downloads, stars and last commit re-verified against RubyGems and the GitHub API on 2026-09-25.
@@ -317,14 +317,16 @@ Environment:
 - **Config:** `enable_actioncable_tracking = true` (requires `enable_breadcrumbs = true`)
 - **Shipped:** v0.5.0 (March 24, 2026)
 
-### T. Zeitwerk Loading Error Capture
+### T. Zeitwerk Loading Error Capture — DONE
+- **Status (2026-10-10):** Shipped as part of crash capture rather than as a new flag. The at_exit hook moved from `config.after_initialize` (which runs after `:eager_load!` and was never reached by a boot crash) to an engine initializer that runs after the host's initializers and before eager loading. A crash while `Rails.application.initialized?` is false is marked `phase: "boot"`, a `Zeitwerk::NameError`'s file and constant are parsed out, and the import lands on `platform: "boot_crash"` through find-or-increment (which also fixed a unique-index collision on the second identical crash). The Boot Errors page under Diagnostics lists them; `Zeitwerk::NameError` classifies as critical. Proven by a chaos step that injects a misnamed model, boots, and asserts the row
 - **What:** Capture `Zeitwerk::NameError` events during `eager_load!` — when a file doesn't define the expected constant. Surface on a "Boot Errors" panel
 - **Why:** Autoloading errors are silent in development (lazy loading) but crash in production (eager loading). Catching them at boot and surfacing them prevents deploy surprises
 - **Implementation:** Guard with `defined?(Zeitwerk)`, register callback via `Rails.autoloaders.main.on_load` or rescue `Zeitwerk::NameError`
 - **Effort:** Half day
 - **Impact:** Reliability + (prevents deploy surprises)
 
-### U. ActiveStorage Service Health
+### U. ActiveStorage Service Health — DONE
+- **Status (2026-10-10):** The breadcrumb-based page shipped in v0.5 (`Queries::ActiveStorageSummary`). The live reachability probe (`Services::ActiveStorageProbe`: one `exist?` for a never-stored key against `ActiveStorage::Blob.service`) now opens that page and is the `active_storage` check of `GET /health`, where an unreachable service degrades the answer rather than taking it down. Skipped on hosts without storage configured
 - **What:** Check storage service reachability (`ActiveStorage::Blob.service.exist?` with a known key) and capture blob stats. Surface storage health on the system health panel
 - **Why:** Storage service failures (S3 outage, disk full, permission issues) cause errors that are hard to diagnose without service health context
 - **Implementation:** Guard with `defined?(ActiveStorage)`, read service config, attempt lightweight health check. Add to diagnostic dump
@@ -371,7 +373,8 @@ Environment:
 - **Effort (actual):** foundation 2-3 days · extraction + tooling ~14 days · locales ~4 days · verification and release ~2 days
 - **Impact:** Reach ++ (adoption in non-English-speaking teams)
 
-### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+)
+### Y. Lazy Backtrace via Thread.each_caller_location (Ruby 3.2+) — DONE (as far as it applies)
+- **Status (2026-10-10):** Re-verified against the code: `LocalVariableCapturer` and `SwallowedExceptionTracker` never walk the stack — both read `tp.path`/`tp.lineno` straight off the TracePoint, and `ErrorHashGenerator` reads `exception.backtrace_locations`, which Ruby has already materialised at raise time. The one real stack walk in the gem was `MissingTranslationTracker#host_call_site` (added with 0.15.0's missing-translation tracking); it now uses `Thread.each_caller_location` with an early return, so a new key costs the frames down to the host's call site rather than a 40-element Location array. Nothing else to convert
 - **What:** Use `Thread.each_caller_location` (Ruby 3.2+) as a more efficient alternative to `caller_locations`. Stops iterating after finding the first app-code frame instead of generating the full backtrace
 - **Why:** `caller_locations` generates the entire call stack as an array. `Thread.each_caller_location` is lazy — it yields frames one by one and can stop early. For deep stacks (100+ frames), this reduces allocation and speeds up app-frame detection
 - **Implementation:** Guard with Ruby version check. Use in `LocalVariableCapturer` and `SwallowedExceptionTracker` for faster app-frame filtering
@@ -488,7 +491,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Power users care deeply about this. Frequent source of complaints with every error tracker
 - **Effort:** 2-3 days
 
-### 7a. Telegram Notifications
+### 7a. Telegram Notifications — DONE (v0.15.0)
+- **Shipped:** `config.enable_telegram_notifications`, `telegram_bot_token`, `telegram_chat_id` (and `telegram_api_base_url` for a self-hosted Bot API server). `TelegramErrorNotificationJob` posts one HTML-formatted `sendMessage` per error through `Services::TelegramDelivery`, which also carries storm, burst-summary and baseline alerts and redacts the token from every log line. HTML parse mode rather than MarkdownV2: MarkdownV2 reserves eighteen characters and one unescaped `_` in a class name fails the whole message. `--telegram` on the installer, Settings page group, 11 locales, NOTIFICATIONS and CONFIGURATION guides.
 - **What:** Add Telegram Bot API integration for error notifications. Configure with `config.enable_telegram_notifications = true` and `config.telegram_bot_token` / `config.telegram_chat_id`. Send formatted error alerts to Telegram channels or groups
 - **Why:** Faultline has Telegram and we don't. Telegram is the dominant messaging platform in Eastern Europe, CIS countries, and parts of Asia. Adding it closes a competitive gap and opens the gem to a large developer community
 - **Implementation:** `TelegramErrorNotificationJob` using the Telegram Bot API (`https://api.telegram.org/bot<token>/sendMessage`). No gem dependency needed, just HTTP POST via `Net::HTTP` (already in stdlib). Format with Markdown, include error type, message, URL, and severity badge
@@ -539,8 +543,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Low-effort, high-visibility feature that makes the gem feel "enterprise-ready"
 - **Effort:** 1-2 days
 
-### 14. Health Check Endpoint
+### 14. Health Check Endpoint — DONE
 - **What:** Add `/error_dashboard/health` that returns JSON with: database connectivity, error count, last error timestamp, queue status
+- **Status:** Shipped. `GET /health` under the engine mount (authenticated like every dashboard route) reports the error database (`SELECT 1` on `ErrorLogsRecord`'s pool, so a separate database is probed, plus table presence), last capture time and last-24h count, the Active Job adapter and Solid Queue config problems, the storm breaker state and the gem version. 503 when the error database is down, 200 with `status: degraded` for a storm or a queue misconfiguration. `Queries::HealthStatus`; documented in docs/API_REFERENCE.md
 - **Why:** "Who watches the watchmen?" If the error dashboard itself is broken, you need to know
 - **Community impact:** Small feature, big signal of production maturity
 - **Effort:** Half day
@@ -555,7 +560,8 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ## Tier 4 — Differentiators (stand out from the crowd)
 
-### 15a. Ruby 4.0 in the CI test matrix — OPEN
+### 15a. Ruby 4.0 in the CI test matrix — DONE
+- **Status (2026-10-10):** `.github/workflows/test.yml` runs Ruby 3.2, 3.3, 3.4 and 4.0 against Rails 7.0–8.1; every pair is green, no `exclude:` needed. The one blocker was `rdoc` (no longer a default gem on 4.0; the gemspec-description spec needs it), now in the dev bundle. The README caveat is gone
 - **What:** `.github/workflows/test.yml` runs Ruby 3.2, 3.3 and 3.4 against Rails 7.0–8.1 (re-checked 2026-09-25: the matrix is still `['3.2', '3.3', '3.4']`). Add Ruby 4.0 (and future 4.x) so every version the README and gemspec claim ("Ruby 3.2–4.0") is exercised in CI rather than only on the maintainer's machine
 - **Why:** The README beta note currently has to say "CI runs Ruby 3.2–3.4; Ruby 4.0 is verified by the maintainer" — an honest caveat, but one that should not need to exist. Known blockers to check first: `ostruct` is no longer a default gem on 4.0 and sqlite3 2.8.1 does not compile on macOS (see CLAUDE.md gotchas); the Linux runner may not hit the second
 - **Effort:** Half a day
@@ -586,8 +592,9 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Community impact:** Useful for sprint retros and weekly standups
 - **Effort:** 1-2 days
 
-### 20. Webhook Signature Verification (HMAC)
+### 20. Webhook Signature Verification (HMAC) — DONE
 - **What:** Sign outbound webhook payloads with HMAC-SHA256 so receivers can verify authenticity
+- **Status:** Shipped. `config.webhook_signing_secret` (ENV `WEBHOOK_SIGNING_SECRET`) adds `X-Error-Dashboard-Signature-256` (`sha256=HMAC(secret, "timestamp.body")`) and `X-Error-Dashboard-Timestamp` to every POST to `webhook_urls` — per-error, storm, burst-summary and baseline alerts alike. `Services::WebhookSigner.valid?` is the receiver-side check; docs/guides/NOTIFICATIONS.md has Ruby and Node examples
 - **Why:** Without signatures, anyone who discovers the webhook URL can send fake error notifications. Standard practice for production webhooks
 - **Community impact:** Security-conscious teams won't use unsigned webhooks
 - **Effort:** Half day
@@ -671,6 +678,7 @@ shift is deliberate. Depth before breadth.
 | **Verifying** | Chart locale fixes for #178 | #170 confirmed and closed. #178 fixed again in v0.11.4 (#199) and left open for @gmarziou to confirm and close. Still open on 2026-09-25, with no reply since the maintainer's 2026-08-30 comment announcing the fix |
 | **Demo** | Live demo tracks each gem release | On v0.14.0 (checked 2026-09-25). A scheduled workflow in the demo repo (`update-demo-release.yml` in `AnjanJ/rails_error_dashboard_demo_app`) moves it to each newly published version |
 | **Done** | Submit to awesome-ruby (21) | Merged upstream 2026-08-13 ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033)) still open and unmerged as of 2026-09-25 |
+| **Done** | Health check endpoint (14), webhook HMAC signatures (20), missing-translation tracking | Landed on main after v0.14.4, unreleased as of 2026-10-10. `GET /health`; `config.webhook_signing_secret`; `config.enable_missing_translation_tracking` (wraps `I18n.exception_handler`, own table, own page). Each is a `feat:` commit, so release-please cuts them as v0.15.0 |
 | **Done** | CVE ID for GHSA-qhgm-3pxf-mvc6 | Assigned: CVE-2026-94549 (on the advisory since 2026-09-22). The maintainer has notified the reporter |
 | **Community-owned** | Native-speaker review of the remaining 9 locales (#156–#165 less #158) | Open by design — the contribution path, not a backlog. First one landed: @gmarziou on French (#201, shipped in v0.11.5, closing #158) |
 
@@ -680,14 +688,7 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 
 | Item | Effort | Impact | Note |
 |------|--------|--------|------|
-| Telegram notifications (7a) | Half day | Adoption ++ | Only competitive gap vs Faultline that still stands |
 | Per-occurrence context history (C3) | 1–2 days | Credibility +++ | Completes C2. Was pencilled in for v0.12, which went to correctness fixes instead |
-| Health check endpoint (14) | Half day | Maturity signal + | "Who watches the watchmen" |
-| Webhook HMAC signatures (20) | Half day | Security + | Standard practice for outbound webhooks |
-| Zeitwerk boot-error capture (T) | Half day | Reliability + | |
-| ActiveStorage service health (U) | Half day | Operational + | |
-| Missing-translation tracking | Half day | Unique ++ | Newly relevant — we now ship 11 locales and have a private I18n backend to hook |
-| Lazy backtrace via `Thread.each_caller_location` (Y) | Half day | Performance + | |
 | Smarter grouping controls (7) | 2-3 days | Power users ++ | Custom fingerprint lambda done; merge/split UI is not |
 | RBAC (11) | 2-3 days | Enterprise ++ | |
 | Audit logging (12) | 1 day | Enterprise ++ | |
@@ -735,7 +736,7 @@ principle (see its entry above).
 ### What Needs Work
 - API (3/10) — no JSON endpoints at all (ICEBOX)
 - User management (7/10) — HTTP Basic Auth + custom lambda (Devise/Warden/session), no RBAC yet
-- Integrations (8.5/10) — four issue trackers (GitHub/GitLab/Codeberg/Linear) with manual + auto-create + lifecycle sync + webhooks. **No Telegram** — the one competitive gap vs Faultline that still stands
+- Integrations (8.5/10) — four issue trackers (GitHub/GitLab/Codeberg/Linear) with manual + auto-create + lifecycle sync + webhooks, and Telegram since v0.15.0 (7a), which closed the last channel gap vs Faultline
 - Translation quality (unscored) — nine locales are machine-translated and unreviewed. Mechanically verified, honestly labelled, but a native speaker has reviewed only French (v0.11.5, #201). Issues #156–#165, less the closed #158, are the open invitation
 - Performance monitoring (0/10) — no request timing or slow query tracking. Deferred on principle, not backlog (see Z)
 - Dashboard performance (7.5/10) — no rollup tables, no partitioning guidance. BRIN + functional indexes added

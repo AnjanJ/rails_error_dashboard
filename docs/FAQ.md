@@ -138,7 +138,7 @@ Or schedule with cron/whenever. See [Database Optimization](guides/DATABASE_OPTI
 </details>
 
 <details>
-<summary><strong>Can I get Slack/Discord notifications?</strong></summary>
+<summary><strong>Can I get Slack/Discord/Telegram notifications?</strong></summary>
 
 Yes! Enable during installation or configure manually:
 

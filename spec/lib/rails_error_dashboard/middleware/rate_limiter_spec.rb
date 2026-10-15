@@ -57,6 +57,24 @@ RSpec.describe RailsErrorDashboard::Middleware::RateLimiter do
     3.times { expect(get("/not-the-dashboard").first).to eq(200) }
   end
 
+  # /red also matched /redirect: a host path that merely shares the mount's
+  # first characters is not the dashboard.
+  it "leaves a host path that shares the mount's prefix alone" do
+    RailsErrorDashboard.configuration.rate_limit_per_minute = 1
+
+    3.times { expect(get("#{mount}irect").first).to eq(200) }
+    3.times { expect(get("#{mount}-archive/errors").first).to eq(200) }
+  end
+
+  it "still covers the mount itself and everything below it" do
+    RailsErrorDashboard.configuration.rate_limit_per_minute = 1
+
+    expect(get(mount).first).to eq(200)
+    expect(get(mount).first).to eq(429)
+    expect(get("#{mount}/").first).to eq(200)
+    expect(get("#{mount}/").first).to eq(429)
+  end
+
   it "does nothing unless enable_rate_limiting is on" do
     RailsErrorDashboard.configuration.enable_rate_limiting = false
     RailsErrorDashboard.configuration.rate_limit_per_minute = 1

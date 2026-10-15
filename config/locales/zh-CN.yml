@@ -60,6 +60,8 @@ zh-CN:
       llm: LLM
       n_plus_one: N+1 查询
       deprecations: Deprecations
+      missing_translations: "翻译"
+      boot_errors: "启动错误"
       swallowed: 被吞异常
       diagnostic_dumps: 诊断
       storms: 风暴
@@ -753,6 +755,53 @@ zh-CN:
         column_ratio: 比例
         view_unrescued: 查看未被捕获、已进入 error_log 的 %{exception} 错误
         footer_tip: 被吞异常先被抛出，随后被静默捕获，可能掩盖真正的缺陷。
+      missing_translations_page:
+        title: "缺失的翻译"
+        empty_title: "未记录到缺失的翻译"
+        empty_body: "最近 %{days} 天内未记录到缺失的翻译键。"
+        how_title: "缺失翻译的跟踪方式:"
+        how_enabled_html: "必须启用跟踪（%{option}）"
+        how_hooked: "RED 会包装 I18n.exception_handler，并把调用交给应用原有的处理器；I18n 配置的其他部分不会改变"
+        how_recorded: "每一次到达处理器的查找——无论来自 I18n.t 还是视图助手 t()——都会按语言区域和键计数，并记录首次观测到的调用位置"
+        how_not_seen: "提供了 :default 的查找永远不会缺失；使用 raise_on_missing_translations 的查找会在任何处理器运行前抛出异常，因此两者都不会在此计数"
+        how_buffered: "缺失在内存中计数，并在请求或任务结束时写入，因此显示会有短暂延迟"
+        missing_keys: "缺失的键"
+        total_misses: "缺失总数"
+        locales_affected: "受影响的语言区域"
+        all_title: "缺失的翻译键"
+        column_key: "键"
+        column_locale: "语言区域"
+        column_source: "首次出现于"
+        column_misses: "缺失次数"
+        column_first_seen: "首次出现"
+        overflow_notice: "由于跟踪器的缓冲区（每线程 %{limit} 个键）已满，有 %{count} 次缺失无法归到具体的键。"
+        footer_tip: "把该键加入语言文件，或传入 :default。用户实际遇到的键排在最前。"
+        docs: "Rails i18n 指南"
+
+      boot_errors_page:
+        title: "启动错误"
+        empty_title: "未记录到启动错误"
+        empty_body: "最近 %{days} 天内没有进程在启动时崩溃。"
+        how_title: "启动错误的捕获方式:"
+        how_enabled_html: "必须启用崩溃捕获（%{option}）"
+        how_hooked: "RED 在你的 initializer 运行之后、Rails 预加载之前注册 at_exit 钩子，因此即使应用从未完成启动，启动期间的崩溃也会被捕获"
+        how_captured_html: "文件定义了错误常量导致的 %{zeitwerk}、模型中的 %{syntax}、抛出异常的 initializer：任何在处理请求之前就终止进程的问题"
+        how_imported: "此时还没有数据库，所以崩溃先写入磁盘，并在下一次成功启动时导入"
+        how_never: "被 SIGKILL 或段错误终止的进程，任何工具的 at_exit 都看不到"
+        unresolved: "未解决"
+        boot_crashes: "启动崩溃"
+        failed_boots: "失败的启动"
+        all_title: "按错误分组的启动崩溃"
+        column_error: "错误"
+        column_file: "文件"
+        column_constant: "常量"
+        column_boots: "启动次数"
+        column_first_seen: "首次出现"
+        column_status: "状态"
+        status_open: "未处理"
+        status_resolved: "已解决"
+        footer_tip: "启动崩溃意味着进程从未处理过请求。请在下次部署前修复；该行会像其他错误一样被标记为已解决。"
+
       rack_attack_page:
         title: 限流事件
         missing_title: 尚未安装 Rack Attack
@@ -967,7 +1016,7 @@ zh-CN:
         unable_to_detect: 无法检测
         no_user_model: 未检测到 User 模型
         unable_to_query_count: 无法查询数量
-        manual_cleanup_required: 需要手动清理
+        retention_enforced_by_job: "由 RetentionCleanupJob 在您的调度器运行它时删除"
         keep_forever: 永久保留
         no_automatic_deletion: 不自动删除
         run_command: 执行：
@@ -975,7 +1024,7 @@ zh-CN:
       options:
         enable_middleware: 捕获未处理的异常
         enable_error_subscriber: 订阅 Rails 错误事件
-        retention_days: 仅手动清理（执行：rails error_dashboard:cleanup_resolved DAYS=90）
+        retention_days: "删除这么多天内未再出现的错误。由 RetentionCleanupJob 执行，gem 本身不会安排它运行"
         max_backtrace_lines: 堆栈跟踪深度上限
         sampling_rate: 错误捕获的采样比例
         application_name: 本应用的名称（未设置时自动检测）
@@ -989,7 +1038,7 @@ zh-CN:
         total_users_for_impact: 用于计算影响百分比（未设置时自动检测）
         async_logging: 在后台任务中处理
         async_adapter: 任务队列适配器
-        enable_rate_limiting: 对 API 请求限流
+        enable_rate_limiting: "按 IP 和路径限制仪表盘请求"
         rate_limit_per_minute: 每个 IP 每分钟的请求数
         enable_slack_notifications: 实时通知
         slack_webhook_url: Slack webhook 地址
@@ -998,10 +1047,15 @@ zh-CN:
         notification_email_from: 发件人地址
         enable_discord_notifications: 通过 Discord webhook 通知
         discord_webhook_url: Discord webhook 地址
+        enable_telegram_notifications: "Telegram Bot API 通知"
+        telegram_bot_token: "来自 @BotFather 的机器人令牌（设置环境变量 TELEGRAM_BOT_TOKEN）"
+        telegram_chat_id: "机器人发送消息的聊天、群组或频道"
+        telegram_api_base_url: "Bot API 服务器（仅在使用代理或自建服务器时更改）"
         enable_pagerduty_notifications: 严重错误升级
         pagerduty_integration_key: PagerDuty API 密钥
         enable_webhook_notifications: 通用 webhook 地址
         webhook_urls: 自定义 webhook 地址
+        webhook_signing_secret: 使用 HMAC-SHA256 签名发出的 webhook（设置环境变量 WEBHOOK_SIGNING_SECRET）
         enable_scheduled_digests: 每日/每周摘要邮件。可通过 SolidQueue、Sidekiq 或 cron 调度
         digest_frequency: 摘要邮件的发送频率
         digest_recipients: 邮件地址（默认使用通知收件人）
@@ -1019,7 +1073,7 @@ zh-CN:
         source_code_context_lines: 目标行前后显示的行数
         enable_git_blame: 显示 git blame 信息
         source_code_cache_ttl: 源代码缓存时长
-        only_show_app_code_source: 出于安全考虑隐藏 gems/stdlib
+        only_show_app_code_source: "在源码查看器中隐藏 gem 和 vendor 代码"
         git_branch_strategy: 分支解析策略
         enable_breadcrumbs: 记录请求的活动轨迹
         breadcrumb_buffer_size: 每个请求最多记录的 breadcrumbs 数
@@ -1043,6 +1097,7 @@ zh-CN:
         enable_diagnostic_dump: 按需生成系统状态快照
         enable_crash_capture: 用 at_exit 钩子捕获未处理的崩溃
         enable_coverage_tracking: 诊断模式 — 在面板中启用后，可在源码视图中看到已执行的行（Ruby 3.2+）
+        enable_missing_translation_tracking: "按语言区域和键统计应用的 I18n 缺失（包装 I18n.exception_handler）"
         enable_rack_attack_tracking: 将 throttle/blocklist 事件记录到独立数据表
         enable_actioncable_tracking: 将 WebSocket 频道事件记录为 breadcrumbs
         enable_activestorage_tracking: 将上传/下载/删除记录为 breadcrumbs
@@ -1088,6 +1143,8 @@ zh-CN:
         breadcrumbs: Breadcrumbs
         system_health: 系统状态
         swallowed_exceptions: 被吞异常检测
+        missing_translations: "缺失翻译跟踪"
+        boot_errors: "启动错误捕获"
         rack_attack: Rack Attack 跟踪
         actioncable: ActionCable 跟踪
         activestorage: ActiveStorage 跟踪
@@ -1450,6 +1507,13 @@ zh-CN:
           guide_link: ActionCable 指南
       activestorage:
         title: ActiveStorage 状态
+        probe:
+          title: "服务可达性"
+          reachable: "可达"
+          unreachable: "不可达"
+          service: "服务：%{name}"
+          latency: "往返 %{ms} ms"
+          how: "加载本页时对一个永远不会存储的键做一次存在性检查。GET /health 执行同样的探测。"
         empty:
           title: 未找到 ActiveStorage 事件
           message: 最近 %{days} 天的错误 breadcrumbs 中未检测到 ActiveStorage 的服务操作。

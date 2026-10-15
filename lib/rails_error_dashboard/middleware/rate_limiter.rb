@@ -55,8 +55,14 @@ module RailsErrorDashboard
         "/red"
       end
 
+      # The mount itself or anything below it. A plain start_with? also
+      # matched the host's own /redirect when the engine was at /red. An
+      # engine mounted at "/" owns every path.
       def error_dashboard_route?(path)
-        path.start_with?(engine_mount_path)
+        mount = engine_mount_path.to_s.chomp("/")
+        return true if mount.empty?
+
+        path == mount || path.start_with?("#{mount}/")
       end
 
       def rate_limit_key(request, limit_config)

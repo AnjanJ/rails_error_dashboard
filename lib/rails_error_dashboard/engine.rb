@@ -48,6 +48,22 @@ module RailsErrorDashboard
       end
     end
 
+    # Register the crash-capture at_exit hook as soon as the host's
+    # config/initializers have run (so enable_crash_capture is known) and
+    # BEFORE Rails' :eager_load! finisher. Every engine initializer runs ahead
+    # of the finishers, so this is early enough for a Zeitwerk::NameError, a
+    # SyntaxError in a model or a raising initializer to be captured; the old
+    # place, config.after_initialize, runs AFTER eager loading and was never
+    # reached by exactly the crashes a boot check exists for. The import of
+    # earlier crash files stays in after_initialize, where the database is.
+    initializer "rails_error_dashboard.crash_capture", after: :load_config_initializers do
+      next if ENV["SECRET_KEY_BASE_DUMMY"].present?
+
+      if RailsErrorDashboard.configuration.enable_crash_capture
+        RailsErrorDashboard::Services::CrashCapture.enable!
+      end
+    end
+
     # Validate configuration after initialization
     initializer "rails_error_dashboard.validate_config", after: :load_config_initializers do
       config.after_initialize do
@@ -131,6 +147,28 @@ module RailsErrorDashboard
         # (every deploy) is lost. at_exit, not Signal.trap — trapping would
         # clobber Puma's USR1/USR2 handlers (safety rule 9).
         at_exit { RailsErrorDashboard::Services::RackAttackTracker.flush_all_threads! }
+      end
+
+      # Count the host app's missing translations. The handler wrap is the one
+      # place RED touches global I18n state, so it runs only when opted in,
+      # and here in after_initialize so the handler the host's own
+      # initializers configured is the one being wrapped (and delegated to).
+      #
+      # Same drain points as Rack Attack tracking: to_complete fires after the
+      # response body is closed (never delays a request, safety rule 2) and is
+      # interval-gated; at_exit drains whatever buffers are still on live
+      # threads. Puma joins its worker threads before at_exit runs, so what a
+      # worker held at SIGTERM (at most FLUSH_INTERVAL seconds of misses) is
+      # lost with it; the hook still covers the main thread, runners and
+      # console sessions. at_exit, not Signal.trap (safety rule 9).
+      if RailsErrorDashboard.configuration.enable_missing_translation_tracking
+        RailsErrorDashboard::Services::MissingTranslationHandler.install!
+
+        Rails.application.executor.to_complete do
+          RailsErrorDashboard::Services::MissingTranslationTracker.flush_if_due!
+        end
+
+        at_exit { RailsErrorDashboard::Services::MissingTranslationTracker.flush_all_threads! }
       end
 
       # Drain the storm count buffer at the end of every request and job, and
@@ -224,7 +262,10 @@ module RailsErrorDashboard
         end
       end
 
-      # Import crash files from previous process death, then register at_exit hook
+      # Import crash files from a previous process death. The at_exit hook
+      # itself is registered by the "rails_error_dashboard.crash_capture"
+      # initializer above, before eager loading; enable! here is a no-op when
+      # that ran and a fallback when the configuration was only set later.
       if RailsErrorDashboard.configuration.enable_crash_capture
         RailsErrorDashboard::Services::CrashCapture.import!
         RailsErrorDashboard::Services::CrashCapture.enable!

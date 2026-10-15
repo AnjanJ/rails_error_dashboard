@@ -265,16 +265,19 @@
     end
 
   when :retention_days
-    # Show retention configuration with manual cleanup instructions
+    # Retention is enforced by RetentionCleanupJob, which the host schedules
+    # (docs/PRODUCTION.md). The badge used to claim "manual cleanup only" and
+    # cite cleanup_resolved, a different task that deletes only resolved
+    # errors and ignores this setting.
     if value.present?
 %>
     <div>
       <span class="badge bg-warning text-dark fs-6"><%= red_tp("red.settings.values.days", count: value) %></span>
-      <small class="text-danger d-block">
-        <i class="bi bi-exclamation-triangle"></i> <%= red_t("red.settings.values.manual_cleanup_required") %>
+      <small class="text-muted d-block">
+        <i class="bi bi-clock-history"></i> <%= red_t("red.settings.values.retention_enforced_by_job") %>
       </small>
       <small class="text-muted d-block mt-1">
-        <%= red_t("red.settings.values.run_command") %> <code class="small">rails error_dashboard:cleanup_resolved DAYS=<%= value %></code>
+        <%= red_t("red.settings.values.run_command") %> <code class="small">RailsErrorDashboard::RetentionCleanupJob.perform_now</code>
       </small>
     </div>
 <%

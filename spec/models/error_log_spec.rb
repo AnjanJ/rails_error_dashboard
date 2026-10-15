@@ -303,6 +303,37 @@ RSpec.describe RailsErrorDashboard::ErrorLog, type: :model do
     end
   end
 
+  describe '.storable_user_id' do
+    let(:uuid) { '3f2a9c1e-8b4d-4c2a-9f1e-7d6b5a4c3b2a' }
+
+    it 'keeps an integer ID' do
+      expect(described_class.storable_user_id(42)).to eq(42)
+    end
+
+    it 'keeps an integer ID given as a string' do
+      expect(described_class.storable_user_id('42')).to eq(42)
+    end
+
+    it 'drops a UUID the integer column would turn into another user' do
+      expect(described_class.storable_user_id(uuid)).to be_nil
+    end
+
+    it 'keeps a missing ID missing' do
+      expect(described_class.storable_user_id(nil)).to be_nil
+    end
+
+    context 'when user_id is not an integer column' do
+      before do
+        allow(described_class).to receive(:type_for_attribute).and_call_original
+        allow(described_class).to receive(:type_for_attribute).with('user_id').and_return(ActiveModel::Type::String.new)
+      end
+
+      it 'passes the ID through' do
+        expect(described_class.storable_user_id(uuid)).to eq(uuid)
+      end
+    end
+  end
+
   describe 'severity methods' do
     describe '#critical?' do
       it 'returns true for SecurityError' do

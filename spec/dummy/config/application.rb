@@ -14,5 +14,9 @@ module Dummy
 
     # Configure ActiveJob to use test adapter
     config.active_job.queue_adapter = :test
+
+    # See config/storage.yml: lets ActiveStorage::Blob load and gives the
+    # reachability probe a real (Disk) service.
+    config.active_storage.service = :test
   end
 end

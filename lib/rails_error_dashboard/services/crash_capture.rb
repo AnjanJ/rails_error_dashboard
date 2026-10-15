@@ -14,6 +14,16 @@ module RailsErrorDashboard
     # disk as JSON. On the next boot, `import!` reads crash files and creates
     # ErrorLog records with severity "fatal".
     #
+    # BOOT CRASHES: the hook is registered from an engine initializer that
+    # runs right after the host's config/initializers (so the configuration
+    # is known) and before Rails' :eager_load! finisher. That ordering is the
+    # whole point: a Zeitwerk::NameError from eager loading, a SyntaxError in
+    # a model, an initializer that raised -- these kill the process before
+    # config.after_initialize ever runs, so a hook registered there (as this
+    # one was until 0.15) never saw them. A crash captured while
+    # Rails.application.initialized? is still false is marked phase "boot",
+    # imported with platform "boot_crash", and listed on the Boot Errors page.
+    #
     # Safety contract:
     # - Default OFF (opt-in via config.enable_crash_capture)
     # - Writes to tmpfile, NOT the database (connection pool may be closed)
@@ -23,6 +33,14 @@ module RailsErrorDashboard
     # - Zero runtime overhead — hook only fires during process shutdown
     class CrashCapture
       FILE_PREFIX = "red_crash_"
+
+      BOOT_PHASE = "boot"
+      RUNTIME_PHASE = "runtime"
+      BOOT_PLATFORM = "boot_crash"
+      RUNTIME_PLATFORM = "crash_capture"
+
+      # "expected file /app/app/models/foo.rb to define constant Foo, but didn't"
+      ZEITWERK_MESSAGE = /expected file (?<file>.+?) to define constant (?<constant>\S+), but didn't/
 
       class << self
         # Enable crash capture. Registers the `at_exit` hook and records boot time.
@@ -108,6 +126,11 @@ module RailsErrorDashboard
           # Rails version (may not be available during crash)
           data[:rails_version] = Rails.version if defined?(Rails) && Rails.respond_to?(:version)
 
+          # Boot or runtime: a process that died before initialize! finished
+          # never served a request, which is a different kind of outage.
+          data[:phase] = boot_phase? ? BOOT_PHASE : RUNTIME_PHASE
+          data[:boot] = boot_detail(exception) if data[:phase] == BOOT_PHASE
+
           # Uptime
           if @boot_time
             data[:uptime_seconds] = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @boot_time).round(1)
@@ -120,6 +143,51 @@ module RailsErrorDashboard
           data[:cause_chain] = extract_cause_chain(exception)
 
           data
+        end
+
+        # True while Rails is still running its initializers (eager loading
+        # included). Rails.application.initialized? flips only after the last
+        # finisher has run. Outside Rails (a plain Ruby script) there is no
+        # boot phase to speak of.
+        def boot_phase?
+          defined?(Rails) && Rails.respond_to?(:application) && Rails.application &&
+            !Rails.application.initialized?
+        rescue
+          false
+        end
+
+        # What a boot crash names, for the Boot Errors page: the file and the
+        # constant for a Zeitwerk::NameError, else the first backtrace frame
+        # under Rails.root (a SyntaxError or an initializer that raised).
+        # Paths are made relative to Rails.root so the page reads
+        # "app/models/foo.rb", not a deploy directory.
+        def boot_detail(exception)
+          detail = {}
+          root = rails_root_prefix
+
+          if exception.class.name == "Zeitwerk::NameError" && (m = ZEITWERK_MESSAGE.match(exception.message.to_s))
+            detail[:file] = relative_path(m[:file], root)
+            detail[:constant] = m[:constant]
+          elsif (frame = Array(exception.backtrace).find { |f| root && f.to_s.start_with?(root) })
+            detail[:file] = relative_path(frame.to_s.split(":in ").first, root)
+          end
+
+          detail
+        rescue
+          {}
+        end
+
+        def rails_root_prefix
+          return nil unless defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+
+          "#{Rails.root}/"
+        rescue
+          nil
+        end
+
+        def relative_path(path, root)
+          path = path.to_s
+          root && path.start_with?(root) ? path.delete_prefix(root) : path
         end
 
         def extract_cause_chain(exception)
@@ -155,6 +223,8 @@ module RailsErrorDashboard
           cause_chain = data["cause_chain"]
           cause_json = cause_chain.is_a?(Array) && cause_chain.any? ? cause_chain.to_json : nil
 
+          boot = data["phase"] == BOOT_PHASE
+
           # Build environment_info from crash metadata
           env_info = {
             ruby_version: data["ruby_version"],
@@ -164,6 +234,8 @@ module RailsErrorDashboard
             uptime_seconds: data["uptime_seconds"],
             gc: data["gc"],
             crash_captured_at: data["timestamp"],
+            phase: data["phase"],
+            boot: (data["boot"] if boot && data["boot"].is_a?(Hash) && data["boot"].any?),
             source: "crash_capture"
           }.compact
 
@@ -180,7 +252,9 @@ module RailsErrorDashboard
             message: data["message"] || "Process crash captured via at_exit hook",
             backtrace: backtrace_text,
             occurred_at: occurred_at,
-            platform: "crash_capture",
+            # Boot crashes get their own platform so the Boot Errors page and
+            # the index's platform filter can find them.
+            platform: boot ? BOOT_PLATFORM : RUNTIME_PLATFORM,
             resolved: false
           }
 
@@ -210,7 +284,16 @@ module RailsErrorDashboard
             attributes[:last_seen_at] = occurred_at
           end
 
-          ErrorLog.create!(attributes)
+          # Through the same find-or-increment as every other capture: a crash
+          # that repeats on every restart is one row with a count, not a new
+          # row per restart -- and a plain create! collided with the unique
+          # group-identity index on the second one, which left the file as
+          # .failed and the crash unrecorded.
+          if attributes[:error_hash]
+            Commands::FindOrIncrementError.call(attributes[:error_hash], attributes)
+          else
+            ErrorLog.create!(attributes)
+          end
 
           # Delete file after successful import
           File.delete(file)

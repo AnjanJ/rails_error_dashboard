@@ -83,6 +83,24 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
         expect(result).to include(">   42")
       end
 
+      it "reads only source files, whatever the backtrace names" do
+        Dir.mktmpdir do |root|
+          FileUtils.mkdir_p(File.join(root, "config"))
+          FileUtils.mkdir_p(File.join(root, "app/models"))
+          File.write(File.join(root, "config/application.yml"), "SECRET_TOKEN: not-for-the-dashboard\n")
+          File.write(File.join(root, "app/models/user.rb"), "class User\nend\n")
+          allow(Rails).to receive(:root).and_return(Pathname.new(root))
+          allow(RailsErrorDashboard.configuration).to receive(:enable_source_code_integration).and_return(true)
+
+          result = described_class.call(make_error(
+            backtrace: "config/application.yml:1:in 'load'\napp/models/user.rb:1:in 'save'"
+          ))
+
+          expect(result).to include("class User")
+          expect(result).not_to include("not-for-the-dashboard")
+        end
+      end
+
       it "omits source code when integration is disabled" do
         allow(RailsErrorDashboard.configuration).to receive(:enable_source_code_integration).and_return(false)
         result = described_class.call(make_error)

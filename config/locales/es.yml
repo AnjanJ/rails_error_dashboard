@@ -60,6 +60,8 @@ es:
       llm: LLM
       n_plus_one: Consultas N+1
       deprecations: Deprecations
+      missing_translations: "Traducciones"
+      boot_errors: "Errores de arranque"
       swallowed: Silenciadas
       diagnostic_dumps: Diagnóstico
       storms: Tormentas
@@ -858,6 +860,53 @@ es:
           error_log
         footer_tip: Las excepciones silenciadas se lanzan y luego se capturan sin
           aviso. Pueden ocultar errores reales.
+      missing_translations_page:
+        title: "Traducciones faltantes"
+        empty_title: "No se registraron traducciones faltantes"
+        empty_body: "No se registraron claves de traducción faltantes en los últimos %{days} días."
+        how_title: "Cómo se registran las traducciones faltantes:"
+        how_enabled_html: "El seguimiento debe estar activado (%{option})"
+        how_hooked: "RED envuelve I18n.exception_handler y delega en el handler que su aplicación ya tenía; nada más cambia en su configuración de I18n"
+        how_recorded: "Cada búsqueda que llega al handler — tanto I18n.t como el helper de vista t() — se cuenta por locale y clave, junto con el primer punto de llamada visto"
+        how_not_seen: "Una búsqueda con :default nunca falla, y una hecha con raise_on_missing_translations lanza una excepción antes de que se ejecute cualquier handler, así que ninguna se cuenta aquí"
+        how_buffered: "Los fallos se cuentan en memoria y se escriben al final de la petición o del job, así que espere un breve retraso antes de que aparezcan"
+        missing_keys: "Claves faltantes"
+        total_misses: "Fallos totales"
+        locales_affected: "Locales afectados"
+        all_title: "Claves de traducción faltantes"
+        column_key: "Clave"
+        column_locale: "Locale"
+        column_source: "Visto primero en"
+        column_misses: "Fallos"
+        column_first_seen: "Visto por primera vez"
+        overflow_notice: "%{count} fallos no pudieron atribuirse a una clave porque el búfer del rastreador (%{limit} claves por hilo) estaba lleno."
+        footer_tip: "Añada la clave al archivo de locale o pase un :default. Las claves que los usuarios realmente encontraron aparecen primero."
+        docs: "Guía i18n de Rails"
+
+      boot_errors_page:
+        title: "Errores de arranque"
+        empty_title: "No se registraron errores de arranque"
+        empty_body: "Ningún proceso murió al arrancar en los últimos %{days} días."
+        how_title: "Cómo se capturan los errores de arranque:"
+        how_enabled_html: "La captura de fallos debe estar activada (%{option})"
+        how_hooked: "RED registra su hook at_exit justo después de sus initializers y antes del eager loading de Rails, así que un fallo durante el arranque se ve aunque la app nunca termine de arrancar"
+        how_captured_html: "Un %{zeitwerk} por un archivo que define la constante equivocada, un %{syntax} en un modelo, un initializer que lanza una excepción: cualquier cosa que mate el proceso antes de atender una petición"
+        how_imported: "El fallo se escribe en disco, porque aún no hay base de datos, y se importa en el siguiente arranque que tenga éxito"
+        how_never: "Un proceso terminado con SIGKILL o por un segfault nunca es visto por at_exit, en ninguna herramienta"
+        unresolved: "Sin resolver"
+        boot_crashes: "Fallos de arranque"
+        failed_boots: "Arranques fallidos"
+        all_title: "Fallos de arranque por error"
+        column_error: "Error"
+        column_file: "Archivo"
+        column_constant: "Constante"
+        column_boots: "Arranques"
+        column_first_seen: "Visto por primera vez"
+        column_status: "Estado"
+        status_open: "Abierto"
+        status_resolved: "Resuelto"
+        footer_tip: "Un fallo de arranque significa que el proceso nunca atendió una petición. Corríjalo antes del próximo despliegue; la fila se resuelve como cualquier otro error."
+
       rack_attack_page:
         title: Eventos de límite de tasa
         missing_title: Rack Attack no está instalado
@@ -1129,7 +1178,7 @@ es:
         unable_to_detect: No se pudo detectar
         no_user_model: No se detectó ningún modelo User
         unable_to_query_count: No se pudo consultar la cantidad
-        manual_cleanup_required: Se requiere limpieza manual
+        retention_enforced_by_job: "Eliminados por RetentionCleanupJob cuando su planificador lo ejecute"
         keep_forever: Conservar indefinidamente
         no_automatic_deletion: Sin eliminación automática
         run_command: 'Ejecutar:'
@@ -1137,8 +1186,7 @@ es:
       options:
         enable_middleware: Captura las excepciones no gestionadas
         enable_error_subscriber: Se suscribe a los eventos de error de Rails
-        retention_days: 'Solo limpieza manual (ejecutar: rails error_dashboard:cleanup_resolved
-          DAYS=90)'
+        retention_days: "Eliminar errores no vistos durante estos días. Lo aplica RetentionCleanupJob, que la gema no programa por sí misma"
         max_backtrace_lines: Profundidad máxima del backtrace
         sampling_rate: Porcentaje de errores capturados
         application_name: Nombre de esta aplicación (se detecta automáticamente si
@@ -1157,7 +1205,7 @@ es:
           si no se define)
         async_logging: Procesamiento mediante jobs en segundo plano
         async_adapter: Adaptador de la cola de jobs
-        enable_rate_limiting: Limitar las solicitudes a la API
+        enable_rate_limiting: "Limitar las solicitudes del panel por IP y ruta"
         rate_limit_per_minute: Solicitudes por minuto y por IP
         enable_slack_notifications: Notificaciones en tiempo real
         slack_webhook_url: Endpoint del webhook de Slack
@@ -1166,10 +1214,15 @@ es:
         notification_email_from: Dirección del remitente
         enable_discord_notifications: Notificaciones por webhook de Discord
         discord_webhook_url: Endpoint del webhook de Discord
+        enable_telegram_notifications: "Notificaciones de Telegram mediante la Bot API"
+        telegram_bot_token: "Token del bot de @BotFather (configure la variable de entorno TELEGRAM_BOT_TOKEN)"
+        telegram_chat_id: "Chat, grupo o canal donde publica el bot"
+        telegram_api_base_url: "Servidor de la Bot API (cámbielo solo para un proxy o un servidor propio)"
         enable_pagerduty_notifications: Escalado de errores críticos
         pagerduty_integration_key: Clave de API de PagerDuty
         enable_webhook_notifications: Endpoints de webhook genéricos
         webhook_urls: Endpoints de webhook personalizados
+        webhook_signing_secret: Firma los webhooks salientes con HMAC-SHA256 (defina la variable de entorno WEBHOOK_SIGNING_SECRET)
         enable_scheduled_digests: Correos de resumen diarios/semanales. Programación
           mediante SolidQueue, Sidekiq o cron
         digest_frequency: Frecuencia de envío de los correos de resumen
@@ -1189,7 +1242,7 @@ es:
         source_code_context_lines: Líneas antes y después de la línea de destino
         enable_git_blame: Mostrar la información de git blame
         source_code_cache_ttl: Duración de la caché del código fuente
-        only_show_app_code_source: Ocultar gems y stdlib por seguridad
+        only_show_app_code_source: "Ocultar el código de gems y vendor en el visor de código"
         git_branch_strategy: Estrategia de resolución de la rama
         enable_breadcrumbs: Capturar el rastro de actividad de la solicitud
         breadcrumb_buffer_size: Número máximo de breadcrumbs por solicitud
@@ -1224,6 +1277,7 @@ es:
         enable_crash_capture: Hook at_exit para caídas no gestionadas
         enable_coverage_tracking: 'Modo diagnóstico: actívelo desde el panel para
           ver las líneas ejecutadas en la vista del código fuente (Ruby 3.2+)'
+        enable_missing_translation_tracking: "Cuenta los fallos de I18n de la app por locale y clave (envuelve I18n.exception_handler)"
         enable_rack_attack_tracking: Registrar los eventos throttle/blocklist en su
           propia tabla
         enable_actioncable_tracking: Seguir los eventos de canal de WebSocket como
@@ -1281,6 +1335,8 @@ es:
         breadcrumbs: Breadcrumbs
         system_health: Estado del sistema
         swallowed_exceptions: Detección de excepciones silenciadas
+        missing_translations: "Seguimiento de traducciones faltantes"
+        boot_errors: "Captura de errores de arranque"
         rack_attack: Seguimiento de Rack Attack
         actioncable: Seguimiento de ActionCable
         activestorage: Seguimiento de ActiveStorage
@@ -1694,6 +1750,13 @@ es:
           guide_link: Guía de ActionCable
       activestorage:
         title: Estado de ActiveStorage
+        probe:
+          title: "Accesibilidad del servicio"
+          reachable: "Accesible"
+          unreachable: "Inaccesible"
+          service: "Servicio: %{name}"
+          latency: "%{ms} ms de ida y vuelta"
+          how: "Una comprobación de existencia de una clave que nunca se almacena, hecha al cargar esta página. GET /health ejecuta la misma comprobación."
         empty:
           title: No se encontraron eventos de ActiveStorage
           message: No se detectaron operaciones del servicio ActiveStorage en los
