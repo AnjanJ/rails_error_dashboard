@@ -79,6 +79,12 @@ Thank you to everyone who has contributed to Rails Error Dashboard! 🙏
 
 ---
 
+### Mqsl ([@Maxime-Quesnel](https://github.com/Maxime-Quesnel))
+
+- ✨ [#279](https://github.com/AnjanJ/rails_error_dashboard/pull/279) - Added UUID user ID support: the install migration types `user_id` like the app's primary keys, as Active Storage does, and an integer column stores `nil` instead of the number a UUID starts with (#278) (v0.15.0)
+
+---
+
 ## How to Become a Contributor
 
 We welcome all contributions! Here's how you can help:
@@ -149,8 +155,8 @@ When you contribute to Rails Error Dashboard, you get:
 
 ## Contributor Stats
 
-**Total Contributors:** 10 (including maintainer)
-**External Contributors:** 9
+**Total Contributors:** 11 (including maintainer)
+**External Contributors:** 10
 **Total PRs Merged:** 60+
 **Total Issues Resolved:** 45+
 **Lines of Code:** 15,000+
@@ -190,6 +196,7 @@ When you contribute to Rails Error Dashboard, you get:
 - [@midwire](https://github.com/midwire) - Backtrace line numbers, loading states & skeleton screens
 - [@j4rs](https://github.com/j4rs) - Mute/unmute notification suppression
 - [@antarr](https://github.com/antarr) - AI Help drawer (OpenAI + Anthropic, streamed Markdown)
+- [@Maxime-Quesnel](https://github.com/Maxime-Quesnel) - UUID user IDs
 
 ---
 
@@ -205,4 +212,4 @@ If you've contributed and don't see your name here, please open a PR to add your
 
 ---
 
-*This page is updated with each release. Last updated: September 27, 2026*
+*This page is updated with each release. Last updated: October 15, 2026*
