@@ -155,6 +155,28 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
 
       expect(result).to eq({})
     end
+
+    # audit-fixes-0-16-0/REQ-4: the error term was 1 - count/max, so the
+    # busiest platform scored 0 on it and a lone platform was always Critical.
+    it "does not rate a lone platform" do
+      3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
+
+      expect(described_class.new(days: 7).platform_stability_scores).to eq({})
+    end
+
+    it "gives two equally busy platforms equal, non-zero scores" do
+      3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
+      3.times { create(:error_log, platform: "android", occurred_at: 1.day.ago) }
+
+      scores = described_class.new(days: 7).platform_stability_scores
+
+      expect(scores["ios"]).to eq(scores["android"])
+      expect(scores["ios"]).to be > 0
+
+      # Equal volume, no resolutions, no growth: neither is Critical on volume alone
+      statuses = described_class.new(days: 7).platform_health_summary.transform_values { _1[:health_status] }
+      expect(statuses.values).to all(satisfy { |status| status != :critical })
+    end
   end
 
   describe "#cross_platform_errors" do
@@ -277,9 +299,11 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
         expect(ios_health[:critical_errors]).to eq(2)
         expect(ios_health[:unresolved_errors]).to eq(3)
         expect(ios_health[:resolution_rate]).to eq(70.0)
-        expect(ios_health[:stability_score]).to be_present
         expect(ios_health[:error_velocity]).to be_present
-        expect(ios_health[:health_status]).to be_in([ :healthy, :warning, :critical ])
+        # audit-fixes-0-16-0/REQ-4: a rating compares platforms, so a lone
+        # platform is not rated. It was always Critical before.
+        expect(ios_health[:stability_score]).to be_nil
+        expect(ios_health[:health_status]).to eq(:not_rated)
       end
     end
 

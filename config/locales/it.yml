@@ -36,6 +36,8 @@ it:
         healthy: "✅ Integro"
         warning: "⚠️ Avviso"
         critical: "\U0001F534 Critico"
+        not_rated: "Non valutato"
+        not_rated_hint: "La valutazione confronta le piattaforme, quindi servono errori su almeno due."
       device_type:
         mobile: Mobile
         tablet: Tablet

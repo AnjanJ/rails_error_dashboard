@@ -36,6 +36,8 @@ uk:
         healthy: "✅ Справний"
         warning: "⚠️ Попередження"
         critical: "\U0001F534 Критичний"
+        not_rated: "Без оцінки"
+        not_rated_hint: "Оцінка порівнює платформи, тому потрібні помилки щонайменше на двох."
       device_type:
         mobile: Mobile
         tablet: Tablet

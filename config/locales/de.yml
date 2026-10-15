@@ -36,6 +36,8 @@ de:
         healthy: "✅ Fehlerfrei"
         warning: "⚠️ Warnung"
         critical: "\U0001F534 Kritisch"
+        not_rated: "Nicht bewertet"
+        not_rated_hint: "Eine Bewertung vergleicht Plattformen und braucht daher Fehler auf mindestens zwei."
       device_type:
         mobile: Mobil
         tablet: Tablet

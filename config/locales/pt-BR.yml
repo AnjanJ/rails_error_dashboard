@@ -36,6 +36,8 @@ pt-BR:
         healthy: "✅ Saudável"
         warning: "⚠️ Atenção"
         critical: "\U0001F534 Crítico"
+        not_rated: "Sem avaliação"
+        not_rated_hint: "A avaliação compara plataformas, então precisa de erros em pelo menos duas."
       device_type:
         mobile: Celular
         tablet: Tablet

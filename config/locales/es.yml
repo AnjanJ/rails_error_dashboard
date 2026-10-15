@@ -36,6 +36,8 @@ es:
         healthy: "✅ Correcto"
         warning: "⚠️ Advertencia"
         critical: "\U0001F534 Crítico"
+        not_rated: "Sin calificar"
+        not_rated_hint: "La calificación compara plataformas, así que necesita errores en al menos dos."
       device_type:
         mobile: Móvil
         tablet: Tableta
