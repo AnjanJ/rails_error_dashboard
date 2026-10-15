@@ -1182,7 +1182,7 @@ Override the default error grouping with a lambda:
 config.custom_fingerprint = ->(exception, context) {
   case exception
   when ActiveRecord::RecordNotFound
-    "record-not-found-#{context[:controller]}"
+    "record-not-found-#{context[:controller_name]}"
   when ActionController::RoutingError
     "routing-error"  # Group all 404s together
   else

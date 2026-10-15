@@ -24,6 +24,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 - [Rack Attack Event Tracking](#rack-attack-event-tracking-v040)
 - [Process Crash Capture](#process-crash-capture-v040)
 - [Custom Severity Classification](#custom-severity-classification)
+- [Custom Grouping](#custom-grouping)
 - [Ignored Exceptions](#ignored-exceptions)
 - [Error Sampling](#error-sampling)
 - [Storm Protection](#storm-protection)
@@ -37,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/LLM_OBSERVABILITY.md); coverage tracking; `custom_fingerprint`; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`).
+Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`).
 
 ### Authentication & Access
 
@@ -176,6 +177,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `custom_severity_rules` | Hash | `{}` | Exact error class name (a String) → severity. See [Custom Severity Classification](#custom-severity-classification) |
+| `custom_fingerprint` | Lambda | `nil` | `->(exception, context) { String or nil }`: your own grouping key. See [Custom Grouping](#custom-grouping) |
 | `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings or Class objects (both cover subclasses), or Regexps matched against the class name. Class objects are matched since 0.14.4 |
 
 ### Performance Optimization
@@ -1266,6 +1268,58 @@ RailsErrorDashboard::Services::SeverityClassifier.classify("Stripe::CardError") 
 - **Validation Errors**: Downgrade to low if they're expected user input errors
 - **Third-party API Errors**: Classify based on business impact
 - **Custom Application Errors**: Set appropriate severity for domain-specific errors
+
+## Custom Grouping
+
+RED groups errors by their class, their message with numbers and IDs normalized, the first frame
+in your code, and the controller and action, within each application. To group some errors
+differently, return your own key:
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.custom_fingerprint = ->(exception, context) {
+    case exception
+    when ActiveRecord::RecordNotFound
+      # One group per path, IDs collapsed: /players/1 and /players/2 count together.
+      # Outside a request there is no request_url, and nil keeps the default.
+      path = context[:request_url]&.split("?")&.first
+      "404:#{path.gsub(/\d+/, ':id')}" if path
+    when MyApp::ExternalServiceError
+      # One group per service, whatever the message says
+      "external-#{exception.service_name}"
+    end
+    # Anything else returns nil: RED's default grouping
+  }
+end
+```
+
+### What the lambda returns
+
+- **A non-empty String**: errors with the same string share a group, within one application. RED
+  stores a digest of the string, not the string itself.
+- **`nil`**, or anything that isn't a non-empty String: RED's default grouping.
+- **If the lambda raises**, RED logs the failure and uses the default grouping. The error is still
+  recorded.
+
+### What `context` holds
+
+A Hash with Symbol keys. Any value can be `nil`, and there is no request or controller object:
+read the fields below.
+
+- **Errors RED captures itself, and `Rails.error.report`**: `request_url` (path and query string),
+  `http_method`, `controller_name`, `action_name`, `request_params`, `user_id`, `ip_address`,
+  `user_agent`, `platform`, `hostname`, `content_type`, `request_id`, `session_id`,
+  `request_duration_ms`, `environment`, `app_version`, `occurred_at` and `source`.
+- **`ManualErrorReporter.report`**: the arguments you passed (`request_url`, `platform`, `user_id`,
+  `user_agent`, `ip_address`, `app_version`, `metadata`, `occurred_at`) and `source`.
+
+### Notes
+
+- Storm protection counts errors by the same key, so errors you group together also count together
+  toward its thresholds.
+- A new or changed lambda applies to errors captured from then on. Groups already recorded keep
+  their key, so an error that recurs after the change opens a new group once.
+- The lambda runs on the request thread for every error. Keep it to a few string operations.
 
 ---
 
