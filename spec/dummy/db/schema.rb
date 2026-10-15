@@ -16,7 +16,7 @@
 # (MySQL rejects an int -> bigint FK), and the swallowed-exceptions strings
 # carry the 250 limit the MySQL index-key migration leaves them with.
 # bin/check-schema-parity compares this file with the migrations.
-ActiveRecord::Schema[7.0].define(version: 2026_10_15_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_15_000002) do
   create_table "rails_error_dashboard_error_occurrence_contexts", force: :cascade do |t|
     t.bigint "error_occurrence_id", null: false
     t.bigint "error_log_id", null: false
@@ -222,6 +222,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_000001) do
     t.datetime "context_captured_at"
     t.string "context_fidelity", limit: 10
     t.datetime "last_notified_at"
+    t.string "backtrace_source", limit: 10
     t.index [ "app_version" ], name: "index_rails_error_dashboard_error_logs_on_app_version"
     t.index [ "application_id", "occurred_at" ], name: "index_error_logs_on_app_occurred"
     t.index [ "application_id", "resolved" ], name: "index_error_logs_on_app_resolved"
@@ -281,6 +282,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_000001) do
     t.datetime "updated_at", null: false
     t.string "app_version"
     t.string "git_sha"
+    t.string "capture_source", limit: 10
     t.index [ "app_version", "occurred_at" ], name: "index_error_occurrences_on_version_and_time"
     t.index [ "error_log_id" ], name: "index_error_occurrences_on_error_log"
     t.index [ "occurred_at", "error_log_id" ], name: "index_error_occurrences_on_time_and_error"

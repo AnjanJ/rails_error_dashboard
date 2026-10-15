@@ -4,7 +4,7 @@ Tests cite `capture-source/REQ-N`. Build this spec after `occurrence-context-his
 `log_error.rb`, `spec/dummy/db/schema.rb` and the locale files. Write commit messages that state
 the new behaviour without exploit detail (the residual of GHSA-q7r3-w7p3-95h5).
 
-- [ ] **T1** Capture-source columns → REQ-9
+- [x] **T1** Capture-source columns → REQ-9
   - Files: db/migrate/20261015000002_add_capture_source_to_error_occurrences_and_error_logs.rb, spec/dummy/db/schema.rb, spec/migrations/add_capture_source_spec.rb
   - Test: spec/migrations/add_capture_source_spec.rb (both nullable columns exist after migrating; re-running is a no-op)
   - After: none
