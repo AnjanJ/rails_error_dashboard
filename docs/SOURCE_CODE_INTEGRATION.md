@@ -78,7 +78,7 @@ Securely reads source code files from disk with comprehensive security validatio
 
 **Features:**
 - Path validation (must be within Rails.root)
-- Source files only: Ruby (`.rb`, `.rake`, `.ru`) and view templates (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`), nothing under a dot directory such as `.git/`
+- Source files only: Ruby (`.rb`, `.rake`, `.ru`) anywhere in Rails.root, and view templates (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`) under an `app/` directory (`app/views`, `app/components`, an engine's `app/`). Nothing under a dot directory such as `.git/`
 - Directory traversal prevention (blocks `../` patterns)
 - Sensitive file protection (.env, secrets, credentials, keys)
 - Binary file detection
@@ -753,7 +753,7 @@ Source code is loaded on-demand:
 
 - ✅ Gem/vendor code filtering (optional)
 - ✅ Only shows files within Rails.root
-- ✅ Only shows source files (Ruby and view templates), never configuration, logs or dotfiles
+- ✅ Only shows source files (Ruby, and view templates under `app/`), never configuration (including `config/*.yml.erb`), logs or dotfiles
 - ✅ Binary file detection and blocking
 - ✅ File size limits (10 MB max)
 
@@ -812,7 +812,7 @@ bundle exec rspec
 
 2. **Verify file path is within Rails.root, and is a source file**
 
-   Only Ruby files and view templates are shown (`.rb`, `.rake`, `.ru`, `.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`). A frame in `Gemfile`, a YAML file or anything under a dot directory shows "Invalid or unsafe file path" by design.
+   Only Ruby files (`.rb`, `.rake`, `.ru`) and view templates under an `app/` directory (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`) are shown. A frame in `Gemfile`, a YAML file, a template outside `app/` (such as `config/database.yml.erb`) or anything under a dot directory shows "Invalid or unsafe file path" by design.
 
    ```ruby
    # Check in Rails console

@@ -345,7 +345,8 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
 
     %w[
       app/models/user.rb app/views/users/show.html.erb app/views/users/show.json.jbuilder
-      app/views/users/index.haml lib/tasks/import.rake config.ru
+      app/views/users/index.haml lib/tasks/import.rake config.ru config/initializers/cors.rb
+      app/components/card_component.html.erb components/admin/app/views/admin/show.html.erb
     ].each do |path|
       it "reads #{path}" do
         lines, error = read(path)
@@ -357,6 +358,16 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
 
     %w[config/application.yml config/settings.json log/production.log .npmrc Gemfile].each do |path|
       it "does not read #{path}" do
+        lines, error = read(path)
+
+        expect(lines).to be_nil
+        expect(error).to eq("Invalid or unsafe file path")
+      end
+    end
+
+    # Outside an app/ directory a template extension is configuration, not a view
+    %w[config/database.yml.erb config/settings.yml.erb config/secrets.json.erb lib/templates/form.html.erb].each do |path|
+      it "does not read the template #{path}, which is outside app/" do
         lines, error = read(path)
 
         expect(lines).to be_nil
