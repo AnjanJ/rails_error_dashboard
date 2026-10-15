@@ -10,6 +10,7 @@ module RailsErrorDashboard
     self.table_name = "rails_error_dashboard_error_occurrences"
 
     belongs_to :error_log, class_name: "RailsErrorDashboard::ErrorLog"
+    has_one :context, class_name: "RailsErrorDashboard::ErrorOccurrenceContext", dependent: :delete
 
     # Only define user association if User model exists
     if defined?(::User)
