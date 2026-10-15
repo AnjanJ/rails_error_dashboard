@@ -9,7 +9,7 @@ the new behaviour without exploit detail (the residual of GHSA-q7r3-w7p3-95h5).
   - Test: spec/migrations/add_capture_source_spec.rb (both nullable columns exist after migrating; re-running is a no-op)
   - After: none
   - Done when: `bundle exec rspec spec/migrations/add_capture_source_spec.rb` → all pass, and `bin/check-schema-parity` → agrees
-- [ ] **T2** Record the marker on capture → REQ-1, REQ-2, REQ-3, REQ-7, REQ-8
+- [x] **T2** Record the marker on capture → REQ-1, REQ-2, REQ-3, REQ-7, REQ-8
   - Files: lib/rails_error_dashboard/manual_error_reporter.rb, lib/rails_error_dashboard/commands/log_error.rb, spec/commands/log_error_capture_source_spec.rb
   - Test: spec/commands/log_error_capture_source_spec.rb, covering:
     - a `ManualErrorReporter` report is client, sync and async

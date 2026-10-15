@@ -513,6 +513,13 @@ module RailsErrorDashboard
           attributes[:environment] = resolve_environment
         end
 
+        # Where the backtrace this row is created with came from. Not part of
+        # the fingerprint: a client report and a server capture of one error
+        # stay one group.
+        if ErrorLog.column_names.include?("backtrace_source")
+          attributes[:backtrace_source] = capture_source
+        end
+
         # Neutralise invalid bytes BEFORE filtering: the filter runs regexes,
         # which raise on an invalid string, and PostgreSQL rejects the INSERT.
         attributes = Services::EncodingSanitizer.scrub_deep(attributes)
@@ -654,6 +661,7 @@ module RailsErrorDashboard
             occurrence_columns = ErrorOccurrence.column_names
             occurrence_attrs[:app_version] = attributes[:app_version] if occurrence_columns.include?("app_version")
             occurrence_attrs[:git_sha] = attributes[:git_sha] if occurrence_columns.include?("git_sha")
+            occurrence_attrs[:capture_source] = capture_source if occurrence_columns.include?("capture_source")
             occurrence_attrs = Services::EncodingSanitizer.scrub_deep(occurrence_attrs)
             occurrence = ErrorOccurrence.create(ErrorOccurrence.clamp_string_attributes(occurrence_attrs))
             # This occurrence's own copy of the context the row just got. Never
@@ -1004,6 +1012,12 @@ module RailsErrorDashboard
 
       # Symbol or string key: the async job round-trips the context through the
       # queue serializer, which turns symbol keys into strings.
+      # "client" for a ManualErrorReporter report, "server" for every other
+      # capture. Only the exact marker ManualErrorReporter sets counts.
+      def capture_source
+        context_value(:_capture_source) == "client" ? "client" : "server"
+      end
+
       def context_value(key)
         return nil unless @context.is_a?(Hash)
 
