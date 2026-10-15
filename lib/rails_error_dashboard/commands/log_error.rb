@@ -433,7 +433,7 @@ module RailsErrorDashboard
           error_type: reported_error_type || @exception.class.name,
           message: @exception.message,
           backtrace: truncated_backtrace,
-          user_id: error_context.user_id,
+          user_id: ErrorLog.storable_user_id(error_context.user_id),
           request_url: error_context.request_url,
           request_params: error_context.request_params,
           user_agent: error_context.user_agent,

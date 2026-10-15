@@ -204,6 +204,13 @@ module RailsErrorDashboard
       Commands::LogError.call(exception, context)
     end
 
+    # nil rather than a wrong user: an integer column casts "3f2a9c1e-..." to 3
+    def self.storable_user_id(user_id)
+      return user_id unless type_for_attribute("user_id").type == :integer
+
+      Integer(user_id.to_s, 10, exception: false)
+    end
+
     # Mark error as resolved (delegates to Command)
     def resolve!(resolution_data = {})
       Commands::ResolveError.call(id, resolution_data)
