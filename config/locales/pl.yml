@@ -1168,6 +1168,11 @@ pl:
           other: "%{count} zdarzenia"
           few: "%{count} zdarzenia"
           many: "%{count} zdarzeń"
+        occurrences:
+          one: "%{count} wystąpienie"
+          other: "%{count} wystąpienia"
+          few: "%{count} wystąpienia"
+          many: "%{count} wystąpień"
         queries:
           one: "%{count} zapytanie"
           other: "%{count} zapytania"
@@ -1222,6 +1227,7 @@ pl:
         enable_middleware: Przechwytuje nieobsłużone wyjątki
         enable_error_subscriber: Subskrybuje zdarzenia błędów Rails
         retention_days: "Usuwaj błędy niewidziane przez tyle dni. Wykonuje to RetentionCleanupJob, którego gem sam nie planuje"
+        occurrence_context_limit: "Ile najnowszych wystąpień każdego błędu zachowuje breadcrumbs, stan systemu i zmienne (0 = wyłączone)"
         max_backtrace_lines: Limit głębokości śladu stosu
         sampling_rate: Odsetek przechwytywanych błędów
         application_name: Nazwa tej aplikacji (wykrywana automatycznie, jeśli nie

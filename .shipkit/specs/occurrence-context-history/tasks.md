@@ -41,7 +41,7 @@ migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
   - Test: spec/requests/errors_show_occurrence_spec.rb (the card links each occurrence that has context to `?occurrence=ID`; occurrences without context are not linked; the list query never selects payload columns)
   - After: T5
   - Done when: `bundle exec rspec spec/requests/errors_show_occurrence_spec.rb` → all pass, and `bin/i18n-check` → no failures
-- [ ] **T7** Settings row, initializer template and docs → REQ-13
+- [x] **T7** Settings row, initializer template and docs → REQ-13
   - Files: app/views/rails_error_dashboard/errors/settings.html.erb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, docs/guides/CONFIGURATION.md, _guides/configuration.md, docs/FEATURES.md, _getting_started/features.md
   - Test: none (REQ-13 is prose). `bin/i18n-check` guards the locale keys.
   - After: T6

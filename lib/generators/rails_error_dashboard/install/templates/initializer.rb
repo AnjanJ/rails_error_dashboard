@@ -411,6 +411,12 @@ RailsErrorDashboard.configure do |config|
   config.enable_system_health = false
 
 <% end -%>
+  # Occurrence Context History (NEW in 0.16.0)
+  # Each occurrence keeps its own breadcrumbs, system health and variables, so
+  # any of an error's recent occurrences can be opened, not only the latest.
+  # Kept for the newest N occurrences per error; 0 stops storing them.
+  config.occurrence_context_limit = 25
+
 <% if @enable_swallowed_exceptions -%>
   # Swallowed Exception Detection - ENABLED
   # Requires Ruby 3.3+ — detects exceptions that are raised then silently rescued

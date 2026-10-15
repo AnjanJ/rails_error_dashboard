@@ -1548,6 +1548,9 @@ en:
         events:
           one: "%{count} event"
           other: "%{count} events"
+        occurrences:
+          one: "%{count} occurrence"
+          other: "%{count} occurrences"
         queries:
           one: "%{count} query"
           other: "%{count} queries"
@@ -1612,6 +1615,7 @@ en:
         enable_middleware: "Catches unhandled exceptions"
         enable_error_subscriber: "Subscribes to Rails error events"
         retention_days: "Delete errors not seen for this many days. Enforced by RetentionCleanupJob, which nothing in the gem schedules"
+        occurrence_context_limit: "How many recent occurrences per error keep their breadcrumbs, system health and variables (0 = off)"
         max_backtrace_lines: "Stack trace depth limit"
         sampling_rate: "Percentage of errors captured"
         application_name: "Name of this application (auto-detected if not set)"

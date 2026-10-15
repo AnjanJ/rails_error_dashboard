@@ -641,7 +641,7 @@ When async logging is enabled, breadcrumbs are harvested from the current thread
 
 ## System Health Snapshot (NEW!)
 
-**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at every captured occurrence (the snapshot is stored on the grouped error record and overwritten on recurrence, so the detail page always shows the latest failure; a storm-shed capture leaves the previous snapshot in place):
+**⚙️ Optional Feature** - System health is disabled by default. Enable it to capture runtime metrics at every captured occurrence (the snapshot is stored on the grouped error record and overwritten on recurrence, so the detail page shows the latest failure; a storm-shed capture leaves the previous snapshot in place). The newest occurrences also keep their own copy: see [Occurrence Context History](#occurrence-context-history-v0160):
 
 ```ruby
 config.enable_system_health = true
@@ -816,6 +816,23 @@ end
 - Shares the same TracePoint handler as local variable capture — minimal overhead when both are enabled
 
 ---
+
+## Occurrence Context History (v0.16.0)
+
+**⚙️ Follows the context features** - The error record holds its latest capture's context. Each occurrence now also keeps its own copy of the breadcrumbs, system health, local variables and instance variables, so an intermittent failure can be compared across its recent occurrences, not only the last one. Nothing is stored unless at least one of those four features is enabled.
+
+```ruby
+config.occurrence_context_limit = 25  # default; 0 stops storing them
+```
+
+### How It Works
+
+- At capture, RED stores for that occurrence the same four values it writes to the error record, filtered the same way. A capture with none of them stores nothing, and neither does a storm-protection reduced capture.
+- Only the newest `occurrence_context_limit` occurrences of each error keep theirs: each new one pushes the oldest out.
+- The error page's **History** tab lists them under **Captured occurrences**. Opening one shows its breadcrumbs, system health and variables in the usual cards, under a banner naming the occurrence and its time. The rest of the page, including the request details and Copy for LLM, still shows the latest capture.
+- They are deleted with their error: by retention cleanup, `error_dashboard:cleanup_resolved`, batch delete and destroy.
+
+If storing an occurrence's context fails, the error and the occurrence are still recorded, and nothing is raised in your app. The context lives in its own table, `rails_error_dashboard_error_occurrence_contexts`, which the usual upgrade (the installer, then `rails db:migrate`) adds.
 
 ## Swallowed Exception Detection (v0.4.0)
 

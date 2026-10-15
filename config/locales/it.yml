@@ -1143,6 +1143,10 @@ it:
           one: "%{count} evento"
           other: "%{count} eventi"
           many: "%{count} eventi"
+        occurrences:
+          one: "%{count} occorrenza"
+          other: "%{count} occorrenze"
+          many: "%{count} occorrenze"
         queries:
           one: "%{count} query"
           other: "%{count} query"
@@ -1192,6 +1196,7 @@ it:
         enable_middleware: Intercetta le eccezioni non gestite
         enable_error_subscriber: Si iscrive agli eventi di errore di Rails
         retention_days: "Elimina gli errori non visti da questo numero di giorni. Applicato da RetentionCleanupJob, che la gem non pianifica da sola"
+        occurrence_context_limit: "Quante occorrenze recenti per errore conservano breadcrumbs, stato del sistema e variabili (0 = disattivato)"
         max_backtrace_lines: Limite di profondità dello stack trace
         sampling_rate: Percentuale di errori acquisiti
         application_name: Nome di questa applicazione (rilevato automaticamente se

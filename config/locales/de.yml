@@ -1115,6 +1115,9 @@ de:
         events:
           one: "%{count} Ereignis"
           other: "%{count} Ereignisse"
+        occurrences:
+          one: "%{count} Vorkommen"
+          other: "%{count} Vorkommen"
         queries:
           one: "%{count} Abfrage"
           other: "%{count} Abfragen"
@@ -1159,6 +1162,7 @@ de:
         enable_middleware: Fängt unbehandelte Exceptions ab
         enable_error_subscriber: Abonniert Rails-Fehlerereignisse
         retention_days: "Fehler löschen, die so viele Tage nicht mehr aufgetreten sind. Durchgesetzt vom RetentionCleanupJob, den das Gem selbst nicht einplant"
+        occurrence_context_limit: "Für wie viele der neuesten Vorkommen je Fehler Breadcrumbs, Systemzustand und Variablen aufbewahrt werden (0 = aus)"
         max_backtrace_lines: Maximale Backtrace-Tiefe
         sampling_rate: Anteil der erfassten Fehler
         application_name: Name dieser Anwendung (wird automatisch erkannt, wenn nicht

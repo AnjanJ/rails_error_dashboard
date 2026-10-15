@@ -1152,6 +1152,10 @@ es:
           one: "%{count} evento"
           other: "%{count} eventos"
           many: "%{count} eventos"
+        occurrences:
+          one: "%{count} aparición"
+          other: "%{count} apariciones"
+          many: "%{count} apariciones"
         queries:
           one: "%{count} consulta"
           other: "%{count} consultas"
@@ -1201,6 +1205,7 @@ es:
         enable_middleware: Captura las excepciones no gestionadas
         enable_error_subscriber: Se suscribe a los eventos de error de Rails
         retention_days: "Eliminar errores no vistos durante estos días. Lo aplica RetentionCleanupJob, que la gema no programa por sí misma"
+        occurrence_context_limit: "Cuántas apariciones recientes por error conservan sus breadcrumbs, estado del sistema y variables (0 = desactivado)"
         max_backtrace_lines: Profundidad máxima del backtrace
         sampling_rate: Porcentaje de errores capturados
         application_name: Nombre de esta aplicación (se detecta automáticamente si

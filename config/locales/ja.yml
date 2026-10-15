@@ -1005,6 +1005,8 @@ ja:
           other: "%{count}秒"
         events:
           other: "%{count}件のイベント"
+        occurrences:
+          other: "%{count}件の発生"
         queries:
           other: "%{count}クエリ"
         std_devs: "%{count}σ"
@@ -1044,6 +1046,7 @@ ja:
         enable_middleware: 未処理の例外を捕捉します
         enable_error_subscriber: Rails のエラーイベントを購読します
         retention_days: "この日数の間発生しなかったエラーを削除します。RetentionCleanupJob が実行しますが、gem 自体はスケジュールしません"
+        occurrence_context_limit: "エラーごとに Breadcrumb、システムヘルス、変数を保持する最新の発生数（0 = 無効）"
         max_backtrace_lines: スタックトレースの深さの上限
         sampling_rate: エラーを記録する割合
         application_name: このアプリケーションの名前 (未設定の場合は自動検出)

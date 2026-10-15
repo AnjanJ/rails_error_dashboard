@@ -1147,6 +1147,10 @@ pt-BR:
           one: "%{count} evento"
           other: "%{count} eventos"
           many: "%{count} eventos"
+        occurrences:
+          one: "%{count} ocorrência"
+          other: "%{count} ocorrências"
+          many: "%{count} ocorrências"
         queries:
           one: "%{count} consulta"
           other: "%{count} consultas"
@@ -1196,6 +1200,7 @@ pt-BR:
         enable_middleware: Captura exceções não tratadas
         enable_error_subscriber: Assina os eventos de erro do Rails
         retention_days: "Excluir erros não vistos há este número de dias. Aplicado pelo RetentionCleanupJob, que a gem não agenda por conta própria"
+        occurrence_context_limit: "Quantas ocorrências recentes por erro mantêm breadcrumbs, saúde do sistema e variáveis (0 = desativado)"
         max_backtrace_lines: Profundidade máxima do backtrace
         sampling_rate: Porcentagem de erros capturados
         application_name: Nome desta aplicação (detectado automaticamente se não for

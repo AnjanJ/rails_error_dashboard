@@ -1171,6 +1171,11 @@ ru:
           other: "%{count} события"
           few: "%{count} события"
           many: "%{count} событий"
+        occurrences:
+          one: "%{count} событие"
+          other: "%{count} события"
+          few: "%{count} события"
+          many: "%{count} событий"
         queries:
           one: "%{count} запрос"
           other: "%{count} запроса"
@@ -1225,6 +1230,7 @@ ru:
         enable_middleware: Перехватывает необработанные исключения
         enable_error_subscriber: Подписывается на события ошибок Rails
         retention_days: "Удалять ошибки, не встречавшиеся столько дней. Выполняет RetentionCleanupJob, который гем сам не планирует"
+        occurrence_context_limit: "Сколько последних событий каждой ошибки сохраняют breadcrumbs, состояние системы и переменные (0 = выключено)"
         max_backtrace_lines: Ограничение глубины backtrace
         sampling_rate: Доля захватываемых ошибок
         application_name: Имя этого приложения (определяется автоматически, если не

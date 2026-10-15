@@ -10,6 +10,7 @@
         enable_middleware: { type: :boolean },
         enable_error_subscriber: { type: :boolean },
         retention_days: { type: :retention_days },
+        occurrence_context_limit: { type: :integer, unit: :occurrences },
         max_backtrace_lines: { type: :integer, unit: :lines },
         sampling_rate: { type: :percentage }
       }

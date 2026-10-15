@@ -1167,6 +1167,11 @@ uk:
           other: "%{count} події"
           few: "%{count} події"
           many: "%{count} подій"
+        occurrences:
+          one: "%{count} подія"
+          other: "%{count} події"
+          few: "%{count} події"
+          many: "%{count} подій"
         queries:
           one: "%{count} запит"
           other: "%{count} запита"
@@ -1221,6 +1226,7 @@ uk:
         enable_middleware: Перехоплює необроблені винятки
         enable_error_subscriber: Підписується на події помилок Rails
         retention_days: "Видаляти помилки, яких не було стільки днів. Виконує RetentionCleanupJob, який гем сам не планує"
+        occurrence_context_limit: "Скільки останніх подій кожної помилки зберігають breadcrumbs, стан системи та змінні (0 = вимкнено)"
         max_backtrace_lines: Обмеження глибини стеку викликів
         sampling_rate: Відсоток захоплених помилок
         application_name: Назва цього застосунку (визначається автоматично, якщо не
