@@ -24,6 +24,7 @@ module RailsErrorDashboard
 
         resolved_count = 0
         failed_ids = []
+        failures = {}
 
         resolved_errors = []
 
@@ -40,7 +41,10 @@ module RailsErrorDashboard
             resolved_errors << error
           rescue => e
             failed_ids << error.id
-            RailsErrorDashboard::Logger.error("Failed to resolve error #{error.id}: #{e.message}")
+            failures[error.id] = "#{e.class}: #{e.message}"
+            # Rails.logger, not RED's logger: log_level defaults to :silent, and
+            # this is the only record of why the row failed
+            Rails.logger.warn("[RailsErrorDashboard] Failed to resolve error #{error.id}: #{e.class}: #{e.message}")
           end
         end
 
@@ -62,7 +66,8 @@ module RailsErrorDashboard
           count: resolved_count,
           total: @error_ids.size,
           failed_ids: failed_ids,
-          errors: failed_ids.empty? ? [] : [ red_tp("red.commands.batch_failed.resolve", count: failed_ids.size) ]
+          failures: failures,
+          errors: failed_ids.empty? ? [] : [ "#{red_tp("red.commands.batch_failed.resolve", count: failed_ids.size)} (#{failed_ids.map { |id| "##{id}" }.join(", ")})" ]
         }
       rescue => e
         RailsErrorDashboard::Logger.error("Batch resolve failed: #{e.message}")
