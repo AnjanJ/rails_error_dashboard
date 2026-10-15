@@ -693,6 +693,7 @@ zh-CN:
             other: "%{count} 个栈帧"
           click_to_expand: "（点击展开）"
           view_source: 查看源码
+          client_report_note: "这些帧来自客户端报告（ManualErrorReporter）。它们描述的是在客户端运行的代码，因此 RED 不会为其打开源文件、显示代码片段或运行 git blame。"
           none: 无可用的 backtrace
       row:
         new_badge: 新

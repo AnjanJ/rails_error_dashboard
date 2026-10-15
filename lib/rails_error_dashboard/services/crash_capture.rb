@@ -267,6 +267,11 @@ module RailsErrorDashboard
             attributes[:exception_cause] = cause_json
           end
 
+          # The at_exit hook wrote this backtrace from the crashed process
+          if ErrorLog.column_names.include?("backtrace_source")
+            attributes[:backtrace_source] = "server"
+          end
+
           if ErrorLog.column_names.include?("error_hash")
             attributes[:error_hash] = Services::ErrorHashGenerator.from_attributes(
               error_type: attributes[:error_type],

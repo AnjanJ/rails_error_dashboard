@@ -38,7 +38,8 @@ module RailsErrorDashboard
         Entry = Struct.new(
           :error_class, :message, :first_app_frame,
           :controller_name, :action_name, :custom_hash, :environment,
-          :opaque_identity, :count, :first_seen_at, :last_seen_at, :buckets
+          :opaque_identity, :count, :first_seen_at, :last_seen_at, :buckets,
+          :capture_source
         )
 
         # The bucket an instant belongs to, as an epoch second.
@@ -120,6 +121,7 @@ module RailsErrorDashboard
               # job CANNOT recompute this -- it has to travel, or a storm count
               # lands on a different row than the full capture path would.
               "opaque_identity" => entry.opaque_identity,
+              "capture_source" => entry.capture_source,
               "count" => entry.count.value,
               "first_seen_at" => entry.first_seen_at.iso8601,
               "last_seen_at" => entry.last_seen_at.iso8601,
@@ -167,7 +169,7 @@ module RailsErrorDashboard
                 parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
                 parts[:opaque_identity],
                 Concurrent::AtomicFixnum.new(0), first_seen_at || Time.current, last_seen_at || Time.current,
-                Concurrent::Map.new
+                Concurrent::Map.new, parts[:capture_source]
               )
             end
           end
@@ -216,7 +218,8 @@ module RailsErrorDashboard
             error_class: entry["error_class"], message: entry["message"],
             first_app_frame: entry["first_app_frame"], controller_name: entry["controller_name"],
             action_name: entry["action_name"], custom_hash: entry["custom_hash"],
-            environment: entry["environment"], opaque_identity: entry["opaque_identity"]
+            environment: entry["environment"], opaque_identity: entry["opaque_identity"],
+            capture_source: entry["capture_source"]
           }
         end
 

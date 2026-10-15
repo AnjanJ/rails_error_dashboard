@@ -24,7 +24,8 @@ default.
 
 In the backtrace on an error's page, each line from your app's `app/`, `lib/`, `config/` and `db/`
 directories gets a **View Source** button. Lines from gems (including a gem's own `app/` directory,
-such as Devise's), Rails and Ruby don't. The button opens a viewer with:
+such as Devise's), Rails and Ruby don't, and neither does a backtrace a client sent through
+`ManualErrorReporter` (see [Security](#security)). The button opens a viewer with:
 
 - **The code around the line**: 5 lines before and after by default, with syntax highlighting and
   the failing line highlighted. The rows carry the file's own line numbers.
@@ -228,11 +229,24 @@ RED limits what it reads:
 
 RED only reads files. It never writes to your app's directory.
 
-The file paths come from the stored backtrace. Errors reported with `ManualErrorReporter` carry the
-backtrace your client sent, so a client can point the viewer at any Ruby file or view template in
-your app. Keep secrets out of Ruby source; use Rails credentials or environment variables. Before
-0.15.0, other files could be read this way too: see
+The file paths come from the stored backtrace. An error reported with `ManualErrorReporter` carries
+the backtrace your client sent, which describes code that ran on the client. Since 0.16.0 RED
+records where each backtrace came from, and for one a client sent it reads no file at all:
+
+- no **View Source** button, and so no git blame, on the error's page, which says instead that the
+  frames came from a client report
+- no source snippets in **Copy for LLM** or in the context sent to **AI help**
+
+This follows the backtrace the page shows. When a later server capture of the same error replaces a
+client's one-line backtrace with its full one, the page gets View Source again; a client's full
+backtrace is never replaced. RED's own captures (the middleware, `Rails.error`, jobs, crash
+import) are unchanged.
+
+RED can't tell which errors recorded before 0.16.0 came from a client, so those still get View
+Source. Before 0.16.0, a client report could point the viewer at any Ruby file or view template in
+your app, and before 0.15.0 at other files too: see
 [GHSA-q7r3-w7p3-95h5](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-q7r3-w7p3-95h5).
+Keep secrets out of Ruby source either way; use Rails credentials or environment variables.
 
 ---
 
@@ -275,7 +289,8 @@ end
 ### Source code not showing
 
 - **No View Source button:** check `enable_source_code_integration` is on, and restart the app.
-  Only lines in your app's `app/`, `lib/`, `config/` and `db/` get the button.
+  Only lines in your app's `app/`, `lib/`, `config/` and `db/` get the button. A backtrace a client
+  sent through `ManualErrorReporter` never gets it; the page says so (see [Security](#security)).
 - **"Could not read source: File not found or not readable":** the file isn't at
   `Rails.root` plus the backtrace path on the server showing the dashboard. A file deleted or moved
   since the error happened shows this too.

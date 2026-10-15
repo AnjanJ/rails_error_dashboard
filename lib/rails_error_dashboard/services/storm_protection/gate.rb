@@ -279,7 +279,12 @@ module RailsErrorDashboard
               # Only an EXPLICIT environment from the caller. nil means "the
               # worker's own environment", resolved at flush time exactly as
               # LogError resolves it for a full capture.
-              environment: context[:environment].to_s.strip.presence&.[](0, 64)
+              environment: context[:environment].to_s.strip.presence&.[](0, 64),
+              # Whose backtrace first_app_frame came from, for the row the flush
+              # may build from it. Not part of the identity or the gate key: a
+              # client report and a server capture of one error share an entry,
+              # which keeps the first event's frame, and so its source.
+              capture_source: context[:_capture_source] == "client" ? "client" : "server"
             )
           end
 

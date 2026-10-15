@@ -775,6 +775,7 @@ it:
             many: "%{count} frame"
           click_to_expand: "(clicca per espandere)"
           view_source: Vedi il codice
+          client_report_note: "Questi frame provengono da una segnalazione del client (ManualErrorReporter). Descrivono codice eseguito sul client, quindi RED non apre file sorgente, non mostra estratti e non esegue git blame per essi."
           none: Backtrace non disponibile
       row:
         new_badge: NUOVO

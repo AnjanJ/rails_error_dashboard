@@ -391,6 +391,12 @@ module RailsErrorDashboard
         if ErrorLog.column_names.include?("context_captured_at")
           create_attrs[:context_captured_at] = create_attrs[:occurred_at]
         end
+        # The backtrace above is the exemplar's first frame, so it is a
+        # client's when the counted event was a client report. An entry from
+        # a release that did not record the source reads as server.
+        if ErrorLog.column_names.include?("backtrace_source")
+          create_attrs[:backtrace_source] = entry["capture_source"] == "client" ? "client" : "server"
+        end
         begin
           # requires_new opens a SAVEPOINT: on PostgreSQL a failed INSERT aborts
           # its transaction, and every later statement -- including the recovery

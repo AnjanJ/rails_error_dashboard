@@ -782,6 +782,7 @@ fr:
             many: "%{count} frames"
           click_to_expand: "(cliquez pour développer)"
           view_source: Voir le code source
+          client_report_note: "Ces frames proviennent d'un rapport client (ManualErrorReporter). Ils décrivent du code exécuté côté client : RED n'ouvre donc aucun fichier source, n'affiche aucun extrait et n'exécute pas git blame pour eux."
           none: Aucun backtrace disponible
       row:
         new_badge: NOUVEAU

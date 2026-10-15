@@ -181,6 +181,14 @@ module RailsErrorDashboard
       Services::SeverityClassifier.critical?(error_type)
     end
 
+    # Whether the backtrace this row shows was sent by a client through
+    # ManualErrorReporter. Its frames describe code that ran on the client, so
+    # View Source, git blame and the Markdown formatter read no file for them.
+    # nil (a row from before the column, or an app not yet migrated) is server.
+    def client_backtrace?
+      has_attribute?(:backtrace_source) && backtrace_source == "client"
+    end
+
     # Check if error is recent (< 1 hour)
     def recent?
       occurred_at >= 1.hour.ago

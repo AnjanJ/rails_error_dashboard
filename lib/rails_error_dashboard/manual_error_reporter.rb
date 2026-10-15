@@ -111,6 +111,11 @@ module RailsErrorDashboard
         occurred_at: occurred_at || Time.current
       }.compact # Remove nil values
 
+      # Marks this as a client report, so nothing reads this app's source files
+      # for its backtrace. Set here, after the caller's values, and from no
+      # argument: source: is only a label.
+      context[:_capture_source] = "client"
+
       # severity is deliberately NOT forwarded: nothing downstream reads it,
       # and passing it on would keep the illusion that it does.
       if severity.present?

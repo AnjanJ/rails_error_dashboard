@@ -696,6 +696,7 @@ ja:
             other: "%{count}フレーム"
           click_to_expand: "(クリックで展開)"
           view_source: ソースを表示
+          client_report_note: "これらのフレームはクライアントからの報告（ManualErrorReporter）によるものです。クライアント側で実行されたコードを示すため、RED はソースファイルを開かず、コード片の表示や git blame も行いません。"
           none: Backtrace はありません
       row:
         new_badge: NEW
