@@ -57,6 +57,11 @@ RSpec.describe RailsErrorDashboard::Queries::HealthStatus do
 
   describe "when the error database is unreachable" do
     before do
+      # Setting a partial double on ErrorLog makes rspec-rails define its
+      # attribute methods, which loads the schema through the very connection
+      # pool stubbed below. Load it first, or the example passes only when an
+      # earlier one happened to.
+      RailsErrorDashboard::ErrorLog.define_attribute_methods
       allow(RailsErrorDashboard::ErrorLogsRecord).to receive(:connection_pool)
         .and_raise(ActiveRecord::ConnectionNotEstablished, "postgres://secret-host:5432 refused")
     end
