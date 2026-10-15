@@ -40,7 +40,7 @@ the new behaviour without exploit detail (the residual of GHSA-q7r3-w7p3-95h5).
     - Copy for LLM and the AI-help context hold no source snippet for the client report
   - After: T3
   - Done when: `bundle exec rspec spec/requests/errors_show_client_backtrace_spec.rb spec/services/markdown_error_formatter_spec.rb` → all pass, and `bin/i18n-check` → no failures
-- [ ] **T5** Document client reports in the source integration docs → REQ-10
+- [x] **T5** Document client reports in the source integration docs → REQ-10
   - Files: docs/SOURCE_CODE_INTEGRATION.md, _features/source-code-integration.md
   - Test: none (REQ-10 is prose)
   - After: none
