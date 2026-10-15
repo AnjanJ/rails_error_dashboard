@@ -16,9 +16,11 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
       expect(result.keys).to include(
         :days, :error_stats, :errors_over_time,
         :errors_by_type, :errors_by_platform,
-        :errors_by_hour, :top_users, :resolution_rate,
-        :mobile_errors, :api_errors
+        :errors_by_hour, :top_users, :resolution_rate
       )
+      # audit-fixes-0-16-0/REQ-14: computed on every analytics cache miss and
+      # rendered nowhere
+      expect(result.keys).not_to include(:mobile_errors, :api_errors)
     end
 
     describe "application-scoped resolution rate" do
@@ -262,38 +264,6 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
       end
     end
 
-    describe "mobile errors count" do
-      it "counts iOS and Android errors" do
-        result = described_class.call(30)
-
-        expect(result[:mobile_errors]).to eq(2) # iOS + Android
-      end
-
-      it "excludes API errors" do
-        create(:error_log, platform: "API", occurred_at: 1.day.ago)
-
-        result = described_class.call(30)
-
-        expect(result[:mobile_errors]).to eq(2)
-      end
-    end
-
-    describe "API errors count" do
-      it "counts API platform errors" do
-        result = described_class.call(30)
-
-        expect(result[:api_errors]).to eq(1)
-      end
-
-      it "includes errors with nil platform" do
-        create(:error_log, platform: nil, occurred_at: 1.day.ago)
-
-        result = described_class.call(30)
-
-        expect(result[:api_errors]).to eq(2)
-      end
-    end
-
     describe "custom time range" do
       it "accepts custom days parameter" do
         result = described_class.call(7)
@@ -329,8 +299,6 @@ RSpec.describe RailsErrorDashboard::Queries::AnalyticsStats do
         result = described_class.call(30)
 
         expect(result[:error_stats][:total]).to eq(0)
-        expect(result[:mobile_errors]).to eq(0)
-        expect(result[:api_errors]).to eq(0)
       end
 
       it "returns empty hashes for groupings" do

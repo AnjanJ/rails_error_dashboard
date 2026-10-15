@@ -36,7 +36,7 @@
     <div class="row mb-4">
       <% @platform_health.each do |platform, health| %>
         <div class="col-md-6 col-lg-3 mb-3">
-          <div class="card h-100 <%= health[:health_status] == :healthy ? 'border-success' : health[:health_status] == :warning ? 'border-warning' : 'border-danger' %>">
+          <div class="card h-100 <%= { healthy: 'border-success', warning: 'border-warning', not_rated: 'border-secondary' }.fetch(health[:health_status], 'border-danger') %>">
             <div class="card-body">
               <h5 class="card-title text-capitalize">
                 <%= platform || red_t("red.common.unknown") %>
@@ -44,23 +44,28 @@
                   <span class="badge bg-success float-end"><%= red_t("red.analytics.platform_comparison.health_card.healthy") %></span>
                 <% elsif health[:health_status] == :warning %>
                   <span class="badge bg-warning float-end"><%= red_t("red.analytics.platform_comparison.health_card.warning") %></span>
+                <% elsif health[:health_status] == :not_rated %>
+                  <span class="badge bg-secondary float-end" title="<%= red_t("red.common.health_status.not_rated_hint") %>"><%= red_t("red.common.health_status.not_rated") %></span>
                 <% else %>
                   <span class="badge bg-danger float-end"><%= red_t("red.analytics.platform_comparison.health_card.critical") %></span>
                 <% end %>
               </h5>
 
-              <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <small class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.stability_score") %></small>
-                  <strong><%= health[:stability_score] %>/100</strong>
-                </div>
-                <div class="progress" style="height: 8px;">
-                  <div class="progress-bar <%= health[:stability_score] >= 80 ? 'bg-success' : health[:stability_score] >= 60 ? 'bg-warning' : 'bg-danger' %>"
-                       role="progressbar"
-                       style="width: <%= health[:stability_score] %>%">
+              <%# A lone platform has no score: a rating compares platforms %>
+              <% if health[:stability_score] %>
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted"><%= red_t("red.analytics.platform_comparison.health_card.stability_score") %></small>
+                    <strong><%= health[:stability_score] %>/100</strong>
+                  </div>
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar <%= health[:stability_score] >= 80 ? 'bg-success' : health[:stability_score] >= 60 ? 'bg-warning' : 'bg-danger' %>"
+                         role="progressbar"
+                         style="width: <%= health[:stability_score] %>%">
+                    </div>
                   </div>
                 </div>
-              </div>
+              <% end %>
 
               <div class="small">
                 <div class="d-flex justify-content-between mb-1">

@@ -23,6 +23,7 @@ module RailsErrorDashboard
 
         muted_count = 0
         failed_ids = []
+        failures = {}
         muted_errors = []
 
         errors.each do |error|
@@ -33,11 +34,18 @@ module RailsErrorDashboard
               muted_by: @muted_by,
               muted_reason: @reason
             )
+            # The comment a single mute writes, so the reason shows in the thread
+            if @reason.present?
+              error.comments.create!(author_name: @muted_by || "System", body: "Muted notifications: #{@reason}")
+            end
             muted_count += 1
             muted_errors << error
           rescue => e
             failed_ids << error.id
-            RailsErrorDashboard::Logger.error("Failed to mute error #{error.id}: #{e.message}")
+            failures[error.id] = "#{e.class}: #{e.message}"
+            # Rails.logger, not RED's logger: log_level defaults to :silent, and
+            # this is the only record of why the row failed
+            Rails.logger.warn("[RailsErrorDashboard] Failed to mute error #{error.id}: #{e.class}: #{e.message}")
           end
         end
 
@@ -50,7 +58,8 @@ module RailsErrorDashboard
           count: muted_count,
           total: @error_ids.size,
           failed_ids: failed_ids,
-          errors: failed_ids.empty? ? [] : [ red_tp("red.commands.batch_failed.mute", count: failed_ids.size) ]
+          failures: failures,
+          errors: failed_ids.empty? ? [] : [ "#{red_tp("red.commands.batch_failed.mute", count: failed_ids.size)} (#{failed_ids.map { |id| "##{id}" }.join(", ")})" ]
         }
       rescue => e
         RailsErrorDashboard::Logger.error("Batch mute failed: #{e.message}")

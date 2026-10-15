@@ -28,6 +28,17 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GEM_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMPLATES_DIR="$GEM_DIR/test/pre_release/templates"
+
+# Ports this run started a server on. However the run ends, interrupted
+# included, nothing is left listening on them.
+STARTED_PORTS=()
+cleanup_servers() {
+  local port
+  for port in "${STARTED_PORTS[@]:-}"; do
+    [ -n "$port" ] && { lsof -ti :"$port" | xargs kill 2>/dev/null || true; }
+  done
+}
+trap cleanup_servers EXIT
 CHAOS_DIR="$GEM_DIR/test/pre_release/chaos"
 TEST_DIR="/tmp/pre_release_test_$$"
 TARGET="${1:-all}"
@@ -302,8 +313,11 @@ run_http_tests() {
   sleep 1
 
   log_step "Starting Rails server on port $port..."
-  (cd "$app_dir" && bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
+  # exec: the subshell becomes the server, so $! is Puma's pid. Without it,
+  # killing $! killed only the subshell and Puma kept the port.
+  (cd "$app_dir" && exec bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
   local server_pid=$!
+  STARTED_PORTS+=("$port")
   sleep 3
 
   # Check if server started
@@ -341,6 +355,8 @@ RUBY
   log_step "Stopping server..."
   kill "$server_pid" 2>/dev/null || true
   wait "$server_pid" 2>/dev/null || true
+  # Anything still holding the port (a child Puma spawned) goes too
+  lsof -ti :"$port" | xargs kill 2>/dev/null || true
   sleep 1
 }
 
@@ -519,8 +535,11 @@ run_http_error_tests() {
   log_step "Starting Rails server on port $port for Phase F..."
   # Do NOT daemonize (-d) — daemonizing can cause issues with DB connections
   # and file descriptor inheritance. Run in background instead.
-  (cd "$app_dir" && bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
+  # exec: the subshell becomes the server, so $! is Puma's pid. Without it,
+  # killing $! killed only the subshell and Puma kept the port.
+  (cd "$app_dir" && exec bin/rails server -p "$port" >> "$app_dir/log/server.log" 2>&1) &
   local server_pid=$!
+  STARTED_PORTS+=("$port")
   sleep 3
 
   # Check if server started
@@ -544,6 +563,8 @@ run_http_error_tests() {
   log_step "Stopping server..."
   kill "$server_pid" 2>/dev/null || true
   wait "$server_pid" 2>/dev/null || true
+  # Anything still holding the port (a child Puma spawned) goes too
+  lsof -ti :"$port" | xargs kill 2>/dev/null || true
   sleep 1
 }
 

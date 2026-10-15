@@ -674,6 +674,13 @@ module RailsErrorDashboard
         end
       end
 
+      # Any other git_branch_strategy links to main. A warning, not an error:
+      # a link format is not worth stopping a boot.
+      if git_branch_strategy && !%w[commit_sha current_branch main].include?(git_branch_strategy.to_s)
+        warnings << "git_branch_strategy must be one of :commit_sha, :current_branch or :main " \
+                    "(got: #{git_branch_strategy.inspect}). Repository links will point at main."
+      end
+
       # Validate custom_fingerprint (must respond to .call if set)
       if custom_fingerprint && !custom_fingerprint.respond_to?(:call)
         errors << "custom_fingerprint must respond to .call (lambda, proc, or object with .call method)"
@@ -1126,9 +1133,10 @@ module RailsErrorDashboard
       return nil if effective_issue_tracker_provider == :linear
       return nil if git_repository_url.blank?
 
-      # Extract owner/repo from URL: https://github.com/owner/repo(.git)
-      match = git_repository_url.match(%r{[:/]([^/]+/[^/]+?)(?:\.git)?$})
-      match&.[](1)
+      # owner/repo from the normalized URL, so ".git", ".git/" and trailing
+      # slashes all name the same repository the View Source links use
+      url = Services::RepositoryUrl.normalize(git_repository_url)
+      url.match(%r{[:/]([^/]+/[^/]+)\z})&.[](1)
     end
 
     # Resolve the issue tracker API token (supports string or lambda)

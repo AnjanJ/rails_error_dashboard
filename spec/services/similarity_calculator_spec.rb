@@ -244,4 +244,24 @@ RSpec.describe RailsErrorDashboard::Services::SimilarityCalculator do
       expect(distance).to eq(5)
     end
   end
+
+  # audit-fixes-0-16-0/REQ-7: Ruby 3.4 writes in 'User#save' where 3.3 wrote
+  # in `save'. The frame regex only knew the backtick, so 3.4 frames lost their
+  # method and similar-error matching compared bare file names.
+  describe "frames from either Ruby's backtrace format" do
+    ruby33 = "app/models/user.rb:10:in `save'\napp/models/user.rb:20:in `block in save'"
+    ruby34 = "app/models/user.rb:10:in 'User#save'\napp/models/user.rb:20:in 'block in User#save'"
+
+    it "gives a Ruby 3.3 and a Ruby 3.4 line the same frames" do
+      calculator = described_class.new(build(:error_log), build(:error_log))
+
+      expect(calculator.send(:extract_frames, ruby34)).to eq(calculator.send(:extract_frames, ruby33))
+      expect(calculator.send(:extract_frames, ruby33)).to eq([ "user.rb:save", "user.rb:block in save" ])
+    end
+
+    it "gives ErrorLog#backtrace_frames the same frames for both" do
+      expect(build(:error_log, backtrace: ruby34).backtrace_frames)
+        .to eq(build(:error_log, backtrace: ruby33).backtrace_frames)
+    end
+  end
 end

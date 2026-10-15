@@ -279,8 +279,6 @@ module RailsErrorDashboard
       @errors_by_hour = analytics[:errors_by_hour]
       @top_users = analytics[:top_users]
       @resolution_rate = analytics[:resolution_rate]
-      @mobile_errors = analytics[:mobile_errors]
-      @api_errors = analytics[:api_errors]
 
       # Get recurring issues data (pass application filter)
       recurring = Queries::RecurringIssues.call(days, application_id: @current_application_id)

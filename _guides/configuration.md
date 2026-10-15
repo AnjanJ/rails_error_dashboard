@@ -590,19 +590,21 @@ RailsErrorDashboard.configure do |config|
   # Warden with admin scope
   config.authenticate_with = -> { warden.authenticated?(:admin) }
 
+  # Devise helpers work too
+  config.authenticate_with = -> { current_user&.admin? }
+
   # Session-based
   config.authenticate_with = -> { session[:dashboard_admin] == true }
 end
 ```
 
-> **Important: Engine controller context.** The lambda runs inside the engine's controller, which inherits from `ActionController::Base` — not your app's `ApplicationController`. This means Devise helpers like `current_user` and `authenticate_user!` are **not available**. Use `warden` (the underlying Rack middleware) instead:
+> **Engine controller context.** The lambda runs inside the engine's controller (via `instance_exec`), which inherits from `ActionController::Base`, not your app's `ApplicationController`. Devise adds its helpers to `ActionController::Base`, so `current_user`, `user_signed_in?` and `authenticate_user!` work here, and so does `warden`. A method defined only in your own `ApplicationController`, or one of its concerns, doesn't: the lambda raises, RED denies access (403) and logs `[RailsErrorDashboard] authenticate_with lambda raised NoMethodError: …`.
 >
 > | Works | Doesn't work |
 > |-------|-------------|
-> | `warden.authenticated?` | `current_user` |
-> | `warden.user` | `authenticate_user!` |
-> | `warden.authenticate(:scope => :user)` | `user_signed_in?` |
-> | `session`, `cookies`, `request`, `params` | Devise helper methods |
+> | `current_user`, `user_signed_in?`, `authenticate_user!` (Devise) | Methods defined in your `ApplicationController` |
+> | `warden.authenticated?`, `warden.user` | Helpers from your app's own concerns |
+> | `session`, `cookies`, `request`, `params` | |
 
 **How it works:**
 - The lambda has access to `warden`, `session`, `request`, `params`, `cookies`, `redirect_to`, etc.
@@ -611,6 +613,20 @@ end
 - **Lambda raises** → rescued, logged, 403 (fail closed)
 - **Lambda calls `redirect_to`** → redirect honored (e.g. to your login page)
 - **`authenticate_with` is `nil`** (the default) **or `false`** → HTTP Basic Auth is used (see [Dashboard Credentials](#dashboard-credentials))
+
+### User IDs That Are Not Integers
+
+At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys:
+
+```ruby
+# config/application.rb
+config.generators do |g|
+  g.orm :active_record, primary_key_type: :uuid
+end
+```
+
+On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number.
+
 
 ---
 

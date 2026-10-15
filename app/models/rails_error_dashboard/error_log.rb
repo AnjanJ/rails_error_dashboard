@@ -339,14 +339,7 @@ module RailsErrorDashboard
         []
       end
 
-      lines.first(20).map do |line|
-        # Extract file path and method name, ignore line numbers
-        if line =~ %r{([^/]+\.rb):.*?in `(.+)'$}
-          "#{Regexp.last_match(1)}:#{Regexp.last_match(2)}"
-        elsif line =~ %r{([^/]+\.rb)}
-          Regexp.last_match(1)
-        end
-      end.compact.uniq
+      lines.first(20).map { |line| Services::BacktraceProcessor.frame_key(line) }.compact.uniq
     end
 
     # Calculate backtrace signature — delegates to Service

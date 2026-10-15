@@ -498,12 +498,7 @@ module RailsErrorDashboard
       end
 
       def resolve_application
-        # Same chain LogError uses — app name is process-global
-        app_name = RailsErrorDashboard.configuration.application_name ||
-                   ENV["APPLICATION_NAME"] ||
-                   (defined?(Rails) && Rails.application.class.module_parent_name) ||
-                   "Rails Application"
-        Application.find_or_create_by_name(app_name)
+        Application.find_or_create_by_name(RailsErrorDashboard.resolved_application_name)
       end
 
       # Record the interval whose per-event timing was lost.

@@ -59,6 +59,7 @@ require "rails_error_dashboard/services/source_code_reader"
 require "rails_error_dashboard/services/git_blame_reader"
 require "rails_error_dashboard/services/git_head_reader"
 require "rails_error_dashboard/services/solid_queue_config_check"
+require "rails_error_dashboard/services/repository_url"
 require "rails_error_dashboard/services/github_link_generator"
 require "rails_error_dashboard/services/cause_chain_extractor"
 require "rails_error_dashboard/services/environment_snapshot"
@@ -224,6 +225,19 @@ module RailsErrorDashboard
   # Forget the memo (specs).
   def self.reset_detected_git_sha!
     remove_instance_variable(:@detected_git_sha) if defined?(@detected_git_sha)
+  end
+
+  # The name errors are filed under: config.application_name, then the
+  # APPLICATION_NAME variable, then the Rails app's module name. Capture, the
+  # storm and event flushers, and the backfill all use this one chain, or the
+  # same app's rows end up under two Applications, or under none.
+  #
+  # @return [String]
+  def self.resolved_application_name
+    configuration.application_name.presence ||
+      ENV["APPLICATION_NAME"].presence ||
+      (defined?(Rails) && Rails.application&.class&.module_parent_name) ||
+      "Rails Application"
   end
 
   # Register a plugin

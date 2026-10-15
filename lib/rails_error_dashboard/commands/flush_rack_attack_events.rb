@@ -83,10 +83,8 @@ module RailsErrorDashboard
       end
 
       def current_application_id
-        app_name = RailsErrorDashboard.configuration.application_name
-        return nil unless app_name.present?
-
-        Application.find_by(name: app_name)&.id
+        # The name capture files errors under, so these rows join that app
+        Application.find_by(name: RailsErrorDashboard.resolved_application_name)&.id
       rescue => e
         nil
       end

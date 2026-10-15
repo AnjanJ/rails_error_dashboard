@@ -114,7 +114,7 @@ in a subdirectory of its repository gets links that 404.
 | Strategy | The link points at |
 |---|---|
 | `:commit_sha` (the default) | The commit RED recorded for the error when it first happened |
-| `:current_branch` | The commit the server's app directory is at now (`git rev-parse HEAD`; needs `.git`) |
+| `:current_branch` | The commit the app is running: `config.git_sha`, then `GIT_SHA`, `HEROKU_SLUG_COMMIT` or `RENDER_GIT_COMMIT`, then the `.git` HEAD read once at boot. No `git` command runs while a page renders |
 | `:main` | The `main` branch |
 
 When there is no commit to use, the link points at `main`. There is no setting for another branch
@@ -161,7 +161,7 @@ Source** on the controller's line.
 | `source_code_context_lines` | `5` | Lines shown before and after the error line. At least 1, at most 50 |
 | `enable_git_blame` | `false` | Shows blame. Needs `enable_source_code_integration` |
 | `git_repository_url` | `ENV["GIT_REPOSITORY_URL"]` | Your repository's web URL. Also used by issue tracking |
-| `git_branch_strategy` | `:commit_sha` | `:commit_sha`, `:current_branch` or `:main`; any other value links to `main` |
+| `git_branch_strategy` | `:commit_sha` | `:commit_sha`, `:current_branch` or `:main`, as a Symbol or String. Any other value logs a warning at boot and links to `main` |
 | `git_sha` | `ENV["GIT_SHA"]` | The deployed commit |
 | `source_code_cache_ttl` | `3600` | Seconds RED caches each line's source and blame, and an error page's details section |
 | `only_show_app_code_source` | `true` | Refuses to read files under `/gems/`, `/vendor/bundle/`, `/vendor/ruby/` or `/.bundle/` |
@@ -346,7 +346,7 @@ the working tree on the server, not the commit that raised the error.
 - The commit isn't pushed to the repository.
 - The Rails app is in a subdirectory of the repository (see the path rule in
   [Step 3](#step-3-repository-links)).
-- `:current_branch` on a server without `.git` falls back to `main`.
+- `:current_branch` with no `git_sha`, none of those variables and no `.git` falls back to `main`.
 
 ### Error pages are slow
 

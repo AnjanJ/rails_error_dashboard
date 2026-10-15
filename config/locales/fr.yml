@@ -36,6 +36,8 @@ fr:
         healthy: "✅ Sain"
         warning: "⚠️ Avertissement"
         critical: "\U0001F534 Critique"
+        not_rated: "Non évalué"
+        not_rated_hint: "L'évaluation compare les plateformes : il faut des erreurs sur au moins deux."
       device_type:
         mobile: Mobile
         tablet: Tablette

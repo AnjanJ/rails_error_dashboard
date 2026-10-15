@@ -244,7 +244,9 @@ PreReleaseTestHarness.section("A8: Batch operations")
 
 batch_errors = 3.times.map do |i|
   begin
-    raise RuntimeError, "batch chaos #{i} #{SecureRandom.hex(4)}"
+    # A word per error: fingerprinting turns digits into N, so "#{i}" and an
+    # all-digit hex suffix (e.g. 19566962) could make two of these one group
+    raise RuntimeError, "batch chaos #{%w[alpha beta gamma][i]} #{SecureRandom.hex(4)}"
   rescue => e
     log_error_and_find(e, { controller_name: "batch_test", platform: "Web" })
   end
@@ -264,7 +266,7 @@ assert "all batch errors resolved", batch_errors.all?(&:resolved?)
 # Batch delete
 delete_errors = 2.times.map do |i|
   begin
-    raise RuntimeError, "delete chaos #{i} #{SecureRandom.hex(4)}"
+    raise RuntimeError, "delete chaos #{%w[alpha beta gamma][i]} #{SecureRandom.hex(4)}"
   rescue => e
     log_error_and_find(e, { controller_name: "delete_test", platform: "Web" })
   end

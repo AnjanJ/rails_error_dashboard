@@ -99,11 +99,6 @@ RSpec.describe "analytics page counting units" do
       expect(result[:errors_by_hour].values.sum).to eq(8)
     end
 
-    it "counts mobile and api errors in events" do
-      expect(result[:mobile_errors]).to eq(3)
-      expect(result[:api_errors]).to eq(0)
-    end
-
     # The chart's slices must add up to the headline figure, or the
     # percentage bars the view computes from them stop summing to 100%.
     it "keeps every breakdown summing to the headline total" do

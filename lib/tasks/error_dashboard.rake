@@ -335,9 +335,8 @@ namespace :error_dashboard do
 
   desc "Backfill application_id for existing errors"
   task backfill_application: :environment do
-    app_name = ENV["APP_NAME"] || ENV["APPLICATION_NAME"] ||
-               (defined?(Rails) && Rails.application.class.module_parent_name) ||
-               "Legacy Application"
+    # APP_NAME overrides; otherwise the name capture files new errors under
+    app_name = ENV["APP_NAME"].presence || RailsErrorDashboard.resolved_application_name
 
     puts "\n" + "=" * 80
     puts "RAILS ERROR DASHBOARD - BACKFILL APPLICATION"

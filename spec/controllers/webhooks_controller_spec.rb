@@ -132,13 +132,25 @@ RSpec.describe RailsErrorDashboard::WebhooksController, type: :controller do
       end
     end
 
+    # audit-fixes-0-16-0/REQ-10: the signature check ran first and answered
+    # 401, so a Gitea user posting to /webhooks/gitea was told the signature
+    # was wrong when the provider name was.
     context "unknown provider" do
       it "returns 404" do
         payload = {}.to_json
         request.headers["Content-Type"] = "application/json"
 
         post :receive, params: { provider: "bitbucket" }, body: payload
-        # Will fail signature check first
+
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it "still answers 401 to a known provider with a bad signature" do
+        request.headers["Content-Type"] = "application/json"
+        request.headers["X-Hub-Signature-256"] = "sha256=wrong"
+
+        post :receive, params: { provider: "github" }, body: {}.to_json
+
         expect(response).to have_http_status(:unauthorized)
       end
     end

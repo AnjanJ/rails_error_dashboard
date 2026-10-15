@@ -2514,7 +2514,9 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'toggle-next':
         var nextEl = actionEl.nextElementSibling;
         if (nextEl) {
-          var isHidden = nextEl.style.display === 'none' || nextEl.style.display === '';
+          // The computed display: an open element usually has no inline display
+          // at all, and reading '' as hidden made the first click a no-op.
+          var isHidden = window.getComputedStyle(nextEl).display === 'none';
           nextEl.style.display = isHidden ? (actionEl.dataset.redDisplay || 'block') : 'none';
           var chev = actionEl.querySelector('.chev');
           if (chev) {

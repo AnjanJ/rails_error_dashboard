@@ -195,20 +195,20 @@
 
   <!-- Dynamically render setting groups -->
   <% setting_groups.each do |group_slug, group_config| %>
+    <%# One flag, or every flag in an array, must be on for a row to show. The
+        count and the rows both use this, so the count says what is shown. %>
+    <% shown_settings = group_config[:settings].select { |_key, meta| Array(meta[:show_if]).all? { |flag| @config.send(flag) } } %>
     <div class="card" style="margin-bottom: var(--space-4);">
       <button type="button" data-red-action="toggle-next" data-red-display="block" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: var(--space-4) var(--space-6); background: none; border: none; cursor: pointer; border-bottom: 1px solid var(--border-primary);">
         <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);"><i class="<%= group_config[:icon] %>" style="margin-right: 6px;"></i> <%= red_t("red.settings.groups.#{group_slug}") %></span>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 11px; color: var(--text-tertiary);"><%= red_tp("red.settings.option_count", count: group_config[:settings].size) %></span>
+          <span style="font-size: 11px; color: var(--text-tertiary);"><%= red_tp("red.settings.option_count", count: shown_settings.size) %></span>
           <i class="bi bi-chevron-up chev" style="font-size: 12px; color: var(--text-tertiary);"></i>
         </div>
       </button>
       <div>
-        <% group_config[:settings].each do |setting_key, setting_meta| %>
+        <% shown_settings.each do |setting_key, setting_meta| %>
           <%
-            # One flag, or every flag in an array, must be on for the row to show.
-            should_show = Array(setting_meta[:show_if]).all? { |flag| @config.send(flag) }
-            next unless should_show
             value = @config.send(setting_meta[:method] || setting_key)
             # A credential is shown as Set / Not set whatever shape it has. The
             # per-row :type documents the value's shape; this one rule is what

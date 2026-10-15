@@ -799,12 +799,7 @@ module RailsErrorDashboard
       end
 
       def find_or_create_application
-        app_name = RailsErrorDashboard.configuration.application_name ||
-                   ENV["APPLICATION_NAME"] ||
-                   (defined?(Rails) && Rails.application.class.module_parent_name) ||
-                   "Rails Application"
-
-        Application.find_or_create_by_name(app_name)
+        Application.find_or_create_by_name(RailsErrorDashboard.resolved_application_name)
       rescue => e
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
         # Fallback: try to find any application or create default

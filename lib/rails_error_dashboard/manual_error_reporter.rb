@@ -49,7 +49,12 @@ module RailsErrorDashboard
     #   believe they had set a value that was never read.
     # @param source [String, nil] Source identifier (e.g., "frontend", "mobile_app")
     #
-    # @return [ErrorLog, nil] The created error log record, or nil if filtered/ignored
+    # @return [ErrorLog, nil] The created or updated error log record. nil when
+    #   no row is written now, or none is returned:
+    #   - the error is ignored or sampled out (ignored_exceptions, sampling_rate)
+    #   - storm protection only counts it (:count_only)
+    #   - async_logging is on: a job writes the row later
+    #   - logging failed internally (RED never raises into your code)
     #
     # @example Basic usage
     #   ManualErrorReporter.report(

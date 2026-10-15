@@ -29,8 +29,6 @@ module RailsErrorDashboard
             errors_by_hour: errors_by_hour,
             top_users: top_affected_users,
             resolution_rate: resolution_rate,
-            mobile_errors: mobile_errors_count,
-            api_errors: api_errors_count,
             pattern_insights: pattern_insights
           }
         end
@@ -268,16 +266,6 @@ module RailsErrorDashboard
         return 0 if total_groups.zero?
 
         ((resolved_count.to_f / total_groups) * 100).round(1)
-      end
-
-      def mobile_errors_count
-        Queries::EventVolume.in_window(base_scope.where(platform: [ "iOS", "Android" ]), @start_date)
-      end
-
-      def api_errors_count
-        Queries::EventVolume.in_window(
-          base_scope.where("platform IS NULL OR platform = ?", "API"), @start_date
-        )
       end
 
       #  Pattern insights for top error types

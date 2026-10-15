@@ -6,7 +6,7 @@ permalink: /docs/features/ADVANCED_ERROR_GROUPING
 
 # Advanced Error Grouping
 
-This guide covers the advanced error grouping features, including fuzzy error matching, co-occurring error detection, and error cascade identification.
+This guide covers three features that show related errors on an error's page: fuzzy error matching, co-occurring error detection, and error cascade identification. They don't merge or regroup anything: each error keeps its own group.
 
 **⚙️ Optional Features** - All grouping features are disabled by default. Enable them in your initializer:
 
@@ -29,17 +29,16 @@ end
 
 ## Overview
 
-Intelligent error grouping that goes beyond simple error type matching:
+Ways to find related errors beyond simple error type matching:
 
 - **Fuzzy Matching**: Find similar errors even when error_hash differs
-- **Co-occurring Errors**: Detect errors that happen together in time
-- **Cascade Detection**: Identify potential error cascades (A is followed by B is followed by C) — temporal association, not proven causation
+- **Co-occurring Errors**: Find errors that happen within minutes of this one
+- **Cascade Detection**: Find errors that often follow this one within 60 seconds, or that it often follows — temporal association, not proven causation
 
 These features help you:
-- Reduce noise by grouping related errors
-- Identify root causes faster
-- Understand error dependencies
-- Prioritize fixes based on impact
+- Find related errors that grouping kept apart
+- Spot a likely root cause among errors that arrive together
+- Fix related errors together
 
 ## Fuzzy Error Matching
 
@@ -52,37 +51,49 @@ Fuzzy matching finds errors that are similar but not identical. It uses:
 ### How It Works
 
 ```ruby
-# In your error show page, similar errors are automatically displayed
-# Or access programmatically:
+# The error page shows similar errors when the feature is on. In code:
 error = RailsErrorDashboard::ErrorLog.find(123)
 similar = error.similar_errors(threshold: 0.6, limit: 10)
 
 similar.each do |result|
-  puts "#{result[:error].error_type} - #{result[:similarity]}% similar"
+  puts "#{result[:error].error_type} - #{(result[:similarity] * 100).round}% similar"
 end
 ```
+
+`similarity` is a score from 0.0 to 1.0, rounded to three places: 0.853 means 85% similar.
 
 ### Similarity Calculation
 
 1. **Backtrace Frames** (70%):
-   - Extracts file paths and method names from stack traces
-   - Ignores line numbers (they change with code edits)
-   - Uses Jaccard similarity on frame sets
-   - Example: `app/controllers/users_controller.rb:create`
+   - Takes the first 20 lines of each backtrace
+   - Keeps the file name and method of each Ruby (`.rb`) frame, without the directory or the line number (line numbers change with code edits)
+   - Uses Jaccard similarity on the two sets of frames: shared frames divided by all frames
+   - Example: `app/controllers/users_controller.rb:42:in 'UsersController#create'` becomes `users_controller.rb:create`
+   - A backtrace with no Ruby frames scores 0 here. An error reported with a JavaScript or mobile backtrace can reach at most 0.3 in total, below the 0.6 the error page uses
 
 2. **Message Similarity** (30%):
-   - Normalizes messages (replaces numbers, quoted strings)
-   - Calculates Levenshtein distance
-   - Example: "User 123 not found" → "User N not found"
+   - Normalizes messages: quoted strings become `""` or `''`, hex addresses and object inspections are masked, numbers become `n`, and everything is lowercased
+   - Calculates Levenshtein distance, as 1 − (distance ÷ length of the longer message)
+   - Example: "User 123 not found" → "user n not found"
 
 3. **Combined Score**:
    ```text
    similarity = (backtrace_score * 0.7) + (message_score * 0.3)
    ```
 
+### Candidates
+
+Fuzzy matching doesn't compare an error with every other error. It scores at most 50 candidates:
+
+1. Errors with the same backtrace signature (up to 50)
+2. If that finds fewer than 20, errors of the same type (up to 30 more)
+3. If there are still fewer than 20, errors on the same platform whose type contains the first word of this error's class name (up to 20 more; for `NoMethodError` the word is `No`)
+
+Candidates are not limited to the error's application.
+
 ### Configuration
 
-Default threshold is **0.6 (60% similar)**. This provides a good balance between recall and precision.
+There is no setting for the threshold. The error page uses **0.6 (60% similar)** and shows the top 5. Other values work only when you call the method yourself:
 
 ```ruby
 # Adjust threshold for your needs
@@ -92,10 +103,9 @@ similar = error.similar_errors(threshold: 0.5)  # More lenient (more results)
 
 ### Platform-Based Matching
 
-By default, fuzzy matching only compares errors from the **same platform** (iOS to iOS, Android to Android). This is because:
+Fuzzy matching only scores errors from the **same platform** (iOS to iOS, Android to Android): an error on another platform scores 0. An error with no platform is compared with any platform. This is because:
 - Platform-specific code differs significantly
-- More relevant matches for debugging
-- Faster computation
+- Matches on the same platform are more relevant for debugging
 
 ### Use Cases
 
@@ -106,17 +116,19 @@ By default, fuzzy matching only compares errors from the **same platform** (iOS 
 
 ### UI Display
 
-On the error show page, you'll see a "Similar Errors" card showing:
-- Similarity percentage (color-coded progress bar)
+On the error page, the "Similar Errors" card lists up to 5 errors that are 60% similar or more:
+- Similarity percentage (progress bar)
 - Error type and message preview
 - Platform and occurrence count
-- Link to view the similar error
+- A View link to the similar error
+
+The card is hidden when no error reaches 60%.
 
 ## Co-occurring Errors
 
 ### What It Does
 
-Detects errors that happen together within a time window (default: 5 minutes). This helps identify:
+Finds other errors that happened within a time window (default: 5 minutes) before or after this error's occurrences. This helps identify:
 - Cascading failures
 - Related bugs
 - Concurrent issues
@@ -132,24 +144,30 @@ co_occurring = error.co_occurring_errors(
 )
 
 co_occurring.each do |result|
-  error = result[:error]
-  puts "#{error.error_type} occurs together #{result[:frequency]} times"
-  puts "Average delay: #{result[:avg_delay_seconds]}s"
+  other = result[:error]
+  puts "#{other.error_type} occurs together #{result[:frequency]} times"
+  puts "Average delay: #{result[:avg_delay_seconds]}s" # negative: the other error came first
 end
 ```
 
 ### Parameters
 
-- **window_minutes** (default: 5): Time window for co-occurrence
-- **min_frequency** (default: 2): Minimum times errors must co-occur
+- **window_minutes** (default: 5): How far before and after each occurrence to look
+- **min_frequency** (default: 2): Minimum number of pairs (see below)
 - **limit** (default: 10): Maximum results to return
+
+The error page uses 5 minutes, at least 2 pairs and the top 5. Other values work only when you call the method yourself.
 
 ### Algorithm
 
-1. Get all occurrence timestamps for the target error
-2. For each timestamp, find other errors within ±window_minutes
-3. Count co-occurrences and calculate average delay
-4. Return errors sorted by frequency
+1. Take the newest 500 occurrences of this error
+2. Put a window of ± `window_minutes` around each one, and merge windows that overlap
+3. Read other errors' occurrences inside those windows, newest first, at most 20,000
+4. Count pairs: an occurrence of another error counts once for each of this error's occurrences within `window_minutes` of it. One occurrence near three of this error's counts 3
+5. Average the delay (the other error's time minus this error's) over its pairs. A negative delay means the other error tends to come first
+6. Keep the errors with at least `min_frequency` pairs, most pairs first
+
+It compares against every other error's occurrences, in every application and on every platform.
 
 ### Use Cases
 
@@ -160,19 +178,20 @@ end
 
 ### UI Display
 
-The "Co-occurring Errors" card shows:
+The "Co-occurring Errors" card shows up to 5 errors:
 - Error type and message
-- Frequency of co-occurrence
-- Average time delay between errors
-- Link to the co-occurring error
+- Platform
+- Frequency (the number of pairs)
+- Average delay, shown as "N s before" (the other error tends to come first), "N s after", or "simultaneous"
+- A View link to the co-occurring error
 
 ## Error Cascades
 
 ### What It Does
 
-Identifies parent-child relationships between errors:
-- **Parents**: Errors that cause this error
-- **Children**: Errors this error causes
+Records pairs of errors where one often follows the other within 60 seconds:
+- **Parents** ("Triggered By" on the error page): errors that this error tends to follow
+- **Children** ("Triggers"): errors that tend to follow this error
 
 ### How It Works
 
@@ -184,18 +203,19 @@ hourly with `lookback_hours: 1`, so each run scans only the occurrences since th
 # What the job runs; from a console, for one window
 RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 1)
 
-# Access cascade patterns for an error
+# Read the cascades for an error. Each one is a Hash:
+# { error:, frequency:, probability:, avg_delay_seconds: }
 error = RailsErrorDashboard::ErrorLog.find(123)
 cascades = error.error_cascades(min_probability: 0.5)
 
-puts "Parent errors (what causes this):"
-cascades[:parents].each do |pattern|
-  puts "  #{pattern.parent_error.error_type} → #{pattern.cascade_probability * 100}%"
+puts "Parent errors (come before this one):"
+cascades[:parents].each do |cascade|
+  puts "  #{cascade[:error].error_type} → #{(cascade[:probability] * 100).round(1)}%"
 end
 
-puts "Child errors (what this causes):"
-cascades[:children].each do |pattern|
-  puts "  #{pattern.child_error.error_type} → #{pattern.cascade_probability * 100}%"
+puts "Child errors (come after this one):"
+cascades[:children].each do |cascade|
+  puts "  #{cascade[:error].error_type} → #{(cascade[:probability] * 100).round(1)}%"
 end
 ```
 
@@ -218,9 +238,9 @@ Read it as how strongly B follows A, not as a true percentage.
 
 ### Cascade Probability Levels
 
-- **High (70% and up)**: Strong cascade relationship
-- **Medium (50-70%)**: Moderate cascade relationship
-- **Low (<50%)**: Filtered out by default
+- **70% and up**: Red badge on the error page. Its footnote calls these strong cascades, together with a frequency of 3 or more
+- **50% to 70%**: Yellow badge
+- **Below 50%**: Not shown: `error_cascades` leaves them out by default (`min_probability: 0.5`)
 
 ### Scheduling
 
@@ -245,34 +265,29 @@ With cron, once a day:
 
 ### Use Cases
 
-1. **Root Cause**: Fix the parent error to resolve children
-2. **Impact Analysis**: See downstream effects of an error
-3. **Priority Setting**: Parent errors have higher impact
+1. **Root Cause**: Check whether fixing the parent error stops the children
+2. **Impact Analysis**: See which errors tend to follow this one
+3. **Priority Setting**: A parent with many children may be worth fixing first
 4. **Architecture Review**: Identify tight coupling issues
 
 ### UI Display
 
-The "Error Cascades" section shows:
-- Visual diagram: Parent → This Error → Children
-- Cascade probability percentage
-- Average delay between errors
-- Links to parent and child errors
+The "Error Cascades" card has up to two tables, "Triggered By" (parents) and "Triggers" (children). Each row shows:
+- Error type and message
+- Cascade probability percentage (red at 70% and up, yellow below)
+- Frequency
+- Average delay between the two errors
+- A View link to the parent or child error
+
+The card is hidden when the error has no cascades at 50% or more.
 
 ## Configuration
 
 ### Fuzzy Matching Configuration
 
-```ruby
-# In config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  # Fuzzy matching threshold (0.0 - 1.0)
-  # Default: 0.6 (60% similar)
-  # Higher = more strict, fewer matches
-  # Lower = more lenient, more matches
-
-  # No config needed - adjust via method parameters
-end
-```
+There is no setting for fuzzy matching. The threshold is a method parameter, from 0.0 to 1.0
+(higher is stricter, fewer matches). The error page always uses 0.6; pass another value to
+`similar_errors(threshold:)` in code.
 
 ### Cascade Detection Configuration
 
@@ -291,7 +306,7 @@ error.error_cascades(min_probability: 0.7)
 
 ### Platform-Based Matching
 
-Fuzzy matching compares errors from the same platform only. This is currently a sensible default and cannot be configured.
+Fuzzy matching compares errors from the same platform only. This cannot be configured.
 
 ## Use Cases
 
@@ -302,7 +317,7 @@ Fuzzy matching compares errors from the same platform only. This is currently a 
 **Solution**: Use fuzzy matching to find related authentication errors:
 1. View any auth error
 2. Check "Similar Errors" card
-3. See all related auth errors (even with different line numbers)
+3. See related auth errors (line numbers don't count towards the score)
 4. Fix the root cause once
 
 ### Scenario 2: Mysterious Cascading Failures
@@ -311,9 +326,9 @@ Fuzzy matching compares errors from the same platform only. This is currently a 
 
 **Solution**: Use cascade detection:
 1. View the final error users see
-2. Check "Error Cascades" → "Parent Errors"
-3. Follow the chain back to the root cause
-4. Fix the parent error to resolve all children
+2. Check "Error Cascades" → "Triggered By"
+3. Follow the chain back through each parent's own page
+4. Check whether fixing the first error stops the rest
 
 ### Scenario 3: Load Spike Investigation
 
@@ -322,7 +337,7 @@ Fuzzy matching compares errors from the same platform only. This is currently a 
 **Solution**: Use co-occurring errors:
 1. Pick any error from the spike
 2. Check "Co-occurring Errors" card
-3. See all errors that happen together
+3. See the errors that happen within 5 minutes of it
 4. Identify if it's a database bottleneck, API timeout, etc.
 
 ### Scenario 4: Code Duplication Detection
@@ -330,21 +345,21 @@ Fuzzy matching compares errors from the same platform only. This is currently a 
 **Problem**: You suspect similar error handling exists in multiple controllers.
 
 **Solution**: Use fuzzy matching:
-1. View an error from one controller
-2. Check "Similar Errors" with threshold 0.5
+1. Find an error from one controller
+2. In a console, call `error.similar_errors(threshold: 0.5)` (the card always uses 0.6)
 3. See errors from other controllers with similar backtraces
 4. Refactor common error handling into shared code
 
 ## Best Practices
 
-### 1. Start with Default Thresholds
+### 1. Start with the Defaults
 
-The defaults are well-tested:
+The error page uses:
 - Fuzzy matching: 0.6 (60%)
-- Cascade window: 60 seconds
-- Co-occurrence window: 5 minutes
+- Co-occurrence: a 5-minute window and at least 2 pairs
+- Cascades: probability 50% and up
 
-Only adjust if you have specific needs.
+The cascade window (60 seconds) and minimum frequency (3) are fixed.
 
 ### 2. Monitor Cascade Detection
 
@@ -356,10 +371,10 @@ Check cascade patterns weekly:
 ### 3. Use Co-occurring Errors for Root Cause
 
 When investigating production issues:
-1. Find the most recent error
+1. Open the error users see
 2. Check co-occurring errors
-3. Look for the earliest error in the sequence
-4. That's likely your root cause
+3. Look for errors marked "before": they tend to happen first
+4. Those are your root-cause candidates
 
 ### 4. Leverage Similar Errors for Cleanup
 
@@ -372,19 +387,21 @@ Periodically:
 ## Performance Considerations
 
 ### Fuzzy Matching
-- **Computation**: O(n) where n = number of candidate errors
-- **Caching**: Similarity scores are calculated on-demand
-- **Limits**: Results limited to 10 by default
+- **Computation**: Scores at most 50 candidate errors
+- **Caching**: Scores are computed on every render of the error page; only the card's HTML is cached
+- **Limits**: Results limited to 10 by default; the card shows 5
 
 ### Co-occurring Errors
-- **Database**: Uses indexed occurred_at queries
-- **Memory**: Loads error occurrences into memory
-- **Performance**: Fast for normal error volumes (<10k/day)
+- **Queries**: At most four, whatever the volume: the error exists, its newest 500 occurrence times, other errors' occurrences in those windows, and the co-occurring errors themselves
+- **Database**: The windows use the `[occurred_at, error_log_id]` index on occurrences
+- **Memory**: At most 500 of this error's occurrence times and 20,000 (error, time) pairs for other errors
+- **Bounds**: Only the newest 500 occurrences of the error are compared. When the windows hold more than 20,000 occurrences of other errors, the newest 20,000 are read, so counts for the older windows can come out low
+- Runs on every render of the error page while the feature is on
 
 ### Cascade Detection
-- **Background Job**: Runs hourly, doesn't block requests
-- **Database**: Creates cascade_patterns table
-- **Cleanup**: Old patterns (>90 days) should be cleaned periodically
+- **Background Job**: Runs when your scheduler runs `CascadeDetectionJob`, never in a request
+- **Memory**: Loads one (error, time) pair for every occurrence in the lookback
+- **Cleanup**: Retention cleanup deletes a cascade when it deletes either of its errors; nothing else expires them
 
 ## Troubleshooting
 
@@ -392,20 +409,21 @@ Periodically:
 
 **Possible causes**:
 - Error is unique (truly different from others)
-- Threshold is too high (try 0.5)
-- Different platforms (iOS vs Android)
+- Threshold is too high: the card uses 0.6; try `error.similar_errors(threshold: 0.5)` in a console
+- Different platforms (iOS vs Android): they score 0
+- The backtrace has no Ruby frames (a JavaScript or mobile error), so the score can't pass 0.3
+- No candidate: only errors with the same backtrace signature or type, or a type that shares its first word, are compared
 
 **Solution**: Lower the threshold or check if the error is genuinely unique.
 
 ### "Too many co-occurring errors"
 
 **Possible causes**:
-- Time window too large (>5 minutes)
 - High error volume during peak hours
 - Many unrelated errors happening simultaneously
 
 **Solution**:
-- Reduce window_minutes to 2-3
+- The card's values are fixed. In a console, pass a smaller `window_minutes` (2-3)
 - Increase min_frequency to filter noise
 - Focus on specific error types
 
@@ -425,16 +443,19 @@ Periodically:
 
 ### Similarity Tracking
 
-No additional columns needed for fuzzy matching (computed on-demand).
+No additional columns needed for fuzzy matching (computed on-demand from `backtrace`, `message`, `platform` and `backtrace_signature`).
 
 ### Error Occurrences
 
 ```ruby
 create_table :rails_error_dashboard_error_occurrences do |t|
-  t.references :error_log
+  t.references :error_log, null: false, foreign_key: { to_table: :rails_error_dashboard_error_logs }
   t.datetime :occurred_at, null: false
   t.integer :user_id
   t.string :request_id
+  t.string :session_id
+  t.string :app_version # app_version and git_sha were added by a later migration
+  t.string :git_sha
   t.timestamps
 end
 
@@ -445,39 +466,44 @@ add_index :rails_error_dashboard_error_occurrences, [:occurred_at, :error_log_id
 
 ```ruby
 create_table :rails_error_dashboard_cascade_patterns do |t|
-  t.integer :parent_error_id, null: false
-  t.integer :child_error_id, null: false
-  t.integer :frequency, default: 0
+  t.references :parent_error, null: false, foreign_key: { to_table: :rails_error_dashboard_error_logs }
+  t.references :child_error, null: false, foreign_key: { to_table: :rails_error_dashboard_error_logs }
+  t.integer :frequency, default: 1, null: false
   t.float :avg_delay_seconds
   t.float :cascade_probability
   t.datetime :last_detected_at
   t.timestamps
 end
 
-add_index :rails_error_dashboard_cascade_patterns, [:parent_error_id, :child_error_id]
+add_index :rails_error_dashboard_cascade_patterns, [:parent_error_id, :child_error_id], unique: true
 ```
 
 ## API Reference
+
+All three methods return empty results (`[]`, or empty `parents` and `children`) while their feature is off.
 
 ### ErrorLog#similar_errors
 
 ```ruby
 error.similar_errors(threshold: 0.6, limit: 10)
-# Returns: [{ error: ErrorLog, similarity: 0.85 }, ...]
+# Returns: [{ error: ErrorLog, similarity: 0.853 }, ...]  (most similar first)
 ```
 
 ### ErrorLog#co_occurring_errors
 
 ```ruby
 error.co_occurring_errors(window_minutes: 5, min_frequency: 2, limit: 10)
-# Returns: [{ error: ErrorLog, frequency: 5, avg_delay_seconds: 12.5 }, ...]
+# Returns: [{ error: ErrorLog, frequency: 5, avg_delay_seconds: -12.5 }, ...]  (most pairs first)
 ```
 
 ### ErrorLog#error_cascades
 
 ```ruby
 error.error_cascades(min_probability: 0.5)
-# Returns: { parents: [CascadePattern, ...], children: [CascadePattern, ...] }
+# Returns: {
+#   parents:  [{ error: ErrorLog, frequency: 4, probability: 0.8, avg_delay_seconds: 12.5 }, ...],
+#   children: [{ error: ErrorLog, frequency: 3, probability: 0.6, avg_delay_seconds: 4.0 }, ...]
+# }  (highest probability first)
 ```
 
 ### Services::CascadeDetector.call

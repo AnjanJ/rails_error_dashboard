@@ -115,9 +115,9 @@ config.rate_limit_per_minute = 300 # the default
 | `302` | Every form POST except `ai_help`. Also a page whose feature is off: it redirects to `/errors` with a message saying so |
 | `303` | A `per_page` that isn't a positive number, or a `page` past the end of the error list: it redirects to the same page without `page` and `per_page`, keeping the other parameters |
 | `400` | A malformed request |
-| `401` | No or wrong HTTP Basic login. For webhooks: a missing or wrong signature, or an unknown provider |
+| `401` | No or wrong HTTP Basic login. For webhooks: a missing or wrong signature |
 | `403` | Your `authenticate_with` block returned false or raised |
-| `404` | No error with that ID, except on `create_issue` and `link_issue`, which redirect (`302`) to the error's page with a failure message. Webhooks while issue tracking or the webhook secret isn't set. `ai_help` with no LLM configured |
+| `404` | No error with that ID, except on `create_issue` and `link_issue`, which redirect (`302`) to the error's page with a failure message. Webhooks while issue tracking or the webhook secret isn't set, or for a provider other than `github`, `gitlab`, `codeberg` or `linear`. `ai_help` with no LLM configured |
 | `406` | A page asked for in a format other than HTML |
 | `422` | A POST without a valid CSRF token. `ai_help` with a blank question or one over 4,000 characters |
 | `429` | Over the [rate limit](#rate-limiting) |

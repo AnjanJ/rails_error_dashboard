@@ -126,7 +126,7 @@ end
 config.authenticate_with = -> { warden.authenticated? }
 ```
 
-> **Note:** Devise helpers like `current_user` are not available in the engine controller context. Use `warden` directly instead. See the [Configuration Guide](guides/CONFIGURATION.md#custom-authentication) for details and examples.
+> **Note:** Devise helpers such as `current_user` work in the lambda, and so does `warden`. Methods defined only in your own `ApplicationController` don't. See the [Configuration Guide](guides/CONFIGURATION.md#custom-authentication) for details and examples.
 
 You can enable or disable any feature at any time by editing this file. Just change `true` to `false` (or vice versa) and restart your Rails server.
 
@@ -275,7 +275,7 @@ A blank value denies every login, in development too. If the app refuses to boot
 ```ruby
 config.authenticate_with = -> { warden.authenticated? }
 ```
-**Common mistake:** Using `current_user` — this will raise `NameError` because Devise helpers aren't available in the engine controller. Use `warden` directly instead.
+**Common mistake:** Calling a helper defined only in your app's `ApplicationController`. The engine's controller doesn't inherit it, so the lambda raises and access is denied. Devise's `current_user` is fine.
 
 Check `log/production.log` for `[RailsErrorDashboard] authenticate_with lambda raised` messages — these indicate your lambda is raising an error (which results in 403 denied).
 

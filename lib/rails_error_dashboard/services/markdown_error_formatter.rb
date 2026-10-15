@@ -64,33 +64,30 @@ module RailsErrorDashboard
         raw = @error.backtrace
         return nil if raw.blank?
 
-        lines = raw.split("\n")
-        app_lines = lines.reject { |l| l.include?("/gems/") || l.include?("/ruby/") || l.include?("/vendor/") }
-        app_lines = lines.first(MAX_BACKTRACE_LINES) if app_lines.empty?
+        app_lines = app_frames.map { |frame| frame[:full_line] }
+        app_lines = raw.split("\n") if app_lines.empty?
         app_lines = app_lines.first(MAX_BACKTRACE_LINES)
 
         "## Backtrace\n\n```\n#{app_lines.join("\n")}\n```"
+      end
+
+      # The application's frames, as the error page classifies them. RED stores
+      # frames shortened ("gems/…", "ruby/…"), so a "/gems/" substring test
+      # kept every gem frame.
+      def app_frames
+        @app_frames ||= Services::BacktraceParser.parse(@error.backtrace.to_s).select { |frame| frame[:category] == :app }
       end
 
       def source_code_section
         return nil unless defined?(RailsErrorDashboard) &&
           RailsErrorDashboard.configuration.enable_source_code_integration
 
-        raw = @error.backtrace
-        return nil if raw.blank?
-
-        lines = raw.split("\n")
-        app_lines = lines.reject { |l| l.include?("/gems/") || l.include?("/ruby/") || l.include?("/vendor/") }
-        return nil if app_lines.empty?
+        return nil if @error.backtrace.blank? || app_frames.empty?
 
         snippets = []
-        app_lines.first(3).each do |frame|
-          # Parse "file:line:in 'method'" format
-          match = frame.match(/^(.+?):(\d+)/)
-          next unless match
-
-          file_path = match[1]
-          line_number = match[2].to_i
+        app_frames.first(3).each do |frame|
+          file_path = frame[:file_path]
+          line_number = frame[:line_number]
 
           reader = Services::SourceCodeReader.new(file_path, line_number)
           source_lines = reader.read_lines(context: 3)

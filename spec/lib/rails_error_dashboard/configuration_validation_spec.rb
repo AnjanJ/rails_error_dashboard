@@ -1316,4 +1316,26 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       expect { config.validate! }.not_to raise_error
     end
   end
+
+  # audit-fixes-0-16-0/REQ-9: an unknown strategy silently linked to main. It
+  # warns rather than raises, because a link format is not worth stopping a boot.
+  describe "git_branch_strategy" do
+    it "warns about an unknown strategy without raising" do
+      config.git_branch_strategy = :master
+
+      expect(Rails.logger).to receive(:warn).with(/git_branch_strategy must be one of.*:master/)
+      expect { config.validate! }.not_to raise_error
+    end
+
+    it "accepts the three strategies as Symbols or Strings" do
+      expect(Rails.logger).not_to receive(:warn).with(/git_branch_strategy/)
+
+      %w[commit_sha current_branch main].each do |strategy|
+        [ strategy, strategy.to_sym ].each do |value|
+          config.git_branch_strategy = value
+          config.validate!
+        end
+      end
+    end
+  end
 end

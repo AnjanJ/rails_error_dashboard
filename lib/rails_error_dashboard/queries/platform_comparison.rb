@@ -160,18 +160,25 @@ module RailsErrorDashboard
       def platform_stability_scores
         platforms = base_scope.distinct.pluck(:platform).compact
         error_rates = error_rate_by_platform
+        # A score compares platforms. With fewer than two that have errors in
+        # the window there is nothing to compare against, so none is rated (a
+        # lone platform used to come out Critical every time). The count is of
+        # platforms with errors in the window: the list above is every
+        # platform ever seen.
+        return {} if error_rates.size < 2
         resolution_times = resolution_time_by_platform
 
-        # Find max values for normalization
-        max_errors = error_rates.values.max || 1
+        total_errors = error_rates.values.sum
         max_resolution_time = resolution_times.values.compact.max || 1
 
         platforms.each_with_object({}) do |platform, result|
           error_count = error_rates[platform] || 0
           avg_resolution = resolution_times[platform] || 0
 
-          # Normalize to 0-1 scale (inverted - lower is better)
-          error_score = 1.0 - (error_count.to_f / max_errors)
+          # This platform's share of all errors, inverted. Against the busiest
+          # platform instead, the busiest always scored 0 here and so was always
+          # Critical.
+          error_score = total_errors.positive? ? 1.0 - (error_count.to_f / total_errors) : 1.0
           resolution_score = avg_resolution.positive? ? 1.0 - (avg_resolution / max_resolution_time) : 1.0
 
           # Weight: 70% error count, 30% resolution time
@@ -252,9 +259,10 @@ module RailsErrorDashboard
             critical_errors: critical_errors,
             unresolved_errors: unresolved_errors,
             resolution_rate: resolution_rate,
-            stability_score: stability_scores[platform] || 0,
+            # nil and :not_rated when there are fewer than two platforms
+            stability_score: stability_scores[platform],
             error_velocity: velocity, # Positive = increasing, negative = decreasing
-            health_status: determine_health_status(stability_scores[platform] || 0, velocity)
+            health_status: stability_scores.key?(platform) ? determine_health_status(stability_scores[platform], velocity) : :not_rated
           }
         end
       end

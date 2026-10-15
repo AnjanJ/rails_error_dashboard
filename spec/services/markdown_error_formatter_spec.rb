@@ -83,6 +83,30 @@ RSpec.describe RailsErrorDashboard::Services::MarkdownErrorFormatter do
         expect(result).to include(">   42")
       end
 
+      # audit-fixes-0-16-0/REQ-5: RED stores frames shortened ("gems/…",
+      # "ruby/…"), so filtering on "/gems/" kept every gem frame, and the three
+      # source slots went to files the reader refuses.
+      it "uses application frames from the stored backtrace for both sections" do
+        Dir.mktmpdir do |root|
+          FileUtils.mkdir_p(File.join(root, "app/models"))
+          File.write(File.join(root, "app/models/user.rb"), "class User\nend\n")
+          allow(Rails).to receive(:root).and_return(Pathname.new(root))
+          allow(RailsErrorDashboard.configuration).to receive(:enable_source_code_integration).and_return(true)
+
+          result = described_class.call(make_error(backtrace: [
+            "gems/activerecord-8.1.4/lib/active_record/persistence.rb:10:in 'save!'",
+            "gems/actionpack-8.1.4/lib/action_controller/metal.rb:20:in 'dispatch'",
+            "ruby/3.4.0/set.rb:5:in 'each'",
+            "app/models/user.rb:1:in 'save'"
+          ].join("\n")))
+
+          expect(result).to include("class User")
+          backtrace = result[/## Backtrace.*?```\n(.*?)```/m, 1]
+          expect(backtrace).to include("app/models/user.rb:1")
+          expect(backtrace).not_to include("gems/")
+        end
+      end
+
       it "reads only source files, whatever the backtrace names" do
         Dir.mktmpdir do |root|
           FileUtils.mkdir_p(File.join(root, "config"))

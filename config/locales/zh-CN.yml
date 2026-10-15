@@ -36,6 +36,8 @@ zh-CN:
         healthy: "✅ 正常"
         warning: "⚠️ 警告"
         critical: "\U0001F534 严重"
+        not_rated: "未评级"
+        not_rated_hint: "评级是在平台之间比较的，因此至少需要两个平台上的错误。"
       device_type:
         mobile: Mobile
         tablet: Tablet

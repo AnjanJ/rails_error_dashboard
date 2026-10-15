@@ -67,6 +67,8 @@ module RailsErrorDashboard
         "success"
       when :warning
         "warning"
+      when :not_rated
+        "secondary"
       else
         "danger"
       end
@@ -82,6 +84,8 @@ module RailsErrorDashboard
         red_t("red.common.health_status.healthy")
       when :warning
         red_t("red.common.health_status.warning")
+      when :not_rated
+        red_t("red.common.health_status.not_rated")
       else
         red_t("red.common.health_status.critical")
       end
