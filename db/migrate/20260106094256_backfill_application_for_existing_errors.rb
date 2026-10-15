@@ -3,9 +3,9 @@ class BackfillApplicationForExistingErrors < ActiveRecord::Migration[7.0]
     return if RailsErrorDashboard::ErrorLog.count.zero?
 
     # Create default application
-    default_name = ENV['APPLICATION_NAME'] ||
-                   (defined?(Rails) && Rails.application.class.module_parent_name) ||
-                   'Legacy Application'
+    # The name new errors are captured under, config.application_name first,
+    # so old and new errors land in the same Application
+    default_name = RailsErrorDashboard.resolved_application_name
 
     app = RailsErrorDashboard::Application.find_or_create_by!(name: default_name) do |a|
       a.description = 'Auto-created during migration for existing errors'

@@ -227,6 +227,19 @@ module RailsErrorDashboard
     remove_instance_variable(:@detected_git_sha) if defined?(@detected_git_sha)
   end
 
+  # The name errors are filed under: config.application_name, then the
+  # APPLICATION_NAME variable, then the Rails app's module name. Capture, the
+  # storm and event flushers, and the backfill all use this one chain, or the
+  # same app's rows end up under two Applications, or under none.
+  #
+  # @return [String]
+  def self.resolved_application_name
+    configuration.application_name.presence ||
+      ENV["APPLICATION_NAME"].presence ||
+      (defined?(Rails) && Rails.application&.class&.module_parent_name) ||
+      "Rails Application"
+  end
+
   # Register a plugin
   # @param plugin [Plugin] The plugin instance to register
   # @return [Boolean] True if registered successfully, false otherwise
