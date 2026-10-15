@@ -218,6 +218,7 @@ module RailsErrorDashboard
     # Instance variable capture from tp.self (receiver object at raise time)
     attr_accessor :enable_instance_variables           # Master switch (default: false)
     attr_accessor :instance_variable_max_count          # Max ivars to capture (default: 20)
+    attr_accessor :occurrence_context_limit             # Occurrences per error whose context is kept (default: 25; 0 = off)
     attr_accessor :instance_variable_filter_patterns    # Additional sensitive ivar patterns (default: [])
 
     # Swallowed exception detection via TracePoint(:raise) + TracePoint(:rescue) (Ruby 3.3+ only)
@@ -481,6 +482,9 @@ module RailsErrorDashboard
       # Instance variable capture defaults - OFF by default (opt-in)
       @enable_instance_variables = false         # Capture ivars from tp.self at raise time
       @instance_variable_max_count = 20          # Max ivars per exception
+      # Keep the moment-of-failure context of the newest 25 occurrences of each
+      # error, not only the latest. 0 keeps none.
+      @occurrence_context_limit = 25
       @instance_variable_filter_patterns = []    # Additional sensitive ivar name patterns
 
       # Swallowed exception detection defaults - OFF by default (Ruby 3.3+ opt-in)
@@ -717,6 +721,10 @@ module RailsErrorDashboard
       # Validate instance variable capture settings
       if enable_instance_variables && instance_variable_max_count && instance_variable_max_count < 1
         errors << "instance_variable_max_count must be at least 1 (got: #{instance_variable_max_count})"
+      end
+
+      unless occurrence_context_limit.is_a?(Integer) && occurrence_context_limit >= 0
+        errors << "occurrence_context_limit must be a whole number of 0 or more (got: #{occurrence_context_limit.inspect})"
       end
 
       # Validate swallowed exception detection settings
