@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.4...rails_error_dashboard/v0.15.0) (2026-10-15)
+
+
+### ✨ Features
+
+* boot-crash capture, ActiveStorage reachability probe, Ruby 4.0 in CI, lazy call-site walk ([#275](https://github.com/AnjanJ/rails_error_dashboard/issues/275)) ([aa28cd5](https://github.com/AnjanJ/rails_error_dashboard/commit/aa28cd5d6785ab06967f3457100047b10dba57a2))
+* health check endpoint, signed outbound webhooks, missing-translation tracking ([#273](https://github.com/AnjanJ/rails_error_dashboard/issues/273)) ([e0943a3](https://github.com/AnjanJ/rails_error_dashboard/commit/e0943a3cc6793cf87c2dcde8d4fa5db860b68ba1))
+* support UUID user IDs ([#279](https://github.com/AnjanJ/rails_error_dashboard/issues/279)) ([1157321](https://github.com/AnjanJ/rails_error_dashboard/commit/1157321c83fa61f6dc51f378082aa09d2fd088cb)), closes [#278](https://github.com/AnjanJ/rails_error_dashboard/issues/278)
+* Telegram notifications, and credentials masked on the Settings page ([#276](https://github.com/AnjanJ/rails_error_dashboard/issues/276)) ([83c4eb7](https://github.com/AnjanJ/rails_error_dashboard/commit/83c4eb76cdcff027c90caad7e4e42a9dfb8e6f0d))
+
+
+### 🐛 Bug Fixes
+
+* read view templates only under an app/ directory ([#283](https://github.com/AnjanJ/rails_error_dashboard/issues/283)) ([53fba53](https://github.com/AnjanJ/rails_error_dashboard/commit/53fba531f75cca163696eb45994ee4693d1241c6))
+* show source only for source files inside Rails.root ([#282](https://github.com/AnjanJ/rails_error_dashboard/issues/282)) ([b80dea3](https://github.com/AnjanJ/rails_error_dashboard/commit/b80dea3600656450bea56b65b0d172b15d10c2fb))
+* the nine 0.14.5 findings from the docs audit ([#277](https://github.com/AnjanJ/rails_error_dashboard/issues/277)) ([d1ac5a4](https://github.com/AnjanJ/rails_error_dashboard/commit/d1ac5a4884f76f00273722540d6e380da58278be))
+
 ## [0.14.4](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.3...rails_error_dashboard/v0.14.4) (2026-10-02)
 
 
