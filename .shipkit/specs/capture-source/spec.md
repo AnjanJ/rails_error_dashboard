@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `93ba34d` on spec/0-16-0.
 > Status: open
-> Paths: lib/rails_error_dashboard/manual_error_reporter.rb,lib/rails_error_dashboard/commands/,lib/rails_error_dashboard/services/,app/helpers/rails_error_dashboard/backtrace_helper.rb,app/views/rails_error_dashboard/errors/,db/migrate/,spec/
+> Paths: lib/rails_error_dashboard/manual_error_reporter.rb,lib/rails_error_dashboard/commands/,lib/rails_error_dashboard/services/,app/models/rails_error_dashboard/error_log.rb,app/helpers/rails_error_dashboard/backtrace_helper.rb,app/views/rails_error_dashboard/errors/,docs/SOURCE_CODE_INTEGRATION.md,db/migrate/,spec/
 
 ## Purpose
 Record how each error was captured: by RED inside the app (server), or from a report a client sent
