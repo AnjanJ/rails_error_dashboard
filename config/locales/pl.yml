@@ -250,6 +250,10 @@ pl:
           inactive_body: włącz, aby zobaczyć wykonane linie
           enable: Włącz
           disable: Wyłącz
+        occurrence:
+          title: "Wystąpienie #%{id}"
+          body: "Breadcrumbs, stan systemu i zmienne pochodzą z tego wystąpienia. Pozostałe dane pokazują najnowsze przechwycenie."
+          show_latest: "Pokaż najnowsze"
         baselines:
           title: Statystyki poziomu bazowego
           anomaly_label: 'Anomalia:'

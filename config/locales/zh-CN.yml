@@ -233,6 +233,10 @@ zh-CN:
           inactive_body: 启用后可查看已执行的行
           enable: 启用
           disable: 停用
+        occurrence:
+          title: "发生 #%{id}"
+          body: "Breadcrumbs、系统状态和变量来自这次发生。其余内容显示最新一次捕获。"
+          show_latest: "查看最新"
         baselines:
           title: 基线统计
           anomaly_label: 异常：

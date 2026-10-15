@@ -249,6 +249,10 @@ pt-BR:
           inactive_body: ative para ver as linhas executadas
           enable: Ativar
           disable: Desativar
+        occurrence:
+          title: "Ocorrência #%{id}"
+          body: "Breadcrumbs, saúde do sistema e variáveis vêm desta ocorrência. Todo o resto mostra a captura mais recente."
+          show_latest: "Ver a mais recente"
         baselines:
           title: Estatísticas de referência
           anomaly_label: 'Anomalia:'

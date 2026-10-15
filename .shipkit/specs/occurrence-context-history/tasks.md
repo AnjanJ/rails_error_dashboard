@@ -3,17 +3,17 @@
 Tests cite `occurrence-context-history/REQ-N`. Build this spec before `capture-source`: both add a
 migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
 
-- [ ] **T1** Context table, model and associations → REQ-12, REQ-5
+- [x] **T1** Context table, model and associations → REQ-12, REQ-5
   - Files: db/migrate/20261015000001_create_rails_error_dashboard_error_occurrence_contexts.rb, spec/dummy/db/schema.rb, app/models/rails_error_dashboard/error_occurrence_context.rb, app/models/rails_error_dashboard/error_log.rb, app/models/rails_error_dashboard/error_occurrence.rb, lib/rails_error_dashboard.rb, spec/models/rails_error_dashboard/error_occurrence_context_spec.rb, spec/migrations/create_error_occurrence_contexts_spec.rb
   - Test: spec/migrations/create_error_occurrence_contexts_spec.rb (table and columns exist after migrating; the model lives in the error DB; destroying an error deletes its contexts)
   - After: none
   - Done when: `bundle exec rspec spec/migrations/create_error_occurrence_contexts_spec.rb spec/models/rails_error_dashboard/error_occurrence_context_spec.rb` → all pass, and `bin/check-schema-parity` → agrees
-- [ ] **T2** `occurrence_context_limit` option → REQ-3, REQ-4
+- [x] **T2** `occurrence_context_limit` option → REQ-3, REQ-4
   - Files: lib/rails_error_dashboard/configuration.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb
   - Test: spec/lib/rails_error_dashboard/configuration_validation_spec.rb (default 25; `validate!` rejects negative or non-Integer values)
   - After: none
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/configuration_validation_spec.rb` → all pass
-- [ ] **T3** Record and trim contexts on capture → REQ-1, REQ-2, REQ-3, REQ-4, REQ-10, REQ-11
+- [x] **T3** Record and trim contexts on capture → REQ-1, REQ-2, REQ-3, REQ-4, REQ-10, REQ-11
   - Files: lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard.rb, spec/commands/record_occurrence_context_spec.rb, spec/commands/log_error_occurrence_context_spec.rb
   - Test: spec/commands/log_error_occurrence_context_spec.rb, covering:
     - sync and async captures store the four values the error row got
@@ -23,12 +23,12 @@ migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
     - a raising insert still records the error
   - After: T1, T2
   - Done when: `bundle exec rspec spec/commands/log_error_occurrence_context_spec.rb spec/commands/record_occurrence_context_spec.rb` → all pass
-- [ ] **T4** Delete contexts on every cleanup path → REQ-5
+- [x] **T4** Delete contexts on every cleanup path → REQ-5
   - Files: app/jobs/rails_error_dashboard/retention_cleanup_job.rb, spec/jobs/retention_cleanup_occurrence_contexts_spec.rb
   - Test: spec/jobs/retention_cleanup_occurrence_contexts_spec.rb (retention, `cleanup_resolved` and batch delete leave no context rows for the deleted errors)
   - After: T3
   - Done when: `bundle exec rspec spec/jobs/retention_cleanup_occurrence_contexts_spec.rb` → all pass
-- [ ] **T5** Per-occurrence view with banner → REQ-6, REQ-7, REQ-9
+- [x] **T5** Per-occurrence view with banner → REQ-6, REQ-7, REQ-9
   - Files: app/controllers/rails_error_dashboard/errors_controller.rb, lib/rails_error_dashboard/value_objects/occurrence_snapshot.rb, lib/rails_error_dashboard.rb, app/views/rails_error_dashboard/errors/show.html.erb, app/views/rails_error_dashboard/errors/_occurrence_banner.html.erb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/requests/errors_show_occurrence_spec.rb
   - Test: spec/requests/errors_show_occurrence_spec.rb, covering:
     - `?occurrence=` shows that occurrence's breadcrumbs and variables, with the banner

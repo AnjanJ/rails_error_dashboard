@@ -248,6 +248,10 @@ it:
           inactive_body: abilita per vedere le righe eseguite
           enable: Abilita
           disable: Disabilita
+        occurrence:
+          title: "Occorrenza #%{id}"
+          body: "Breadcrumbs, stato del sistema e variabili provengono da questa occorrenza. Tutto il resto mostra l'acquisizione più recente."
+          show_latest: "Mostra la più recente"
         baselines:
           title: Statistiche della baseline
           anomaly_label: 'Anomalia:'

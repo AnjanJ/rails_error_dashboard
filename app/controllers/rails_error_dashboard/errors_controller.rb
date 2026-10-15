@@ -119,6 +119,10 @@ module RailsErrorDashboard
       @related_errors = @error.related_errors(limit: 5, application_id: @current_application_id)
       @error_markdown = Services::MarkdownErrorFormatter.call(@error, related_errors: @related_errors)
 
+      # ?occurrence=ID: the context cards show that occurrence's stored context
+      @occurrence_context = find_occurrence_context(@error)
+      @snapshot = @occurrence_context ? ValueObjects::OccurrenceSnapshot.build(@error, @occurrence_context) : @error
+
       # Fetch platform issue state and comments if linked
       @platform_issue = fetch_platform_issue(@error)
       @platform_comments = fetch_platform_comments(@error)
@@ -897,6 +901,17 @@ module RailsErrorDashboard
     # value ("new" has no key) falls back to the raw text.
     def status_flash_label(status)
       red_t("red.errors.row.status.#{status}", default: status.to_s.tr("_", " "))
+    end
+
+    # Looked up through the error, so another error's occurrence id finds
+    # nothing. nil (the page shows the latest snapshot) when there is no id, it
+    # is foreign or unknown, or its context is no longer kept.
+    def find_occurrence_context(error)
+      return if params[:occurrence].blank?
+      # An app that updated the gem but has not migrated yet
+      return unless ErrorOccurrenceContext.table_exists?
+
+      error.occurrence_contexts.find_by(error_occurrence_id: params[:occurrence])
     end
 
     def fetch_platform_issue(error)

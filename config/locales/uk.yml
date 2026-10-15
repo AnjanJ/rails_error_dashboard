@@ -250,6 +250,10 @@ uk:
           inactive_body: увімкніть, щоб бачити виконані рядки
           enable: Увімкнути
           disable: Вимкнути
+        occurrence:
+          title: "Подія #%{id}"
+          body: "Breadcrumbs, стан системи та змінні належать до цієї події. Усе інше показує останнє захоплення."
+          show_latest: "Показати останню"
         baselines:
           title: Статистика базового рівня
           anomaly_label: 'Аномалія:'

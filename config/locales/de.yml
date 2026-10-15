@@ -244,6 +244,10 @@ de:
           inactive_body: aktivieren, um ausgeführte Zeilen zu sehen
           enable: Aktivieren
           disable: Deaktivieren
+        occurrence:
+          title: "Vorkommen #%{id}"
+          body: "Breadcrumbs, Systemzustand und Variablen stammen aus diesem Vorkommen. Alles andere zeigt die neueste Erfassung."
+          show_latest: "Neueste anzeigen"
         baselines:
           title: Referenzstatistiken
           anomaly_label: 'Anomalie:'

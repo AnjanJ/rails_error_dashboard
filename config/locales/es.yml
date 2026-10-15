@@ -249,6 +249,10 @@ es:
           inactive_body: actívela para ver las líneas ejecutadas
           enable: Activar
           disable: Desactivar
+        occurrence:
+          title: "Aparición #%{id}"
+          body: "Los breadcrumbs, el estado del sistema y las variables provienen de esta aparición. Todo lo demás muestra la captura más reciente."
+          show_latest: "Ver la más reciente"
         baselines:
           title: Estadísticas de referencia
           anomaly_label: 'Anomalía:'

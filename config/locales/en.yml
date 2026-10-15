@@ -381,6 +381,11 @@ en:
           enable: "Enable"
           disable: "Disable"
 
+        occurrence:
+          title: "Occurrence #%{id}"
+          body: "Breadcrumbs, system health and variables are from this occurrence. Everything else shows the latest capture."
+          show_latest: "Show latest"
+
         baselines:
           title: "Baseline Statistics"
           # %{sigma} is a standard-deviation count, %{level} an anomaly level.

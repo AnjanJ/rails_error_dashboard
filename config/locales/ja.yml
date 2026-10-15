@@ -235,6 +235,10 @@ ja:
           inactive_body: 有効にすると実行された行を確認できます
           enable: 有効にする
           disable: 無効にする
+        occurrence:
+          title: "発生 #%{id}"
+          body: "Breadcrumb、システムヘルス、変数はこの発生時のものです。それ以外は最新のキャプチャを表示しています。"
+          show_latest: "最新を表示"
         baselines:
           title: ベースライン統計
           anomaly_label: '異常:'
