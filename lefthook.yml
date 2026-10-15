@@ -43,7 +43,9 @@ pre-commit:
       run: |
         echo "Checking for vulnerable dependencies..."
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bin/with-ruby bundle audit check --update
+        # In a worktree, git hands hooks an absolute GIT_DIR and GIT_INDEX_FILE; --update's
+        # git pull of ~/.local/share/ruby-advisory-db then runs against this repo and fails.
+        env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bin/with-ruby bundle audit check --update
 
     # 4. Check for debugger statements in staged Ruby files
     no-debuggers:
@@ -117,7 +119,9 @@ qa:
     bundle-audit:
       run: |
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bin/with-ruby bundle audit check --update
+        # In a worktree, git hands hooks an absolute GIT_DIR and GIT_INDEX_FILE; --update's
+        # git pull of ~/.local/share/ruby-advisory-db then runs against this repo and fails.
+        env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bin/with-ruby bundle audit check --update
 
 # Quick check on changed files only (fast)
 quick:
@@ -158,7 +162,9 @@ full:
     audit:
       run: |
         gem list bundler-audit -i > /dev/null || gem install bundler-audit --conservative
-        bin/with-ruby bundle audit check --update
+        # In a worktree, git hands hooks an absolute GIT_DIR and GIT_INDEX_FILE; --update's
+        # git pull of ~/.local/share/ruby-advisory-db then runs against this repo and fails.
+        env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE bin/with-ruby bundle audit check --update
 
 # ============================================================================
 # USAGE EXAMPLES
