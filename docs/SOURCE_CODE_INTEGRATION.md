@@ -161,7 +161,7 @@ Source** on the controller's line.
 | `source_code_context_lines` | `5` | Lines shown before and after the error line. At least 1, at most 50 |
 | `enable_git_blame` | `false` | Shows blame. Needs `enable_source_code_integration` |
 | `git_repository_url` | `ENV["GIT_REPOSITORY_URL"]` | Your repository's web URL. Also used by issue tracking |
-| `git_branch_strategy` | `:commit_sha` | `:commit_sha`, `:current_branch` or `:main`; any other value links to `main` |
+| `git_branch_strategy` | `:commit_sha` | `:commit_sha`, `:current_branch` or `:main`, as a Symbol or String. Any other value logs a warning at boot and links to `main` |
 | `git_sha` | `ENV["GIT_SHA"]` | The deployed commit |
 | `source_code_cache_ttl` | `3600` | Seconds RED caches each line's source and blame, and an error page's details section |
 | `only_show_app_code_source` | `true` | Refuses to read files under `/gems/`, `/vendor/bundle/`, `/vendor/ruby/` or `/.bundle/` |

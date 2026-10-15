@@ -674,6 +674,13 @@ module RailsErrorDashboard
         end
       end
 
+      # Any other git_branch_strategy links to main. A warning, not an error:
+      # a link format is not worth stopping a boot.
+      if git_branch_strategy && !%w[commit_sha current_branch main].include?(git_branch_strategy.to_s)
+        warnings << "git_branch_strategy must be one of :commit_sha, :current_branch or :main " \
+                    "(got: #{git_branch_strategy.inspect}). Repository links will point at main."
+      end
+
       # Validate custom_fingerprint (must respond to .call if set)
       if custom_fingerprint && !custom_fingerprint.respond_to?(:call)
         errors << "custom_fingerprint must respond to .call (lambda, proc, or object with .call method)"

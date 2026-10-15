@@ -292,7 +292,8 @@ module RailsErrorDashboard
 
     # Determine which commit SHA to use based on strategy
     def determine_commit_sha(error_log)
-      strategy = RailsErrorDashboard.configuration.git_branch_strategy || :commit_sha
+      # A String (from ENV, say) means the same as the Symbol
+      strategy = (RailsErrorDashboard.configuration.git_branch_strategy || :commit_sha).to_s.to_sym
 
       case strategy
       when :commit_sha
