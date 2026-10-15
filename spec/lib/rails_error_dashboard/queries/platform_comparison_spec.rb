@@ -164,6 +164,16 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       expect(described_class.new(days: 7).platform_stability_scores).to eq({})
     end
 
+    # The platform list is every platform ever seen; the minimum counts the
+    # ones with errors in the window, or an old Android error lets this week's
+    # iOS-only errors be rated Critical on volume alone.
+    it "does not rate a platform that is the only one with errors in the window" do
+      3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
+      create(:error_log, platform: "android", occurred_at: 60.days.ago)
+
+      expect(described_class.new(days: 7).platform_stability_scores).to eq({})
+    end
+
     it "gives two equally busy platforms equal, non-zero scores" do
       3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
       3.times { create(:error_log, platform: "android", occurred_at: 1.day.ago) }

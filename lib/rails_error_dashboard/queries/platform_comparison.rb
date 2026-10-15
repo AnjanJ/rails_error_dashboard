@@ -159,11 +159,13 @@ module RailsErrorDashboard
       # @return [Hash] Platform => stability score
       def platform_stability_scores
         platforms = base_scope.distinct.pluck(:platform).compact
-        # A score compares platforms. With one there is nothing to compare it
-        # against, so it is not rated (it used to come out Critical every time).
-        return {} if platforms.size < 2
-
         error_rates = error_rate_by_platform
+        # A score compares platforms. With fewer than two that have errors in
+        # the window there is nothing to compare against, so none is rated (a
+        # lone platform used to come out Critical every time). The count is of
+        # platforms with errors in the window: the list above is every
+        # platform ever seen.
+        return {} if error_rates.size < 2
         resolution_times = resolution_time_by_platform
 
         total_errors = error_rates.values.sum
