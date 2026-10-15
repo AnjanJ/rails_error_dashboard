@@ -624,7 +624,7 @@ RailsErrorDashboard::ErrorLog.where(error_type: "ArgumentError").count
 - [Configuration Guide](CONFIGURATION.md)
 - [Performance Tuning](DATABASE_OPTIMIZATION.md)
 - [Backtrace Limiting](BACKTRACE_LIMITING.md)
-- [Async Logging](../README.md#async-logging)
+- [Async Logging](CONFIGURATION.md#async-error-logging)
 
 ---
 

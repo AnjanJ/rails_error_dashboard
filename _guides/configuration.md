@@ -612,6 +612,20 @@ end
 - **Lambda calls `redirect_to`** → redirect honored (e.g. to your login page)
 - **`authenticate_with` is `nil`** (the default) **or `false`** → HTTP Basic Auth is used (see [Dashboard Credentials](#dashboard-credentials))
 
+### User IDs That Are Not Integers
+
+At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys:
+
+```ruby
+# config/application.rb
+config.generators do |g|
+  g.orm :active_record, primary_key_type: :uuid
+end
+```
+
+On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number.
+
+
 ---
 
 ## Notification Features

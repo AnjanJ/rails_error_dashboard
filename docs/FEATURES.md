@@ -1701,9 +1701,9 @@ config.enable_baseline_alerts      # => true or false
 
 For detailed information about what each feature does and when to use it, see the relevant sections above:
 
-- **Notifications**: [🚨 Notifications & Alerting](#-notifications--alerting)
-- **Performance**: [⚡ Performance & Scalability](#-performance--scalability)
-- **Advanced Analytics**: [🎯 Advanced Analytics Features](#-advanced-analytics-features)
+- **Notifications**: [🚨 Notifications & Alerting](#notifications--alerting)
+- **Performance**: [⚡ Performance & Scalability](#performance--scalability)
+- **Advanced Analytics**: [🎯 Advanced Analytics Features](#advanced-analytics-features)
 
 ---
 

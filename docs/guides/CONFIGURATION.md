@@ -318,7 +318,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 |--------|------|---------|-------------|
 | `enable_activestorage_tracking` | Boolean | `false` | Track ActiveStorage service operations (uploads, downloads, deletes, existence checks) as breadcrumbs. Works with any backend (Disk, S3, GCS, Azure). Requires `enable_breadcrumbs = true` |
 
-Live reachability needs no option: when `config.active_storage.service` is set, the ActiveStorage Health page and `GET /health` run one existence check for a never-stored key against that service (see the [API reference](API_REFERENCE.md#health-check)).
+Live reachability needs no option: when `config.active_storage.service` is set, the ActiveStorage Health page and `GET /health` run one existence check for a never-stored key against that service (see the [API reference](../API_REFERENCE.md#health-check)).
 
 ### Issue Tracking — GitHub/GitLab/Codeberg (v0.5.8+)
 
