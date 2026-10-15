@@ -1133,9 +1133,10 @@ module RailsErrorDashboard
       return nil if effective_issue_tracker_provider == :linear
       return nil if git_repository_url.blank?
 
-      # Extract owner/repo from URL: https://github.com/owner/repo(.git)
-      match = git_repository_url.match(%r{[:/]([^/]+/[^/]+?)(?:\.git)?$})
-      match&.[](1)
+      # owner/repo from the normalized URL, so ".git", ".git/" and trailing
+      # slashes all name the same repository the View Source links use
+      url = Services::RepositoryUrl.normalize(git_repository_url)
+      url.match(%r{[:/]([^/]+/[^/]+)\z})&.[](1)
     end
 
     # Resolve the issue tracker API token (supports string or lambda)

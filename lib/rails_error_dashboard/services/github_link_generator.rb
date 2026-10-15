@@ -77,14 +77,9 @@ module RailsErrorDashboard
 
       private
 
-      # Normalize repository URL (remove .git suffix, trailing slashes, etc.)
-      #
       # @return [String]
       def normalize_repository_url
-        url = repository_url.strip
-        url = url.chomp(".git")
-        url = url.chomp("/")
-        url
+        RepositoryUrl.normalize(repository_url)
       end
 
       # Host of the repository URL, downcased, or nil when the value is not an
