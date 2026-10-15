@@ -1339,7 +1339,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
-  # occurrence-context-history/REQ-3, REQ-4: how many occurrences' contexts each
+  # occurrence-context-history/REQ-3, occurrence-context-history/REQ-4: how many occurrences' contexts each
   # error keeps; 0 keeps none.
   describe "occurrence_context_limit" do
     it "defaults to 25" do

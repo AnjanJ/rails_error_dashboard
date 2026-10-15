@@ -27,7 +27,7 @@ RSpec.describe "LogError keeps each occurrence's context" do
     RailsErrorDashboard::ErrorLog.find_by!(message: "occurrence context probe")
   end
 
-  # occurrence-context-history/REQ-1, REQ-11
+  # occurrence-context-history/REQ-1, occurrence-context-history/REQ-11
   it "stores the context the error row got, for a sync capture" do
     capture
 
@@ -38,7 +38,7 @@ RSpec.describe "LogError keeps each occurrence's context" do
     expect(context.error_log_id).to eq(error_log.id)
   end
 
-  # occurrence-context-history/REQ-1, REQ-11
+  # occurrence-context-history/REQ-1, occurrence-context-history/REQ-11
   it "stores the context the error row got, for an async capture" do
     config.async_logging = true
 
