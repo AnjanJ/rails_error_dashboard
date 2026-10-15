@@ -120,5 +120,47 @@ RSpec.describe RailsErrorDashboard::Queries::CoOccurringErrors do
 
       expect(result.size).to eq(3)
     end
+
+    # audit-fixes-0-16-0/REQ-2: this renders on every error page while the
+    # feature is on. It ran one window query per lifetime occurrence, so an
+    # error with 50k occurrences meant 50k queries on a host request thread.
+    describe "query count" do
+      def occurrences_for(error, count, from:)
+        rows = Array.new(count) do |i|
+          { error_log_id: error.id, occurred_at: from + (i * 10).minutes, created_at: Time.current, updated_at: Time.current }
+        end
+        RailsErrorDashboard::ErrorOccurrence.insert_all(rows)
+      end
+
+      def queries_during
+        count = 0
+        counter = lambda do |_name, _start, _finish, _id, payload|
+          count += 1 unless payload[:name] == "SCHEMA" || payload[:sql].match?(/\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i)
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
+        count
+      end
+
+      it "does not grow with the number of occurrences" do
+        occurrences_for(error_a, 20, from: center_time - 1.day)
+        occurrences_for(error_b, 20, from: center_time - 1.day + 1.minute)
+        few = queries_during { described_class.call(error_log_id: error_a.id, min_frequency: 1) }
+
+        occurrences_for(error_a, 580, from: center_time - 10.days)
+        many = queries_during { described_class.call(error_log_id: error_a.id, min_frequency: 1) }
+
+        expect(many).to eq(few)
+      end
+
+      it "still finds a recent co-occurrence when the error has more than 500 occurrences" do
+        occurrences_for(error_a, 600, from: center_time - 10.days)
+        create(:error_occurrence, error_log: error_a, occurred_at: center_time)
+        create(:error_occurrence, error_log: error_b, occurred_at: center_time + 1.minute)
+
+        result = described_class.call(error_log_id: error_a.id, min_frequency: 1)
+
+        expect(result.map { |r| r[:error].id }).to include(error_b.id)
+      end
+    end
   end
 end
