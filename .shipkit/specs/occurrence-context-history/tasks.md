@@ -14,7 +14,7 @@ migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
   - After: none
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/configuration_validation_spec.rb` → all pass
 - [x] **T3** Record and trim contexts on capture → REQ-1, REQ-2, REQ-3, REQ-4, REQ-10, REQ-11
-  - Files: lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard.rb, spec/commands/record_occurrence_context_spec.rb, spec/commands/log_error_occurrence_context_spec.rb
+  - Files: lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard.rb, spec/commands/log_error_occurrence_context_spec.rb
   - Test: spec/commands/log_error_occurrence_context_spec.rb, covering:
     - sync and async captures store the four values the error row got
     - `:lite` or empty captures store nothing
@@ -22,7 +22,7 @@ migration and touch `log_error.rb` and `spec/dummy/db/schema.rb`.
     - a limit of 0 stores nothing
     - a raising insert still records the error
   - After: T1, T2
-  - Done when: `bundle exec rspec spec/commands/log_error_occurrence_context_spec.rb spec/commands/record_occurrence_context_spec.rb` → all pass
+  - Done when: `bundle exec rspec spec/commands/log_error_occurrence_context_spec.rb` → all pass (the command has no spec of its own: LogError is its only caller, and that spec drives it through every case above)
 - [x] **T4** Delete contexts on every cleanup path → REQ-5
   - Files: app/jobs/rails_error_dashboard/retention_cleanup_job.rb, spec/jobs/retention_cleanup_occurrence_contexts_spec.rb
   - Test: spec/jobs/retention_cleanup_occurrence_contexts_spec.rb (retention, `cleanup_resolved` and batch delete leave no context rows for the deleted errors)
