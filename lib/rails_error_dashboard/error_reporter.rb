@@ -46,8 +46,10 @@ module RailsErrorDashboard
         # Skip duplicate reports from our own middleware when the subscriber
         # already captured this error with full request context above.
         # Without this, async logging enqueues two jobs for one exception —
-        # and non-deterministic job ordering can overwrite good data.
-        if source == "rack.middleware" &&
+        # and non-deterministic job ordering can overwrite good data. The
+        # middleware's report also carries context[:middleware], because Rails
+        # 7.0's reporter passes subscribers no source.
+        if (source == "rack.middleware" || context[:middleware]) &&
            Thread.current[:rails_error_dashboard_reported_errors]&.include?(error.object_id)
           return
         end

@@ -128,6 +128,20 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
         )
       end
 
+      # Rails 7.0's reporter passes subscribers no source, so the middleware's
+      # own report is recognised by its context marker there
+      it "skips the middleware's duplicate when the reporter passed no source (Rails 7.0)" do
+        expect(RailsErrorDashboard::Commands::LogError).to receive(:call).once
+
+        reporter.report(error, handled: false, severity: :error, context: {}, source: nil)
+        reporter.report(error,
+          handled: false,
+          severity: :error,
+          context: { request: ActionDispatch::Request.new(env), middleware: true },
+          source: nil
+        )
+      end
+
       it "does not skip middleware report for a different error" do
         other_error = RuntimeError.new("different error")
         other_error.set_backtrace([ "app/models/user.rb:5" ])
