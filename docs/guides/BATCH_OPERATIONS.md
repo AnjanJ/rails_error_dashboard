@@ -25,14 +25,15 @@ errors". The filters you had set are cleared, except the application.
 To clear the selection, untick the checkbox at the start of the toolbar, or the one in the table
 header.
 
-> **Delete doesn't ask for confirmation.** It deletes the selected errors straight away, together
-> with their occurrences and comments, and they can't be recovered.
+> **Delete asks once, then can't be undone.** The browser asks "Are you sure you want to delete the
+> selected errors?"; after you confirm, the errors are deleted together with their occurrences and
+> comments, and they can't be recovered. Before 0.15.0, Delete didn't ask.
 
 ### What each action does
 
 | Action | Effect |
 |---|---|
-| Resolve | Marks the errors resolved, with status `resolved`. It doesn't run your `on_error_resolved` callbacks, so linked issues in your issue tracker stay open. Plugins get `on_errors_batch_resolved` |
+| Resolve | Marks the errors resolved, with status `resolved`. It runs your `on_error_resolved` callbacks and the `error_resolved.rails_error_dashboard` event for each error, so linked issues in your issue tracker close (before 0.15.0 they stayed open). Plugins get one `on_errors_batch_resolved` |
 | Delete | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts. Plugins get `on_errors_batch_deleted` with the IDs |
 | Mute (no button) | Mutes the errors, storing who and why. Unlike muting one error with a reason, no comment is added. Plugins get `on_errors_batch_muted` |
 | Unmute (no button) | Unmutes them. Plugins get `on_errors_batch_unmuted` |

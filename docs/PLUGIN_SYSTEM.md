@@ -127,10 +127,8 @@ class RailsErrorDashboard::Plugin
 end
 ```
 
-`name` is required. Without it, `register_plugin` raises `NotImplementedError`. If no other plugin
-is registered yet, the nameless one is added before the error. Hooks still run, but until the app
-restarts, `register_plugin`, `unregister_plugin` and the registry's `names`, `info` and `find` raise,
-the Settings page fails with a 500, and any hook failure raises instead of being rescued.
+`name` is required. A plugin whose `name` is missing, blank or raises makes `register_plugin` raise
+`ArgumentError`, and nothing is registered.
 
 ### Registering
 
@@ -165,13 +163,14 @@ Register plugins in an initializer, so they are registered once, at boot.
   [RailsErrorDashboard] /app/config/initializers/error_dashboard_plugins.rb:12:in 'on_error_logged'
   ```
 
-- **`enabled?` is not protected.** An exception raised in `enabled?` is not rescued. During capture,
-  RED gives up on the rest of that capture after the error is saved. In the dashboard, the error page
-  and the Resolve, Mute and Unmute actions fail with a 500; a batch action says "Batch operation
-  failed", although the errors were already changed. Keep `enabled?` simple.
-- **`on_register` is not protected either.** An exception there raises out of `register_plugin`, so
-  from an initializer it stops the app booting.
-- Exceptions that aren't `StandardError`s, such as `NotImplementedError`, aren't rescued anywhere.
+- **`enabled?` is protected too.** An exception there is logged, and the plugin counts as disabled
+  for that event; the other plugins still run.
+- **So is `on_register`.** An exception there is logged and the plugin isn't registered:
+  `register_plugin` returns `false`, and the app boots without it.
+- In a hook, exceptions that aren't `StandardError`s, such as `NotImplementedError`, aren't rescued.
+
+Before 0.15.0, an exception in `enabled?` or `on_register` wasn't rescued: it could fail dashboard
+pages with a 500, or stop the app booting.
 
 ---
 
@@ -357,8 +356,9 @@ Copy one into your app and change it, rather than relying on it as is.
 
 - **Keep hooks fast.** They run inside capture or a dashboard request. Use a job for anything slow.
 - **Use the batch hooks for batches.** One call for the whole batch, not one per error.
-- **Create clients when first used**, not in `on_register`: an exception there stops the app booting.
-- **Check dependencies in `enabled?`**, simply. It must not raise:
+- **Create clients when first used**, not in `on_register`: an exception there leaves the plugin
+  unregistered until the app restarts.
+- **Check dependencies in `enabled?`**, simply. An exception there is logged and read as disabled:
 
   ```ruby
   def enabled?

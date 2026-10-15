@@ -177,8 +177,8 @@ Identifies parent-child relationships between errors:
 ### How It Works
 
 Cascades are detected by `RailsErrorDashboard::CascadeDetectionJob`. Nothing in the gem schedules
-it: add it to your scheduler alongside the other periodic jobs (see the Production guide), hourly
-with `lookback_hours: 1`, so each run scans only the occurrences since the last one.
+it: add it to your scheduler alongside the other periodic jobs (see [Scheduling](#scheduling)),
+hourly with `lookback_hours: 1`, so each run scans only the occurrences since the last one.
 
 ```ruby
 # What the job runs; from a console, for one window
@@ -224,22 +224,24 @@ Read it as how strongly B follows A, not as a true percentage.
 
 ### Scheduling
 
-Nothing in the gem runs cascade detection, and there is no job class for it. Schedule
-`CascadeDetector.call` yourself, with `lookback_hours` equal to the time between runs. Windows that
-overlap count the same errors again: an hourly run that looks back 24 hours finds the same pairs 24
-times a day, adds 1 to their frequency each time, and pushes the probability up with no new errors.
+Nothing in the gem schedules cascade detection. Since 0.15.0, schedule
+`RailsErrorDashboard::CascadeDetectionJob` with `lookback_hours` equal to the time between runs. It
+does nothing while `enable_error_cascades` is off. Windows that overlap count the same errors again:
+an hourly run that looks back 24 hours finds the same pairs 24 times a day, adds 1 to their
+frequency each time, and pushes the probability up with no new errors.
 
-With Solid Queue, in `config/recurring.yml`:
+With Solid Queue, in `config/recurring.yml` (as in [Running in Production](../PRODUCTION.md#2-schedule-the-periodic-jobs)):
 
 ```yaml
 production:
   red_cascades:
-    command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
-    schedule: every day at 5am
+    class: RailsErrorDashboard::CascadeDetectionJob
+    args: [ { lookback_hours: 1 } ]
+    schedule: every hour
 ```
 
 With cron, once a day:
-`bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
+`bin/rails runner 'RailsErrorDashboard::CascadeDetectionJob.perform_now(lookback_hours: 24)'`.
 
 ### Use Cases
 
@@ -410,12 +412,13 @@ Periodically:
 ### "Cascade detection not working"
 
 **Possible causes**:
-- Nothing runs `CascadeDetector` (see [Scheduling](#scheduling))
-- `enable_error_cascades` is off, so the error page doesn't show them
+- Nothing runs `CascadeDetectionJob` (see [Scheduling](#scheduling))
+- `enable_error_cascades` is off: the job skips detection, and the error page doesn't show them
 - The errors happen more than 60 seconds apart, or fewer than 3 times in the lookback
 
 **Solution**:
-- Schedule `CascadeDetector.call`, or run it once from a console to check
+- Schedule `CascadeDetectionJob`, or run `RailsErrorDashboard::CascadeDetectionJob.perform_now` once
+  from a console to check
 - Check the `rails_error_dashboard_cascade_patterns` table exists (run migrations)
 
 ## Database Schema

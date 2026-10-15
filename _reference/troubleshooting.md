@@ -494,9 +494,10 @@ Set it on that command only, never in the runtime environment: while it is set, 
    - Muted errors, errors marked "Won't fix", environments outside `notification_environments`,
      errors during an error storm, and new errors past `notification_burst_limit` don't notify.
 
-7. **Send a test**: open `/red/settings` and click **Send Test Error**. Every click logs the same
-   `TestError`, so only the first click notifies (or the first after you resolve it, or after 24
-   hours). It is classified `:low`, so a higher `notification_minimum_severity` blocks it.
+7. **Send a test**: open `/red/settings` and click **Send Test Error**. The `TestError` is critical,
+   and every click notifies every channel that is on and configured, PagerDuty included, even when it
+   repeats an earlier test error or the environment isn't in `notification_environments`. If nothing
+   arrives, the channel itself is the problem: check its URL, key or recipients, and your worker.
 
 ---
 

@@ -22,19 +22,17 @@ default.
 
 ## What you get
 
-In the backtrace on an error's page, each line from your app's `app/` and `lib/` directories gets a
-**View Source** button. Lines from gems, Rails and Ruby don't, with one exception: a gem that has
-its own `app/` directory, such as Devise or RED itself, gets the button too, and its viewer says
-"Invalid or unsafe file path". The button opens a viewer with:
+In the backtrace on an error's page, each line from your app's `app/`, `lib/`, `config/` and `db/`
+directories gets a **View Source** button. Lines from gems (including a gem's own `app/` directory,
+such as Devise's), Rails and Ruby don't. The button opens a viewer with:
 
 - **The code around the line**: 5 lines before and after by default, with syntax highlighting and
-  the failing line highlighted. The rows are numbered from 1, not with the file's line numbers; the
-  viewer's header gives the file and line.
+  the failing line highlighted. The rows carry the file's own line numbers.
 - **Git blame**, if you turn it on: the author of the last change to that line, how long ago it was,
   and its commit message.
 - **A link to your repository**, if you set its URL: a **View Source** button with an external-link
   icon that opens the line on GitHub, GitLab, Bitbucket, Codeberg, Gitea or Forgejo. Its tooltip
-  says "View on GitHub", "View on GitLab" or, for the others, "View on Bitbucket".
+  names the host, for example "View on GitHub" or "View on Codeberg".
 
 The code comes from the file on your server as it is now. After a deploy that changed the file, the
 viewer shows the new code, not what ran when the error happened. The repository link can point at
@@ -42,8 +40,10 @@ the code as it was; see [Which commit the links use](#which-commit-the-links-use
 
 With source code integration on, two other features use it:
 
-- **Copy for LLM** on an error's page adds a few lines of source around lines near the top of the
-  backtrace. It reads the files each time, without the cache.
+- **Copy for LLM** on an error's page, and **AI help**, add a few lines of source around the first
+  three backtrace lines outside gems and Ruby. AI help sends that text to your configured LLM
+  provider. Both read the files each time, without the cache, under the same
+  [file rules](#security) as the viewer.
 - **Line coverage**: with `enable_coverage_tracking`, the viewer can mark which lines ran.
 
 ---
@@ -63,7 +63,8 @@ Restart the app. Then open an error whose backtrace goes through your code, and 
 Source** next to one of your app's lines.
 
 RED reads the file at the path in the backtrace, starting from your app's root (`Rails.root`). It
-has to exist there on the server that shows the dashboard.
+has to exist there on the server that shows the dashboard, and it has to be a source file: Ruby
+anywhere in the app, or a view template under an `app/` directory (see [Security](#security)).
 
 ### Step 2: git blame
 
@@ -85,7 +86,8 @@ config.git_repository_url = ENV["GIT_REPOSITORY_URL"] # e.g. "https://github.com
 ```
 
 `git_repository_url` reads `GIT_REPOSITORY_URL` by default, so setting that variable is enough.
-RED links only `http` and `https` URLs, and removes a trailing `.git` or `/`.
+RED links only `http` and `https` URLs. It removes a trailing `.git`, then a trailing `/`, so
+`https://github.com/org/app.git/` keeps its `.git`; leave the slash off.
 
 RED knows the repository host from the URL's host name:
 
@@ -99,9 +101,11 @@ RED knows the repository host from the URL's host name:
 Any other host, such as GitHub Enterprise at `github.example.com` or `git.example.com`, gets no
 link.
 
-The path in the link is the part of the backtrace path from the last `app/`, `lib/`, `config/`,
-`db/`, `spec/` or `test/` in it. That matches the repository only when the Rails app is at the
-repository's root. An app in a subdirectory of its repository gets links that 404.
+The path in the link is the frame's path relative to `Rails.root`. For a path RED stored relative
+(frames under `Rails.root` are stored that way), the link starts at the first `app/`, `lib/`,
+`config/`, `db/`, `spec/` or `test/` directory in it; for an absolute path from elsewhere, at the
+last one. That matches the repository only when the Rails app is at the repository's root. An app
+in a subdirectory of its repository gets links that 404.
 
 ### Which commit the links use
 
@@ -159,7 +163,7 @@ Source** on the controller's line.
 | `git_repository_url` | `ENV["GIT_REPOSITORY_URL"]` | Your repository's web URL. Also used by issue tracking |
 | `git_branch_strategy` | `:commit_sha` | `:commit_sha`, `:current_branch` or `:main`; any other value links to `main` |
 | `git_sha` | `ENV["GIT_SHA"]` | The deployed commit |
-| `source_code_cache_ttl` | `3600` | Seconds RED caches each line's source and blame |
+| `source_code_cache_ttl` | `3600` | Seconds RED caches each line's source and blame, and an error page's details section |
 | `only_show_app_code_source` | `true` | Refuses to read files under `/gems/`, `/vendor/bundle/`, `/vendor/ruby/` or `/.bundle/` |
 
 Environment variables RED reads for this feature: `GIT_REPOSITORY_URL`, `GIT_SHA`,
@@ -183,12 +187,17 @@ end
   backtrace, runs blame for each if it is on, and builds each link. The viewers start closed, but
   the work is already done. On a long backtrace, the first view of an error can take a moment.
 - **Caching:** each line's source and blame are cached in `Rails.cache` for
-  `source_code_cache_ttl` seconds, keyed by the file and line number. Errors that share a line share
-  the cache entry.
+  `source_code_cache_ttl` seconds, keyed by the file and line number (`source_code/<RED
+  version>/<file>/<line>` and `git_blame/<file>/<line>`). Errors that share a line share the cache
+  entry.
 - **The page is cached too.** Where fragment caching is on, as it is in production, the error's
-  details section, with its backtrace, viewers, blame and links, is cached until the error changes:
-  it happens again, or its status, assignee or priority changes. So after you change any setting on
-  this page, an error you have already opened keeps showing what it showed. See
+  details section, with its backtrace, viewers, blame and links, is cached for
+  `source_code_cache_ttl` seconds, and until the error changes (it happens again, or its status,
+  assignee or priority changes). Its key includes RED's version and `enable_source_code_integration`,
+  `enable_git_blame`, `only_show_app_code_source`, `git_repository_url` and `git_branch_strategy`, so
+  changing one of those, or upgrading RED, shows the new result at once. Other changes, such as
+  `source_code_context_lines` or an edited file, show on an error you have already opened when its
+  cache entries expire. While coverage tracking is active, the section isn't cached. See
   [Clearing the cache](#clearing-the-cache).
 - **Reading:** RED reads only the lines it shows, from the file at the backtrace path relative to
   `Rails.root`.
@@ -202,7 +211,13 @@ end
 Anyone who can log in to the dashboard can read the code it shows and the authors' names from blame.
 RED limits what it reads:
 
-- Only files under your app's directory (`Rails.root`), and no path containing `..`.
+- Only files under your app's directory (`Rails.root`), checked with the trailing separator, so a
+  directory beside it whose name starts the same way (`/app-old` next to `/app`) is outside. No
+  path containing `..`.
+- Only source files: Ruby (`.rb`, `.rake`, `.ru`) anywhere under `Rails.root`, and view templates
+  (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`) only under an `app/` directory (`app/views`,
+  `app/components`, an engine's `app/`). Nothing under a dot directory such as `.git/` or `.bundle/`.
+  So `config/*.yml`, `config/database.yml.erb`, logs, `Gemfile` and `.env` are never shown.
 - Never files whose path matches `.env`, `secrets.yml`, `credentials.yml`, `database.yml`,
   `master.key`, `private_key`, `.pem` or `.key`.
 - No files over 10 MB, and no binary files (a NUL byte in the first 8 KB).
@@ -212,6 +227,12 @@ RED limits what it reads:
 - Repository links are built only from `http` and `https` URLs.
 
 RED only reads files. It never writes to your app's directory.
+
+The file paths come from the stored backtrace. Errors reported with `ManualErrorReporter` carry the
+backtrace your client sent, so a client can point the viewer at any Ruby file or view template in
+your app. Keep secrets out of Ruby source; use Rails credentials or environment variables. Before
+0.15.0, other files could be read this way too: see
+[GHSA-q7r3-w7p3-95h5](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-q7r3-w7p3-95h5).
 
 ---
 
@@ -254,19 +275,18 @@ end
 ### Source code not showing
 
 - **No View Source button:** check `enable_source_code_integration` is on, and restart the app.
-  Only lines in your app's `app/` and `lib/` (and gems with an `app/` directory) get the button. An
-  error you opened before turning it
-  on shows its cached page until it happens again; [clear the cache](#clearing-the-cache) to see the
-  button now.
+  Only lines in your app's `app/`, `lib/`, `config/` and `db/` get the button.
 - **"Could not read source: File not found or not readable":** the file isn't at
   `Rails.root` plus the backtrace path on the server showing the dashboard. A file deleted or moved
   since the error happened shows this too.
 - **"Could not read source: Invalid or unsafe file path":** the path is outside `Rails.root`, has
-  `..`, matches a sensitive-file pattern, or is gem or vendor code (see [Security](#security)).
+  `..`, isn't a Ruby file or a view template under `app/`, is under a dot directory, matches a
+  sensitive-file pattern, or is gem or vendor code (see [Security](#security)).
 - **"File too large" or "Binary file cannot be displayed":** the file is over 10 MB, or not text.
-- **Every `lib/` or `config/` line says "File not found", on an app whose root is `/app`** (Heroku,
-  and many Docker images): RED stores `/app/lib/x.rb` as `app/lib/x.rb`, then looks for
-  `Rails.root/app/lib/x.rb`. Lines under `app/` read fine.
+- **`lib/` or `config/` lines of an older error say "File not found", on an app whose root is
+  `/app`** (Heroku, and many Docker images): before 0.15.0, RED stored `/app/lib/x.rb` as
+  `app/lib/x.rb`, then looked for `Rails.root/app/lib/x.rb`. Errors recorded since 0.15.0 store
+  paths relative to `Rails.root` and read fine.
 
 With `config.enable_internal_logging = true` and `config.log_level = :debug`, RED logs why it
 refused a path. A missing file isn't logged.
@@ -327,14 +347,13 @@ the working tree on the server, not the commit that raised the error.
 - The Rails app is in a subdirectory of the repository (see the path rule in
   [Step 3](#step-3-repository-links)).
 - `:current_branch` on a server without `.git` falls back to `main`.
-- You changed `git_repository_url` or `git_branch_strategy`, and the error's page is still cached
-  (see [Clearing the cache](#clearing-the-cache)).
+
 
 ### Error pages are slow
 
 Each app line in a backtrace costs a file read, and a `git blame` with blame on, the first time an
-error's page is viewed. Later views come from the cache until the error changes. To make the first
-view cheaper:
+error's page is viewed. Later views come from the cache for `source_code_cache_ttl` seconds, or
+until the error changes. To make the first view cheaper:
 
 - turn off `enable_git_blame` where it can't work or isn't needed;
 - raise `source_code_cache_ttl`;
@@ -342,9 +361,11 @@ view cheaper:
 
 ### Clearing the cache
 
-Two caches hold what the viewer shows: each error's rendered details section, until the error
-changes, and each line's source and blame, for `source_code_cache_ttl` seconds. After a settings
-change, clearing both shows the new result on every error:
+Two caches hold what the viewer shows: each error's rendered details section and each line's source
+and blame, both for `source_code_cache_ttl` seconds. Changing a setting in the details section's
+cache key, or upgrading RED, refreshes it by itself (see [How it works](#how-it-works)). To see any
+other change on every error at once, such as `source_code_context_lines` or files changed by a
+deploy, clear both:
 
 ```ruby
 Rails.cache.clear

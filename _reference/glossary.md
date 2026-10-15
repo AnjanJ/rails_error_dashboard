@@ -369,8 +369,9 @@ Test that verifies multiple components working together. Example: Error capture 
 ## API
 
 ### HTTP Routes
-The dashboard's HTML pages and the forms on them. There is no JSON API, and no HTTP endpoint that
-accepts errors. See the [API Reference](/rails_error_dashboard/docs/reference/api-reference/).
+The dashboard's HTML pages and the forms on them, plus one JSON route, the health check for an
+uptime monitor. There is no JSON API for errors, and no HTTP endpoint that accepts them. See the
+[API Reference](/rails_error_dashboard/docs/reference/api-reference/).
 
 ### Dashboard Authentication
 HTTP Basic with the dashboard credentials, or your `authenticate_with` block, on every route except

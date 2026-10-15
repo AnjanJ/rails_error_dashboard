@@ -44,7 +44,7 @@ leave them unset.
 | Multi-App Support | `application_name`, `environment`, `database`, `use_separate_database` |
 | User Integration | `user_model`, `total_users_for_impact` |
 | Performance Settings | `async_logging`, `async_adapter`, `enable_rate_limiting`, `rate_limit_per_minute` |
-| Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, PagerDuty, webhooks) its switch and its URL, key or recipients (for email, also `notification_email_from`); then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
+| Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, Telegram, PagerDuty, webhooks) its switch and its URL, key, token or recipients (for email, also `notification_email_from`; for Telegram, `telegram_chat_id` and `telegram_api_base_url`; for webhooks, `webhook_signing_secret`); then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
 | Advanced Analytics Features | `enable_similar_errors`, `enable_co_occurring_errors`, `enable_error_cascades`, `enable_error_correlation`, `enable_platform_comparison`, `enable_occurrence_patterns`, `enable_baseline_alerts`, `baseline_alert_threshold_std_devs`, `baseline_alert_severities`, `baseline_alert_cooldown_minutes` |
 | Source Code Integration | `enable_source_code_integration`, `source_code_context_lines`, `enable_git_blame`, `source_code_cache_ttl`, `only_show_app_code_source`, `git_branch_strategy` |
 | Breadcrumbs | `enable_breadcrumbs`, `breadcrumb_buffer_size`, `enable_n_plus_one_detection`, `n_plus_one_threshold` |
@@ -52,7 +52,7 @@ leave them unset.
 | Enhanced Metrics | `app_version`, `git_sha`, `git_repository_url`, `dashboard_base_url` |
 | Issue Tracking | `enable_issue_tracking`, `issue_tracker_token`, `issue_tracker_provider`, `issue_tracker_repo`, `issue_tracker_labels`, `issue_webhook_secret` |
 | Deep Debugging | `enable_local_variables`, `enable_instance_variables`, `detect_swallowed_exceptions`, `enable_diagnostic_dump`, `enable_crash_capture`, `enable_coverage_tracking` |
-| Event Tracking | `enable_rack_attack_tracking`, `enable_actioncable_tracking`, `enable_activestorage_tracking` |
+| Event Tracking | `enable_rack_attack_tracking`, `enable_missing_translation_tracking`, `enable_actioncable_tracking`, `enable_activestorage_tracking` |
 | Advanced Configuration | `custom_severity_rules`, `ignored_exceptions` |
 | Internal Logging | `enable_internal_logging`, `log_level` |
 
@@ -64,11 +64,10 @@ After the groups come two cards:
 - **Active Plugins** lists the plugins you registered, with their name, version, description, and
   whether each is active. See the [Plugin System](../PLUGIN_SYSTEM.md).
 - **Test Notifications** has a **Send Test Error** button. After you confirm, it records a
-  `RailsErrorDashboard::TestError`, which is notified like any new error: through Slack, email,
-  Discord and webhooks, subject to `notification_minimum_severity` and `notification_environments`.
-  PagerDuty doesn't get it, because PagerDuty only takes critical errors. Only the first click
-  notifies: a second test error counts as a repeat of the first, so delete the test error before
-  testing again.
+  `RailsErrorDashboard::TestError`, which is critical, and notifies every channel that is on and
+  configured, **PagerDuty included**. Every click notifies: when the usual rules hold a notification
+  back (a repeat of the last test error, or an environment outside `notification_environments`), the
+  button sends it anyway. Warn whoever PagerDuty pages before you click it.
 
 ### How values are shown
 
@@ -79,24 +78,19 @@ After the groups come two cards:
 | Lists and rules | A count: "3 items", "2 rules" |
 | Symbols and strings | The value, such as `:silent` |
 | Unset values | **Not set**; an empty list shows **Empty** |
-| `issue_tracker_token`, `issue_webhook_secret` | Only **Set** or **Not set** |
+| Credentials | Only **Set** or **Not set**: `slack_webhook_url`, `discord_webhook_url`, `pagerduty_integration_key`, `webhook_urls`, `webhook_signing_secret`, `telegram_bot_token`, `issue_tracker_token`, `issue_webhook_secret` (every option in `Configuration::SECRET_ATTRIBUTES`) |
 
-> **Webhook URLs and the PagerDuty key are shown in full.** `slack_webhook_url`,
-> `discord_webhook_url` and `pagerduty_integration_key` appear as written whenever their channel is
-> on, and anyone who can log in to the dashboard can read them. A long URL looks cut off on screen,
-> but the full value is in the page. Give the dashboard login only to people who may see these.
+Before 0.15.0, the Slack and Discord webhook URLs and the PagerDuty key were shown in full.
 
 ### Rows that need a second look
 
-- **`retention_days`** shows the number of days, "Manual cleanup required", and a
-  `rails error_dashboard:cleanup_resolved` command. That task is a different rule: it deletes
-  *resolved* errors by when they were resolved. Retention deletes errors not seen for that many days,
-  and only when you schedule `RetentionCleanupJob`. See
+- **`retention_days`** shows the number of days and that `RetentionCleanupJob` deletes errors not
+  seen for that long once your scheduler runs it. Nothing in the gem schedules it. See
   [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs).
 - **`async_adapter`** is only checked for a valid value. RED's jobs run on your app's Active Job
   adapter. See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
-- **`digest_frequency`** is shown, but the digest job doesn't read it. Digests go out as often as you
-  schedule `ScheduledDigestJob`.
+- **`digest_frequency`** is the period `ScheduledDigestJob` reports on when you schedule it without
+  one. Digests still go out only as often as you schedule the job.
 - **Enabled doesn't mean working.** A switch can be on while its jobs never run, or before there is
   enough data to show. To check the setup itself, run `bin/rails error_dashboard:verify`.
 

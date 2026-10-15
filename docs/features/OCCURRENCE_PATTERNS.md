@@ -248,10 +248,10 @@ pattern[:hourly_distribution].each do |hour, count|
 end
 ```
 
-`occurrence_pattern` returns `{}` unless `enable_occurrence_patterns` is on. It, `error_bursts`, and
-the error page's pattern section analyse one timestamp per error record of that type and platform:
-the time RED first recorded each one, not every occurrence. For a pattern over every occurrence,
-call the service with the occurrences' times.
+`occurrence_pattern` returns `{}` unless `enable_occurrence_patterns` is on. Since 0.15.0, it,
+`error_bursts` and the error page's pattern section read the occurrences of that error type and
+platform (the newest 10,000 in the window). On an install without occurrence rows they fall back to
+one timestamp per error record. To analyse another set of times, call the service yourself:
 
 #### Via Service
 ```ruby
@@ -550,17 +550,12 @@ puts pattern[:peak_hours]
 
 **Problem**: "60 errors in 2 minutes, what happened?"
 
-**Analysis**: a burst of one error is one error record with many occurrences, and
-`error_bursts` reads one timestamp per record, so read the occurrences:
+**Analysis**: `error_bursts` reads the error's occurrences, so a burst of one error shows up
+(it needs `enable_occurrence_patterns`):
 
 ```ruby
 error = RailsErrorDashboard::ErrorLog.find_by(error_type: "NoMethodError")
-logs = RailsErrorDashboard::ErrorLog.where(error_type: error.error_type, platform: error.platform)
-timestamps = RailsErrorDashboard::ErrorOccurrence
-  .where(error_log_id: logs.select(:id))
-  .where("occurred_at >= ?", 1.day.ago)
-  .pluck(:occurred_at)
-bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps)
+bursts = error.error_bursts(days: 1)
 
 latest_burst = bursts.last # bursts come oldest first
 puts latest_burst
@@ -738,15 +733,9 @@ Action: Monitor error rate %, not absolute count
 - Low/Medium intensity → Log, monitor
 - High intensity (20+ errors) → Alert on-call engineer
 
-**Example**, over the error's occurrences (`error_bursts` sees one timestamp per error record, so it
-misses a burst of one error):
+**Example**:
 ```ruby
-logs = RailsErrorDashboard::ErrorLog.where(error_type: error.error_type, platform: error.platform)
-timestamps = RailsErrorDashboard::ErrorOccurrence
-  .where(error_log_id: logs.select(:id))
-  .where("occurred_at >= ?", 1.day.ago)
-  .pluck(:occurred_at)
-latest = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps: timestamps).last # oldest first
+latest = error.error_bursts(days: 1).last # oldest first
 
 if latest && latest[:burst_intensity] == :high
   PagerDutyService.create_incident(
@@ -763,8 +752,7 @@ end
 **Cause**: `enable_occurrence_patterns` is off (`occurrence_pattern` returns `{}`), or there is
 nothing in the lookback (`pattern_type` is `:none`).
 
-`occurrence_pattern` analyses one timestamp per error record, not per occurrence, so an error that
-happened many times can still have very little to analyse. Check the occurrences instead:
+`occurrence_pattern` reads the error's occurrences in the lookback. Check there are some:
 
 ```ruby
 logs = RailsErrorDashboard::ErrorLog.where(error_type: "YourError")
@@ -806,8 +794,7 @@ end
 ```
 
 A burst needs 5 or more errors, each within 60 seconds of the one before; these are fixed.
-`error_bursts` reads one timestamp per error record, so pass the occurrence timestamps above to
-`PatternDetector.detect_bursts(timestamps:)` instead.
+`error_bursts` reads these same occurrence timestamps (the newest 10,000 in the window).
 
 ### "Heatmap visualization not showing"
 

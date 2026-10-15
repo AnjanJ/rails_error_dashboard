@@ -324,7 +324,7 @@ config.use_separate_database = true   # Separate database
 
 ### Batch Operations
 - **Bulk resolve** multiple errors at once
-- **Bulk delete** errors (no confirmation dialog: Delete acts at once)
+- **Bulk delete** errors, after one confirmation
 - **Checkbox selection** UI
 - **Action toolbar** for batch operations
 - **Plugin events** triggered for batch actions

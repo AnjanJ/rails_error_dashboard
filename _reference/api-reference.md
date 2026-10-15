@@ -6,8 +6,9 @@ order: 1
 
 # API Reference
 
-RED has no JSON API, and no HTTP endpoint that accepts errors. Its HTTP routes are the dashboard
-itself: HTML pages, and the forms on them that post back. This page lists those routes, for when you
+RED has no JSON API for errors, and no HTTP endpoint that accepts them. Its HTTP routes are the
+dashboard itself: HTML pages, the forms on them that post back, and one JSON route, the
+[health check](#health-check) for an uptime monitor. This page lists those routes, for when you
 script the dashboard, put it behind a proxy, or want to know why a request was refused. Errors reach
 RED from Ruby code running in your app; the [Ruby API](#ruby-api) covers that.
 
@@ -57,8 +58,9 @@ authentication:
 
 Pages render HTML only. Asking a page for another format, with `.json` on the path or an
 `Accept: application/json` header, gets `406`. The actions that change something are form POSTs
-that answer with a redirect. Two routes differ: `ai_help` streams
-[server-sent events](#actions-on-one-error), and the webhooks answer with an empty body.
+that answer with a redirect. Three routes differ: [`/health`](#health-check) answers in JSON,
+`ai_help` streams [server-sent events](#actions-on-one-error), and the webhooks answer with an empty
+body.
 
 ### Posting from a script
 
@@ -95,8 +97,9 @@ config.rate_limit_per_minute = 300 # the default
   path, counted per exact path, so `/red/errors/1` and `/red/errors/2` have separate counts.
   Webhooks and requests that fail authentication count too, because the limit runs before
   authentication.
-- **Which paths:** every path that starts with the mount path. With `/red`, that includes your
-  app's own paths that start with the same letters, such as `/redirect`.
+- **Which paths:** the mount path and every path below it (`/red` and `/red/...`). Your app's own
+  paths that only start with the same letters, such as `/redirect`, aren't counted; before 0.15.0
+  they were. With the dashboard mounted at `/`, every path is counted.
 - **Over the limit:** `429` with an HTML page, `Retry-After: 60`, `X-RateLimit-Limit` and
   `X-RateLimit-Period`. There is no JSON variant.
 - **Where counts live:** in `Rails.cache`. With `:null_store`, nothing is ever limited. With more
@@ -108,7 +111,7 @@ config.rate_limit_per_minute = 300 # the default
 
 | Code | When |
 |---|---|
-| `200` | A page; `ai_help`'s event stream; a webhook that passed its signature check |
+| `200` | A page; `/health` while the error database answers; `ai_help`'s event stream; a webhook that passed its signature check |
 | `302` | Every form POST except `ai_help`. Also a page whose feature is off: it redirects to `/errors` with a message saying so |
 | `303` | A `per_page` that isn't a positive number, or a `page` past the end of the error list: it redirects to the same page without `page` and `per_page`, keeping the other parameters |
 | `400` | A malformed request |
@@ -119,13 +122,15 @@ config.rate_limit_per_minute = 300 # the default
 | `422` | A POST without a valid CSRF token. `ai_help` with a blank question or one over 4,000 characters |
 | `429` | Over the [rate limit](#rate-limiting) |
 | `500` | Anything else that fails inside the dashboard. It renders a "Something went wrong" page; your app is unaffected |
+| `503` | `/health` when the error database doesn't answer or RED's tables are missing |
 
 Until a request is authenticated, these error responses are plain text with no details.
 
 ### Pages
 
 All are `GET`. Pages that take `days` accept 1 to 365 and default to 30, except Platform Comparison
-(7). Pages that list rows take `page` and `per_page` (default 25, at most 100). `application_id`
+(7). Pages that list rows take `page` and `per_page` (default 25, at most 100: a larger value, however it
+is written, such as `150.5` or `0999`, is capped). `application_id`
 limits most pages to one application.
 
 | Path | Page | Takes | Needs |
@@ -150,11 +155,52 @@ limits most pages to one application.
 | `/errors/activestorage_health_summary` | ActiveStorage health | `days`, `page`, `per_page` | `enable_activestorage_tracking` and `enable_breadcrumbs` |
 | `/errors/llm_health_summary` | LLM health | `days`, `page`, `per_page` | `enable_llm_observability` and `enable_breadcrumbs` |
 | `/errors/diagnostic_dumps` | Diagnostic dumps | `page`, `per_page` | `enable_diagnostic_dump` |
+| `/errors/missing_translations` | Missing translations: the I18n keys your app looked up and didn't have | `days`, `page`, `per_page` | `enable_missing_translation_tracking` |
+| `/errors/boot_errors` | Boot errors: crashes while the app was booting, recorded on the next boot | `days`, `page`, `per_page` | `enable_crash_capture` |
 | `/settings` | Your configuration, read-only | | |
 
 When a page's option is off, the page redirects to `/errors` with a message saying the feature is off;
 the **Needs** column gives the option. The LLM health page is the exception: it renders and says the
 feature is off.
+
+### Health check
+
+`GET /health` answers in JSON whether the dashboard can still record and show errors, for an uptime
+monitor. It needs the dashboard's [authentication](#authentication) like every other route, because
+the body names your database adapter and queue backend.
+
+```bash
+curl -s -u "$RED_USER:$RED_PASSWORD" https://your-app.example.com/red/health
+```
+
+```json
+{
+  "status": "ok",
+  "version": "0.15.0",
+  "timestamp": "2026-10-15T08:34:14Z",
+  "checks": {
+    "database": { "status": "ok", "adapter": "PostgreSQL", "separate_database": false, "tables_present": true, "latency_ms": 0.42 },
+    "errors": { "status": "ok", "last_error_at": "2026-10-15T08:07:00Z", "last_24h": 41 },
+    "queue": { "status": "ok", "async_logging": true, "adapter": "solid_queue", "problems": [] },
+    "storm_protection": { "status": "ok", "enabled": true, "state": "closed" },
+    "active_storage": { "status": "ok", "service": "amazon", "latency_ms": 48.3 }
+  },
+  "duration_ms": 1.9
+}
+```
+
+| `status` | HTTP | When |
+|---|---|---|
+| `ok` | `200` | Every check passed |
+| `degraded` | `200` | The dashboard works, with a caveat: storm protection is shedding or counting captures (`state` isn't `closed`), the queue configuration won't run RED's jobs, ActiveStorage didn't answer, or another check failed |
+| `down` | `503` | The error database didn't answer `SELECT 1`, or RED's tables are missing (`"reason": "missing_tables"`). Nothing is being recorded |
+
+- `database` checks the **error** database, so with a separate one, that is what's tested. Only this
+  check can make the answer `down`. While it fails, `errors` is skipped.
+- `active_storage` makes one existence check against your storage service, and says `skipped` when
+  ActiveStorage isn't set up.
+- The answer has `Cache-Control: no-store`. If the check itself fails, the answer is still JSON,
+  `{"status":"down", "version": ..., "error": "<exception class>"}`, with `503`.
 
 ### Actions on one error
 
@@ -163,7 +209,7 @@ All are `POST /errors/:id/<action>`. All except `ai_help` redirect back to the e
 | Action | Params | What it does |
 |---|---|---|
 | `resolve` | `resolved_by_name`, `resolution_comment`, `resolution_reference`, all optional | Resolves the error from any status. Runs your `on_error_resolved` callbacks and plugins, and closes a linked issue when issue tracking is on |
-| `assign` | `assigned_to` (required) | Sets the assignee, and sets the status to `in_progress` |
+| `assign` | `assigned_to` (required) | Sets the assignee and the status `in_progress`, which reopens a resolved error. A `wont_fix` error keeps its status |
 | `unassign` | | Clears the assignee. The status doesn't change |
 | `update_priority` | `priority_level`: `0` to `3` | See [priorities](#priority-and-status) |
 | `snooze` | `hours`: a whole number from 1 to 720 (required); `reason` | Marks the error snoozed until then. The list leaves it out when "Hide snoozed" is ticked (`hide_snoozed=1`). Notifications still go out. A reason is saved as a comment |
@@ -198,8 +244,9 @@ allows only these moves:
 | `resolved` | `new` |
 | `wont_fix` | `new` |
 
-Moving to `resolved` this way resolves the error, but doesn't run `on_error_resolved` callbacks or
-plugins. A `wont_fix` error still counts new occurrences, but sends no notifications for them.
+Moving to `resolved` this way resolves the error and runs the same callbacks, event and plugins as
+the Resolve button. A `wont_fix` error still counts new occurrences, but sends no notifications for
+them.
 
 ### Other actions
 
@@ -208,7 +255,7 @@ All are `POST`.
 | Path | Params | What it does |
 |---|---|---|
 | `/errors/batch_action` | `error_ids[]`, `action_type`, and see below | Acts on several errors, then redirects to `/errors` |
-| `/errors/test_error` | | Logs a `RailsErrorDashboard::TestError`, to check your notification channels |
+| `/errors/test_error` | | Logs a `RailsErrorDashboard::TestError`, which is critical, and notifies every configured channel, PagerDuty included, on every click |
 | `/errors/create_diagnostic_dump` | `note` | Captures a snapshot of the process. Needs `enable_diagnostic_dump` |
 | `/errors/enable_coverage` | | Turns on line coverage for the source viewer. Needs `enable_coverage_tracking` and Ruby 3.2+ |
 | `/errors/disable_coverage` | | Turns it off |
@@ -218,7 +265,7 @@ All are `POST`.
 
 | `action_type` | Extra params | Notes |
 |---|---|---|
-| `resolve` | `resolved_by_name`, `resolution_comment` | Doesn't run `on_error_resolved` callbacks, so linked issues stay open. Plugins get `on_errors_batch_resolved` |
+| `resolve` | `resolved_by_name`, `resolution_comment` | Runs the `on_error_resolved` callbacks and event for each error, so linked issues close. Plugins get one `on_errors_batch_resolved` |
 | `mute` | `muted_by`, `reason` | |
 | `unmute` | | |
 | `delete` | | Deletes the errors with everything recorded about them: occurrences, comments, cascade records and event counts |
@@ -245,6 +292,23 @@ These routes skip the dashboard's login and CSRF check. They check a signature m
 - `200` once the signature checks out, even when the payload matches no error or fails to process,
   so the tracker doesn't retry.
 
+### Webhooks RED sends
+
+With `enable_webhook_notifications` and `webhook_urls`, RED POSTs JSON to your URLs (see the
+[Notifications guide](/rails_error_dashboard/docs/guides/notifications/#webhook-notifications-new)). Set `config.webhook_signing_secret`, or
+`WEBHOOK_SIGNING_SECRET`, and every POST is signed:
+
+| Header | Value |
+|---|---|
+| `X-Error-Dashboard-Timestamp` | Unix seconds when RED sent it |
+| `X-Error-Dashboard-Signature-256` | `sha256=` and the hex HMAC-SHA256 of `"<timestamp>.<raw body>"` with your secret |
+
+The timestamp is part of what is signed, so a captured request can't be replayed with a new one. A
+Ruby receiver can check both with
+`RailsErrorDashboard::Services::WebhookSigner.valid?(body, timestamp:, signature:, secret:)`, which
+also refuses a timestamp more than 300 seconds off (`tolerance:`). See
+[Signing](/rails_error_dashboard/docs/guides/notifications/#signing-hmac-sha256) for receivers in other languages.
+
 ### Filtering the error list
 
 `GET /errors` takes these query parameters. Each takes a single value.
@@ -260,7 +324,7 @@ These routes skip the dashboard's login and CSRF check. They check a signature m
 | `user_id` | a user ID | |
 | `app_version`, `git_sha` | exact value | |
 | `search` | text | Searches the message, backtrace and error type. Full-text on PostgreSQL; a case-insensitive match elsewhere |
-| `severity` | `critical`, `high`, `medium`, `low` | Uses RED's built-in classification. `custom_severity_rules` don't apply to this filter |
+| `severity` | `critical`, `high`, `medium`, `low` | RED's classification, including your `custom_severity_rules` |
 | `timeframe` | `last_hour`, `today`, `yesterday`, `last_7_days`, `last_30_days`, `last_90_days` | |
 | `frequency` | `once`, `few` (2-9), `frequent` (10-99), `very_frequent` (100+), `recurring` | `recurring` means more than 5 occurrences and seen in the last 24 hours |
 | `assigned_to` | `__unassigned__`, `__assigned__`, or a name | |
@@ -336,9 +400,10 @@ RailsErrorDashboard::ManualErrorReporter.report(
 |---|---|
 | `error_type:` | Required. Groups the error and decides its severity |
 | `message:` | Required |
-| `backtrace:` | An array of lines, or one string with a line per frame |
+| `backtrace:` | An array of lines, or one string with a line per frame. With source code integration on, the viewer reads the files these lines name, under its [file rules](/rails_error_dashboard/docs/features/source-code-integration/#security) |
 | `platform:` | Stored as given. The dashboard's iOS and Android badges match exactly `"iOS"` and `"Android"`. Without it the platform is `"API"` |
-| `user_id:`, `app_version:` | Stored as given |
+| `user_id:` | Stored as given. While RED's `user_id` column is an integer, an ID it can't hold, such as a UUID, is stored as `nil`; see [User IDs That Are Not Integers](/rails_error_dashboard/docs/guides/configuration/#user-ids-that-are-not-integers) |
+| `app_version:` | Stored as given |
 | `request_url:`, `user_agent:`, `ip_address:` | Stored as given |
 | `metadata:` | A Hash. It is shown with the request params. Anything else is dropped |
 | `occurred_at:` | A `Time` or a date string; defaults to now. A time in the future becomes now. An older time is kept on the occurrence, which the charts read; the error's own `occurred_at` is set no further back than 24 hours |
@@ -372,8 +437,8 @@ end
   each repeat of an open error. An open error that keeps happening more than 24 hours after RED
   first recorded it starts a new error record, so it runs again then. `on_critical_error` runs at
   the same moments when the error is critical.
-- `on_error_resolved` runs when an error is resolved with the Resolve button, `ErrorLog#resolve!`
-  or a webhook. A batch resolve or a status change to `resolved` doesn't run it.
+- `on_error_resolved` runs whenever an error is resolved: the Resolve button, a batch resolve, a
+  status change to `resolved`, `ErrorLog#resolve!` or a webhook.
 - A callback that raises is rescued and doesn't stop the others.
 
 The same moments are published as `ActiveSupport::Notifications` events:
@@ -401,29 +466,25 @@ is on. See [Manual Breadcrumbs](/rails_error_dashboard/docs/guides/configuration
 ### Jobs
 
 RED's periodic jobs need your scheduler: see
-[Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs). Cascade detection also
-needs one if you want it. Nothing in the gem runs it and there is no job class for it, so there is
-no cascade data until you do (the error page shows it when `enable_error_cascades` is on):
+[Schedule the periodic jobs](/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs). Since 0.15.0, cascade detection is one of them:
+`RailsErrorDashboard::CascadeDetectionJob`, which does nothing while `enable_error_cascades` is off.
 
 ```ruby
-RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)
+RailsErrorDashboard::CascadeDetectionJob.perform_now(lookback_hours: 1)
 # => { detected: 2, updated: 5 }
 ```
 
 Keep `lookback_hours` equal to the time between runs: each run adds 1 to the frequency of every
 cascade it finds again, so windows that overlap count the same errors twice (see
-[Scheduling](/rails_error_dashboard/docs/features/advanced-error-grouping/#scheduling)). With Solid Queue, a `command:` entry in
-`config/recurring.yml` runs it daily:
+[Scheduling](/rails_error_dashboard/docs/features/advanced-error-grouping/#scheduling)). With Solid Queue, in `config/recurring.yml`:
 
 ```yaml
 production:
   red_cascades:
-    command: "RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)"
-    schedule: every day at 5am
+    class: RailsErrorDashboard::CascadeDetectionJob
+    args: [ { lookback_hours: 1 } ]
+    schedule: every hour
 ```
-
-With cron, once a day:
-`bin/rails runner 'RailsErrorDashboard::Services::CascadeDetector.call(lookback_hours: 24)'`.
 
 ### Reading and changing errors
 
@@ -454,8 +515,7 @@ their buttons.
 ### Internal classes
 
 The `Commands`, `Queries` and `Services` classes back the dashboard's pages. They aren't a public
-API and can change in any release; `CascadeDetector`, above, is the one you need to call yourself.
-If you already call the others, these are their current signatures:
+API and can change in any release. If you already call them, these are their current signatures:
 
 | Call | Returns |
 |---|---|
