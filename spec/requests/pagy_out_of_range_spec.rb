@@ -68,22 +68,22 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
     # Integer() refused these, so the raw string reached Pagy, whose to_i read
     # them as 150 and 999: over the cap, with no redirect either.
     it "clamps a decimal per_page" do
-      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "150.5" } }
+      limits = limits_for { get "/error_dashboard/errors", params: { per_page: "150.5" } }
 
       expect(response).to have_http_status(:ok)
-      expect(sql).to include("100")
-      expect(sql).not_to include("150")
+      expect(limits).to include(100)
+      expect(limits).not_to include(150)
     end
 
     it "clamps a zero-padded or trailing-garbage per_page" do
-      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "0999" } }
+      limits = limits_for { get "/error_dashboard/errors", params: { per_page: "0999" } }
       expect(response).to have_http_status(:ok)
-      expect(sql).to include("100")
-      expect(sql).not_to include("999")
+      expect(limits).to include(100)
+      expect(limits).not_to include(999)
 
-      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "150abc" } }
+      limits = limits_for { get "/error_dashboard/errors", params: { per_page: "150abc" } }
       expect(response).to have_http_status(:ok)
-      expect(sql).not_to include("150")
+      expect(limits).not_to include(150)
     end
 
     it "still redirects for a per_page Pagy rejects" do
@@ -93,26 +93,29 @@ RSpec.describe "Pagy out-of-range redirect", type: :request do
       expect(response.location).not_to include("per_page")
     end
 
-    # The limit may be inlined or sent as a bind, depending on the adapter.
+    # The LIMIT of every query the block ran, as integers. Not the SQL text:
+    # the page loads other queries too, and the microseconds in their
+    # timestamp binds sometimes contain "150" or "999".
+    #
+    # The limit is a bind named "LIMIT", or inlined where the adapter doesn't
+    # use prepared statements (MySQL).
     def limits_for
-      seen = []
+      limits = []
       collector = lambda do |_n, _s, _f, _i, payload|
-        next unless payload[:sql].include?("LIMIT")
-
-        binds = payload[:type_casted_binds]
-        binds = binds.call if binds.respond_to?(:call)
-        seen << "#{payload[:sql]} #{Array(binds).inspect}"
+        bind = Array(payload[:binds]).find { |b| b.respond_to?(:name) && b.name == "LIMIT" }
+        limit = bind ? bind.value : payload[:sql][/\bLIMIT (\d+)/, 1]
+        limits << Integer(limit) if limit
       end
       ActiveSupport::Notifications.subscribed(collector, "sql.active_record") { yield }
-      seen.join("\n")
+      limits
     end
 
     it "clamps a huge per_page to 100" do
-      sql = limits_for { get "/error_dashboard/errors", params: { per_page: "9999999" } }
+      limits = limits_for { get "/error_dashboard/errors", params: { per_page: "9999999" } }
 
       expect(response).to have_http_status(:ok)
-      expect(sql).not_to include("9999999")
-      expect(sql).to match(/\b100\b/)
+      expect(limits).not_to include(9_999_999)
+      expect(limits).to include(100)
     end
 
     it "renders at most 100 rows however many are asked for" do
