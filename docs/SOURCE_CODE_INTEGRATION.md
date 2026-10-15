@@ -114,7 +114,7 @@ in a subdirectory of its repository gets links that 404.
 | Strategy | The link points at |
 |---|---|
 | `:commit_sha` (the default) | The commit RED recorded for the error when it first happened |
-| `:current_branch` | The commit the server's app directory is at now (`git rev-parse HEAD`; needs `.git`) |
+| `:current_branch` | The commit the app is running: `config.git_sha`, then `GIT_SHA`, `HEROKU_SLUG_COMMIT` or `RENDER_GIT_COMMIT`, then the `.git` HEAD read once at boot. No `git` command runs while a page renders |
 | `:main` | The `main` branch |
 
 When there is no commit to use, the link points at `main`. There is no setting for another branch
@@ -346,7 +346,7 @@ the working tree on the server, not the commit that raised the error.
 - The commit isn't pushed to the repository.
 - The Rails app is in a subdirectory of the repository (see the path rule in
   [Step 3](#step-3-repository-links)).
-- `:current_branch` on a server without `.git` falls back to `main`.
+- `:current_branch` with no `git_sha`, none of those variables and no `.git` falls back to `main`.
 
 ### Error pages are slow
 

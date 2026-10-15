@@ -299,23 +299,15 @@ module RailsErrorDashboard
         # Use the SHA from when the error occurred (most accurate)
         error_log.respond_to?(:git_sha) ? error_log.git_sha : nil
       when :current_branch
-        # Use current branch HEAD
-        get_current_git_sha
+        # The commit this process is running: config.git_sha, the deploy ENV
+        # variables, then the .git HEAD read once at boot. Never `git rev-parse`
+        # here: this renders on a host request thread, and a subprocess with
+        # no timeout is the pattern the capture path already removed.
+        Commands::LogError.capture_git_sha
       when :main
         # Use main/master branch
         nil # Will default to "main" in GithubLinkGenerator
       else
-        nil
-      end
-    end
-
-    # Get current git SHA from repository
-    def get_current_git_sha
-      return @current_git_sha if defined?(@current_git_sha)
-
-      @current_git_sha = begin
-        `git rev-parse HEAD 2>/dev/null`.strip.presence
-      rescue StandardError
         nil
       end
     end

@@ -254,6 +254,29 @@ RSpec.describe RailsErrorDashboard::BacktraceHelper, type: :helper do
 
         expect(link).to include("/main/")
       end
+
+      # audit-fixes-0-16-0/REQ-1: the error page runs on a host request thread,
+      # so the current-branch link uses the commit resolved at boot instead of
+      # shelling out to git.
+      context "with the current-branch strategy" do
+        around do |example|
+          config = RailsErrorDashboard.configuration
+          saved = [ config.git_branch_strategy, config.git_sha ]
+          example.run
+        ensure
+          config.git_branch_strategy, config.git_sha = saved
+        end
+
+        it "links to the commit resolved at boot, without starting a subprocess" do
+          RailsErrorDashboard.configuration.git_branch_strategy = :current_branch
+          RailsErrorDashboard.configuration.git_sha = "abc1234"
+          expect(helper).not_to receive(:`)
+
+          link = helper.generate_repository_link(frame, error_log)
+
+          expect(link).to include("/blob/abc1234/")
+        end
+      end
     end
   end
 
