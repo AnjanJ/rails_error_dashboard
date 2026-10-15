@@ -8,6 +8,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       RUBY_VERSION: ruby-3.4.5
       RUBOCOP_CACHE_ROOT: tmp/rubocop
@@ -42,6 +43,7 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: Integration Tests (shared + separate DB)
 
     steps:
@@ -72,6 +74,7 @@ jobs:
   #   - any PR touching db/migrate/**, which is what breaks upgrades
   upgrade:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: Upgrade Path (published → this branch)
     steps:
       - name: Checkout code
