@@ -36,6 +36,17 @@ in step at every place the backtrace is written: create, `backtrace_upgrade`, cr
 the storm exemplar.
 
 **Decision.** Option 1.
+
+**Amended in T3.** The storm exemplar is not always `"server"`. Storm protection runs inside
+`LogError.call`, so it counts `ManualErrorReporter` reports too. Its exemplar's
+`first_app_frame`, which becomes the minimal row's backtrace, is then the frame a client sent. The
+gate therefore records the event's source in its parts (`gate.rb#gate_parts`), outside the
+identity and the gate key. The count buffer carries it (`CountBuffer::Entry`, the snapshot and
+`parts_from`), and `FlushStormCounts` writes it to `backtrace_source`. A client event and a server
+event of one error share an entry, and the entry keeps the first event's frame, so it keeps that
+event's source. An entry from a release without the field reads as server (REQ-7). T3 gains
+`storm_protection/gate.rb` and `storm_protection/count_buffer.rb`.
+
 **Falsifiability.** We would fold both into the event envelope if the deferred envelope refactor
 (evidence-integrity §D8) is specced and starts.
 **Fired-if.** `test -f .shipkit/specs/event-envelope/spec.md`
@@ -111,7 +122,8 @@ forwarding a caller-supplied context hash into `LogError` (for example, a `conte
   - `LogError` sets `attributes[:backtrace_source]` and the occurrence's `capture_source` from the
     marker.
   - `FindOrIncrementError#backtrace_upgrade` copies `backtrace_source` along with the backtrace.
-  - Crash import and the storm exemplar write `"server"`.
+  - Crash import writes `"server"`. The storm exemplar writes the source of the event it was
+    built from (amended in T3, below).
   - Every write sits inside the existing rescues (REQ-8).
 - **UI:** a note in place of View Source for client backtraces, with locale keys in all 11
   locales. Docs: SOURCE_CODE_INTEGRATION.md and its `_features` copy (REQ-10).

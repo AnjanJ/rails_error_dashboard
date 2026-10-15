@@ -230,6 +230,12 @@ module RailsErrorDashboard
         return {} unless incoming.include?("\n") || incoming.length > stored.length
 
         upgrade = { backtrace: @attributes[:backtrace] }
+        # The source goes with the backtrace it describes: a client's backtrace
+        # replacing a server one must make the row client, and the reverse. A
+        # caller that names none is RED's own server-side code.
+        if ErrorLog.column_names.include?("backtrace_source")
+          upgrade[:backtrace_source] = @attributes[:backtrace_source].presence || "server"
+        end
         # The row is no longer a reconstructed exemplar: it now carries a real
         # stack from a real capture, so it must stop describing itself as
         # "minimal".

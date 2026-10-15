@@ -20,14 +20,15 @@ the new behaviour without exploit detail (the residual of GHSA-q7r3-w7p3-95h5).
     - a failing marker write still records the error
   - After: T1
   - Done when: `bundle exec rspec spec/commands/log_error_capture_source_spec.rb` → all pass
-- [ ] **T3** Keep `backtrace_source` in step with the shown backtrace → REQ-2, REQ-4
-  - Files: lib/rails_error_dashboard/commands/find_or_increment_error.rb, lib/rails_error_dashboard/services/crash_capture.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, spec/commands/find_or_increment_error_capture_source_spec.rb
+- [x] **T3** Keep `backtrace_source` in step with the shown backtrace → REQ-2, REQ-4
+  - Files: lib/rails_error_dashboard/commands/find_or_increment_error.rb, lib/rails_error_dashboard/services/crash_capture.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, spec/commands/find_or_increment_error_capture_source_spec.rb
   - Test: spec/commands/find_or_increment_error_capture_source_spec.rb, covering:
     - when `backtrace_upgrade` replaces a one-line client backtrace with a server one, the row
       becomes server
     - when the stored backtrace is multi-line and from a client, a later server capture leaves it
       client
-    - crash import and storm exemplars are server
+    - crash import is server; a storm exemplar takes the source of the counted event its frame came
+      from (client for a ManualErrorReporter report), and an entry without one reads as server
   - After: T2
   - Done when: `bundle exec rspec spec/commands/find_or_increment_error_capture_source_spec.rb` → all pass
 - [ ] **T4** Gate View Source, blame and the Markdown formatter → REQ-4, REQ-5, REQ-6
