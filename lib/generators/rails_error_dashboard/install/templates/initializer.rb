@@ -41,11 +41,14 @@ RailsErrorDashboard.configure do |config|
   # warden, session, request, params, cookies, redirect_to, etc.
   # Return truthy to allow access, falsy to deny (403 Forbidden).
   #
-  # NOTE: Devise helpers (current_user, authenticate_user!) are NOT available
-  # because the engine controller inherits from ActionController::Base, not your
-  # app's ApplicationController. Use `warden` directly instead.
+  # Devise helpers (current_user, user_signed_in?, authenticate_user!) work:
+  # Devise adds them to ActionController::Base, which the engine's controller
+  # inherits. Methods defined only in your app's ApplicationController do not:
+  # the lambda raises and access is denied (logged as "authenticate_with lambda
+  # raised").
   #
-  # Devise/Warden example (recommended):
+  # Devise examples:
+  #   config.authenticate_with = -> { current_user&.admin? }
   #   config.authenticate_with = -> { warden.authenticated? }
   #
   # Warden with redirect to login:
