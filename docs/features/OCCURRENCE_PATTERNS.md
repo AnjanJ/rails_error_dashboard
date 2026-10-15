@@ -31,7 +31,7 @@ end
 Occurrence pattern analysis helps you understand **when and how** errors happen:
 - **Cyclical Patterns**: Do errors follow daily or weekly rhythms?
 - **Error Bursts**: Are errors happening in rapid sequences?
-- **Pattern Strength**: How predictable is the error pattern?
+- **Pattern Strength**: How concentrated are the errors in a few hours of the day?
 
 ### Why Patterns Matter
 
@@ -48,10 +48,12 @@ Understanding temporal patterns enables:
 Cyclical patterns are **repeating temporal rhythms** in error occurrences.
 
 **Examples**:
-- **Business Hours**: Errors peak 9 AM - 5 PM (user activity)
-- **Night**: Errors peak midnight - 6 AM (batch processing)
-- **Weekend**: Errors spike Saturday - Sunday (different user behavior)
-- **Uniform**: Errors spread evenly throughout the day/week
+- **Business Hours**: Errors peak between 9 AM and 6 PM (user activity)
+- **Night**: Errors peak between midnight and 7 AM (batch processing)
+- **Weekend**: Most errors happen on Saturday and Sunday (different user behavior)
+- **Uniform**: None of the above
+
+Hours and weekdays are read in your application's time zone (`config.time_zone`, UTC by default).
 
 ### Pattern Detection Algorithm
 
@@ -59,7 +61,8 @@ The system analyzes error occurrence timestamps to detect patterns:
 
 ```ruby
 def analyze_cyclical_pattern(timestamps:, days: 30)
-  # Step 1: Group the timestamps by hour (0-23) and weekday (0-6)
+  # Step 1: Count the timestamps by hour (0-23) and weekday (0-6).
+  # Hours and weekdays with no errors are absent.
   hourly_distribution = { 0 => 5, 1 => 3, ..., 9 => 45, ... }
   weekday_distribution = { 0 => 120, 1 => 95, ... }  # 0=Sunday, 1=Monday
 
@@ -67,7 +70,8 @@ def analyze_cyclical_pattern(timestamps:, days: 30)
   pattern_type = determine_pattern_type(hourly_distribution, weekday_distribution)
   # => :business_hours, :night, :weekend, :uniform (:none with no timestamps)
 
-  # Step 3: Peak hours: hours with more than twice the average count
+  # Step 3: Peak hours: hours with more than twice the average,
+  # where the average is the total divided by 24
   peak_hours = find_peak_hours(hourly_distribution)
 
   # Step 4: Pattern strength (0.0 - 1.0)
@@ -87,12 +91,22 @@ end
 
 ### Pattern Types
 
+The rules are checked in this order, and the first that matches wins:
+
+| Type | Rule |
+|---|---|
+| Business Hours | 3 or more peak hours from 9:00 to 17:59 |
+| Night | 2 or more peak hours from 0:00 to 6:59 |
+| Weekend | Saturday and Sunday hold more than half of the errors |
+| Uniform | None of the above |
+| None | No timestamps in the window |
+
+A peak hour is an hour with more than twice the average count, where the average is the total
+divided by 24.
+
 #### 1. Business Hours Pattern
 
-**Characteristics**:
-- Peak hours: 9 AM - 5 PM
-- Low hours: Midnight - 6 AM
-- Peak weekdays: Monday - Friday
+**Rule**: 3 or more peak hours from 9:00 to 17:59. The weekdays and the other hours don't matter.
 
 **Interpretation**: Errors driven by **user activity**
 - More users during business hours = more errors
@@ -115,10 +129,8 @@ Hourly Distribution:
 
 #### 2. Night Pattern
 
-**Characteristics**:
-- Peak hours: Midnight - 6 AM
-- Low hours: 9 AM - 5 PM
-- No weekday preference
+**Rule**: 2 or more peak hours from 0:00 to 6:59, when the errors are not Business Hours. The
+weekdays don't matter.
 
 **Interpretation**: Errors driven by **background processes**
 - Batch jobs, data syncs, scheduled tasks
@@ -140,10 +152,8 @@ Hourly Distribution:
 
 #### 3. Weekend Pattern
 
-**Characteristics**:
-- Peak weekdays: Saturday, Sunday
-- Low weekdays: Monday - Friday
-- No strong hourly preference
+**Rule**: Saturday and Sunday together hold more than half of the errors, when the errors are
+neither Business Hours nor Night.
 
 **Interpretation**: Errors driven by **weekend user behavior**
 - Different features used on weekends
@@ -166,12 +176,13 @@ Weekday Distribution:
 
 #### 4. Uniform Pattern
 
-**Characteristics**:
-- No clear peak hours
-- No clear peak weekdays
-- Errors distributed evenly
+**Rule**: None of the other rules match.
 
-**Interpretation**: Errors **not time-dependent**
+Uniform doesn't mean the errors are spread evenly. An error with one or two peak hours in the
+daytime, one peak hour at night, or its peaks in the evening (18:00 to 23:59) is Uniform too,
+unless the weekend rule matches. Check the pattern strength and the heatmap.
+
+**Interpretation**: When the strength is low too, errors are **not time-dependent**
 - Background errors (timeouts, network)
 - Random user-triggered errors
 - System-level issues
@@ -189,49 +200,53 @@ Hourly Distribution:
 
 ### Pattern Strength
 
-Pattern strength measures how **predictable** the pattern is (0.0 = no pattern, 1.0 = perfect pattern).
+Pattern strength measures how **concentrated** the errors are in some hours of the day (0.0 = spread
+evenly over all 24 hours, 1.0 = strongly concentrated). It is computed from the hourly distribution
+alone, separately from the pattern type.
 
-**Calculation**: Coefficient of Variation
+**Calculation**: Coefficient of variation of the 24 hourly counts
 ```ruby
-def calculate_pattern_strength(distribution)
-  values = distribution.values
-  mean = values.sum.to_f / values.count
-  variance = values.sum { |v| (v - mean)**2 } / values.count
+def calculate_pattern_strength(hourly_distribution)
+  values = (0..23).map { |hour| hourly_distribution[hour] || 0 }  # hours with no errors count as 0
+  mean = values.sum.to_f / 24
+  variance = values.sum { |v| (v - mean)**2 } / 24
   std_dev = Math.sqrt(variance)
 
-  # Coefficient of variation
+  # Coefficient of variation, rounded to 2 places and capped at 1.0
   cv = std_dev / mean
-
-  # Convert to strength score (higher CV = stronger pattern)
-  # Cap at 1.0 for very strong patterns
-  [cv / 2.0, 1.0].min
+  [cv.round(2), 1.0].min
 end
 ```
 
-**Interpretation**:
-- **0.8 - 1.0**: Very strong pattern (highly predictable)
-- **0.5 - 0.8**: Strong pattern (predictable)
-- **0.3 - 0.5**: Moderate pattern (somewhat predictable)
-- **0.0 - 0.3**: Weak pattern (not very predictable)
+Errors confined to a few hours reach the 1.0 cap: errors only from 9:00 to 17:59 score 1.0.
+
+**Interpretation** (the bands the error page uses):
+- **0.7 - 1.0**: Strong pattern - errors highly concentrated in specific hours
+- **0.4 - 0.7**: Moderate pattern - some concentration in specific hours
+- **0.0 - 0.4**: Weak pattern - errors distributed fairly evenly
 
 **Example**:
 ```text
-Business hours pattern: strength = 0.85 (very strong)
-→ Errors very predictable, always 9 AM - 5 PM
+22 errors an hour from 9:00 to 17:59, 4 an hour otherwise:
+→ Business Hours, strength 0.81 (strong)
 
-Uniform pattern: strength = 0.15 (weak)
-→ Errors unpredictable, random timing
+8 to 12 errors every hour:
+→ Uniform, strength 0.13 (weak)
+
+20 errors an hour from 9:00 to 17:59, 4 an hour otherwise:
+→ Uniform (20 is not more than twice the average of 10), strength 0.77 (strong)
 ```
 
 ### Accessing Pattern Data
 
 #### Via UI
-Navigate to an error detail page → "Occurrence Pattern" card shows:
-- Pattern type badge
-- Pattern strength progress bar
+Navigate to an error detail page → the "Occurrence Patterns" card (last 30 days) shows:
+- Pattern type badge, with a one-line description
+- Pattern strength progress bar, labelled strong, moderate or weak
 - Hourly distribution heatmap
-- Peak hours alert
-- Recommendations
+- Peak hours, when there are any
+
+The card appears when there is at least one timestamp in the 30 days.
 
 #### Via Code
 ```ruby
@@ -250,8 +265,10 @@ end
 
 `occurrence_pattern` returns `{}` unless `enable_occurrence_patterns` is on. Since 0.15.0, it,
 `error_bursts` and the error page's pattern section read the occurrences of that error type and
-platform (the newest 10,000 in the window). On an install without occurrence rows they fall back to
-one timestamp per error record. To analyse another set of times, call the service yourself:
+platform, in every application (the newest 10,000 in the window, so a frequent error's
+distribution can cover fewer days than asked). When there are no occurrence rows in the window
+(an install from before the occurrences table, for instance), they fall back to one timestamp per
+error record. To analyse another set of times, call the service yourself:
 
 #### Via Service
 ```ruby
@@ -274,9 +291,9 @@ pattern = RailsErrorDashboard::Services::PatternDetector.analyze_cyclical_patter
 Error bursts are **rapid sequences of errors** occurring in a short time window.
 
 **Characteristics**:
-- Multiple errors within 60 seconds
-- Inter-arrival time < 60 seconds
+- Each error comes 60 seconds or less after the one before
 - At least 5 errors in sequence
+- No limit on the length: a burst lasts as long as the gaps stay at 60 seconds or less
 
 **Example**:
 ```text
@@ -286,71 +303,33 @@ Normal errors:
   10:12:00 - Error 3  (7 min gap)
 
 Burst:
-  14:30:00 - Error 1
-  14:30:15 - Error 2  (15 sec gap) ← Burst starts
+  14:30:00 - Error 1  ← Burst starts
+  14:30:15 - Error 2  (15 sec gap)
   14:30:22 - Error 3  (7 sec gap)
   14:30:45 - Error 4  (23 sec gap)
   14:31:10 - Error 5  (25 sec gap)
-  14:31:30 - Error 6  (20 sec gap)
-  14:35:00 - Error 7  (3.5 min gap) ← Burst ends
+  14:31:30 - Error 6  (20 sec gap) ← Burst ends: 6 errors over 90 seconds, low intensity
+  14:35:00 - Error 7  (3.5 min gap)
 ```
 
 ### Burst Detection Algorithm
 
+`PatternDetector.detect_bursts(timestamps:)`:
+
+1. Sorts the timestamps, and returns no bursts when there are fewer than 5
+2. Walks through them in order. A gap of 60 seconds or less starts a burst (at the earlier of the
+   two errors) or extends the current one
+3. A longer gap ends the current burst. It is kept if it has 5 or more errors
+4. Each kept burst is returned, oldest first, as:
+
 ```ruby
-def detect_bursts(timestamps:)
-  # Step 1: Sort the timestamps
-  timestamps = timestamps.sort
-
-  # Step 2: Detect bursts
-  bursts = []
-  current_burst = nil
-
-  timestamps.each_with_index do |timestamp, i|
-    next if i.zero?
-
-    # Calculate time since previous error
-    inter_arrival = timestamp - timestamps[i - 1]
-
-    if inter_arrival <= 60  # 60 seconds threshold
-      # Start or continue burst
-      if current_burst.nil?
-        current_burst = {
-          start_time: timestamps[i - 1],
-          end_time: timestamp,
-          errors: [timestamps[i - 1], timestamp]
-        }
-      else
-        current_burst[:end_time] = timestamp
-        current_burst[:errors] << timestamp
-      end
-    else
-      # Gap too large, end burst
-      if current_burst && current_burst[:errors].count >= 5
-        # Save burst (minimum 5 errors)
-        bursts << finalize_burst(current_burst)
-      end
-      current_burst = nil
-    end
-  end
-
-  # Don't forget last burst
-  if current_burst && current_burst[:errors].count >= 5
-    bursts << finalize_burst(current_burst)
-  end
-
-  bursts
-end
-
-def finalize_burst(burst_data)
-  {
-    start_time: burst_data[:start_time],
-    end_time: burst_data[:end_time],
-    duration_seconds: (burst_data[:end_time] - burst_data[:start_time]).round(1),
-    error_count: burst_data[:errors].count,
-    burst_intensity: classify_burst_intensity(burst_data[:errors].count)
-  }
-end
+{
+  start_time: first_error_time,
+  end_time: last_error_time,
+  duration_seconds: (last_error_time - first_error_time).round(1),
+  error_count: errors_in_burst,
+  burst_intensity: classify_burst_intensity(errors_in_burst)
+}
 ```
 
 ### Burst Intensity
@@ -385,19 +364,21 @@ Bursts indicate:
 - **Infinite loops**: Code stuck in error loop
 
 **Not bursts**:
-- Steady error rate (even if high)
+- Steady error rate with gaps over 60 seconds (even if high)
 - Errors spread over hours
 - Normal user activity patterns
 
 ### Accessing Burst Data
 
 #### Via UI
-Navigate to an error detail page → "Error Bursts" table shows:
+Navigate to an error detail page → the "Error Bursts" card (last 7 days) shows a table with:
 - Burst start time
-- Duration
+- Duration (in minutes, with the seconds)
 - Error count
 - Intensity badge
-- Errors/second rate
+
+It lists the first 10 bursts, oldest first, with a note when there are more, and a list of things
+to check below the table. The card appears only when there is at least one burst.
 
 #### Via Code
 ```ruby
@@ -427,67 +408,57 @@ bursts = RailsErrorDashboard::Services::PatternDetector.detect_bursts(timestamps
 
 ### Hourly Distribution Heatmap
 
-The UI displays a **24-hour heatmap** showing error concentration:
+The UI displays a row of **24 cells**, one per hour, each showing its count. A cell's red is
+stronger the closer its count is to the busiest hour's, and peak hours have a red border:
 
 ```text
-Hour  Count  Visualization
-00:00   5    ░░░░░
-01:00   3    ░░░
-02:00   8    ░░░░░░░░
-...
-09:00  45    ████████████████ (Peak)
-10:00  42    ███████████████
-11:00  38    ██████████████
-...
-23:00   6    ░░░░░░
+Hour   0   1   2  ...   9   10   11  ...  23
+Count  5   3   8  ...  45   42   38  ...   6
+Shade  ░   ░   ░  ...  █    █    ▓   ...   ░
+                       ^peak ^peak ^peak
 ```
 
 **Color Coding**:
-- 🟦 **Light Blue**: Low (< 50% of peak)
-- 🟨 **Yellow**: Medium (50-80% of peak)
-- 🟥 **Red**: High (> 80% of peak)
+- Red at an opacity of count ÷ the busiest hour's count: an hour with no errors is blank, the busiest hour is solid red
+- A red border marks the peak hours (more than twice the average)
 
 ### Pattern Insights Card
 
-The error show page displays:
-- **Pattern Type Badge**: Visual indicator (Business Hours, Night, Weekend, Uniform)
-- **Pattern Strength**: Progress bar (0-100%)
-- **Peak Hours**: List of high-error hours
-- **Recommendations**: Actionable suggestions based on pattern
+The error page's "Occurrence Patterns" card displays:
+- **Pattern Type Badge**: Business Hours, Night, Weekend, Uniform, or No Pattern Detected, with a one-line description
+- **Pattern Strength**: Progress bar (0-100%), labelled strong, moderate or weak
+- **Hourly Distribution Heatmap**: see above
+- **Peak Hours**: The hours with more than twice the average, when there are any
 
 **Example**:
 ```text
-┌─────────────────────────────────────┐
-│ 🕒 Occurrence Pattern               │
-├─────────────────────────────────────┤
-│ Pattern Type: Business Hours        │
-│ Pattern Strength: ████████░░ 85%    │
-│                                     │
-│ Peak Hours: 9 AM, 10 AM, 11 AM,    │
-│             2 PM, 3 PM              │
-│                                     │
-│ 💡 Recommendations:                 │
-│ • Monitor error rate during         │
-│   business hours                    │
-│ • Correlate with user traffic       │
-│ • Consider scaling infrastructure   │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ Occurrence Patterns (Last 30 days)          │
+├─────────────────────────────────────────────┤
+│ Pattern Type: Business Hours Pattern        │
+│ Pattern Strength: ████████░░ 85%            │
+│   Strong pattern - Errors highly            │
+│   concentrated in specific hours            │
+│                                             │
+│ Hourly Distribution Heatmap                 │
+│ [0] [1] [2] ... [9] [10] ... [23]           │
+│                                             │
+│ Peak Hours: 9:00, 10:00, 11:00, 14:00,      │
+│             15:00                           │
+└─────────────────────────────────────────────┘
 ```
 
 ### Burst Timeline
 
-Bursts are displayed in a timeline table:
+Bursts are displayed in a table:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│ 💥 Error Bursts (Last 7 Days)                       │
-├─────────────────────────────────────────────────────┤
-│ Time             Duration  Count  Intensity  Rate   │
-├─────────────────────────────────────────────────────┤
-│ Dec 20, 2:30 PM    90s      35    🔴 High    0.4/s │
-│ Dec 19, 10:15 AM  120s      18    🟡 Medium  0.2/s │
-│ Dec 18, 3:45 PM    60s      12    🟡 Medium  0.2/s │
-└─────────────────────────────────────────────────────┘
+Error Bursts  3  (Last 7 days)
+
+Start Time                     Duration        Error Count  Intensity
+December 18, 2025 03:45:00 PM  1.0 min (60s)   12 errors    Medium (10-19 errors)
+December 19, 2025 10:15:00 AM  2.0 min (120s)  18 errors    Medium (10-19 errors)
+December 20, 2025 02:30:00 PM  1.5 min (90s)   35 errors    High (20+ errors)
 ```
 
 ## Use Cases
@@ -509,7 +480,7 @@ puts pattern[:peak_hours]
 ```
 
 **Interpretation**:
-- Error peaks during business hours (9 AM - 5 PM)
+- Error peaks during business hours (9 AM - 6 PM)
 - Likely related to user activity
 - Database queries slow under load
 
@@ -613,10 +584,20 @@ puts pattern[:weekday_distribution]
 
 **Problem**: "Errors used to be business hours, now uniform"
 
-**Analysis**:
+**Analysis**: `occurrence_pattern(days: 60)` covers the last 60 days, the last 30 included. To look at
+30-60 days ago alone, pass those occurrences to the service:
+
 ```ruby
 # Old pattern (30-60 days ago)
-old_pattern = error.occurrence_pattern(days: 60)
+logs = RailsErrorDashboard::ErrorLog.where(error_type: error.error_type, platform: error.platform)
+old_times = RailsErrorDashboard::ErrorOccurrence
+  .where(error_log_id: logs.select(:id))
+  .where(occurred_at: 60.days.ago...30.days.ago)
+  .pluck(:occurred_at)
+old_pattern = RailsErrorDashboard::Services::PatternDetector.analyze_cyclical_pattern(
+  timestamps: old_times,
+  days: 30
+)
 puts old_pattern[:pattern_type]
 # => :business_hours
 
@@ -644,8 +625,10 @@ There are no settings for pattern or burst detection. The rules are fixed in
 
 | Rule | Value |
 |---|---|
-| Lookback | The `days:` you pass: 30 by default for patterns, 7 for bursts |
-| Peak hour | An hour with more than twice the average count per hour |
+| Lookback | The `days:` you pass: 30 by default for patterns, 7 for bursts. The error page always uses 30 and 7 |
+| Sample | The newest 10,000 occurrences in the lookback |
+| Peak hour | An hour with more than twice the average count per hour (the total divided by 24) |
+| Pattern type | See [Pattern Types](#pattern-types) |
 | Burst | A run of 5 or more errors, each within 60 seconds of the one before |
 | Burst intensity | `:low` 5-9 errors, `:medium` 10-19, `:high` 20 or more |
 
@@ -695,9 +678,11 @@ Instead of static thresholds:
 # Bad: Alert if > 50 errors/hour (doesn't account for patterns)
 alert if error_count > 50
 
-# Good: Alert if exceeding expected pattern
-baseline = pattern[:hourly_distribution][current_hour]
-alert if error_count > baseline * 2
+# Good: Alert if exceeding the usual count for this hour of the day.
+# hourly_distribution holds totals over the whole lookback, so divide by its days.
+pattern = error.occurrence_pattern(days: 30)
+usual = pattern[:hourly_distribution].to_h.fetch(Time.current.hour, 0) / 30.0
+alert if error_count > usual * 2
 ```
 
 ### 4. Investigate Pattern Changes
@@ -761,15 +746,17 @@ RailsErrorDashboard::ErrorOccurrence.where(error_log_id: logs.select(:id)).where
 
 ### "Pattern type always shows 'uniform'"
 
-**Cause**: Not enough variation in timing, or truly uniform distribution
+**Cause**: Uniform is what's left when no other rule matches: fewer than 3 peak hours from 9:00 to
+17:59, fewer than 2 from 0:00 to 6:59, and no more than half of the errors at the weekend
 
 **Check**:
 ```ruby
 pattern = error.occurrence_pattern
 puts pattern[:hourly_distribution]
+puts pattern[:peak_hours]
 # If all hours have similar counts → truly uniform
-
-# If some hours have 0, some have many, a peak hour still needs more than twice the average
+# Otherwise check where the peak hours fall: a peak hour needs more than twice the average,
+# and peaks in the evening (18:00-23:59) don't count towards any type
 ```
 
 The thresholds are fixed. For a different rule, analyse the occurrence timestamps yourself.
@@ -798,12 +785,9 @@ A burst needs 5 or more errors, each within 60 seconds of the one before; these 
 
 ### "Heatmap visualization not showing"
 
-**Cause**: UI rendering issue or no data
-
-**Debug**:
-1. Check browser console for JS errors
-2. Verify pattern data is present in page source
-3. Ensure Chart.js loaded correctly
+**Cause**: The heatmap is part of the Occurrence Patterns card, which appears only with
+`enable_occurrence_patterns` on and at least one timestamp in the last 30 days. It is plain HTML,
+with no chart library or JavaScript.
 
 **Workaround**: View pattern data via console:
 ```ruby
@@ -822,11 +806,11 @@ pattern = error.occurrence_pattern(days: 30)
 {
   pattern_type: :business_hours,  # or :night, :weekend, :uniform, :none
   peak_hours: [9, 10, 11, 14, 15],
-  hourly_distribution: { 0 => 5, 1 => 3, ..., 23 => 6 },
-  weekday_distribution: { 0 => 120, 1 => 95, ..., 6 => 110 },
-  pattern_strength: 0.85,
+  hourly_distribution: { 0 => 5, 1 => 3, ..., 23 => 6 },        # hours with no errors are absent
+  weekday_distribution: { 0 => 120, 1 => 95, ..., 6 => 110 },   # 0 = Sunday
+  pattern_strength: 0.85,         # 0.0-1.0, two decimal places
   total_errors: 1250,
-  analysis_days: 30
+  analysis_days: 30               # 0 when there are no timestamps
 }
 ```
 
@@ -836,7 +820,7 @@ pattern = error.occurrence_pattern(days: 30)
 error = RailsErrorDashboard::ErrorLog.find(123)
 bursts = error.error_bursts(days: 7)
 
-# Returns array:
+# Returns array, oldest burst first:
 [
   {
     start_time: <Time>,
