@@ -78,6 +78,7 @@ Securely reads source code files from disk with comprehensive security validatio
 
 **Features:**
 - Path validation (must be within Rails.root)
+- Source files only: Ruby (`.rb`, `.rake`, `.ru`) and view templates (`.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`), nothing under a dot directory such as `.git/`
 - Directory traversal prevention (blocks `../` patterns)
 - Sensitive file protection (.env, secrets, credentials, keys)
 - Binary file detection
@@ -88,7 +89,7 @@ Securely reads source code files from disk with comprehensive security validatio
 **Security:**
 - No shell commands or external processes
 - Path normalization and validation
-- Sensitive pattern blacklist
+- Source-file allowlist, plus a sensitive pattern blacklist
 - Rails.root boundary enforcement
 
 **Tests:** 40+ test cases covering security, edge cases, and functionality
@@ -193,7 +194,7 @@ generate_repository_link(frame, error_log)
 - Rails.cache integration for performance
 - Configurable TTL (default: 1 hour)
 - Separate cache keys for source code and git blame
-- Cache key format: `source_code/{file_path}/{line_number}`
+- Cache key format: `source_code/{gem_version}/{file_path}/{line_number}`
 
 **Tests:** 25+ helper tests for all methods
 
@@ -711,7 +712,7 @@ end
 
 All source code reads and git blame lookups are cached:
 
-- **Cache Key:** `source_code/{file_path}/{line_number}`
+- **Cache Key:** `source_code/{gem_version}/{file_path}/{line_number}`. The gem version is in the key, so an upgrade never serves a read cached by an older version.
 - **Cache TTL:** Configurable (default: 3600 seconds)
 - **Cache Backend:** Rails.cache (MemoryStore, Redis, Solid Cache, etc.)
 
@@ -752,6 +753,7 @@ Source code is loaded on-demand:
 
 - ✅ Gem/vendor code filtering (optional)
 - ✅ Only shows files within Rails.root
+- ✅ Only shows source files (Ruby and view templates), never configuration, logs or dotfiles
 - ✅ Binary file detection and blocking
 - ✅ File size limits (10 MB max)
 
@@ -808,7 +810,10 @@ bundle exec rspec
    ```
    Restart your Rails server after changing configuration.
 
-2. **Verify file path is within Rails.root**
+2. **Verify file path is within Rails.root, and is a source file**
+
+   Only Ruby files and view templates are shown (`.rb`, `.rake`, `.ru`, `.erb`, `.haml`, `.slim`, `.builder`, `.jbuilder`). A frame in `Gemfile`, a YAML file or anything under a dot directory shows "Invalid or unsafe file path" by design.
+
    ```ruby
    # Check in Rails console
    Rails.root

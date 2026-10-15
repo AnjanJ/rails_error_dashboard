@@ -34,7 +34,9 @@ module RailsErrorDashboard
     # active, because that overlay is live data.
     def source_view_cache_key
       config = RailsErrorDashboard.configuration
+      # The gem version too, for the same reason as read_source_code's key
       parts = [
+        RailsErrorDashboard::VERSION,
         config.enable_source_code_integration, config.enable_git_blame, config.only_show_app_code_source,
         config.git_repository_url, config.git_branch_strategy
       ]
@@ -203,8 +205,9 @@ module RailsErrorDashboard
       return nil unless RailsErrorDashboard.configuration.enable_source_code_integration
       return nil unless frame[:file_path] && frame[:line_number]
 
-      # Cache key includes file path, line number, and git SHA if available
-      cache_key = "source_code/#{frame[:file_path]}/#{frame[:line_number]}"
+      # The gem version is in the key: a cached read must not outlive a change
+      # to the reader's rules for which files it may read.
+      cache_key = "source_code/#{RailsErrorDashboard::VERSION}/#{frame[:file_path]}/#{frame[:line_number]}"
       cache_ttl = RailsErrorDashboard.configuration.source_code_cache_ttl || 3600
 
       Rails.cache.fetch(cache_key, expires_in: cache_ttl) do

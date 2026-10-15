@@ -13,6 +13,11 @@ module RailsErrorDashboard
       MAX_FILE_SIZE = 10 * 1024 * 1024 # 10 MB
       MAX_CONTEXT_LINES = 50
 
+      # The files a Ruby backtrace can point to: source and view templates. A
+      # frame's path is whatever the stored backtrace says, and the files
+      # beside the code (config/*.yml, logs, dotfiles) are where secrets live.
+      SOURCE_EXTENSIONS = %w[.rb .rake .ru .erb .haml .slim .builder .jbuilder].freeze
+
       attr_reader :file_path, :line_number, :error
 
       # Initialize a new source code reader
@@ -112,11 +117,20 @@ module RailsErrorDashboard
       def validate_path!(path)
         # Normalize path
         normalized = File.expand_path(path)
-        rails_root = File.expand_path(Rails.root)
+        root_prefix = File.join(File.expand_path(Rails.root), "")
 
-        # Must be within Rails.root
-        unless normalized.start_with?(rails_root)
+        # Must be within Rails.root. The trailing separator matters: without it
+        # a root of /app also admitted /app-old.
+        unless normalized.start_with?(root_prefix)
           RailsErrorDashboard::Logger.warn("Path outside Rails.root: #{normalized}")
+          return false
+        end
+
+        # Source files only, and nothing under a dot directory (.git, .bundle)
+        source = SOURCE_EXTENSIONS.include?(File.extname(normalized).downcase)
+        hidden = normalized.delete_prefix(root_prefix).split("/").any? { |segment| segment.start_with?(".") }
+        if !source || hidden
+          RailsErrorDashboard::Logger.warn("Not a source file: #{normalized}")
           return false
         end
 

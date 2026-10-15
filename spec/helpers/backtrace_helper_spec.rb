@@ -71,6 +71,16 @@ RSpec.describe RailsErrorDashboard::BacktraceHelper, type: :helper do
         expect(highlighted[:number]).to eq(6)
         expect(highlighted[:content]).to include('raise "Test error"')
       end
+
+      it "does not reuse a read cached by another version of the gem" do
+        helper.read_source_code(frame)
+        File.write(test_file, test_content.sub('raise "Test error"', 'raise "Upgraded"'))
+        stub_const("RailsErrorDashboard::VERSION", "#{RailsErrorDashboard::VERSION}.next")
+
+        result = helper.read_source_code(frame)
+
+        expect(result[:lines].find { |l| l[:highlight] }[:content]).to include("Upgraded")
+      end
     end
 
     context "when source code integration is disabled" do
@@ -105,6 +115,15 @@ RSpec.describe RailsErrorDashboard::BacktraceHelper, type: :helper do
         expect(result[:lines]).to be_nil
         expect(result[:error]).to be_present
       end
+    end
+  end
+
+  describe "#source_view_cache_key" do
+    it "changes with the gem version" do
+      before_upgrade = helper.source_view_cache_key
+      stub_const("RailsErrorDashboard::VERSION", "#{RailsErrorDashboard::VERSION}.next")
+
+      expect(helper.source_view_cache_key).not_to eq(before_upgrade)
     end
   end
 
