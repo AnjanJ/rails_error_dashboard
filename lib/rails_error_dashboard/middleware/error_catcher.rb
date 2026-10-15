@@ -38,15 +38,19 @@ module RailsErrorDashboard
         # Report to Rails.error (will be logged by our ErrorReporter)
         # CRITICAL: Wrap in rescue to ensure gem failures don't break the app
         begin
-          Rails.error.report(exception,
+          options = {
             handled: false,
             severity: :error,
             context: {
               request: ActionDispatch::Request.new(env),
               middleware: true
-            },
-            source: "rack.middleware"
-          )
+            }
+          }
+          # Rails 7.0's ErrorReporter#report takes no source: keyword (7.1
+          # added it). Passing one raised ArgumentError there, which the rescue
+          # below swallowed, so on 7.0 this middleware reported nothing.
+          options[:source] = "rack.middleware" if report_takes_source?
+          Rails.error.report(exception, **options)
         rescue => e
           # If error reporting fails, log it but DON'T break the app
           RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Middleware error reporting failed: #{e.class} - #{e.message}")
@@ -60,6 +64,16 @@ module RailsErrorDashboard
         Thread.current[:rails_error_dashboard_request_env] = nil
         Thread.current[:rails_error_dashboard_reported_errors] = nil
         RailsErrorDashboard::Services::BreadcrumbCollector.clear_buffer
+      end
+
+      private
+
+      # Asked of the reporter's class, not the object: a stubbed or wrapped
+      # report method hides its real keywords.
+      def report_takes_source?
+        Rails.error.class.instance_method(:report).parameters.any? do |type, name|
+          name == :source || type == :keyrest
+        end
       end
     end
   end
