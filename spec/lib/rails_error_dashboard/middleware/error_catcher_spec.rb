@@ -15,6 +15,44 @@ RSpec.describe RailsErrorDashboard::Middleware::ErrorCatcher do
     RailsErrorDashboard.reset_configuration!
   end
 
+  describe "reporting an unhandled exception" do
+    let(:error_app) { ->(_env) { raise ArgumentError, "middleware report probe" } }
+
+    # Rails 7.0's ErrorReporter#report takes no source: keyword (7.1 added it)
+    let(:reporter_without_source) do
+      Class.new do
+        attr_reader :reports
+
+        def initialize
+          @reports = []
+        end
+
+        def report(error, handled:, severity: handled ? :warning : :error, context: {})
+          @reports << { error: error, handled: handled, severity: severity, context: context }
+        end
+      end.new
+    end
+
+    it "reports through a reporter whose report takes no source: (Rails 7.0)" do
+      allow(Rails).to receive(:error).and_return(reporter_without_source)
+
+      expect { described_class.new(error_app).call(env) }.to raise_error(ArgumentError, "middleware report probe")
+
+      expect(reporter_without_source.reports.size).to eq(1)
+      expect(reporter_without_source.reports.first).to include(handled: false, severity: :error)
+      expect(reporter_without_source.reports.first[:context]).to include(middleware: true)
+    end
+
+    it "names itself as the source where the reporter takes one" do
+      skip "this Rails' reporter takes no source:" unless ActiveSupport::ErrorReporter.instance_method(:report).parameters.any? { |_, name| name == :source }
+      allow(Rails.error).to receive(:report)
+
+      expect { described_class.new(error_app).call(env) }.to raise_error(ArgumentError)
+
+      expect(Rails.error).to have_received(:report).with(an_instance_of(ArgumentError), hash_including(source: "rack.middleware"))
+    end
+  end
+
   describe "request env thread-local" do
     it "stores request env in Thread.current during the request" do
       env_during_request = nil
