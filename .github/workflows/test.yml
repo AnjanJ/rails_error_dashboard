@@ -10,6 +10,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Jobs take 1-5 minutes. A hung service container once sat in "Initialize
+    # containers" for 16 minutes; without a limit GitHub waits 6 hours.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -67,6 +70,7 @@ jobs:
   # SQLite-shaped spec/dummy/db/schema.rb.
   adapter-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +140,7 @@ jobs:
   # indexes) on the adapter the schema file is written for.
   schema-parity:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: Schema parity (schema.rb vs db/migrate)
 
     steps:
@@ -162,6 +167,7 @@ jobs:
 
   system-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     name: System Tests (Chrome)
 
     steps:
