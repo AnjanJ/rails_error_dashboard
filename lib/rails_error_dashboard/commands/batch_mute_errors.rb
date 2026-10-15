@@ -34,6 +34,10 @@ module RailsErrorDashboard
               muted_by: @muted_by,
               muted_reason: @reason
             )
+            # The comment a single mute writes, so the reason shows in the thread
+            if @reason.present?
+              error.comments.create!(author_name: @muted_by || "System", body: "Muted notifications: #{@reason}")
+            end
             muted_count += 1
             muted_errors << error
           rescue => e
