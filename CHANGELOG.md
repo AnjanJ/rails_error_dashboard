@@ -5,6 +5,126 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.15.0...rails_error_dashboard/v0.16.0) (2026-10-15)
+
+
+### ✨ Features
+
+* occurrence context history (ROADMAP C3) ([#290](https://github.com/AnjanJ/rails_error_dashboard/issues/290)) ([aa1063d](https://github.com/AnjanJ/rails_error_dashboard/commit/aa1063d5cdfeff0336f9febd9be2a804357da9c8))
+* record capture source; no file reads for client-sent backtraces ([#293](https://github.com/AnjanJ/rails_error_dashboard/issues/293)) ([6677422](https://github.com/AnjanJ/rails_error_dashboard/commit/6677422aa6066bd7f4c3016fc0a8b9fc1071df8f))
+
+
+### 🐛 Bug Fixes
+
+* the 0.16.0 audit fixes (host-app safety, correctness, docs) ([#288](https://github.com/AnjanJ/rails_error_dashboard/issues/288)) ([e0a1742](https://github.com/AnjanJ/rails_error_dashboard/commit/e0a174235370c44bb668e67f6ffdc6b4c9a0d0ae))
+* the middleware reports exceptions on Rails 7.0 ([#294](https://github.com/AnjanJ/rails_error_dashboard/issues/294)) ([52a1774](https://github.com/AnjanJ/rails_error_dashboard/commit/52a1774f753b8d7188924f67dd1dfcf4090b649c))
+
+### Upgrade instructions
+
+This release has two new migrations. One creates the table that keeps each occurrence's context.
+The other adds two capture-source columns. Run the installer to copy them, then migrate:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails generate rails_error_dashboard:install --no-interactive
+bin/rails db:migrate
+bin/rails error_dashboard:verify
+```
+
+Commit the new migration files with `Gemfile.lock`. With a separate error database they go to
+`db/error_dashboard_migrate/`. Until they have run, RED stores no occurrence context and records no
+capture source, and nothing else is affected.
+
+### Security
+
+- **No file reads for a backtrace a client sent.** This applies with `enable_source_code_integration`
+  on (it is off by default). An error reported through `ManualErrorReporter` carries the backtrace
+  your client sent, which describes code that ran on the client.
+  - RED now records where each backtrace came from.
+  - For a client's backtrace, the error page offers no View Source, and so runs no git blame. It
+    says the frames came from a client report.
+  - Copy for LLM and AI help add no source snippets for it.
+  - RED's own captures are unchanged: the middleware, `Rails.error`, jobs and crash import.
+  - This follows [GHSA-q7r3-w7p3-95h5](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-q7r3-w7p3-95h5),
+    fixed in 0.15.0, which limited the viewer to source files. Before this release, a client report
+    could still point it at any Ruby file or view template in the app.
+  - Errors recorded before 0.16.0 can't be told apart and keep View Source.
+
+### New
+
+- **Occurrence context history.** The error page used to show only the latest capture's
+  breadcrumbs, system health, and local and instance variables. RED now also keeps them for each
+  of an error's newest occurrences.
+  - The History tab lists them under **Captured occurrences**.
+  - Opening one (`?occurrence=ID`) shows its context in the usual cards, under a banner naming the
+    occurrence and its time. The rest of the page, including Copy for LLM, still shows the latest
+    capture.
+  - `config.occurrence_context_limit` sets how many occurrences per error keep theirs (default
+    25; `0` stores none).
+  - Nothing is stored unless breadcrumbs, system health, or local or instance variables are
+    enabled.
+  - Retention cleanup, `error_dashboard:cleanup_resolved`, batch delete and destroy all remove
+    them with their error.
+
+### Fixes
+
+- **Rails 7.0: the middleware reports exceptions.** It passed `Rails.error.report` a `source:`
+  keyword that Rails 7.0 does not accept, and its own rescue hid the resulting `ArgumentError`. On
+  7.0 it reported nothing. This doesn't make RED record request errors in production on 7.0; see
+  the known limitation below.
+- **Repository links with `git_branch_strategy = :current_branch`** come from the commit RED
+  resolved at boot. RED no longer runs `git` on the request thread.
+- **Co-occurring errors** run a bounded number of queries, however many occurrences an error has.
+- **Repository URLs** ending in `.git`, `.git/` or `/` are treated as the same repository, in View
+  Source links and in issue tracking.
+- **Platform Comparison**
+  - An application with errors on only one platform no longer has that platform rated Critical on
+    volume alone. It shows "Not rated".
+  - Scores use each platform's share of all errors.
+- **Copy for LLM and AI help** take their backtrace lines and source snippets from your
+  application's frames only. Before, gem frames could fill the three source slots.
+- **Application name.** The backfill migration, the `backfill_application` task, and the
+  Rack::Attack, missing-translation and swallowed-exception flushers now use
+  `config.application_name` first, as capture does.
+- **Similarity** reads frames in both Ruby 3.3's and Ruby 3.4's backtrace styles.
+- **Settings**
+  - A group folds on the first click.
+  - The option counts show only the options in each group.
+  - An invalid `git_branch_strategy` is reported at boot as a warning.
+- **Webhooks** for an unknown provider get a 404.
+- **Batch actions** that fail for some errors report the failed ids and the reasons, on the page
+  and in the Rails log.
+- **Bulk mute** with a reason adds the same comment a single mute adds.
+- **The analytics page** no longer computes counts it doesn't show.
+
+### Known limitation: Rails 7.0
+
+On Rails 7.0, RED doesn't record unhandled exceptions from web requests while
+`config.action_dispatch.show_exceptions` is on. It is on by default in production and development.
+
+- Rails 7.0 catches these exceptions and renders its error page without reporting them. RED's
+  middleware sits outside the point where Rails catches them, so it never sees them either.
+- Rails 7.1 and later report these exceptions themselves, and RED records them.
+- This isn't new in 0.16.0. Every RED release behaves this way on Rails 7.0.
+- Only exceptions raised while serving a web request are affected.
+- A fix is planned for a patch release.
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: pin `gem "json", "< 3"` until you upgrade Rails. See
+[Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
+### Docs
+
+- `authenticate_with` can use Devise helpers such as `current_user`. Only helpers defined in your
+  own `ApplicationController` are unavailable. The generated initializer says so too.
+- The Advanced Error Grouping, Platform Comparison and Occurrence Patterns guides match the code.
+  Every relative link and anchor in the docs now resolves, and a spec keeps it that way.
+- A new API reference documents the HTTP endpoints RED actually serves (#272).
+- `custom_fingerprint` is documented, including the keys its context really has (#286).
+
+Thanks to everyone who reported issues and reviewed this release.
+
 ## [0.15.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.14.4...rails_error_dashboard/v0.15.0) (2026-10-15)
 
 
