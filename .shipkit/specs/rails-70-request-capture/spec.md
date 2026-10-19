@@ -1,59 +1,42 @@
 # Spec: Rails 7.0 request capture
 
-> Spec accepted at commit `bd08d75` on spec/0-16-1.
+> Spec accepted at commit `da1e915` on spec/0-16-1.
 > Status: open
-> Paths: lib/rails_error_dashboard.rb,lib/rails_error_dashboard/engine.rb,lib/rails_error_dashboard/middleware/,spec/
+> Paths: lib/rails_error_dashboard/configuration.rb,README.md,docs/,_getting_started/,_reference/,spec/
 
 ## Purpose
-A Rails 7.0 app records no unhandled request errors: Rails renders the error page without
-reporting the exception, and RED's middleware sits outside the code that renders it. 0.16.0
-shipped this as a known limitation. Record these errors on 7.0 the way 7.1+ already does, and
-never record one twice. See `intake.md`.
+On Rails 7.0.0 to 7.0.8.7, Rails renders a request's error page without reporting the exception,
+so RED records no unhandled request errors. Rails 7.0.10 (2025-10-28) fixed this upstream. 0.16.0
+documented it as a known limitation of "Rails 7.0", which was too broad. Tell the affected apps,
+at boot and in the docs, that upgrading Rails to 7.0.10 fixes it. Revised on 2026-10-19 after the
+7.0.10 finding; see `intake.md`. The first version of this spec, a 7.0-only reporter, is
+superseded (`design.md`).
 
 ## User stories
-- As a developer on Rails 7.0, I want an exception that breaks a request recorded in RED, so the
-  dashboard shows the errors my users actually hit.
+- As a developer on Rails 7.0.8.x, I want RED to tell me that request errors aren't being
+  recorded and how to fix it, so I don't assume my app has none.
 
 ## Requirements (EARS)
-
-### What Rails 7.0 records
-- **REQ-1.** While the host app runs Rails 7.0 with production settings (`show_exceptions` on,
-  detailed exceptions off), when a request raises an exception its controller does not rescue,
-  RED shall record that exception exactly once.
-- **REQ-2.** While the host app runs Rails 7.0 with development settings (detailed exceptions on),
-  when a request raises an exception its controller does not rescue, RED shall record that
-  exception exactly once.
-- **REQ-3.** While the host app runs Rails 7.0 with `show_exceptions` off, when a request raises an
-  exception its controller does not rescue, RED shall record that exception exactly once.
-
-### What Rails 7.0 does not record
-- **REQ-4.** While the host app runs Rails 7.0 with `show_exceptions` on, if the exception is one
-  Rails answers with a rescue response (a class in
-  `ActionDispatch::ExceptionWrapper.rescue_responses`, such as `ActionController::RoutingError`
-  or `ActiveRecord::RecordNotFound`), then RED shall not record it, as Rails 7.1 does not.
-- **REQ-5.** When a controller's `rescue_from` handles an exception on Rails 7.0, RED shall not
-  record it.
-
-### What the record and the response look like
-- **REQ-6.** When RED records a request exception on Rails 7.0, the error shall carry the
-  request's URL, HTTP method, controller and action, and shall be a server capture.
-- **REQ-7.** When RED records a request exception on Rails 7.0, the host app shall send the
-  response it sends without RED installed (the same status and body).
-- **REQ-8.** If recording a request exception fails inside RED on Rails 7.0, then the host app
-  shall still send the error response Rails renders.
-
-### Rails 7.1 and later
-- **REQ-9.** While the host app runs Rails 7.1 or later, RED shall record an unhandled request
-  exception exactly once, as 0.16.0 does.
+- **REQ-1.** While the host app runs a Rails older than 7.0.10, when RED validates its
+  configuration at boot, RED shall log one warning saying that this Rails version does not report
+  the request exceptions it renders as error pages, so RED cannot record them, and that upgrading
+  to Rails 7.0.10 or later fixes it.
+- **REQ-2.** While the host app runs Rails 7.0.10 or later, RED shall not log that warning.
+- **REQ-3.** The README, the Quickstart and the Troubleshooting guide, and their Jekyll copies,
+  shall say that unhandled request errors are not recorded on Rails 7.0.0 to 7.0.8.7, and that
+  Rails 7.0.10 fixes it. [untested: prose, verified by reading]
 
 ## Out of scope
-- Moving RED's middleware on Rails 7.1+, or changing what 7.1+ records.
-- Running the chaos suite's Phase F on Rails 7.0.
-- Dropping Rails 7.0 support.
+- A RED reporter for Rails 7.0.0 to 7.0.8.7. Rejected (`intake.md`, `design.md`).
+- Raising RED's minimum Rails to 7.0.10.
+- Recording development-mode request errors on Rails 7.0. No 7.0 patch version reports them.
+- What 7.1+ records through `ActionDispatch::Reloader` when code reloading is on (seen in the
+  probe; see `design.md`).
 
 ## Release steps
 Not requirements, because they describe the release rather than the product:
-- Verify in a real Rails 7.0.8.7 app in production mode, and record the run with the release
-  scenarios.
-- The 0.16.1 release notes say the 0.16.0 "Known limitation: Rails 7.0" is fixed. The 0.16.0
-  CHANGELOG section stays as written.
+- The 0.16.1 release notes correct the 0.16.0 "Known limitation: Rails 7.0": only 7.0.0 to 7.0.8.7
+  are affected, Rails 7.0.10 fixes it, and RED now warns at boot. The 0.16.0 CHANGELOG section
+  stays as written.
+- A real Rails 7.0.10 production app records a raising request once and a 404 not at all, via a
+  7.0 row in the local release scenario runner.
