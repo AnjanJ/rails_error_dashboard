@@ -5,7 +5,7 @@ checkout as `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec …`
 velocity at or below 10 (all events in the window's first half), so the Healthy threshold is the
 only thing under test.
 
-- [ ] **T1** Score and card only active platforms → REQ-8
+- [x] **T1** Score and card only active platforms → REQ-8
   - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb, spec/requests/platform_health_cards_spec.rb
   - Test: platform_comparison_spec "audit-fixes-0-16-1/REQ-8 scores no platform without errors in the window", and platform_health_cards_spec "…/REQ-8 shows no card for it on the Overview or Platform Comparison".
   - After: none

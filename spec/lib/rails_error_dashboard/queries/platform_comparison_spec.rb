@@ -174,6 +174,19 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       expect(described_class.new(days: 7).platform_stability_scores).to eq({})
     end
 
+    # The platform list was every platform ever seen, so one with no errors in
+    # the window scored 100 and got a Healthy card.
+    it "audit-fixes-0-16-1/REQ-8 scores no platform without errors in the window" do
+      2.times { create(:error_log, platform: "iOS", occurred_at: 1.day.ago) }
+      2.times { create(:error_log, platform: "Android", occurred_at: 1.day.ago) }
+      create(:error_log, platform: "Web", occurred_at: 60.days.ago)
+
+      comparison = described_class.new(days: 7)
+
+      expect(comparison.platform_stability_scores.keys).to contain_exactly("iOS", "Android")
+      expect(comparison.platform_health_summary.keys).to contain_exactly("iOS", "Android")
+    end
+
     it "gives two equally busy platforms equal, non-zero scores" do
       3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
       3.times { create(:error_log, platform: "android", occurred_at: 1.day.ago) }

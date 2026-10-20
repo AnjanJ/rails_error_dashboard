@@ -158,21 +158,19 @@ module RailsErrorDashboard
       # Higher score = more stable (fewer errors, faster resolution)
       # @return [Hash] Platform => stability score
       def platform_stability_scores
-        platforms = base_scope.distinct.pluck(:platform).compact
+        # Only platforms with errors in the window are scored. Every platform
+        # ever seen used to be, and one with none in the window scored 100.
         error_rates = error_rate_by_platform
         # A score compares platforms. With fewer than two that have errors in
         # the window there is nothing to compare against, so none is rated (a
-        # lone platform used to come out Critical every time). The count is of
-        # platforms with errors in the window: the list above is every
-        # platform ever seen.
+        # lone platform used to come out Critical every time).
         return {} if error_rates.size < 2
         resolution_times = resolution_time_by_platform
 
         total_errors = error_rates.values.sum
         max_resolution_time = resolution_times.values.compact.max || 1
 
-        platforms.each_with_object({}) do |platform, result|
-          error_count = error_rates[platform] || 0
+        error_rates.each_with_object({}) do |(platform, error_count), result|
           avg_resolution = resolution_times[platform] || 0
 
           # This platform's share of all errors, inverted. Against the busiest
@@ -232,7 +230,8 @@ module RailsErrorDashboard
         severities = severity_distribution_by_platform
         midpoint = @start_date + (@days / 2.0).days
 
-        platforms.each_with_object({}) do |platform, result|
+        # A card for each platform with errors in the window, as the scores
+        error_rates.each_key.with_object({}) do |platform, result|
           platform_scope = base_scope.where(platform: platform)
           groups_in_window = platform_scope.where("occurred_at >= ?", @start_date)
 
