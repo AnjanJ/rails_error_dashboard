@@ -30,7 +30,7 @@ only thing under test.
   - Test: business_hours_copy_spec "audit-fixes-0-16-1/REQ-10 states 9:00-17:59 in every locale" (reads each locale's `red.errors.patterns.types.business_hours.description` and the detector's range).
   - After: T4
   - Done when: the spec fails on all eleven locales before and passes after; `bin/i18n-check` passes.
-- [ ] **T6** Platform names as stored → REQ-11
+- [x] **T6** Platform names as stored → REQ-11
   - Files: app/views/rails_error_dashboard/errors/platform_comparison.html.erb, app/views/rails_error_dashboard/errors/correlation.html.erb, spec/requests/platform_names_display_spec.rb
   - Test: platform_names_display_spec "audit-fixes-0-16-1/REQ-11 shows iOS and API as stored on Platform Comparison and Correlation" (no "Ios", "Api" or `text-capitalize` on a platform name).
   - After: T4

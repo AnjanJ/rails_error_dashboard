@@ -38,7 +38,7 @@
         <div class="col-md-6 col-lg-3 mb-3">
           <div class="card h-100 <%= { healthy: 'border-success', warning: 'border-warning', not_rated: 'border-secondary' }.fetch(health[:health_status], 'border-danger') %>">
             <div class="card-body">
-              <h5 class="card-title text-capitalize">
+              <h5 class="card-title">
                 <%= platform || red_t("red.common.unknown") %>
                 <% if health[:health_status] == :healthy %>
                   <span class="badge bg-success float-end"><%= red_t("red.analytics.platform_comparison.health_card.healthy") %></span>
@@ -143,7 +143,7 @@
           <div class="card-body">
             <% @severity_distribution.each do |platform, severities| %>
               <div class="mb-3">
-                <h6 class="text-capitalize"><%= platform || red_t("red.common.unknown") %></h6>
+                <h6><%= platform || red_t("red.common.unknown") %></h6>
                 <% total = severities.values.sum %>
                 <% if total > 0 %>
                   <div class="progress" style="height: 25px;">
@@ -243,7 +243,7 @@
                     </td>
                     <td>
                       <% error[:platforms].each do |platform| %>
-                        <span class="badge bg-secondary text-capitalize me-1"><%= platform %></span>
+                        <span class="badge bg-secondary me-1"><%= platform %></span>
                       <% end %>
                     </td>
                     <td>
@@ -322,7 +322,7 @@
     new Chart(errorRateCtx, {
       type: 'bar',
       data: {
-        labels: <%= js_safe_json(@error_rate_by_platform.keys.map { |k| k.to_s.capitalize }) %>,
+        labels: <%= js_safe_json(@error_rate_by_platform.keys.map(&:to_s)) %>,
         datasets: [{
           label: '<%= red_js_t("red.ui_js.charts.series_total_errors") %>',
           data: <%= js_safe_json(@error_rate_by_platform.values) %>,
@@ -349,7 +349,7 @@
   if (dailyTrendCtx) {
     const datasets = <%= js_safe_json(@daily_trends.map { |platform, data|
       {
-        label: platform.to_s.capitalize,
+        label: platform.to_s,
         data: data.values,
         platform: platform.to_s.downcase,
         tension: 0.4
@@ -386,7 +386,7 @@
   // Resolution Time Chart
   const resolutionTimeCtx = document.getElementById('resolutionTimeChart');
   if (resolutionTimeCtx) {
-    const platforms = <%= js_safe_json(@resolution_times.keys.map { |k| k.to_s.capitalize }) %>;
+    const platforms = <%= js_safe_json(@resolution_times.keys.map(&:to_s)) %>;
     const times = <%= js_safe_json(@resolution_times.values.map { |v| v || 0 }) %>;
 
     new Chart(resolutionTimeCtx, {
