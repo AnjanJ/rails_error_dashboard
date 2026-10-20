@@ -61,7 +61,7 @@ The page compares platforms over the last 7, 14 or 30 days, for the selected app
 
 ### Core Metrics
 
-Each platform's card displays:
+Each platform with errors in the window gets a card, which displays:
 
 #### 1. Total Errors
 **Description**: The platform's error events in the window
@@ -106,11 +106,15 @@ resolution_rate = (resolved.to_f / (resolved + unresolved) * 100).round(1)  # 0.
 **Description**: A score from 0 to 100 that compares the platform with the others
 
 **Calculation**: Weighted combination of:
-- **70%** - The platform's share of all errors (a smaller share scores higher)
-- **30%** - Its average resolution time against the slowest platform's (faster scores higher)
+- **70%** - Its share of the window's errors against an even split (at or below an even split
+  scores full marks)
+- **30%** - Its average resolution time against the fastest platform's (as fast as the fastest
+  scores full marks)
 
-With errors on fewer than two platforms in the window there is no score: the card shows a grey
-**Not rated** badge and no score bar. See [Stability Scoring](#stability-scoring) for details.
+A platform with nothing from the window resolved yet is scored on its share alone, and its card
+says "No errors from this period resolved yet". With errors on fewer than two platforms in the window
+there is no score: the card shows a grey **Not rated** badge and no score bar. See
+[Stability Scoring](#stability-scoring) for details.
 
 **Interpretation**: The score bar is green from 80, yellow from 60 to 80, and red below 60, the same
 thresholds as the health status.
@@ -156,52 +160,76 @@ end
 
 ### Algorithm
 
-The stability score combines two factors (`platform_stability_scores`):
+The stability score combines two factors (`platform_stability_scores`). Only platforms with errors in
+the window are scored:
 
 ```ruby
 # A score compares platforms: it needs two with errors in the window.
 return {} if error_rate_by_platform.size < 2
 
-total_errors = error_rate_by_platform.values.sum
-slowest = resolution_time_by_platform.values.compact.max
+even_share = 1.0 / error_rate_by_platform.size  # one over the platforms with errors
+share = platform_errors.to_f / total_errors
 
-# Factor 1: Error share (70% weight). Fewer errors = higher score
-error_score = 1.0 - (platform_errors.to_f / total_errors)  # 1.0 when there are no errors at all
-
-# Factor 2: Resolution time (30% weight). Faster resolution = higher score
-resolution_score = if avg_resolution_hours.to_f > 0
-  1.0 - (avg_resolution_hours / slowest)
+# Factor 1: Volume (70% weight). Full credit at or below an even split, falling
+# linearly to 0 when one platform has every error
+error_score = if share <= even_share
+  1.0
 else
-  1.0  # No resolved errors in the window
+  1.0 - (share - even_share) / (1.0 - even_share)
 end
 
-# Combine with weights, scale to 0-100
-((error_score * 0.7) + (resolution_score * 0.3)) * 100  # rounded to 1 decimal
+if avg_resolution_hours  # something from the window is resolved
+  # Factor 2: Resolution time (30% weight). The fastest platform's average over
+  # this one's, each floored at one hour
+  resolution_score = [fastest_avg_hours, 1.0].max / [avg_resolution_hours, 1.0].max
+
+  ((error_score * 0.7) + (resolution_score * 0.3)) * 100  # rounded to 1 decimal
+else
+  error_score * 100  # nothing resolved: volume alone, rounded to 1 decimal
+end
 ```
 
-`platforms` is every platform value on the application's errors, ever. The two needed for a score are
-platforms with errors in the window. Once two have, a platform with none in the window also gets a
-score, and scores 100.
+`fastest_avg_hours` is the lowest average among the platforms that have resolved something from the
+window. A platform with no errors in the window gets no score and no card. Errors with no platform
+value belong to no platform: they get no card and don't count towards the even split.
 
 ### Why This Formula?
 
-**Error Share (70% weight)**: Primary indicator of platform health
+**Volume (70% weight)**: Primary indicator of platform health
 - Fewer errors = more stable platform
-- A share, so each platform is measured against the total and the busiest one no longer scores 0
+- Measured against an even split, so platforms that share the errors equally all get full credit,
+  and the credit reaches 0 only when one platform has every error
 - Dominant factor because prevention > cure
 
 **Resolution Time (30% weight)**: Secondary indicator of team responsiveness
 - Faster fixes = better process
 - Measured in hours from an error's first occurrence to its resolution, averaged over the errors
   first seen in the window and resolved
-- Normalized against the slowest platform, so the slowest one always gets 0 here
+- Measured against the fastest platform: the fastest and any as fast get full credit, and one twice
+  as slow gets half
+- Each average is floored at one hour. Otherwise an average of 0.0 (resolved at once) would leave
+  every other platform with no credit, and differences under an hour say little about a platform
 - Lower weight because it measures response, not prevention
 
 What follows from the formula:
-- The scores are relative: a platform's score changes when another platform's errors do
-- The slowest-resolving platform scores at most 70, so it can't be Healthy
-- A platform with no resolved errors in the window gets the full 30, even if nothing has been fixed
-- With two platforms, the two error terms add up to 1
+- The scores are relative: a platform's score changes when another platform's errors or resolution
+  times do
+- Platforms with equal shares that resolve equally fast score 100 each
+- A platform with nothing from the window resolved is scored on volume alone, so two platforms on the
+  same page can be scored on different bases. Its card says "No errors from this period resolved yet"
+- One very fast platform pulls the others' resolution credit down: against a 1-hour platform, a
+  10-hour one gets a tenth of the credit, and scores 73 at an even share
+
+The busier platform's score at some common splits, with full resolution credit:
+
+| Split | Busier platform's volume credit | Its score |
+|---|---|---|
+| 50/50 | 1.0 | 100, Healthy |
+| 60/40 | 0.8 | 86, Healthy |
+| 90/10 | 0.2 | 44, Critical |
+| 80/10/10 | 0.3 | 51, Critical |
+
+Healthy also needs a velocity of 10% or less.
 
 ### Example Calculation
 
@@ -212,43 +240,45 @@ What follows from the formula:
 
 ```text
 total_errors = 500
-slowest      = 48 hours (Android)
+even_share   = 1/3      (three platforms with errors)
+fastest      = 24 hours (iOS; API has nothing resolved)
 ```
 
 **iOS Score**:
 ```text
-error_score      = 1.0 - (100 / 500) = 0.8
-resolution_score = 1.0 - (24 / 48)   = 0.5
+share            = 100 / 500 = 0.2   (at or below 1/3)
+error_score      = 1.0
+resolution_score = 24 / 24   = 1.0
 
-stability_score = (0.8 * 0.7) + (0.5 * 0.3)
-                = 0.56 + 0.15
-                = 0.71
-                = 71.0/100   → Warning (60 or more, velocity -10%)
+stability_score = (1.0 * 0.7) + (1.0 * 0.3)
+                = 1.0
+                = 100.0/100   → Healthy (80 or more, velocity -10%)
 ```
 
 **Android Score**:
 ```text
-error_score      = 1.0 - (300 / 500) = 0.4
-resolution_score = 1.0 - (48 / 48)   = 0.0   (the slowest platform)
+share            = 300 / 500 = 0.6
+error_score      = 1.0 - (0.6 - 1/3) / (1 - 1/3) = 1.0 - 0.4 = 0.6
+resolution_score = 24 / 48   = 0.5
 
-stability_score = (0.4 * 0.7) + (0.0 * 0.3)
-                = 0.28
-                = 28.0/100   → Critical
+stability_score = (0.6 * 0.7) + (0.5 * 0.3)
+                = 0.42 + 0.15
+                = 0.57
+                = 57.0/100   → Critical (below 60)
 ```
 
 **API Score**:
 ```text
-error_score      = 1.0 - (100 / 500) = 0.8
-resolution_score = 1.0                       (nothing resolved)
+share            = 100 / 500 = 0.2   (at or below 1/3)
+error_score      = 1.0
+nothing resolved → volume alone
 
-stability_score = (0.8 * 0.7) + (1.0 * 0.3)
-                = 0.56 + 0.3
-                = 0.86
-                = 86.0/100   → Healthy (80 or more, velocity +5%)
+stability_score = 1.0 * 100
+                = 100.0/100   → Healthy (80 or more, velocity +5%)
 ```
 
-**Interpretation**: Android needs attention. API outscores iOS on the same error count only because
-none of its errors has been resolved yet.
+**Interpretation**: Android needs attention: 60% of the errors, and the slowest fixes. API's 100 is
+on volume alone, and its card says "No errors from this period resolved yet".
 
 With only one platform, `platform_stability_scores` returns `{}`; that platform's summary has
 `stability_score: nil` and `health_status: :not_rated`.
@@ -402,13 +432,13 @@ Platform Velocity (7 Days: the last 3.5 days against the 3.5 before):
 ```text
 Platform Metrics (30 days):
            Errors  Avg resolution  Stability  Resolution Rate  Velocity  Status
-  iOS:     200     20 h            75.3       75%              -10%      Warning
-  Android: 600     60 h            25.8       30%              +45%      Critical
-  API:     150     10 h            83.9       90%              -5%       Healthy
+  iOS:     200     20 h            85.0       75%              -10%      Healthy
+  Android: 600     60 h            43.7       30%              +45%      Critical
+  API:     150     10 h            100.0      90%              -5%       Healthy
 ```
 
 **Conclusion**: Android needs urgent attention:
-- Low stability (25.8): most of the errors, and the slowest fixes
+- Low stability (43.7): most of the errors, and the slowest fixes
 - Poor resolution rate (30%)
 - Rapidly increasing errors (+45%)
 
@@ -542,8 +572,8 @@ Scores are relative, so set goals on the numbers each platform controls:
 - **Velocity**: Zero or negative on every platform
 - **Resolution**: >70% resolution rate on all platforms
 
-A goal like "every platform above 80" can't be met: with two platforms the error terms add up to 1,
-and the slowest-resolving platform scores at most 70.
+A goal like "every platform above 80" depends on the other platforms as well: a platform's score
+moves when another platform's errors or resolution times change.
 
 Track progress toward goals using the dashboard.
 
@@ -654,9 +684,9 @@ comparison.severity_distribution_by_platform
 comparison.resolution_time_by_platform
 # => { "iOS" => 24.0, "Android" => 48.0, "API" => nil }
 
-# Stability scores (0-100); {} with errors on fewer than two platforms
+# Stability scores (0-100) for the platforms with errors in the window; {} with fewer than two
 comparison.platform_stability_scores
-# => { "iOS" => 71.0, "Android" => 28.0, "API" => 86.0 }
+# => { "iOS" => 100.0, "Android" => 57.0, "API" => 100.0 }
 
 # Top 10 errors per platform, by their events in the window
 comparison.top_errors_by_platform
@@ -672,16 +702,17 @@ comparison.cross_platform_errors
 comparison.daily_trend_by_platform
 # => { "iOS" => { Date => 12, ... }, ... }
 
-# Health summary, by platform
+# Health summary, for each platform with errors in the window
 comparison.platform_health_summary["iOS"]
 # => {
 #   total_errors: 100,
 #   critical_errors: 4,
 #   unresolved_errors: 12,
 #   resolution_rate: 70.0,
-#   stability_score: 71.0,        # nil with errors on fewer than two platforms
+#   resolution_measured: true,    # false: nothing from the window resolved, so the score is volume alone
+#   stability_score: 100.0,       # nil with errors on fewer than two platforms
 #   error_velocity: -10.0,
-#   health_status: :warning       # :healthy, :warning, :critical or :not_rated
+#   health_status: :healthy       # :healthy, :warning, :critical or :not_rated
 # }
 
 # Error velocity (% change between the window's two halves) is in the summary
@@ -719,10 +750,11 @@ RailsErrorDashboard::ManualErrorReporter.report(
 
 **Explanation**:
 - With errors on fewer than two platforms in the window there is no score: the platform shows "Not rated"
-- A platform's score moves when another platform's errors change
-- The slowest-resolving platform scores at most 70
-- A platform with no resolved errors in the window gets the full resolution term
-- A platform seen before but with no errors in the window scores 100 (when two others have errors)
+- A platform's score moves when another platform's errors or resolution times change
+- A platform's volume credit drops only when it has more than an even split of the errors
+- A platform with nothing from the window resolved is scored on volume alone; its card says so
+- One very fast platform lowers the others' resolution credit (each average is floored at one hour)
+- A platform with no errors in the window gets no score and no card
 
 ### "Cross-platform errors not showing"
 

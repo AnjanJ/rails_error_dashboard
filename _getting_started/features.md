@@ -150,7 +150,7 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Side-by-side metrics** for iOS vs Android vs API (plus any platform you report manually)
 - **Platform-specific error rates**
 - **Cross-platform correlation** analysis
-- **Platform health scores** (0-100)
+- **Platform health scores** (0-100), comparing each platform's share of the errors with an even split and its resolution time with the fastest platform's
 
 ### User Impact Analysis
 - **Percentage of users affected** by each error type

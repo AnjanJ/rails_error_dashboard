@@ -35,7 +35,7 @@ only thing under test.
   - Test: platform_names_display_spec "audit-fixes-0-16-1/REQ-11 shows iOS and API as stored on Platform Comparison and Correlation" (no "Ios", "Api" or `text-capitalize` on a platform name).
   - After: T4
   - Done when: `bundle exec rspec spec/requests/platform_names_display_spec.rb` → 0 failures; it fails before.
-- [ ] **T7** Docs and the 0.16.0 amendment → REQ-9
+- [x] **T7** Docs and the 0.16.0 amendment → REQ-9
   - Files: docs/features/PLATFORM_COMPARISON.md, _features/platform-comparison.md, docs/GLOSSARY.md, _reference/glossary.md, docs/FEATURES.md, _getting_started/features.md, .shipkit/specs/audit-fixes-0-16-0/design.md, spec/requests/analytics_reports_i18n_spec.rb
   - Test: none, REQ-9 is prose (`[untested]`). The worked example is checked against T2–T4's specs by recomputing it, and `spec/docs/links_spec.rb` stays green.
   - After: T4
