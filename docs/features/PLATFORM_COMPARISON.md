@@ -164,11 +164,14 @@ The stability score combines two factors (`platform_stability_scores`). Only pla
 the window are scored:
 
 ```ruby
-# A score compares platforms: it needs two with errors in the window.
-return {} if error_rate_by_platform.size < 2
+# Platforms with errors in the window. Errors with no platform value belong to none.
+platforms = error_rate_by_platform.except(nil)
 
-even_share = 1.0 / error_rate_by_platform.size  # one over the platforms with errors
-share = platform_errors.to_f / total_errors
+# A score compares platforms: it needs two.
+return {} if platforms.size < 2
+
+even_share = 1.0 / platforms.size
+share = platform_errors.to_f / total_errors  # total_errors: the sum over those platforms
 
 # Factor 1: Volume (70% weight). Full credit at or below an even split, falling
 # linearly to 0 when one platform has every error
