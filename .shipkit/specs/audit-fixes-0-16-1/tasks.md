@@ -25,7 +25,7 @@ only thing under test.
   - Test: platform_comparison_spec "audit-fixes-0-16-1/REQ-6 scores a platform with nothing resolved on volume alone" (it got the full 30 points before), and platform_health_cards_spec "…/REQ-7 says no errors from this period were resolved, on both pages".
   - After: T3
   - Done when: both specs → 0 failures; `bin/i18n-check` (lefthook's i18n-check) passes for the new key in all eleven locales.
-- [ ] **T5** Business-hours copy matches the detector → REQ-10
+- [x] **T5** Business-hours copy matches the detector → REQ-10
   - Files: config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/lib/rails_error_dashboard/business_hours_copy_spec.rb
   - Test: business_hours_copy_spec "audit-fixes-0-16-1/REQ-10 states 9:00-17:59 in every locale" (reads each locale's `red.errors.patterns.types.business_hours.description` and the detector's range).
   - After: T4

@@ -365,7 +365,7 @@ fr:
         types:
           business_hours:
             label: Motif des heures ouvrées
-            description: Les erreurs culminent pendant les heures ouvrées (9h-17h),
+            description: Les erreurs culminent pendant les heures ouvrées (9:00–17:59),
               ce qui suggère un lien avec l'activité des utilisateurs
           night:
             label: Motif nocturne

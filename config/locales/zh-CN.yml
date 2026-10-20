@@ -324,7 +324,7 @@ zh-CN:
         types:
           business_hours:
             label: 工作时段规律
-            description: 错误高峰出现在工作时段（9:00–17:00），说明与用户活动相关
+            description: 错误高峰出现在工作时段（9:00–17:59），说明与用户活动相关
           night:
             label: 夜间规律
             description: 错误高峰出现在夜间（0:00–6:00），可能来自后台任务或定时作业

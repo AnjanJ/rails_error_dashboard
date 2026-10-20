@@ -350,7 +350,7 @@ de:
         types:
           business_hours:
             label: Muster der Geschäftszeiten
-            description: Fehler häufen sich während der Geschäftszeiten (9–17 Uhr),
+            description: Fehler häufen sich während der Geschäftszeiten (9:00–17:59),
               was auf einen Zusammenhang mit der Nutzeraktivität hindeutet
           night:
             label: Nachtmuster

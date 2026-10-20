@@ -364,7 +364,7 @@ es:
         types:
           business_hours:
             label: Patrón de horario laboral
-            description: Los errores se concentran en el horario laboral (9:00-17:00),
+            description: Los errores se concentran en el horario laboral (9:00–17:59),
               lo que sugiere relación con la actividad de los usuarios
           night:
             label: Patrón nocturno

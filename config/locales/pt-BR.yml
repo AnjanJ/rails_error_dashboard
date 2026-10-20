@@ -364,7 +364,7 @@ pt-BR:
         types:
           business_hours:
             label: Padrão de horário comercial
-            description: Os erros se concentram no horário comercial (9h-17h), o que
+            description: Os erros se concentram no horário comercial (9:00–17:59), o que
               sugere relação com a atividade dos usuários
           night:
             label: Padrão noturno

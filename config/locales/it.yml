@@ -359,7 +359,7 @@ it:
         types:
           business_hours:
             label: Schema da orario d'ufficio
-            description: Il picco di errori cade nell'orario d'ufficio (9–17), il
+            description: Il picco di errori cade nell'orario d'ufficio (9:00–17:59), il
               che suggerisce una correlazione con l'attività degli utenti
           night:
             label: Schema notturno

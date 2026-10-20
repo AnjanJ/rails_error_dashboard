@@ -521,7 +521,7 @@ en:
         types:
           business_hours:
             label: "Business Hours Pattern"
-            description: "Errors peak during business hours (9am-5pm), suggesting user activity correlation"
+            description: "Errors peak during business hours (9:00–17:59), suggesting user activity correlation"
           night:
             label: "Night Pattern"
             description: "Errors peak during night hours (midnight-6am), possibly from background jobs or automated tasks"
