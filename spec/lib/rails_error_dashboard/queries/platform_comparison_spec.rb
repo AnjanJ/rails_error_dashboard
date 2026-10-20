@@ -202,6 +202,70 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
     end
   end
 
+  # audit-fixes-0-16-1: each platform is scored against an even split of the
+  # window's errors. Every error happens in the first half of the window, so
+  # velocity stays at or below 10 and the score alone decides Healthy.
+  describe "#platform_stability_scores against an even split" do
+    around { |example| freeze_time { example.run } }
+
+    # Resolved resolved_after after it happened, or never when nil. By default
+    # at once, so every platform resolves as fast as the fastest and gets full
+    # resolution credit: the volume term alone sets the score.
+    def errors_on(platform, count, resolved_after: 0.seconds)
+      count.times do
+        occurred_at = 5.days.ago
+        create(:error_log, platform: platform, occurred_at: occurred_at,
+                           resolved_at: resolved_after && occurred_at + resolved_after)
+      end
+    end
+
+    def comparison
+      described_class.new(days: 7)
+    end
+
+    [ %w[iOS Android], %w[iOS Android Web] ].each do |platforms|
+      it "audit-fixes-0-16-1/REQ-1 rates equal platforms Healthy with equal scores (#{platforms.size} platforms)" do
+        platforms.each { |platform| errors_on(platform, 4) }
+
+        summary = comparison.platform_health_summary
+
+        expect(summary.transform_values { _1[:stability_score] }).to eq(platforms.index_with { 100.0 })
+        expect(summary.transform_values { _1[:health_status] }).to eq(platforms.index_with { :healthy })
+      end
+    end
+
+    # Full resolution credit everywhere, so 100 is full volume credit
+    it "audit-fixes-0-16-1/REQ-2 gives full volume credit at or below an even split" do
+      errors_on("iOS", 5)
+      errors_on("Android", 3)
+      errors_on("Web", 2)
+
+      scores = comparison.platform_stability_scores
+
+      expect(scores).to include("Android" => 100.0, "Web" => 100.0)
+      expect(scores["iOS"]).to eq(82.5)
+    end
+
+    {
+      "60/40" => [ { "iOS" => 6, "Android" => 4 }, { "iOS" => 86.0, "Android" => 100.0 } ],
+      "90/10" => [ { "iOS" => 9, "Android" => 1 }, { "iOS" => 44.0, "Android" => 100.0 } ],
+      "80/10/10" => [ { "iOS" => 8, "Android" => 1, "Web" => 1 }, { "iOS" => 51.0, "Android" => 100.0, "Web" => 100.0 } ]
+    }.each do |split, (counts, expected)|
+      it "audit-fixes-0-16-1/REQ-3 gives a larger share less credit (#{split})" do
+        counts.each { |platform, count| errors_on(platform, count) }
+
+        expect(comparison.platform_stability_scores).to eq(expected)
+      end
+    end
+
+    it "audit-fixes-0-16-1/REQ-3 rates the busier side of a 60/40 split Healthy" do
+      errors_on("iOS", 6)
+      errors_on("Android", 4)
+
+      expect(comparison.platform_health_summary["iOS"][:health_status]).to eq(:healthy)
+    end
+  end
+
   describe "#cross_platform_errors" do
     it "finds errors occurring on multiple platforms" do
       # Same error type on iOS and Android

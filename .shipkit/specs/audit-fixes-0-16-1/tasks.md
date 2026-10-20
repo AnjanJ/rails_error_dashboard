@@ -10,7 +10,7 @@ only thing under test.
   - Test: platform_comparison_spec "audit-fixes-0-16-1/REQ-8 scores no platform without errors in the window", and platform_health_cards_spec "…/REQ-8 shows no card for it on the Overview or Platform Comparison".
   - After: none
   - Done when: both fail before the change (a 100/Healthy card for the inactive platform) and pass after.
-- [ ] **T2** Volume credit against an even split → REQ-1, REQ-2, REQ-3
+- [x] **T2** Volume credit against an even split → REQ-1, REQ-2, REQ-3
   - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb
   - Test: "audit-fixes-0-16-1/REQ-1 rates equal platforms Healthy with equal scores", "…/REQ-2 gives full volume credit at or below an even split", "…/REQ-3 gives a larger share less credit" (60/40 → 86 and 90/10 → 44 at full resolution credit).
   - After: T1

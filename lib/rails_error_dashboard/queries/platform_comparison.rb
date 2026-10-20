@@ -168,15 +168,22 @@ module RailsErrorDashboard
         resolution_times = resolution_time_by_platform
 
         total_errors = error_rates.values.sum
+        even_share = 1.0 / error_rates.size
         max_resolution_time = resolution_times.values.compact.max || 1
 
         error_rates.each_with_object({}) do |(platform, error_count), result|
           avg_resolution = resolution_times[platform] || 0
 
-          # This platform's share of all errors, inverted. Against the busiest
-          # platform instead, the busiest always scored 0 here and so was always
-          # Critical.
-          error_score = total_errors.positive? ? 1.0 - (error_count.to_f / total_errors) : 1.0
+          # This platform's share of all errors against an even split: full
+          # credit at or below it, falling linearly to 0 when one platform has
+          # every error. Against the raw share instead, no evenly split app
+          # could be Healthy. The even-split test is done in integers so an
+          # exact split is never lost to rounding.
+          error_score = if error_count * error_rates.size <= total_errors
+            1.0
+          else
+            1.0 - (((error_count.to_f / total_errors) - even_share) / (1.0 - even_share))
+          end
           resolution_score = avg_resolution.positive? ? 1.0 - (avg_resolution / max_resolution_time) : 1.0
 
           # Weight: 70% error count, 30% resolution time
