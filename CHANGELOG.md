@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.0...rails_error_dashboard/v0.16.1) (2026-10-20)
+
+
+### 🐛 Bug Fixes
+
+* platform health scores compare against an even split and the fastest platform ([#298](https://github.com/AnjanJ/rails_error_dashboard/issues/298)) ([59554ab](https://github.com/AnjanJ/rails_error_dashboard/commit/59554abf5b971badfae105693647a39b9465a8da))
+* warn at boot on Rails older than 7.0.10 ([#296](https://github.com/AnjanJ/rails_error_dashboard/issues/296)) ([c44dc00](https://github.com/AnjanJ/rails_error_dashboard/commit/c44dc003fe48dd5bc6edbb3e300c72b14905d949))
+
+### Upgrade instructions
+
+No migrations and no configuration changes:
+
+```sh
+bundle update rails_error_dashboard
+```
+
+### Rails 7.0: only 7.0.0 to 7.0.8.7 are affected
+
+0.16.0's "Known limitation: Rails 7.0" was too broad.
+
+- Rails 7.0.0 to 7.0.8.7 render a request's error page without reporting the exception, so RED
+  records no unhandled request errors on those versions.
+- Rails 7.0.10 (released 2025-10-28) reports these exceptions, as Rails 7.1 and later do, and RED
+  records them. Upgrade to Rails 7.0.10 or later.
+- On the affected versions RED now logs one warning at boot:
+  `[Rails Error Dashboard] Rails 7.0.8.7 does not report the request exceptions it renders as
+  error pages, so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later
+  fixes this.`
+- In development, where Rails shows its detailed error page, no Rails 7.0 version reports request
+  exceptions, 7.0.10 included. Use **Send Test Error** to check RED there.
+- If you can't move from 7.0.8.x to 7.0.10, please open an issue.
+
+See [Troubleshooting](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70).
+
+### Platform health scores change again
+
+In 0.16.0 a platform's score used its share of all errors. With Healthy at 80, a platform needed
+28.6% of the errors or fewer to be Healthy, so no evenly split app with two or three platforms
+could be Healthy, and the busier side of a 60/40 split was Critical. In 0.16.1:
+
+- **Volume** is measured against an even split. A platform with no more than its even share of
+  the errors gets full credit; above it, the credit falls to 0 when one platform has every error.
+- **Resolution time** is measured against the fastest platform, with each average floored at one
+  hour. It was measured against the slowest, which therefore scored 70 at most.
+- **A platform with nothing from the period resolved** is scored on volume alone, and its card
+  says "No errors from this period resolved yet". It used to get the full resolution credit.
+- **A platform with no errors in the period** gets no card and no score. It used to score 100 and
+  show as Healthy, on the Overview and on Platform Comparison.
+- **Errors with no platform value** stay out of the comparison.
+
+The weights (70% volume, 30% resolution) and the Healthy, Warning and Critical thresholds are
+unchanged. With equal resolution times, a 50/50 split scores 100 for both platforms, the busier
+side of 60/40 scores 86 (Healthy) and of 90/10 scores 44 (Critical). Scores change for every
+install. See [Stability Scoring](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/features/PLATFORM_COMPARISON.md#stability-scoring).
+
+### Fixes
+
+- **Business-hours pattern** descriptions say 9:00–17:59 in every language. They said 9am-5pm
+  (and 9–17), but the detector counts the whole 17:00 hour.
+- **Platform names** show as stored on Platform Comparison and Correlation: "iOS" and "API",
+  not "Ios", "Api" or "IOS".
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: pin `gem "json", "< 3"` until you upgrade Rails. See
+[Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
 ## [0.16.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.15.0...rails_error_dashboard/v0.16.0) (2026-10-15)
 
 
