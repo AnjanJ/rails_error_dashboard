@@ -202,10 +202,12 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
     end
   end
 
-  # audit-fixes-0-16-1: each platform is scored against an even split of the
-  # window's errors. Every error happens in the first half of the window, so
-  # velocity stays at or below 10 and the score alone decides Healthy.
-  describe "#platform_stability_scores against an even split" do
+  # audit-fixes-0-16-1: each platform is scored against the others: its share
+  # of the window's errors against an even split, and its average resolution
+  # time against the fastest platform's. Every error happens in the first half
+  # of the window, so velocity stays at or below 10 and the score alone
+  # decides Healthy.
+  describe "#platform_stability_scores compared across platforms" do
     around { |example| freeze_time { example.run } }
 
     # Resolved resolved_after after it happened, or never when nil. By default
@@ -263,6 +265,43 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       errors_on("Android", 4)
 
       expect(comparison.platform_health_summary["iOS"][:health_status]).to eq(:healthy)
+    end
+
+    # Even shares from here on, so the resolution term alone sets the score
+    it "audit-fixes-0-16-1/REQ-4 gives the fastest and any as fast full credit" do
+      errors_on("iOS", 2, resolved_after: 2.hours)
+      errors_on("Android", 2, resolved_after: 2.hours)
+      errors_on("Web", 2, resolved_after: 4.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0, "Web" => 85.0)
+    end
+
+    it "audit-fixes-0-16-1/REQ-5 rates 12h against 10h Healthy at an even share" do
+      errors_on("iOS", 2, resolved_after: 10.hours)
+      errors_on("Android", 2, resolved_after: 12.hours)
+
+      summary = comparison.platform_health_summary
+
+      expect(summary["Android"]).to include(stability_score: 95.0, health_status: :healthy)
+      expect(summary["iOS"][:stability_score]).to eq(100.0)
+    end
+
+    it "audit-fixes-0-16-1/REQ-5 reduces credit by how much slower a platform is" do
+      errors_on("iOS", 2, resolved_after: 1.hour)
+      errors_on("Android", 2, resolved_after: 10.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 73.0)
+    end
+
+    # An average of 0.0 (resolved at once) would leave every other platform
+    # with no resolution credit, and sub-hour differences say nothing about a
+    # platform's health.
+    it "audit-fixes-0-16-1/REQ-4 floors averages at one hour" do
+      errors_on("iOS", 2, resolved_after: 0.seconds)
+      errors_on("Android", 2, resolved_after: 30.minutes)
+      errors_on("Web", 2, resolved_after: 10.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0, "Web" => 73.0)
     end
   end
 

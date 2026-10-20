@@ -169,10 +169,10 @@ module RailsErrorDashboard
 
         total_errors = error_rates.values.sum
         even_share = 1.0 / error_rates.size
-        max_resolution_time = resolution_times.values.compact.max || 1
+        fastest_resolution = resolution_times.values_at(*error_rates.keys).compact.min
 
         error_rates.each_with_object({}) do |(platform, error_count), result|
-          avg_resolution = resolution_times[platform] || 0
+          avg_resolution = resolution_times[platform]
 
           # This platform's share of all errors against an even split: full
           # credit at or below it, falling linearly to 0 when one platform has
@@ -184,7 +184,17 @@ module RailsErrorDashboard
           else
             1.0 - (((error_count.to_f / total_errors) - even_share) / (1.0 - even_share))
           end
-          resolution_score = avg_resolution.positive? ? 1.0 - (avg_resolution / max_resolution_time) : 1.0
+
+          # The fastest platform's average resolution time over this one's,
+          # each floored at one hour: the fastest and any as fast get full
+          # credit, one twice as slow gets half. Against the slowest instead,
+          # the slowest always scored 0 here. The floor keeps an average of 0.0
+          # (resolved at once) from leaving every other platform with none.
+          resolution_score = if avg_resolution
+            [ fastest_resolution, 1.0 ].max / [ avg_resolution, 1.0 ].max
+          else
+            1.0
+          end
 
           # Weight: 70% error count, 30% resolution time
           # Convert to 0-100 scale

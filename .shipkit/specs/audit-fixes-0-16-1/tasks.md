@@ -15,7 +15,7 @@ only thing under test.
   - Test: "audit-fixes-0-16-1/REQ-1 rates equal platforms Healthy with equal scores", "…/REQ-2 gives full volume credit at or below an even split", "…/REQ-3 gives a larger share less credit" (60/40 → 86 and 90/10 → 44 at full resolution credit).
   - After: T1
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb` → 0 failures; the REQ-1 example scored 65 before.
-- [ ] **T3** Resolution credit against the fastest, floored at one hour → REQ-4, REQ-5
+- [x] **T3** Resolution credit against the fastest, floored at one hour → REQ-4, REQ-5
   - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb
   - Test: "audit-fixes-0-16-1/REQ-4 gives the fastest and any as fast full credit", "…/REQ-5 rates 12h against 10h Healthy at an even share" (95), and a floor example where one platform averages 0.0 h.
   - After: T2
