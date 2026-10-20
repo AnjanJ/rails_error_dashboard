@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.0...rails_error_dashboard/v0.16.1) (2026-10-20)
+
+
+### 🐛 Bug Fixes
+
+* platform health scores compare against an even split and the fastest platform ([#298](https://github.com/AnjanJ/rails_error_dashboard/issues/298)) ([59554ab](https://github.com/AnjanJ/rails_error_dashboard/commit/59554abf5b971badfae105693647a39b9465a8da))
+* warn at boot on Rails older than 7.0.10 ([#296](https://github.com/AnjanJ/rails_error_dashboard/issues/296)) ([c44dc00](https://github.com/AnjanJ/rails_error_dashboard/commit/c44dc003fe48dd5bc6edbb3e300c72b14905d949))
+
 ## [0.16.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.15.0...rails_error_dashboard/v0.16.0) (2026-10-15)
 
 
