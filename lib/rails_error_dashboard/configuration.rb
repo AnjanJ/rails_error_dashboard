@@ -735,6 +735,13 @@ module RailsErrorDashboard
                     "Feature has been auto-disabled. Upgrade Ruby to use this feature."
         @detect_swallowed_exceptions = false
       end
+
+      # Rails 7.0.0-7.0.8.7 render request exceptions without reporting them, so
+      # RED never sees them. Rails 7.0.10 backported 7.1's reporting.
+      if defined?(ActionPack) && ActionPack.gem_version < Gem::Version.new("7.0.10")
+        warnings << "Rails #{ActionPack.gem_version} does not report the request exceptions it renders as error pages, " \
+                    "so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later fixes this."
+      end
       # Validate sub-settings only if feature is still active after version check
       if detect_swallowed_exceptions
         if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1

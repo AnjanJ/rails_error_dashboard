@@ -1360,4 +1360,45 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       end
     end
   end
+
+  # rails-70-request-capture/REQ-1, REQ-2: Rails 7.0.0-7.0.8.7 render request
+  # exceptions without reporting them, so RED records none. CI's 7.0 rows install
+  # 7.0.10, so the version is stubbed rather than taken from the row.
+  describe "Rails versions that do not report rendered request exceptions" do
+    let(:warnings) { [] }
+
+    before do
+      allow(Rails.logger).to receive(:warn) { |message| warnings << message }
+    end
+
+    def request_capture_warnings
+      warnings.select { |message| message.include?("7.0.10") }
+    end
+
+    def run_on_actionpack(version)
+      allow(ActionPack).to receive(:gem_version).and_return(Gem::Version.new(version))
+    end
+
+    it "rails-70-request-capture/REQ-1 warns once on Rails older than 7.0.10" do
+      run_on_actionpack("7.0.8.7")
+
+      config.validate!
+
+      expect(request_capture_warnings).to contain_exactly(
+        a_string_including(
+          "Rails 7.0.8.7 does not report the request exceptions it renders as error pages",
+          "Upgrading to Rails 7.0.10 or later fixes this"
+        )
+      )
+    end
+
+    it "rails-70-request-capture/REQ-2 does not warn on Rails 7.0.10 or later" do
+      [ "7.0.10", "7.1.0", ActionPack.gem_version.to_s ].each do |version|
+        run_on_actionpack(version)
+        config.validate!
+      end
+
+      expect(request_capture_warnings).to be_empty
+    end
+  end
 end

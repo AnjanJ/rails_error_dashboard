@@ -72,6 +72,9 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    one, or set `config.async_logging = false` (notifications still need a worker). See
    [Run a worker for RED's jobs](PRODUCTION.md#1-run-a-worker-for-reds-jobs).
 
+7. **Check the Rails version**: on Rails 7.0.0 to 7.0.8.7, errors from web requests are never
+   recorded. See [Request Errors Not Recorded on Rails 7.0](#request-errors-not-recorded-on-rails-70).
+
 ---
 
 ### Migrations Failing
@@ -268,6 +271,29 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
 
 3. **A resolved error that happens again** reopens the same record. One marked "Won't fix" stays
    closed and keeps counting.
+
+---
+
+### Request Errors Not Recorded on Rails 7.0
+
+**Problem**: On Rails 7.0.0 to 7.0.8.7, an exception raised while serving a web request never
+appears, while errors from jobs, `Rails.error.report` and **Send Test Error** do. At boot, RED
+logs a warning:
+```
+[Rails Error Dashboard] Rails 7.0.8.7 does not report the request exceptions it renders as error pages, so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later fixes this.
+```
+
+**Why**: with `config.action_dispatch.show_exceptions` on (the default in production and
+development), these Rails versions catch the exception and render the error page without
+reporting it. RED's middleware sits outside the point where Rails catches it, so it never sees
+the exception either. Rails 7.0.10 reports these exceptions, as Rails 7.1 and later do.
+
+**Solution**: upgrade Rails to 7.0.10 or later, for example `gem "rails", "~> 7.0.10"` and
+`bundle update rails`. No RED setting changes this.
+
+In development, where Rails shows its detailed error page, no Rails 7.0 version reports request
+exceptions, 7.0.10 included. To check that RED records errors in development, use **Send Test
+Error** on `/red/settings`.
 
 ---
 

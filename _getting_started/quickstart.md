@@ -10,7 +10,7 @@ Get Rails Error Dashboard up and running in 5 minutes!
 
 ## Prerequisites
 
-- Rails 7.0 or later (supports 7.0, 7.1, 7.2, 8.0, 8.1)
+- Rails 7.0 or later (supports 7.0, 7.1, 7.2, 8.0, 8.1). On Rails 7.0.0 to 7.0.8.7, unhandled exceptions from web requests are not recorded; upgrade to Rails 7.0.10 or later. See [Troubleshooting](/rails_error_dashboard/docs/reference/troubleshooting/#request-errors-not-recorded-on-rails-70).
 - Ruby 3.2 or later (supports 3.2, 3.3, 3.4, 4.0)
 - SQLite, PostgreSQL, or MySQL database
 - `pagy ~> 43` and `groupdate ~> 6`. If your app pins an older Pagy or groupdate, upgrade it first, or `bundle install` fails.

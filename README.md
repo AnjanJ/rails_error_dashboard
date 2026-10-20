@@ -127,7 +127,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 - **Host-app safety** — nothing in the capture path raises into your app; every subscriber and callback is rescue-wrapped, `Thread.current` is cleaned up in `ensure`, and the original exception is always re-raised. Variables, health and breadcrumbs are opt-in and off by default; storm protection is on by default and fails open.
 - **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are a maintainer's single-machine measurements and no benchmark script ships with the gem yet.
 - **Security** — HTTP Basic Auth or your own `authenticate_with` lambda (Devise, Warden, session); your Rails `filter_parameters` are applied to params, variables and breadcrumbs; prompts are never recorded by LLM observability. Vulnerability reports: [SECURITY.md](SECURITY.md).
-- **Compatibility** — Rails 7.0–8.1, Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; `turbo-rails` plus ActionCable are needed for live updates (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
+- **Compatibility** — Rails 7.0–8.1 (on Rails 7.0.0 to 7.0.8.7, unhandled request errors are not recorded; Rails 7.0.10 fixes it), Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; `turbo-rails` plus ActionCable are needed for live updates (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
 
 ---
 
@@ -632,6 +632,7 @@ gem 'rails_error_dashboard'
 
 RED requires Rails 7.0 or newer, Ruby 3.2 or newer, `pagy ~> 43` and `groupdate ~> 6`. An app that pins an older Pagy or groupdate must upgrade it first, or `bundle install` fails.
 
+- **Rails 7.0.0 to 7.0.8.7**: unhandled exceptions from web requests are not recorded, because these versions render the error page without reporting the exception. Upgrade to Rails 7.0.10 or later, which reports them; until then RED logs a warning at boot. See [Troubleshooting](docs/TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70).
 - **Rails before 8.1.4 or 7.2.4** (every 8.0, 7.1 and 7.0 release): also add `gem "json", "< 3"`. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
 - **MySQL**: load the time-zone tables (`mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql`), or the charts fail.
 
