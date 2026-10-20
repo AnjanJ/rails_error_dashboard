@@ -65,6 +65,13 @@ module RailsErrorDashboard
         @volume ||= Queries::EventVolume.new(base_scope, @start_date)
       end
 
+      # Events per platform for the platforms with errors in the window, the
+      # only ones scored or given a health card. Errors with no platform value
+      # belong to none.
+      def active_error_rates
+        @active_error_rates ||= error_rate_by_platform.except(nil)
+      end
+
       # platform => { error_type => events in the window }.
       #
       # Severity, critical counts and cross-platform totals all fold from this
@@ -160,7 +167,7 @@ module RailsErrorDashboard
       def platform_stability_scores
         # Only platforms with errors in the window are scored. Every platform
         # ever seen used to be, and one with none in the window scored 100.
-        error_rates = error_rate_by_platform
+        error_rates = active_error_rates
         # A score compares platforms. With fewer than two that have errors in
         # the window there is nothing to compare against, so none is rated (a
         # lone platform used to come out Critical every time).
@@ -245,7 +252,7 @@ module RailsErrorDashboard
       # Get platform health summary
       # @return [Hash] Platform => health metrics
       def platform_health_summary
-        error_rates = error_rate_by_platform
+        error_rates = active_error_rates
         stability_scores = platform_stability_scores
         severities = severity_distribution_by_platform
         midpoint = @start_date + (@days / 2.0).days

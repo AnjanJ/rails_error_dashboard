@@ -187,6 +187,19 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       expect(comparison.platform_health_summary.keys).to contain_exactly("iOS", "Android")
     end
 
+    # Errors with no platform value belong to no platform: no card, no score,
+    # and they don't count towards the even split.
+    it "audit-fixes-0-16-1/REQ-8 leaves errors with no platform out of the comparison" do
+      2.times { create(:error_log, platform: "iOS", occurred_at: 1.day.ago) }
+      2.times { create(:error_log, platform: "Android", occurred_at: 1.day.ago) }
+      create(:error_log, platform: "Web", occurred_at: 1.day.ago).update_column(:platform, nil)
+
+      comparison = described_class.new(days: 7)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0)
+      expect(comparison.platform_health_summary.keys).to contain_exactly("iOS", "Android")
+    end
+
     it "gives two equally busy platforms equal, non-zero scores" do
       3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
       3.times { create(:error_log, platform: "android", occurred_at: 1.day.ago) }
