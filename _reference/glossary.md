@@ -142,7 +142,7 @@ Statistical anomaly detection that compares current error rates against historic
 **Metrics**: Mean, standard deviation, 95th percentile.
 
 ### Platform Comparison
-Compare error rates and stability across different platforms (iOS, Android, Web, API). Calculates stability scores and health status.
+Compare error rates and stability across different platforms (iOS, Android, Web, API). Calculates stability scores and health status. Each platform with errors in the window gets a stability score from 0 to 100: 70% for its share of the errors against an even split, 30% for its average resolution time against the fastest platform's.
 
 ### Error Correlation
 Analyze relationships between errors and:

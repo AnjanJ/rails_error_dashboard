@@ -109,7 +109,7 @@
                   <td><%= release[:error_types] %></td>
                   <td>
                     <% release[:platforms].each do |platform| %>
-                      <span class="badge bg-secondary text-capitalize me-1"><%= platform %></span>
+                      <span class="badge bg-secondary me-1"><%= platform %></span>
                     <% end %>
                   </td>
                   <td>
@@ -326,7 +326,7 @@
         <div class="row">
           <% @platform_specific_errors.each do |platform, errors| %>
             <div class="col-md-6 mb-3">
-              <h6 class="text-capitalize"><%= platform %></h6>
+              <h6><%= platform %></h6>
               <div class="list-group">
                 <% errors.each do |error_data| %>
                   <div class="list-group-item">

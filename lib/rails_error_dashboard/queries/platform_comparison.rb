@@ -65,6 +65,13 @@ module RailsErrorDashboard
         @volume ||= Queries::EventVolume.new(base_scope, @start_date)
       end
 
+      # Events per platform for the platforms with errors in the window, the
+      # only ones scored or given a health card. Errors with no platform value
+      # belong to none.
+      def active_error_rates
+        @active_error_rates ||= error_rate_by_platform.except(nil)
+      end
+
       # platform => { error_type => events in the window }.
       #
       # Severity, critical counts and cross-platform totals all fold from this
@@ -158,32 +165,50 @@ module RailsErrorDashboard
       # Higher score = more stable (fewer errors, faster resolution)
       # @return [Hash] Platform => stability score
       def platform_stability_scores
-        platforms = base_scope.distinct.pluck(:platform).compact
-        error_rates = error_rate_by_platform
+        # Only platforms with errors in the window are scored. Every platform
+        # ever seen used to be, and one with none in the window scored 100.
+        error_rates = active_error_rates
         # A score compares platforms. With fewer than two that have errors in
         # the window there is nothing to compare against, so none is rated (a
-        # lone platform used to come out Critical every time). The count is of
-        # platforms with errors in the window: the list above is every
-        # platform ever seen.
+        # lone platform used to come out Critical every time).
         return {} if error_rates.size < 2
         resolution_times = resolution_time_by_platform
 
         total_errors = error_rates.values.sum
-        max_resolution_time = resolution_times.values.compact.max || 1
+        even_share = 1.0 / error_rates.size
+        fastest_resolution = resolution_times.values_at(*error_rates.keys).compact.min
 
-        platforms.each_with_object({}) do |platform, result|
-          error_count = error_rates[platform] || 0
-          avg_resolution = resolution_times[platform] || 0
+        error_rates.each_with_object({}) do |(platform, error_count), result|
+          avg_resolution = resolution_times[platform]
 
-          # This platform's share of all errors, inverted. Against the busiest
-          # platform instead, the busiest always scored 0 here and so was always
-          # Critical.
-          error_score = total_errors.positive? ? 1.0 - (error_count.to_f / total_errors) : 1.0
-          resolution_score = avg_resolution.positive? ? 1.0 - (avg_resolution / max_resolution_time) : 1.0
+          # This platform's share of all errors against an even split: full
+          # credit at or below it, falling linearly to 0 when one platform has
+          # every error. Against the raw share instead, no evenly split app
+          # could be Healthy. The even-split test is done in integers so an
+          # exact split is never lost to rounding.
+          error_score = if error_count * error_rates.size <= total_errors
+            1.0
+          else
+            1.0 - (((error_count.to_f / total_errors) - even_share) / (1.0 - even_share))
+          end
 
-          # Weight: 70% error count, 30% resolution time
-          # Convert to 0-100 scale
-          result[platform] = ((error_score * 0.7 + resolution_score * 0.3) * 100).round(1)
+          # The fastest platform's average resolution time over this one's,
+          # each floored at one hour: the fastest and any as fast get full
+          # credit, one twice as slow gets half. Against the slowest instead,
+          # the slowest always scored 0 here. The floor keeps an average of 0.0
+          # (resolved at once) from leaving every other platform with none.
+          result[platform] = if avg_resolution
+            resolution_score = [ fastest_resolution, 1.0 ].max / [ avg_resolution, 1.0 ].max
+
+            # Weight: 70% error count, 30% resolution time
+            # Convert to 0-100 scale
+            ((error_score * 0.7 + resolution_score * 0.3) * 100).round(1)
+          else
+            # Nothing resolved in the window: no resolution time to compare, so
+            # the score is the volume credit alone, on the same scale. It used
+            # to get the full resolution credit. The cards say which it is.
+            (error_score * 100).round(1)
+          end
         end
       end
 
@@ -227,12 +252,13 @@ module RailsErrorDashboard
       # Get platform health summary
       # @return [Hash] Platform => health metrics
       def platform_health_summary
-        error_rates = error_rate_by_platform
+        error_rates = active_error_rates
         stability_scores = platform_stability_scores
         severities = severity_distribution_by_platform
         midpoint = @start_date + (@days / 2.0).days
 
-        platforms.each_with_object({}) do |platform, result|
+        # A card for each platform with errors in the window, as the scores
+        error_rates.each_key.with_object({}) do |platform, result|
           platform_scope = base_scope.where(platform: platform)
           groups_in_window = platform_scope.where("occurred_at >= ?", @start_date)
 
@@ -259,6 +285,9 @@ module RailsErrorDashboard
             critical_errors: critical_errors,
             unresolved_errors: unresolved_errors,
             resolution_rate: resolution_rate,
+            # false when nothing from the window is resolved, so the stability
+            # score is volume alone
+            resolution_measured: resolved_errors.positive?,
             # nil and :not_rated when there are fewer than two platforms
             stability_score: stability_scores[platform],
             error_velocity: velocity, # Positive = increasing, negative = decreasing

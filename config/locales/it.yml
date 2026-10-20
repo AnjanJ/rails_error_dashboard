@@ -38,6 +38,7 @@ it:
         critical: "\U0001F534 Critico"
         not_rated: "Non valutato"
         not_rated_hint: "La valutazione confronta le piattaforme, quindi servono errori su almeno due."
+        nothing_resolved: "Nessun errore di questo periodo è stato ancora risolto"
       device_type:
         mobile: Mobile
         tablet: Tablet
@@ -358,7 +359,7 @@ it:
         types:
           business_hours:
             label: Schema da orario d'ufficio
-            description: Il picco di errori cade nell'orario d'ufficio (9–17), il
+            description: Il picco di errori cade nell'orario d'ufficio (9:00–17:59), il
               che suggerisce una correlazione con l'attività degli utenti
           night:
             label: Schema notturno

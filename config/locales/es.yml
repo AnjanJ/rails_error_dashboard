@@ -38,6 +38,7 @@ es:
         critical: "\U0001F534 Crítico"
         not_rated: "Sin calificar"
         not_rated_hint: "La calificación compara plataformas, así que necesita errores en al menos dos."
+        nothing_resolved: "Aún no se ha resuelto ningún error de este período"
       device_type:
         mobile: Móvil
         tablet: Tableta
@@ -363,7 +364,7 @@ es:
         types:
           business_hours:
             label: Patrón de horario laboral
-            description: Los errores se concentran en el horario laboral (9:00-17:00),
+            description: Los errores se concentran en el horario laboral (9:00–17:59),
               lo que sugiere relación con la actividad de los usuarios
           night:
             label: Patrón nocturno

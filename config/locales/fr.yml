@@ -38,6 +38,7 @@ fr:
         critical: "\U0001F534 Critique"
         not_rated: "Non évalué"
         not_rated_hint: "L'évaluation compare les plateformes : il faut des erreurs sur au moins deux."
+        nothing_resolved: "Aucune erreur de cette période n'est encore résolue"
       device_type:
         mobile: Mobile
         tablet: Tablette
@@ -364,7 +365,7 @@ fr:
         types:
           business_hours:
             label: Motif des heures ouvrées
-            description: Les erreurs culminent pendant les heures ouvrées (9h-17h),
+            description: Les erreurs culminent pendant les heures ouvrées (9:00–17:59),
               ce qui suggère un lien avec l'activité des utilisateurs
           night:
             label: Motif nocturne

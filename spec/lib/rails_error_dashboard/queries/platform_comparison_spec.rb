@@ -174,6 +174,32 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       expect(described_class.new(days: 7).platform_stability_scores).to eq({})
     end
 
+    # The platform list was every platform ever seen, so one with no errors in
+    # the window scored 100 and got a Healthy card.
+    it "audit-fixes-0-16-1/REQ-8 scores no platform without errors in the window" do
+      2.times { create(:error_log, platform: "iOS", occurred_at: 1.day.ago) }
+      2.times { create(:error_log, platform: "Android", occurred_at: 1.day.ago) }
+      create(:error_log, platform: "Web", occurred_at: 60.days.ago)
+
+      comparison = described_class.new(days: 7)
+
+      expect(comparison.platform_stability_scores.keys).to contain_exactly("iOS", "Android")
+      expect(comparison.platform_health_summary.keys).to contain_exactly("iOS", "Android")
+    end
+
+    # Errors with no platform value belong to no platform: no card, no score,
+    # and they don't count towards the even split.
+    it "audit-fixes-0-16-1/REQ-8 leaves errors with no platform out of the comparison" do
+      2.times { create(:error_log, platform: "iOS", occurred_at: 1.day.ago) }
+      2.times { create(:error_log, platform: "Android", occurred_at: 1.day.ago) }
+      create(:error_log, platform: "Web", occurred_at: 1.day.ago).update_column(:platform, nil)
+
+      comparison = described_class.new(days: 7)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0)
+      expect(comparison.platform_health_summary.keys).to contain_exactly("iOS", "Android")
+    end
+
     it "gives two equally busy platforms equal, non-zero scores" do
       3.times { create(:error_log, platform: "ios", occurred_at: 1.day.ago) }
       3.times { create(:error_log, platform: "android", occurred_at: 1.day.ago) }
@@ -186,6 +212,122 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
       # Equal volume, no resolutions, no growth: neither is Critical on volume alone
       statuses = described_class.new(days: 7).platform_health_summary.transform_values { _1[:health_status] }
       expect(statuses.values).to all(satisfy { |status| status != :critical })
+    end
+  end
+
+  # audit-fixes-0-16-1: each platform is scored against the others: its share
+  # of the window's errors against an even split, and its average resolution
+  # time against the fastest platform's. Every error happens in the first half
+  # of the window, so velocity stays at or below 10 and the score alone
+  # decides Healthy.
+  describe "#platform_stability_scores compared across platforms" do
+    around { |example| freeze_time { example.run } }
+
+    # Resolved resolved_after after it happened, or never when nil. By default
+    # at once, so every platform resolves as fast as the fastest and gets full
+    # resolution credit: the volume term alone sets the score.
+    def errors_on(platform, count, resolved_after: 0.seconds)
+      count.times do
+        occurred_at = 5.days.ago
+        create(:error_log, platform: platform, occurred_at: occurred_at,
+                           resolved_at: resolved_after && occurred_at + resolved_after)
+      end
+    end
+
+    def comparison
+      described_class.new(days: 7)
+    end
+
+    [ %w[iOS Android], %w[iOS Android Web] ].each do |platforms|
+      it "audit-fixes-0-16-1/REQ-1 rates equal platforms Healthy with equal scores (#{platforms.size} platforms)" do
+        platforms.each { |platform| errors_on(platform, 4) }
+
+        summary = comparison.platform_health_summary
+
+        expect(summary.transform_values { _1[:stability_score] }).to eq(platforms.index_with { 100.0 })
+        expect(summary.transform_values { _1[:health_status] }).to eq(platforms.index_with { :healthy })
+      end
+    end
+
+    # Full resolution credit everywhere, so 100 is full volume credit
+    it "audit-fixes-0-16-1/REQ-2 gives full volume credit at or below an even split" do
+      errors_on("iOS", 5)
+      errors_on("Android", 3)
+      errors_on("Web", 2)
+
+      scores = comparison.platform_stability_scores
+
+      expect(scores).to include("Android" => 100.0, "Web" => 100.0)
+      expect(scores["iOS"]).to eq(82.5)
+    end
+
+    {
+      "60/40" => [ { "iOS" => 6, "Android" => 4 }, { "iOS" => 86.0, "Android" => 100.0 } ],
+      "90/10" => [ { "iOS" => 9, "Android" => 1 }, { "iOS" => 44.0, "Android" => 100.0 } ],
+      "80/10/10" => [ { "iOS" => 8, "Android" => 1, "Web" => 1 }, { "iOS" => 51.0, "Android" => 100.0, "Web" => 100.0 } ]
+    }.each do |split, (counts, expected)|
+      it "audit-fixes-0-16-1/REQ-3 gives a larger share less credit (#{split})" do
+        counts.each { |platform, count| errors_on(platform, count) }
+
+        expect(comparison.platform_stability_scores).to eq(expected)
+      end
+    end
+
+    it "audit-fixes-0-16-1/REQ-3 rates the busier side of a 60/40 split Healthy" do
+      errors_on("iOS", 6)
+      errors_on("Android", 4)
+
+      expect(comparison.platform_health_summary["iOS"][:health_status]).to eq(:healthy)
+    end
+
+    # Even shares from here on, so the resolution term alone sets the score
+    it "audit-fixes-0-16-1/REQ-4 gives the fastest and any as fast full credit" do
+      errors_on("iOS", 2, resolved_after: 2.hours)
+      errors_on("Android", 2, resolved_after: 2.hours)
+      errors_on("Web", 2, resolved_after: 4.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0, "Web" => 85.0)
+    end
+
+    it "audit-fixes-0-16-1/REQ-5 rates 12h against 10h Healthy at an even share" do
+      errors_on("iOS", 2, resolved_after: 10.hours)
+      errors_on("Android", 2, resolved_after: 12.hours)
+
+      summary = comparison.platform_health_summary
+
+      expect(summary["Android"]).to include(stability_score: 95.0, health_status: :healthy)
+      expect(summary["iOS"][:stability_score]).to eq(100.0)
+    end
+
+    it "audit-fixes-0-16-1/REQ-5 reduces credit by how much slower a platform is" do
+      errors_on("iOS", 2, resolved_after: 1.hour)
+      errors_on("Android", 2, resolved_after: 10.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 73.0)
+    end
+
+    # An average of 0.0 (resolved at once) would leave every other platform
+    # with no resolution credit, and sub-hour differences say nothing about a
+    # platform's health.
+    it "audit-fixes-0-16-1/REQ-4 floors averages at one hour" do
+      errors_on("iOS", 2, resolved_after: 0.seconds)
+      errors_on("Android", 2, resolved_after: 30.minutes)
+      errors_on("Web", 2, resolved_after: 10.hours)
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0, "Web" => 73.0)
+    end
+
+    # No resolution time is invented for a platform with none: it is scored on
+    # its volume credit alone. It used to get the full 30 resolution points.
+    it "audit-fixes-0-16-1/REQ-6 scores a platform with nothing resolved on volume alone" do
+      errors_on("iOS", 6, resolved_after: nil)
+      errors_on("Android", 4, resolved_after: 2.hours)
+
+      summary = comparison.platform_health_summary
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 80.0, "Android" => 100.0)
+      expect(summary["iOS"]).to include(stability_score: 80.0, resolution_measured: false)
+      expect(summary["Android"]).to include(stability_score: 100.0, resolution_measured: true)
     end
   end
 

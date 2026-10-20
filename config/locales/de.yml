@@ -38,6 +38,7 @@ de:
         critical: "\U0001F534 Kritisch"
         not_rated: "Nicht bewertet"
         not_rated_hint: "Eine Bewertung vergleicht Plattformen und braucht daher Fehler auf mindestens zwei."
+        nothing_resolved: "Noch keine Fehler aus diesem Zeitraum behoben"
       device_type:
         mobile: Mobil
         tablet: Tablet
@@ -349,7 +350,7 @@ de:
         types:
           business_hours:
             label: Muster der Geschäftszeiten
-            description: Fehler häufen sich während der Geschäftszeiten (9–17 Uhr),
+            description: Fehler häufen sich während der Geschäftszeiten (9:00–17:59),
               was auf einen Zusammenhang mit der Nutzeraktivität hindeutet
           night:
             label: Nachtmuster

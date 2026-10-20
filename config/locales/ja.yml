@@ -38,6 +38,7 @@ ja:
         critical: "\U0001F534 重大"
         not_rated: "評価なし"
         not_rated_hint: "評価はプラットフォーム同士の比較なので、2つ以上のプラットフォームのエラーが必要です。"
+        nothing_resolved: "この期間のエラーはまだ1件も解決されていません"
       device_type:
         mobile: モバイル
         tablet: タブレット
@@ -325,7 +326,7 @@ ja:
         types:
           business_hours:
             label: 業務時間帯パターン
-            description: エラーは業務時間帯(9時〜17時)に集中しており、ユーザーの利用状況との関連が考えられます
+            description: エラーは業務時間帯(9:00–17:59)に集中しており、ユーザーの利用状況との関連が考えられます
           night:
             label: 夜間パターン
             description: エラーは夜間(0時〜6時)に集中しており、バックグラウンドジョブや自動処理が原因の可能性があります

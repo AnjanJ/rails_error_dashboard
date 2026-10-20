@@ -84,6 +84,7 @@ en:
         critical: "🔴 Critical"
         not_rated: "Not rated"
         not_rated_hint: "A rating compares platforms, so it needs errors on at least two."
+        nothing_resolved: "No errors from this period resolved yet"
 
       # Device classes reported by the user-agent parser. Browser and OS names
       # (Chrome, Safari, Windows, iOS) are brands and stay as written; these
@@ -520,7 +521,7 @@ en:
         types:
           business_hours:
             label: "Business Hours Pattern"
-            description: "Errors peak during business hours (9am-5pm), suggesting user activity correlation"
+            description: "Errors peak during business hours (9:00–17:59), suggesting user activity correlation"
           night:
             label: "Night Pattern"
             description: "Errors peak during night hours (midnight-6am), possibly from background jobs or automated tasks"

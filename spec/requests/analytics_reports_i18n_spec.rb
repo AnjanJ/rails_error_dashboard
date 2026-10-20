@@ -195,11 +195,10 @@ RSpec.describe "Analytics & reports translations", type: :request do
   end
 
   describe "platform_comparison — translated health status badges" do
-    # stability_score is normalized against the platform with the MOST
-    # errors present (error_score = 1.0 - count/max_count), so a single lone
-    # platform always normalizes to error_score 0 (it IS the max) and never
-    # reads :healthy. A second, much noisier platform is required to give the
-    # quiet platform's error_score room to approach 1.0.
+    # A rating compares platforms, so a lone platform is not rated and a
+    # second one is needed. The quiet platform has 1 of the 21 errors, below
+    # an even split, so it gets full volume credit; nothing is resolved, so it
+    # is scored on volume alone: 100, Healthy.
     it "renders the translated Healthy badge for the quieter of two platforms" do
       create(:error_log, application: application, platform: "iOS", occurred_at: 1.day.ago)
       20.times do
