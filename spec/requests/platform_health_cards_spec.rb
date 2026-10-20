@@ -51,4 +51,18 @@ RSpec.describe "Platform health cards", type: :request do
       expect(platform_comparison_cards.keys).to contain_exactly("iOS", "Android")
     end
   end
+
+  context "with a rated platform that has nothing resolved in the window" do
+    before do
+      2.times { create(:error_log, platform: "iOS", occurred_at: 5.days.ago) }
+      2.times { create(:error_log, platform: "Android", occurred_at: 5.days.ago, resolved_at: 5.days.ago + 2.hours) }
+    end
+
+    it "audit-fixes-0-16-1/REQ-7 says no errors from this period were resolved, on both pages" do
+      [ overview_cards, platform_comparison_cards ].each do |cards|
+        expect(cards["iOS"]).to include("No errors from this period resolved yet")
+        expect(cards["Android"]).not_to include("No errors from this period resolved yet")
+      end
+    end
+  end
 end

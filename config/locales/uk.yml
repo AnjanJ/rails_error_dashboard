@@ -38,6 +38,7 @@ uk:
         critical: "\U0001F534 Критичний"
         not_rated: "Без оцінки"
         not_rated_hint: "Оцінка порівнює платформи, тому потрібні помилки щонайменше на двох."
+        nothing_resolved: "Жодну помилку за цей період ще не вирішено"
       device_type:
         mobile: Mobile
         tablet: Tablet

@@ -64,6 +64,10 @@
                          style="width: <%= health[:stability_score] %>%">
                     </div>
                   </div>
+                  <%# Scored on volume alone: nothing from the window is resolved %>
+                  <% unless health[:resolution_measured] %>
+                    <small class="text-muted d-block mt-1"><%= red_t("red.common.health_status.nothing_resolved") %></small>
+                  <% end %>
                 </div>
               <% end %>
 

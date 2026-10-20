@@ -38,6 +38,7 @@ ja:
         critical: "\U0001F534 重大"
         not_rated: "評価なし"
         not_rated_hint: "評価はプラットフォーム同士の比較なので、2つ以上のプラットフォームのエラーが必要です。"
+        nothing_resolved: "この期間のエラーはまだ1件も解決されていません"
       device_type:
         mobile: モバイル
         tablet: タブレット

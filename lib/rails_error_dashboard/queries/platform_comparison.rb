@@ -190,15 +190,18 @@ module RailsErrorDashboard
           # credit, one twice as slow gets half. Against the slowest instead,
           # the slowest always scored 0 here. The floor keeps an average of 0.0
           # (resolved at once) from leaving every other platform with none.
-          resolution_score = if avg_resolution
-            [ fastest_resolution, 1.0 ].max / [ avg_resolution, 1.0 ].max
-          else
-            1.0
-          end
+          result[platform] = if avg_resolution
+            resolution_score = [ fastest_resolution, 1.0 ].max / [ avg_resolution, 1.0 ].max
 
-          # Weight: 70% error count, 30% resolution time
-          # Convert to 0-100 scale
-          result[platform] = ((error_score * 0.7 + resolution_score * 0.3) * 100).round(1)
+            # Weight: 70% error count, 30% resolution time
+            # Convert to 0-100 scale
+            ((error_score * 0.7 + resolution_score * 0.3) * 100).round(1)
+          else
+            # Nothing resolved in the window: no resolution time to compare, so
+            # the score is the volume credit alone, on the same scale. It used
+            # to get the full resolution credit. The cards say which it is.
+            (error_score * 100).round(1)
+          end
         end
       end
 
@@ -275,6 +278,9 @@ module RailsErrorDashboard
             critical_errors: critical_errors,
             unresolved_errors: unresolved_errors,
             resolution_rate: resolution_rate,
+            # false when nothing from the window is resolved, so the stability
+            # score is volume alone
+            resolution_measured: resolved_errors.positive?,
             # nil and :not_rated when there are fewer than two platforms
             stability_score: stability_scores[platform],
             error_velocity: velocity, # Positive = increasing, negative = decreasing

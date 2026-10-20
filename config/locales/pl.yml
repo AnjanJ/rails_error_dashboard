@@ -38,6 +38,7 @@ pl:
         critical: "\U0001F534 Krytyczny"
         not_rated: "Bez oceny"
         not_rated_hint: "Ocena porównuje platformy, więc potrzebne są błędy na co najmniej dwóch."
+        nothing_resolved: "Żaden błąd z tego okresu nie został jeszcze rozwiązany"
       device_type:
         mobile: Mobile
         tablet: Tablet

@@ -20,7 +20,7 @@ only thing under test.
   - Test: "audit-fixes-0-16-1/REQ-4 gives the fastest and any as fast full credit", "…/REQ-5 rates 12h against 10h Healthy at an even share" (95), and a floor example where one platform averages 0.0 h.
   - After: T2
   - Done when: `bundle exec rspec spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb` → 0 failures; the REQ-5 platform scored at most 70 before.
-- [ ] **T4** Nothing resolved: volume alone, labelled → REQ-6, REQ-7
+- [x] **T4** Nothing resolved: volume alone, labelled → REQ-6, REQ-7
   - Files: lib/rails_error_dashboard/queries/platform_comparison.rb, spec/lib/rails_error_dashboard/queries/platform_comparison_spec.rb, app/views/rails_error_dashboard/errors/overview.html.erb, app/views/rails_error_dashboard/errors/platform_comparison.html.erb, config/locales/en.yml, config/locales/de.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml, spec/requests/platform_health_cards_spec.rb
   - Test: platform_comparison_spec "audit-fixes-0-16-1/REQ-6 scores a platform with nothing resolved on volume alone" (it got the full 30 points before), and platform_health_cards_spec "…/REQ-7 says no errors from this period were resolved, on both pages".
   - After: T3

@@ -38,6 +38,7 @@ pt-BR:
         critical: "\U0001F534 Crítico"
         not_rated: "Sem avaliação"
         not_rated_hint: "A avaliação compara plataformas, então precisa de erros em pelo menos duas."
+        nothing_resolved: "Nenhum erro deste período foi resolvido ainda"
       device_type:
         mobile: Celular
         tablet: Tablet

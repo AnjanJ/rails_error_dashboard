@@ -38,6 +38,7 @@ zh-CN:
         critical: "\U0001F534 严重"
         not_rated: "未评级"
         not_rated_hint: "评级是在平台之间比较的，因此至少需要两个平台上的错误。"
+        nothing_resolved: "此期间的错误均尚未解决"
       device_type:
         mobile: Mobile
         tablet: Tablet

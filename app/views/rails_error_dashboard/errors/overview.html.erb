@@ -211,6 +211,10 @@
                 <div class="progress" style="height: 4px; margin-bottom: var(--space-3);">
                   <div class="progress-bar" style="width: <%= health[:stability_score] %>%; background: var(--status-<%= health[:health_status] == :healthy ? 'success' : health[:health_status] == :warning ? 'warning' : 'critical' %>);"></div>
                 </div>
+                <%# Scored on volume alone: nothing from the window is resolved %>
+                <% unless health[:resolution_measured] %>
+                  <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: var(--space-2);"><%= red_t("red.common.health_status.nothing_resolved") %></div>
+                <% end %>
               <% end %>
               <div style="font-size: 12px; color: var(--text-tertiary);">
                 <%= red_t("red.errors.overview_page.platform_summary", total: health[:total_errors], critical: health[:critical_errors], unresolved: health[:unresolved_errors]) %>

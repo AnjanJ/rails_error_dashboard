@@ -303,6 +303,19 @@ RSpec.describe RailsErrorDashboard::Queries::PlatformComparison do
 
       expect(comparison.platform_stability_scores).to eq("iOS" => 100.0, "Android" => 100.0, "Web" => 73.0)
     end
+
+    # No resolution time is invented for a platform with none: it is scored on
+    # its volume credit alone. It used to get the full 30 resolution points.
+    it "audit-fixes-0-16-1/REQ-6 scores a platform with nothing resolved on volume alone" do
+      errors_on("iOS", 6, resolved_after: nil)
+      errors_on("Android", 4, resolved_after: 2.hours)
+
+      summary = comparison.platform_health_summary
+
+      expect(comparison.platform_stability_scores).to eq("iOS" => 80.0, "Android" => 100.0)
+      expect(summary["iOS"]).to include(stability_score: 80.0, resolution_measured: false)
+      expect(summary["Android"]).to include(stability_score: 100.0, resolution_measured: true)
+    end
   end
 
   describe "#cross_platform_errors" do
