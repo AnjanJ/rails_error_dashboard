@@ -246,9 +246,9 @@ HEADLESS=false bundle exec rspec
 INSPECTOR=true HEADLESS=false bundle exec rspec
 ```
 
-A file or directory argument narrows the run as usual: `bundle exec rspec
-spec/system/` runs only the browser specs. Use `--exclude-pattern` (above) to
-run everything else.
+**A file or directory argument narrows the run.** `bundle exec rspec spec/system/`
+runs only the browser specs, as CI's system-test job does, and a spec file runs just
+that file. Use `--exclude-pattern` (above) to leave the browser specs out of a full run.
 
 ### System Tests
 

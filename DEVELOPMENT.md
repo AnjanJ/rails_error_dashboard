@@ -105,11 +105,10 @@ bundle exec rspec
 open coverage/index.html
 ```
 
-### Running a Subset
-File and directory arguments scope the run as RSpec normally does:
-`bundle exec rspec spec/system/` runs only the browser specs, and a single
-file runs only that file (the `rspec-changed` Lefthook hook relies on this).
-To run everything except the browser specs, exclude them:
+### Running Part of the Suite
+A file or directory argument runs just those specs: `bundle exec rspec spec/system/`
+runs only the browser specs, as CI's system-test job does. To run everything except
+the browser specs, exclude them instead:
 
 ```bash
 bundle exec rspec --exclude-pattern "spec/system/**/*"
