@@ -152,7 +152,7 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
       end
     end
 
-    context 'with notifications enabled', :vcr do
+    context 'with notifications enabled' do
       before do
         allow(RailsErrorDashboard.configuration).to receive(:enable_slack_notifications).and_return(true)
         allow(RailsErrorDashboard.configuration).to receive(:slack_webhook_url).and_return('https://hooks.slack.com/test')

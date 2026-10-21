@@ -18,10 +18,14 @@ RSpec.describe RailsErrorDashboard::SlackErrorNotificationJob, type: :job do
 
   describe "#perform" do
     context "when error log exists" do
+      # The stub must match the real payload: with VCR hooked into WebMock, an
+      # unmatched stub raised a StandardError the job swallowed, and
+      # have_requested still passed because WebMock records the attempt before
+      # matching. Without VCR an unmatched stub raises an Exception instead.
       it "sends Slack notification" do
         stub_request(:post, webhook_url)
           .with(
-            body: hash_including(text: /New Error in/),
+            body: hash_including(text: /New Error Alert/),
             headers: { "Content-Type" => "application/json" }
           )
           .to_return(status: 200, body: "ok")

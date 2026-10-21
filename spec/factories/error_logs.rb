@@ -52,11 +52,6 @@ FactoryBot.define do
       user_agent { 'Mozilla/5.0 (Linux; Android 13)' }
     end
 
-    trait :api do
-      platform { 'API' }
-      user_agent { 'Rails Application' }
-    end
-
     trait :with_user do
       user_id { rand(1..100) }
     end

@@ -105,11 +105,11 @@ bundle exec rspec
 open coverage/index.html
 ```
 
-### Directory Arguments Run Everything
-`spec/spec_helper.rb` pins `config.pattern` to every spec under `spec/`, so
-passing a directory — `bundle exec rspec spec/system/` included — runs the
-whole suite. CI's system-test job does exactly that and reports the full
-count. To leave the browser specs out, exclude them instead:
+### Running a Subset
+File and directory arguments scope the run as RSpec normally does:
+`bundle exec rspec spec/system/` runs only the browser specs, and a single
+file runs only that file (the `rspec-changed` Lefthook hook relies on this).
+To run everything except the browser specs, exclude them:
 
 ```bash
 bundle exec rspec --exclude-pattern "spec/system/**/*"

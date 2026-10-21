@@ -27,16 +27,12 @@ require 'rspec/rails'
 require 'factory_bot_rails'
 require 'faker'
 require 'webmock/rspec'
-require 'vcr'
 require 'database_cleaner/active_record'
 
 # Require support files
 Dir[File.join(ORIGINAL_ROOT, 'spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
 RSpec.configure do |config|
-  # Configure spec file pattern to use original root
-  config.pattern = File.join(ORIGINAL_ROOT, 'spec', '**', '*_spec.rb')
-
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
   end
@@ -61,12 +57,4 @@ RSpec.configure do |config|
   config.before(:each) do
     WebMock.disable_net_connect!(allow_localhost: true)
   end
-end
-
-# VCR configuration
-VCR.configure do |config|
-  config.cassette_library_dir = 'spec/vcr_cassettes'
-  config.hook_into :webmock
-  config.configure_rspec_metadata!
-  config.ignore_localhost = true
 end
