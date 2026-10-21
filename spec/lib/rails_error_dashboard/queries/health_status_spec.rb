@@ -24,14 +24,19 @@ RSpec.describe RailsErrorDashboard::Queries::HealthStatus do
       expect(db[:latency_ms]).to be_a(Numeric)
     end
 
+    # Frozen clock: last_error_at is ISO 8601 in whole seconds, and a slow runner
+    # took over a second between the create and the expectation's 2.hours.ago,
+    # which together passed the 2-second tolerance.
     it "reports the last capture and the last-24h count" do
-      create(:error_log, occurred_at: 2.hours.ago)
-      create(:error_log, occurred_at: 3.days.ago)
+      freeze_time do
+        create(:error_log, occurred_at: 2.hours.ago)
+        create(:error_log, occurred_at: 3.days.ago)
 
-      errors = result[:checks][:errors]
-      expect(errors[:status]).to eq("ok")
-      expect(errors[:last_24h]).to eq(1)
-      expect(Time.iso8601(errors[:last_error_at])).to be_within(2.seconds).of(2.hours.ago)
+        errors = result[:checks][:errors]
+        expect(errors[:status]).to eq("ok")
+        expect(errors[:last_24h]).to eq(1)
+        expect(Time.iso8601(errors[:last_error_at])).to be_within(2.seconds).of(2.hours.ago)
+      end
     end
 
     it "reports null last_error_at on an empty table" do
