@@ -15,15 +15,5 @@ FactoryBot.define do
       raise_count { 100 }
       rescue_count { 100 }
     end
-
-    trait :partially_swallowed do
-      raise_count { 100 }
-      rescue_count { 50 }
-    end
-
-    trait :not_swallowed do
-      raise_count { 100 }
-      rescue_count { 10 }
-    end
   end
 end
