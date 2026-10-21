@@ -13,10 +13,10 @@ release with occurrence-context-history.
 None. There is no `.shipkit/product.md`; suggest `/shipkit:product` afterwards.
 
 ## Conflicts found
-- **Deferred event envelope.** `.shipkit/specs/evidence-integrity/design.md` §D8 deferred a
+- **Deferred event envelope.** `.shipkit/specs/_shipped/evidence-integrity/design.md` §D8 deferred a
   canonical capture envelope, and a capture-source field would be part of it. The user decided
   to build this **standalone**.
-- **Precedent, not a conflict.** `.shipkit/specs/environment-awareness/design.md`, "environment
+- **Precedent, not a conflict.** `.shipkit/specs/_shipped/environment-awareness/design.md`, "environment
   is a match dimension, not a fingerprint input". Capture source follows it: it must not change
   how errors are grouped.
 - No decision record contradicts this.

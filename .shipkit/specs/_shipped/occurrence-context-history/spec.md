@@ -1,7 +1,7 @@
 # Spec: Per-occurrence context history
 
 > Spec accepted at commit `93ba34d` on spec/0-16-0.
-> Status: open
+> Status: shipped in 0.16.0 (#290)
 > Paths: lib/rails_error_dashboard/commands/,lib/rails_error_dashboard/configuration.rb,app/models/rails_error_dashboard/,app/controllers/rails_error_dashboard/errors_controller.rb,app/views/rails_error_dashboard/errors/,app/jobs/rails_error_dashboard/retention_cleanup_job.rb,lib/rails_error_dashboard/value_objects/occurrence_snapshot.rb,lib/generators/rails_error_dashboard/install/templates/initializer.rb,db/migrate/,spec/
 
 ## Purpose

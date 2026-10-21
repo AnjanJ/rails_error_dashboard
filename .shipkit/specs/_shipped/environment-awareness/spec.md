@@ -3,6 +3,7 @@
 > Spec accepted at commit `8e51278` on main (2026-08-26). Decisions taken at the Q1 gate:
 > release as **0.11.0**; environment is a **match dimension** (separate rows per environment);
 > notification rule is an **allowlist**; analytics breakdown **included**.
+> Status: shipped in 0.11.0 (#187)
 
 ## Purpose
 

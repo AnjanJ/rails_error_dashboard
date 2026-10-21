@@ -3,6 +3,7 @@
 > Spec accepted at commit `d953f2d` on main (2026-09-29). Plan approved by the user the same day:
 > the message and guide fixes plus the two test-only guards go into 0.14.3; the dashboard warning
 > waits for 0.14.4.
+> Status: shipped in 0.14.3 (#265)
 
 ## Purpose
 

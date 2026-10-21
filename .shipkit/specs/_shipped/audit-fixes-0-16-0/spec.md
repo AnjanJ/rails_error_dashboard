@@ -1,7 +1,7 @@
 # Spec: Audit fixes for 0.16.0
 
 > Spec accepted at commit `93ba34d` on spec/0-16-0.
-> Status: open
+> Status: shipped in 0.16.0 (#288)
 > Paths: app/,lib/,db/migrate/20260106094256_backfill_application_for_existing_errors.rb,docs/,_guides/,_features/,_getting_started/,_reference/,bin/pre-release-test,spec/
 
 ## Purpose

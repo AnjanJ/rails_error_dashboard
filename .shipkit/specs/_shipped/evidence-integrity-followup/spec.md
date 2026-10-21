@@ -5,10 +5,11 @@
 > assessed against `ae9b074`. All 10 probes independently reproduced in-session on SQLite;
 > the reviewer reproduced the same 10 on PostgreSQL 16.15 with a migration-built schema.
 > **9 findings, 9 confirmed real, 0 refuted.** Evidence: `verification.md`.
+> Status: shipped across 0.14.0 and 0.14.1 (#249-#253)
 
 ## Purpose
 
-The previous sprint (`.shipkit/specs/evidence-integrity/`) fixed 14 findings and shipped five
+The previous sprint (`.shipkit/specs/_shipped/evidence-integrity/`) fixed 14 findings and shipped five
 PRs. The follow-up review confirms the sound ones — storm conservation, queue/tracing redaction,
 per-user attribution, async time/release, manual fields, job breadcrumbs, mobile layout — and
 then names the pattern in what remains:

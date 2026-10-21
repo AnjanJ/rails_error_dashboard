@@ -2,6 +2,7 @@
 
 > Spec accepted at commit `d75859b` on main (2026-09-28). Plan approved by the user the same day.
 > The user chose to retire the Solid Queue generator rather than fix its template.
+> Status: shipped in 0.14.3 (#262)
 
 ## Purpose
 
