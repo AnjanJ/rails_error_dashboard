@@ -20,6 +20,7 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 ### RSpec (unit/integration)
 ```bash
 bundle exec rspec                          # full suite (5,966 examples at 0.16.1)
+bundle exec rspec spec/path/to/file_spec.rb   # one file (a file or directory argument narrows the run)
 bundle exec rspec spec/system/             # system tests (Capybara + Cuprite)
 HEADLESS=false bundle exec rspec spec/system/  # visible browser
 ```
