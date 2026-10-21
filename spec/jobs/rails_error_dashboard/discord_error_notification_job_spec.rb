@@ -16,12 +16,14 @@ RSpec.describe RailsErrorDashboard::DiscordErrorNotificationJob, type: :job do
 
   describe "#perform" do
     context "when error log exists" do
+      # WebMock cannot evaluate RSpec's array_including/hash_including nested in
+      # a body matcher, so this stub never matched; VCR hid that (see the Slack
+      # spec). A block matcher reads the JSON body directly.
       it "sends Discord notification" do
         stub_request(:post, webhook_url)
-          .with(
-            body: hash_including(embeds: array_including(hash_including(title: /New Error/))),
-            headers: { "Content-Type" => "application/json" }
-          )
+          .with(headers: { "Content-Type" => "application/json" }) { |req|
+            JSON.parse(req.body).dig("embeds", 0, "title").to_s.include?("New Error")
+          }
           .to_return(status: 204)
 
         described_class.new.perform(error_log.id)
