@@ -1,8 +1,8 @@
 # Spec: Audit fixes for 0.16.1
 
 > Spec accepted at commit `bd08d75` on spec/0-16-1.
-> Status: open
-> Paths: lib/rails_error_dashboard/queries/platform_comparison.rb,app/views/rails_error_dashboard/errors/,config/locales/,docs/,_features/,_reference/,_getting_started/,spec/,.shipkit/specs/audit-fixes-0-16-0/design.md
+> Status: shipped in 0.16.1 (#298)
+> Paths: lib/rails_error_dashboard/queries/platform_comparison.rb,app/views/rails_error_dashboard/errors/,config/locales/,docs/,_features/,_reference/,_getting_started/,spec/,.shipkit/specs/_shipped/audit-fixes-0-16-0/design.md
 
 ## Purpose
 Fix what 0.16.0's audit left: a platform health score that can't rate an evenly split app

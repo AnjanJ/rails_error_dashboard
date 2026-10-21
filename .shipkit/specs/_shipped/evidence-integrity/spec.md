@@ -6,7 +6,8 @@
 > Source: external review at `review-evidence/2026-09-19/REVIEW.md`, assessed against
 > commit `0fd824c`. Re-verified independently at HEAD `9664789` (v0.13.0) — 14 findings,
 > 14 confirmed real (one "partly-real"), 0 refuted, by 13 verifier + 13 adversarial-challenger
-> agents plus hand reproduction. Evidence: `.shipkit/specs/evidence-integrity/verification.md`.
+> agents plus hand reproduction. Evidence: `.shipkit/specs/_shipped/evidence-integrity/verification.md`.
+> Status: shipped across 0.13.0 and 0.14.0
 
 ## Purpose
 

@@ -20,7 +20,7 @@ None. There is no `.shipkit/product.md`, so there is no goal list to choose from
 
 ## Conflicts found
 - **Decision.** "rate platforms by their share of all errors, and need two to rate" in
-  `.shipkit/specs/audit-fixes-0-16-0/design.md` (reversal condition: users report ratings that
+  `.shipkit/specs/_shipped/audit-fixes-0-16-0/design.md` (reversal condition: users report ratings that
   disagree with their per-platform error rates; Fired-if manual). With score
   `70 × (1 − share) + 30 × resolution` and Healthy at 80, a platform can be Healthy only with
   a share of 28.6% or less, even with a perfect resolution term. So no platform in an evenly

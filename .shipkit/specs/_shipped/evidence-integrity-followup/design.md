@@ -3,7 +3,7 @@
 Decision records for `spec.md`. Each records the context, the real alternatives, the case for and
 **against** the choice, and a falsifiability clause.
 
-Two of these (§F1, §F8) revisit decisions from `.shipkit/specs/evidence-integrity/design.md`.
+Two of these (§F1, §F8) revisit decisions from `.shipkit/specs/_shipped/evidence-integrity/design.md`.
 Where they overturn an earlier record, they say so and mark it superseded rather than quietly
 replacing it.
 
@@ -63,7 +63,7 @@ pattern would be indefensible.
 **Decision.** Option 2 — three bounded seams (one normalization point, one volume model, one
 provenance policy), taken as the chosen remedy for these nine findings, **not** as a commitment
 that the full event-envelope refactor is now a prerequisite.
-`.shipkit/specs/evidence-integrity/design.md` §D8 is marked **superseded by this record** on its
+`.shipkit/specs/_shipped/evidence-integrity/design.md` §D8 is marked **superseded by this record** on its
 literal terms; whether the full refactor is warranted remains an open question for
 `.shipkit/specs/event-envelope/`.
 **I would reverse this if** the R1 cutover (REQ-F6) cannot be completed without changing

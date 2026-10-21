@@ -18,7 +18,7 @@ None. There is no `.shipkit/product.md`, so there is no goal list to choose from
 - No decision record covers where RED's middleware sits. Searched `.shipkit/decisions/` (only
   0001, about other gems' files) and every `.shipkit/specs/*/design.md` for "middleware",
   "ShowExceptions" and "7.0".
-- **Precedent, not a conflict.** `.shipkit/specs/capture-source/spec.md` REQ-2: an error RED
+- **Precedent, not a conflict.** `.shipkit/specs/_shipped/capture-source/spec.md` REQ-2: an error RED
   records any way other than `ManualErrorReporter` is a server capture. The new reporter's
   captures are server captures.
 

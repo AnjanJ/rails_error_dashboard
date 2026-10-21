@@ -11,7 +11,7 @@ ships in one minor release with capture-source.
 None. There is no `.shipkit/product.md`; suggest `/shipkit:product` afterwards.
 
 ## Conflicts found
-- **Deferred event envelope.** `.shipkit/specs/evidence-integrity/design.md` §D8 deferred a
+- **Deferred event envelope.** `.shipkit/specs/_shipped/evidence-integrity/design.md` §D8 deferred a
   canonical immutable event envelope to `.shipkit/specs/event-envelope/`, which was never
   written. Per-occurrence context is one piece of such an envelope. The user decided to build C3
   **standalone**; the envelope stays deferred and can absorb it later.

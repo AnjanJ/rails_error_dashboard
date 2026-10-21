@@ -1,7 +1,7 @@
 # Spec: Rails 7.0 request capture
 
 > Spec accepted at commit `da1e915` on spec/0-16-1.
-> Status: open
+> Status: shipped in 0.16.0 (#294) and 0.16.1 (#296)
 > Paths: lib/rails_error_dashboard/configuration.rb,README.md,docs/,_getting_started/,_reference/,spec/
 
 ## Purpose

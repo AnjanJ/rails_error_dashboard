@@ -36,7 +36,7 @@ only thing under test.
   - After: T4
   - Done when: `bundle exec rspec spec/requests/platform_names_display_spec.rb` → 0 failures; it fails before.
 - [x] **T7** Docs and the 0.16.0 amendment → REQ-9
-  - Files: docs/features/PLATFORM_COMPARISON.md, _features/platform-comparison.md, docs/GLOSSARY.md, _reference/glossary.md, docs/FEATURES.md, _getting_started/features.md, .shipkit/specs/audit-fixes-0-16-0/design.md, spec/requests/analytics_reports_i18n_spec.rb
+  - Files: docs/features/PLATFORM_COMPARISON.md, _features/platform-comparison.md, docs/GLOSSARY.md, _reference/glossary.md, docs/FEATURES.md, _getting_started/features.md, .shipkit/specs/_shipped/audit-fixes-0-16-0/design.md, spec/requests/analytics_reports_i18n_spec.rb
   - Test: none, REQ-9 is prose (`[untested]`). The worked example is checked against T2–T4's specs by recomputing it, and `spec/docs/links_spec.rb` stays green.
   - After: T4
   - Done when: `bundle exec rspec spec/docs/links_spec.rb --example "Documentation links"` → 0 failures; the full suite → 0 failures, RuboCop clean.

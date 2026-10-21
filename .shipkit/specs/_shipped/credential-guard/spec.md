@@ -3,6 +3,7 @@
 > Spec accepted at commit `ed31388` on main (2026-09-26). Decisions taken at the Q1 gate: refuse
 > **any** blank credential; guard the **login** as well as boot; disclose through a **new GHSA**
 > with a CVE requested, published once the fix is on RubyGems.
+> Status: shipped in 0.14.2 (#260)
 
 ## Purpose
 

@@ -70,7 +70,7 @@ example has to be rewritten (REQ-16 covers that page).
 **Falsifiability.** We would move to absolute rates if users report ratings that disagree with
 their per-platform error rates after the change.
 **Amended 2026-10-15 (implementation).** "Two platforms" means two with errors in the window. The platform list is every platform ever seen, so an old error on a second platform let a lone active platform be rated Critical.
-**Amended 2026-10-21 (audit-fixes-0-16-1).** The volume term, `1 - share`, is superseded by "volume credit falls linearly from an even split to all errors" in `.shipkit/specs/audit-fixes-0-16-1/design.md`: with Healthy at 80, no evenly split two- or three-platform app could be Healthy. The "need two to rate" half stands.
+**Amended 2026-10-21 (audit-fixes-0-16-1).** The volume term, `1 - share`, is superseded by "volume credit falls linearly from an even split to all errors" in `.shipkit/specs/_shipped/audit-fixes-0-16-1/design.md`: with Healthy at 80, no evenly split two- or three-platform app could be Healthy. The "need two to rate" half stands.
 **Fired-if.** manual
 
 ## Decision: fix the similarity regex everywhere, including the stored signature   (→ REQ-7)

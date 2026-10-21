@@ -10,7 +10,7 @@ the query so the Overview and Platform Comparison agree. The copy and platform-n
 view and locale changes.
 
 This amends "rate platforms by their share of all errors, and need two to rate" in
-`.shipkit/specs/audit-fixes-0-16-0/design.md`: its volume term is superseded here, and its
+`.shipkit/specs/_shipped/audit-fixes-0-16-0/design.md`: its volume term is superseded here, and its
 "need two to rate" half stands. That record gets an amendment line pointing here.
 
 ## Decision: volume credit falls linearly from an even split to all errors   (→ REQ-1, REQ-2, REQ-3)

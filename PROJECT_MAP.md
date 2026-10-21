@@ -60,7 +60,7 @@ API may change before v1.0.0.
 | `bin/` | Dev scripts: `pre-release-test`, `check-schema-parity`, `i18n-check`, `i18n-merge`, `with-ruby`, `smoke-test`, `full-integration-test` |
 | `docs/` | Guides (QUICKSTART, FEATURES, API_REFERENCE, PRODUCTION, UPGRADING, UNINSTALL, PLUGIN_SYSTEM, LLM_OBSERVABILITY, ...) and `docs/guides/` |
 | `_guides/`, `_reference/` | Hand-maintained Jekyll copies of `docs/guides/` and top-level docs (lowercase, hyphenated filenames; they drift) |
-| `.shipkit/` | `decisions/`, `specs/`, `research/` |
+| `.shipkit/` | `decisions/`, `specs/` (released ones under `specs/_shipped/`), `research/` |
 | `tasks/` | Gitignored (`.gitignore`): local handoffs, audit notes, release-note drafts. Not in the repo |
 
 ## Core modules / domains
@@ -111,7 +111,7 @@ Tables are namespaced `rails_error_dashboard_*`. Base class `ErrorLogsRecord` en
 
 ## Specs & decisions
 - Decision log: `.shipkit/decisions/`.
-- Specs (each has `spec.md`, `design.md`, `tasks.md`): `.shipkit/specs/audit-fixes-0-16-0`, `audit-fixes-0-16-1`, `capture-source`, `credential-guard`, `environment-awareness`, `evidence-integrity`, `evidence-integrity-followup`, `occurrence-context-history`, `rails-70-request-capture`, `setup-hardening-0-14-3`, `solid-queue-hands-off`. These are all shipped through 0.16.1 as far as the commit log shows; no spec for unreleased work was found.
+- Specs (each has `spec.md`, `design.md`, `tasks.md`): in-flight specs sit directly under `.shipkit/specs/`; released ones move to `.shipkit/specs/_shipped/` with a `> Status: shipped in …` line (see its README). Shipped through 0.16.1: `audit-fixes-0-16-0`, `audit-fixes-0-16-1`, `capture-source`, `credential-guard`, `environment-awareness`, `evidence-integrity`, `evidence-integrity-followup`, `occurrence-context-history`, `rails-70-request-capture`, `setup-hardening-0-14-3`, `solid-queue-hands-off`.
 - Research: `.shipkit/research/` (uniqueness evidence, OSS business-case file).
 
 ## Gotchas
