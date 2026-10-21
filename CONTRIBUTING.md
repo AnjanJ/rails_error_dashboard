@@ -246,11 +246,9 @@ HEADLESS=false bundle exec rspec
 INSPECTOR=true HEADLESS=false bundle exec rspec
 ```
 
-**A directory argument does not narrow the run.** `spec/spec_helper.rb` pins
-`config.pattern` to every spec under `spec/`, so `bundle exec rspec spec/system/`
-runs the whole suite, system specs included — CI's system-test job runs exactly
-that and reports the full example count. Use `--exclude-pattern` (above) to leave
-the browser specs out.
+**A file or directory argument narrows the run.** `bundle exec rspec spec/system/`
+runs only the browser specs, as CI's system-test job does, and a spec file runs just
+that file. Use `--exclude-pattern` (above) to leave the browser specs out of a full run.
 
 ### System Tests
 
