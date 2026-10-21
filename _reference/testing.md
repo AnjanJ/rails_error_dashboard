@@ -93,10 +93,9 @@ ENFORCE_COVERAGE=true bundle exec rspec
 SimpleCov runs on every invocation and writes `coverage/index.html`. The `COVERAGE`
 variable that the CI workflows set is not read by the suite.
 
-**A directory argument does not narrow the run.** `spec/spec_helper.rb` pins
-`config.pattern` to every spec under `spec/`, so `bundle exec rspec spec/system/`
-runs the whole suite. CI's system-test job runs exactly that command and reports the
-full example count. Use `--exclude-pattern` to leave specs out.
+**A file or directory argument narrows the run.** `bundle exec rspec spec/system/`
+runs only the browser specs, as CI's system-test job does, and a spec file runs just
+that file. Use `--exclude-pattern` to leave specs out of a full run.
 
 ### Test Against Specific Rails Version
 
@@ -184,7 +183,7 @@ Every pull request to `main` gets **22 checks** from two workflows.
 | `postgresql / Ruby 3.4 / Rails 8.1` | The same suite on PostgreSQL 16, schema built from `db/migrate` |
 | `mysql / Ruby 3.4 / Rails 8.1` | The same suite on MySQL 8.4 with its time zone tables loaded, schema built from `db/migrate` |
 | `Schema parity (schema.rb vs db/migrate)` | `bin/check-schema-parity` |
-| `System Tests (Chrome)` | `bundle exec rspec spec/system/` on Ruby 3.4 / Rails 8.1 — which runs the whole suite, system specs included (see the note above) |
+| `System Tests (Chrome)` | `bundle exec rspec spec/system/` on Ruby 3.4 / Rails 8.1: the browser specs only, which the other rows exclude |
 
 **`.github/workflows/ci.yml`**
 

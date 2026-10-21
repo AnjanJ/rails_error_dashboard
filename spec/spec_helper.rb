@@ -34,9 +34,6 @@ require 'database_cleaner/active_record'
 Dir[File.join(ORIGINAL_ROOT, 'spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
 RSpec.configure do |config|
-  # Configure spec file pattern to use original root
-  config.pattern = File.join(ORIGINAL_ROOT, 'spec', '**', '*_spec.rb')
-
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
   end
