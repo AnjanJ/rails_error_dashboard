@@ -97,7 +97,7 @@ bundle exec rspec spec/lib/rails_error_dashboard/commands/log_error_spec.rb
 
 ### Coverage
 SimpleCov runs on every `bundle exec rspec` (`spec/spec_helper.rb` starts it
-unconditionally; the `COVERAGE` variable the CI workflows set is not read).
+unconditionally; there is no variable to turn it off).
 `ENFORCE_COVERAGE=true` also fails the run below 80%.
 
 ```bash

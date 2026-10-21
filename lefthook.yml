@@ -34,7 +34,7 @@ pre-commit:
       run: |
         if [ -n "{staged_files}" ]; then
           echo "Running tests for changed specs..."
-          COVERAGE=false bin/with-ruby bundle exec rspec {staged_files}
+          bin/with-ruby bundle exec rspec {staged_files}
         fi
 
     # 3. Bundle audit - Check for vulnerable dependencies
@@ -140,7 +140,7 @@ quick:
         changed_specs=$(git diff --name-only --diff-filter=AM HEAD | grep "_spec\.rb$" || true)
         if [ -n "$changed_specs" ]; then
           echo "🧪 Running changed specs..."
-          COVERAGE=false bin/with-ruby bundle exec rspec $changed_specs
+          bin/with-ruby bundle exec rspec $changed_specs
         else
           echo "No spec files changed"
         fi

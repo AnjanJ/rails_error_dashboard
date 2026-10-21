@@ -5,10 +5,7 @@
       "package-name": "rails_error_dashboard",
       "changelog-path": "CHANGELOG.md",
       "release-type": "ruby",
-      "version-file": "lib/rails_error_dashboard/version.rb",
-      "extra-files": [
-        "rails_error_dashboard.gemspec"
-      ]
+      "version-file": "lib/rails_error_dashboard/version.rb"
     }
   },
   "changelog-sections": [

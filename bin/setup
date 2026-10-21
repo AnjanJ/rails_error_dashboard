@@ -41,7 +41,7 @@ echo
 
 # Run tests to verify setup
 echo "🧪 Running tests to verify setup..."
-COVERAGE=false bundle exec rspec --format documentation --fail-fast || {
+bundle exec rspec --format documentation --fail-fast || {
   echo "❌ Some tests failed. Please fix before continuing."
   exit 1
 }

@@ -1063,7 +1063,7 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 - **Troubleshooting guides**
 
 ### Testing Support
-- **Multi-version testing** with Appraisal
+- **Multi-version testing** in CI: every supported Ruby (3.2 to 4.0) against every supported Rails (7.0 to 8.1)
 - **Factory Bot integration** for test data
 - **RSpec matchers** for common assertions
 - **Test helpers** for error generation

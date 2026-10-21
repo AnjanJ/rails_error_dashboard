@@ -9,6 +9,10 @@
 *.gem
 *.rbc
 
+# Never ship a database in the gem (the gemspec globs db/**/*)
+/db/*.sqlite3
+/db/*.sqlite3-*
+
 # Ignore dummy app artifacts
 spec/dummy/db/*.sqlite3
 spec/dummy/db/*.sqlite3-*
@@ -16,18 +20,15 @@ spec/dummy/db/error_dashboard_migrate/
 spec/dummy/log/*.log
 spec/dummy/tmp/
 spec/dummy/storage/
-spec/dummy/spec/dummy/db/*.sqlite3
-spec/dummy/spec/dummy/db/*.sqlite3-*
-
-# Ignore test coverage
-coverage/
 
 # Ignore byebug history
 .byebug_history
 log/
 
-# Ignore Claude Code settings, skills, and agents
-.claude/
+# Claude Code: settings.json and skills/ are tracked; personal settings and
+# agent worktrees stay local
+.claude/settings.local.json
+.claude/worktrees/
 
 # Ignore JetBrains IDE settings
 .idea
@@ -41,12 +42,6 @@ log/
 *_SUMMARY*.md
 *_APPLIED*.md
 *_SOLUTION*.md
-scripts/compile_scss.sh
-app/views/layouts/*_old_backup.html.erb
-
-# SCSS source files (using inline CSS instead)
-app/assets/stylesheets/rails_error_dashboard/*.scss
-app/assets/stylesheets/rails_error_dashboard/*.css.map
 .DS_Store
 
 # Private research/planning docs (not for public repo)
@@ -54,7 +49,6 @@ AGENTS.md
 DEEP_INTROSPECTION_ANALYSIS.md
 FAULTLINE_COMPARISON.md
 HOST_APP_SAFETY.md
-ROADMAP.md
 TIMESERIES_ANALYSIS.md
 seo/
 blog/

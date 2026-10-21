@@ -547,10 +547,6 @@ module RailsErrorDashboard
         say "\n"
       end
 
-      def show_readme
-        # Skip the old README display since we have the new summary
-      end
-
       private
 
       def quick_mode?
