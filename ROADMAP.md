@@ -5,7 +5,7 @@
 > **Working analysis docs are local-only, by design.** Earlier revisions of this file linked to
 > `DEEP_INTROSPECTION_ANALYSIS.md`, `FAULTLINE_COMPARISON.md`, `TIMESERIES_ANALYSIS.md` and
 > `HOST_APP_SAFETY.md`. All four exist on the maintainer's machine but are listed in `.gitignore`
-> (lines 55-59) and have never been committed, so the links were dead for every reader of the
+> and have never been committed, so the links were dead for every reader of the
 > public repo. The links are removed here rather than repaired.
 >
 > **The safety knowledge itself is committed and current** — `HOST_APP_SAFETY.md` was distilled

@@ -26,8 +26,10 @@ spec/dummy/storage/
 .byebug_history
 log/
 
-# Ignore Claude Code settings, skills, and agents
-.claude/
+# Claude Code: settings.json and skills/ are tracked; personal settings and
+# agent worktrees stay local
+.claude/settings.local.json
+.claude/worktrees/
 
 # Ignore JetBrains IDE settings
 .idea
@@ -48,7 +50,6 @@ AGENTS.md
 DEEP_INTROSPECTION_ANALYSIS.md
 FAULTLINE_COMPARISON.md
 HOST_APP_SAFETY.md
-ROADMAP.md
 TIMESERIES_ANALYSIS.md
 seo/
 blog/
