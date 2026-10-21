@@ -53,15 +53,7 @@ jobs:
     - name: Run unit and integration tests
       env:
         RAILS_VERSION: ${{ matrix.rails }}
-        COVERAGE: false
       run: bundle exec rspec --exclude-pattern "spec/system/**/*"
-
-    - name: Upload coverage reports (Ruby 3.4 / Rails 8.1 only)
-      if: matrix.ruby == '3.4' && matrix.rails == '8.1'
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage/coverage.xml
-        fail_ci_if_error: false
 
   # The databases the README advertises, on the newest Ruby/Rails only: adapter
   # differences do not change with the Ruby version, so one row each is the
@@ -131,8 +123,6 @@ jobs:
         mysql -h 127.0.0.1 -uroot -pred -e "SELECT CONVERT_TZ(NOW(), '+00:00', 'Etc/UTC') AS converted"
 
     - name: Run unit and integration tests (schema built from db/migrate)
-      env:
-        COVERAGE: false
       run: bundle exec rspec --exclude-pattern "spec/system/**/*"
 
   # spec/dummy/db/schema.rb is hand-maintained; the gem's migrations are what
@@ -200,7 +190,6 @@ jobs:
     - name: Run system tests
       env:
         RAILS_VERSION: '8.1'
-        COVERAGE: false
         # Ferrum waits this long for Chrome to print its websocket URL, and
         # defaults to 10s. A cold GitHub runner can exceed that, which surfaces
         # as `Ferrum::ProcessTimeoutError` on a spec that has nothing wrong with

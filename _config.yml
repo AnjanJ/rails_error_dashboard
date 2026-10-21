@@ -104,7 +104,6 @@ exclude:
   - tasks
   - blog
   - seo
-  - gemfiles
   - lefthook.yml
   - .git
   - .github

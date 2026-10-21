@@ -165,7 +165,6 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   spec.add_development_dependency "simplecov", "~> 1.1"
   # Note: sqlite3 version is specified in Gemfile based on Rails version
   # Rails 7.0 requires ~> 1.4, Rails 8.0 requires >= 2.1
-  spec.add_development_dependency "appraisal", "~> 2.5"
 
   # System tests (browser-based UI testing)
   spec.add_development_dependency "capybara", "~> 3.40"
