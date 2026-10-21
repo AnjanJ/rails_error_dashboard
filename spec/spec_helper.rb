@@ -27,6 +27,13 @@ require 'rspec/rails'
 require 'factory_bot_rails'
 require 'faker'
 require 'webmock/rspec'
+
+# Set the rule once, at load, so it already holds when the first example's
+# hooks run. The support files below register their before hooks ahead of the
+# one at the bottom of this file, so on the first system example Capybara boots
+# its server and pings 127.0.0.1/__identify__ before that hook has run. VCR
+# used to hide this: it makes WebMock allow every connection while it is on.
+WebMock.disable_net_connect!(allow_localhost: true)
 require 'database_cleaner/active_record'
 
 # Require support files
