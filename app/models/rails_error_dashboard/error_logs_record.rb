@@ -86,6 +86,45 @@ module RailsErrorDashboard
       end
     end
 
+    # Bytes a TEXT column holds on MySQL, the tightest adapter RED supports.
+    TEXT_LIMIT = 65_535
+
+    # Text columns holding JSON. Cutting one would leave a payload nothing can
+    # parse, so an oversized one is left out instead: context is RED's own data
+    # to give up, and the error row survives without it.
+    JSON_TEXT_COLUMNS = %w[
+      request_params exception_cause environment_info breadcrumbs system_health
+      local_variables instance_variables top_fingerprints dump_data
+    ].freeze
+
+    # The text-column half of clamp_string_attributes. MySQL in strict mode
+    # rejects the whole INSERT when one TEXT value is over 65,535 bytes, and the
+    # capture path rescues the failure, so a single oversized payload lost the
+    # error. The same limit applies on every adapter, so the behaviour doesn't
+    # depend on the database. Run on the final attributes, just before writing.
+    # @param attributes [Hash] attribute name => value
+    # @return [Hash] a copy with oversized text cut (plain text) or left out (JSON)
+    def self.clamp_text_attributes(attributes)
+      columns = text_columns
+      attributes.each_with_object({}) do |(name, value), clamped|
+        clamped[name] = if value.is_a?(String) && value.bytesize > TEXT_LIMIT && columns.include?(name.to_s)
+          JSON_TEXT_COLUMNS.include?(name.to_s) ? nil : Services::CaptureLimits.cut_bytes(value, TEXT_LIMIT)
+        else
+          value
+        end
+      end
+    rescue => e
+      RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] clamp_text_attributes failed: #{e.message}")
+      attributes
+    end
+
+    # @return [Set<String>] text column names (memoized per class)
+    def self.text_columns
+      @text_columns ||= columns_hash.each_with_object(Set.new) do |(name, column), names|
+        names << name if column.type == :text
+      end
+    end
+
     private
 
     def scrub_invalid_strings
