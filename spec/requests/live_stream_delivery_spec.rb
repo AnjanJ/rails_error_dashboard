@@ -29,9 +29,11 @@ RSpec.describe "Live stream delivery", type: :request do
 
     broadcaster.instance_variable_set(:@broadcast_unavailable_until, nil)
     broadcaster.reset_throttle!
+    RailsErrorDashboard.configuration.enable_live_updates = true
   end
 
   after do
+    RailsErrorDashboard.configuration.enable_live_updates = false
     ActionCable.server.config.cable = @original_cable
     ActionCable.server.instance_variable_set(:@pubsub, nil)
     broadcaster.reset_throttle!
