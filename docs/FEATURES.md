@@ -581,9 +581,9 @@ config.llm_api_key  = -> { Rails.application.credentials.dig(:openai, :api_key) 
 config.llm_model    = "gpt-5"
 ```
 
-API keys can be passed as a String or a callable — using a callable keeps secrets in Rails credentials rather than the initializer. Responses are streamed via Server-Sent Events and rendered as sanitized Markdown live in the drawer; no chat history is persisted. Error context sent to the provider goes through the same `filter_sensitive_data` pipeline as the rest of the dashboard, so PII and secrets are redacted as `[FILTERED]` before leaving your app.
+API keys can be passed as a String or a callable — using a callable keeps secrets in Rails credentials rather than the initializer. Responses are streamed via Server-Sent Events and rendered as sanitized Markdown live in the drawer; no chat history is persisted. Error context sent to the provider goes through the same `filter_sensitive_data` pipeline as the rest of the dashboard, so values under sensitive names, and the secret shapes the filter recognises in free text, are redacted as `[FILTERED]` before leaving your app. Free-text redaction is best-effort.
 
-> **Privacy:** AI Help sends error details (backtrace, context, your question) to the configured provider. Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted before transmission. Review your provider's data-retention policy before enabling in production.
+> **Privacy:** AI Help sends error details (backtrace, context, your question) to the configured provider. Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted before transmission (best-effort for free text such as the message). Review your provider's data-retention policy before enabling in production.
 
 #### How AI Help differs from LLM Observability
 
@@ -1379,9 +1379,15 @@ config.sensitive_data_patterns = [
 ]
 ```
 
-Values matching these patterns are replaced with `[FILTERED]`.
+Values under keys matching these patterns are replaced with `[FILTERED]`: in request params, the query string of the request URL, breadcrumbs and captured variables.
 
-**Session IDs.** While filtering is on, the session ID recorded on each occurrence is stored as a keyed digest (`h1:` followed by 32 hex characters, an HMAC keyed with your `secret_key_base`), never the raw ID. Occurrences from one session still share a value, so `ErrorOccurrence.for_session(raw_id)` keeps working, but the stored value cannot be used to resume a session. Rotating `secret_key_base` breaks that correlation across the rotation. After upgrading from 0.12.x or earlier, run `rails error_dashboard:digest_session_ids` once to convert rows stored before the change; it is idempotent. With `filter_sensitive_data = false` the raw ID is stored.
+**Messages are free text, so their redaction is best-effort.** In the error message and its cause chain, RED redacts `key=value`, `key: value`, JSON pairs such as `"token":"…"`, `Bearer` tokens and card numbers, when the key matches the patterns above. A secret in any other shape is stored as it appears, so if your messages can carry secrets in another form, raise them with a sanitised message.
+
+**Filtering fails closed.** If a filter step fails, the field it was cleaning is stored as `[FILTERED]`, never the raw value.
+
+**Size limits.** A message keeps its first 10,000 characters plus a marker saying how many were cut. Request params over 64,000 bytes keep their smaller values, with the largest replaced by `[TRUNCATED]` and `"_truncated": true` added. Any other text value over 65,535 bytes is cut, or left out when it holds JSON, so an error is always recorded, on MySQL too.
+
+**Session IDs.** While filtering is on, the session ID recorded on each occurrence is stored as a keyed digest (`h1:` followed by 32 hex characters, an HMAC keyed with your `secret_key_base`), never the raw ID. Occurrences from one session still share a value, so `ErrorOccurrence.for_session(raw_id)` keeps working, but the stored value cannot be used to resume a session. Rotating `secret_key_base` breaks that correlation across the rotation. After upgrading from 0.12.x or earlier, run `rails error_dashboard:digest_session_ids` once to convert rows stored before the change; it is idempotent. With `filter_sensitive_data = false` the raw ID is stored. An app with no `secret_key_base` stores no session ID: a digest under a key everyone knows would protect nothing.
 
 ### Auto-Reopen on Recurrence
 

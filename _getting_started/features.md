@@ -1256,7 +1256,13 @@ config.sensitive_data_patterns = [
 ]
 ```
 
-Values matching these patterns are replaced with `[FILTERED]`.
+Values under keys matching these patterns are replaced with `[FILTERED]`: in request params, the query string of the request URL, breadcrumbs and captured variables.
+
+**Messages are free text, so their redaction is best-effort.** In the error message and its cause chain, RED redacts `key=value`, `key: value`, JSON pairs such as `"token":"…"`, `Bearer` tokens and card numbers, when the key matches the patterns above. A secret in any other shape is stored as it appears, so if your messages can carry secrets in another form, raise them with a sanitised message.
+
+**Filtering fails closed.** If a filter step fails, the field it was cleaning is stored as `[FILTERED]`, never the raw value.
+
+**Size limits.** A message keeps its first 10,000 characters plus a marker saying how many were cut. Request params over 64,000 bytes keep their smaller values, with the largest replaced by `[TRUNCATED]` and `"_truncated": true` added. Any other text value over 65,535 bytes is cut, or left out when it holds JSON, so an error is always recorded, on MySQL too.
 
 ### Auto-Reopen on Recurrence
 

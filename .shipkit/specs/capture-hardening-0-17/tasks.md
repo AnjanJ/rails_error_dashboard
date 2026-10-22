@@ -64,10 +64,10 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
   - After: T5
   - Done when: `R rspec spec/commands/log_error_session_digest_spec.rb spec/services/sensitive_data_filter_spec.rb` → 0 failures
 - [ ] **T8** Docs: best-effort redaction, fail closed, the limits → REQ-13
-  - Files: README.md, docs/FEATURES.md, docs/guides/CONFIGURATION.md, _features/, _guides/, _reference/, _getting_started/
+  - Files: README.md, docs/FEATURES.md, docs/guides/CONFIGURATION.md, _getting_started/features.md, _guides/configuration.md
   - Test: none (REQ-13 is prose, checked by reading)
   - After: none
-  - Done when: `grep -rn "best-effort" README.md docs/FEATURES.md docs/guides/CONFIGURATION.md _features _guides` shows the note in each file and its site copy
+  - Done when: `grep -rln "best-effort" README.md docs/FEATURES.md docs/guides/CONFIGURATION.md _getting_started/features.md _guides/configuration.md` lists all five files
 
 ## After the gate
 - Full suite, RuboCop on tracked files, and `env -u RAILS_VERSION bin/with-ruby bin/pre-release-test all` (read FINAL RESULTS).
