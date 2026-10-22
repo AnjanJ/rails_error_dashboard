@@ -409,11 +409,13 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
         expect(result["api_key"][:value]).to eq("sk-123")
       end
 
-      it "never raises even if filtering fails" do
+      # capture-hardening-0-17/REQ-6: a failing filter withholds the values.
+      it "never raises, and withholds the values, if filtering fails" do
         allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:parameter_filter)
           .and_raise(RuntimeError, "boom")
         result = described_class.call({ name: "test" })
         expect(result).to have_key("name")
+        expect(result["name"][:value]).to eq("[FILTERED]")
       end
     end
 
@@ -469,13 +471,14 @@ RSpec.describe RailsErrorDashboard::Services::VariableSerializer do
         expect(result).to have_key("obj.attr")
       end
 
-      it "returns unfiltered result when parameter_filter returns nil" do
+      # capture-hardening-0-17/REQ-7: no filter, no values (fails closed).
+      it "withholds every value when the filter can't be built" do
         allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:parameter_filter)
           .and_return(nil)
         result = described_class.call({ password: "visible", name: "test" })
-        # With nil filter, no filtering applied — raw values returned
-        expect(result["password"][:value]).to eq("visible")
-        expect(result["name"][:value]).to eq("test")
+
+        expect(result["password"][:value]).to eq("[FILTERED]")
+        expect(result["name"][:value]).to eq("[FILTERED]")
       end
 
       it "falls back to base filter when effective_filter raises during pattern building" do

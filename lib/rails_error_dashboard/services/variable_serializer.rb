@@ -289,8 +289,10 @@ module RailsErrorDashboard
       def self.filter_serialized(result, additional_filter_patterns: [])
         return result unless RailsErrorDashboard.configuration.filter_sensitive_data
 
+        # Fails closed, like SensitiveDataFilter: values that can't be filtered
+        # are withheld, never stored raw.
         filter = effective_filter(additional_filter_patterns: additional_filter_patterns)
-        return result unless filter
+        return withhold_values(result) unless filter
 
         result.each do |var_name, info|
           # Filter the variable name itself
@@ -344,9 +346,25 @@ module RailsErrorDashboard
         result
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] VariableSerializer.filter_serialized failed: #{e.message}")
-        result
+        withhold_values(result)
       end
       private_class_method :filter_serialized
+
+      # Every variable keeps its name and type; its value becomes [FILTERED].
+      def self.withhold_values(result)
+        return {} unless result.is_a?(Hash)
+
+        result.each_value do |info|
+          next unless info.is_a?(Hash)
+
+          info[:value] = SensitiveDataFilter::FILTERED_REPLACEMENT
+          info[:filtered] = true
+        end
+        result
+      rescue StandardError
+        {}
+      end
+      private_class_method :withhold_values
 
       # Build effective filter: SensitiveDataFilter base + variable-specific filter patterns
       # @param additional_filter_patterns [Array] Extra patterns (e.g. instance_variable_filter_patterns)
@@ -410,7 +428,7 @@ module RailsErrorDashboard
         filtered
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_hash_recursive failed: #{e.message}")
-        hash
+        SensitiveDataFilter::FILTERED_REPLACEMENT
       end
       private_class_method :filter_hash_recursive
 
@@ -433,7 +451,7 @@ module RailsErrorDashboard
         end
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_array_recursive failed: #{e.message}")
-        array
+        SensitiveDataFilter::FILTERED_REPLACEMENT
       end
       private_class_method :filter_array_recursive
     end
