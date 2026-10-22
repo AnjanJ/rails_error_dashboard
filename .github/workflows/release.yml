@@ -11,45 +11,89 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write      # Create releases and tags
-  pull-requests: write # Create/update release PRs
-  id-token: write      # Required for trusted publishing (OIDC)
+# Nothing at the workflow level: each job below declares exactly what its token
+# may do. Only `publish` can request the RubyGems trusted-publishing token
+# (id-token: write), and it runs nothing but the gem's own build and push.
+# spec/ci/workflows_spec.rb checks this shape on every PR.
+permissions: {}
+
+# Third-party actions are pinned to commit SHAs (version in the comment);
+# Dependabot's github-actions updates keep them current.
 
 jobs:
-  # Automated path: release-please opens/merges release PRs and publishes
-  # on successful merge. Triggered by every push to main.
+  # Automated path: release-please opens/updates the release PR on every push
+  # to main, and creates the GitHub release + tag when that PR is merged.
+  # It works through the API, so it needs no checkout.
   release:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Create releases and tags
+      pull-requests: write # Create/update release PRs
 
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0  # Full history for changelog generation
-
-      # Step 1: Release Please manages versioning and changelog
-      # This will create/update a Release PR when commits are pushed to main
-      # When the Release PR is merged, it will create a GitHub release
       - name: Create Release PR or Publish Release
-        uses: googleapis/release-please-action@v5
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Steps below only run if a release was created (Release PR was merged)
+    outputs:
+      # Consumed by the test job below (and through it, publish and
+      # smoke-test), which cannot detect a release on their own.
+      release_created: ${{ steps.release.outputs.release_created }}
 
+  # Runs the whole suite and RuboCop on the released commit before anything is
+  # published, with a read-only token. These gems are resolved fresh (there is
+  # no committed lockfile), so this job deliberately holds no write or
+  # publishing permission.
+  #
+  # Two triggers share this job and `publish`:
+  #   - a push to main that created a release (release_created == 'true');
+  #   - a manual dispatch (the escape hatch, see `publish`), on which `release`
+  #     is skipped. A skipped `needs` would skip this job too, and everything
+  #     after it, without !cancelled() in the condition.
+  test:
+    needs: release
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.release.outputs.release_created == 'true') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # Dispatch only: the `version` input must match version.rb on main. A
+      # guardrail to confirm intent and prevent accidental publishes of the
+      # wrong version. The input reaches the script as an env var.
+      - name: Verify input version matches version.rb
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          file_version=$(ruby -r ./lib/rails_error_dashboard/version.rb -e 'puts RailsErrorDashboard::VERSION')
+          if [ "$file_version" != "$INPUT_VERSION" ]; then
+            echo "::error::Input version '$INPUT_VERSION' does not match version.rb '$file_version'. Aborting."
+            exit 1
+          fi
+          echo "Version match confirmed: $file_version"
+
+      # No bundler-cache anywhere in this workflow: what runs here is installed
+      # fresh from RubyGems, never restored from a cache other workflows write.
       - name: Set up Ruby
-        if: ${{ steps.release.outputs.release_created }}
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b1da4809b005e0178fe08a1d57317bffc00b7b4c # v1.332.0
         with:
           ruby-version: .ruby-version
-          bundler-cache: true
+          bundler-cache: false
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
 
       - name: Run tests before publishing
-        if: ${{ steps.release.outputs.release_created }}
         env:
           # Same as test.yml: Ferrum defaults to 10s waiting for Chrome's websocket
           # URL and a cold runner can exceed it. The 0.11.1 release run failed on
@@ -58,21 +102,55 @@ jobs:
         run: bundle exec rspec
 
       - name: Run RuboCop before publishing
-        if: ${{ steps.release.outputs.release_created }}
         run: bundle exec rubocop
 
-      # Step 2: Publish to RubyGems using Trusted Publishing
-      # This requires setting up a Trusted Publisher on RubyGems.org
-      # See: https://guides.rubygems.org/trusted-publishing/
-      - name: Publish to RubyGems
-        if: ${{ steps.release.outputs.release_created }}
-        uses: rubygems/release-gem@v1
-        # No API key needed! Trusted publishing handles authentication via OIDC
+  # Publishes to RubyGems with Trusted Publishing: no API key, the job trades
+  # its OIDC token (id-token: write) for a short-lived RubyGems credential.
+  # See https://guides.rubygems.org/trusted-publishing/ -- the trusted
+  # publisher on rubygems.org is keyed to this file name, release.yml.
+  #
+  # Also the manual escape hatch: dispatch this workflow with `version` set to
+  # the version on main to republish WITHOUT going through release-please. Use
+  # it when the automated run created the tag + GitHub release but a transient
+  # failure (flaky test, network blip) blocked the publish, and re-running won't
+  # help because release-please sees the release already exists.
+  #
+  # The `rubygems` environment accepts deployments from main only. The bundle
+  # leaves out the development and test groups (see the Gemfile), so only the
+  # gem's runtime dependencies are installed here.
+  #
+  # contents: write is needed: release-gem runs Bundler's `rake release`, which
+  # creates and pushes the vX.Y.Z tag BEFORE it uploads the gem. release-gem
+  # stores the job token in its own git credential cache for that push, so the
+  # checkout persists none.
+  publish:
+    needs: test
+    if: ${{ !cancelled() && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: rubygems
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      BUNDLE_WITHOUT: development:test
 
-    outputs:
-      # Consumed by the smoke-test job below, which cannot detect a release on
-      # its own -- see the comment on that job.
-      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@b1da4809b005e0178fe08a1d57317bffc00b7b4c # v1.332.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: false
+
+      - name: Install runtime dependencies only
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
 
   # Smoke-test the live demo once a release has actually published.
   #
@@ -87,13 +165,12 @@ jobs:
   # The demo deploys from its own repository on push, so this is a check that
   # the released gem works against the deployed site -- not a deploy gate.
   smoke-test:
-    needs: release
-    if: ${{ github.event_name == 'push' && needs.release.outputs.release_created }}
+    needs: publish
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.publish.result == 'success' }}
     # A called workflow can never hold MORE permissions than the job that
     # calls it. smoke-test-demo.yml's job asks for `issues: write` (it files an
-    # issue when the smoke test fails), and this workflow's top-level block
-    # grants only contents, pull-requests and id-token -- so GitHub rejected
-    # the whole workflow at startup ("startup_failure"), and with it
+    # issue when the smoke test fails); when this job granted less, GitHub
+    # rejected the whole workflow at startup ("startup_failure"), and with it
     # release-please: no release PR could be opened from the moment this job
     # was added. Declaring the permissions in the callee is not enough; the
     # caller has to grant them here.
@@ -101,51 +178,7 @@ jobs:
       contents: read
       issues: write
     uses: ./.github/workflows/smoke-test-demo.yml
-    secrets: inherit
-
-  # Manual escape hatch: republishes the gem at the current version on main
-  # WITHOUT going through release-please. Use this when:
-  #   - The automated `release` job above created a tag + GitHub release but
-  #     a transient failure (flaky test, network blip) blocked the publish step
-  #   - Re-running the workflow won't help because release-please sees the
-  #     release already exists and skips its downstream steps
-  #
-  # Required: the `version` input must match lib/rails_error_dashboard/version.rb
-  # on the current main. This is a guardrail to confirm intent and prevent
-  # accidental publishes of the wrong version.
-  republish:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Verify input version matches version.rb
-        run: |
-          file_version=$(ruby -r ./lib/rails_error_dashboard/version.rb -e 'puts RailsErrorDashboard::VERSION')
-          input_version="${{ inputs.version }}"
-          if [ "$file_version" != "$input_version" ]; then
-            echo "::error::Input version '$input_version' does not match version.rb '$file_version'. Aborting."
-            exit 1
-          fi
-          echo "Version match confirmed: $file_version"
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
-
-      - name: Run tests before publishing
-        env:
-          # Same as test.yml: Ferrum defaults to 10s waiting for Chrome's websocket
-          # URL and a cold runner can exceed it. The 0.11.1 release run failed on
-          # exactly this (Ferrum::ProcessTimeoutError) with nothing wrong in the gem.
-          FERRUM_PROCESS_TIMEOUT: 30
-        run: bundle exec rspec
-
-      - name: Run RuboCop before publishing
-        run: bundle exec rubocop
-
-      - name: Publish to RubyGems
-        uses: rubygems/release-gem@v1
+    # Only the two secrets the smoke test reads, not `secrets: inherit`.
+    secrets:
+      DEMO_USER: ${{ secrets.DEMO_USER }}
+      DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}

@@ -18,7 +18,7 @@ time. Each test is written first and watched fail for the right reason.
   - Test: spec/ci/workflows_spec.rb examples for REQ-1, REQ-11 and REQ-17 on smoke-test-demo.yml
   - After: T2
   - Done when: `env -u RAILS_VERSION bin/with-ruby bundle exec rspec spec/ci/workflows_spec.rb` → 0 failures; `actionlint .github/workflows/smoke-test-demo.yml` → no output
-- [ ] **T4** Split release.yml into release, test, publish and smoke-test jobs with per-job permissions and pinned actions → REQ-1, REQ-3, REQ-4, REQ-5, REQ-6, REQ-8, REQ-9, REQ-11, REQ-12, REQ-13, REQ-14, REQ-15, REQ-17
+- [x] **T4** Split release.yml into release, test, publish and smoke-test jobs with per-job permissions and pinned actions → REQ-1, REQ-3, REQ-4, REQ-5, REQ-6, REQ-8, REQ-9, REQ-11, REQ-12, REQ-13, REQ-14, REQ-15, REQ-17
   - Files: spec/ci/workflows_spec.rb, .github/workflows/release.yml
   - Test: spec/ci/workflows_spec.rb examples for each listed requirement on release.yml; the REQ-15 example runs the version-check script with a matching and a mismatched INPUT_VERSION
   - After: T3

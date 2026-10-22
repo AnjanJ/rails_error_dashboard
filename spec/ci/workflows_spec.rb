@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "yaml"
+require "open3"
 
 # Guards the least-privilege shape of the GitHub Actions workflows and of the
 # bundle the release job installs (spec: .shipkit/specs/ci-least-privilege).
@@ -47,7 +48,7 @@ RSpec.describe "GitHub Actions workflows" do
 
   # The workflows this spec holds to least privilege.
   def hardened_workflows
-    %w[ci.yml test.yml smoke-test-demo.yml]
+    %w[ci.yml test.yml smoke-test-demo.yml release.yml]
   end
 
   describe "every hardened workflow" do
@@ -87,6 +88,134 @@ RSpec.describe "GitHub Actions workflows" do
         jobs(name).each_key do |job_id|
           expect(effective_permissions(name, job_id)).to eq({ "contents" => "read" }), "#{name}:#{job_id}"
         end
+      end
+    end
+  end
+
+  describe "release.yml" do
+    let(:release_jobs) { jobs("release.yml") }
+
+    def job_steps(job_id)
+      release_jobs.fetch(job_id).fetch("steps")
+    end
+
+    def runs?(step, command)
+      step["run"].to_s.include?(command)
+    end
+
+    def version_check_step
+      job_steps("test").find { |step| step.dig("env", "INPUT_VERSION") }
+    end
+
+    # Runs the version check the way a runner would (bash -eo pipefail), from
+    # the repo root, with the Ruby running this spec first on PATH.
+    def run_version_check(input_version)
+      env = {
+        "INPUT_VERSION" => input_version,
+        "PATH" => "#{RbConfig::CONFIG['bindir']}#{File::PATH_SEPARATOR}#{ENV['PATH']}"
+      }
+      Bundler.with_unbundled_env do
+        Open3.capture2e(env, "bash", "-eo", "pipefail", "-c", version_check_step.fetch("run"), chdir: repo_root)
+      end
+    end
+
+    it "grants id-token: write to the publish job alone, and nothing at the workflow level (ci-least-privilege/REQ-3)" do
+      expect(workflow("release.yml")["permissions"]).to eq({})
+
+      with_id_token = release_jobs.keys.select { |job_id| effective_permissions("release.yml", job_id)&.dig("id-token") == "write" }
+      expect(with_id_token).to eq([ "publish" ])
+      expect(effective_permissions("release.yml", "publish")).to eq({ "contents" => "write", "id-token" => "write" })
+    end
+
+    it "runs the test suite and RuboCop only in the read-only test job (ci-least-privilege/REQ-4)" do
+      testing = release_jobs.keys.select do |job_id|
+        Array(release_jobs[job_id]["steps"]).any? { |step| runs?(step, "bundle exec rspec") || runs?(step, "bundle exec rubocop") }
+      end
+
+      expect(testing).to eq([ "test" ])
+      expect(effective_permissions("release.yml", "test")).to eq({ "contents" => "read" })
+    end
+
+    it "gives release-please only what it needs to open release PRs and releases (ci-least-privilege/REQ-5)" do
+      expect(effective_permissions("release.yml", "release")).to eq({ "contents" => "write", "pull-requests" => "write" })
+    end
+
+    it "installs the publish job's bundle without the development and test groups (ci-least-privilege/REQ-6)" do
+      groups = release_jobs.fetch("publish").fetch("env").fetch("BUNDLE_WITHOUT").split(":")
+
+      expect(groups).to include("development", "test")
+    end
+
+    it "restores no Bundler cache in any job, so every gem is installed fresh (ci-least-privilege/REQ-6)" do
+      cached = steps("release.yml").select { |_job_id, step| step.dig("with", "bundler-cache") == true }
+
+      expect(cached).to eq([])
+    end
+
+    it "publishes only after the test job has passed in the same run (ci-least-privilege/REQ-8)" do
+      test_job = release_jobs.fetch("test")
+      publish = release_jobs.fetch("publish")
+
+      expect(Array(test_job["needs"])).to eq([ "release" ])
+      # On a dispatch, `release` is skipped; without !cancelled() the skip
+      # would propagate and silently skip test and publish too.
+      expect(test_job["if"]).to include("!cancelled()", "workflow_dispatch", "needs.release.outputs.release_created")
+      expect(Array(publish["needs"])).to eq([ "test" ])
+      expect(publish["if"]).to include("!cancelled()", "needs.test.result == 'success'")
+    end
+
+    it "publishes from the rubygems environment (ci-least-privilege/REQ-9)" do
+      environment = release_jobs.fetch("publish").fetch("environment")
+
+      expect(environment.is_a?(Hash) ? environment["name"] : environment).to eq("rubygems")
+    end
+
+    it "pins every action it uses to a full commit SHA (ci-least-privilege/REQ-13)" do
+      references = steps("release.yml").map { |_job_id, step| step["uses"] }.compact +
+        release_jobs.values.map { |job| job["uses"] }.compact
+      unpinned = references.reject { |ref| ref.start_with?("./") || ref.match?(/@\h{40}\z/) }
+
+      expect(references).not_to be_empty
+      expect(unpinned).to eq([])
+    end
+
+    it "runs the demo smoke test after a publish from main, with read and issues access (ci-least-privilege/REQ-14)" do
+      smoke = release_jobs.fetch("smoke-test")
+
+      expect(smoke["uses"]).to eq("./.github/workflows/smoke-test-demo.yml")
+      expect(Array(smoke["needs"])).to eq([ "publish" ])
+      expect(smoke["if"]).to include("github.event_name == 'push'", "needs.publish.result == 'success'")
+      expect(effective_permissions("release.yml", "smoke-test")).to eq({ "contents" => "read", "issues" => "write" })
+    end
+
+    it "passes the smoke test only the two demo secrets (ci-least-privilege/REQ-17)" do
+      expect(release_jobs.fetch("smoke-test")["secrets"]).to eq(
+        "DEMO_USER" => "${{ secrets.DEMO_USER }}",
+        "DEMO_PASSWORD" => "${{ secrets.DEMO_PASSWORD }}"
+      )
+    end
+
+    describe "the republish version check (ci-least-privilege/REQ-15)" do
+      it "runs on dispatch only, before the test suite" do
+        check_index = job_steps("test").index(version_check_step)
+        rspec_index = job_steps("test").index { |step| runs?(step, "bundle exec rspec") }
+
+        expect(version_check_step["if"]).to include("workflow_dispatch")
+        expect(version_check_step.dig("env", "INPUT_VERSION")).to eq("${{ inputs.version }}")
+        expect(check_index).to be < rspec_index
+      end
+
+      it "passes when the input matches version.rb" do
+        output, status = run_version_check(RailsErrorDashboard::VERSION)
+
+        expect(status).to be_success, output
+      end
+
+      it "fails when the input differs from version.rb" do
+        output, status = run_version_check("0.0.0-not-this-version")
+
+        expect(status).not_to be_success
+        expect(output).to include("does not match")
       end
     end
   end
