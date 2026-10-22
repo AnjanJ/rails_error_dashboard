@@ -100,15 +100,21 @@ module RailsErrorDashboard
       # Rotating secret_key_base breaks correlation across the rotation.
       #
       # @param raw [#to_s, nil] raw session ID, or an existing digest
-      # @return [String, nil] "h1:" + 32 hex characters; nil for blank input or on
-      #   any failure (never the raw value, never an exception)
+      # @return [String, nil] "h1:" + 32 hex characters; nil for blank input, when
+      #   the app has no secret_key_base, or on any failure (never the raw value,
+      #   never an exception)
       def self.digest_session_id(raw)
         value = raw.to_s
         return nil if value.empty?
         # Exact shape only: a raw value that merely starts with "h1:" is digested.
         return value if value.match?(SESSION_DIGEST_FORMAT)
 
-        SESSION_DIGEST_PREFIX + OpenSSL::HMAC.hexdigest("SHA256", session_digest_key, value)[0, 32]
+        # No secret, no digest: one keyed with a value everyone knows would
+        # protect nothing, so the session ID is not stored at all.
+        key = session_digest_key
+        return nil unless key
+
+        SESSION_DIGEST_PREFIX + OpenSSL::HMAC.hexdigest("SHA256", key, value)[0, 32]
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] Session ID digest failed: #{e.class}")
         nil
@@ -125,11 +131,12 @@ module RailsErrorDashboard
         nil
       end
 
+      # @return [String, nil] the app's secret_key_base, or nil when it has none
       def self.session_digest_key
         key = Rails.application.secret_key_base if defined?(Rails) && Rails.application.respond_to?(:secret_key_base)
-        key.to_s.empty? ? "rails_error_dashboard" : key.to_s
+        key.to_s.empty? ? nil : key.to_s
       rescue StandardError
-        "rails_error_dashboard"
+        nil
       end
 
       # @return [ActiveSupport::ParameterFilter, nil]
