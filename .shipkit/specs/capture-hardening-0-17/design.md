@@ -73,7 +73,9 @@ MySQL's TEXT holds 65,535 bytes. A GitHub issue body holds 65,536 characters.
 **Case for 1.** It matches the crash path. Even at 4 bytes per character it fits TEXT with room for
 the marker. It is far longer than any message a person reads, and it keeps messages well inside
 issue, Slack and AI-help limits. The fingerprint hashes only the first 500 characters of the raw
-message, before this runs, so grouping can't change.
+message, before this runs, so grouping can't change. The crash import is the exception: it hashes
+the whole stored message, so it strips the marker first, which leaves exactly the text crash files
+held before the marker existed.
 
 **Case against 1.** An exception that embeds a big payload in its message loses everything past
 10,000 characters. Option 2 keeps more, but leaves messages large enough to break issue creation and

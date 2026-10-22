@@ -277,7 +277,11 @@ module RailsErrorDashboard
           if ErrorLog.column_names.include?("error_hash")
             attributes[:error_hash] = Services::ErrorHashGenerator.from_attributes(
               error_type: attributes[:error_type],
-              message: attributes[:message],
+              # Without the length marker: its count differs per message, and
+              # from_attributes hashes the whole (normalised) message, so it
+              # would split one crash into a group per length. Stripped, this
+              # is the text crash files held before the marker existed.
+              message: attributes[:message].to_s.sub(Services::CaptureLimits::MESSAGE_MARKER, ""),
               backtrace: backtrace_text,
               application_id: application.id
             )

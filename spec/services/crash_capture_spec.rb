@@ -298,6 +298,29 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
         expect(read_crash_file["message"]).to eq(("y" * 10_000) + "… [10000 more characters]")
       end
 
+      # capture-hardening-0-17/REQ-5: the crash file now carries the marker,
+      # whose count differs with each message's length; it must not become
+      # part of the fingerprint, or one crash would split into many groups.
+      it "groups long crashes of different lengths together, as before the marker" do
+        described_class.enable!
+        prefix = "y" * 10_000
+        [ 500, 600 ].each do |extra|
+          error = RuntimeError.new(prefix + ("z" * extra))
+          error.set_backtrace([ "app/models/user.rb:42:in `save!'" ])
+          described_class.capture!(error)
+          described_class.import!
+        end
+
+        row = RailsErrorDashboard::ErrorLog.sole
+        expect(row.occurrence_count).to eq(2)
+        expect(row.error_hash).to eq(
+          RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+            error_type: "RuntimeError", message: prefix,
+            backtrace: "app/models/user.rb:42:in `save!'", application_id: row.application_id
+          )
+        )
+      end
+
       it "filters and limits what it stores, and groups on the raw message" do
         message = "login failed password=hunter2 " + ("x" * 20_000)
         write_crash_file(build_crash_data(
