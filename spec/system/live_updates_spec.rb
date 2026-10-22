@@ -5,7 +5,7 @@ require "rails_helper"
 # The browser half of live updates. Until 0.16.x no layer loaded the index in a
 # browser and waited for a row: the delivery spec proved the server broadcast,
 # and the index rendered stream tags, but the layout loaded no client to
-# connect them, so nothing ever arrived (F1).
+# connect them, so nothing ever arrived.
 #
 # ActionCable runs on the in-process async adapter, and the turbo-rails client
 # is the vendored copy served for its CDN URL under the same integrity check a

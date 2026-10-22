@@ -53,13 +53,12 @@ example cites `live-updates-client/REQ-N`.
   - Done when:
     - `R rspec` → 0 failures (≈ 5,990 examples);
     - chaos 1,507/1,507 through the commit hook;
-    - Lab A pointed at this checkout:
-      - switch on: `curriculum-lab/scripts/live_updates_check.sh` prints "appeared without reload: true" and opens `/cable`;
-      - switch off: no stream tags, no client and no "Broadcasting to" lines;
-      - Lab A restored afterwards
+    - a fresh Rails 8.1.4 app with this checkout as a `path:` gem, in headless Chrome:
+      - switch on: the new row appears without a reload, and the browser opens `/cable`;
+      - switch off: no stream tags, no client and no "Broadcasting to" lines
 
 ## After the gate
 
-- Push the branch, open the PR (with `Refs` only: there is no GitHub issue for F1), and wait for CI.
+- Push the branch, open the PR (no `Closes`: there is no GitHub issue for this bug), and wait for CI.
 - The release, and whether this goes in 0.16.3 or 0.17.0, is the user's call. The release notes
   carry the "Release steps" line from spec.md.

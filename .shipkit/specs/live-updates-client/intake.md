@@ -3,7 +3,7 @@
 > Intake taken on 2026-10-22.
 
 ## Request
-Live updates never reach the browser (F1 in the maintainer's bug list): the engine layout loads no
+Live updates never reach the browser: the engine layout loads no
 Turbo client, so the `<turbo-cable-stream-source>` tags on the error index never connect, while the
 server still renders and broadcasts partials on every capture. Decide between loading the client and
 removing the feature, then fix it.
@@ -41,7 +41,7 @@ option has to land before the freeze.
   turbo-rails 2.0.23 gem.
 - **Turbo Drive stays off.** `<body data-turbo="false">` is kept, because streams work without
   Drive.
-- **Proven by the lab spike, 2026-10-22, Lab A (Rails 8.1.4, gem 0.16.1, async cable).** With the
+- **Proven by the lab spike, 2026-10-22, a fresh Rails 8.1.4 app (gem 0.16.1, async cable).** With the
   client loaded:
   - the new row arrived without a reload;
   - clicking a local time stopped toggling, because `turbo:load` re-runs `convertToLocalTime` and
