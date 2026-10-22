@@ -181,15 +181,19 @@ module RailsErrorDashboard
         path, query = url.split("?", 2)
         return url if query.nil? || query.empty?
 
-        params = Rack::Utils.parse_query(query)
+        params = begin
+          Rack::Utils.parse_query(query)
+        rescue ArgumentError, TypeError, RangeError
+          # Rack refuses the query (a stray %, a bad escape, too deep): redact
+          # it pair by pair instead of keeping the URL as it came.
+          return redact_query(filter, url)
+        end
         filtered_params = filter.filter(params)
         filtered_query = Rack::Utils.build_query(filtered_params)
         "#{path}?#{filtered_query}"
       rescue => e
-        # Rack refuses the query (a stray %, a bad escape): redact it pair by
-        # pair instead of keeping the URL as it came.
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_url failed: #{e.message}")
-        redact_query(filter, url)
+        FILTERED_REPLACEMENT
       end
       private_class_method :filter_url
 

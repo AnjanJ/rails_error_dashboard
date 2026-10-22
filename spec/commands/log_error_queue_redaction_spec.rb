@@ -58,6 +58,23 @@ RSpec.describe "capture payload redaction at the queue boundary" do
       expect(payload).not_to include("QUEUE_TOKEN")
     end
 
+    # capture-hardening-0-17/REQ-6: if redacting the payload fails, the
+    # payload is withheld, not shipped raw to the queue's backing store.
+    it "carries no secret when redacting the payload fails" do
+      allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:parameter_filter).and_raise(RuntimeError, "boom")
+
+      RailsErrorDashboard::Commands::LogError.call(
+        boom, request_params: { token: "QUEUE_TOKEN" }.to_json, params: { api_key: "QUEUE_RAW_PARAM" }
+      )
+
+      payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+      expect(payload).not_to include("QUEUE_SECRET")
+      expect(payload).not_to include("QUEUE_TOKEN")
+      expect(payload).not_to include("QUEUE_RAW_PARAM")
+    end
+
     it "carries the fingerprint as an opaque digest rather than message text" do
       RailsErrorDashboard::Commands::LogError.call(boom)
 

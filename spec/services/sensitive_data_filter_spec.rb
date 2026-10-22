@@ -270,6 +270,22 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
           .to eq(message: "[FILTERED]", request_url: nil)
       end
 
+      # capture-hardening-0-17/REQ-6: only a query Rack can't parse gets the
+      # pair-by-pair fallback; any other failure in the URL step fails closed.
+      it "stores [FILTERED] for the URL when its step raises for another reason" do
+        filter = described_class.parameter_filter
+        # Only the whole-query hash fails; per-key checks still work, so the
+        # pair-by-pair fallback, if it ran, would succeed and keep the URL.
+        allow(filter).to receive(:filter).and_wrap_original do |original, value|
+          raise "boom" if value.is_a?(Hash) && value.size > 1
+
+          original.call(value)
+        end
+
+        expect(described_class.filter_attributes(request_url: "/login?password=x&username=alice")[:request_url])
+          .to eq("[FILTERED]")
+      end
+
       # capture-hardening-0-17/REQ-6
       it "stores [FILTERED] for the one field whose step raises, and filters the others" do
         filter = described_class.parameter_filter
@@ -359,7 +375,9 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
         [ "quotes", '"' * 10_000 ],
         [ "an unterminated JSON string", '{"token":"' + ("x" * 9_990) ],
         [ "unterminated quoted values", 'a: "' * 2_500 ],
-        [ "Bearer runs", "Bearer " * 1_428 ]
+        [ "Bearer runs", "Bearer " * 1_428 ],
+        [ "many key: value matches", "a: b " * 2_000 ],
+        [ "many JSON pairs", '"a":1,' * 1_666 ]
       ].each do |label, message|
         it "filters 10,000 characters of #{label} in under 50 ms" do
           described_class.filter_attributes(message: "warm up password: x")

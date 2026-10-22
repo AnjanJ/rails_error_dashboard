@@ -71,6 +71,25 @@ RSpec.describe "capture size limits" do
       )
     end
 
+    # capture-hardening-0-17/REQ-1: redaction on the request thread can make
+    # the cut message longer ("pin=1" becomes "pin=[FILTERED]"); the worker
+    # must not cut it a second time and misreport how much was cut.
+    it "keeps the request thread's marker when redaction made the cut message longer (async)" do
+      RailsErrorDashboard.configuration.async_logging = true
+      RailsErrorDashboard.configuration.filter_sensitive_data = true
+      message = ("pin=1 " * 2_000) + ("x" * 70_000)
+
+      RailsErrorDashboard::Commands::LogError.call(boom(message))
+      perform_enqueued_jobs
+
+      # The count is the request thread's. (A cut that lands inside a
+      # sensitive pair lets redaction take the marker's leading ellipsis as
+      # that pair's value; the count is what says how much was cut.)
+      stored = logs.sole.message
+      expect(stored).to end_with("[#{message.length - 10_000} more characters]")
+      expect(stored).not_to include("pin=1")
+    end
+
     # capture-hardening-0-17/REQ-4: the storm gate already keeps only the
     # first 500 characters as its exemplar, so a storm-only row stays bounded.
     it "is stored bounded when a storm only counted it" do
@@ -94,6 +113,44 @@ RSpec.describe "capture size limits" do
     stored = logs.sole.request_params
     expect(stored.bytesize).to be <= 64_000
     expect(JSON.parse(stored)).to include("order_id" => "42", "upload" => "[TRUNCATED]", "_truncated" => true)
+  end
+
+  # capture-hardening-0-17/REQ-2: filtering replaces short values with
+  # "[FILTERED]", so params just under the limit can grow past it.
+  it "keeps params within 64,000 bytes after filtering made them longer" do
+    RailsErrorDashboard.configuration.filter_sensitive_data = true
+    pins = (1..300).to_h { |i| [ "pin#{i}", "1" ] }
+    room = 63_990 - { "blob" => "" }.merge(pins).to_json.bytesize
+    params = { "blob" => "x" * room }.merge(pins).to_json
+
+    RailsErrorDashboard::Commands::LogError.call(boom("params grew"), request_params: params)
+
+    stored = logs.sole.request_params
+    expect(stored.bytesize).to be <= 64_000
+    expect(JSON.parse(stored)).to include("pin1" => "[FILTERED]", "_truncated" => true)
+  end
+
+  # capture-hardening-0-17/REQ-4: the sync extractor keeps 1,000 characters of
+  # each cause's message; the async payload now does the same on the request
+  # thread, before the filter runs over it.
+  it "limits cause messages in the async payload as the sync path does" do
+    RailsErrorDashboard.configuration.async_logging = true
+    error = begin
+      begin
+        raise ArgumentError, "c" * 5_000
+      rescue ArgumentError
+        raise StandardError, "outer"
+      end
+    rescue StandardError => e
+      e
+    end
+
+    RailsErrorDashboard::Commands::LogError.call(error)
+
+    exception_data, = enqueued_jobs
+      .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+      .fetch(:args)
+    expect(exception_data["cause_chain"].first["message"].length).to eq(1_000)
   end
 
   # capture-hardening-0-17/REQ-3, capture-hardening-0-17/REQ-4
