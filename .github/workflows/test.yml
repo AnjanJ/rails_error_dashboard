@@ -7,6 +7,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# The tests only read the repository, so every job gets a read-only token
+# instead of the repository default.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,6 +30,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
@@ -99,6 +106,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
@@ -135,6 +144,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
@@ -162,6 +173,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
