@@ -21,7 +21,7 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
 - **Paramount:** no process-wide side effects in the host process: no signal handlers, no heap walks, no cross-thread backtraces, no retained Bindings.
 - No APM or performance monitoring until error tracking is best-in-class ("depth before breadth", ROADMAP item Z).
 - The free gem never requires a separate service, agent, sidecar or monitoring account; it runs only inside the host app.
-- No removing a shipped free feature, and no caps on the user's own data.
+- No removing a shipped free feature, and no quotas on the user's own data: no limit on how many errors are kept or for how long. Per-field size limits that keep a capture storable and the host app within its budget are allowed (clarified 2026-10-22).
 
 ## Metrics that matter
 - **Host-app incidents caused by RED** (it raised into, blocked or slowed a host app). The paramount number: the rules say never.
