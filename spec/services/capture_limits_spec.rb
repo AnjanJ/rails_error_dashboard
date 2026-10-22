@@ -12,6 +12,11 @@ RSpec.describe RailsErrorDashboard::Services::CaptureLimits do
       expect(result.delete_prefix("a" * 10_000)).to eq("… [60000 more characters]")
     end
 
+    it "leaves a message it already cut alone, so the async worker doesn't cut it twice" do
+      once = described_class.message("a" * 70_000)
+      expect(described_class.message(once)).to equal(once)
+    end
+
     it "returns a message at the limit unchanged" do
       message = "b" * 10_000
       expect(described_class.message(message)).to equal(message)

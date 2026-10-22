@@ -20,7 +20,8 @@ write.
 **Context.** Messages and params reach the database by four routes:
 - the sync capture (`LogError#call` builds the attributes);
 - the async enqueue (`LogError.call_async` redacts the payload on the request thread);
-- the storm gate (it buffers a redacted message on the request thread);
+- the storm gate (it buffers a redacted message on the request thread, but only the first 500
+  characters, `HASH_MESSAGE_LIMIT`, so it is already bounded and needs no change);
 - the crash import.
 
 The filter's regexes and its `JSON.parse` run on whatever size arrives, on the request thread in
@@ -38,6 +39,9 @@ after filtering, and the same hash feeds both the error row and the occurrence-c
 on the request thread (the paramount budget). The final clamp catches anything that grew after
 filtering, such as a big locals payload, and it covers the occurrence-context row too, because that
 row is built from the same attributes.
+
+The async route limits on the request thread and the worker limits again, so `CaptureLimits.message`
+leaves a message it already cut alone.
 
 **Case against 1.** There are more call sites to keep in step: three entry points and three write
 points. A new route added later could forget the entry limit; the write clamp still saves the row,

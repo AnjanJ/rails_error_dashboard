@@ -403,7 +403,7 @@ module RailsErrorDashboard
           # lookup below -- fails with InFailedSqlTransaction. The savepoint
           # confines the damage to this INSERT so the batch can continue.
           ErrorLog.transaction(requires_new: true) do
-            created = ErrorLog.create!(**ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs)))
+            created = ErrorLog.create!(**ErrorLog.clamp_text_attributes(ErrorLog.clamp_string_attributes(Services::SensitiveDataFilter.filter_attributes(create_attrs))))
             yield created.id if block_given?
           end
         rescue ActiveRecord::RecordNotUnique

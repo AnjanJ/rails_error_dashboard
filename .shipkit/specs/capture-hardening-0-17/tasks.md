@@ -26,12 +26,12 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
   - After: none
   - Done when: `R rspec spec/models/error_logs_record_clamp_spec.rb` → 0 failures
 - [ ] **T3** Apply the limits on every capture route → REQ-1, REQ-2, REQ-3, REQ-4, REQ-5
-  - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, spec/commands/log_error_capture_limits_spec.rb
+  - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/capture_limits.rb, spec/services/capture_limits_spec.rb, spec/commands/log_error_capture_limits_spec.rb
   - Test: log_error_capture_limits_spec:
     - a 70,000-character message, sync and async → one row, message cut with the marker, `error_hash` equal to the full message's;
     - 70 KB params → one row, valid JSON with `_truncated`;
     - oversized locals → one row, `local_variables` nil;
-    - a storm-counted 70,000-character message → the row's message is cut.
+    - a storm-counted 70,000-character message → the row keeps the gate's existing 500-character exemplar (already bounded; the gate needs no change).
 
     Runs on CI's MySQL row as well (REQ-4).
   - After: T1, T2

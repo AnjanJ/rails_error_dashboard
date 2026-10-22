@@ -93,7 +93,7 @@ module RailsErrorDashboard
         # what counts as safe to emit. filter_attributes returns its input
         # unchanged when filter_sensitive_data is off and rescues internally.
         msg = Services::SensitiveDataFilter.filter_attributes(
-          message: exception.message.to_s
+          message: Services::CaptureLimits.message(exception.message.to_s)
         )[:message].to_s
         {
           "error.type" => exception.class.name,
@@ -127,10 +127,17 @@ module RailsErrorDashboard
         # message, a backtrace line or the context would raise right here. The
         # identity above is still taken from the raw exception, exactly as the
         # sync path takes it, so grouping is unchanged.
+        #
+        # Size limits come first of all: the scrub, the redaction below and
+        # ActiveJob's JSON encoding all run on this thread, and a megabyte
+        # message or body must not cost the request that much work.
+        if context[:request_params].is_a?(String)
+          context = context.merge(request_params: Services::CaptureLimits.request_params(context[:request_params]))
+        end
         context = Services::EncodingSanitizer.scrub_deep(context)
         exception_data = Services::EncodingSanitizer.scrub_deep(
           class_name: exception.class.name,
-          message: exception.message,
+          message: Services::CaptureLimits.message(exception.message),
           backtrace: exception.backtrace,
           cause_chain: serialize_cause_chain(exception)
         )
@@ -439,11 +446,13 @@ module RailsErrorDashboard
           # rebuilt as StandardError, and that name must not become the group
           # identity. Falls back to the real class for every ordinary capture.
           error_type: reported_error_type || @exception.class.name,
-          message: @exception.message,
+          # Limited before the filter, so its regexes see bounded input; the
+          # fingerprint below hashes the raw message, so grouping is unchanged.
+          message: Services::CaptureLimits.message(@exception.message),
           backtrace: truncated_backtrace,
           user_id: ErrorLog.storable_user_id(error_context.user_id),
           request_url: error_context.request_url,
-          request_params: error_context.request_params,
+          request_params: Services::CaptureLimits.request_params(error_context.request_params),
           user_agent: error_context.user_agent,
           ip_address: error_context.ip_address,
           platform: error_context.platform,
@@ -639,6 +648,11 @@ module RailsErrorDashboard
         # grouping command keeps an earlier occurrence's user or locals beside
         # this one's URL, the row displays a mixture, and only that command can
         # see it. Passing nil lets it decide between "full" and "partial".
+        #
+        # The size net runs last, on everything the row and its occurrence
+        # context will hold: MySQL rejects the whole INSERT for one TEXT value
+        # over 65,535 bytes, and that used to lose the error.
+        attributes = ErrorLog.clamp_text_attributes(attributes)
         error_log = ErrorLog.find_or_increment_by_hash(
           error_hash,
           attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : nil)

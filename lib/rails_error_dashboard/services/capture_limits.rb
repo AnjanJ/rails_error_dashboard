@@ -24,12 +24,17 @@ module RailsErrorDashboard
       TEXT_MARKER = "… [truncated]"
       # Room for the `,"_truncated":true` the fitted object gains.
       FLAG_BYTES = 20
+      # What .message appends, so an already-cut message (the async worker
+      # receives one the request thread cut) is left alone, not cut again.
+      MESSAGE_MARKER = /… \[\d+ more characters\]\z/
+      MESSAGE_MARKER_MAX = 40
 
       # @param message [String, nil]
       # @return [String, nil] at most MESSAGE_LIMIT characters plus a marker
       #   saying how many were cut; anything that isn't a String as it came
       def self.message(message)
         return message unless message.is_a?(String) && message.length > MESSAGE_LIMIT
+        return message if message.length <= MESSAGE_LIMIT + MESSAGE_MARKER_MAX && message.match?(MESSAGE_MARKER)
 
         "#{message[0, MESSAGE_LIMIT]}… [#{message.length - MESSAGE_LIMIT} more characters]"
       rescue StandardError
