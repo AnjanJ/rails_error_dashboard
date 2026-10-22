@@ -3,7 +3,7 @@
 Run specs as `env -u RAILS_VERSION bin/with-ruby bundle exec rspec <files>`, one rspec process at a
 time. Each test is written first and watched fail for the right reason.
 
-- [ ] **T1** Put every gem not needed to build and release the gem into the development and test groups → REQ-7
+- [x] **T1** Put every gem not needed to build and release the gem into the development and test groups → REQ-7
   - Files: spec/ci/workflows_spec.rb, Gemfile
   - Test: spec/ci/workflows_spec.rb "keeps only the gem, rails and the json constraint in the Gemfile's default group"
   - After: none
