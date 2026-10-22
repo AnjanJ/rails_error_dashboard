@@ -38,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-filtering) section, including what its best-effort redaction of free text such as the error message catches.
+Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-filtering) section, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
 
 ### Authentication & Access
 

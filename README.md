@@ -428,7 +428,7 @@ config.llm_api_key = -> { Rails.application.credentials.dig(:openai, :api_key) }
 config.llm_model = "gpt-5"
 ```
 
-> **Privacy:** AI Help sends the error's details (backtrace, context, and your question) to the configured provider (OpenAI or Anthropic). Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted as `[FILTERED]` before they leave your app. Redaction of free text such as the error message is best-effort: it catches `key=value`, `key: value`, JSON pairs, `Bearer` tokens and card numbers, not every secret a message can hold.
+> **Privacy:** AI Help sends the error's details (backtrace, context, and your question) to the configured provider (OpenAI or Anthropic). Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted as `[FILTERED]` before they leave your app. Redaction of free text such as the error message is best-effort: it catches `key=value`, `key: value`, JSON pairs, `Bearer` tokens and card numbers, not every secret a message can hold. Filtering fails closed: if a filter step fails, the field is stored as `[FILTERED]`.
 
 [Complete documentation →](docs/FEATURES.md#error-details-page)
 </details>

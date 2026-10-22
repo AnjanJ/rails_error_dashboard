@@ -165,7 +165,8 @@ leaked them. The existing spec "returns original attributes if filtering raises 
 the old behaviour and is rewritten. Breadcrumbs and variable values that call `filter_message` also
 become `[FILTERED]` when it raises.
 
-**Decision.** Option 1. The 0.17.0 notes say filtering now fails closed.
+**Decision.** Option 1. The same rule covers breadcrumbs (withheld) and captured variables (values
+`[FILTERED]`) when their filter is missing or raises. The 0.17.0 notes say filtering now fails closed.
 **Falsifiability.** We would reconsider if an issue reports `[FILTERED]` replacing a field with no
 secret in it, caused by a filter failure.
 **Fired-if.** manual
@@ -199,7 +200,8 @@ against catastrophic backtracking, not a budget, so the typical cost is measured
 Option 2 is faster, but can't express procs.
 
 **Decision.** Option 1. If the measured cost of a typical message is above 1 ms, add a small bounded
-per-key memo.
+per-key memo. Measured during the task: 0.07 ms for a typical 221-character message, about 1 ms for
+a busy 10,000-character one, so no memo.
 **Falsifiability.** We would switch to option 2 if the overhead benchmark shows message filtering
 above 1 ms for a typical (under 500-character) message.
 **Fired-if.** manual

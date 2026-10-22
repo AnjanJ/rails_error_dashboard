@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `ecd8cd4` on fix/capture-hardening-0-17 (2026-10-22).
 > Status: open
-> Paths: lib/rails_error_dashboard.rb,lib/rails_error_dashboard/services/sensitive_data_filter.rb,lib/rails_error_dashboard/services/capture_limits.rb,lib/rails_error_dashboard/commands/log_error.rb,lib/rails_error_dashboard/commands/flush_storm_counts.rb,lib/rails_error_dashboard/services/storm_protection/gate.rb,app/models/rails_error_dashboard/error_logs_record.rb,README.md,docs/FEATURES.md,docs/guides/CONFIGURATION.md,_guides/,_features/,_reference/,_getting_started/,lib/rails_error_dashboard/services/crash_capture.rb,spec/services/sensitive_data_filter_spec.rb,spec/services/capture_limits_spec.rb,spec/commands/log_error_capture_limits_spec.rb,spec/models/error_logs_record_clamp_spec.rb,spec/services/crash_capture_spec.rb,spec/commands/log_error_session_digest_spec.rb,spec/commands/log_error_queue_redaction_spec.rb,spec/services/storm_protection/gate_spec.rb
+> Paths: lib/rails_error_dashboard.rb,lib/rails_error_dashboard/services/sensitive_data_filter.rb,lib/rails_error_dashboard/services/capture_limits.rb,lib/rails_error_dashboard/commands/log_error.rb,lib/rails_error_dashboard/commands/flush_storm_counts.rb,lib/rails_error_dashboard/services/storm_protection/gate.rb,app/models/rails_error_dashboard/error_logs_record.rb,README.md,docs/FEATURES.md,docs/guides/CONFIGURATION.md,_guides/,_features/,_reference/,_getting_started/,lib/rails_error_dashboard/services/crash_capture.rb,spec/services/sensitive_data_filter_spec.rb,spec/services/capture_limits_spec.rb,spec/commands/log_error_capture_limits_spec.rb,spec/models/error_logs_record_clamp_spec.rb,spec/services/crash_capture_spec.rb,spec/commands/log_error_session_digest_spec.rb,spec/commands/log_error_queue_redaction_spec.rb,spec/services/storm_protection/gate_spec.rb,lib/rails_error_dashboard/services/breadcrumb_collector.rb,lib/rails_error_dashboard/services/variable_serializer.rb,spec/services/breadcrumb_collector_spec.rb,spec/services/variable_serializer_spec.rb
 
 ## Purpose
 Make what a capture stores safe to store, on every adapter.
@@ -24,9 +24,12 @@ Make what a capture stores safe to store, on every adapter.
 ### Long values are stored, within limits
 - **REQ-1.** When a captured error's message is longer than 10,000 characters, RED shall store the
   first 10,000 characters followed by a marker that says how many characters were cut.
-- **REQ-2.** When a capture's request params are larger than 64,000 bytes, RED shall store them as
-  valid JSON of at most 64,000 bytes, dropping the largest values first and adding
-  `"_truncated": true`.
+- **REQ-2.** When a capture's request params are larger than 64,000 bytes, RED shall store at most
+  64,000 bytes of them: a JSON object as valid JSON, with its largest values replaced first and
+  `"_truncated": true` added; anything else (an array, text that isn't JSON, or an object whose keys
+  alone are over the limit) cut at a character boundary with a marker. (Reworded at review to match
+  the approved design: forcing the rest into JSON would hide its text from the message redaction
+  rules.)
 - **REQ-3.** RED shall write no text value larger than 65,535 bytes at capture. A longer plain-text
   value shall be shortened with a marker, and a longer structured (JSON) value shall be left out, and
   the error shall still be stored.
