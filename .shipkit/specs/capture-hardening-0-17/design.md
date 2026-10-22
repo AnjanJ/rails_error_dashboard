@@ -40,8 +40,13 @@ on the request thread (the paramount budget). The final clamp catches anything t
 filtering, such as a big locals payload, and it covers the occurrence-context row too, because that
 row is built from the same attributes.
 
-The async route limits on the request thread and the worker limits again, so `CaptureLimits.message`
-leaves a message it already cut alone.
+The async route limits the message on the request thread and marks the payload
+(`_message_limited`), and the worker doesn't limit it again: redaction can make a cut message
+longer, and a second cut would misreport how much was cut. Cause-chain messages in the async payload
+keep 1,000 characters, as the sync extractor does. Params are limited again after filtering, because
+`[FILTERED]` is longer than many values it replaces. Hash params (`params`, `additional_context`,
+`metadata`) are filtered on the request thread by key only (linear) and limited at the worker, once
+they are serialized.
 
 **Case against 1.** There are more call sites to keep in step: three entry points and three write
 points. A new route added later could forget the entry limit; the write clamp still saves the row,
@@ -96,7 +101,8 @@ value (a base64 upload, a rich-text body) beside small, useful ones.
 Dropping by size removes the fewest values for the bytes saved.
 
 **Case against 1.** It parses up to 64 KB more than the old path did, and nested objects are treated
-as one value, so a big nested blob takes its siblings with it. Option 2 is cheaper but leaves invalid
+as one value, so a big nested blob takes its siblings with it. An object whose keys and small values
+alone exceed the limit can't be fitted, and is cut as text, which is not valid JSON. Option 2 is cheaper but leaves invalid
 JSON that the page shows as raw text.
 
 **Decision.** Option 1. The parse happens only when the params are over the limit.
@@ -135,16 +141,18 @@ breadcrumbs) missing because it exceeded 64 KB.
 
 ## Decision: Fail closed per field; text that isn't JSON gets the message rules   (→ REQ-6, REQ-7, REQ-11, REQ-15)
 
-**Context.** Each helper in `SensitiveDataFilter` rescues by returning its input. `filter_attributes`
+**Context.** Each helper in `SensitiveDataFilter` rescues by returning its input, and so did the
+async payload redaction in `LogError.redact_async_payload` (the queue's copy). `filter_attributes`
 returns the raw attributes when the filter can't be built or anything raises. `filter_json_string`
 and `filter_cause_chain` return non-JSON input as it came. The user decided on 2026-10-22 that
 filtering fails closed. The crash import never calls the filter at all.
 
 **Alternatives.**
 1. Every unexpected exception yields `[FILTERED]` for that field. A filter that can't be built yields
-   `[FILTERED]` for each of the four fields present. A JSON parse failure is not a filter failure:
-   that text goes through the message rules. The crash import calls `filter_attributes` and the
-   limits.
+   `[FILTERED]` for each of the four fields present. A JSON parse failure, or a query string Rack
+   refuses, is not a filter failure: that text gets the message rules (or the pair-by-pair URL
+   fallback). A failing async payload redaction withholds the payload's message, params, URL, cause
+   chain and session ID. The crash import calls `filter_attributes` and the limits.
 2. Replace non-JSON params with `[FILTERED]` too.
 3. Fail closed only at the top level of `filter_attributes`.
 
