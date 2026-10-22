@@ -142,6 +142,16 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
       expect(initializer).to include("config.active_job.queue_adapter")
     end
 
+    # live-updates-client/REQ-11
+    it "writes enable_live_updates = false and names what live updates need" do
+      output
+
+      expect(initializer).to match(/^  config\.enable_live_updates = false$/)
+      expect(initializer).to include("turbo-rails")
+      expect(initializer).to include("ActionCable")
+      expect(initializer).to include("cross-process")
+    end
+
     it "does not claim the dashboard is served at /error_dashboard" do
       output
 
