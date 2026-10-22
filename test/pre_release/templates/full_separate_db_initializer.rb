@@ -54,6 +54,11 @@ RailsErrorDashboard.configure do |config|
   config.enable_middleware = true
   config.enable_error_subscriber = true
 
+  # Boot/process crash capture (phase O injects a misnamed model and boots).
+  # The next boot must import the crash into the ERROR database.
+  config.enable_crash_capture = true
+  config.crash_capture_path = Rails.root.join("tmp", "red_crashes").to_s
+
   # Internal logging
   config.enable_internal_logging = true
   config.log_level = :warn

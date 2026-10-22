@@ -710,7 +710,10 @@ YAML
 
   log_success "Gem installed and configured (separate DB)"
 
+  inject_boot_error_and_crash "$app_dir" || exit 1
+
   run_chaos_tests "$app_dir" \
+    "$CHAOS_DIR/phase_o_boot_errors.rb" \
     "$CHAOS_DIR/phase_e_error_capture.rb" \
     "$CHAOS_DIR/phase_a_data_integrity.rb" \
     "$CHAOS_DIR/phase_c_queries.rb" \

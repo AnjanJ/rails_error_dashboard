@@ -42,4 +42,22 @@ assert "query carries file and constant", entry && entry[:file] == "app/models/z
 assert "no crash file left behind",
        Dir.glob(File.join(RailsErrorDashboard.configuration.crash_capture_path || Dir.tmpdir, "red_crash_*.json*")).none? { |f| File.read(f).include?("ZeitwerkBad") }
 
+if RailsErrorDashboard.configuration.use_separate_database
+  # functional-fixes-0-17/REQ-1: the crash import runs at boot, and it used to
+  # run before ErrorLogsRecord was connected to the error database, so it
+  # wrote through the primary connection (no RED tables) and the crash was
+  # lost. Finding the row above through ErrorLog proves it reached the error
+  # database; these checks pin that it could not have gone anywhere else.
+  PreReleaseTestHarness.section("O3: with a separate database, the crash is in the error database")
+
+  red_db = RailsErrorDashboard::ErrorLogsRecord.connection_db_config
+  primary_db = ActiveRecord::Base.connection_db_config
+  assert "ErrorLogsRecord uses the error database, not primary", red_db.name != primary_db.name,
+         "red=#{red_db.name} primary=#{primary_db.name}"
+  assert "the primary database has no RED error table",
+         !ActiveRecord::Base.connection.table_exists?("rails_error_dashboard_error_logs")
+  assert "no crash file was left as .failed",
+         Dir.glob(File.join(RailsErrorDashboard.configuration.crash_capture_path || Dir.tmpdir, "red_crash_*.failed")).empty?
+end
+
 PreReleaseTestHarness.summary("phase_o_boot_errors")
