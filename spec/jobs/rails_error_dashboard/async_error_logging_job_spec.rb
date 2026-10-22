@@ -3,6 +3,21 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
+  # A class that counts how often it is built, standing in for any loaded
+  # class a reported type could name.
+  let(:recording_class) do
+    Class.new do
+      class << self
+        attr_accessor :instances
+      end
+      self.instances = 0
+
+      def initialize(*)
+        self.class.instances += 1
+      end
+    end
+  end
+
   describe "#perform" do
     let(:exception_data) do
       {
@@ -142,6 +157,79 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
       end
     end
 
+    # A client report's error_type is the CALLER's string: hosts take it from
+    # their own frontend or mobile clients. The worker must never treat it as
+    # the name of a class to look up or build.
+    context "with a client report" do
+      let(:client_context) { context.merge(_capture_source: "client") }
+
+      it "never looks the reported type up as a constant (async-job-reconstruct/REQ-1)" do
+        lookups = []
+        stub_const("RedProbeNamespace", Module.new do
+          define_singleton_method(:const_missing) do |name|
+            lookups << name
+            super(name)
+          end
+        end)
+        data = exception_data.merge(class_name: "RedProbeNamespace::Widget")
+
+        described_class.new.perform(data, client_context)
+
+        expect(lookups).to be_empty
+        expect(RailsErrorDashboard::ErrorLog.last.error_type).to eq("RedProbeNamespace::Widget")
+      end
+
+      it "builds no instance of a class the reported type happens to name (async-job-reconstruct/REQ-1)" do
+        stub_const("RedProbeWidget", recording_class)
+        data = exception_data.merge(class_name: "RedProbeWidget")
+
+        described_class.new.perform(data, client_context)
+
+        expect(RedProbeWidget.instances).to eq(0)
+        expect(RailsErrorDashboard::ErrorLog.last.error_type).to eq("RedProbeWidget")
+      end
+
+      it "hands LogError a SyntheticException even when the type names a real exception (async-job-reconstruct/REQ-1)" do
+        expect(RailsErrorDashboard::Commands::LogError).to receive(:new)
+          .with(an_instance_of(RailsErrorDashboard::ManualErrorReporter::SyntheticException), anything, worker: true)
+          .and_call_original
+
+        described_class.new.perform(exception_data.merge(class_name: "ArgumentError"), client_context)
+
+        log = RailsErrorDashboard::ErrorLog.last
+        expect(log.error_type).to eq("ArgumentError")
+        expect(log.message).to eq("Test async error")
+        expect(log.backtrace).to include("app/controllers/test_controller.rb:10:in `index'")
+      end
+    end
+
+    # Payloads enqueued before 0.16.0 carry no capture-source marker, so a
+    # client report from one of them arrives here looking like a server
+    # exception. Only an Exception subclass may be built on this path.
+    context "with a payload that has no capture-source marker" do
+      it "builds no instance of a class that is not an exception (async-job-reconstruct/REQ-2, REQ-5)" do
+        stub_const("RedProbeWidget", recording_class)
+        data = exception_data.merge(class_name: "RedProbeWidget")
+
+        expect { described_class.new.perform(data, context) }.to change(RailsErrorDashboard::ErrorLog, :count).by(1)
+        expect(RedProbeWidget.instances).to eq(0)
+        expect(RailsErrorDashboard::ErrorLog.last.error_type).to eq("RedProbeWidget")
+      end
+
+      it "stores a module or a plain constant as reported (async-job-reconstruct/REQ-2)" do
+        stub_const("RedProbeModule", Module.new)
+        stub_const("RED_PROBE_VALUE", "not a class")
+
+        # Distinct messages: these hand-built payloads carry no _identity, so
+        # the worker hashes the rebuilt StandardError and would group the two.
+        expect {
+          described_class.new.perform(exception_data.merge(class_name: "RedProbeModule", message: "a module"), context)
+          described_class.new.perform(exception_data.merge(class_name: "RED_PROBE_VALUE", message: "a value"), context)
+        }.to change(RailsErrorDashboard::ErrorLog, :count).by(2)
+        expect(RailsErrorDashboard::ErrorLog.pluck(:error_type)).to contain_exactly("RedProbeModule", "RED_PROBE_VALUE")
+      end
+    end
+
     context "when backtrace is nil" do
       it "handles missing backtrace gracefully" do
         data = exception_data.merge(backtrace: nil)
@@ -212,6 +300,44 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
           nil
         end
       end
+    end
+  end
+
+  # The same report through ManualErrorReporter, once sync and once through
+  # the queue, must be the same capture: one row, one hash, the same fields.
+  describe "a client report through the queue" do
+    let(:report) do
+      { error_type: "RedProbeWidget", message: "widget failed",
+        backtrace: [ "at handleClick (app.js:42)", "at onClick (button.js:15)" ], platform: "Web" }
+    end
+
+    before do
+      stub_const("RedProbeWidget", recording_class)
+      RailsErrorDashboard.reset_configuration!
+      RailsErrorDashboard.configuration.sampling_rate = 1.0
+      RailsErrorDashboard.configuration.enable_storm_protection = false
+      allow(RailsErrorDashboard::Services::ErrorBroadcaster).to receive(:available?).and_return(false)
+    end
+
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "stores what the sync path stores, on the same row (async-job-reconstruct/REQ-3)" do
+      RailsErrorDashboard.configuration.async_logging = false
+      sync_row = RailsErrorDashboard::ManualErrorReporter.report(**report)
+
+      RailsErrorDashboard.configuration.async_logging = true
+      RailsErrorDashboard::ManualErrorReporter.report(**report)
+      perform_enqueued_jobs
+
+      row = RailsErrorDashboard::ErrorLog.sole
+      expect(row.id).to eq(sync_row.id)
+      expect(row.error_hash).to eq(sync_row.error_hash)
+      expect(row.occurrence_count).to eq(2)
+      expect(row.error_type).to eq("RedProbeWidget")
+      expect(row.message).to eq("widget failed")
+      expect(row.backtrace).to eq(sync_row.backtrace)
+      expect(row.backtrace_source).to eq("client")
+      expect(RedProbeWidget.instances).to eq(0)
     end
   end
 

@@ -15,7 +15,7 @@ module RailsErrorDashboard
       context = context.symbolize_keys if context.respond_to?(:symbolize_keys)
 
       # Reconstruct the exception from serialized data
-      exception = reconstruct_exception(exception_data)
+      exception = reconstruct_exception(exception_data, context)
 
       # Pass pre-extracted cause chain via context so LogError can use it
       # (reconstructed exceptions don't have Ruby's built-in cause set)
@@ -74,13 +74,21 @@ module RailsErrorDashboard
     # set the message with Exception's own initializer, bypassing whatever
     # the subclass expects. Fall back to the constructor for classes whose
     # `message` needs state their initializer sets.
-    def reconstruct_exception(data)
-      exception_class = begin
-        data[:class_name].constantize
-      rescue NameError
-        # If class doesn't exist, use StandardError
-        StandardError
+    #
+    # A client report (ManualErrorReporter) is rebuilt as the same
+    # SyntheticException the sync path logs. Its type is the caller's string,
+    # usually taken from a frontend or mobile client, so it is never looked up
+    # as a constant.
+    def reconstruct_exception(data, context)
+      if context[:_capture_source] == "client"
+        return ManualErrorReporter::SyntheticException.new(
+          error_type: data[:class_name].to_s,
+          message: data[:message],
+          backtrace: Array(data[:backtrace])
+        )
       end
+
+      exception_class = resolve_exception_class(data[:class_name])
 
       exception = allocate_exception(exception_class, data[:message]) ||
                   construct_exception(exception_class, data[:message]) ||
@@ -90,6 +98,18 @@ module RailsErrorDashboard
       exception.set_backtrace(data[:backtrace]) if data[:backtrace]
 
       exception
+    end
+
+    # Only an Exception subclass is ever built from a queued name. Anything
+    # else (a missing constant, a module, a non-exception class, a plain
+    # value) becomes a StandardError; the stored error_type still comes from
+    # _reported_error_type. Payloads enqueued before 0.16.0 carry no capture
+    # source, so a client report from one of them arrives here.
+    def resolve_exception_class(name)
+      klass = name.constantize
+      klass.is_a?(Class) && klass < Exception ? klass : StandardError
+    rescue NameError
+      StandardError
     end
 
     def allocate_exception(exception_class, message)
