@@ -7,7 +7,9 @@
 # - Controllers (via ErrorHandler concern)
 # - Background Jobs (via ActiveJob integration)
 # - Sidekiq (via ActiveJob)
-# - Services (if they use Rails.error.handle)
+# - Code that calls Rails.error.report or Rails.error.record
+# - Rails.error.handle blocks only when given a severity other than :warning:
+#   handle reports at :warning by default, and #report skips handled warnings
 # - Model callbacks
 # - Rake tasks
 # - Console
