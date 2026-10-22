@@ -3,6 +3,23 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::ApplicationHelper, type: :helper do
+  # live-updates-client/REQ-4: the browser refuses the client unless its bytes
+  # match the pinned hash, and the system specs serve the vendored copy in its
+  # place, so a bump that updates one and not the other must fail here first.
+  describe "the pinned live-updates client" do
+    it "has the SHA-384 of the vendored copy the system specs serve" do
+      body = File.binread(File.expand_path("../support/vendor/turbo.js", __dir__))
+
+      expect("sha384-#{Digest::SHA384.base64digest(body)}").to eq(described_class::LIVE_UPDATES_CLIENT_INTEGRITY)
+    end
+
+    it "has a URL the system-spec interceptor serves from that copy" do
+      served = VENDORED_SCRIPTS.select { |pattern, _| pattern.match?(described_class::LIVE_UPDATES_CLIENT_URL) }
+
+      expect(served.values).to eq([ "turbo.js" ])
+    end
+  end
+
   describe "#safe_external_url" do
     it "returns an http(s) URL unchanged" do
       expect(helper.safe_external_url("https://x.test/a")).to eq("https://x.test/a")

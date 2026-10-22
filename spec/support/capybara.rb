@@ -78,7 +78,12 @@ VENDORED_SCRIPTS = {
   %r{cdn\.jsdelivr\.net/npm/chartjs-adapter-date-fns@[\d.]+/dist/chartjs-adapter-date-fns\.bundle\.min\.js} =>
     "chartjs-adapter-date-fns.bundle.min.js",
   %r{cdn\.jsdelivr\.net/npm/chartkick@[\d.]+/dist/chartkick\.min\.js} =>
-    "chartkick.min.js"
+    "chartkick.min.js",
+  # The live-updates client (only on the error index, only with
+  # enable_live_updates on). It loads under an integrity hash, so this copy
+  # must be byte-identical to what the layout pins; a helper spec checks that.
+  %r{cdn\.jsdelivr\.net/npm/@hotwired/turbo-rails@[\d.]+/app/assets/javascripts/turbo\.js} =>
+    "turbo.js"
 }.freeze
 
 VENDORED_SCRIPT_BODIES = VENDORED_SCRIPTS.to_h do |pattern, filename|
@@ -108,7 +113,9 @@ RSpec.configure do |config|
         request.respond(
           responseCode: 200,
           body: vendored.last,
-          responseHeaders: { "Content-Type" => "application/javascript" }
+          # CORS header: a module script (the live-updates client) is fetched
+          # in CORS mode, and the browser refuses it without one.
+          responseHeaders: { "Content-Type" => "application/javascript", "Access-Control-Allow-Origin" => "*" }
         )
       elsif request.url.match?(EXTERNAL_ASSET_HOSTS)
         request.abort
