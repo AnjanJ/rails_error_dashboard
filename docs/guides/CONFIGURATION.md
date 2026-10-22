@@ -170,6 +170,7 @@ On by default. See [Storm Protection](#storm-protection) below.
 |--------|------|---------|-------------|
 | `enable_middleware` | Boolean | `true` | Enable error catching middleware |
 | `enable_error_subscriber` | Boolean | `true` | Enable Rails.error subscriber |
+| `enable_live_updates` | Boolean | `false` | New errors appear on an open error list without a reload (Turbo Streams). Broadcasting runs when an error is captured, so it is opt-in. Needs `turbo-rails` and Action Cable, with a cross-process adapter (Solid Cable, Redis) in production. See [Real-Time Updates](REAL_TIME_UPDATES.md) |
 | `retention_days` | Integer | `90` | Delete an error once it has **not been seen** for this many days (by `last_seen_at`, not by when it first occurred, so an error that is still happening is never deleted). Diagnostic dumps and swallowed-exception records older than this are pruned too. Deletes only when `RailsErrorDashboard::RetentionCleanupJob` runs, and nothing in the gem schedules it: see [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs) |
 | `occurrence_context_limit` | Integer | `25` | How many of an error's newest occurrences keep their own breadcrumbs, system health and variables, which the error page's History tab lists. `0` stops storing them. Must be an Integer of 0 or more |
 
@@ -460,16 +461,16 @@ Rails Error Dashboard uses an **opt-in architecture**. Core features are always 
 **Tier 1 Features (Always ON):**
 - ✅ Error capture (controllers, jobs, middleware)
 - ✅ Dashboard UI with search and filtering
-- ✅ Real-time updates via Turbo Streams (needs Action Cable with a cross-process adapter, such as Solid Cable or Redis)
 - ✅ Analytics and trend charts
 
-**Optional Features (17 total):**
+**Optional Features:**
 - 📧 **6 Notification Channels** (Slack, Email, Discord, Telegram, PagerDuty, Webhooks)
 - ⚡ **3 Performance Features** (Async Logging, Error Sampling, Separate Database)
 - 📊 **7 Advanced Analytics** (Baseline Alerts, Fuzzy Matching, Co-occurring Errors, Error Cascades, Correlation, Platform Comparison, Occurrence Patterns)
 - 🔍 **2 Developer Tools** (Source Code Integration, Git Blame)
+- 📡 **Live updates** (`enable_live_updates`: new errors appear on an open error list; needs `turbo-rails` and Action Cable, see [Real-Time Updates](REAL_TIME_UPDATES.md))
 
-All features can be enabled during installation via the interactive installer, or toggled on/off at any time in the initializer.
+Most can be enabled during installation via the interactive installer, and all of them can be turned on or off at any time in the initializer.
 
 ---
 

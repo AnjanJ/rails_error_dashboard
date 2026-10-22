@@ -42,7 +42,7 @@ example cites `live-updates-client/REQ-N`.
   - After: none
   - Done when: `R rspec spec/generators/install_generator_spec.rb` → 0 failures
 - [ ] **T6** Docs and mirrors describe live updates as opt-in → REQ-12
-  - Files: docs/guides/REAL_TIME_UPDATES.md, docs/guides/CONFIGURATION.md, docs/FEATURES.md, docs/FAQ.md, docs/README.md, docs/GLOSSARY.md, docs/guides/ERROR_TREND_VISUALIZATIONS.md, README.md, _guides/real-time-updates.md, _guides/configuration.md, _guides/error-trend-visualizations.md, _getting_started/features.md, _getting_started/documentation.md, rails_error_dashboard.gemspec
+  - Files: docs/guides/REAL_TIME_UPDATES.md, docs/guides/CONFIGURATION.md, docs/FEATURES.md, docs/FAQ.md, docs/README.md, docs/GLOSSARY.md, docs/guides/ERROR_TREND_VISUALIZATIONS.md, README.md, _guides/real-time-updates.md, _guides/configuration.md, _guides/error-trend-visualizations.md, _getting_started/features.md, _getting_started/documentation.md, _reference/faq.md, _reference/glossary.md, rails_error_dashboard.gemspec
   - Test: none (REQ-12 is prose). Checked by the grep below and by reading each changed passage.
   - After: none
   - Done when: `grep -rniE 'out[- ]of[- ]the[- ]box|no configuration needed' docs/guides/REAL_TIME_UPDATES.md _guides/real-time-updates.md` → no output, and `grep -lr enable_live_updates docs/guides/REAL_TIME_UPDATES.md docs/guides/CONFIGURATION.md _guides/real-time-updates.md _guides/configuration.md docs/FEATURES.md _getting_started/features.md README.md` → all seven files listed

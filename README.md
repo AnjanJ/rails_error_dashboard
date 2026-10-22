@@ -127,7 +127,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 - **Host-app safety** — nothing in the capture path raises into your app; every subscriber and callback is rescue-wrapped, `Thread.current` is cleaned up in `ensure`, and the original exception is always re-raised. Variables, health and breadcrumbs are opt-in and off by default; storm protection is on by default and fails open.
 - **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are a maintainer's single-machine measurements and no benchmark script ships with the gem yet.
 - **Security** — HTTP Basic Auth or your own `authenticate_with` lambda (Devise, Warden, session); your Rails `filter_parameters` are applied to params, variables and breadcrumbs; prompts are never recorded by LLM observability. Vulnerability reports: [SECURITY.md](SECURITY.md).
-- **Compatibility** — Rails 7.0–8.1 (on Rails 7.0.0 to 7.0.8.7, unhandled request errors are not recorded; Rails 7.0.10 fixes it), Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; `turbo-rails` plus ActionCable are needed for live updates (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
+- **Compatibility** — Rails 7.0–8.1 (on Rails 7.0.0 to 7.0.8.7, unhandled request errors are not recorded; Rails 7.0.10 fixes it), Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; live updates are opt-in (`enable_live_updates`) and need `turbo-rails` plus ActionCable (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
 
 ---
 
@@ -135,7 +135,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 
 ### Core (Always Enabled)
 
-Error capture from controllers, jobs, and middleware. Custom-designed dashboard with dark/light mode, search, filtering, and real-time updates (the latter with `turbo-rails` + ActionCable in the host). Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
+Error capture from controllers, jobs, and middleware. Custom-designed dashboard with dark/light mode, search, filtering, and opt-in live updates (with `turbo-rails` + ActionCable in the host). Analytics with trend charts, severity breakdown, and spike detection. Workflow management with assignment, priority, snooze, mute/unmute (notification suppression), comments, and batch operations. Security via HTTP Basic Auth or custom lambda (Devise, Warden, session-based). Exception cause chains, enriched HTTP context, custom fingerprinting, CurrentAttributes integration, auto-reopen on recurrence, and sensitive data filtering — all built in.
 
 ### Optional Features
 
@@ -784,7 +784,7 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Notifications](docs/guides/NOTIFICATIONS.md)** — Multi-channel alerting
 - **[Source Code Integration](docs/SOURCE_CODE_INTEGRATION.md)** — Inline source + git blame
 - **[Batch Operations](docs/guides/BATCH_OPERATIONS.md)** — Bulk resolve/delete
-- **[Real-Time Updates](docs/guides/REAL_TIME_UPDATES.md)** — Live dashboard
+- **[Real-Time Updates](docs/guides/REAL_TIME_UPDATES.md)** — Opt-in live error list (`enable_live_updates`)
 - **[Error Trends](docs/guides/ERROR_TREND_VISUALIZATIONS.md)** — Charts and analytics
 - **[Translations](docs/guides/TRANSLATIONS.md)** — Eleven shipped locales, correcting a string, adding a language
 

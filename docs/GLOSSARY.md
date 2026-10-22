@@ -255,13 +255,13 @@ Minimum severity level required to trigger a notification. Example: PagerDuty on
 ## Real-Time Updates
 
 ### Turbo Streams
-Hotwire/Turbo feature for real-time page updates without JavaScript. Broadcasts DOM changes over WebSockets or SSE.
+Hotwire feature for updating a page from the server without custom JavaScript. The dashboard's opt-in live updates (`enable_live_updates`) send them over Action Cable.
 
 ### Broadcast
 Server-initiated update sent to connected clients. Used to update error lists and statistics in real-time.
 
 ### ActionCable
-Rails' WebSocket framework. Powers real-time broadcasts in the dashboard.
+Rails' WebSocket framework. Carries the dashboard's live updates when `enable_live_updates` is on.
 
 ---
 

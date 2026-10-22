@@ -155,7 +155,7 @@ Supports Slack, Discord, Email, PagerDuty, and custom webhooks. See [Notificatio
 <details>
 <summary><strong>Does it work with Turbo/Hotwire?</strong></summary>
 
-Yes — with `turbo-rails` and a working ActionCable adapter in the host app, new errors appear in the dashboard over Turbo Streams without a page refresh. Without them the dashboard does not auto-refresh; there is no polling fallback.
+Yes. Live updates are opt-in: set `config.enable_live_updates = true`. Then, with `turbo-rails` and a working ActionCable adapter in the host app, new errors appear in the dashboard over Turbo Streams without a page refresh (see the [Real-Time Updates guide](/rails_error_dashboard/docs/guides/real-time-updates/)). Without them the dashboard does not auto-refresh; there is no polling fallback.
 </details>
 
 <details>

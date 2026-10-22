@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `08c506e` on fix/live-updates-client.
 > Status: open
-> Paths: lib/rails_error_dashboard/configuration.rb,lib/rails_error_dashboard/services/error_broadcaster.rb,app/views/rails_error_dashboard/errors/index.html.erb,app/views/layouts/rails_error_dashboard.html.erb,app/helpers/rails_error_dashboard/application_helper.rb,lib/generators/rails_error_dashboard/install/templates/initializer.rb,docs/,_guides/,_getting_started/,README.md,rails_error_dashboard.gemspec
+> Paths: lib/rails_error_dashboard/configuration.rb,lib/rails_error_dashboard/services/error_broadcaster.rb,app/views/rails_error_dashboard/errors/index.html.erb,app/views/layouts/rails_error_dashboard.html.erb,app/helpers/rails_error_dashboard/application_helper.rb,lib/generators/rails_error_dashboard/install/templates/initializer.rb,docs/,_guides/,_getting_started/,_reference/,README.md,rails_error_dashboard.gemspec
 
 ## Purpose
 
@@ -52,7 +52,7 @@ so no one loses visible behaviour, and hosts stop paying for broadcasts that nob
 - **REQ-11.** The installer's initializer template shall include `enable_live_updates`, set to
   `false`, with a comment naming what the host needs.
 - **REQ-12.** The real-time updates guide, the configuration guide, FEATURES, the README and their
-  `_guides/` and `_getting_started/` copies shall describe live updates as opt-in through
+  `_guides/`, `_getting_started/` and `_reference/` copies shall describe live updates as opt-in through
   `enable_live_updates`, with the host requirements: turbo-rails, and ActionCable with a
   cross-process adapter in production. [untested: prose, verified by reading and by grepping for
   stale claims]

@@ -6,171 +6,64 @@ order: 6
 
 # Real-Time Updates with Turbo Streams
 
-This guide explains how Rails Error Dashboard uses Turbo Streams to provide real-time updates for error tracking without manual page refreshes.
+With live updates on, an open error list shows newly captured errors without a reload. Rows already on the page also update in place when their errors recur or change. Live updates are **off by default**, and they need Turbo Streams and Action Cable in the host app.
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [How It Works](#how-it-works)
-- [Features](#features)
-- [Technical Implementation](#technical-implementation)
-- [Configuration](#configuration)
-- [Browser Requirements](#browser-requirements)
-- [Performance Considerations](#performance-considerations)
+- [Turning them on](#turning-them-on)
+- [What updates](#what-updates)
+- [What it costs](#what-it-costs)
+- [Streams](#streams)
+- [Content Security Policy](#content-security-policy)
 - [Troubleshooting](#troubleshooting)
+- [How it is tested](#how-it-is-tested)
+- [Upgrading from 0.16.2 or earlier](#upgrading-from-0162-or-earlier)
 
 ---
 
-## Overview
-
-Rails Error Dashboard now includes **real-time updates** powered by Turbo Streams. When errors occur in your application, the dashboard automatically updates without requiring a manual page refresh. This requires `turbo-rails` and a working ActionCable adapter in the host app; without them the dashboard does not auto-refresh — there is no polling fallback.
-
-### What Gets Updated in Real-Time:
-
-1. **Error List** - New errors appear instantly at the top of the list
-2. **Dashboard Stats** - Error counts update automatically (Today, This Week, Unresolved, Resolved). The figures are cached, so after a newly captured error the stat cards can lag by up to 60 seconds (analytics by up to 5 minutes); resolving, muting, batch actions and the retention job refresh them immediately.
-3. **Visual Indicators** - New errors are highlighted with animations
-4. **Live Status** - A pulsing "Live" indicator shows the connection is active
-
----
-
-## How It Works
-
-### Turbo Streams Technology
-
-Turbo Streams is part of the Hotwire framework and provides efficient, real-time updates over WebSockets or SSE (Server-Sent Events).
-
-**Flow:**
-
-```text
-Error Occurs → ErrorLog Created → Turbo Stream Broadcast → Dashboard Updates
-```
-
-**Diagram:**
-
-```text
-┌─────────────────┐
-│  Rails App      │
-│  Error occurs   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  ErrorLog.create│
-│  after_commit   │
-└────────┬────────┘
-         │
-         ▼
-┌──────────────────────┐
-│ Turbo::StreamsChannel│
-│ broadcast_prepend_to │
-└────────┬─────────────┘
-         │
-         ▼
-┌──────────────────────┐
-│  WebSocket/SSE       │
-│  to all subscribers  │
-└────────┬─────────────┘
-         │
-         ▼
-┌──────────────────────┐
-│  Browser Dashboard   │
-│  Auto-updates UI     │
-└──────────────────────┘
-```
-
----
-
-## Features
-
-### 1. Live Error List Updates
-
-When a new error is logged:
-- Appears instantly at the top of the error list
-- Yellow highlight animation (3 seconds)
-- Smooth slide-in transition
-- No page reload needed
-
-**Example:**
+## Turning them on
 
 ```ruby
-# When this happens in your app:
-raise ArgumentError, "Invalid user input"
-
-# Dashboard users see the error appear immediately with:
-# - Yellow flash animation
-# - Error details (type, message, platform, etc.)
-# - Auto-scrolls to top of list
+# config/initializers/rails_error_dashboard.rb
+RailsErrorDashboard.configure do |config|
+  config.enable_live_updates = true
+end
 ```
 
-### 2. Real-Time Stats Refresh
+The host app also needs four things:
 
-Dashboard statistics update automatically:
-- **Today** - Errors in last 24 hours
-- **This Week** - Errors in last 7 days
-- **Unresolved** - Open errors
-- **Resolved** - Fixed errors
+1. **turbo-rails in its Gemfile.** RED does not depend on it, and the dashboard works without it.
+2. **Action Cable, loaded and mounted.** It is loaded by `require "rails/all"`, or by `require "action_cable/engine"` in `config/application.rb`. Rails mounts it at `/cable` by default, and the dashboard also honours a custom `config.action_cable.url` or `mount_path`.
+3. **A `config/cable.yml` adapter that reaches every process that captures errors.** In production, use a cross-process adapter such as Solid Cable or Redis. The `async` adapter only delivers within one process, so errors captured by a job worker or another Puma worker would never reach the browser.
+4. **A cable connection the dashboard viewer can open.** The error list subscribes through your app's `ApplicationCable::Connection`. If that connection rejects visitors who are not signed in to your app, a person who has only the dashboard login gets no live updates.
 
-All stat cards pulse briefly when updated to draw attention.
+When the switch is on but turbo-rails or Action Cable is missing, RED logs a warning at boot that names the missing piece. The error list then behaves as if the switch were off.
 
-### 3. Visual Feedback
+## What updates
 
-**Live Indicator:**
-- Green "Live" badge pulses to show active connection
-- Located in header next to timestamp
+- **New errors** go to the top of the error list. This happens on the first page of a list that is unfiltered, or filtered only to one application. A list with any other filter or a sort, or a later page, does not take new rows, because a new error may not belong at its top.
+- **Rows already on the page** are replaced in place when their error recurs, is resolved, or changes in any other way.
+- **A Live badge** next to "Last updated" shows that the page has subscribed.
+- **Relative times in new rows** ("2 minutes ago") are formatted in the dashboard's language, like the rest of the page.
 
-**New Error Animation:**
-```css
-/* Yellow highlight fades over 3 seconds */
-@keyframes slideInFade {
-  0% { background: #FEF3C7; transform: translateY(-20px); }
-  10% { background: #FEF3C7; transform: translateY(0); }
-  100% { background: transparent; }
-}
-```
+Without live updates the dashboard works the same, and a reload shows new errors. There is no polling fallback.
 
-**Stat Card Pulse:**
-```css
-/* Brief scale animation when stats update */
-@keyframes statPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-```
+## What it costs
 
-### 4. Error Updates (Recurrences)
+With the switch off, capturing an error does no live-update work.
 
-When an existing error recurs:
-- Occurrence count updates in place
-- Last seen timestamp updates
-- Stats refresh automatically
-- Row briefly highlights to show the update
+With it on, every capture that creates or updates an error row renders that row's partial in the thread that committed the row. When async logging is off, that thread is the request thread. The partial is rendered once per stream, so twice when the error belongs to an application.
 
----
+The cost is bounded in four ways:
 
-## Technical Implementation
+- the stats payload is computed at most once every 5 seconds, per stream and per process;
+- while storm protection's circuit breaker is open, nothing is broadcast, and the page catches up on its next load;
+- if the cable adapter cannot be reached (for example, Redis is down), broadcasting pauses for 60 seconds instead of retrying on every error;
+- the turbo-rails client (about 41 KB compressed) loads only on the error list, and only when live updates are on.
 
-### 1. Turbo Rails Integration
+## Streams
 
-**Gemspec Addition:**
-
-```ruby
-# rails_error_dashboard.gemspec
-spec.add_dependency "turbo-rails", "~> 2.0"
-```
-
-**Layout Script:**
-
-```html
-<!-- app/views/layouts/rails_error_dashboard.html.erb -->
-<script type="module">
-  import * as Turbo from 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/+esm'
-</script>
-```
-
-### Streams
-
-Broadcasts go out on three kinds of stream, each of which exists globally and once per application. `RailsErrorDashboard::Services::ErrorBroadcaster.stream_name` is the single source for the names, used by the built-in views and by the broadcaster.
+Broadcasts go out on three kinds of stream. Each exists once globally and once per application. `RailsErrorDashboard::Services::ErrorBroadcaster.stream_name` is the single source for the names, used by both the built-in views and the broadcaster.
 
 | Stream | Per application | Carries |
 |---|---|---|
@@ -181,581 +74,59 @@ Broadcasts go out on three kinds of stream, each of which exists globally and on
 The error list subscribes according to what it is showing:
 
 - Filtered to an application, it listens to that application's streams only, so another application's errors never appear in it.
-- With any other filter, a sort, or on a page after the first, it does not listen to the new-row stream: a new error may not match the filter, and would not belong at the top. Rows already on the page still update in place.
+- With any other filter, a sort, or on a page after the first, it does not listen to the new-row stream. Rows already on the page still update in place.
 
-The stats payload is computed at most once every 5 seconds per stream and per process, one payload per captured error at most, and nothing is broadcast while storm protection is active; the page catches up on its next load. The built-in error list does not currently contain a `dashboard_stats` element, so the stats stream only has a visible effect in a view that provides one.
+The built-in pages contain no `dashboard_stats` element, so the stats stream has a visible effect only in a custom view that provides one.
 
-If you built a custom view against the single `error_list` stream of earlier versions, subscribe it to `error_updates` and `error_stats` as well: row replacements and stats moved off `error_list` in 0.13.0.
+If you built a custom view against the single `error_list` stream of earlier versions, subscribe it to `error_updates` and `error_stats` as well. Row replacements and stats moved off `error_list` in 0.13.0.
 
-### 2. Error Model Broadcasting
+## Content Security Policy
 
-**Model Callbacks:**
+The error list loads the turbo-rails client (`@hotwired/turbo-rails`, at a pinned version) from `cdn.jsdelivr.net`. It is a module script with a Subresource Integrity hash, and it carries your CSP nonce when you have one. Under a strict policy:
 
-```ruby
-# app/models/rails_error_dashboard/error_log.rb
-after_create_commit :broadcast_new_error
-after_update_commit :broadcast_error_update
-
-def broadcast_new_error
-  return unless defined?(Turbo)
-
-  platforms = ErrorLog.distinct.pluck(:platform).compact
-  show_platform = platforms.size > 1
-
-  Turbo::StreamsChannel.broadcast_prepend_to(
-    "error_list",
-    target: "error_list",
-    partial: "rails_error_dashboard/errors/error_row",
-    locals: { error: self, show_platform: show_platform }
-  )
-  broadcast_replace_stats
-rescue => e
-  Rails.logger.error("Failed to broadcast new error: #{e.message}")
-end
-
-def broadcast_error_update
-  return unless defined?(Turbo)
-
-  Turbo::StreamsChannel.broadcast_replace_to(
-    "error_list",
-    target: "error_#{id}",
-    partial: "rails_error_dashboard/errors/error_row",
-    locals: { error: self, show_platform: show_platform }
-  )
-  broadcast_replace_stats
-end
-
-def broadcast_replace_stats
-  return unless defined?(Turbo)
-
-  stats = Queries::DashboardStats.call
-  Turbo::StreamsChannel.broadcast_replace_to(
-    "error_list",
-    target: "dashboard_stats",
-    partial: "rails_error_dashboard/errors/stats",
-    locals: { stats: stats }
-  )
-end
-```
-
-### 3. View Setup
-
-**Subscribe to Turbo Stream:**
-
-```erb
-<!-- app/views/rails_error_dashboard/errors/index.html.erb -->
-<%= turbo_stream_from "error_list" %>
-
-<!-- Stats container with ID for targeting -->
-<div id="dashboard_stats" class="mb-4">
-  <%= render "stats", stats: @stats %>
-</div>
-
-<!-- Error list tbody with ID for targeting -->
-<tbody id="error_list">
-  <% @errors.each do |error| %>
-    <%= render "error_row", error: error, show_platform: @platforms.size > 1 %>
-  <% end %>
-</tbody>
-```
-
-**Partials:**
-
-```erb
-<!-- app/views/rails_error_dashboard/errors/_error_row.html.erb -->
-<tr id="error_<%= error.id %>">
-  <!-- Error details... -->
-</tr>
-
-<!-- app/views/rails_error_dashboard/errors/_stats.html.erb -->
-<div class="row g-4">
-  <!-- Stat cards... -->
-</div>
-```
-
-### 4. JavaScript Animations
-
-```javascript
-// Highlight new errors when prepended
-document.addEventListener('turbo:before-stream-render', (event) => {
-  const { target, action } = event.detail.newStream;
-
-  if (action === 'prepend' && target === 'error_list') {
-    setTimeout(() => {
-      const firstRow = document.querySelector('#error_list tr:first-child');
-      if (firstRow) {
-        firstRow.classList.add('new-error');
-        setTimeout(() => firstRow.classList.remove('new-error'), 3000);
-      }
-    }, 10);
-  }
-
-  // Pulse stats cards when updated
-  if (action === 'replace' && target === 'dashboard_stats') {
-    setTimeout(() => {
-      document.querySelectorAll('.stat-card').forEach(card => {
-        card.classList.add('updated');
-        setTimeout(() => card.classList.remove('updated'), 500);
-      });
-    }, 10);
-  }
-});
-```
-
----
-
-## Configuration
-
-### Enable/Disable Real-Time Updates
-
-Real-time updates work out-of-the-box. No configuration needed!
-
-**To disable** (if needed for debugging):
-
-```ruby
-# config/initializers/rails_error_dashboard.rb
-
-# Option 1: Remove turbo-rails from your Gemfile
-# gem 'turbo-rails' # commented out
-
-# Option 2: Add guard in model
-# app/models/rails_error_dashboard/error_log.rb
-def broadcast_new_error
-  return if Rails.env.test? # Skip in tests
-  return unless RailsErrorDashboard.configuration.enable_realtime_updates # Custom config
-  # ... rest of code
-end
-```
-
-### Custom Configuration (Advanced)
-
-Add custom settings to your configuration:
-
-```ruby
-# config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  # Disable real-time updates in certain environments
-  config.enable_realtime_updates = !Rails.env.development?
-
-  # Custom broadcast channel name
-  config.turbo_stream_channel = "custom_error_channel"
-
-  # Throttle broadcasts (prevent spam)
-  config.broadcast_throttle = 1.second # Max 1 broadcast per second
-end
-```
-
-**Implementation:**
-
-```ruby
-# lib/rails_error_dashboard/configuration.rb
-attr_accessor :enable_realtime_updates
-attr_accessor :turbo_stream_channel
-attr_accessor :broadcast_throttle
-
-def initialize
-  @enable_realtime_updates = true
-  @turbo_stream_channel = "error_list"
-  @broadcast_throttle = 0.seconds
-  # ... other defaults
-end
-```
-
----
-
-## Browser Requirements
-
-### Supported Browsers
-
-Real-time updates work in all modern browsers:
-
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
-- ✅ Opera 76+
-
-### Fallback Behavior
-
-If Turbo Streams are not supported:
-- Dashboard works normally
-- Users can manually refresh the page
-- No errors or broken functionality
-
-### WebSocket vs SSE
-
-Turbo automatically chooses the best transport:
-- **WebSocket** (preferred) - Full duplex, lowest latency
-- **SSE** (fallback) - Server-Sent Events, works through most proxies
-
----
-
-## Performance Considerations
-
-### Scalability
-
-**Single User:**
-- Minimal overhead (~1-2 KB per update)
-- Instant updates (< 50ms latency)
-
-**Multiple Users (10-100):**
-- Each user subscribes to the same channel
-- Server broadcasts once, all users receive
-- Network overhead: ~1-2 KB × number of connected users
-
-**High-Volume Apps (1000s of errors/minute):**
-- Consider throttling broadcasts
-- Use sampling (see [ERROR_SAMPLING_AND_FILTERING.md](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/))
-- Monitor WebSocket connections
-
-### Database Impact
-
-Broadcasts happen in `after_commit` callbacks:
-- **No database overhead** - Uses existing error creation
-- **No N+1 queries** - Stats query is optimized
-- **Async-safe** - Works with Sidekiq/Solid Queue
-
-### Network Bandwidth
-
-**Per Error Broadcast:**
-- Error row HTML: ~500 bytes
-- Stats update HTML: ~300 bytes
-- **Total: ~800 bytes per error**
-
-**Calculation:**
-
-```text
-1,000 errors/hour = 800 KB/hour per user
-10 concurrent users = 8 MB/hour total bandwidth
-```
-
-**Optimization Tips:**
-
-1. **Use Error Sampling** - Reduce broadcast frequency
-2. **Compress HTML** - Enable gzip/brotli
-3. **Throttle Updates** - Limit broadcasts to 1 per second
-
----
+- `script-src` must allow `https://cdn.jsdelivr.net`. The dashboard's other scripts already need this.
+- `connect-src` must allow the WebSocket connection to your cable URL.
 
 ## Troubleshooting
 
-### Problem: Updates Not Appearing
+### No Live badge on the error list
 
-**Check 1: Turbo Loaded?**
+The page did not subscribe. Check these in order:
 
-Open browser console and run:
-```javascript
-typeof Turbo !== 'undefined'
-// Should return: true
-```
+1. `config.enable_live_updates` is `true`.
+2. The boot log has no `enable_live_updates is on but …` warning.
+3. `ActionCable.server.pubsub` works in a Rails console. That means `config/cable.yml` has an entry for this environment, and its adapter is reachable. After a failure, RED waits 60 seconds before trying again.
 
-**Check 2: WebSocket Connected?**
+### The badge shows, but new errors never appear
 
-Look for console messages:
-```text
-Turbo Streams connected
-```
+- **Check the WebSocket.** In the browser's developer tools, filter the network tab by WS. There should be one connection to `/cable` (or to your cable URL). If it closes straight away, your `ApplicationCable::Connection` probably rejected it.
+- **Check where errors are captured.** If they are captured in another process, such as a job worker or a second Puma worker, the `async` adapter cannot reach the browser. Use Solid Cable or Redis.
+- **Check the list's filters.** A filtered, sorted or later page does not receive new rows, by design (see [Streams](#streams)).
+- **Check for an error storm.** During one, nothing is broadcast until the breaker closes.
 
-If you see connection errors, check:
-- Firewall/proxy settings
-- SSL certificate (WebSockets require HTTPS in production)
-- Rails server running
+## How it is tested
 
-**Check 3: Broadcasts Happening?**
+- `spec/requests/live_stream_delivery_spec.rb`: broadcasts reach real subscribers through the async adapter, scoped per application.
+- `spec/requests/live_stream_scoping_spec.rb`: which streams each list subscribes to.
+- `spec/requests/live_updates_client_spec.rb`: the switch, the client tag with its integrity hash, and the cable URL.
+- `spec/system/live_updates_spec.rb`: a real browser opens the list, an error is captured, and its row appears without a reload.
 
-Add logging:
-```ruby
-def broadcast_new_error
-  Rails.logger.info "📡 Broadcasting new error ##{id}"
-  # ... rest of code
-end
-```
+## Upgrading from 0.16.2 or earlier
 
-### Problem: Duplicate Errors Appearing
+Up to 0.16.2, live updates never reached the browser:
 
-**Cause:** Multiple browser tabs subscribed to same channel
+- the error list rendered stream subscriptions;
+- RED broadcast on every capture whenever turbo-rails and Action Cable were loaded;
+- but the dashboard's layout loaded no Turbo client.
 
-**Solution:** This is expected behavior. Each tab shows the same updates.
-
-To prevent duplicates in the database, ensure deduplication is working:
-```ruby
-# Check error_hash generation
-error = RailsErrorDashboard::ErrorLog.last
-error.error_hash # Should be consistent for same error
-```
-
-### Problem: Slow Updates (> 1 second delay)
-
-**Check 1: Stats Query Performance**
-
-```ruby
-# Time the stats query
-Benchmark.ms do
-  RailsErrorDashboard::Queries::DashboardStats.call
-end
-# Should be < 100ms
-```
-
-If slow, check:
-- Database indexes (see [DATABASE_OPTIMIZATION.md](/rails_error_dashboard/docs/guides/database-optimization/))
-- Number of errors in database
-
-**Check 2: Partial Rendering**
-
-```ruby
-# Time partial rendering
-Benchmark.ms do
-  ApplicationController.render(
-    partial: "rails_error_dashboard/errors/error_row",
-    locals: { error: error, show_platform: true }
-  )
-end
-# Should be < 50ms
-```
-
-### Problem: Memory Leak (WebSocket Connections)
-
-**Symptoms:**
-- Server memory increases over time
-- Too many WebSocket connections
-
-**Check Active Connections:**
-
-```ruby
-# Add to routes.rb for debugging
-namespace :admin do
-  get 'turbo_stats' => proc {
-    [200, {}, ["Active Turbo connections: #{ActionCable.server.connections.size}"]]
-  }
-end
-```
-
-**Solution:** Set connection timeout:
-
-```ruby
-# config/cable.yml
-production:
-  adapter: redis
-  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
-  channel_prefix: error_dashboard_production
-  timeout: 30 # Disconnect idle connections after 30 seconds
-```
-
-### Problem: Updates Stop After Error
-
-**Check Rails Logs:**
-
-```text
-Failed to broadcast new error: [error message]
-```
-
-**Common Causes:**
-
-1. **Turbo Not Loaded** - Add guard: `return unless defined?(Turbo)`
-2. **Partial Error** - Check partial syntax
-3. **Database Transaction** - Ensure `after_commit` not `after_create`
-
-**Debug Mode:**
-
-```ruby
-def broadcast_new_error
-  return unless defined?(Turbo)
-
-  begin
-    # ... broadcast code
-  rescue => e
-    Rails.logger.error("Broadcast error: #{e.class} - #{e.message}")
-    Rails.logger.error(e.backtrace.first(5).join("\n"))
-    raise # Re-raise in development
-  end
-end
-```
+Live updates now work, and they are opt-in: set `config.enable_live_updates = true`. If you leave the switch off, captures stop doing the broadcast work they did before.
 
 ---
 
-## Advanced Features
+## See also
 
-### Custom Broadcast Events
-
-Broadcast custom updates:
-
-```ruby
-# In your code
-RailsErrorDashboard::ErrorLog.broadcast_custom_alert(
-  message: "System degraded - high error rate",
-  severity: :critical
-)
-
-# In model
-def self.broadcast_custom_alert(message:, severity:)
-  Turbo::StreamsChannel.broadcast_append_to(
-    "error_list",
-    target: "alert_container",
-    partial: "rails_error_dashboard/errors/alert",
-    locals: { message: message, severity: severity }
-  )
-end
-```
-
-### Targeted Updates (Per-User)
-
-Send updates to specific users:
-
-```ruby
-# Broadcast only to admins
-def broadcast_new_error
-  return unless defined?(Turbo)
-
-  User.admins.find_each do |admin|
-    Turbo::StreamsChannel.broadcast_prepend_to(
-      "error_list_user_#{admin.id}",
-      target: "error_list",
-      partial: "rails_error_dashboard/errors/error_row",
-      locals: { error: self }
-    )
-  end
-end
-```
-
-**View:**
-
-```erb
-<%= turbo_stream_from "error_list_user_#{current_user.id}" %>
-```
-
-### Audio Notifications
-
-Play sound when critical error occurs:
-
-```javascript
-document.addEventListener('turbo:before-stream-render', (event) => {
-  const { target, action } = event.detail.newStream;
-
-  if (action === 'prepend' && target === 'error_list') {
-    const firstRow = document.querySelector('#error_list tr:first-child');
-    const isCritical = firstRow?.querySelector('.badge-danger')?.textContent === 'CRITICAL';
-
-    if (isCritical) {
-      const audio = new Audio('/sounds/critical-error.mp3');
-      audio.play().catch(() => console.log('Audio blocked'));
-    }
-  }
-});
-```
-
----
-
-## Testing Real-Time Updates
-
-### Manual Testing
-
-**Terminal 1: Rails Server**
-```bash
-rails server
-```
-
-**Terminal 2: Trigger Errors**
-```bash
-rails runner "raise ArgumentError, 'Test error'"
-```
-
-**Browser:**
-Open dashboard at `http://localhost:3000/red`
-- Error should appear instantly
-- Stats should update
-- Yellow highlight animation should play
-
-### Automated Testing
-
-Real-time updates are tested in the RSpec suite:
-
-```ruby
-# spec/models/rails_error_dashboard/error_log_spec.rb
-describe "real-time broadcasts" do
-  it "broadcasts new error via Turbo Stream" do
-    allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
-
-    error = create(:error_log)
-
-    expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
-      "error_list",
-      hash_including(target: "error_list")
-    )
-  end
-end
-```
-
-**All 545 tests pass**, including real-time update functionality!
-
----
-
-## Migration Notes
-
-### Upgrading from Pre-Turbo Version
-
-No migration needed! Real-time updates work automatically.
-
-**What Changed:**
-
-1. Added `turbo-rails` dependency
-2. Added Turbo CDN script to layout
-3. Added `after_commit` callbacks to ErrorLog model
-4. Refactored views to use partials
-
-**Backward Compatible:**
-
-- Old dashboards continue to work
-- No database changes required
-- Manual refresh still works
-
-### Downgrading (Removing Real-Time Updates)
-
-If you need to remove real-time updates:
-
-1. **Remove gem:**
-   ```ruby
-   # rails_error_dashboard.gemspec
-   # spec.add_dependency "turbo-rails", "~> 2.0"  # Comment out
-   ```
-
-2. **Remove callbacks:**
-   ```ruby
-   # app/models/rails_error_dashboard/error_log.rb
-   # after_create_commit :broadcast_new_error  # Comment out
-   # after_update_commit :broadcast_error_update  # Comment out
-   ```
-
-3. **Remove Turbo script:**
-   ```erb
-   <!-- app/views/layouts/rails_error_dashboard.html.erb -->
-   <!-- Remove Turbo script -->
-   ```
-
-Dashboard continues to function normally with manual refresh.
-
----
-
-## Additional Resources
-
-- [Turbo Handbook](https://turbo.hotwired.dev/)
-- [Turbo Streams Reference](https://turbo.hotwired.dev/handbook/streams)
+- [Turbo Streams handbook](https://turbo.hotwired.dev/handbook/streams)
+- [Action Cable overview](https://guides.rubyonrails.org/action_cable_overview.html)
+- [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/)
 - [Error Sampling & Filtering](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/)
-- [Database Optimization](/rails_error_dashboard/docs/guides/database-optimization/)
 - [Main README](https://github.com/AnjanJ/rails_error_dashboard/blob/main/README.md)
-
----
-
-## Summary
-
-✅ **Real-time error list updates** - New errors appear instantly
-✅ **Live stats refresh** - Counts update automatically
-✅ **Visual feedback** - Animations highlight changes
-✅ **Requirements** - `turbo-rails` plus a working ActionCable adapter in the host app; there is no polling fallback
-✅ **High performance** - Minimal overhead (~800 bytes per error)
-✅ **Browser compatible** - All modern browsers supported
-✅ **Production ready** - Covered by the request and system specs
-
-**Related Features:**
-- [Error Trend Visualizations](/rails_error_dashboard/docs/guides/error-trend-visualizations/) - Charts for 7-day trends
-- [Baseline Monitoring](/rails_error_dashboard/docs/features/baseline-monitoring/) - Spike detection and alerts
-- [Analytics](/rails_error_dashboard/docs/features/#analytics--insights) - Complete analytics features
