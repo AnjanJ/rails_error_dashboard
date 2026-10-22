@@ -10,11 +10,15 @@ module RailsErrorDashboard
   # - GitHub:   X-Hub-Signature-256 (HMAC-SHA256)
   # - GitLab:   X-Gitlab-Token (shared secret)
   # - Codeberg: X-Gitea-Signature (HMAC-SHA256)
-  # - Linear:   Linear-Signature (HMAC-SHA256)
+  # - Linear:   Linear-Signature (HMAC-SHA256), and a signed webhookTimestamp
+  #             within a minute of now
   class WebhooksController < ActionController::Base
     skip_before_action :verify_authenticity_token
 
     PROVIDERS = %w[github gitlab codeberg linear].freeze
+
+    # Linear's documented tolerance for webhookTimestamp, in milliseconds.
+    LINEAR_TIMESTAMP_TOLERANCE_MS = 60_000
 
     before_action :verify_webhook_enabled
     # Before the signature check: an unknown provider is a wrong URL, and a 401
@@ -110,7 +114,23 @@ module RailsErrorDashboard
       return false unless signature
 
       expected = OpenSSL::HMAC.hexdigest("SHA256", secret, body)
-      ActiveSupport::SecurityUtils.secure_compare(expected, signature)
+      return false unless ActiveSupport::SecurityUtils.secure_compare(expected, signature)
+
+      fresh_linear_delivery?(body)
+    end
+
+    # Linear puts webhookTimestamp (UNIX milliseconds) in the signed body and
+    # recommends rejecting a delivery more than a minute from the receiver's
+    # clock. Read only after the signature matches, so the timestamp is one
+    # Linear signed; a missing or non-numeric one is rejected.
+    def fresh_linear_delivery?(body)
+      payload = JSON.parse(body)
+      timestamp = payload["webhookTimestamp"] if payload.is_a?(Hash)
+      return false unless timestamp.is_a?(Numeric)
+
+      ((Time.current.to_f * 1000) - timestamp).abs <= LINEAR_TIMESTAMP_TOLERANCE_MS
+    rescue JSON::ParserError
+      false
     end
 
     def parse_payload

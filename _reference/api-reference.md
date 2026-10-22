@@ -288,8 +288,11 @@ These routes skip the dashboard's login and CSRF check. They check a signature m
 | Linear | `Linear-Signature` | the HMAC-SHA256 of the body |
 
 - `404` unless `enable_issue_tracking` is on and `issue_webhook_secret` is set.
-- `401` for a missing or wrong signature, or any other provider.
-- `200` once the signature checks out, even when the payload matches no error or fails to process,
+- `401` for a missing or wrong signature, and for a Linear delivery whose `webhookTimestamp` is
+  missing or more than 60 seconds from the server's clock, as Linear's docs recommend. Keep the
+  server's clock synced.
+- `404` for any other provider.
+- `200` once those checks pass, even when the payload matches no error or fails to process,
   so the tracker doesn't retry.
 
 ### Webhooks RED sends
