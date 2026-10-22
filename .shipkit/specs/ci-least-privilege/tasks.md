@@ -13,7 +13,7 @@ time. Each test is written first and watched fail for the right reason.
   - Test: spec/ci/workflows_spec.rb examples for REQ-1, REQ-2, REQ-11 and REQ-12 on ci.yml and test.yml
   - After: T1
   - Done when: `env -u RAILS_VERSION bin/with-ruby bundle exec rspec spec/ci/workflows_spec.rb` → 0 failures; `actionlint .github/workflows/ci.yml .github/workflows/test.yml` → only the two existing SC2209 notes in test.yml
-- [ ] **T3** The smoke-test workflow declares the two secrets it reads, and its checkout persists no credentials → REQ-1, REQ-11, REQ-17
+- [x] **T3** The smoke-test workflow declares the two secrets it reads, and its checkout persists no credentials → REQ-1, REQ-11, REQ-17
   - Files: spec/ci/workflows_spec.rb, .github/workflows/smoke-test-demo.yml
   - Test: spec/ci/workflows_spec.rb examples for REQ-1, REQ-11 and REQ-17 on smoke-test-demo.yml
   - After: T2

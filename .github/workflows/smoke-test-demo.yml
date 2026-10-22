@@ -20,6 +20,13 @@ on:
         required: false
         type: string
         default: 'https://rails-error-dashboard.anjan.dev'
+    # The only secrets this workflow reads. release.yml passes exactly these
+    # (not `secrets: inherit`); each falls back to the demo's public login.
+    secrets:
+      DEMO_USER:
+        required: false
+      DEMO_PASSWORD:
+        required: false
 
   # Run daily at 6am UTC to monitor demo health
   schedule:
@@ -38,12 +45,11 @@ jobs:
   smoke-test:
     runs-on: ubuntu-latest
 
-    # Declared here rather than left to the caller. A called workflow inherits
-    # the CALLER's permissions, and release.yml grants only contents,
-    # pull-requests and id-token -- so the failure-notification step below
-    # (issues.create) would 403 when this runs from a release, while working
-    # fine on the schedule, where the repo default applies. Stating what this
-    # workflow needs keeps both entry points working.
+    # Declared here rather than left to the caller or the repo default: the
+    # failure-notification step below (issues.create) needs issues: write, and
+    # nothing else needs more than read. On the schedule and on dispatch this
+    # block is what applies. A called workflow can never hold more than the
+    # calling job grants, so release.yml's smoke-test job grants these same two.
     permissions:
       contents: read
       issues: write
@@ -51,6 +57,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run smoke tests against demo site
         env:

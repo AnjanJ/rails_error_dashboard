@@ -47,7 +47,7 @@ RSpec.describe "GitHub Actions workflows" do
 
   # The workflows this spec holds to least privilege.
   def hardened_workflows
-    %w[ci.yml test.yml]
+    %w[ci.yml test.yml smoke-test-demo.yml]
   end
 
   describe "every hardened workflow" do
@@ -88,6 +88,17 @@ RSpec.describe "GitHub Actions workflows" do
           expect(effective_permissions(name, job_id)).to eq({ "contents" => "read" }), "#{name}:#{job_id}"
         end
       end
+    end
+  end
+
+  describe "smoke-test-demo.yml" do
+    # release.yml passes these two by name (no `secrets: inherit`), and a
+    # caller can only pass secrets the called workflow declares.
+    it "declares the two demo secrets it reads as optional workflow_call secrets (ci-least-privilege/REQ-17)" do
+      secrets = workflow("smoke-test-demo.yml").fetch(true).fetch("workflow_call").fetch("secrets")
+
+      expect(secrets.keys).to contain_exactly("DEMO_USER", "DEMO_PASSWORD")
+      expect(secrets.values.map { |secret| secret["required"] }).to all(be(false))
     end
   end
 
