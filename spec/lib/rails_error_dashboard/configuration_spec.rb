@@ -62,6 +62,13 @@ RSpec.describe RailsErrorDashboard::Configuration do
       end
     end
 
+    describe "live updates defaults" do
+      # live-updates-client/REQ-1: broadcasting runs on the capture path, so it is opt-in.
+      it "sets enable_live_updates to false (opt-in)" do
+        expect(config.enable_live_updates).to be false
+      end
+    end
+
     describe "breadcrumb configuration defaults" do
       it "sets enable_breadcrumbs to false (opt-in)" do
         expect(config.enable_breadcrumbs).to be false

@@ -37,6 +37,8 @@
     <% if respond_to?(:csp_meta_tag) %>
       <%= csp_meta_tag %>
     <% end %>
+    <%# Head content a page asks for: the live-updates client, on the error index only. %>
+    <%= yield :red_head %>
 
     <!-- Early theme detection (prevents flash of wrong theme) -->
     <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
@@ -1688,7 +1690,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Tooltips
   function initializeTooltips() {
     var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
+    // getOrCreateInstance: with the live-updates client loaded, turbo:load
+    // re-runs this on the first page load, and `new` would stack a second
+    // tooltip on every element.
+    tooltipTriggerList.forEach(function(el) { bootstrap.Tooltip.getOrCreateInstance(el); });
   }
   initializeTooltips();
   if (typeof Turbo !== 'undefined') {
@@ -1743,7 +1748,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.local-time').forEach(function(element) {
       var utcString = element.dataset.utc;
       var formatString = element.dataset.format;
-      if (!utcString) return;
+      // Set up once: this runs again on turbo:load and after live updates,
+      // and a second click listener would cancel the first.
+      if (!utcString || element.dataset.originalUtc) return;
       try {
         var date = new Date(utcString);
         if (isNaN(date.getTime())) return;
@@ -1772,7 +1779,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('.local-time-ago').forEach(function(element) {
       var utcString = element.dataset.utc;
-      if (!utcString) return;
+      // Set up once: this runs again on turbo:load and after live updates,
+      // and a second click listener would cancel the first.
+      if (!utcString || element.dataset.originalUtc) return;
       try {
         var date = new Date(utcString);
         if (isNaN(date.getTime())) return;
@@ -2163,6 +2172,17 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof Turbo !== 'undefined') {
     document.addEventListener('turbo:load', convertToLocalTime);
     document.addEventListener('turbo:frame-load', convertToLocalTime);
+
+    // Live updates (config.enable_live_updates): a streamed row arrives with
+    // the server's time_ago_in_words, in the host app's locale. Once Turbo has
+    // inserted it, format it like the rows that came with the page.
+    // convertToLocalTime skips elements it has already set up.
+    document.addEventListener('turbo:before-stream-render', function(event) {
+      var render = event.detail.render;
+      event.detail.render = function(streamElement) {
+        return Promise.resolve(render(streamElement)).then(convertToLocalTime);
+      };
+    });
   }
 
   // Keyboard Shortcuts

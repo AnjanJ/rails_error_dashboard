@@ -510,6 +510,14 @@ RailsErrorDashboard.configure do |config|
   #   "ValidationError" => :low
   # }
 
+  # Live updates - DISABLED
+  # New errors appear on an open error list without a reload (Turbo Streams).
+  # Broadcasting runs when an error is captured, so it is off unless you opt in.
+  # Needs the turbo-rails gem and ActionCable, with a cross-process adapter in
+  # production (solid_cable or redis; "async" only reaches the same process).
+  # To enable: Set config.enable_live_updates = true
+  config.enable_live_updates = false
+
   # Enhanced metrics (optional)
   config.app_version = ENV["APP_VERSION"]
   config.git_sha = ENV["GIT_SHA"]

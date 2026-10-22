@@ -15,7 +15,7 @@ Rails Error Dashboard uses an **opt-in architecture** with two categories of fea
 ### Tier 1 Features (Always ON)
 Core features that are always enabled - no configuration needed:
 - ✅ **Error Tracking & Capture** - Automatic error logging from controllers, jobs, middleware
-- ✅ **Dashboard & UI** - Modern interface with search, filtering, and real-time updates (the latter with `turbo-rails` + ActionCable in the host)
+- ✅ **Dashboard & UI** - Modern interface with search, filtering, and opt-in live updates (`enable_live_updates`, with `turbo-rails` + ActionCable in the host)
 - ✅ **Analytics & Insights** - Trend charts, severity breakdown, spike detection
 - ✅ **Security & Privacy** - HTTP Basic Auth or custom auth (Devise/Warden/lambda), data retention
 
@@ -91,13 +91,14 @@ All optional features are disabled by default and can be toggled on/off at any t
 - **Status indicators** (Resolved, Unresolved)
 
 ### Real-Time Updates ⚡
-- **Live error list** - New errors appear instantly at the top
-- **Auto-refreshing statistics** - Dashboard cards update in real-time
-- **Visual notifications** - Yellow highlight for new errors
-- **Pulsing animations** on updated metrics
-- **Turbo Streams** powered (WebSocket/SSE)
-- **Requires** `turbo-rails` and a working ActionCable adapter in the host app — no polling fallback
-- **Low bandwidth** - Only ~800 bytes per update
+**⚙️ Optional Feature** - Off by default. Turn it on with `config.enable_live_updates = true`.
+
+- **Live error list** - New errors appear at the top of an open error list without a reload
+- **In-place row updates** - Rows on the page update when their error recurs or is resolved
+- **Live badge** - Shows when the page has subscribed
+- **Turbo Streams** over Action Cable
+- **Requires** `turbo-rails` and Action Cable in the host app, with a cross-process adapter (Solid Cable, Redis) in production. There is no polling fallback
+- See the [Real-Time Updates guide](guides/REAL_TIME_UPDATES.md)
 
 ### Search & Filtering
 - **Text search** across error messages and types
@@ -1419,7 +1420,7 @@ Core gem requires 4 runtime gems: `rails`, `pagy`, `groupdate`, and `concurrent-
 - `browser` — for User-Agent platform detection
 - `chartkick` — for chart helpers (falls back to CDN-only JS)
 - `httparty` — for webhook/notification HTTP calls (falls back to Net::HTTP)
-- `turbo-rails` — for real-time Turbo Stream updates (without it the dashboard does not auto-refresh)
+- `turbo-rails` — for live updates, with `enable_live_updates` (without it the dashboard does not auto-refresh)
 
 ---
 

@@ -5,7 +5,53 @@ require "rails_helper"
 RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
   let(:error_log) { create(:error_log) }
 
+  # live-updates-client/REQ-2: off by default, and while off nothing is sent
+  # even though a pubsub is reachable, so the switch is the only explanation.
+  describe "while enable_live_updates is false" do
+    before do
+      skip "turbo-rails is not loaded" unless defined?(Turbo::StreamsChannel)
+
+      @original_cable = ActionCable.server.config.cable
+      ActionCable.server.config.cable = { "adapter" => "async" }
+      ActionCable.server.instance_variable_set(:@pubsub, nil)
+      described_class.instance_variable_set(:@broadcast_unavailable_until, nil)
+      allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
+      allow(Turbo::StreamsChannel).to receive(:broadcast_replace_to)
+    end
+
+    after do
+      RailsErrorDashboard.configuration.enable_live_updates = false
+      ActionCable.server.config.cable = @original_cable
+      ActionCable.server.instance_variable_set(:@pubsub, nil)
+    end
+
+    it "broadcasts with the switch on (control: the pubsub is reachable)" do
+      RailsErrorDashboard.configuration.enable_live_updates = true
+
+      described_class.broadcast_new(error_log)
+
+      expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).at_least(:once)
+    end
+
+    it "is unavailable and sends nothing from any broadcast with the switch off" do
+      RailsErrorDashboard.configuration.enable_live_updates = false
+
+      expect(described_class.available?).to be false
+      described_class.broadcast_new(error_log)
+      described_class.broadcast_update(error_log)
+      described_class.broadcast_stats(error_log.application_id)
+
+      expect(Turbo::StreamsChannel).not_to have_received(:broadcast_prepend_to)
+      expect(Turbo::StreamsChannel).not_to have_received(:broadcast_replace_to)
+    end
+  end
+
   describe ".available?" do
+    # These describe the infrastructure checks, which only run once the
+    # switch is on.
+    before { RailsErrorDashboard.configuration.enable_live_updates = true }
+    after { RailsErrorDashboard.configuration.enable_live_updates = false }
+
     it "returns false when Turbo is not defined" do
       hide_const("Turbo")
       expect(described_class.available?).to be false

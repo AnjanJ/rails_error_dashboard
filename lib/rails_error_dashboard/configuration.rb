@@ -83,6 +83,11 @@ module RailsErrorDashboard
     # Enable/disable Rails.error subscriber
     attr_accessor :enable_error_subscriber
 
+    # Live updates: new errors pushed to an open error index over Turbo Streams.
+    # Broadcasting runs on the capture path, so it is opt-in. Needs turbo-rails
+    # and ActionCable (with a cross-process adapter in production).
+    attr_accessor :enable_live_updates             # Master switch (default: false)
+
     # Advanced configuration options
     # Custom severity classification rules (hash of error_type => severity)
     attr_accessor :custom_severity_rules
@@ -361,6 +366,7 @@ module RailsErrorDashboard
 
       @enable_middleware = true
       @enable_error_subscriber = true
+      @enable_live_updates = false # Opt-in: broadcasting runs on the capture path
 
       # Advanced configuration defaults
       @custom_severity_rules = {}
@@ -774,6 +780,19 @@ module RailsErrorDashboard
           warnings << "enable_rack_attack_tracking is enabled but the rack-attack gem " \
                       "does not appear to be loaded. No events will be recorded until " \
                       "Rack::Attack is installed and configured."
+        end
+      end
+
+      # Warn rather than auto-disable: ErrorBroadcaster.available? already
+      # declines without these, and the warning is what tells the host why the
+      # error index stays static.
+      if enable_live_updates
+        missing = []
+        missing << "the turbo-rails gem" unless defined?(::Turbo)
+        missing << "ActionCable (require \"action_cable/engine\")" unless defined?(::ActionCable)
+        if missing.any?
+          warnings << "enable_live_updates is on but #{missing.join(' and ')} " \
+                      "#{missing.size > 1 ? 'are' : 'is'} not loaded. Live updates stay off until then."
         end
       end
 

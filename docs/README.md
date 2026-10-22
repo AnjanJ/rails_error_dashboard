@@ -60,7 +60,7 @@ Welcome to the Rails Error Dashboard documentation! This guide will help you get
 - **[Mobile App Integration](guides/MOBILE_APP_INTEGRATION.md)** - Log mobile-originated errors through your own API endpoint
 - **[Batch Operations](guides/BATCH_OPERATIONS.md)** - Bulk error management
 - **[API Reference](API_REFERENCE.md)** - The dashboard's HTTP routes and the Ruby API
-- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Turbo Streams live updates (requires `turbo-rails` + ActionCable in the host)
+- **[Real-Time Updates](guides/REAL_TIME_UPDATES.md)** - Opt-in Turbo Streams live updates (`enable_live_updates`; requires `turbo-rails` + ActionCable in the host)
 - **[Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md)** - Configure Solid Queue for async logging
 
 ### Performance & Optimization

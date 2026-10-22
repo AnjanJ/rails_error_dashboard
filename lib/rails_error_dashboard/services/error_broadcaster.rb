@@ -242,13 +242,18 @@ module RailsErrorDashboard
         )
       end
 
-      # Check if broadcasting infrastructure is available.
-      # Returns false when Turbo/ActionCable isn't loaded, or when the
-      # ActionCable pubsub adapter can't be reached (e.g., Redis down).
-      # Uses a 60-second cooldown after failure to avoid hammering a
-      # dead Redis on every error (issue #114).
+      # Check if live updates are switched on and the broadcasting
+      # infrastructure is available. The one gate for both ends: the ErrorLog
+      # commit callbacks reach it through broadcast_*, and the index asks it
+      # before rendering stream tags, so the two cannot disagree.
+      # Returns false when config.enable_live_updates is off (the default:
+      # broadcasting runs on the capture path), when Turbo/ActionCable isn't
+      # loaded, or when the ActionCable pubsub adapter can't be reached (e.g.,
+      # Redis down). Uses a 60-second cooldown after failure to avoid
+      # hammering a dead Redis on every error (issue #114).
       # @return [Boolean]
       def self.available?
+        return false unless RailsErrorDashboard.configuration.enable_live_updates
         return false unless defined?(Turbo)
         return false unless defined?(ActionCable)
 

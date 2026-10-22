@@ -120,7 +120,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   # browser (~> 6.0)    — richer platform detection (falls back to regex)
   # chartkick (~> 5.0)  — chart helpers (falls back to CDN-only JS)
   # httparty (>= 0.24)  — Discord/PagerDuty/webhook notifications (falls back to Net::HTTP)
-  # turbo-rails (~> 2.0) — real-time Turbo Stream updates (without it the dashboard does not auto-refresh)
+  # turbo-rails (~> 2.0) — live updates, with config.enable_live_updates (without it the dashboard does not auto-refresh)
 
   # concurrent-ruby powers the storm-protection primitives (AtomicReference,
   # AtomicFixnum, Map) — a real runtime dependency, not incidental.
