@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.1...rails_error_dashboard/v0.16.2) (2026-10-22)
+
+
+### 🐛 Bug Fixes
+
+* rebuild async exceptions without trusting the queued type name ([#306](https://github.com/AnjanJ/rails_error_dashboard/issues/306)) ([0b64b4f](https://github.com/AnjanJ/rails_error_dashboard/commit/0b64b4f547eb85b8faccfaa090b2aa9efa4cbb0d))
+
 ## [0.16.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.0...rails_error_dashboard/v0.16.1) (2026-10-20)
 
 
