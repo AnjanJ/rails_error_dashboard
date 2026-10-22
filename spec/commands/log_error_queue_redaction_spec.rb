@@ -199,5 +199,59 @@ RSpec.describe "capture payload redaction at the queue boundary" do
       expect(row.error_hash).to eq(sync_row.error_hash)
       expect(row.occurrence_count).to eq(3)
     end
+
+    # functional-fixes-0-17/REQ-2: a custom key is already the whole
+    # fingerprint. Sync and the storm gate store SHA256(key)[0..15]; the
+    # worker used to complete it with the application id as well, so the
+    # same error grouped differently whenever it went through the queue.
+    context "with a custom fingerprint" do
+      let(:custom_hash) { Digest::SHA256.hexdigest("checkout-timeout")[0..15] }
+
+      before do
+        RailsErrorDashboard.configuration.custom_fingerprint = ->(_exception, _context) { "checkout-timeout" }
+      end
+
+      it "lands a sync, an async and a storm capture on one row with the key's digest" do
+        RailsErrorDashboard.configuration.async_logging = false
+        sync_row = RailsErrorDashboard::Commands::LogError.call(boom)
+
+        RailsErrorDashboard.configuration.async_logging = true
+        RailsErrorDashboard::Commands::LogError.call(boom)
+        perform_enqueued_jobs
+
+        RailsErrorDashboard.configuration.async_logging = false
+        RailsErrorDashboard.configuration.enable_storm_protection = true
+        allow(gate.breaker).to receive(:record!).and_return(:open)
+        allow(gate.breaker).to receive(:episode_snapshot).and_return(nil)
+        gate.admit!(boom)
+        snapshot = gate.count_buffer.snapshot!
+        RailsErrorDashboard::Commands::FlushStormCounts.call(
+          entries: snapshot[:entries], overflow: snapshot[:overflow]
+        )
+
+        row = logs.sole
+        expect(row.id).to eq(sync_row.id)
+        expect(row.error_hash).to eq(custom_hash)
+        expect(row.occurrence_count).to eq(3)
+      end
+
+      # A job queued by an earlier version carries the key's digest with no
+      # marker. It keeps the hash it would have had, so an in-flight queue
+      # drains onto the rows it was headed for.
+      it "completes an unmarked queued identity with the application id, as before" do
+        RailsErrorDashboard.configuration.async_logging = true
+        RailsErrorDashboard::Commands::LogError.call(boom)
+        job = enqueued_jobs.find { |queued| queued[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        args = ActiveJob::Arguments.deserialize(job[:args])
+        args[1].delete(:_identity_custom)
+        clear_enqueued_jobs
+        RailsErrorDashboard::AsyncErrorLoggingJob.perform_now(*args)
+
+        row = logs.sole
+        expect(row.error_hash).to eq(
+          RailsErrorDashboard::Services::ErrorHashGenerator.complete(custom_hash, row.application_id)
+        )
+      end
+    end
   end
 end

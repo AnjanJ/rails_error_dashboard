@@ -118,8 +118,9 @@ module RailsErrorDashboard
         # Application.find_or_create_by_name -- a DB write -- and this runs on
         # the request thread, where the gem promises no I/O. The worker
         # completes the hash with the application resolved, exactly as
-        # FlushStormCounts#canonical_hash does for storm counts.
-        identity_parts = capture_identity_parts(exception, context)
+        # FlushStormCounts#canonical_hash does for storm counts -- except for a
+        # custom fingerprint, which is already complete and travels marked.
+        identity = capture_identity_parts(exception, context)
 
         # Scrub BEFORE anything is serialized: ActiveJob JSON-encodes the
         # payload on this (the request) thread, and an invalid byte in the
@@ -146,7 +147,7 @@ module RailsErrorDashboard
         # context above, so this covers the rest: message, cause chain, request
         # params and request URL -- the four keys filter_attributes touches.
         exception_data, context = redact_async_payload(exception_data, context)
-        context = context.merge(_identity: identity_parts) if identity_parts
+        context = context.merge(identity)
 
         # Stamp WHEN and WHAT RELEASE this event was captured under, before it
         # crosses the queue. Both used to be resolved by the worker from
@@ -254,27 +255,34 @@ module RailsErrorDashboard
       # just removed straight back on the queue. normalize_message replaces
       # hex, digits and quoted strings -- it has no notion of secrets.
       #
+      # Returns the context fragment that carries it to the worker.
+      #
       # A custom fingerprint lambda already yields a complete, message-free
-      # value, so it is passed through unchanged.
+      # value: sync capture and the storm gate store it as the error_hash as
+      # is. It is marked _identity_custom so the worker passes it through too;
+      # completing it with the application id grouped the same error under a
+      # different hash whenever it went through the queue.
       def self.capture_identity_parts(exception, context)
         custom = Services::ErrorHashGenerator.send(:try_custom_fingerprint, exception, context)
-        return custom if custom
+        return { _identity: custom, _identity_custom: true } if custom
 
-        Services::ErrorHashGenerator.opaque_identity(
-          error_class: exception.class.name,
-          normalized_message: Services::ErrorHashGenerator.normalize_message(exception.message),
-          frames: Services::ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
-                  Services::ErrorHashGenerator.extract_app_frame(exception.backtrace),
-          controller_name: context[:controller_name]&.to_s,
-          action_name: context[:action_name]&.to_s
-        )
+        {
+          _identity: Services::ErrorHashGenerator.opaque_identity(
+            error_class: exception.class.name,
+            normalized_message: Services::ErrorHashGenerator.normalize_message(exception.message),
+            frames: Services::ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                    Services::ErrorHashGenerator.extract_app_frame(exception.backtrace),
+            controller_name: context[:controller_name]&.to_s,
+            action_name: context[:action_name]&.to_s
+          )
+        }
       rescue => e
-        # No identity parts simply means the worker recomputes the hash from
-        # the (redacted) payload, which is the pre-existing behaviour.
+        # No identity simply means the worker recomputes the hash from the
+        # (redacted) payload, which is the pre-existing behaviour.
         RailsErrorDashboard::Logger.debug(
           "[RailsErrorDashboard] capture_identity_parts failed: #{e.class} - #{e.message}"
         )
-        nil
+        {}
       end
 
       # Apply the storage filter to everything secret-bearing that crosses the
@@ -797,9 +805,13 @@ module RailsErrorDashboard
       # message text crosses the queue); this adds the application, which only
       # a worker can resolve. Same two stages as the sync path, so a capture
       # groups onto the same row whether it travelled through the queue or not.
+      # A marked custom fingerprint is already the canonical hash, as it is on
+      # the sync and storm paths. A job queued before the marker existed has
+      # none and is completed as it was then, so it lands where it was headed.
       def canonical_hash_from_identity(application)
         opaque = @context[:_identity]
         return nil unless opaque.is_a?(String) && opaque.present?
+        return opaque if @context[:_identity_custom] == true
 
         Services::ErrorHashGenerator.complete(opaque, application.id)
       rescue => e
