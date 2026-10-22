@@ -124,6 +124,7 @@ RSpec.describe "issue webhook identity", type: :request do
   describe "Linear, where numbers are scoped per team" do
     def post_linear(team_key:, number: 42)
       body = {
+        webhookTimestamp: (Time.current.to_f * 1000).to_i,
         type: "Issue",
         action: "update",
         actor: { name: "Dev" },

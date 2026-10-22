@@ -288,6 +288,70 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
         expect(result.occurrence_count).to eq(3)
       end
     end
+
+    # functional-fixes-0-17/REQ-3: resolved rows from before group_window
+    # existed keep it NULL, and the unique group-identity index (unresolved
+    # rows only) folds NULL into one '' bucket. Reopening one parks it there,
+    # and its old occurred_at keeps the 24 h lookup from ever matching it
+    # again, so the next recurrence reopened the NEXT legacy row -- and that
+    # UPDATE violated the index. Every later capture of the error was dropped.
+    context "when reopening a resolved row would collide with an unresolved row of the same identity" do
+      let!(:legacy_rows) do
+        [ 10, 5 ].map do |days_ago|
+          RailsErrorDashboard::ErrorLog.create!(
+            base_attributes.merge(occurred_at: days_ago.days.ago, first_seen_at: days_ago.days.ago,
+                                  last_seen_at: days_ago.days.ago)
+          ).tap do |row|
+            row.update_columns(resolved: true, status: "resolved", resolved_at: (days_ago - 1).days.ago,
+                               group_window: nil)
+          end
+        end
+      end
+      let(:newest_legacy_row) { legacy_rows.last }
+
+      it "counts every recurrence on the unresolved row instead of raising" do
+        # MySQL has no partial indexes, so the index is never built there and
+        # a reopen cannot collide: each old row is simply reopened in turn.
+        unless RailsErrorDashboard::ErrorLog.connection.index_name_exists?(
+          RailsErrorDashboard::ErrorLog.table_name, "index_error_logs_on_group_identity"
+        )
+          skip "no group identity index on this adapter, so a reopen cannot collide"
+        end
+
+        results = Array.new(3) { described_class.call(error_hash, base_attributes.merge(occurred_at: Time.current)) }
+
+        expect(results.map(&:id).uniq).to eq([ newest_legacy_row.id ])
+        open_rows = RailsErrorDashboard::ErrorLog.where(error_hash: error_hash, resolved: false)
+        expect(open_rows.pluck(:id)).to eq([ newest_legacy_row.id ])
+        # 1 when it was created, then the reopen and two claimed recurrences
+        expect(newest_legacy_row.reload.occurrence_count).to eq(4)
+      end
+
+      context "through LogError, which stamps the environment" do
+        before do
+          config = RailsErrorDashboard.configuration
+          config.async_logging = false
+          config.enable_storm_protection = false
+          config.application_name = application.name
+          allow(RailsErrorDashboard::Services::ErrorHashGenerator).to receive(:call).and_return(error_hash)
+        end
+
+        after do
+          RailsErrorDashboard::ErrorOccurrence.delete_all
+          RailsErrorDashboard.reset_configuration!
+        end
+
+        it "records every recurrence" do
+          3.times do
+            raise NoMethodError, "undefined method 'name' for nil"
+          rescue NoMethodError => e
+            RailsErrorDashboard::Commands::LogError.call(e, {})
+          end
+
+          expect(RailsErrorDashboard::ErrorLog.where(error_hash: error_hash).sum(:occurrence_count)).to eq(2 + 3)
+        end
+      end
+    end
   end
 
   describe "locking" do

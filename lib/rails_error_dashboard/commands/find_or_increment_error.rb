@@ -293,9 +293,23 @@ module RailsErrorDashboard
           **environment_adoption(error)
         }
         attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
-        error.update!(attrs)
+        # The group identity this row takes once it is unresolved again.
+        environment = attrs.key?(:environment) ? attrs[:environment] : error.environment
+        group_window = error.respond_to?(:group_window) ? error.group_window : nil
+
+        # Savepoint, as in create_new_or_retry: on PostgreSQL a unique
+        # violation poisons the enclosing transaction.
+        ErrorLog.transaction(requires_new: true) { error.update!(attrs) }
         error.just_reopened = true
         error
+      rescue ActiveRecord::RecordNotUnique
+        # An unresolved row already holds the identity this one would take.
+        # Resolved rows from before group_window existed keep it NULL, which
+        # the index folds into one '' bucket: reopen one and the next
+        # recurrence -- its old occurred_at is outside the 24 h lookup --
+        # reopens the next, and collides. Count the occurrence on the row the
+        # index objected to rather than drop the capture.
+        claim_conflicting_row(environment: environment, group_window: group_window) || raise
       end
 
       # Attributes for a brand-new group.
@@ -382,15 +396,16 @@ module RailsErrorDashboard
 
       # The unresolved row that owns this group identity, matched exactly as
       # the unique index defines it (application, hash, environment and the
-      # immutable group_window bucket) with no time window of its own.
-      def claim_conflicting_row
+      # immutable group_window bucket) with no time window of its own. A new
+      # row's identity comes from this capture; a reopened row brings its own.
+      def claim_conflicting_row(environment: @attributes[:environment], group_window: window_for_attributes)
         return nil unless ErrorLog.column_names.include?("group_window")
 
         scope = ErrorLog.unresolved
           .where(error_hash: @error_hash)
           .where(application_id: @attributes[:application_id])
-        scope = scope.where(environment: @attributes[:environment]) if ErrorLog.column_names.include?("environment")
-        scope = scope.where(group_window: window_for_attributes)
+        scope = scope.where(environment: environment) if ErrorLog.column_names.include?("environment")
+        scope = scope.where(group_window: group_window)
 
         conflicting = scope.lock.first
         return nil unless conflicting

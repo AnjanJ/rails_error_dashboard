@@ -22,7 +22,10 @@ RSpec.describe "Linear webhooks", type: :request do
     RailsErrorDashboard.configuration.issue_webhook_secret = nil
   end
 
-  def post_webhook(payload, sign_with: secret)
+  # Linear stamps every delivery with webhookTimestamp (UNIX ms) in the signed
+  # body; payloads here get a fresh one unless they set their own.
+  def post_webhook(payload, sign_with: secret, stamp: true)
+    payload = { webhookTimestamp: now_ms }.merge(payload) if stamp
     body = payload.to_json
     post "/error_dashboard/webhooks/linear",
       params: body,
@@ -30,6 +33,10 @@ RSpec.describe "Linear webhooks", type: :request do
         "Content-Type" => "application/json",
         "Linear-Signature" => OpenSSL::HMAC.hexdigest("SHA256", sign_with, body)
       }
+  end
+
+  def now_ms
+    (Time.current.to_f * 1000).to_i
   end
 
   def state_change_payload(state_type:, action: "update")
@@ -95,5 +102,49 @@ RSpec.describe "Linear webhooks", type: :request do
       headers: { "Content-Type" => "application/json" }
 
     expect(response).to have_http_status(:unauthorized)
+  end
+
+  # Linear's docs: verify webhookTimestamp is within a minute of the time the
+  # receiver sees the delivery. Only a signed delivery reaches this check.
+  describe "delivery freshness" do
+    # functional-fixes-0-17/REQ-4
+    it "rejects a signed delivery stamped more than 60 seconds ago" do
+      post_webhook(state_change_payload(state_type: "completed").merge(webhookTimestamp: now_ms - 61_000))
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(error_log.reload.resolved).to be false
+    end
+
+    # functional-fixes-0-17/REQ-4
+    it "rejects a signed delivery stamped more than 60 seconds ahead" do
+      post_webhook(state_change_payload(state_type: "completed").merge(webhookTimestamp: now_ms + 61_000))
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(error_log.reload.resolved).to be false
+    end
+
+    # functional-fixes-0-17/REQ-5
+    it "rejects a signed delivery with no webhookTimestamp" do
+      post_webhook(state_change_payload(state_type: "completed"), stamp: false)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(error_log.reload.resolved).to be false
+    end
+
+    # functional-fixes-0-17/REQ-5
+    it "rejects a signed delivery whose webhookTimestamp is not a number" do
+      post_webhook(state_change_payload(state_type: "completed").merge(webhookTimestamp: now_ms.to_s))
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(error_log.reload.resolved).to be false
+    end
+
+    # functional-fixes-0-17/REQ-6
+    it "processes a signed delivery stamped 30 seconds ago" do
+      post_webhook(state_change_payload(state_type: "completed").merge(webhookTimestamp: now_ms - 30_000))
+
+      expect(response).to have_http_status(:ok)
+      expect(error_log.reload.resolved).to be true
+    end
   end
 end
