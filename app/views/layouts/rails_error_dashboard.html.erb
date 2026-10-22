@@ -37,6 +37,8 @@
     <% if respond_to?(:csp_meta_tag) %>
       <%= csp_meta_tag %>
     <% end %>
+    <%# Head content a page asks for: the live-updates client, on the error index only. %>
+    <%= yield :red_head %>
 
     <!-- Early theme detection (prevents flash of wrong theme) -->
     <script<%= " nonce=\"#{red_csp_nonce}\"".html_safe if red_csp_nonce %>>
