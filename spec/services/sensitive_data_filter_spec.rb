@@ -233,17 +233,85 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
       end
     end
 
-    context "fail-safe behavior" do
+    # Filtering fails closed: a step that breaks stores [FILTERED], never the
+    # raw value it was meant to clean. Grouping is unaffected, because the
+    # fingerprint is taken before filtering.
+    context "when filtering breaks (fails closed)" do
+      let(:filtered_fields) { %i[message request_params request_url exception_cause] }
+
       before do
         RailsErrorDashboard.configuration.filter_sensitive_data = true
         allow(Rails.application.config).to receive(:filter_parameters).and_return([])
       end
 
-      it "returns original attributes if filtering raises unexpectedly" do
+      # capture-hardening-0-17/REQ-7
+      it "stores [FILTERED] for every filtered field when the filter can't be built" do
+        allow(described_class).to receive(:parameter_filter).and_return(nil)
+
+        result = described_class.filter_attributes(attributes.merge(error_type: "PaymentError"))
+
+        expect(result.slice(*filtered_fields).values).to all(eq("[FILTERED]"))
+        expect(result[:error_type]).to eq("PaymentError")
+      end
+
+      # capture-hardening-0-17/REQ-6
+      it "stores [FILTERED] for every filtered field when filtering raises" do
         allow(described_class).to receive(:parameter_filter).and_raise(RuntimeError, "boom")
 
         result = described_class.filter_attributes(attributes)
-        expect(result).to eq(attributes)
+
+        expect(result.slice(*filtered_fields).values).to all(eq("[FILTERED]"))
+      end
+
+      it "leaves a filtered field that is absent or nil as it is" do
+        allow(described_class).to receive(:parameter_filter).and_return(nil)
+
+        expect(described_class.filter_attributes(message: "boom", request_url: nil))
+          .to eq(message: "[FILTERED]", request_url: nil)
+      end
+
+      # capture-hardening-0-17/REQ-6
+      it "stores [FILTERED] for the one field whose step raises, and filters the others" do
+        filter = described_class.parameter_filter
+        allow(filter).to receive(:filter).and_wrap_original do |original, value|
+          raise "boom" if value.is_a?(Hash) && value.key?("email")
+
+          original.call(value)
+        end
+
+        result = described_class.filter_attributes(attributes)
+
+        expect(result[:request_params]).to eq("[FILTERED]")
+        expect(result[:request_url]).to include("password=%5BFILTERED%5D", "username=alice")
+        expect(result[:message]).to eq("Test error")
+      end
+    end
+
+    # capture-hardening-0-17/REQ-11: text that isn't JSON is an input shape,
+    # not a filter failure -- it gets the message rules rather than being
+    # stored as it came, or thrown away.
+    context "when params or the cause chain aren't JSON" do
+      before do
+        RailsErrorDashboard.configuration.filter_sensitive_data = true
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+      end
+
+      it "redacts request params with the message rules" do
+        result = described_class.filter_attributes(attributes.merge(request_params: "password=secret123 note=kept"))
+
+        expect(result[:request_params]).to eq("password=[FILTERED] note=kept")
+      end
+
+      it "redacts a cause chain with the message rules" do
+        result = described_class.filter_attributes(attributes.merge(exception_cause: "token=abc123 broke"))
+
+        expect(result[:exception_cause]).to eq("token=[FILTERED] broke")
+      end
+
+      it "filters a JSON array of params" do
+        result = described_class.filter_attributes(attributes.merge(request_params: '[{"password":"secret123","id":1}]'))
+
+        expect(JSON.parse(result[:request_params])).to eq([ { "password" => "[FILTERED]", "id" => 1 } ])
       end
     end
   end

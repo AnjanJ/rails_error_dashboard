@@ -7,8 +7,15 @@ module RailsErrorDashboard
     # On by default. Redacts passwords, tokens, credit cards, SSNs, etc. using
     # built-in defaults + Rails' filter_parameters + custom patterns.
     # Set filter_sensitive_data = false to store raw data (you own your database).
+    #
+    # Fails closed: a step that breaks stores FILTERED_REPLACEMENT for its field,
+    # never the raw value it was meant to clean. Free-text redaction is
+    # best-effort: it recognises the shapes in filter_message, not every secret.
     class SensitiveDataFilter
       FILTERED_REPLACEMENT = "[FILTERED]"
+
+      # The fields filter_attributes cleans.
+      FILTERED_FIELDS = %i[request_params request_url message exception_cause].freeze
 
       # Default patterns that ALWAYS apply when filtering is enabled.
       # These cover data that has no debugging value and should never be stored.
@@ -33,12 +40,13 @@ module RailsErrorDashboard
 
       # Filter sensitive data from error attributes hash
       # @param attributes [Hash] Error attributes to filter
-      # @return [Hash] Filtered attributes (or original if filtering disabled/fails)
+      # @return [Hash] Filtered attributes (original if filtering is disabled;
+      #   FILTERED_REPLACEMENT in every filtered field if filtering can't run)
       def self.filter_attributes(attributes)
         return attributes unless RailsErrorDashboard.configuration.filter_sensitive_data
 
         filter = parameter_filter
-        return attributes unless filter
+        return withhold(attributes) unless filter
 
         filtered = attributes.dup
         filtered[:request_params] = filter_json_string(filter, filtered[:request_params])
@@ -48,8 +56,21 @@ module RailsErrorDashboard
         filtered
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] SensitiveDataFilter failed: #{e.message}")
-        attributes
+        withhold(attributes)
       end
+
+      # Fail closed: when filtering can't run at all, store none of what it was
+      # meant to clean. Absent and nil fields stay as they are.
+      # @param attributes [Hash]
+      # @return [Hash]
+      def self.withhold(attributes)
+        return {} unless attributes.is_a?(Hash)
+
+        FILTERED_FIELDS.each_with_object(attributes.dup) do |key, withheld|
+          withheld[key] = FILTERED_REPLACEMENT unless withheld[key].nil?
+        end
+      end
+      private_class_method :withhold
 
       SESSION_DIGEST_PREFIX = "h1:"
       SESSION_DIGEST_FORMAT = /\Ah1:\h{32}\z/
@@ -116,13 +137,17 @@ module RailsErrorDashboard
         return json_string if json_string.nil? || json_string.empty?
 
         parsed = JSON.parse(json_string)
-        filtered = filter.filter(parsed)
+        # ParameterFilter takes a Hash; an array (or a bare value) is wrapped
+        # so it is filtered too, nested hashes included.
+        filtered = parsed.is_a?(Hash) ? filter.filter(parsed) : filter.filter("params" => parsed)["params"]
         filtered.to_json
       rescue JSON::ParserError
-        json_string
+        # Not JSON -- a caller's own serialisation, a cut body. An input shape,
+        # not a filter failure: the same rules as a message.
+        filter_message(filter, json_string)
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_json_string failed: #{e.message}")
-        json_string
+        FILTERED_REPLACEMENT
       end
       private_class_method :filter_json_string
 
@@ -142,7 +167,7 @@ module RailsErrorDashboard
         "#{path}?#{filtered_query}"
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_url failed: #{e.message}")
-        url
+        FILTERED_REPLACEMENT
       end
       private_class_method :filter_url
 
@@ -165,7 +190,7 @@ module RailsErrorDashboard
         result.gsub(CREDIT_CARD_REGEX, FILTERED_REPLACEMENT)
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_message failed: #{e.message}")
-        message
+        FILTERED_REPLACEMENT
       end
       private_class_method :filter_message
 
@@ -177,7 +202,7 @@ module RailsErrorDashboard
         return cause_json if cause_json.nil? || cause_json.empty?
 
         chain = JSON.parse(cause_json)
-        return cause_json unless chain.is_a?(Array)
+        return filter_message(filter, cause_json) unless chain.is_a?(Array)
 
         filtered_chain = chain.map do |cause|
           cause = cause.dup
@@ -187,10 +212,11 @@ module RailsErrorDashboard
 
         filtered_chain.to_json
       rescue JSON::ParserError
-        cause_json
+        # Not JSON: an input shape, not a filter failure.
+        filter_message(filter, cause_json)
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_cause_chain failed: #{e.message}")
-        cause_json
+        FILTERED_REPLACEMENT
       end
       private_class_method :filter_cause_chain
 
