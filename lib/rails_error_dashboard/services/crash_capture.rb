@@ -115,7 +115,9 @@ module RailsErrorDashboard
         def build_crash_data(exception)
           data = {
             exception_class: exception.class.name,
-            message: exception.message.to_s[0, 10_000],
+            # With the marker CaptureLimits adds everywhere else: the import
+            # can't count characters this process never wrote.
+            message: Services::CaptureLimits.message(exception.message.to_s),
             backtrace: exception.backtrace&.first(50),
             timestamp: Time.now.utc.iso8601,
             pid: Process.pid,

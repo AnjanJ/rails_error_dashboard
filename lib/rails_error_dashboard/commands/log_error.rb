@@ -253,7 +253,9 @@ module RailsErrorDashboard
           RailsErrorDashboard::Logger.error(
             "[RailsErrorDashboard] Async enqueue failed (#{e.class}: #{e.message}), falling back to sync logging"
           )
-          new(exception, context).call
+          # The raw exception goes to the sync path, so its message has not
+          # been limited, whatever the half-built payload says.
+          new(exception, context.except(:_message_limited)).call
         end
       end
 
@@ -339,6 +341,9 @@ module RailsErrorDashboard
 
             context = context.merge(key => param_filter.filter(value))
           end
+        else
+          # No filter, no params: withheld rather than queued raw (fail closed).
+          context = context.except(*CONTEXT_PARAM_KEYS)
         end
 
         # The raw session ID must not sit in Redis / Solid Queue either.

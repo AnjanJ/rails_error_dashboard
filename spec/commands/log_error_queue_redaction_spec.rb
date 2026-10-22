@@ -75,6 +75,20 @@ RSpec.describe "capture payload redaction at the queue boundary" do
       expect(payload).not_to include("QUEUE_RAW_PARAM")
     end
 
+    # capture-hardening-0-17/REQ-7: with no filter, the hashes of params a
+    # caller passed are withheld from the queue too, not shipped raw.
+    it "carries no params hash when the filter can't be built" do
+      allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:parameter_filter).and_return(nil)
+
+      RailsErrorDashboard::Commands::LogError.call(boom, params: { api_key: "QUEUE_RAW_PARAM" })
+
+      payload = enqueued_jobs
+        .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
+        .fetch(:args).to_json
+      expect(payload).not_to include("QUEUE_RAW_PARAM")
+      expect(payload).not_to include("QUEUE_SECRET")
+    end
+
     it "carries the fingerprint as an opaque digest rather than message text" do
       RailsErrorDashboard::Commands::LogError.call(boom)
 

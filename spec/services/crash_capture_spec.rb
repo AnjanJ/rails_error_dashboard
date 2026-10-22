@@ -211,7 +211,7 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
         described_class.capture!(exception)
 
         data = read_crash_file
-        expect(data["message"].length).to be <= 10_000
+        expect(data["message"]).to eq(("x" * 10_000) + "… [10000 more characters]")
       end
 
       it "limits backtrace to 50 lines" do
@@ -287,6 +287,16 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
     context "filtering and limits" do
       before { RailsErrorDashboard.configuration.filter_sensitive_data = true }
       after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+      # capture-hardening-0-17/REQ-1: the crash file is written by the dying
+      # process, so the marker has to be added there; the import can't count
+      # characters that were never written.
+      it "writes a long message to the crash file with the marker" do
+        described_class.enable!
+        described_class.capture!(RuntimeError.new("y" * 20_000))
+
+        expect(read_crash_file["message"]).to eq(("y" * 10_000) + "… [10000 more characters]")
+      end
 
       it "filters and limits what it stores, and groups on the raw message" do
         message = "login failed password=hunter2 " + ("x" * 20_000)

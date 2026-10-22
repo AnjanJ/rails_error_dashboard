@@ -303,15 +303,16 @@ module RailsErrorDashboard
           end
 
           # Memoized ActiveSupport::ParameterFilter, no I/O -- safe on the hot
-          # path. Fails open to the raw message only if filtering itself
-          # breaks, which FlushStormCounts would then still redact at INSERT.
+          # path. Fails closed: if filtering breaks, the exemplar is
+          # [FILTERED], never the raw message, so the raw text can't reach the
+          # flush job's queued arguments.
           def redact(message)
             return message if message.blank?
             return message unless RailsErrorDashboard.configuration.filter_sensitive_data
 
             SensitiveDataFilter.filter_attributes({ message: message })[:message] || message
           rescue StandardError
-            message
+            SensitiveDataFilter::FILTERED_REPLACEMENT
           end
 
           def probe_counter

@@ -1003,7 +1003,7 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 
 ### Data Privacy
 - **Self-hosted** - all data stays on your infrastructure
-- **Sensitive data filtering** 🆕 — Passwords, tokens, secrets, API keys auto-filtered before storage
+- **Sensitive data filtering** 🆕 — Passwords, tokens, secrets, API keys auto-filtered before storage (best-effort in free text such as the error message; see Sensitive Data Filtering)
 - **Configurable filter patterns** 🆕 — Add custom patterns via `config.sensitive_data_patterns`
 - **No external API calls** (except notifications you configure)
 - **No telemetry or tracking**

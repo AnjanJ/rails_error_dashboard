@@ -90,6 +90,17 @@ RSpec.describe "capture size limits" do
       expect(stored).not_to include("pin=1")
     end
 
+    # capture-hardening-0-17/REQ-1: when the job can't be queued, the capture
+    # falls back to sync with the raw exception, which must still be limited.
+    it "is stored cut, with a marker, when the enqueue fails and the capture falls back to sync" do
+      RailsErrorDashboard.configuration.async_logging = true
+      allow(RailsErrorDashboard::AsyncErrorLoggingJob).to receive(:perform_later).and_raise(StandardError, "queue down")
+
+      RailsErrorDashboard::Commands::LogError.call(boom(long_message))
+
+      expect(logs.sole.message).to eq(long_message[0, 10_000] + marker_for(long_message))
+    end
+
     # capture-hardening-0-17/REQ-4: the storm gate already keeps only the
     # first 500 characters as its exemplar, so a storm-only row stays bounded.
     it "is stored bounded when a storm only counted it" do
