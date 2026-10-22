@@ -287,6 +287,80 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
       end
     end
 
+    # Free-text redaction is best-effort: these are the shapes it recognises.
+    context "message shapes" do
+      before do
+        RailsErrorDashboard.configuration.filter_sensitive_data = true
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+      end
+
+      def filtered_message(message)
+        described_class.filter_attributes(message: message)[:message]
+      end
+
+      # capture-hardening-0-17/REQ-8
+      it "redacts key: value for a sensitive key, quoted or not, and keeps other keys" do
+        expect(filtered_message("login failed for password: hunter2 user: alice"))
+          .to eq("login failed for password: [FILTERED] user: alice")
+        expect(filtered_message('api_token: "two words"')).to eq("api_token: [FILTERED]")
+      end
+
+      # capture-hardening-0-17/REQ-8
+      it "redacts JSON pairs, keeping the JSON well formed" do
+        expect(filtered_message(%(unexpected token at '{"user":"a","token":"hunter2"'))).to eq(
+          %(unexpected token at '{"user":"a","token":"[FILTERED]"')
+        )
+        expect(filtered_message(%({"pin": 1234, "id": 7}))).to eq(%({"pin": "[FILTERED]", "id": 7}))
+      end
+
+      # capture-hardening-0-17/REQ-9
+      it "redacts a Bearer token" do
+        expect(filtered_message("401 with Authorization: Bearer eyJhbGc.eyJzdWIi.sig-_x=="))
+          .to eq("401 with Authorization: Bearer [FILTERED]")
+      end
+
+      it "leaves ordinary text alone" do
+        message = "undefined method 'name' for nil (NoMethodError) at https://example.com/a?b=c: retrying"
+        expect(filtered_message(message)).to eq(message)
+      end
+
+      # capture-hardening-0-17/REQ-10
+      it "redacts a URL whose query string can't be parsed, pair by pair" do
+        result = described_class.filter_attributes(request_url: "/cb?token=hunter2&q=100%")[:request_url]
+
+        expect(result).to eq("/cb?token=[FILTERED]&q=100%")
+      end
+
+      # capture-hardening-0-17/REQ-10
+      it "redacts a URL with a bad %-escape, pair by pair" do
+        result = described_class.filter_attributes(request_url: "/login?password=hunter2&x=%zz")[:request_url]
+
+        expect(result).to eq("/login?password=[FILTERED]&x=%zz")
+      end
+
+      # capture-hardening-0-17/REQ-12: every pattern stays linear on
+      # untrusted text; catastrophic backtracking would take seconds here.
+      [
+        [ "a word run", "a" * 10_000 ],
+        [ "colon pairs", "a:" * 5_000 ],
+        [ "equals pairs", "a=" * 5_000 ],
+        [ "JSON keys", '"a":' * 2_500 ],
+        [ "quotes", '"' * 10_000 ],
+        [ "an unterminated JSON string", '{"token":"' + ("x" * 9_990) ],
+        [ "unterminated quoted values", 'a: "' * 2_500 ],
+        [ "Bearer runs", "Bearer " * 1_428 ]
+      ].each do |label, message|
+        it "filters 10,000 characters of #{label} in under 50 ms" do
+          described_class.filter_attributes(message: "warm up password: x")
+          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          described_class.filter_attributes(message: message)
+          elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+
+          expect(elapsed_ms).to be < 50
+        end
+      end
+    end
+
     # capture-hardening-0-17/REQ-11: text that isn't JSON is an input shape,
     # not a filter failure -- it gets the message rules rather than being
     # stored as it came, or thrown away.

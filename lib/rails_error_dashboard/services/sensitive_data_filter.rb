@@ -38,6 +38,19 @@ module RailsErrorDashboard
       # Regex to detect credit card numbers in free text (4 groups of 4 digits)
       CREDIT_CARD_REGEX = /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/
 
+      # More free-text shapes. Each runs on untrusted text on the capture path,
+      # so each is linear: a word-boundary or quote anchor, and no nested
+      # quantifiers. The key decides, through the same filter as everything
+      # else, so filter_parameters, custom patterns and procs all apply.
+      #   key: value     (value bare, "double" or 'single' quoted)
+      KEY_COLON_VALUE = /\b(\w+)(:[ \t]*)("[^"\n]*"|'[^'\n]*'|[^\s,;)\]}]+)/
+      #   "key": "value" or "key": value -- JSON, including JSON::ParserError text
+      JSON_PAIR = /"(\w+)"(\s*:\s*)("(?:[^"\\\n]|\\.)*"|[^\s,}\]]+)/
+      #   Bearer <token>
+      BEARER_TOKEN = /\b(Bearer)\s+[A-Za-z0-9\-._~+\/]+=*/i
+      #   ?key=value pairs, for a query string Rack can't parse
+      QUERY_PAIR = /([?&;])([^&;=#\s]+)=([^&;#\s]*)/
+
       # Filter sensitive data from error attributes hash
       # @param attributes [Hash] Error attributes to filter
       # @return [Hash] Filtered attributes (original if filtering is disabled;
@@ -166,10 +179,29 @@ module RailsErrorDashboard
         filtered_query = Rack::Utils.build_query(filtered_params)
         "#{path}?#{filtered_query}"
       rescue => e
+        # Rack refuses the query (a stray %, a bad escape): redact it pair by
+        # pair instead of keeping the URL as it came.
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] filter_url failed: #{e.message}")
-        FILTERED_REPLACEMENT
+        redact_query(filter, url)
       end
       private_class_method :filter_url
+
+      # @return [String] the URL with each sensitive pair's value replaced
+      def self.redact_query(filter, url)
+        url.gsub(QUERY_PAIR) do
+          separator, key, value = Regexp.last_match(1), Regexp.last_match(2), Regexp.last_match(3)
+          name = begin
+            URI.decode_www_form_component(key)
+          rescue ArgumentError
+            key
+          end
+          "#{separator}#{key}=#{sensitive_key?(filter, name) ? FILTERED_REPLACEMENT : value}"
+        end
+      rescue => e
+        RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] redact_query failed: #{e.message}")
+        FILTERED_REPLACEMENT
+      end
+      private_class_method :redact_query
 
       # Filter key=value patterns in a message string
       # @param filter [ActiveSupport::ParameterFilter] The filter instance
@@ -186,6 +218,18 @@ module RailsErrorDashboard
           "#{key}=#{filtered[key]}"
         end
 
+        result = result.gsub(JSON_PAIR) do
+          key, separator = Regexp.last_match(1), Regexp.last_match(2)
+          sensitive_key?(filter, key) ? %("#{key}"#{separator}"#{FILTERED_REPLACEMENT}") : Regexp.last_match(0)
+        end
+
+        result = result.gsub(KEY_COLON_VALUE) do
+          key, separator = Regexp.last_match(1), Regexp.last_match(2)
+          sensitive_key?(filter, key) ? "#{key}#{separator}#{FILTERED_REPLACEMENT}" : Regexp.last_match(0)
+        end
+
+        result = result.gsub(BEARER_TOKEN) { "#{Regexp.last_match(1)} #{FILTERED_REPLACEMENT}" }
+
         # Scrub credit card numbers from free text
         result.gsub(CREDIT_CARD_REGEX, FILTERED_REPLACEMENT)
       rescue => e
@@ -193,6 +237,12 @@ module RailsErrorDashboard
         FILTERED_REPLACEMENT
       end
       private_class_method :filter_message
+
+      # Whether the filter would redact a value under this key.
+      def self.sensitive_key?(filter, key)
+        filter.filter(key => "")[key] == FILTERED_REPLACEMENT
+      end
+      private_class_method :sensitive_key?
 
       # Filter messages within a cause chain JSON string
       # @param filter [ActiveSupport::ParameterFilter] The filter instance
