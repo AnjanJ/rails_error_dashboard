@@ -310,6 +310,14 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
       let(:newest_legacy_row) { legacy_rows.last }
 
       it "counts every recurrence on the unresolved row instead of raising" do
+        # MySQL has no partial indexes, so the index is never built there and
+        # a reopen cannot collide: each old row is simply reopened in turn.
+        unless RailsErrorDashboard::ErrorLog.connection.index_name_exists?(
+          RailsErrorDashboard::ErrorLog.table_name, "index_error_logs_on_group_identity"
+        )
+          skip "no group identity index on this adapter, so a reopen cannot collide"
+        end
+
         results = Array.new(3) { described_class.call(error_hash, base_attributes.merge(occurred_at: Time.current)) }
 
         expect(results.map(&:id).uniq).to eq([ newest_legacy_row.id ])
