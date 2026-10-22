@@ -23,12 +23,12 @@ time. Each test is written first and watched fail for the right reason.
   - Test: spec/ci/workflows_spec.rb examples for each listed requirement on release.yml; the REQ-15 example runs the version-check script with a matching and a mismatched INPUT_VERSION
   - After: T3
   - Done when: `env -u RAILS_VERSION bin/with-ruby bundle exec rspec spec/ci/workflows_spec.rb` → 0 failures; `actionlint` → only the two SC2209 notes in test.yml; `zizmor --offline .github/workflows` → no template-injection, excessive-permissions, artipacked, cache-poisoning or secrets-inherit finding in the four workflows
-- [ ] **T5** Create the rubygems environment, deployable from main only → REQ-10
+- [x] **T5** Create the rubygems environment, deployable from main only → REQ-10
   - Files: none (repository setting)
   - Test: none; checked with `gh api repos/AnjanJ/rails_error_dashboard/environments/rubygems/deployment-branch-policies`
   - After: none
   - Done when: that call lists exactly one policy, `main` of type `branch`, and the environment has no protection rule other than the branch policy
-- [ ] **T6** Gate: the whole suite, chaos, linters and the spec checks → REQ-1, REQ-6
+- [x] **T6** Gate: the whole suite, chaos, linters and the spec checks → REQ-1, REQ-6
   - Files: none
   - Test: the publish-bundle dry run: in a scratch worktree with a scratch BUNDLE_PATH, `BUNDLE_WITHOUT=development:test bundle install` then `bundle exec rake build`
   - After: T4, T5
