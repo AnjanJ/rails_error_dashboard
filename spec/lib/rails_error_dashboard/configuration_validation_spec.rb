@@ -743,6 +743,44 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  # live-updates-client/REQ-10: a switch that is on but cannot work says why,
+  # instead of leaving the index silently static.
+  describe "live updates validation" do
+    before { allow(Rails.logger).to receive(:warn) }
+
+    it "warns, naming turbo-rails, when live updates are on but Turbo is not loaded" do
+      hide_const("Turbo")
+      config.enable_live_updates = true
+
+      expect { config.validate! }.not_to raise_error
+      expect(Rails.logger).to have_received(:warn).with(/enable_live_updates.*turbo-rails/)
+      expect(config.enable_live_updates).to be true
+    end
+
+    it "warns, naming ActionCable, when live updates are on but ActionCable is not loaded" do
+      hide_const("ActionCable")
+      config.enable_live_updates = true
+
+      config.validate!
+      expect(Rails.logger).to have_received(:warn).with(/enable_live_updates.*ActionCable/)
+    end
+
+    it "does not warn when live updates are on and both are loaded" do
+      config.enable_live_updates = true
+
+      config.validate!
+      expect(Rails.logger).not_to have_received(:warn).with(/enable_live_updates/)
+    end
+
+    it "does not warn while live updates are off, even with both missing" do
+      hide_const("Turbo")
+      hide_const("ActionCable")
+
+      config.validate!
+      expect(Rails.logger).not_to have_received(:warn).with(/enable_live_updates/)
+    end
+  end
+
   describe "crash capture validation" do
     it "accepts valid defaults when enabled" do
       config.enable_crash_capture = true
