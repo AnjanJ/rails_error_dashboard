@@ -74,6 +74,18 @@ RSpec.describe RailsErrorDashboard::Services::CaptureLimits do
       expect(result).to end_with("[truncated]")
     end
 
+    # capture-hardening-0-17/REQ-2: dropping values can't help when the keys
+    # alone are over the limit, so the object is cut as text instead.
+    it "cuts an object whose keys alone are over the limit as text" do
+      params = (1..4_000).to_h { |i| [ "field_#{i.to_s.rjust(20, "0")}", 1 ] }.to_json
+
+      result = described_class.request_params(params)
+
+      expect(result.bytesize).to be <= limit
+      expect(result).to start_with(params[0, 1_000])
+      expect(result).to end_with("[truncated]")
+    end
+
     it "cuts a JSON array as text" do
       result = described_class.request_params(Array.new(20_000) { "abcd" }.to_json)
 

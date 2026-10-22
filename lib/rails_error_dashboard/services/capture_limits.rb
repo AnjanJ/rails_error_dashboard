@@ -68,7 +68,9 @@ module RailsErrorDashboard
         parsed.map { |key, value| [ key, value.to_json.bytesize ] }
               .sort_by { |_key, bytes| -bytes }
               .each do |key, bytes|
-                break if size <= budget
+                # Largest first, so once a value is no bigger than the
+                # placeholder, replacing the rest would only grow the JSON.
+                break if size <= budget || bytes <= replacement
 
                 parsed[key] = TRUNCATED_VALUE
                 size -= bytes - replacement

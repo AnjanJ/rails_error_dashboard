@@ -23,7 +23,8 @@ Make what a capture stores safe to store, on every adapter.
 
 ### Long values are stored, within limits
 - **REQ-1.** When a captured error's message is longer than 10,000 characters, RED shall store the
-  first 10,000 characters followed by a marker that says how many characters were cut.
+  first 10,000 characters followed by a marker that says how many characters were cut. (A row that a
+  storm only counted keeps the storm gate's existing 500-character exemplar, as `design.md` records.)
 - **REQ-2.** When a capture's request params are larger than 64,000 bytes, RED shall store at most
   64,000 bytes of them: a JSON object as valid JSON, with its largest values replaced first and
   `"_truncated": true` added; anything else (an array, text that isn't JSON, or an object whose keys
