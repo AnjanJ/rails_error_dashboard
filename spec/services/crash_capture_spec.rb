@@ -280,6 +280,38 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
   end
 
   describe ".import!" do
+    # capture-hardening-0-17/REQ-15: the import wrote through
+    # FindOrIncrementError directly, so a crash's message and cause chain
+    # skipped the sensitive-data filter and the size limits every other
+    # capture route applies.
+    context "filtering and limits" do
+      before { RailsErrorDashboard.configuration.filter_sensitive_data = true }
+      after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+      it "filters and limits what it stores, and groups on the raw message" do
+        message = "login failed password=hunter2 " + ("x" * 20_000)
+        write_crash_file(build_crash_data(
+          message: message,
+          cause_chain: [ { class_name: "ArgumentError", message: "token=abc123 rejected" } ]
+        ))
+
+        described_class.import!
+
+        error_log = RailsErrorDashboard::ErrorLog.last
+        expect(error_log.message).to start_with("login failed password=[FILTERED] xxx")
+        expect(error_log.message).not_to include("hunter2")
+        expect(error_log.message).to end_with("more characters]")
+        expect(error_log.exception_cause).to include("token=[FILTERED]")
+        expect(error_log.exception_cause).not_to include("abc123")
+        expect(error_log.error_hash).to eq(
+          RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+            error_type: "RuntimeError", message: message,
+            backtrace: "app/models/user.rb:42:in `save!'", application_id: error_log.application_id
+          )
+        )
+      end
+    end
+
     context "happy path" do
       it "creates ErrorLog record from valid crash file" do
         write_crash_file(build_crash_data(

@@ -289,6 +289,15 @@ module RailsErrorDashboard
             attributes[:last_seen_at] = occurred_at
           end
 
+          # The same cleaning every other capture route applies, after the
+          # fingerprint above has hashed the raw message: limits first so the
+          # filter sees bounded input, then the filter (fails closed), then the
+          # per-column nets so the row fits its columns on every adapter.
+          attributes[:message] = Services::CaptureLimits.message(attributes[:message])
+          attributes = Services::EncodingSanitizer.scrub_deep(attributes)
+          attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
+          attributes = ErrorLog.clamp_text_attributes(ErrorLog.clamp_string_attributes(attributes))
+
           # Through the same find-or-increment as every other capture: a crash
           # that repeats on every restart is one row with a count, not a new
           # row per restart -- and a plain create! collided with the unique
