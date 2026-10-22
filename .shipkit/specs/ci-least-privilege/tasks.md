@@ -8,7 +8,7 @@ time. Each test is written first and watched fail for the right reason.
   - Test: spec/ci/workflows_spec.rb "keeps only the gem, rails and the json constraint in the Gemfile's default group"
   - After: none
   - Done when: `env -u RAILS_VERSION bin/with-ruby bundle exec rspec spec/ci/workflows_spec.rb` → 0 failures, and the example was red before the Gemfile change
-- [ ] **T2** Read-only permissions, no persisted credentials and no expanded refs in ci.yml and test.yml → REQ-1, REQ-2, REQ-11, REQ-12
+- [x] **T2** Read-only permissions, no persisted credentials and no expanded refs in ci.yml and test.yml → REQ-1, REQ-2, REQ-11, REQ-12
   - Files: spec/ci/workflows_spec.rb, .github/workflows/ci.yml, .github/workflows/test.yml
   - Test: spec/ci/workflows_spec.rb examples for REQ-1, REQ-2, REQ-11 and REQ-12 on ci.yml and test.yml
   - After: T1

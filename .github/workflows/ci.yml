@@ -5,6 +5,11 @@ on:
   push:
     branches: [ main ]
 
+# No job here writes to the repository or calls the GitHub API, so every job
+# gets a read-only token instead of the repository default.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -15,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -49,6 +56,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -81,16 +90,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # A job-level `if` cannot inspect changed files, so the decision lives here.
       # Release PRs always run it; other PRs only when they touch migrations.
+      #
+      # The branch names reach the script as env vars rather than being
+      # expanded into it, so a branch name is always data, never script text.
       - name: Decide whether to run
         id: decide
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
-          if [[ "${{ github.head_ref }}" == release-please--* ]]; then
+          if [[ "$HEAD_REF" == release-please--* ]]; then
             echo "run=true"  >> "$GITHUB_OUTPUT"
             echo "Release PR — verifying the upgrade path before publish."
-          elif git diff --name-only "origin/${{ github.base_ref || 'main' }}"...HEAD \
+          elif git diff --name-only "origin/$BASE_REF"...HEAD \
                | grep -qE '^db/migrate/'; then
             echo "run=true"  >> "$GITHUB_OUTPUT"
             echo "Migrations changed — verifying the upgrade path."

@@ -35,6 +35,62 @@ RSpec.describe "GitHub Actions workflows" do
     job.key?("permissions") ? job["permissions"] : wf["permissions"]
   end
 
+  # [job_id, step] for every step of every job. A job that calls a reusable
+  # workflow has no steps of its own.
+  def steps(name)
+    jobs(name).flat_map { |job_id, job| Array(job["steps"]).map { |step| [ job_id, step ] } }
+  end
+
+  # Values a PR author or a dispatcher chooses. Expanded inside `run:`, they
+  # become part of the script itself; read from an env var, they stay data.
+  UNTRUSTED_EXPRESSION = /\$\{\{[^}]*\b(?:github\.(?:head_ref|base_ref|event\.)|inputs\.)/
+
+  # The workflows this spec holds to least privilege.
+  def hardened_workflows
+    %w[ci.yml test.yml]
+  end
+
+  describe "every hardened workflow" do
+    it "declares the token permissions of every job in the file itself (ci-least-privilege/REQ-1)" do
+      undeclared = hardened_workflows.flat_map do |name|
+        jobs(name).keys.select { |job_id| effective_permissions(name, job_id).nil? }.map { |job_id| "#{name}:#{job_id}" }
+      end
+
+      expect(undeclared).to eq([])
+    end
+
+    it "persists no credentials from any checkout (ci-least-privilege/REQ-11)" do
+      persisting = hardened_workflows.flat_map do |name|
+        steps(name)
+          .select { |_job_id, step| step["uses"].to_s.start_with?("actions/checkout@") }
+          .reject { |_job_id, step| step.dig("with", "persist-credentials") == false }
+          .map { |job_id, _step| "#{name}:#{job_id}" }
+      end
+
+      expect(persisting).to eq([])
+    end
+
+    it "expands no ref, event or input value inside a run script (ci-least-privilege/REQ-12)" do
+      expanding = hardened_workflows.flat_map do |name|
+        steps(name)
+          .select { |_job_id, step| step["run"].to_s.match?(UNTRUSTED_EXPRESSION) }
+          .map { |job_id, step| "#{name}:#{job_id}:#{step['name']}" }
+      end
+
+      expect(expanding).to eq([])
+    end
+  end
+
+  describe "ci.yml and test.yml" do
+    it "give every job read access to the repository and nothing else (ci-least-privilege/REQ-2)" do
+      %w[ci.yml test.yml].each do |name|
+        jobs(name).each_key do |job_id|
+          expect(effective_permissions(name, job_id)).to eq({ "contents" => "read" }), "#{name}:#{job_id}"
+        end
+      end
+    end
+  end
+
   describe "Gemfile" do
     # The release job installs the bundle with the development and test groups
     # left out. Anything in the default group is installed, and built, there.
