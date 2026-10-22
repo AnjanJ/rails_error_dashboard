@@ -53,7 +53,8 @@ RSpec.describe "capture size limits" do
     # capture-hardening-0-17/REQ-1, capture-hardening-0-17/REQ-4
     it "is cut before it crosses the queue, and stored cut (async)" do
       RailsErrorDashboard.configuration.async_logging = true
-      RailsErrorDashboard::Commands::LogError.call(boom(long_message))
+      error = boom(long_message)
+      RailsErrorDashboard::Commands::LogError.call(error)
 
       exception_data, = enqueued_jobs
         .find { |job| job[:job] == RailsErrorDashboard::AsyncErrorLoggingJob }
@@ -61,7 +62,13 @@ RSpec.describe "capture size limits" do
       expect(exception_data["message"].length).to eq(10_000 + marker_for(long_message).length)
 
       perform_enqueued_jobs
-      expect(logs.sole.message).to eq(long_message[0, 10_000] + marker_for(long_message))
+      row = logs.sole
+      expect(row.message).to eq(long_message[0, 10_000] + marker_for(long_message))
+      # capture-hardening-0-17/REQ-5: the identity crossed the queue from the
+      # raw exception, so the cut doesn't change the group.
+      expect(row.error_hash).to eq(
+        RailsErrorDashboard::Services::ErrorHashGenerator.call(error, application_id: row.application_id)
+      )
     end
 
     # capture-hardening-0-17/REQ-4: the storm gate already keeps only the

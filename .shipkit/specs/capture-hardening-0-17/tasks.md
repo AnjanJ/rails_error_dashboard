@@ -6,7 +6,7 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. The shell exports a stale
 `RAILS_VERSION` that re-pins the lockfile. Run one rspec process at a time.
 
-- [ ] **T1** Limits for a message and for request params → REQ-1, REQ-2
+- [x] **T1** Limits for a message and for request params → REQ-1, REQ-2
   - Files: lib/rails_error_dashboard/services/capture_limits.rb, spec/services/capture_limits_spec.rb
   - Test: capture_limits_spec:
     - a 70,000-character message → the first 10,000 characters plus a marker naming the 60,000 cut;
@@ -16,7 +16,7 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
     - nothing raises on nil or odd input
   - After: none
   - Done when: `R rspec spec/services/capture_limits_spec.rb` → 0 failures
-- [ ] **T2** A per-column net for text values → REQ-3
+- [x] **T2** A per-column net for text values → REQ-3
   - Files: app/models/rails_error_dashboard/error_logs_record.rb, spec/models/error_logs_record_clamp_spec.rb
   - Test: error_logs_record_clamp_spec:
     - a 70 KB `backtrace` → at most 65,535 bytes, valid UTF-8, with a marker;
@@ -25,7 +25,7 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
     - the occurrence-context model gets the same treatment
   - After: none
   - Done when: `R rspec spec/models/error_logs_record_clamp_spec.rb` → 0 failures
-- [ ] **T3** Apply the limits on every capture route → REQ-1, REQ-2, REQ-3, REQ-4, REQ-5
+- [x] **T3** Apply the limits on every capture route → REQ-1, REQ-2, REQ-3, REQ-4, REQ-5
   - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/capture_limits.rb, spec/services/capture_limits_spec.rb, spec/commands/log_error_capture_limits_spec.rb
   - Test: log_error_capture_limits_spec:
     - a 70,000-character message, sync and async → one row, message cut with the marker, `error_hash` equal to the full message's;
@@ -36,7 +36,7 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
     Runs on CI's MySQL row as well (REQ-4).
   - After: T1, T2
   - Done when: `R rspec spec/commands/log_error_capture_limits_spec.rb spec/commands/log_error_queue_redaction_spec.rb spec/commands/flush_storm_counts_spec.rb spec/services/storm_protection/gate_spec.rb` → 0 failures
-- [ ] **T4** Filtering fails closed; text that isn't JSON gets the message rules → REQ-6, REQ-7, REQ-11
+- [x] **T4** Filtering fails closed; text that isn't JSON gets the message rules → REQ-6, REQ-7, REQ-11
   - Files: lib/rails_error_dashboard/services/sensitive_data_filter.rb, spec/services/sensitive_data_filter_spec.rb
   - Test: sensitive_data_filter_spec:
     - a helper that raises → that field `[FILTERED]`;
@@ -45,7 +45,7 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
     - non-JSON params `{"password":"x","a"` → the secret redacted
   - After: none
   - Done when: `R rspec spec/services/sensitive_data_filter_spec.rb` → 0 failures
-- [ ] **T5** Redact `key: value`, JSON pairs, Bearer tokens and unparseable URLs, in linear time → REQ-8, REQ-9, REQ-10, REQ-12
+- [x] **T5** Redact `key: value`, JSON pairs, Bearer tokens and unparseable URLs, in linear time → REQ-8, REQ-9, REQ-10, REQ-12
   - Files: lib/rails_error_dashboard/services/sensitive_data_filter.rb, spec/services/sensitive_data_filter_spec.rb
   - Test: sensitive_data_filter_spec:
     - `password: x`, `password: "a b"`, `{"token":"x"}`, `"pin": 1234` and `Bearer x.y.z` → redacted, with non-sensitive keys kept;
@@ -53,17 +53,17 @@ cites `capture-hardening-0-17/REQ-N`. One commit per task, test and code togethe
     - a 10,000-character adversarial message for each pattern → under 50 ms
   - After: T4
   - Done when: `R rspec spec/services/sensitive_data_filter_spec.rb spec/services/breadcrumb_collector_spec.rb spec/services/variable_serializer_spec.rb` → 0 failures
-- [ ] **T6** Crash imports are filtered and limited → REQ-15
+- [x] **T6** Crash imports are filtered and limited → REQ-15
   - Files: lib/rails_error_dashboard/services/crash_capture.rb, spec/services/crash_capture_spec.rb
   - Test: crash_capture_spec "import filters and limits what it stores": a crash file whose message holds `password=x` and 20,000 characters → the row has `[FILTERED]` and a cut message
   - After: T1, T2
   - Done when: `R rspec spec/services/crash_capture_spec.rb spec/services/crash_capture_boot_spec.rb` → 0 failures
-- [ ] **T7** No secret, no session ID → REQ-14
+- [x] **T7** No secret, no session ID → REQ-14
   - Files: lib/rails_error_dashboard/services/sensitive_data_filter.rb, spec/commands/log_error_session_digest_spec.rb
   - Test: log_error_session_digest_spec "stores no session ID when the app has no secret_key_base"
   - After: T5
   - Done when: `R rspec spec/commands/log_error_session_digest_spec.rb spec/services/sensitive_data_filter_spec.rb` → 0 failures
-- [ ] **T8** Docs: best-effort redaction, fail closed, the limits → REQ-13
+- [x] **T8** Docs: best-effort redaction, fail closed, the limits → REQ-13
   - Files: README.md, docs/FEATURES.md, docs/guides/CONFIGURATION.md, _getting_started/features.md, _guides/configuration.md
   - Test: none (REQ-13 is prose, checked by reading)
   - After: none

@@ -319,6 +319,17 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
           .to eq("401 with Authorization: Bearer [FILTERED]")
       end
 
+      # capture-hardening-0-17/REQ-9: a sensitive key in front of the token
+      # must not hide it -- the key's pass stops at the first space, so it
+      # would redact only the word "Bearer" and leave the token after it.
+      it "redacts the token when a sensitive key comes before Bearer" do
+        expect(filtered_message("retry with token: Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+        expect(filtered_message("retry with token=Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([ :authorization ])
+        described_class.reset!
+        expect(filtered_message("Authorization: Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+      end
+
       it "leaves ordinary text alone" do
         message = "undefined method 'name' for nil (NoMethodError) at https://example.com/a?b=c: retrying"
         expect(filtered_message(message)).to eq(message)

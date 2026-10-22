@@ -217,8 +217,12 @@ module RailsErrorDashboard
       def self.filter_message(filter, message)
         return message if message.nil? || message.empty?
 
+        # Bearer first: a key pass stops at the first space, so "token: Bearer
+        # x" would redact only the word "Bearer" and keep the token after it.
+        result = message.gsub(BEARER_TOKEN) { "#{Regexp.last_match(1)} #{FILTERED_REPLACEMENT}" }
+
         # Extract key=value patterns and filter them
-        result = message.gsub(/(\w+)=(\S+)/) do |_match|
+        result = result.gsub(/(\w+)=(\S+)/) do |_match|
           key = Regexp.last_match(1)
           value = Regexp.last_match(2)
           filtered = filter.filter(key => value)
@@ -234,8 +238,6 @@ module RailsErrorDashboard
           key, separator = Regexp.last_match(1), Regexp.last_match(2)
           sensitive_key?(filter, key) ? "#{key}#{separator}#{FILTERED_REPLACEMENT}" : Regexp.last_match(0)
         end
-
-        result = result.gsub(BEARER_TOKEN) { "#{Regexp.last_match(1)} #{FILTERED_REPLACEMENT}" }
 
         # Scrub credit card numbers from free text
         result.gsub(CREDIT_CARD_REGEX, FILTERED_REPLACEMENT)
