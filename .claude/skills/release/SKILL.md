@@ -24,19 +24,22 @@ That PR contains only:
 - `CHANGELOG.md`
 - `.release-please-manifest.json`
 
-Merging that PR triggers the publish half of the same workflow:
+Merging that PR triggers the publish half of the same workflow, one job after
+another (watch them with `gh run view <run-id>`):
 
 ```
 merge release PR
-  -> bundle exec rspec
-  -> bundle exec rubocop
-  -> git tag (v X.Y.Z and rails_error_dashboard/v X.Y.Z)
-  -> GitHub Release (marked Latest)
-  -> gem push to RubyGems via OIDC trusted publishing
+  -> release:    release-please creates the GitHub Release (marked Latest)
+                 and the rails_error_dashboard/vX.Y.Z tag
+  -> test:       bundle exec rspec, bundle exec rubocop (read-only token)
+  -> publish:    `rubygems` environment (main only); rake release tags vX.Y.Z,
+                 then pushes the gem to RubyGems via OIDC trusted publishing
+  -> smoke-test: checks the live demo against the released gem
 ```
 
 There are **no RubyGems credentials involved** — trusted publishing authenticates
-via OIDC. `~/.gem/credentials` is not used and does not need to exist.
+via OIDC, and only the `publish` job can request that token.
+`~/.gem/credentials` is not used and does not need to exist.
 
 The version number is derived from commit types, not chosen by hand:
 `fix:` -> patch, `feat:` -> minor, `!`/`BREAKING CHANGE` -> major.
@@ -125,7 +128,9 @@ publish action. There is no separate, later `gem push` step to gate on.
 A transient failure (flaky test, network blip) can leave the tag and GitHub
 Release created but the gem unpublished. `.github/workflows/release.yml` has a
 `workflow_dispatch` escape hatch that republishes at the current version on `main`
-without re-running release-please:
+without re-running release-please. It runs the same `test` and `publish` jobs as
+a release, and must be dispatched from `main` (the `rubygems` environment refuses
+any other branch):
 
 ```bash
 gh workflow run release.yml -f version=X.Y.Z
