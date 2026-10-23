@@ -12,7 +12,7 @@ module RailsErrorDashboard
     # Each event is captured as a breadcrumb with category "rack_attack",
     # allowing correlation between rate-limit events and error spikes.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Every subscriber wrapped in rescue => e; nil
     # - Never raise from subscriber callbacks
     # - Skip if buffer is nil (not in a request context)

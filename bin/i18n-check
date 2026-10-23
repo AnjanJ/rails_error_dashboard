@@ -14,7 +14,7 @@
 #
 # Usage:
 #   bin/i18n-check              # check every locale, exit non-zero on failure
-#   bin/i18n-check --pseudo     # write config/locales/zz.yml for layout testing
+#   bin/i18n-check --pseudo     # write config/locales/qps.yml for layout testing
 #   bin/i18n-check --quiet      # failures only; suppress warnings
 #   bin/i18n-check --help
 #

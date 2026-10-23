@@ -90,7 +90,7 @@ module RailsErrorDashboard
       # SECRET_KEY_BASE_DUMMY=1 signals a build environment — no database,
       # no credentials, no external services are available. Activating
       # TracePoint hooks, error subscribers, or background jobs here causes
-      # infinite retry loops and connection failures (issues #1-5).
+      # infinite retry loops and connection failures.
       if ENV["SECRET_KEY_BASE_DUMMY"].present?
         Rails.logger.info "[Rails Error Dashboard] Build environment detected (SECRET_KEY_BASE_DUMMY) — skipping runtime features."
         next

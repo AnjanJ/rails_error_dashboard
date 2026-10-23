@@ -1,11 +1,11 @@
 ---
-description: Audit staged changes against the 10 host app safety rules
+description: Audit staged changes against the 11 host app safety rules
 user-invocable: true
 ---
 
 # /safety-check — Host App Safety Audit
 
-Audit staged or recent changes against the 10 host app safety rules. This skill is also auto-invocable — Claude should run it automatically when making changes to the capture path.
+Audit staged or recent changes against the 11 host app safety rules. This skill is also auto-invocable — Claude should run it automatically when making changes to the capture path.
 
 ## Usage
 
@@ -33,7 +33,7 @@ Audit each changed file against these rules:
 These files run on EVERY request or error — any bug here affects the host app:
 
 - `lib/rails_error_dashboard/middleware/error_catcher.rb`
-- `lib/rails_error_dashboard/error_subscriber.rb`
+- `lib/rails_error_dashboard/error_reporter.rb`
 - `lib/rails_error_dashboard/commands/log_error.rb`
 - `lib/rails_error_dashboard/commands/find_or_increment_error.rb`
 - `lib/rails_error_dashboard/commands/find_or_create_application.rb`
@@ -49,7 +49,7 @@ These files run on EVERY request or error — any bug here affects the host app:
    ```
 
 2. **Classify each changed file**:
-   - **Capture path** (listed above) — audit ALL 10 rules
+   - **Capture path** (listed above) — audit ALL 11 rules
    - **Dashboard path** (controllers, views, queries) — audit rules 1, 7, 8, 9
    - **Background path** (jobs, notifications) — audit rules 1, 5, 6
    - **Other** — audit rules 8, 9, 10
@@ -68,7 +68,7 @@ These files run on EVERY request or error — any bug here affects the host app:
 
 - **Verification Before Done**: Never report PASS without reading the actual code. Diff lines alone are insufficient — read the full file to understand rescue/ensure context.
 - **Autonomous Bug Fixing**: If a safety violation is found (FAIL), fix it immediately rather than just reporting it. Then re-run the check to verify the fix.
-- **Self-Improvement Loop**: If a safety violation was caused by a pattern not yet in the 10 rules, add it to `tasks/lessons.md`.
+- **Self-Improvement Loop**: If a safety violation was caused by a pattern not yet in the 11 rules, add it to `tasks/lessons.md`.
 
 ## Auto-Invocation
 

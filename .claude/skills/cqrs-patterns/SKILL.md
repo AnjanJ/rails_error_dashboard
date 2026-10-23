@@ -133,17 +133,19 @@ module RailsErrorDashboard
 end
 ```
 
-### Existing Services (36 files)
+### Existing Services (a sample; 76 files including `storm_protection/`, so list the directory for all of them)
 - **Parsing**: `BacktraceParser`, `BacktraceProcessor`
 - **Detection**: `CascadeDetector`, `PatternDetector`, `PlatformDetector`
 - **Calculation**: `SimilarityCalculator`, `PearsonCorrelation`, `BaselineCalculator`, `BaselineAlertThrottler`
 - **Normalization**: `ErrorNormalizer` (smart deduplication — UUIDs, timestamps, IDs, tokens)
 - **Source**: `SourceCodeReader`, `GitBlameReader`, `GithubLinkGenerator`
 - **Notifications**: `ErrorBroadcaster`, `ErrorNotificationDispatcher`
-- **Payload builders**: `SlackPayloadBuilder`, `DiscordPayloadBuilder`, `PagerDutyPayloadBuilder`, `GithubIssuePayloadBuilder`, `WebhookPayloadBuilder`
+- **Payload builders**: `SlackPayloadBuilder`, `DiscordPayloadBuilder`, `TelegramPayloadBuilder`, `PagerdutyPayloadBuilder`, `WebhookPayloadBuilder`, `BaselineAlertPayloadBuilder`
+- **Issue trackers**: `IssueTrackerClient` and its `GitHubIssueClient`, `GitLabIssueClient`, `CodebergIssueClient`, `LinearIssueClient`; `IssueBodyFormatter`
 - **Breadcrumbs**: `BreadcrumbCollector` (ring buffer, thread-local)
 - **Health**: `SystemHealthSnapshot` (GC.stat, connection pool, threads)
-- **Data**: `SensitiveDataFilter`, `ContextEnricher`, `CauseChainExtractor`
+- **Data**: `SensitiveDataFilter`, `ExceptionFilter`, `CauseChainExtractor`
+- **Storm protection**: `StormProtection::Gate`, `CircuitBreaker`, `CountBuffer`, `FingerprintBuckets`
 
 ## Naming Conventions
 

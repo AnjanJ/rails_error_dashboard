@@ -38,7 +38,7 @@ module RailsErrorDashboard
     # Cost: auto-estimated from provider/model/tokens unless payload supplies
     # `:cost_usd_estimate`.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Every callback wrapped in rescue => e; nil
     # - Never raise from subscriber callbacks
     # - Skip if buffer is nil (not in a request context)

@@ -23,7 +23,7 @@ module RailsErrorDashboard
     # variables are shared by every fiber of the thread, which is what "per
     # thread" has to mean for the drain point and the record point to agree.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Zero I/O in the record path: a hash lookup, an increment, and (for a
     #   key seen for the first time on this thread) one lazy stack scan
     # - Never raises: every public method rescues

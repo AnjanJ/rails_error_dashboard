@@ -14,7 +14,7 @@ module RailsErrorDashboard
     # absent or the feature is off, `in_span` runs the block with a no-op
     # span object — call sites do NOT branch on availability.
     #
-    # HOST APP SAFETY (HOST_APP_SAFETY.md):
+    # HOST APP SAFETY (.claude/skills/host-app-safety/SKILL.md):
     # - No-op when `enable_otel_export = false` OR OTel API not loaded
     # - Per-span-kind opt-in/out via config.otel_spans
     # - Tracer instance memoized per-process (rebuild on `reset!`)

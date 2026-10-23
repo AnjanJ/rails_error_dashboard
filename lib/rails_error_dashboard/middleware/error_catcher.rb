@@ -8,7 +8,7 @@
 # 1. ErrorCatcher (this file) ← Catches everything
 # 2. ActionDispatch middleware
 # 3. Rails routing
-# 4. Controllers (with ErrorHandler concern)
+# 4. Controllers
 #
 # This ensures NO error goes unreported
 

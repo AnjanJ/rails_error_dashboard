@@ -4,7 +4,7 @@
 # Uses Rails 7+ built-in error reporter - single source of truth
 #
 # This catches errors from:
-# - Controllers (via ErrorHandler concern)
+# - Controllers (Rails reports unhandled request errors through its executor)
 # - Background Jobs (via ActiveJob integration)
 # - Sidekiq (via ActiveJob)
 # - Code that calls Rails.error.report or Rails.error.record

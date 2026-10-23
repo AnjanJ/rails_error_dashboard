@@ -374,7 +374,7 @@ module RailsErrorDashboard
       @custom_fingerprint = nil # Lambda: ->(exception, context) { "custom_key" }
       @sampling_rate = 1.0 # 100% by default
 
-      # Storm protection defaults (thresholds tuned via chaos Phase G — see ROADMAP)
+      # Storm protection defaults
       @enable_storm_protection = true
       @storm_fingerprint_full_per_minute = 30
       @storm_occurrence_sample_keep_every = 10

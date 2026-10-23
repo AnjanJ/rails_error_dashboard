@@ -15,7 +15,7 @@ module RailsErrorDashboard
     # - ObjectSpace.count_objects (O(1) type counts — NOT each_object)
     # - Process uptime
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Every section individually wrapped in rescue => nil
     # - Never raises — returns partial dump on error
     # - No ObjectSpace.each_object (banned rule #8)

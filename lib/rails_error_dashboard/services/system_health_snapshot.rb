@@ -16,7 +16,7 @@ module RailsErrorDashboard
     # config.system_health_queue_stats = false).
     # Every metric call individually wrapped in rescue => nil.
     #
-    # Safety contract (from HOST_APP_SAFETY.md):
+    # Safety contract (from .claude/skills/host-app-safety/SKILL.md):
     # - In-process metrics < 1ms budget (~0.3ms typical on Linux). The
     #   queue-depth counts are the documented exception: their latency is
     #   the queue store's, which is why they are cached and optional.

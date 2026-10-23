@@ -7,7 +7,7 @@ module RailsErrorDashboard
     # Uses a thread-local ring buffer to capture events during a request lifecycle.
     # Thread.current isolation means no mutex/lock is needed.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Every public method wrapped in rescue => e; nil
     # - Never raise, never block, never allocate large objects
     # - Messages truncated to 500 chars, metadata values to 200 chars

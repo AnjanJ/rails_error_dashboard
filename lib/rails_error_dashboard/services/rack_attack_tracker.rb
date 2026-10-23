@@ -16,7 +16,7 @@ module RailsErrorDashboard
     # counted, rather than stored one row per event — a rate-limit flood is exactly
     # when we must not do one INSERT per request.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Zero I/O in the record path (hash lookup + integer increment)
     # - Never raises — every public method wrapped in rescue
     # - Thread-local state, no mutex needed
