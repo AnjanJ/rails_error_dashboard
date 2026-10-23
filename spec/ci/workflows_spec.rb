@@ -92,6 +92,76 @@ RSpec.describe "GitHub Actions workflows" do
     end
   end
 
+  # The upgrade-path test runs only when it can catch something. A job skipped
+  # by its `if` shows as Skipped and counts as passing for a required check; a
+  # job that skips all its own steps shows as a pass that ran nothing.
+  describe "ci.yml: the upgrade gate" do
+    let(:ci_jobs) { jobs("ci.yml") }
+
+    def decide_step
+      ci_jobs.fetch("changes").fetch("steps").find { |step| step["id"] == "decide" }
+    end
+
+    # A repository whose HEAD is one commit past origin/main, adding `path`.
+    # Git's hook variables are unset: this spec also runs inside the
+    # pre-commit hook, where they point at the real repository.
+    def repo_changing(path)
+      dir = Dir.mktmpdir("red_upgrade_gate")
+      git = lambda do |*args|
+        out, status = Open3.capture2e(git_env, "git", "-c", "user.name=spec", "-c", "user.email=spec@example.com",
+          "-c", "commit.gpgsign=false", *args, chdir: dir)
+        raise "git #{args.join(' ')} failed: #{out}" unless status.success?
+      end
+      git.call("init", "-q", "-b", "main")
+      git.call("commit", "-q", "--allow-empty", "-m", "base")
+      git.call("update-ref", "refs/remotes/origin/main", "HEAD")
+      FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+      File.write(File.join(dir, path), "change\n")
+      git.call("add", path)
+      git.call("commit", "-q", "-m", "change")
+      dir
+    end
+
+    def git_env
+      { "GIT_DIR" => nil, "GIT_WORK_TREE" => nil, "GIT_INDEX_FILE" => nil }
+    end
+
+    # Runs the decide script the way a runner would and returns what it wrote
+    # to $GITHUB_OUTPUT.
+    def decide(head_ref:, changed:)
+      dir = repo_changing(changed)
+      output_file = File.join(dir, "github_output")
+      env = git_env.merge("HEAD_REF" => head_ref, "BASE_REF" => "main", "GITHUB_OUTPUT" => output_file)
+      log, status = Open3.capture2e(env, "bash", "-eo", "pipefail", "-c", decide_step.fetch("run"), chdir: dir)
+      expect(status).to be_success, log
+      File.read(output_file).strip
+    ensure
+      FileUtils.rm_rf(dir) if dir
+    end
+
+    it "skips the upgrade job at the job level, on the changes job's answer (test-gaps-0-17/REQ-14)" do
+      upgrade = ci_jobs.fetch("upgrade")
+
+      expect(Array(upgrade["needs"])).to eq([ "changes" ])
+      expect(upgrade["if"]).to eq("needs.changes.outputs.upgrade == 'true'")
+      expect(ci_jobs.dig("changes", "outputs", "upgrade")).to eq("${{ steps.decide.outputs.run }}")
+      expect(upgrade.fetch("steps").map { |step| step["if"] }.compact).to eq([])
+    end
+
+    it "says no for a pull request that changes no migration (test-gaps-0-17/REQ-14)" do
+      expect(decide(head_ref: "fix/something", changed: "lib/something.rb")).to eq("run=false")
+    end
+
+    it "says yes for a pull request that changes a migration (test-gaps-0-17/REQ-15)" do
+      expect(decide(head_ref: "fix/something", changed: "db/migrate/20990101000000_x.rb")).to eq("run=true")
+    end
+
+    it "says yes for a release pull request (test-gaps-0-17/REQ-15)" do
+      expect(decide(head_ref: "release-please--branches--main--components--rails_error_dashboard",
+        changed: "CHANGELOG.md")).to eq("run=true")
+    end
+  end
+
   describe "release.yml" do
     let(:release_jobs) { jobs("release.yml") }
 

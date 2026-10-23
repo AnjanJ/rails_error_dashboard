@@ -81,10 +81,17 @@ jobs:
   # reachable. It runs when it can actually catch something:
   #   - release PRs (branch is always release-please--… ), the last gate before publish
   #   - any PR touching db/migrate/**, which is what breaks upgrades
-  upgrade:
+  #
+  # A job-level `if` cannot inspect changed files, so the `changes` job decides
+  # and the upgrade job reads its answer. When there is nothing to check, the
+  # upgrade check then shows as Skipped rather than as a pass that ran nothing.
+  # `changes` is a required check: a skip caused by a failed `changes` job
+  # would also count as passing, and let a release PR merge untested.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    name: Upgrade Path (published → this branch)
+    timeout-minutes: 5
+    outputs:
+      upgrade: ${{ steps.decide.outputs.run }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -92,7 +99,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # A job-level `if` cannot inspect changed files, so the decision lives here.
       # Release PRs always run it; other PRs only when they touch migrations.
       #
       # The branch names reach the script as env vars rather than being
@@ -115,17 +121,26 @@ jobs:
             echo "No migration changes and not a release PR — skipping."
           fi
 
+  upgrade:
+    needs: changes
+    if: needs.changes.outputs.upgrade == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: Upgrade Path (published → this branch)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
       - name: Set up Ruby
-        if: steps.decide.outputs.run == 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
           bundler-cache: true
 
       - name: Install Rails CLI
-        if: steps.decide.outputs.run == 'true'
         run: gem install rails --no-document
 
       - name: Run upgrade path test
-        if: steps.decide.outputs.run == 'true'
         run: bin/pre-release-test full_upgrade
