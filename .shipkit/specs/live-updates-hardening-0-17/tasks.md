@@ -61,7 +61,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
     - live updates off: 404; a token that can't be issued: 503
   - After: T4
   - Done when: `R rspec spec/requests/live_streams_renewal_spec.rb spec/requests/live_stream_scoping_spec.rb` → 0 failures
-- [ ] **T6** The open list renews itself, and says when it can't → REQ-8, REQ-9
+- [x] **T6** The open list renews itself, and says when it can't → REQ-8, REQ-9
   - Files: app/views/layouts/rails_error_dashboard.html.erb, spec/system/live_updates_spec.rb
   - Test: live_updates_spec, with `LiveStreamToken::LIFETIME` stubbed short:
     - after the first tokens have expired, every source carries a new token, and a newly captured

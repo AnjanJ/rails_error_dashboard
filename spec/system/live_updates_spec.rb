@@ -99,4 +99,53 @@ RSpec.describe "Live updates in the browser", type: :system do
     )
     expect(row).to have_css(".local-time-ago[data-showing-relative='false']")
   end
+
+  # Tokens that live 4 seconds, so the page renews every 2 seconds, and its
+  # first tokens expire while the example runs.
+  describe "renewing subscriptions" do
+    let(:lifetime) { 4 }
+
+    before { stub_const("RailsErrorDashboard::Services::LiveStreamToken::LIFETIME", lifetime.seconds) }
+
+    def source_tokens
+      page.evaluate_script(<<~JS)
+        Array.prototype.map.call(document.querySelectorAll('turbo-cable-stream-source'),
+          function(source) { return source.getAttribute('signed-stream-name'); })
+      JS
+    end
+
+    # live-updates-hardening-0-17/REQ-8
+    it "keeps showing new errors after the page's first tokens have expired, without a reload" do
+      opened_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      open_index_and_wait_for_subscriptions
+      first_tokens = source_tokens
+      page.execute_script("window.__redSamePage = true")
+
+      first_tokens.each do |token|
+        expect(page).to have_no_css("turbo-cable-stream-source[signed-stream-name='#{token}']", visible: :all, wait: 10)
+      end
+      # Past the first tokens' expiry: the channel delivers nothing to them now.
+      remaining = opened_at + lifetime + 0.5 - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      sleep(remaining) if remaining.positive?
+      expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 2, wait: 10)
+
+      capture_new_error
+
+      expect(page).to have_content(marker, wait: 10)
+      expect(page.evaluate_script("window.__redSamePage")).to be true
+      expect(source_tokens & first_tokens).to be_empty
+    end
+
+    # live-updates-hardening-0-17/REQ-9
+    it "hides the Live badge while renewal fails, and shows it again once renewal works" do
+      open_index_and_wait_for_subscriptions
+      expect(page).to have_css("#red-live-badge", visible: :visible)
+
+      RailsErrorDashboard.configuration.enable_live_updates = false # renewals now answer 404
+      expect(page).to have_css("#red-live-badge", visible: :hidden, wait: 10)
+
+      RailsErrorDashboard.configuration.enable_live_updates = true
+      expect(page).to have_css("#red-live-badge", visible: :visible, wait: 10)
+    end
+  end
 end
