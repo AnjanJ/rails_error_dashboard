@@ -16,7 +16,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
     - `issue` returns nil, and `verify` never raises, when the key can't be built
   - After: none
   - Done when: `R rspec spec/services/live_stream_token_spec.rb` → 0 failures
-- [ ] **T2** RED's live-updates channel, loaded only with Action Cable → REQ-2, REQ-3, REQ-5, REQ-12
+- [x] **T2** RED's live-updates channel, loaded only with Action Cable → REQ-2, REQ-3, REQ-5, REQ-12
   - Files: lib/rails_error_dashboard/live_updates_channel.rb, lib/rails_error_dashboard/engine.rb, spec/channels/live_updates_channel_spec.rb, spec/lib/rails_error_dashboard/live_updates_channel_loading_spec.rb
   - Test:
     - live_updates_channel_spec (test adapter set in `before(:context)`):

@@ -72,6 +72,21 @@ module RailsErrorDashboard
       end
     end
 
+    # The live-updates channel subclasses ActionCable::Channel::Base, so it
+    # lives in lib/ (no autoloader or eager load sees it) and is required only
+    # when the host loads Action Cable.
+    initializer "rails_error_dashboard.live_updates_channel" do
+      RailsErrorDashboard::Engine.load_live_updates_channel
+    end
+
+    # @return [Boolean] whether the channel is loaded
+    def self.load_live_updates_channel
+      return false unless defined?(::ActionCable::Channel::Base)
+
+      require "rails_error_dashboard/live_updates_channel"
+      true
+    end
+
     # Validate configuration after initialization
     initializer "rails_error_dashboard.validate_config", after: :load_config_initializers do
       config.after_initialize do
