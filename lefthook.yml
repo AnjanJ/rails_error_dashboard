@@ -27,15 +27,14 @@ pre-commit:
         - "lib/generators/**/templates/*"
       run: bin/with-ruby bundle exec rubocop {staged_files}
 
-    # 2. RSpec - Only changed spec files
+    # 2. RSpec - Only changed spec files. The glob already skips this when no
+    # spec is staged. Don't wrap {staged_files} in a shell test: lefthook
+    # quotes each file on its own, so `[ -n "{staged_files}" ]` broke as soon as
+    # two specs were staged, and the hook passed without running any.
     rspec-changed:
       priority: 1
       glob: "*_spec.rb"
-      run: |
-        if [ -n "{staged_files}" ]; then
-          echo "Running tests for changed specs..."
-          bin/with-ruby bundle exec rspec {staged_files}
-        fi
+      run: bin/with-ruby bundle exec rspec {staged_files}
 
     # 3. Bundle audit - Check for vulnerable dependencies
     bundle-audit:
