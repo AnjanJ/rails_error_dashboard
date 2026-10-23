@@ -77,12 +77,12 @@ pre-commit:
         fi
 
     # Stage 2: Full pre-release chaos tests (runs AFTER fast checks pass)
-    # Builds 4 temp Rails apps, runs 1000+ assertions in production mode.
+    # Builds 5 temp Rails apps (one API-only), runs 1000+ assertions in production mode.
     # Takes ~4-5 min. Skip with: LEFTHOOK_EXCLUDE=chaos-tests git commit -m "msg"
     chaos-tests:
       priority: 2
       run: |
-        echo "Running pre-release chaos tests (4 apps, 1000+ assertions)..."
+        echo "Running pre-release chaos tests (5 apps, 1000+ assertions)..."
         echo "Skip with: LEFTHOOK_EXCLUDE=chaos-tests git commit -m \"msg\""
         bin/with-ruby bin/pre-release-test all
 

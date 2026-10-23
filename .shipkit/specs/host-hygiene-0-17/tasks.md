@@ -26,7 +26,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     - a full-stack app gets neither
   - After: T1
   - Done when: `R rspec spec/lib/rails_error_dashboard/engine_api_host_middleware_spec.rb` → 0 failures
-- [ ] **T3** An API-only chaos app → REQ-1, REQ-2
+- [x] **T3** An API-only chaos app → REQ-1, REQ-2
   - Files: bin/pre-release-test, test/pre_release/templates/full_api_initializer.rb, test/pre_release/chaos/phase_p_api_host.rb, lefthook.yml, .claude/skills/release/SKILL.md
   - Test: Phase P in `full_api`:
     - a host endpoint gives no `Set-Cookie`;

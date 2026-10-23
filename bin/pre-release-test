@@ -10,14 +10,15 @@ set -uo pipefail
 #
 # Usage:
 #   bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|
-#                         full_separate_db|full_kitchen_sink|full_multi_app|
-#                         full_solid_queue|full_upgrade]
+#                         full_separate_db|full_api|full_kitchen_sink|
+#                         full_multi_app|full_solid_queue|full_upgrade]
 #
 # Examples:
 #   bin/pre-release-test full_sync         # Test sync config only (~1 min)
 #   bin/pre-release-test full_http         # Test HTTP error capture (~2 min)
-#   bin/pre-release-test all               # Original 4 apps (~4 min, lefthook)
-#   bin/pre-release-test release_audit     # All 8 apps (~12-15 min, manual)
+#   bin/pre-release-test all               # 5 apps (~5 min, lefthook)
+#   bin/pre-release-test release_audit     # All 9 apps (~13-16 min, manual)
+#   bin/pre-release-test full_api          # API-only host (rails new --api)
 #   bin/pre-release-test full_kitchen_sink # Every config option at once
 #   bin/pre-release-test full_multi_app    # Two apps sharing one DB
 #   bin/pre-release-test full_solid_queue  # Async via SolidQueue adapter
@@ -307,6 +308,9 @@ run_chaos_tests() {
 run_http_tests() {
   local app_dir=$1
   local port=${2:-3000}
+  shift $(( $# < 2 ? $# : 2 ))
+  # Further args: phase files to run before Phase D, against the same server.
+  local extra_phases=("$@")
 
   # Kill any stale server on this port from previous test runs
   lsof -ti :"$port" | xargs kill -9 2>/dev/null || true
@@ -349,7 +353,8 @@ RUBY
   )
 
   # Run Phase D with the correct port
-  PORT="$port" run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_d_http_endpoints.rb"
+  # ${a[@]+"${a[@]}"}: an empty array under `set -u` is an error in bash 3.2.
+  PORT="$port" run_chaos_tests "$app_dir" ${extra_phases[@]+"${extra_phases[@]}"} "$CHAOS_DIR/phase_d_http_endpoints.rb"
 
   # Stop server
   log_step "Stopping server..."
@@ -395,6 +400,44 @@ RUBY
     return 1
   fi
   log_success "Boot died with Zeitwerk::NameError and the crash file was written"
+}
+
+# ---------------------------------------------------------------------------
+# Inject an API controller for Phase P: one action that leaves the session
+# alone, one that writes it. ActionController::API has no skip_forgery_protection,
+# so inject_test_fixtures (an ApplicationController subclass) can't be reused.
+# Args: app_dir
+# ---------------------------------------------------------------------------
+inject_api_probe() {
+  local app_dir=$1
+
+  log_step "Injecting the API probe controller and routes for Phase P..."
+
+  cat > "$app_dir/app/controllers/api_probe_controller.rb" << 'RUBY'
+class ApiProbeController < ActionController::API
+  def ping
+    render json: { ok: true }
+  end
+
+  # Without session middleware, Rails raises DisabledSessionError here.
+  def touch_session
+    session[:touched] = true
+    render json: { touched: true }
+  end
+end
+RUBY
+
+  local routes_file="$app_dir/config/routes.rb"
+  sed_i '$ d' "$routes_file"
+  cat >> "$routes_file" << 'ROUTES'
+
+  # Phase P probe routes
+  get "api_probe/ping"          => "api_probe#ping"
+  get "api_probe/touch_session" => "api_probe#touch_session"
+end
+ROUTES
+
+  log_success "API probe injected (controller, routes)"
 }
 
 # ---------------------------------------------------------------------------
@@ -569,11 +612,11 @@ run_http_error_tests() {
 }
 
 # ---------------------------------------------------------------------------
-# Test configurations (v2: 4 apps, ALL features on, ALL in production mode)
+# Test configurations (`all`: 5 apps, ALL features on, ALL in production mode)
 # ---------------------------------------------------------------------------
 
 test_full_sync() {
-  log_header "APP 1/4: full_sync_app — Sync + Shared DB + All Features (production)"
+  log_header "APP 1/5: full_sync_app — Sync + Shared DB + All Features (production)"
 
   create_app "full_sync_app"
   install_gem "$TEST_DIR/full_sync_app" "$TEMPLATES_DIR/full_sync_initializer.rb"
@@ -594,7 +637,7 @@ test_full_sync() {
 }
 
 test_full_async() {
-  log_header "APP 2/4: full_async_app — Async (Sidekiq inline) + All Features (production)"
+  log_header "APP 2/5: full_async_app — Async (Sidekiq inline) + All Features (production)"
 
   create_app "full_async_app"
 
@@ -615,7 +658,7 @@ RUBY
 }
 
 test_full_http() {
-  log_header "APP 3/4: full_http_app — HTTP Error Capture + Dashboard (production)"
+  log_header "APP 3/5: full_http_app — HTTP Error Capture + Dashboard (production)"
 
   create_app "full_http_app"
 
@@ -638,7 +681,7 @@ test_full_http() {
 }
 
 test_full_separate_db() {
-  log_header "APP 4/4: full_separate_db_app — Separate DB + All Features (production)"
+  log_header "APP 4/5: full_separate_db_app — Separate DB + All Features (production)"
 
   create_app "full_separate_db_app"
 
@@ -726,8 +769,23 @@ YAML
 # Release audit test configurations (4 new apps)
 # ---------------------------------------------------------------------------
 
+test_full_api() {
+  log_header "APP 5/5: full_api_app — API-only host (rails new --api, production)"
+
+  create_app "full_api_app" --api
+
+  local app_dir="$TEST_DIR/full_api_app"
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_api_initializer.rb"
+  inject_api_probe "$app_dir"
+
+  # Phase P (the host's API stays sessionless; the dashboard's session works),
+  # then Phase D (every dashboard page), against one running server.
+  run_http_tests "$app_dir" 3097 "$CHAOS_DIR/phase_p_api_host.rb"
+}
+
 test_full_kitchen_sink() {
-  log_header "APP 5/8: full_kitchen_sink — Every Config Option Enabled (production)"
+  log_header "APP 6/9: full_kitchen_sink — Every Config Option Enabled (production)"
 
   create_app "full_kitchen_sink_app"
 
@@ -746,7 +804,7 @@ test_full_kitchen_sink() {
 }
 
 test_full_multi_app() {
-  log_header "APP 6/8: full_multi_app — Two Apps Sharing One DB (production)"
+  log_header "APP 7/9: full_multi_app — Two Apps Sharing One DB (production)"
 
   # Create the shared error dashboard DB path
   local shared_db="$TEST_DIR/shared_error_dashboard.sqlite3"
@@ -918,7 +976,7 @@ RUBY
 }
 
 test_full_solid_queue() {
-  log_header "APP 7/8: full_solid_queue — Async via SolidQueue Adapter (production)"
+  log_header "APP 8/9: full_solid_queue — Async via SolidQueue Adapter (production)"
 
   create_app "full_solid_queue_app"
 
@@ -956,7 +1014,7 @@ test_full_upgrade() {
   # literal version (the chaos phases run via `rails runner`, inheriting env).
   export UPGRADE_FROM_VERSION="$from_version"
 
-  log_header "APP 8/8: full_upgrade — Upgrade Path v${from_version} → working copy (production)"
+  log_header "APP 9/9: full_upgrade — Upgrade Path v${from_version} → working copy (production)"
 
   create_app "full_upgrade_app"
 
@@ -1051,6 +1109,9 @@ case "$TARGET" in
   full_separate_db)
     test_full_separate_db
     ;;
+  full_api)
+    test_full_api
+    ;;
   full_kitchen_sink)
     test_full_kitchen_sink
     ;;
@@ -1064,25 +1125,27 @@ case "$TARGET" in
     test_full_upgrade
     ;;
   all)
-    # Original 4 apps — backward compatible for lefthook pre-commit
+    # The lefthook pre-commit set: the original 4 apps plus the API-only host
     test_full_sync
     test_full_async
     test_full_http
     test_full_separate_db
+    test_full_api
     ;;
   release_audit)
-    # All 8 apps — comprehensive pre-release validation (~12-15 min)
+    # All 9 apps — comprehensive pre-release validation (~13-16 min)
     test_full_sync
     test_full_async
     test_full_http
     test_full_separate_db
+    test_full_api
     test_full_kitchen_sink
     test_full_multi_app
     test_full_solid_queue
     test_full_upgrade
     ;;
   *)
-    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade]"
+    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_api|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade]"
     exit 1
     ;;
 esac
