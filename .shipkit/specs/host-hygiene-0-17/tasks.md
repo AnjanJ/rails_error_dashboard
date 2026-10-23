@@ -39,7 +39,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     Red first: run it with T2's engine change reverted, and P1 fails.
   - After: T2
   - Done when: `env -u RAILS_VERSION bin/with-ruby bin/pre-release-test full_api` → FINAL RESULTS: 0 failed
-- [ ] **T4** Load only files the npm packages publish, and keep a copy of each → REQ-6, REQ-7
+- [x] **T4** Load only files the npm packages publish, and keep a copy of each → REQ-6, REQ-7
   - Files: app/views/layouts/rails_error_dashboard.html.erb, spec/requests/cdn_integrity_spec.rb, spec/support/vendor/, spec/support/capybara.rb, docs/guides/ERROR_TREND_VISUALIZATIONS.md, _guides/error-trend-visualizations.md
   - Test: cdn_integrity_spec:
     - every jsDelivr URL on a dashboard page is `npm/<package>@<x.y.z>/…`, with no `gh/` and no

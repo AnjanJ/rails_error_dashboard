@@ -645,7 +645,7 @@ Ensure Chart.js and Chartkick are loaded in layout:
 
 ```html
 <!-- app/views/layouts/rails_error_dashboard.html.erb -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartkick@5.0.1/dist/chartkick.min.js"></script>
 ```
 

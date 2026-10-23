@@ -1,40 +1,58 @@
-# Vendored test assets
+# Vendored CDN files
 
-These are the CDN scripts the system specs actually **execute**, kept here so
-the suite never touches the network (#183).
+A byte-for-byte copy of every file the dashboard's layout loads from jsDelivr.
+They serve two purposes:
 
-| File | Layout tag | Why it must run |
+- **Pinning.** Each layout tag carries an `integrity` hash, and
+  `spec/requests/cdn_integrity_spec.rb` checks every hash against the copy here.
+  A version bump that changes the URL, the hash or the copy alone fails there.
+- **Offline system specs (#183).** The scripts the system specs execute are
+  served from here instead of the network (`VENDORED_SCRIPTS` in
+  `spec/support/capybara.rb`), under the same integrity check a browser applies
+  in production. Everything else the layout loads is aborted by the interceptor.
+
+Each file is the one its npm package publishes at that exact version. jsDelivr
+also generates files a package doesn't ship (a `.min.js` or `.min.css` it
+minifies itself), and those bytes can change without a version bump, so the
+layout never uses one. Check a file's presence with
+`https://data.jsdelivr.com/v1/packages/npm/<package>@<version>?structure=flat`.
+
+| File | Package | Executed by system specs |
 |---|---|---|
-| `bootstrap.bundle.min.js` | `bootstrap@5.3.0` | `wait_for_page_load` blocks on `window.bootstrap` for *every* system spec; the modal specs need real Bootstrap behaviour |
-| `chart.umd.min.js` | `chart.js@4.4.0` | `chart_date_locale_spec` asks Chart.js what it drew, to verify the localized date adapter (#178) |
-| `chartjs-adapter-date-fns.bundle.min.js` | `chartjs-adapter-date-fns@3.0.0` | the adapter that fix patches |
-| `chartkick.min.js` | `chartkick@5.0.1` | wraps Chart.js for the dashboard's charts |
-| `turbo.js` | `@hotwired/turbo-rails@8.0.23` (`app/assets/javascripts/turbo.js`) | the live-updates client; `live_updates_spec` waits for a streamed row. It loads under an SRI hash, so it must stay byte-identical to the layout's pin (`application_helper_spec` checks the SHA-384) |
+| `bootstrap-icons.min.css` | `bootstrap-icons@1.11.3` (`font/`) | no |
+| `chart.umd.js` | `chart.js@4.4.0` (`dist/`) | yes: `chart_date_locale_spec` asks Chart.js what it drew (#178) |
+| `chartjs-adapter-date-fns.bundle.min.js` | `chartjs-adapter-date-fns@3.0.0` (`dist/`) | yes: the adapter #178 patches |
+| `chartkick.min.js` | `chartkick@5.0.1` (`dist/`) | yes: wraps Chart.js for the dashboard's charts |
+| `catppuccin-mocha.css` | `@catppuccin/highlightjs@1.0.0` (`css/`) | no |
+| `highlight.min.js` | `@highlightjs/cdn-assets@11.9.0` | no |
+| `highlightjs-line-numbers.min.js` | `highlightjs-line-numbers.js@2.8.0` (`dist/`) | no |
+| `bootstrap.bundle.min.js` | `bootstrap@5.3.0` (`dist/js/`) | yes: `wait_for_page_load` blocks on `window.bootstrap` for every system spec |
+| `stimulus.umd.js` | `@hotwired/stimulus@3.2.2` (`dist/`) | no |
+| `turbo.js` | `@hotwired/turbo-rails@8.0.23` (`app/assets/javascripts/`) | yes: `live_updates_spec`; its hash is also pinned in `application_helper.rb` |
 
-Everything else the layout loads — icon fonts, webfonts, highlight.js,
-Stimulus — is decorative, asserted on by no spec, and simply aborted by the
-interceptor in `spec/support/capybara.rb`.
+## Updating a file
 
-## Updating
+1. Change the URL in `app/views/layouts/rails_error_dashboard.html.erb` (for
+   `turbo.js`, `LIVE_UPDATES_CLIENT_URL` in
+   `app/helpers/rails_error_dashboard/application_helper.rb`).
+2. Download the file the URL names into this folder, under its own file name:
 
-If a `<script>` tag in `app/views/layouts/rails_error_dashboard.html.erb` is
-bumped, re-download the matching file so the specs exercise what production
-ships:
+   ```bash
+   cd spec/support/vendor
+   curl -sfO https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js
+   ```
 
-```bash
-cd spec/support/vendor
-curl -sO https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js
-curl -s https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js -o chart.umd.min.js
-curl -s https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js -o chartjs-adapter-date-fns.bundle.min.js
-curl -s https://cdn.jsdelivr.net/npm/chartkick@5.0.1/dist/chartkick.min.js -o chartkick.min.js
-curl -s https://cdn.jsdelivr.net/npm/@hotwired/turbo-rails@8.0.23/app/assets/javascripts/turbo.js -o turbo.js
-```
+3. Put its hash in the tag's `integrity` attribute (for `turbo.js`, in
+   `LIVE_UPDATES_CLIENT_INTEGRITY`):
+
+   ```bash
+   echo "sha384-$(openssl dgst -sha384 -binary chart.umd.js | openssl base64 -A)"
+   ```
+
+4. Run `spec/requests/cdn_integrity_spec.rb` and the system specs.
+   `bin/pre-release-test release_audit` also compares every hash with the live
+   CDN.
 
 The URL patterns in `capybara.rb` match **any** version, so a bump keeps being
-served from here rather than silently falling through to an abort — which would
+served from here rather than silently falling through to an abort, which would
 turn assertions into skips instead of failures.
-
-When bumping `turbo.js`, also update `LIVE_UPDATES_CLIENT_URL` and
-`LIVE_UPDATES_CLIENT_INTEGRITY` in `app/helpers/rails_error_dashboard/application_helper.rb`.
-Compute the new hash with
-`echo "sha384-$(openssl dgst -sha384 -binary turbo.js | openssl base64 -A)"`.
