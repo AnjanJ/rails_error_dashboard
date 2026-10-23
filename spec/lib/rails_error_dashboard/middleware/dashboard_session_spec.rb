@@ -27,7 +27,7 @@ RSpec.describe RailsErrorDashboard::Middleware::DashboardSession do
     Array(headers["set-cookie"] || headers["Set-Cookie"]).join("\n")
   end
 
-  # host-hygiene-0-17/REQ-2 and REQ-4
+  # host-hygiene-0-17/REQ-2 and host-hygiene-0-17/REQ-4
   it "gives a request with no session a working one, under the dashboard's own cookie" do
     _status, headers, _body = middleware.call(env_for)
 
