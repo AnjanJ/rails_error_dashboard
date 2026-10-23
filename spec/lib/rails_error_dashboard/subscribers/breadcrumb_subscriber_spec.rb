@@ -266,14 +266,34 @@ RSpec.describe RailsErrorDashboard::Subscribers::BreadcrumbSubscriber do
       expect(breadcrumbs).to be_empty
     end
 
-    it "never raises from subscribers" do
-      # Even with broken payload
-      expect {
-        ActiveSupport::Notifications.instrument("sql.active_record", {
-          sql: nil,
-          name: nil
-        }) { }
-      }.not_to raise_error
+    # Every handler starts with current_buffer, outside add's own rescue, so a
+    # current_buffer that raises reaches each subscriber's rescue. Without that
+    # rescue the exception would surface from instrument, in the host's code.
+    it "never raises from subscribers, even when a handler raises (test-gaps-0-17/REQ-2)" do
+      handler_calls = 0
+      allow(collector).to receive(:current_buffer) do
+        handler_calls += 1
+        raise RuntimeError, "handler failure"
+      end
+
+      %w[
+        sql.active_record
+        process_action.action_controller
+        cache_read.active_support
+        cache_write.active_support
+        perform.active_job
+        deliver.action_mailer
+        deprecation.rails
+      ].each do |event|
+        calls_before = handler_calls
+        block_ran = false
+
+        expect {
+          ActiveSupport::Notifications.instrument(event, {}) { block_ran = true }
+        }.not_to raise_error, "#{event} raised into the instrumented code"
+        expect(block_ran).to be(true), "#{event}: the instrumented block did not run"
+        expect(handler_calls).to be > calls_before, "#{event}: no handler ran, so nothing was tested"
+      end
     end
   end
 end

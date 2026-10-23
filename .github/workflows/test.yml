@@ -29,12 +29,12 @@ jobs:
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
 
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: false
@@ -54,7 +54,7 @@ jobs:
         mkdir -p spec/dummy/db
         cd spec/dummy
         rm -f db/*.sqlite3
-        RAILS_ENV=test bundle exec rake db:schema:load
+        RAILS_ENV="test" bundle exec rake db:schema:load
         cd ../..
 
     - name: Run unit and integration tests
@@ -105,12 +105,12 @@ jobs:
       DATABASE_URL: ${{ matrix.adapter == 'postgresql' && 'postgres://red:red@127.0.0.1:5432/red_test?pool=10' || 'trilogy://root:red@127.0.0.1:3306/red_test?pool=10' }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
 
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
       with:
         ruby-version: '3.4'
         bundler-cache: false
@@ -143,12 +143,12 @@ jobs:
     name: Schema parity (schema.rb vs db/migrate)
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
 
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
       with:
         ruby-version: '3.4'
         bundler-cache: false
@@ -172,12 +172,12 @@ jobs:
     name: System Tests (Chrome)
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         persist-credentials: false
 
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
       with:
         ruby-version: '3.4'
         bundler-cache: false
@@ -197,7 +197,7 @@ jobs:
         mkdir -p spec/dummy/db
         cd spec/dummy
         rm -f db/*.sqlite3
-        RAILS_ENV=test bundle exec rake db:schema:load
+        RAILS_ENV="test" bundle exec rake db:schema:load
         cd ../..
 
     - name: Run system tests

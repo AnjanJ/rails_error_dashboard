@@ -19,18 +19,18 @@ jobs:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
         with:
           ruby-version: ${{ env.RUBY_VERSION }}
           bundler-cache: true
 
       - name: Prepare RuboCop cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         env:
           DEPENDENCIES_HASH: ${{ hashFiles('**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
         with:
@@ -48,6 +48,50 @@ jobs:
       - name: Check locale files
         run: bin/i18n-check
 
+  # Dependencies and workflows, a required check:
+  # - bundle-audit, against an advisory database fetched in this run, on the
+  #   bundle a fresh install of this branch resolves (Gemfile.lock is not
+  #   committed). The default resolution only: the matrix rows pin older Rails
+  #   versions, whose known advisories would fail every PR.
+  # - actionlint, from its release tarball, checked against a pinned SHA-256.
+  # - zizmor at low severity and up, from PyPI at a pinned version, run online
+  #   so it also checks each pinned action against the tag in its comment.
+  #   Without a token it silently skips its online audits.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+      ZIZMOR_VERSION: 1.31.1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
+        with:
+          ruby-version: ruby-3.4.5
+          bundler-cache: true
+
+      - name: Audit dependencies (bundle-audit)
+        run: bundle exec bundle-audit check --update
+
+      - name: Lint workflows (actionlint)
+        run: |
+          curl -fsSL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum --check --strict
+          tar -xzf actionlint.tar.gz actionlint
+          ./actionlint
+
+      - name: Audit workflows (zizmor)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pipx run --spec "zizmor==${ZIZMOR_VERSION}" zizmor --min-severity low .github/workflows/
+
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -55,18 +99,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
         with:
           ruby-version: '3.4'
           bundler-cache: true
 
+      # The CLI that runs `rails new`; the apps it builds resolve their own gems.
       - name: Install Rails CLI
-        run: gem install rails --no-document
+        run: gem install rails --no-document # zizmor: ignore[adhoc-packages]
 
       - name: Run full integration tests
         run: bin/full-integration-test all
@@ -81,18 +126,24 @@ jobs:
   # reachable. It runs when it can actually catch something:
   #   - release PRs (branch is always release-please--… ), the last gate before publish
   #   - any PR touching db/migrate/**, which is what breaks upgrades
-  upgrade:
+  #
+  # A job-level `if` cannot inspect changed files, so the `changes` job decides
+  # and the upgrade job reads its answer. When there is nothing to check, the
+  # upgrade check then shows as Skipped rather than as a pass that ran nothing.
+  # `changes` is a required check: a skip caused by a failed `changes` job
+  # would also count as passing, and let a release PR merge untested.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    name: Upgrade Path (published → this branch)
+    timeout-minutes: 5
+    outputs:
+      upgrade: ${{ steps.decide.outputs.run }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      # A job-level `if` cannot inspect changed files, so the decision lives here.
       # Release PRs always run it; other PRs only when they touch migrations.
       #
       # The branch names reach the script as env vars rather than being
@@ -115,17 +166,27 @@ jobs:
             echo "No migration changes and not a release PR — skipping."
           fi
 
+  upgrade:
+    needs: changes
+    if: needs.changes.outputs.upgrade == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: Upgrade Path (published → this branch)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
       - name: Set up Ruby
-        if: steps.decide.outputs.run == 'true'
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1.334.0
         with:
           ruby-version: '3.4'
           bundler-cache: true
 
+      # The CLI that runs `rails new`; the apps it builds resolve their own gems.
       - name: Install Rails CLI
-        if: steps.decide.outputs.run == 'true'
-        run: gem install rails --no-document
+        run: gem install rails --no-document # zizmor: ignore[adhoc-packages]
 
       - name: Run upgrade path test
-        if: steps.decide.outputs.run == 'true'
         run: bin/pre-release-test full_upgrade

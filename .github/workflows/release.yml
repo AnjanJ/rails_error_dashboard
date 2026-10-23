@@ -177,7 +177,9 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: ./.github/workflows/smoke-test-demo.yml
+    # The `$/` form zizmor suggests is newer syntax; this path is what the
+    # workflows spec checks.
+    uses: ./.github/workflows/smoke-test-demo.yml # zizmor: ignore[self-repository]
     # Only the two secrets the smoke test reads, not `secrets: inherit`.
     secrets:
       DEMO_USER: ${{ secrets.DEMO_USER }}

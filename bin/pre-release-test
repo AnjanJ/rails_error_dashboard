@@ -455,6 +455,9 @@ inject_test_fixtures() {
   cat > "$app_dir/app/controllers/test_errors_controller.rb" << 'RUBY'
 # Custom error class for testing custom severity rules
 class CustomTestError < StandardError; end
+# Raised in this file, so the TracePoint features see them as app code
+class ChaosVariablesError < StandardError; end
+class ChaosSwallowedError < StandardError; end
 
 class TestErrorsController < ApplicationController
   skip_forgery_protection
@@ -502,6 +505,25 @@ class TestErrorsController < ApplicationController
 
   def runtime_error
     raise RuntimeError, "Runtime error from test controller"
+  end
+
+  # Distinctive locals and an instance variable at the raise, for the variable
+  # capture checks. Names and values no sensitive-name filter matches.
+  def variables_error
+    @chaos_marker = "ivar-chaos-marker"
+    widget_count = 7
+    widget_label = "chaos-label"
+    raise ChaosVariablesError, "Variables error from test controller (#{widget_count} #{widget_label})"
+  end
+
+  # Raises and rescues without re-raising: a swallowed exception.
+  def swallowed
+    begin
+      raise ChaosSwallowedError, "Swallowed on purpose"
+    rescue ChaosSwallowedError
+      nil
+    end
+    render plain: "ok"
   end
 
   # Verification endpoint — returns error count as JSON (no error raised)
@@ -557,6 +579,8 @@ RUBY
   get "test/name_error"       => "test_errors#name_error"
   get "test/custom_error"     => "test_errors#custom_error"
   get "test/runtime_error"    => "test_errors#runtime_error"
+  get "test/variables_error"  => "test_errors#variables_error"
+  get "test/swallowed"        => "test_errors#swallowed"
   get "test/error_count"     => "test_errors#error_count"
 end
 ROUTES
@@ -937,16 +961,30 @@ RUBY
   mkdir -p "$alpha_dir/db/error_dashboard_migrate"
   (cd "$alpha_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
 
-  log_step "Migrating Alpha primary database..."
-  (cd "$alpha_dir" && bin/rails db:migrate 2>&1 | tail -3)
-
-  log_step "Migrating shared error_dashboard database..."
-  (cd "$alpha_dir" && bin/rails db:migrate:error_dashboard 2>&1 | tail -3)
+  # In a multi-database app, db:migrate migrates every database, the shared
+  # error_dashboard one included.
+  log_step "Migrating Alpha (primary and the shared error_dashboard database)..."
+  multi_app_migrate "$alpha_dir" db:migrate || return
+  multi_app_migrate "$alpha_dir" db:migrate:error_dashboard || return
 
   log_success "Alpha app installed"
 
   # Seed Alpha errors via Phase E
   run_chaos_tests "$alpha_dir" "$CHAOS_DIR/phase_e_error_capture.rb"
+
+  # Snapshot Alpha's errors (id => environment) before Beta touches the shared
+  # database. Phase I checks Beta's migration replay left every one intact.
+  local alpha_snapshot="$TEST_DIR/multi_app_alpha_snapshot.json"
+  if ! (cd "$alpha_dir" && ALPHA_SNAPSHOT="$alpha_snapshot" bin/rails runner '
+      app = RailsErrorDashboard::Application.find_by!(name: "MultiAppAlpha")
+      rows = RailsErrorDashboard::ErrorLog.where(application_id: app.id).pluck(:id, :environment)
+      File.write(ENV.fetch("ALPHA_SNAPSHOT"), JSON.generate(rows.to_h))
+    ' > /tmp/red_chaos_snapshot.log 2>&1); then
+    tail -20 /tmp/red_chaos_snapshot.log
+    log_error "Could not snapshot Alpha's errors"
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return
+  fi
 
   # --- Beta app ---
   create_app "multi_app_beta"
@@ -995,7 +1033,6 @@ production:
     migrations_paths: db/error_dashboard_migrate
 YAML
 
-  # Run generator (skip migrations — tables already exist from Alpha)
   log_step "Running generator for Beta..."
   (cd "$beta_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 bin/rails generate rails_error_dashboard:install --no-interactive --separate-database --database=error_dashboard 2>&1 | grep -v "^$" | head -5)
 
@@ -1013,25 +1050,51 @@ RailsErrorDashboard.configure do |config|
 end
 RUBY
 
-  # Move migrations (but don't run them — tables exist)
-  mkdir -p "$beta_dir/db/error_dashboard_migrate"
-  (cd "$beta_dir" && mv db/migrate/*rails_error_dashboard* db/error_dashboard_migrate/ 2>/dev/null) || true
+  # A real second app installs on a later day, so every one of its migrations
+  # has a version the shared database has never seen, and all of them replay
+  # against Alpha's data. Generated seconds after Alpha, most of Beta's
+  # versions would collide with Alpha's and never run. Renumber them past
+  # Alpha's highest, in order. Plain integers: the installer's versions are a
+  # clock reading plus one per file, so their "seconds" run past 59. (With
+  # --separate-database the installer copies straight into this folder.)
+  local migrate_dir="$beta_dir/db/error_dashboard_migrate"
+  local beta_version beta_versions="" f
+  beta_version=$(ls "$alpha_dir/db/error_dashboard_migrate" | sed 's/_.*//' | sort -n | tail -1)
+  for f in $(ls "$migrate_dir" | sort); do
+    beta_version=$((beta_version + 1))
+    mv "$migrate_dir/$f" "$migrate_dir/${beta_version}_${f#*_}"
+    beta_versions="$beta_versions,$beta_version"
+  done
+  beta_versions="${beta_versions#,}"
 
-  log_step "Migrating Beta primary database..."
-  (cd "$beta_dir" && bin/rails db:migrate 2>&1 | tail -3)
-
-  # Skip db:migrate:error_dashboard — tables already exist from Alpha
-  log_step "Skipping error_dashboard migration (tables exist from Alpha)"
+  log_step "Migrating Beta: replays its RED migrations on the shared database..."
+  multi_app_migrate "$beta_dir" db:migrate || return
+  multi_app_migrate "$beta_dir" db:migrate:error_dashboard || return
 
   log_success "Beta app installed"
 
   # Seed Beta errors via Phase E
   run_chaos_tests "$beta_dir" "$CHAOS_DIR/phase_e_error_capture.rb"
 
-  # Run Phase I from Alpha (verifies both apps' data in shared DB)
+  # Run Phase I from Alpha (verifies both apps' data in shared DB, that every
+  # Beta migration ran, and that Alpha's errors survived the replay)
   log_step "Running Phase I multi-app isolation from Alpha..."
-  BETA_APP_NAME="MultiAppBeta" run_chaos_tests "$alpha_dir" \
-    "$CHAOS_DIR/phase_i_multi_app.rb"
+  BETA_APP_NAME="MultiAppBeta" ALPHA_SNAPSHOT="$alpha_snapshot" BETA_MIGRATION_VERSIONS="$beta_versions" \
+    run_chaos_tests "$alpha_dir" "$CHAOS_DIR/phase_i_multi_app.rb"
+}
+
+# Run one migrate task in a multi-app chaos app and record a failure: without
+# `set -e`, a failed migration would otherwise go unnoticed.
+# Args: app_dir task
+multi_app_migrate() {
+  local app_dir=$1
+  local task=$2
+  if ! (cd "$app_dir" && bin/rails "$task" > /tmp/red_chaos_migrate.log 2>&1); then
+    tail -20 /tmp/red_chaos_migrate.log
+    log_error "$(basename "$app_dir"): $task FAILED"
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return 1
+  fi
 }
 
 test_full_solid_queue() {

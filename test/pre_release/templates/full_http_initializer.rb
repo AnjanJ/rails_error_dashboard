@@ -54,4 +54,13 @@ RailsErrorDashboard.configure do |config|
   # Internal logging
   config.enable_internal_logging = true
   config.log_level = :warn
+
+  # TracePoint features, checked by phase F against real requests: locals and
+  # instance variables on the captured row, and swallowed-exception detection
+  # (Ruby 3.3+). A 1 s flush interval, the minimum, lets phase F see a
+  # swallowed exception during its own server run.
+  config.enable_local_variables = true
+  config.enable_instance_variables = true
+  config.detect_swallowed_exceptions = true
+  config.swallowed_exception_flush_interval = 1
 end
