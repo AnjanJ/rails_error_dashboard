@@ -258,7 +258,7 @@ Minimum severity level required to trigger a notification. Example: PagerDuty on
 Hotwire feature for updating a page from the server without custom JavaScript. The dashboard's opt-in live updates (`enable_live_updates`) send them over Action Cable.
 
 ### Broadcast
-Server-initiated update sent to connected clients. Used to update error lists and statistics in real-time.
+Server-initiated update sent to connected clients. Used to update the error list in real time.
 
 ### ActionCable
 Rails' WebSocket framework. Carries the dashboard's live updates when `enable_live_updates` is on.

@@ -25,7 +25,7 @@ API may change before v1.0.0.
 ## Frontend interaction model
 - **Model:** server-rendered ERB, engine-served; progressive enhancement with inline JS. No SPA, no Stimulus/importmap.
 - **Where UI state lives:** server-side (DB + Rails cache); per-user dashboard language in the session (`locales_controller.rb`).
-- **How updates reach the browser:** full page loads, plus live updates via Turbo Streams over ActionCable when the host has `turbo-rails` + ActionCable (`services/error_broadcaster.rb`; it renders `_stats.html.erb` by full string path — grep the path fragment, not the filename). See `docs/guides/REAL_TIME_UPDATES.md`.
+- **How updates reach the browser:** full page loads, plus live updates via Turbo Streams over ActionCable when the host has `turbo-rails` + ActionCable (`services/error_broadcaster.rb` broadcasts rows; pages subscribe through `live_updates_channel.rb` with short-lived tokens from `services/live_stream_token.rb`, renewed via `ErrorsController#live_streams`). See `docs/guides/REAL_TIME_UPDATES.md`.
 - **Entry points:** `app/controllers/rails_error_dashboard/errors_controller.rb`, `app/views/rails_error_dashboard/`, `app/helpers/rails_error_dashboard/`. Dashboard auth is `authenticate_dashboard_user!` in `application_controller.rb`.
 - **i18n:** eleven locales in `config/locales/` (de en es fr it ja pl pt-BR ru uk zh-CN) served through a private backend (`i18n_store.rb`, `private_backend.rb`, `translation.rb`; view helper `red_t`). Guide: `docs/guides/TRANSLATIONS.md`.
 

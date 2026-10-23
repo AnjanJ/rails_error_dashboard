@@ -70,9 +70,9 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
       returns
   - After: T5
   - Done when: `R rspec spec/system/live_updates_spec.rb` → 0 failures
-- [ ] **T7** The real-time updates guide and its mirror → REQ-13
-  - Files: docs/guides/REAL_TIME_UPDATES.md, _guides/real-time-updates.md
-  - Test: none (prose; REQ-13 is `[untested]`). Check AnyCable's docs on stream callbacks first.
+- [x] **T7** The real-time updates guide and its mirror → REQ-13
+  - Files: docs/guides/REAL_TIME_UPDATES.md, _guides/real-time-updates.md, docs/GLOSSARY.md, _reference/glossary.md, PROJECT_MAP.md
+  - Test: none (prose; REQ-13 is `[untested]`). Check AnyCable's docs on stream callbacks first. The glossary pair and PROJECT_MAP.md are fixed because this change makes their live-update lines false.
   - After: T6
   - Done when: both files describe short-lived subscriptions and renewal, the two streams, the custom-view helper and the two upgrade notes, and `diff` of their bodies shows only the front matter differing
 
