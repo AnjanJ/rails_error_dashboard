@@ -12,7 +12,7 @@ rails_error_dashboard is a self-hosted error tracking gem for Rails. It's a Rail
 2. **CQRS** — Commands for writes (`lib/rails_error_dashboard/commands/`), Queries for reads (`lib/rails_error_dashboard/queries/`), Services for algorithms (`lib/rails_error_dashboard/services/`)
 3. **NEVER depend on Rails asset pipeline** — no Sprockets, no Propshaft, no `app/assets/`, no `public/` directory serving
 4. All CSS is inline in the layout `<style>` block, all JS is inline in `<script>` blocks
-5. External dependencies (Bootstrap JS for tooltips/modals, Chart.js, Highlight.js) loaded via CDN only — Bootstrap CSS was removed in v0.6.0 in favor of a custom design token system
+5. External dependencies load via CDN only. From jsDelivr: scripts Chart.js, chartjs-adapter-date-fns, Chartkick, highlight.js, highlightjs-line-numbers, the Bootstrap JS bundle and Stimulus (plus the turbo-rails live-updates client on the error list when live updates are on); stylesheets Bootstrap Icons and Catppuccin Mocha for highlight.js. Plus Google Fonts CSS. Bootstrap CSS was removed in v0.6.0 in favor of a custom design token system. Every CDN tag must be an npm package file at an exact version, pinned with `integrity` + `crossorigin="anonymous"`, with a vendored copy in `spec/support/vendor/` (Google Fonts excepted); `spec/requests/cdn_integrity_spec.rb` enforces it
 6. Layout must be fully self-contained — works with any proxy (Thruster, Nginx, etc.)
 
 ## Testing
@@ -27,11 +27,12 @@ HEADLESS=false bundle exec rspec spec/system/  # visible browser
 
 ### Pre-Release Chaos Tests (integration, production mode)
 ```bash
-bin/pre-release-test all            # all 4 apps (~4-5 min, ~1,480 assertions)
+bin/pre-release-test all            # all 5 apps incl. an API-only host (~5 min, ~1,640 assertions)
 bin/pre-release-test full_sync      # sync + shared DB
 bin/pre-release-test full_async     # async (Sidekiq inline) + shared DB
 bin/pre-release-test full_http      # HTTP middleware capture + dashboard
 bin/pre-release-test full_separate_db  # separate DB
+bin/pre-release-test full_api       # API-only host (rails new --api)
 ```
 
 Chaos tests create real Rails apps in `/tmp`, install the gem, and run in production mode. They test:

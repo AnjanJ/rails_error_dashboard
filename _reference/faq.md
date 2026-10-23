@@ -72,10 +72,9 @@ Historical data cannot be imported (different formats).
 <details>
 <summary><strong>Does it work with API-only Rails apps?</strong></summary>
 
-Yes! The error logging works in API-only mode. The dashboard UI requires a browser but can be:
-- Mounted in a separate admin app
-- Run in a separate Rails instance pointing to the same database
-- Accessed via SSH tunnel
+Yes. Error capture works in API-only mode, and so does the dashboard, at its mount path (`/red` by default) in a browser. In an API-only app the dashboard brings a cookie session of its own (`_rails_error_dashboard_session`), which only the dashboard's own pages use, so your API's endpoints stay sessionless. If your app already runs session middleware, the dashboard uses that session instead.
+
+You can still run the dashboard elsewhere if you prefer, for example in a separate admin app that points at the same database.
 
 To report errors from your API's clients, see [the mobile endpoint](/rails_error_dashboard/docs/guides/mobile-app-integration/#the-endpoint).
 </details>

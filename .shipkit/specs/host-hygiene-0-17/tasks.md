@@ -63,7 +63,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     accepts 1.3.7 and 1.4.0
   - After: none
   - Done when: `R rspec spec/gemspec_dependencies_spec.rb` → 0 failures, then `env -u RAILS_VERSION bin/with-ruby bundle install` and `R bundle-audit check` → no vulnerabilities
-- [ ] **T7** `CLAUDE.md` and the FAQ → REQ-9
+- [x] **T7** `CLAUDE.md` and the FAQ → REQ-9
   - Files: CLAUDE.md, docs/FAQ.md, _reference/faq.md
   - Test: none (prose; REQ-9 is `[untested]`). `CLAUDE.md` goes through `/shipkit:update-rules`.
   - After: T5
