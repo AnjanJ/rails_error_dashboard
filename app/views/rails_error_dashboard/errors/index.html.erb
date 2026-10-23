@@ -4,7 +4,7 @@
 <%# Names come from ErrorBroadcaster (one source for both ends): this page's
     application or the global streams, without the new-row stream when a
     filter, a sort or a later page means a new row does not belong on top. %>
-<% live_update_tags = red_live_updates? ? red_live_updates_tags(@live_streams) : nil %>
+<% live_update_tags = red_live_updates? ? red_live_updates_tags(@live_streams, renew_url: @live_renew_url) : nil %>
 <% live_updates = live_update_tags.present? %>
 <% if live_updates %>
   <% content_for :red_head, red_live_updates_client_tags %>

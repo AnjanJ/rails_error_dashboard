@@ -36,6 +36,7 @@ RailsErrorDashboard::Engine.routes.draw do
     end
     collection do
       get :analytics
+      get :live_streams
       get :platform_comparison
       get :correlation
       get :deprecations

@@ -26,10 +26,14 @@ module RailsErrorDashboard
     # Never turbo_stream_from: it signs with Turbo's verifier, whose
     # signatures never expire, and points at Turbo::StreamsChannel.
     #
+    # The container carries where and how often the layout's script renews
+    # the tokens (ErrorsController#live_streams), at half their lifetime.
+    #
     # @param streams [Hash{Symbol => String}] from ErrorBroadcaster.streams_for_view
+    # @param renew_url [String, nil] the renewal path for this list (@live_renew_url)
     # @return [ActiveSupport::SafeBuffer, nil] nil when a token can't be
     #   issued: the page then has no live updates, and no Live badge
-    def red_live_updates_tags(streams)
+    def red_live_updates_tags(streams, renew_url: nil)
       sources = (streams || {}).map do |kind, stream|
         token = Services::LiveStreamToken.issue(stream)
         return nil unless token
@@ -38,7 +42,9 @@ module RailsErrorDashboard
       end
       return nil if sources.empty?
 
-      tag.div(safe_join(sources), id: "red-live-streams", hidden: true)
+      renew_every = (Services::LiveStreamToken::LIFETIME / 2).in_milliseconds.to_i if renew_url
+      tag.div(safe_join(sources), id: "red-live-streams", hidden: true,
+        data: { renew_url: renew_url, renew_every: renew_every })
     end
 
     # The client, and where it should connect, for the layout's <head>

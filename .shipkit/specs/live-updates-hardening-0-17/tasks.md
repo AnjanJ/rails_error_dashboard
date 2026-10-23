@@ -51,7 +51,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
       `broadcast_update`, while the new names receive the row
   - After: T2, T3
   - Done when: `R rspec spec/lib/rails_error_dashboard/services/error_broadcaster_spec.rb spec/requests/live_stream_scoping_spec.rb spec/requests/live_stream_delivery_spec.rb spec/requests/live_updates_client_spec.rb spec/system/live_updates_spec.rb` → 0 failures
-- [ ] **T5** Renew a list's subscriptions → REQ-6, REQ-7
+- [x] **T5** Renew a list's subscriptions → REQ-6, REQ-7
   - Files: config/routes.rb, app/controllers/rails_error_dashboard/errors_controller.rb, app/helpers/rails_error_dashboard/application_helper.rb, spec/requests/live_streams_renewal_spec.rb
   - Test: live_streams_renewal_spec:
     - authenticated: the renewal returns exactly the page's stream kinds, as fresh tokens. Checked for
