@@ -67,8 +67,9 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
   - Files: CLAUDE.md, docs/FAQ.md, _reference/faq.md
   - Test: none (prose; REQ-9 is `[untested]`). `CLAUDE.md` goes through `/shipkit:update-rules`.
   - After: T5
-  - Done when: CLAUDE.md lists the nine CDN files and the six chaos apps, rule 5 requires pinned
-    tags, and both FAQ copies say the dashboard works inside an API-only app
+  - Done when: CLAUDE.md lists the nine CDN files and the five chaos apps in `all` (the summary
+    counts six runs, because the HTTP app records two), rule 5 requires pinned tags, and both FAQ
+    copies say the dashboard works inside an API-only app
 
 ## After the gate
 - Full suite, RuboCop on tracked files, and `env -u RAILS_VERSION bin/with-ruby bin/pre-release-test all` (read FINAL RESULTS: 6 apps).

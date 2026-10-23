@@ -9,7 +9,7 @@
 # Installing RED must leave the host's API alone: no cookies, no sessions.
 # The dashboard, which needs a session for CSRF tokens, the flash and the
 # language picker, must still work end to end, on a session of its own.
-# (Spec: .shipkit/specs/host-hygiene-0-17, REQ-1 and REQ-2.)
+# Spec: host-hygiene-0-17/REQ-1 (P1) and host-hygiene-0-17/REQ-2 (P2).
 # ============================================================================
 
 require "net/http"

@@ -123,8 +123,9 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   # turbo-rails (~> 2.0) — live updates, with config.enable_live_updates (without it the dashboard does not auto-refresh)
 
   # concurrent-ruby powers the storm-protection primitives (AtomicReference,
-  # AtomicFixnum, Map, ReadWriteLock) and the health snapshot's queue-stats
-  # cache — a real runtime dependency, not incidental.
+  # AtomicFixnum, Map, ReadWriteLock), the health snapshot's queue-stats cache
+  # and the translation backend's Concurrent::Hash — a real runtime
+  # dependency, not incidental.
   #
   # The floor, ">= 1.3.7": 1.3.6 and earlier carry three CVEs fixed in 1.3.7.
   # None is reachable through OUR code:
