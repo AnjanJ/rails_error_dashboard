@@ -18,7 +18,7 @@ pre-commit:
   piped: true  # Run stages sequentially — if fast checks fail, chaos tests don't run
 
   commands:
-    # Stage 1: Fast parallel checks on changed files
+    # Stage 1: Fast checks on changed files, one at a time (piped: true)
     # 1. RuboCop - Only staged files (exclude ERB templates)
     rubocop-staged:
       priority: 1

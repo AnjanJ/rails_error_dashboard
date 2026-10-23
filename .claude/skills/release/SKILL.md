@@ -75,7 +75,7 @@ To change what version ships, change the commits, not the PR.
    ```bash
    gh pr checks <PR>
    ```
-   All 22 checks must pass. If the PR shows `BLOCKED` with checks stuck at
+   All 29 checks must pass (the upgrade path runs on a release PR). If the PR shows `BLOCKED` with checks stuck at
    `action_required`, GitHub is holding workflow runs because the PR was opened
    by a bot. Approve them:
    ```bash
