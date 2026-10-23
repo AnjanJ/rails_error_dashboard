@@ -1943,7 +1943,7 @@ Made 4 runtime dependencies optional instead of required:
 - `httparty` — only needed for webhook/Slack/Discord/PagerDuty notifications
 - `turbo-rails` — only needed for real-time Turbo Stream updates
 
-Core gem now requires only `rails` and `pagy`.
+Core gem now requires only `rails`, `pagy`, `groupdate` and `concurrent-ruby`.
 
 #### 🔍 Structured Backtrace Parsing
 
@@ -2712,7 +2712,7 @@ Updated gem dependencies to their latest versions for improved compatibility and
 
 **Thanks to @gundestrup for keeping our dependencies up to date!** 🙏
 
-## [0.1.27] - 2025-01-12
+## [0.1.27] - 2026-01-12
 
 ### 🔒 Security
 

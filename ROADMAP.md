@@ -515,10 +515,10 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 
 ### 10. Reduce Runtime Dependencies — DONE
 - **What:** Make `turbo-rails`, `browser`, `httparty`, and `chartkick` optional. Core gem should only require `pagy` and `groupdate`. Load optional features only if the dependency is available
-- **Why:** 9 runtime dependencies is a red flag for production Rails apps. Solid Errors has zero extra dependencies. Every unnecessary dependency is a potential version conflict, security surface, and bundle bloat
-- **Community impact:** Dependency count is one of the first things experienced Rails developers check before adding a gem. Reducing from 9 to 2-3 required deps significantly lowers the adoption barrier
+- **Why:** 8 runtime dependencies (Rails included) is a red flag for production Rails apps. Solid Errors has zero extra dependencies. Every unnecessary dependency is a potential version conflict, security surface, and bundle bloat
+- **Community impact:** Dependency count is one of the first things experienced Rails developers check before adding a gem. Reducing from 8 to 4 required deps (3 beyond Rails) significantly lowers the adoption barrier
 - **Effort:** 1 day
-- **Implemented:** Reduced from 9 required to 2 (pagy, groupdate). browser, httparty, chartkick, turbo-rails are optional with graceful degradation
+- **Implemented:** Reduced from 8 runtime dependencies to 4 (352c936): rails, pagy, groupdate and concurrent-ruby. browser, httparty, chartkick, turbo-rails are optional with graceful degradation
 
 ---
 
@@ -744,11 +744,14 @@ principle (see its entry above).
 - Community growth — awesome-ruby **merged 2026-08-13** ([markets/awesome-ruby#1246](https://github.com/markets/awesome-ruby/pull/1246)). Ruby Toolbox PR still open ([rubytoolbox/catalog#1033](https://github.com/rubytoolbox/catalog/pull/1033))
 
 ### Security Track Record
-Three advisories published. One was reported by an outside researcher and two were found
+Six advisories published. One was reported by an outside researcher and five were found
 internally; each was published on the same day as the release that fixed it:
 - [GHSA-4rwp-83g9-78gv](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-4rwp-83g9-78gv) (2026-05-04, high) — stored XSS in `resolution_comment` rendering. Found by an internal security audit; patched in 0.6.4
 - [GHSA-qhgm-3pxf-mvc6](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qhgm-3pxf-mvc6) (2026-08-24, high) — default credentials accepted outside production. Reported by [@rajnisht7](https://github.com/rajnisht7); patched in 0.9.1; **CVE-2026-94549**
 - [GHSA-xmv7-mg68-3v2f](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-xmv7-mg68-3v2f) (2026-09-18, medium) — stored XSS through a linked issue URL, and an unauthenticated 500 (instead of 401) on a malformed Basic auth header. Found by the maintainer during a deep QA pass over 0.12.1; patched in 0.13.0
+- [GHSA-qh4g-qc9x-9f83](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-qh4g-qc9x-9f83) (2026-09-27, high) — the default-credentials guard could be bypassed by partial, blank or non-string credential settings. Found internally; patched in 0.14.2
+- [GHSA-q7r3-w7p3-95h5](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-q7r3-w7p3-95h5) (2026-10-15, medium) — the source viewer and Copy for LLM could read non-source files named in a stored backtrace. Found internally; patched in 0.15.0
+- [GHSA-6xp8-wxmw-c7hp](https://github.com/AnjanJ/rails_error_dashboard/security/advisories/GHSA-6xp8-wxmw-c7hp) (2026-10-22, low) — async logging instantiated a class named by a client-supplied error type. Found internally; patched in 0.16.2
 
 Another hardening fix, authenticating every dashboard controller rather than only `ErrorsController`
 (#167), shipped in v0.9.0 without an advisory — it was found internally before disclosure.
