@@ -99,24 +99,21 @@ STANDARD_ENDPOINTS.each do |path, expected_type, expected_severity, description|
     assert "#{description}: message present", error_log.message.present?
     assert "#{description}: backtrace present", error_log.backtrace.present?
     assert "#{description}: error_hash present", error_log.error_hash.present?
-    # controller_name/action_name may not be available when errors are reported
-    # by ActionDispatch::Executor instead of our ErrorCatcher middleware
-    if error_log.controller_name.present?
-      assert "#{description}: controller_name captured", true
-    else
-      assert "#{description}: controller_name not available (Executor path — OK)", true
-    end
-    if error_log.action_name.present?
-      assert "#{description}: action_name captured", true
-    else
-      assert "#{description}: action_name not available (Executor path — OK)", true
-    end
+    # Request errors reach RED through Rails' executor report (the middleware
+    # sits above ShowExceptions), and the row still names where it came from.
+    # test-gaps-0-17/REQ-5
+    assert "#{description}: controller_name captured",
+      error_log.controller_name.to_s.downcase.delete("_").include?("testerrors"),
+      "got #{error_log.controller_name.inspect}"
+    assert "#{description}: action_name captured",
+      error_log.action_name == path.delete_prefix("/test/"),
+      "got #{error_log.action_name.inspect}"
   end
 end
 puts ""
 
 # ---------------------------------------------------------------------------
-# F2: Timeout::Error (may be flaky — tolerant test)
+# F2: Timeout::Error (test-gaps-0-17/REQ-6)
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("F2: Timeout::Error capture")
 
@@ -133,15 +130,34 @@ assert "Timeout: HTTP returned error status (#{status})",
   status.is_a?(Integer) && status >= 400,
   "got #{status}"
 
-if timeout_count_after > timeout_count_before
-  assert "Timeout: captured", true
-  assert "Timeout: severity=medium", timeout_log&.severity&.to_sym == :medium
-else
-  # Timeout can be flaky in test — don't hard-fail
-  puts "  (Timeout::Error may not have fired reliably — skipped)"
-  assert "Timeout: tolerant skip", true
-end
+assert "Timeout: captured", timeout_count_after > timeout_count_before,
+  "count unchanged: #{timeout_count_before} -> #{timeout_count_after}"
+assert "Timeout: severity=medium", timeout_log&.severity&.to_sym == :medium,
+  "got #{timeout_log&.severity.inspect}"
 puts ""
+
+# ---------------------------------------------------------------------------
+# F3-F5: exceptions Rails maps in rescue_responses (test-gaps-0-17/REQ-7)
+#
+# Since Rails 7.1, ShowExceptions marks a request's exception for reporting
+# only when it is NOT a rescue response (action_dispatch.report_exception =
+# !wrapper.rescue_response?), and the Executor reports nothing else. RED's
+# middleware sits above ShowExceptions, so these client errors are answered
+# with their mapped status and never recorded. If that changes (in Rails or
+# in RED), these checks fail and someone decides whether it is a bug.
+# ---------------------------------------------------------------------------
+RESCUE_RESPONSES_UNREPORTED = Rails.gem_version >= Gem::Version.new("7.1")
+
+def assert_rescue_response(label, status, expected_status, count_before, count_after)
+  unless RESCUE_RESPONSES_UNREPORTED
+    puts "  SKIP: #{label}: Rails #{Rails.version} reports rescue responses differently (checked on 7.1+)"
+    return
+  end
+
+  assert "#{label}: answered #{expected_status}", status == expected_status, "got #{status}"
+  assert "#{label}: not recorded (Rails leaves rescue responses unreported)",
+    count_after == count_before, "count changed: #{count_before} -> #{count_after}"
+end
 
 # ---------------------------------------------------------------------------
 # F3: ActionController::ParameterMissing
@@ -161,21 +177,7 @@ param_count_after = RailsErrorDashboard::ErrorLog
   .where(error_type: "ActionController::ParameterMissing")
   .count
 
-param_log = find_captured_error("ActionController::ParameterMissing")
-
-# Rails returns 400 for ParameterMissing in development mode
-assert "ParameterMissing: HTTP returned 400+ (#{status})",
-  status.is_a?(Integer) && status >= 400,
-  "got #{status}"
-
-if param_count_after > param_count_before
-  assert "ParameterMissing: captured by middleware", true
-  assert "ParameterMissing: error_type correct", param_log&.error_type == "ActionController::ParameterMissing"
-else
-  # Rails may handle ParameterMissing before middleware in some configurations
-  puts "  (ParameterMissing handled by Rails before middleware — acceptable)"
-  assert "ParameterMissing: Rails handled internally (OK)", true
-end
+assert_rescue_response("ParameterMissing", status, 400, param_count_before, param_count_after)
 puts ""
 
 # ---------------------------------------------------------------------------
@@ -196,20 +198,7 @@ notfound_count_after = RailsErrorDashboard::ErrorLog
   .where(error_type: "ActiveRecord::RecordNotFound")
   .count
 
-notfound_log = find_captured_error("ActiveRecord::RecordNotFound")
-
-# Rails may return 404 for RecordNotFound
-assert "RecordNotFound: HTTP returned 404 or 500 (#{status})",
-  status.is_a?(Integer) && [ 404, 500 ].include?(status),
-  "got #{status}"
-
-if notfound_count_after > notfound_count_before
-  assert "RecordNotFound: captured by middleware", true
-  assert "RecordNotFound: severity=high", notfound_log&.severity&.to_sym == :high
-else
-  puts "  (RecordNotFound handled by Rails before middleware — acceptable)"
-  assert "RecordNotFound: Rails handled internally (OK)", true
-end
+assert_rescue_response("RecordNotFound", status, 404, notfound_count_before, notfound_count_after)
 puts ""
 
 # ---------------------------------------------------------------------------
@@ -230,21 +219,7 @@ invalid_count_after = RailsErrorDashboard::ErrorLog
   .where(error_type: "ActiveRecord::RecordInvalid")
   .count
 
-invalid_log = find_captured_error("ActiveRecord::RecordInvalid")
-
-assert "RecordInvalid: HTTP returned error status (#{status})",
-  status.is_a?(Integer) && status >= 400,
-  "got #{status}"
-
-if invalid_count_after > invalid_count_before
-  assert "RecordInvalid: captured", true
-  assert "RecordInvalid: severity=medium", invalid_log&.severity&.to_sym == :medium
-else
-  # RecordInvalid may be rescued by Rails rescue_responses (mapped to 422)
-  # and not reported via Rails.error in some Rails versions
-  puts "  (RecordInvalid not reported by Rails Executor — acceptable)"
-  assert "RecordInvalid: Rails handled internally (OK)", true
-end
+assert_rescue_response("RecordInvalid", status, 422, invalid_count_before, invalid_count_after)
 puts ""
 
 # ---------------------------------------------------------------------------
@@ -290,31 +265,16 @@ nm_error = RailsErrorDashboard::ErrorLog
   .first
 
 if nm_error
-  # In production mode, errors may be reported by either:
-  # 1. Our ErrorCatcher middleware (includes request context)
-  # 2. ActionDispatch::Executor (may not include request context)
-  # Test tolerantly: verify context is present when available
-  # controller_name may be "test_errors" (from request.params[:controller])
-  # or "TestErrorsController" (from controller.class.name via Executor context)
-  if nm_error.controller_name.present?
-    # controller_name may be "test_errors" (snake_case from request.params[:controller])
-    # or "TestErrorsController" (from controller.class.name via Executor context).
-    # Normalize both to a comparable form before asserting.
-    normalized = nm_error.controller_name.downcase.delete("_")
-    assert "context: controller_name captured",
-      normalized.include?("testerrors"),
-      "got #{nm_error.controller_name.inspect}"
-  else
-    assert "context: controller_name not available (Executor path — OK)", true
-  end
+  # controller_name may be "test_errors" (snake_case from request.params[:controller])
+  # or "TestErrorsController" (from controller.class.name via Executor context).
+  # Normalize both to a comparable form before asserting. test-gaps-0-17/REQ-5
+  assert "context: controller_name captured",
+    nm_error.controller_name.to_s.downcase.delete("_").include?("testerrors"),
+    "got #{nm_error.controller_name.inspect}"
 
-  if nm_error.action_name.present?
-    assert "context: action_name is 'nil_error'",
-      nm_error.action_name == "nil_error",
-      "got #{nm_error.action_name.inspect}"
-  else
-    assert "context: action_name not available (Executor path — OK)", true
-  end
+  assert "context: action_name is 'nil_error'",
+    nm_error.action_name == "nil_error",
+    "got #{nm_error.action_name.inspect}"
 
   assert "context: occurred_at recent",
     nm_error.occurred_at > 2.minutes.ago
