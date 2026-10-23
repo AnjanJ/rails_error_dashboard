@@ -74,7 +74,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
   - Files: docs/guides/REAL_TIME_UPDATES.md, _guides/real-time-updates.md, docs/GLOSSARY.md, _reference/glossary.md, PROJECT_MAP.md
   - Test: none (prose; REQ-13 is `[untested]`). Check AnyCable's docs on stream callbacks first. The glossary pair and PROJECT_MAP.md are fixed because this change makes their live-update lines false.
   - After: T6
-  - Done when: both files describe short-lived subscriptions and renewal, the two streams, the custom-view helper and the two upgrade notes, and `diff` of their bodies shows only the front matter differing
+  - Done when: both files describe short-lived subscriptions and renewal, the two streams, the custom-view helper and the two upgrade notes, and `diff` of the two shows only the front matter and the mirror's site-URL links differing
 
 ## After the gate
 - Full suite, RuboCop on tracked files, and `env -u RAILS_VERSION bin/with-ruby bin/pre-release-test all` (read FINAL RESULTS).
