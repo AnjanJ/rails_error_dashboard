@@ -24,18 +24,18 @@ RSpec.describe "Live stream scoping on the error list", type: :request do
     end
   end
 
-  it "subscribes the unfiltered list to the three global streams" do
+  it "subscribes the unfiltered list to the two global streams" do
     get "/error_dashboard/errors"
 
     expect(response).to have_http_status(:ok)
-    expect(subscribed_streams).to contain_exactly("error_list", "error_updates", "error_stats")
+    expect(subscribed_streams).to contain_exactly("error_list", "error_updates")
   end
 
   it "subscribes an application-filtered list to that application's streams only" do
     get "/error_dashboard/errors", params: { application_id: application.id }
 
     id = application.id
-    expect(subscribed_streams).to contain_exactly("error_list_app_#{id}", "error_updates_app_#{id}", "error_stats_app_#{id}")
+    expect(subscribed_streams).to contain_exactly("error_list_app_#{id}", "error_updates_app_#{id}")
   end
 
   {
@@ -46,25 +46,36 @@ RSpec.describe "Live stream scoping on the error list", type: :request do
     "the explicit all-statuses view" => { unresolved: "0" },
     "a later page" => { page: 2, per_page: 1 }
   }.each do |label, params|
-    it "does not subscribe to new-row prepends with #{label}, but keeps updates and stats" do
+    it "does not subscribe to new-row prepends with #{label}, but keeps updates" do
       get "/error_dashboard/errors", params: params
 
       expect(response).to have_http_status(:ok)
-      expect(subscribed_streams).to contain_exactly("error_updates", "error_stats")
+      expect(subscribed_streams).to contain_exactly("error_updates")
     end
+  end
+
+  # live-updates-hardening-0-17/REQ-11
+  it "subscribes no list to a stats stream" do
+    [ {}, { application_id: application.id }, { platform: "iOS" }, { application_id: application.id, page: 2, per_page: 1 } ]
+      .each do |params|
+        get "/error_dashboard/errors", params: params
+
+        expect(subscribed_streams).to be_present
+        expect(subscribed_streams.grep(/stats/)).to be_empty, "a stats stream for #{params.inspect}"
+      end
   end
 
   it "combines both rules: application plus another filter" do
     get "/error_dashboard/errors", params: { application_id: application.id, platform: "iOS" }
 
     id = application.id
-    expect(subscribed_streams).to contain_exactly("error_updates_app_#{id}", "error_stats_app_#{id}")
+    expect(subscribed_streams).to contain_exactly("error_updates_app_#{id}")
   end
 
   it "never turns a hostile application_id into a stream name" do
     get "/error_dashboard/errors", params: { application_id: "7_evil" }
 
-    expect(subscribed_streams).to all(match(/\Aerror_(list|updates|stats)_app_0\z/))
+    expect(subscribed_streams).to all(match(/\Aerror_(list|updates)_app_0\z/))
   end
 
   it "does not choke on a nested page parameter" do
@@ -85,11 +96,9 @@ RSpec.describe "Live stream scoping on the error list", type: :request do
     channel = Turbo::StreamsChannel
     allow(channel).to receive(:broadcast_prepend_to) { |stream, **| published << stream }
     allow(channel).to receive(:broadcast_replace_to) { |stream, **| published << stream }
-    allow(RailsErrorDashboard::Queries::DashboardStats).to receive(:call).and_return({ total_today: 1 })
     allow(broadcaster).to receive(:render_partial).and_return("<tr></tr>")
     row = RailsErrorDashboard::ErrorLog.last
 
-    broadcaster.reset_throttle!
     broadcaster.broadcast_new(row)
     broadcaster.broadcast_update(row)
 

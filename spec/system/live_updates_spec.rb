@@ -40,7 +40,7 @@ RSpec.describe "Live updates in the browser", type: :system do
     wait_for_page_load
     # turbo-rails marks each source `connected` once its subscription is
     # confirmed; broadcasting before that would race the subscribe.
-    expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 3, wait: 10)
+    expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 2, wait: 10)
   end
 
   def capture_new_error

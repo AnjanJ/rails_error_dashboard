@@ -30,7 +30,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
       Cable hidden; the channel file is on no autoload or eager-load path
   - After: T1
   - Done when: `R rspec spec/channels/live_updates_channel_spec.rb spec/lib/rails_error_dashboard/live_updates_channel_loading_spec.rb` → 0 failures
-- [ ] **T3** Stop the stats broadcast → REQ-10, REQ-11
+- [x] **T3** Stop the stats broadcast → REQ-10, REQ-11
   - Files: lib/rails_error_dashboard/services/error_broadcaster.rb, spec/lib/rails_error_dashboard/services/error_broadcaster_spec.rb, spec/requests/live_stream_delivery_spec.rb, spec/requests/live_stream_scoping_spec.rb, spec/system/live_updates_spec.rb, spec/rails_helper.rb, spec/integration/capture_query_budget_spec.rb, test/pre_release/chaos/phase_b_edge_cases.rb, app/views/rails_error_dashboard/errors/_stats.html.erb, spec/views/rails_error_dashboard/errors/_stats.html.erb_spec.rb, config/locales/en.yml
   - Test:
     - error_broadcaster_spec: `broadcast_new` and `broadcast_update` never call `Queries::DashboardStats`

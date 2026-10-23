@@ -207,7 +207,7 @@ eb = RailsErrorDashboard::Services::ErrorBroadcaster
 
 assert_no_crash("broadcast_new(nil)") { eb.broadcast_new(nil) }
 assert_no_crash("broadcast_update(nil)") { eb.broadcast_update(nil) }
-assert_no_crash("broadcast_stats") { eb.broadcast_stats }
+assert_no_crash("streams_for_view") { eb.streams_for_view(application_id: "7_evil", filtered: true) }
 assert_no_crash("available? check") { eb.available? }
 puts ""
 

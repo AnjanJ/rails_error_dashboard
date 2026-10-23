@@ -6,11 +6,9 @@ require "rails_helper"
 # Phase 2 extraction sweep and kept hardcoded English labels until now, which
 # bin/i18n-check's hardcoded-English heuristic caught.
 #
-# It is worth its own spec because it is not an ordinary page partial: nothing
-# renders it with `render "stats"`, so a grep for that form says it is dead
-# code. It is not — Services::ErrorBroadcaster#broadcast_stats renders it by
-# string path over ActionCable, outside any request. Both paths are pinned
-# below so the next sweep does not mistake it for unused again.
+# It is worth its own spec because no built-in page renders it: the live
+# stats broadcast that did, by string path, was removed in 0.17.0. It stays
+# for custom index views that render it, so its labels stay pinned here.
 RSpec.describe "rails_error_dashboard/errors/_stats.html.erb", type: :view do
   before(:all) do
     ActionView::TestCase::TestController.helper(RailsErrorDashboard::I18nHelper)

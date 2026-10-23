@@ -1,7 +1,7 @@
-<%# Rendered live over ActionCable by ErrorBroadcaster.broadcast_stats, which
-    names this partial by its FULL STRING PATH -- no `render "stats"` call
-    exists, so a search for one finds nothing. It is in scope for any change
-    to the stats contract.
+<%# No built-in page renders this partial. Until 0.17.0 the live-updates
+    stats broadcast rendered it by its full string path; that broadcast is
+    gone, and the partial stays for custom index views that render
+    "rails_error_dashboard/errors/stats" themselves.
 
     today / this_week count EVENTS (summed occurrence_count), not groups. %>
 <div class="row g-4">
