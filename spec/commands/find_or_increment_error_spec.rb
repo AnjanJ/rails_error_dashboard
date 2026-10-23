@@ -354,25 +354,54 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
     end
   end
 
-  describe "locking" do
-    it "runs the lookup and the write inside one transaction so the row lock is held across both" do
-      RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, occurrence_count: 1))
+  # The lookup and the write must hold one row lock across both, or two
+  # processes each read count N and each write N + 1. Only separate
+  # connections can show that: Rails pins every thread to the connection that
+  # holds the test transaction, so a transactional example serialises the
+  # threads itself. :non_transactional runs this group on committed rows (see
+  # spec/support/database_cleaner.rb).
+  #
+  # SQLite ignores FOR UPDATE, and before Rails 8.0 its deferred transactions
+  # deadlock on a read-then-write race instead of queueing, so the example runs
+  # where the lock does something: the PostgreSQL and MySQL CI rows.
+  describe "concurrent captures on separate connections", :non_transactional do
+    self.use_transactional_tests = false
 
-      transaction_open_during_update = nil
-      allow_any_instance_of(RailsErrorDashboard::ErrorLog).to receive(:update!).and_wrap_original do |m, *args|
-        transaction_open_during_update = RailsErrorDashboard::ErrorLog.connection.transaction_open?
+    # Same application and environment as the captures, so every thread takes
+    # the find_unresolved -> increment_existing path.
+    let(:capture) { base_attributes.merge(environment: "production") }
+    let!(:row) do
+      RailsErrorDashboard::ErrorLog.create!(capture.merge(resolved: false, occurrence_count: 1))
+    end
+
+    before do
+      if RailsErrorDashboard::ErrorLog.connection.adapter_name.match?(/sqlite/i)
+        skip "SQLite ignores FOR UPDATE, so the row lock can't be shown here"
+      end
+    end
+
+    it "keeps one row and counts every capture (test-gaps-0-17/REQ-1)" do
+      # Widen the gap between the read and the write, so a lookup without the
+      # row lock loses an update on every run, not just sometimes.
+      allow_any_instance_of(described_class).to receive(:increment_existing).and_wrap_original do |m, *args|
+        sleep 0.2
         m.call(*args)
       end
 
-      described_class.call(error_hash, base_attributes)
-      expect(transaction_open_during_update).to be(true)
-    end
+      start = Concurrent::CountDownLatch.new(1)
+      threads = Array.new(4) do
+        Thread.new do
+          RailsErrorDashboard::ErrorLog.connection_pool.with_connection do
+            start.wait
+            described_class.call(error_hash, capture.merge(occurred_at: Time.current))
+          end
+        end
+      end
+      start.count_down
+      threads.each(&:value)
 
-    it "issues the lookup with a row lock" do
-      RailsErrorDashboard::ErrorLog.create!(base_attributes.merge(resolved: false, occurrence_count: 1))
-      relation = RailsErrorDashboard::ErrorLog.unresolved.where(error_hash: error_hash).lock
-      expect(relation.lock_value).to be(true)
-      expect(described_class.new(error_hash, base_attributes).send(:find_unresolved)).to be_present
+      expect(RailsErrorDashboard::ErrorLog.where(error_hash: error_hash).count).to eq(1)
+      expect(row.reload.occurrence_count).to eq(1 + 4)
     end
   end
 
