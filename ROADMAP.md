@@ -730,7 +730,7 @@ principle (see its entry above).
 - Multi-tenancy (8/10) — per-app isolation, auto-detection, shared DB
 - Deployment (8/10) — 3-step install, works with Thruster, API-only mode, MySQL + PostgreSQL + SQLite supported
 - Dependencies (9/10) — only 3 required besides Rails (pagy, groupdate, concurrent-ruby), 4 optional with graceful degradation (browser, chartkick, httparty, turbo-rails)
-- Testing (9.5/10) — 5,300+ RSpec examples across 315 spec files (5,338 in CI on 2026-09-25); a pre-release chaos suite that ran 1,483 assertions in production mode on 2026-09-25; CI runs Ruby 3.2–3.4 × Rails 7.0–8.1, PostgreSQL and MySQL rows built from the migrations, plus system, schema-parity, integration and upgrade-path jobs (22 checks per pull request)
+- Testing (9.5/10) — 5,300+ RSpec examples across 315 spec files (5,338 in CI on 2026-09-25); a pre-release chaos suite that ran 1,483 assertions in production mode on 2026-09-25; CI runs Ruby 3.2–4.0 × Rails 7.0–8.1, PostgreSQL and MySQL rows built from the migrations, plus system, schema-parity, integration, upgrade-path and audit jobs (29 checks per pull request, all required)
 - Community (growing) — 9 contributors, 121 merged PRs, 47,992 downloads, 92 stars
 
 ### What Needs Work

@@ -173,13 +173,14 @@ don't drift; CI runs it on every pull request.
 
 ### GitHub Actions Setup
 
-Every pull request to `main` gets **22 checks** from two workflows.
+Every pull request to `main` gets **29 checks** from two workflows, and the "Protect main branch"
+ruleset requires all of them.
 
 **`.github/workflows/test.yml`**
 
 | Job | What runs |
 |-----|-----------|
-| `Ruby X / Rails Y` (15 jobs) | RSpec without the system specs, on SQLite: Ruby 3.2, 3.3, 3.4 × Rails 7.0, 7.1, 7.2, 8.0, 8.1 |
+| `Ruby X / Rails Y` (20 jobs) | RSpec without the system specs, on SQLite: Ruby 3.2, 3.3, 3.4, 4.0 × Rails 7.0, 7.1, 7.2, 8.0, 8.1 |
 | `postgresql / Ruby 3.4 / Rails 8.1` | The same suite on PostgreSQL 16, schema built from `db/migrate` |
 | `mysql / Ruby 3.4 / Rails 8.1` | The same suite on MySQL 8.4 with its time zone tables loaded, schema built from `db/migrate` |
 | `Schema parity (schema.rb vs db/migrate)` | `bin/check-schema-parity` |
@@ -190,8 +191,10 @@ Every pull request to `main` gets **22 checks** from two workflows.
 | Job | What runs |
 |-----|-----------|
 | `lint` | RuboCop and `bin/i18n-check` |
+| `audit` | bundle-audit with a freshly fetched advisory database, actionlint, and zizmor at low severity and up |
 | `Integration Tests (shared + separate DB)` | `bin/full-integration-test all` |
-| `Upgrade Path (published → this branch)` | `bin/pre-release-test full_upgrade`. The job always reports, but only does the work on release PRs and on PRs that touch `db/migrate/` |
+| `changes` | Decides whether the upgrade-path test has anything to check |
+| `Upgrade Path (published → this branch)` | `bin/pre-release-test full_upgrade`, on release PRs and on PRs that touch `db/migrate/`. Otherwise the check shows as Skipped, which counts as passing |
 
 Each Ruby × Rails job starts from a fresh lockfile and schema. An excerpt of
 `.github/workflows/test.yml` (the file itself is the source of truth):
@@ -405,7 +408,7 @@ done
 - [ ] All specs pass on Ruby 3.3 (all Rails)
 - [ ] All specs pass on Ruby 3.4 (all Rails)
 - [ ] All specs pass on PostgreSQL and MySQL
-- [ ] GitHub Actions CI passing (all 22 checks)
+- [ ] GitHub Actions CI passing (all 29 checks)
 - [ ] No deprecation warnings
 - [ ] Commit types correct — release-please writes CHANGELOG.md from them; it is not edited by hand
 
