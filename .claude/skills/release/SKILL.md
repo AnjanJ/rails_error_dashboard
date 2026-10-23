@@ -67,8 +67,8 @@ To change what version ships, change the commits, not the PR.
    ```bash
    bundle exec rspec        # expect 0 failures
    bundle exec rubocop      # expect no offenses
-   bin/pre-release-test all # builds 4 apps; the summary says "Apps passed: 5" because
-                            # the HTTP app records two runs. Expect 0 failed assertions
+   bin/pre-release-test all # builds 5 apps (one API-only); the summary says "Apps passed: 6"
+                            # because the HTTP app records two runs. Expect 0 failed assertions
    ```
 
 4. **Check CI on the release PR**:

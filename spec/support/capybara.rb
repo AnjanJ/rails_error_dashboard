@@ -73,8 +73,8 @@ VENDORED_SCRIPTS = {
     "bootstrap.bundle.min.js",
   # chart_date_locale_spec asks Chart.js what it drew to verify the localized
   # date adapter (#178); without these it skips instead of asserting.
-  %r{cdn\.jsdelivr\.net/npm/chart\.js@[\d.]+/dist/chart\.umd\.min\.js} =>
-    "chart.umd.min.js",
+  %r{cdn\.jsdelivr\.net/npm/chart\.js@[\d.]+/dist/chart\.umd\.js} =>
+    "chart.umd.js",
   %r{cdn\.jsdelivr\.net/npm/chartjs-adapter-date-fns@[\d.]+/dist/chartjs-adapter-date-fns\.bundle\.min\.js} =>
     "chartjs-adapter-date-fns.bundle.min.js",
   %r{cdn\.jsdelivr\.net/npm/chartkick@[\d.]+/dist/chartkick\.min\.js} =>
@@ -90,7 +90,8 @@ VENDORED_SCRIPT_BODIES = VENDORED_SCRIPTS.to_h do |pattern, filename|
   path = File.expand_path("vendor/#{filename}", __dir__)
   raise "Missing vendored script #{path} — see spec/support/vendor/README.md" unless File.exist?(path)
 
-  [ pattern, File.read(path).freeze ]
+  # binread: the layout pins each file's exact bytes with an integrity hash.
+  [ pattern, File.binread(path).freeze ]
 end.freeze
 
 # Every host the layout reaches for. Host-level, so a version bump or a new
