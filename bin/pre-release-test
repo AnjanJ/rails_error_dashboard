@@ -19,6 +19,7 @@ set -uo pipefail
 #   bin/pre-release-test all               # 5 apps (~5 min, lefthook)
 #   bin/pre-release-test release_audit     # All 9 apps (~13-16 min, manual)
 #   bin/pre-release-test full_api          # API-only host (rails new --api)
+#   bin/pre-release-test cdn_integrity     # CDN files vs their pinned hashes (network)
 #   bin/pre-release-test full_kitchen_sink # Every config option at once
 #   bin/pre-release-test full_multi_app    # Two apps sharing one DB
 #   bin/pre-release-test full_solid_queue  # Async via SolidQueue adapter
@@ -784,6 +785,64 @@ test_full_api() {
   run_http_tests "$app_dir" 3097 "$CHAOS_DIR/phase_p_api_host.rb"
 }
 
+# ---------------------------------------------------------------------------
+# Release audit only, and it needs the network: every file the dashboard loads
+# from jsDelivr must still have exactly the bytes its integrity hash pins. The
+# specs check each hash against the copy in spec/support/vendor; this checks
+# it against the CDN itself. Recorded as one more entry in the summary.
+# ---------------------------------------------------------------------------
+check_cdn_integrity() {
+  log_header "CDN integrity: the layout's hashes against the live files"
+
+  local output
+  output=$(ruby - "$GEM_DIR" 2>&1 <<'RUBY'
+require "net/http"
+require "digest"
+
+root = ARGV.fetch(0)
+layout = File.read(File.join(root, "app/views/layouts/rails_error_dashboard.html.erb"))
+helper = File.read(File.join(root, "app/helpers/rails_error_dashboard/application_helper.rb"))
+
+pins = layout.scan(%r{(?:src|href)="(https://cdn\.jsdelivr\.net/[^"]+)"[^>]*\bintegrity="(sha384-[^"]+)"})
+client = [ helper[/LIVE_UPDATES_CLIENT_URL = "([^"]+)"/, 1], helper[/LIVE_UPDATES_CLIENT_INTEGRITY = "([^"]+)"/, 1] ]
+pins << client if client.all?
+
+passed = failed = 0
+if pins.size < 10
+  failed += 1
+  puts "  FAIL: found #{pins.size} pinned CDN files, expected at least 10"
+end
+pins.each do |url, expected|
+  response = Net::HTTP.get_response(URI(url))
+  actual = "sha384-#{Digest::SHA384.base64digest(response.body.to_s)}"
+  if response.code == "200" && actual == expected
+    passed += 1
+    puts "  ok: #{url}"
+  else
+    failed += 1
+    puts "  FAIL: #{url} (HTTP #{response.code}, #{actual})"
+  end
+rescue StandardError => e
+  failed += 1
+  puts "  FAIL: #{url} (#{e.class}: #{e.message})"
+end
+puts "RESULTS: #{passed} passed, #{failed} failed"
+RUBY
+)
+  echo "$output" | grep -v '^RESULTS'
+
+  local passed failed
+  passed=$(echo "$output" | grep 'RESULTS:' | grep -o '[0-9]* passed' | grep -o '[0-9]*')
+  failed=$(echo "$output" | grep 'RESULTS:' | grep -o '[0-9]* failed' | grep -o '[0-9]*')
+  if [ -n "$passed" ] && [ -n "$failed" ] && [ "$failed" -eq 0 ]; then
+    log_success "CDN integrity: ${passed} files match their pinned hashes"
+    echo "${passed}:0:OK" >> "$RESULTS_FILE"
+  else
+    log_error "CDN integrity: ${failed:-?} mismatched or unreachable"
+    echo "${passed:-0}:${failed:-1}:ERR" >> "$RESULTS_FILE"
+  fi
+}
+
 test_full_kitchen_sink() {
   log_header "APP 6/9: full_kitchen_sink — Every Config Option Enabled (production)"
 
@@ -1112,6 +1171,9 @@ case "$TARGET" in
   full_api)
     test_full_api
     ;;
+  cdn_integrity)
+    check_cdn_integrity
+    ;;
   full_kitchen_sink)
     test_full_kitchen_sink
     ;;
@@ -1143,9 +1205,10 @@ case "$TARGET" in
     test_full_multi_app
     test_full_solid_queue
     test_full_upgrade
+    check_cdn_integrity
     ;;
   *)
-    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_api|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade]"
+    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_api|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade|cdn_integrity]"
     exit 1
     ;;
 esac

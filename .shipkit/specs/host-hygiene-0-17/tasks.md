@@ -47,7 +47,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     - each one has a vendored copy in `spec/support/vendor/`
   - After: none
   - Done when: `R rspec spec/requests/cdn_integrity_spec.rb spec/system/chart_date_locale_spec.rb` → 0 failures
-- [ ] **T5** Integrity on every CDN tag, checked against the copies → REQ-5, REQ-7
+- [x] **T5** Integrity on every CDN tag, checked against the copies → REQ-5, REQ-7
   - Files: app/views/layouts/rails_error_dashboard.html.erb, spec/requests/cdn_integrity_spec.rb, bin/pre-release-test
   - Test: cdn_integrity_spec:
     - every off-site `<script src>` and stylesheet `<link>` except Google Fonts has `integrity` and

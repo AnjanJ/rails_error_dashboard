@@ -51,4 +51,25 @@ RSpec.describe "CDN files in the dashboard layout", type: :request do
       expect(File).to exist(vendored_copy(url)), "no vendored copy of #{url}"
     end
   end
+
+  # host-hygiene-0-17/REQ-5. Google Fonts serves CSS generated per browser,
+  # which no hash can pin; it can't run script.
+  it "loads every off-site script and stylesheet with integrity and crossorigin, Google Fonts aside" do
+    pinned = off_site_tags.reject { |_tag, url| url.start_with?("https://fonts.googleapis.com/") }
+
+    expect(pinned.size).to eq(10)
+    pinned.each do |tag, url|
+      expect(tag["integrity"]).to start_with("sha384-"), "no integrity hash on #{url}"
+      expect(tag["crossorigin"]).to eq("anonymous"), "no crossorigin=anonymous on #{url}"
+    end
+  end
+
+  # host-hygiene-0-17/REQ-7
+  it "pins each file to the exact bytes of its vendored copy" do
+    jsdelivr_tags.each do |tag, url|
+      expected = "sha384-#{Digest::SHA384.base64digest(File.binread(vendored_copy(url)))}"
+
+      expect(tag["integrity"]).to eq(expected), "#{url} is pinned to other bytes than its vendored copy"
+    end
+  end
 end
