@@ -57,7 +57,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     `release_audit` compares the same values with the live files.
   - After: T4, T3
   - Done when: `R rspec spec/requests/cdn_integrity_spec.rb` → 0 failures, and `R rspec spec/system/` → 0 failures
-- [ ] **T6** A concurrent-ruby floor and a true comment → REQ-8, REQ-9
+- [x] **T6** A concurrent-ruby floor and a true comment → REQ-8, REQ-9
   - Files: rails_error_dashboard.gemspec, spec/gemspec_dependencies_spec.rb
   - Test: gemspec_dependencies_spec: the concurrent-ruby requirement rejects 1.3.6 and 2.0.0, and
     accepts 1.3.7 and 1.4.0
