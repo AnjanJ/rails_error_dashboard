@@ -45,7 +45,7 @@ Chaos tests create real Rails apps in `/tmp`, install the gem, and run in produc
 
 ### Lefthook Pre-Commit
 Runs automatically on `git commit`:
-- Stage 1 (parallel): RuboCop, changed specs, bundle-audit, debugger check, i18n-check (locale files), whitespace
+- Stage 1 (one at a time; `piped: true`): RuboCop, changed specs, bundle-audit, debugger check, i18n-check (locale files), whitespace
 - Stage 2 (sequential): chaos tests (`bin/pre-release-test all`)
 
 Skip chaos tests: `LEFTHOOK_EXCLUDE=chaos-tests git commit -m "msg"`

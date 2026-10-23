@@ -92,7 +92,7 @@ Every major error-tracking SDK has had an incident where it damaged the host app
 
 ## Code Review Checklist
 
-When reviewing changes to the capture path (`middleware/`, `error_subscriber.rb`, `commands/log_error.rb`, `commands/find_or_increment_error.rb`):
+When reviewing changes to the capture path (`middleware/`, `error_reporter.rb`, `commands/log_error.rb`, `commands/find_or_increment_error.rb`):
 
 - [ ] Every public method has a rescue clause
 - [ ] No `raise` statements (except re-raising the original)

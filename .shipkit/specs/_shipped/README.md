@@ -10,3 +10,10 @@ not read status lines. Moving the directory one level down takes it out of the s
 keeping the history next to the live specs.
 
 Live specs stay directly under `.shipkit/specs/`.
+
+## Paths you can't open
+
+Some shipped specs cite files under `tasks/` or `review-evidence/`. Both folders hold the
+maintainer's private working notes and review material and are gitignored, so those files
+aren't in the repository. Each spec still states its requirements, decisions and evidence on
+its own; the cited files were where the work started, not part of the record.

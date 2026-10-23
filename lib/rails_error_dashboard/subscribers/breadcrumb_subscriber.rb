@@ -8,7 +8,7 @@ module RailsErrorDashboard
     # BreadcrumbCollector.add. The subscribers are registered once at boot when
     # enable_breadcrumbs is true.
     #
-    # SAFETY RULES (HOST_APP_SAFETY.md):
+    # SAFETY RULES (.claude/skills/host-app-safety/SKILL.md):
     # - Every subscriber wrapped in rescue => e; nil
     # - Never raise from subscriber callbacks
     # - Skip if buffer is nil (not in a request context)
