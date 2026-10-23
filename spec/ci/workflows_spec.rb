@@ -178,6 +178,42 @@ RSpec.describe "GitHub Actions workflows" do
     end
   end
 
+  # A required check. Each tool must be able to fail it: nothing may continue
+  # on error, and each runs with the options that make it strict.
+  describe "ci.yml: the audit job" do
+    let(:audit) { jobs("ci.yml").fetch("audit") }
+
+    def audit_step(command)
+      audit.fetch("steps").find { |step| step["run"].to_s.include?(command) }
+    end
+
+    it "reports as `audit`, with the read-only token, and never continues on error" do
+      expect(audit).not_to have_key("name")
+      expect(effective_permissions("ci.yml", "audit")).to eq({ "contents" => "read" })
+      expect([ audit, *audit.fetch("steps") ].map { |entry| entry["continue-on-error"] }.compact).to eq([])
+    end
+
+    it "checks the bundle against an advisory database fetched in the same run (test-gaps-0-17/REQ-16)" do
+      expect(audit_step("bundle-audit")["run"]).to include("bundle-audit check --update")
+    end
+
+    it "runs actionlint from a release checked against a pinned SHA-256 (test-gaps-0-17/REQ-17)" do
+      script = audit_step("actionlint")["run"]
+
+      expect(script).to include("sha256sum --check", "./actionlint")
+      expect(audit.dig("env", "ACTIONLINT_SHA256")).to match(/\A\h{64}\z/)
+    end
+
+    it "runs zizmor online on every workflow at low severity and up (test-gaps-0-17/REQ-18)" do
+      step = audit_step("zizmor")
+
+      expect(step["run"]).to include("--min-severity low", ".github/workflows/")
+      expect(step["run"]).not_to include("--offline")
+      expect(step.dig("env", "GH_TOKEN")).to eq("${{ github.token }}")
+      expect(audit.dig("env", "ZIZMOR_VERSION")).to match(/\A\d+\.\d+\.\d+\z/)
+    end
+  end
+
   describe "release.yml" do
     let(:release_jobs) { jobs("release.yml") }
 
