@@ -6,7 +6,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. The shell exports a stale
 `RAILS_VERSION` that re-pins the lockfile. Run one rspec process at a time.
 
-- [ ] **T1** Issue and verify short-lived stream tokens → REQ-1, REQ-2
+- [x] **T1** Issue and verify short-lived stream tokens → REQ-1, REQ-2
   - Files: lib/rails_error_dashboard/services/live_stream_token.rb, lib/rails_error_dashboard.rb, spec/services/live_stream_token_spec.rb
   - Test: live_stream_token_spec:
     - a token issued for a RED stream verifies to that stream, with `expires_at` 10 minutes after issue;
