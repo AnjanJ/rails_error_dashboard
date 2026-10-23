@@ -61,6 +61,22 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
       expect(described_class.available?).to be false
     end
 
+    # live-updates-hardening-0-17/REQ-12: nobody could subscribe, so nothing is
+    # rendered or broadcast.
+    it "returns false when the live-updates channel is not loaded" do
+      stub_const("Turbo", Module.new)
+      server = double("server", pubsub: double("pubsub"))
+      cable = Module.new
+      cable.define_singleton_method(:server) { server }
+      stub_const("ActionCable", cable)
+      described_class.instance_variable_set(:@broadcast_unavailable_until, nil)
+      expect(described_class.available?).to be true # control: everything else is available
+
+      hide_const("RailsErrorDashboard::LiveUpdatesChannel")
+
+      expect(described_class.available?).to be false
+    end
+
     it "returns true when Turbo and ActionCable are available" do
       stub_const("Turbo", Module.new)
       pubsub = double("pubsub")
@@ -250,30 +266,30 @@ RSpec.describe RailsErrorDashboard::Services::ErrorBroadcaster do
     end
 
     it "names streams in one place, for the view and the broadcaster alike" do
-      expect(described_class.stream_name(:list)).to eq("error_list")
-      expect(described_class.stream_name(:list, 7)).to eq("error_list_app_7")
-      expect(described_class.stream_name(:updates, "7")).to eq("error_updates_app_7")
-      expect(described_class.stream_name(:updates, nil)).to eq("error_updates")
-      expect(described_class.stream_name(:updates, "")).to eq("error_updates")
+      expect(described_class.stream_name(:list)).to eq("rails_error_dashboard:error_list")
+      expect(described_class.stream_name(:list, 7)).to eq("rails_error_dashboard:error_list_app_7")
+      expect(described_class.stream_name(:updates, "7")).to eq("rails_error_dashboard:error_updates_app_7")
+      expect(described_class.stream_name(:updates, nil)).to eq("rails_error_dashboard:error_updates")
+      expect(described_class.stream_name(:updates, "")).to eq("rails_error_dashboard:error_updates")
     end
 
     it "never builds a stream name out of unvalidated text" do
-      expect(described_class.stream_name(:list, "7; DROP")).to eq("error_list_app_0")
+      expect(described_class.stream_name(:list, "7; DROP")).to eq("rails_error_dashboard:error_list_app_0")
       expect { described_class.stream_name(:nope) }.to raise_error(KeyError)
     end
 
     it "prepends a new row to the global list and to its application's list" do
       described_class.broadcast_new(row)
 
-      expect(channel).to have_received(:broadcast_prepend_to).with("error_list", hash_including(target: "error_list"))
+      expect(channel).to have_received(:broadcast_prepend_to).with("rails_error_dashboard:error_list", hash_including(target: "error_list"))
       expect(channel).to have_received(:broadcast_prepend_to)
-        .with("error_list_app_#{app_id}", hash_including(target: "error_list"))
+        .with("rails_error_dashboard:error_list_app_#{app_id}", hash_including(target: "error_list"))
     end
 
     it "replaces an updated row on the global and the application update streams" do
       described_class.broadcast_update(row)
 
-      %W[error_updates error_updates_app_#{app_id}].each do |stream|
+      %W[rails_error_dashboard:error_updates rails_error_dashboard:error_updates_app_#{app_id}].each do |stream|
         expect(channel).to have_received(:broadcast_replace_to).with(stream, hash_including(target: "error_#{row.id}"))
       end
       expect(channel).not_to have_received(:broadcast_prepend_to)

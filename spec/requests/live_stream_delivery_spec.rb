@@ -54,9 +54,9 @@ RSpec.describe "Live stream delivery", type: :request do
     confirmed = []
 
     streams = [
-      "error_list",
-      "error_list_app_#{app_a.id}",
-      "error_list_app_#{app_b.id}"
+      "rails_error_dashboard:error_list",
+      "rails_error_dashboard:error_list_app_#{app_a.id}",
+      "rails_error_dashboard:error_list_app_#{app_b.id}"
     ]
     streams.each do |stream|
       pubsub.subscribe(stream, ->(message) { received[stream] << message },
@@ -67,24 +67,55 @@ RSpec.describe "Live stream delivery", type: :request do
     # Built before the count is taken: creating the row broadcasts by itself
     # (after_create_commit), and that broadcast is not the one under test.
     row = create(:error_log, application: app_a)
-    wait_until { received["error_list"].any? }
+    wait_until { received["rails_error_dashboard:error_list"].any? }
     # Plain Hash with a 0 default: a stream that has received nothing yet must
     # read as 0 here, not nil.
     baseline = Hash.new(0).merge(streams.to_h { |stream| [ stream, received[stream].size ] })
 
     broadcaster.broadcast_new(row)
-    wait_until { received["error_list"].size > baseline["error_list"] }
+    wait_until { received["rails_error_dashboard:error_list"].size > baseline["rails_error_dashboard:error_list"] }
 
     delivered = ->(stream) { received[stream].size - baseline[stream] }
 
     aggregate_failures do
-      expect(delivered.call("error_list")).to eq(1)
-      expect(delivered.call("error_list_app_#{app_a.id}")).to eq(1)
-      expect(delivered.call("error_list_app_#{app_b.id}")).to eq(0)
+      expect(delivered.call("rails_error_dashboard:error_list")).to eq(1)
+      expect(delivered.call("rails_error_dashboard:error_list_app_#{app_a.id}")).to eq(1)
+      expect(delivered.call("rails_error_dashboard:error_list_app_#{app_b.id}")).to eq(0)
     end
 
     # The payload is the row itself, not a bare notification: a tab that
     # receives it has everything it needs to prepend.
-    expect(received["error_list_app_#{app_a.id}"].last.to_s).to include("error_#{row.id}")
+    expect(received["rails_error_dashboard:error_list_app_#{app_a.id}"].last.to_s).to include("error_#{row.id}")
+  end
+
+  # live-updates-hardening-0-17/REQ-4: pages served before 0.17.0 carry Turbo
+  # tokens for these names that never expire. Nothing is broadcast to them.
+  it "sends nothing to the stream names used before 0.17.0" do
+    app = create(:application, name: "LegacyNamesApp")
+    row = create(:error_log, application: app)
+
+    received = Hash.new { |hash, key| hash[key] = [] }
+    pubsub = ActionCable.server.pubsub
+    confirmed = []
+
+    legacy = %w[error_list error_updates error_stats].flat_map { |base| [ base, "#{base}_app_#{app.id}" ] }
+    current = [
+      broadcaster.stream_name(:list), broadcaster.stream_name(:list, app.id),
+      broadcaster.stream_name(:updates), broadcaster.stream_name(:updates, app.id)
+    ]
+    streams = (legacy + current).uniq
+    streams.each do |stream|
+      pubsub.subscribe(stream, ->(message) { received[stream] << message }, -> { confirmed << stream })
+    end
+    wait_until { confirmed.size == streams.size }
+
+    broadcaster.broadcast_new(row)
+    broadcaster.broadcast_update(row)
+    wait_until { current.all? { |stream| received[stream].any? } }
+
+    aggregate_failures do
+      current.each { |stream| expect(received[stream]).not_to be_empty, "#{stream} received nothing" }
+      legacy.each { |stream| expect(received[stream]).to be_empty, "#{stream} still receives broadcasts" }
+    end
   end
 end

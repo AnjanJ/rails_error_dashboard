@@ -15,18 +15,28 @@ module RailsErrorDashboard
     # are NOT available there. We render via the engine's own controller renderer
     # and pass pre-rendered HTML to the broadcast to ensure route helpers work.
     class ErrorBroadcaster
-      # Stream names, in ONE place for the view (turbo_stream_from) and for this
-      # class. Two kinds, because a Turbo subscription is all-or-nothing per
+      # Stream names, in ONE place for the view (red_live_updates_tags) and for
+      # this class. Two kinds, because a subscription is all-or-nothing per
       # stream and the index needs them separately: a view filtered by platform
       # wants row REPLACES (harmless: they only touch rows already on the page)
       # but not PREPENDS (a new row may not match its filter).
       #
-      # Every kind exists globally and per application ("error_list_app_7"), so
-      # a view filtered to one application never receives another's rows.
+      # Every kind exists globally and per application
+      # ("rails_error_dashboard:error_list_app_7"), so a view filtered to one
+      # application never receives another's rows.
+      #
+      # Pages are subscribed through LiveUpdatesChannel with short-lived tokens
+      # (LiveStreamToken), never through Turbo::StreamsChannel, whose signed
+      # names never expire. The names changed in 0.17.0 for the same reason:
+      # pages served before then carry Turbo tokens for the old names
+      # ("error_list", ...), and nothing is broadcast to those any more.
       #
       # There is no stats stream: no built-in page has a stats target, and the
       # payload was a full DashboardStats computation on the capture path.
-      STREAMS = { list: "error_list", updates: "error_updates" }.freeze
+      STREAMS = {
+        list: "rails_error_dashboard:error_list",
+        updates: "rails_error_dashboard:error_updates"
+      }.freeze
 
       # Column visibility (which optional cells a row has) used to be two
       # SELECT DISTINCT scans per broadcast. It changes about never.
@@ -43,14 +53,14 @@ module RailsErrorDashboard
         "#{base}_app_#{application_id.to_s[/\A\d+\z/].to_i}"
       end
 
-      # The streams a dashboard index page subscribes to.
+      # The streams a dashboard index page subscribes to, by kind.
       # @param application_id [Integer, String, nil] the page's application filter
       # @param filtered [Boolean] any OTHER filter, a sort or a later page is active,
       #   so a new row cannot simply be put on top of the list
-      # @return [Array<String>]
+      # @return [Hash{Symbol => String}]
       def self.streams_for_view(application_id: nil, filtered: false)
         kinds = filtered ? %i[updates] : %i[list updates]
-        kinds.map { |kind| stream_name(kind, application_id) }
+        kinds.to_h { |kind| [ kind, stream_name(kind, application_id) ] }
       end
 
       # Broadcast a new error (prepend to the error list)
@@ -155,7 +165,8 @@ module RailsErrorDashboard
       # before rendering stream tags, so the two cannot disagree.
       # Returns false when config.enable_live_updates is off (the default:
       # broadcasting runs on the capture path), when Turbo/ActionCable isn't
-      # loaded, or when the ActionCable pubsub adapter can't be reached (e.g.,
+      # loaded, when RED's LiveUpdatesChannel isn't (nobody could subscribe),
+      # or when the ActionCable pubsub adapter can't be reached (e.g.,
       # Redis down). Uses a 60-second cooldown after failure to avoid
       # hammering a dead Redis on every error (issue #114).
       # @return [Boolean]
@@ -163,6 +174,7 @@ module RailsErrorDashboard
         return false unless RailsErrorDashboard.configuration.enable_live_updates
         return false unless defined?(Turbo)
         return false unless defined?(ActionCable)
+        return false unless defined?(RailsErrorDashboard::LiveUpdatesChannel)
 
         # Circuit breaker: skip broadcast attempts for 60s after a failure
         if @broadcast_unavailable_until && Time.current < @broadcast_unavailable_until

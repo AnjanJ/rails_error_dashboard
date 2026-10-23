@@ -38,7 +38,7 @@ cites `live-updates-hardening-0-17/REQ-N`. One commit per task, test and code to
     - live_stream_scoping_spec: no list subscribes to a stats stream
   - After: none
   - Done when: `R rspec spec/lib/rails_error_dashboard/services/error_broadcaster_spec.rb spec/requests/live_stream_scoping_spec.rb spec/requests/live_stream_delivery_spec.rb spec/integration/capture_query_budget_spec.rb spec/views/rails_error_dashboard/errors/_stats.html.erb_spec.rb spec/system/live_updates_spec.rb` → 0 failures
-- [ ] **T4** Subscribe through RED's channel, on renamed streams → REQ-1, REQ-4
+- [x] **T4** Subscribe through RED's channel, on renamed streams → REQ-1, REQ-4
   - Files: lib/rails_error_dashboard/services/error_broadcaster.rb, app/helpers/rails_error_dashboard/application_helper.rb, app/views/rails_error_dashboard/errors/index.html.erb, app/controllers/rails_error_dashboard/errors_controller.rb, spec/lib/rails_error_dashboard/services/error_broadcaster_spec.rb, spec/requests/live_stream_scoping_spec.rb, spec/requests/live_stream_delivery_spec.rb, spec/requests/live_updates_client_spec.rb, spec/system/live_updates_spec.rb
   - Test:
     - live_stream_scoping_spec:
