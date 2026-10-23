@@ -391,6 +391,20 @@ RSpec.describe RailsErrorDashboard::Services::BreadcrumbCollector do
       expect(described_class.filter_sensitive([])).to eq([])
     end
 
+    # capture-hardening-0-17/REQ-7
+    it "withholds the breadcrumbs when the filter can't be built" do
+      allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:parameter_filter).and_return(nil)
+
+      expect(described_class.filter_sensitive([ { c: "sql", m: "SELECT 1 password=x" } ])).to eq([])
+    end
+
+    # capture-hardening-0-17/REQ-6
+    it "withholds the breadcrumbs when filtering raises" do
+      allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:filter_message).and_raise(RuntimeError, "boom")
+
+      expect(described_class.filter_sensitive([ { c: "sql", m: "SELECT 1 password=x" } ])).to eq([])
+    end
+
     it "never raises" do
       expect { described_class.filter_sensitive(nil) }.not_to raise_error
       expect { described_class.filter_sensitive("bad") }.not_to raise_error

@@ -93,7 +93,7 @@ module RailsErrorDashboard
         # what counts as safe to emit. filter_attributes returns its input
         # unchanged when filter_sensitive_data is off and rescues internally.
         msg = Services::SensitiveDataFilter.filter_attributes(
-          message: exception.message.to_s
+          message: Services::CaptureLimits.message(exception.message.to_s)
         )[:message].to_s
         {
           "error.type" => exception.class.name,
@@ -127,10 +127,20 @@ module RailsErrorDashboard
         # message, a backtrace line or the context would raise right here. The
         # identity above is still taken from the raw exception, exactly as the
         # sync path takes it, so grouping is unchanged.
+        #
+        # Size limits come first of all: the scrub, the redaction below and
+        # ActiveJob's JSON encoding all run on this thread, and a megabyte
+        # message or body must not cost the request that much work.
+        if context[:request_params].is_a?(String)
+          context = context.merge(request_params: Services::CaptureLimits.request_params(context[:request_params]))
+        end
+        # The message is limited below; redaction can then make it longer, so
+        # the worker must not limit it again and misreport how much was cut.
+        context = context.merge(_message_limited: true)
         context = Services::EncodingSanitizer.scrub_deep(context)
         exception_data = Services::EncodingSanitizer.scrub_deep(
           class_name: exception.class.name,
-          message: exception.message,
+          message: Services::CaptureLimits.message(exception.message),
           backtrace: exception.backtrace,
           cause_chain: serialize_cause_chain(exception)
         )
@@ -243,7 +253,9 @@ module RailsErrorDashboard
           RailsErrorDashboard::Logger.error(
             "[RailsErrorDashboard] Async enqueue failed (#{e.class}: #{e.message}), falling back to sync logging"
           )
-          new(exception, context).call
+          # The raw exception goes to the sync path, so its message has not
+          # been limited, whatever the half-built payload says.
+          new(exception, context.except(:_message_limited)).call
         end
       end
 
@@ -329,6 +341,9 @@ module RailsErrorDashboard
 
             context = context.merge(key => param_filter.filter(value))
           end
+        else
+          # No filter, no params: withheld rather than queued raw (fail closed).
+          context = context.except(*CONTEXT_PARAM_KEYS)
         end
 
         # The raw session ID must not sit in Redis / Solid Queue either.
@@ -338,11 +353,17 @@ module RailsErrorDashboard
 
         [ exception_data, context ]
       rescue => e
-        # Never fail a capture over redaction. Fall back to the previous
-        # behaviour: the row itself is still filtered before the INSERT.
+        # Never fail a capture over redaction, and never ship the raw payload
+        # either: withhold what redaction was meant to clean (fail closed). The
+        # identity was taken from the raw exception, so grouping is unchanged.
         RailsErrorDashboard::Logger.error(
           "[RailsErrorDashboard] Async payload redaction failed: #{e.class} - #{e.message}"
         )
+        withheld = Services::SensitiveDataFilter::FILTERED_REPLACEMENT
+        exception_data = exception_data.merge(message: withheld, cause_chain: nil)
+        context = context.except(*CONTEXT_PARAM_KEYS, :session_id)
+        context = context.merge(request_params: withheld) unless context[:request_params].nil?
+        context = context.merge(request_url: withheld) unless context[:request_url].nil?
         [ exception_data, context ]
       end
 
@@ -362,7 +383,9 @@ module RailsErrorDashboard
 
           chain << {
             class_name: current.class.name,
-            message: current.message&.to_s,
+            # The same 1,000 characters the sync CauseChainExtractor keeps: the
+            # filter runs over these on the request thread.
+            message: current.message&.to_s&.slice(0, Services::CauseChainExtractor::MAX_MESSAGE_LENGTH),
             backtrace: current.backtrace&.first(20)&.map { |line| Services::BacktraceProcessor.shorten_gem_path(Services::EncodingSanitizer.scrub(line)) }
           }
 
@@ -439,11 +462,14 @@ module RailsErrorDashboard
           # rebuilt as StandardError, and that name must not become the group
           # identity. Falls back to the real class for every ordinary capture.
           error_type: reported_error_type || @exception.class.name,
-          message: @exception.message,
+          # Limited before the filter, so its regexes see bounded input; the
+          # fingerprint below hashes the raw message, so grouping is unchanged.
+          # An async capture's message was limited on the request thread.
+          message: @context[:_message_limited] ? @exception.message : Services::CaptureLimits.message(@exception.message),
           backtrace: truncated_backtrace,
           user_id: ErrorLog.storable_user_id(error_context.user_id),
           request_url: error_context.request_url,
-          request_params: error_context.request_params,
+          request_params: Services::CaptureLimits.request_params(error_context.request_params),
           user_agent: error_context.user_agent,
           ip_address: error_context.ip_address,
           platform: error_context.platform,
@@ -534,6 +560,9 @@ module RailsErrorDashboard
 
         # Apply sensitive data filtering (on by default)
         attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
+        # [FILTERED] is longer than many values it replaces: params that were
+        # just under the limit can be over it now.
+        attributes[:request_params] = Services::CaptureLimits.request_params(attributes[:request_params])
 
         # Fit string metadata to its columns (after hashing, before writing)
         attributes = ErrorLog.clamp_string_attributes(attributes)
@@ -639,6 +668,11 @@ module RailsErrorDashboard
         # grouping command keeps an earlier occurrence's user or locals beside
         # this one's URL, the row displays a mixture, and only that command can
         # see it. Passing nil lets it decide between "full" and "partial".
+        #
+        # The size net runs last, on everything the row and its occurrence
+        # context will hold: MySQL rejects the whole INSERT for one TEXT value
+        # over 65,535 bytes, and that used to lose the error.
+        attributes = ErrorLog.clamp_text_attributes(attributes)
         error_log = ErrorLog.find_or_increment_by_hash(
           error_hash,
           attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : nil)

@@ -428,7 +428,7 @@ config.llm_api_key = -> { Rails.application.credentials.dig(:openai, :api_key) }
 config.llm_model = "gpt-5"
 ```
 
-> **Privacy:** AI Help sends the error's details (backtrace, context, and your question) to the configured provider (OpenAI or Anthropic). Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted as `[FILTERED]` before they leave your app.
+> **Privacy:** AI Help sends the error's details (backtrace, context, and your question) to the configured provider (OpenAI or Anthropic). Keep `config.filter_sensitive_data = true` (the default) so sensitive values are redacted as `[FILTERED]` before they leave your app. Redaction of free text such as the error message is best-effort: it catches `key=value`, `key: value`, JSON pairs, `Bearer` tokens and card numbers, not every secret a message can hold. Filtering fails closed: if a filter step fails, the field is stored as `[FILTERED]`.
 
 [Complete documentation →](docs/FEATURES.md#error-details-page)
 </details>
@@ -487,7 +487,7 @@ See the values of local variables and instance variables at the moment an except
 - TracePoint(`:raise`) captures locals and ivars before the stack unwinds
 - Strings, arrays and hashes are snapshotted at raise time (one level deep, bounded by the limits below), so an `ensure` block that cleans up state does not overwrite what you see. Other objects are kept by reference and show their state at serialization time
 - Configurable limits: max variable count, nesting depth, string truncation length
-- Sensitive data auto-filtered via Rails `filter_parameters` — passwords, tokens, and PII never stored
+- Sensitive data filtered via Rails `filter_parameters`: values under sensitive names are replaced with `[FILTERED]`, and free-text values get best-effort redaction
 - Never stores Binding objects — values extracted immediately, Binding is GC'd
 - Independent config flags: enable one or both
 

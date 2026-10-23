@@ -211,7 +211,7 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
         described_class.capture!(exception)
 
         data = read_crash_file
-        expect(data["message"].length).to be <= 10_000
+        expect(data["message"]).to eq(("x" * 10_000) + "… [10000 more characters]")
       end
 
       it "limits backtrace to 50 lines" do
@@ -280,6 +280,71 @@ RSpec.describe RailsErrorDashboard::Services::CrashCapture do
   end
 
   describe ".import!" do
+    # capture-hardening-0-17/REQ-15: the import wrote through
+    # FindOrIncrementError directly, so a crash's message and cause chain
+    # skipped the sensitive-data filter and the size limits every other
+    # capture route applies.
+    context "filtering and limits" do
+      before { RailsErrorDashboard.configuration.filter_sensitive_data = true }
+      after { RailsErrorDashboard::Services::SensitiveDataFilter.reset! }
+
+      # capture-hardening-0-17/REQ-1: the crash file is written by the dying
+      # process, so the marker has to be added there; the import can't count
+      # characters that were never written.
+      it "writes a long message to the crash file with the marker" do
+        described_class.enable!
+        described_class.capture!(RuntimeError.new("y" * 20_000))
+
+        expect(read_crash_file["message"]).to eq(("y" * 10_000) + "… [10000 more characters]")
+      end
+
+      # capture-hardening-0-17/REQ-5: the crash file now carries the marker,
+      # whose count differs with each message's length; it must not become
+      # part of the fingerprint, or one crash would split into many groups.
+      it "groups long crashes of different lengths together, as before the marker" do
+        described_class.enable!
+        prefix = "y" * 10_000
+        [ 500, 600 ].each do |extra|
+          error = RuntimeError.new(prefix + ("z" * extra))
+          error.set_backtrace([ "app/models/user.rb:42:in `save!'" ])
+          described_class.capture!(error)
+          described_class.import!
+        end
+
+        row = RailsErrorDashboard::ErrorLog.sole
+        expect(row.occurrence_count).to eq(2)
+        expect(row.error_hash).to eq(
+          RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+            error_type: "RuntimeError", message: prefix,
+            backtrace: "app/models/user.rb:42:in `save!'", application_id: row.application_id
+          )
+        )
+      end
+
+      it "filters and limits what it stores, and groups on the raw message" do
+        message = "login failed password=hunter2 " + ("x" * 20_000)
+        write_crash_file(build_crash_data(
+          message: message,
+          cause_chain: [ { class_name: "ArgumentError", message: "token=abc123 rejected" } ]
+        ))
+
+        described_class.import!
+
+        error_log = RailsErrorDashboard::ErrorLog.last
+        expect(error_log.message).to start_with("login failed password=[FILTERED] xxx")
+        expect(error_log.message).not_to include("hunter2")
+        expect(error_log.message).to end_with("more characters]")
+        expect(error_log.exception_cause).to include("token=[FILTERED]")
+        expect(error_log.exception_cause).not_to include("abc123")
+        expect(error_log.error_hash).to eq(
+          RailsErrorDashboard::Services::ErrorHashGenerator.from_attributes(
+            error_type: "RuntimeError", message: message,
+            backtrace: "app/models/user.rb:42:in `save!'", application_id: error_log.application_id
+          )
+        )
+      end
+    end
+
     context "happy path" do
       it "creates ErrorLog record from valid crash file" do
         write_crash_file(build_crash_data(

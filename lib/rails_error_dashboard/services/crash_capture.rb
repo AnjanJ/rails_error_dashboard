@@ -115,7 +115,9 @@ module RailsErrorDashboard
         def build_crash_data(exception)
           data = {
             exception_class: exception.class.name,
-            message: exception.message.to_s[0, 10_000],
+            # With the marker CaptureLimits adds everywhere else: the import
+            # can't count characters this process never wrote.
+            message: Services::CaptureLimits.message(exception.message.to_s),
             backtrace: exception.backtrace&.first(50),
             timestamp: Time.now.utc.iso8601,
             pid: Process.pid,
@@ -275,7 +277,11 @@ module RailsErrorDashboard
           if ErrorLog.column_names.include?("error_hash")
             attributes[:error_hash] = Services::ErrorHashGenerator.from_attributes(
               error_type: attributes[:error_type],
-              message: attributes[:message],
+              # Without the length marker: its count differs per message, and
+              # from_attributes hashes the whole (normalised) message, so it
+              # would split one crash into a group per length. Stripped, this
+              # is the text crash files held before the marker existed.
+              message: attributes[:message].to_s.sub(Services::CaptureLimits::MESSAGE_MARKER, ""),
               backtrace: backtrace_text,
               application_id: application.id
             )
@@ -288,6 +294,15 @@ module RailsErrorDashboard
           if ErrorLog.column_names.include?("last_seen_at")
             attributes[:last_seen_at] = occurred_at
           end
+
+          # The same cleaning every other capture route applies, after the
+          # fingerprint above has hashed the raw message: limits first so the
+          # filter sees bounded input, then the filter (fails closed), then the
+          # per-column nets so the row fits its columns on every adapter.
+          attributes[:message] = Services::CaptureLimits.message(attributes[:message])
+          attributes = Services::EncodingSanitizer.scrub_deep(attributes)
+          attributes = Services::SensitiveDataFilter.filter_attributes(attributes)
+          attributes = ErrorLog.clamp_text_attributes(ErrorLog.clamp_string_attributes(attributes))
 
           # Through the same find-or-increment as every other capture: a crash
           # that repeats on every restart is one row with a count, not a new

@@ -38,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`).
+Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-filtering) section, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
 
 ### Authentication & Access
 
@@ -1042,7 +1042,7 @@ config.breadcrumb_categories = [ :sql, :controller ]
 - **Thread-local** — no mutex/lock, each request isolated
 - **Cleanup in ensure** — buffer cleared even on exceptions (Puma thread reuse safe)
 - **Every subscriber wrapped in rescue** — never raises, never blocks
-- **Sensitive data filtered** — passwords, tokens, secrets scrubbed before storage
+- **Sensitive data filtered** — values under sensitive names are replaced with `[FILTERED]` before storage; free text gets best-effort redaction
 - **< 0.1ms/request overhead** — events already fired by Rails
 
 ---
@@ -1108,7 +1108,7 @@ end
 ### Safety
 
 - **Never stores Binding objects** — values extracted immediately, Binding is GC'd
-- **Sensitive data auto-filtered** — Rails `filter_parameters` applied automatically
+- **Sensitive data auto-filtered** — Rails `filter_parameters` applied automatically; free-text values get best-effort redaction
 - **Configurable limits** — all size limits enforced during serialization
 - **Opt-in only** — disabled by default
 

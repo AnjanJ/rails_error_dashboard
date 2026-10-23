@@ -233,17 +233,188 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
       end
     end
 
-    context "fail-safe behavior" do
+    # Filtering fails closed: a step that breaks stores [FILTERED], never the
+    # raw value it was meant to clean. Grouping is unaffected, because the
+    # fingerprint is taken before filtering.
+    context "when filtering breaks (fails closed)" do
+      let(:filtered_fields) { %i[message request_params request_url exception_cause] }
+
       before do
         RailsErrorDashboard.configuration.filter_sensitive_data = true
         allow(Rails.application.config).to receive(:filter_parameters).and_return([])
       end
 
-      it "returns original attributes if filtering raises unexpectedly" do
+      # capture-hardening-0-17/REQ-7
+      it "stores [FILTERED] for every filtered field when the filter can't be built" do
+        allow(described_class).to receive(:parameter_filter).and_return(nil)
+
+        result = described_class.filter_attributes(attributes.merge(error_type: "PaymentError"))
+
+        expect(result.slice(*filtered_fields).values).to all(eq("[FILTERED]"))
+        expect(result[:error_type]).to eq("PaymentError")
+      end
+
+      # capture-hardening-0-17/REQ-6
+      it "stores [FILTERED] for every filtered field when filtering raises" do
         allow(described_class).to receive(:parameter_filter).and_raise(RuntimeError, "boom")
 
         result = described_class.filter_attributes(attributes)
-        expect(result).to eq(attributes)
+
+        expect(result.slice(*filtered_fields).values).to all(eq("[FILTERED]"))
+      end
+
+      it "leaves a filtered field that is absent or nil as it is" do
+        allow(described_class).to receive(:parameter_filter).and_return(nil)
+
+        expect(described_class.filter_attributes(message: "boom", request_url: nil))
+          .to eq(message: "[FILTERED]", request_url: nil)
+      end
+
+      # capture-hardening-0-17/REQ-6: only a query Rack can't parse gets the
+      # pair-by-pair fallback; any other failure in the URL step fails closed.
+      it "stores [FILTERED] for the URL when its step raises for another reason" do
+        filter = described_class.parameter_filter
+        # Only the whole-query hash fails; per-key checks still work, so the
+        # pair-by-pair fallback, if it ran, would succeed and keep the URL.
+        allow(filter).to receive(:filter).and_wrap_original do |original, value|
+          raise "boom" if value.is_a?(Hash) && value.size > 1
+
+          original.call(value)
+        end
+
+        expect(described_class.filter_attributes(request_url: "/login?password=x&username=alice")[:request_url])
+          .to eq("[FILTERED]")
+      end
+
+      # capture-hardening-0-17/REQ-6
+      it "stores [FILTERED] for the one field whose step raises, and filters the others" do
+        filter = described_class.parameter_filter
+        allow(filter).to receive(:filter).and_wrap_original do |original, value|
+          raise "boom" if value.is_a?(Hash) && value.key?("email")
+
+          original.call(value)
+        end
+
+        result = described_class.filter_attributes(attributes)
+
+        expect(result[:request_params]).to eq("[FILTERED]")
+        expect(result[:request_url]).to include("password=%5BFILTERED%5D", "username=alice")
+        expect(result[:message]).to eq("Test error")
+      end
+    end
+
+    # Free-text redaction is best-effort: these are the shapes it recognises.
+    context "message shapes" do
+      before do
+        RailsErrorDashboard.configuration.filter_sensitive_data = true
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+      end
+
+      def filtered_message(message)
+        described_class.filter_attributes(message: message)[:message]
+      end
+
+      # capture-hardening-0-17/REQ-8
+      it "redacts key: value for a sensitive key, quoted or not, and keeps other keys" do
+        expect(filtered_message("login failed for password: hunter2 user: alice"))
+          .to eq("login failed for password: [FILTERED] user: alice")
+        expect(filtered_message('api_token: "two words"')).to eq("api_token: [FILTERED]")
+      end
+
+      # capture-hardening-0-17/REQ-8
+      it "redacts JSON pairs, keeping the JSON well formed" do
+        expect(filtered_message(%(unexpected token at '{"user":"a","token":"hunter2"'))).to eq(
+          %(unexpected token at '{"user":"a","token":"[FILTERED]"')
+        )
+        expect(filtered_message(%({"pin": 1234, "id": 7}))).to eq(%({"pin": "[FILTERED]", "id": 7}))
+      end
+
+      # capture-hardening-0-17/REQ-9
+      it "redacts a Bearer token" do
+        expect(filtered_message("401 with Authorization: Bearer eyJhbGc.eyJzdWIi.sig-_x=="))
+          .to eq("401 with Authorization: Bearer [FILTERED]")
+      end
+
+      # capture-hardening-0-17/REQ-9: a sensitive key in front of the token
+      # must not hide it -- the key's pass stops at the first space, so it
+      # would redact only the word "Bearer" and leave the token after it.
+      it "redacts the token when a sensitive key comes before Bearer" do
+        expect(filtered_message("retry with token: Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+        expect(filtered_message("retry with token=Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([ :authorization ])
+        described_class.reset!
+        expect(filtered_message("Authorization: Bearer abc.def-ghi")).not_to include("abc.def-ghi")
+      end
+
+      it "leaves ordinary text alone" do
+        message = "undefined method 'name' for nil (NoMethodError) at https://example.com/a?b=c: retrying"
+        expect(filtered_message(message)).to eq(message)
+      end
+
+      # capture-hardening-0-17/REQ-10
+      it "redacts a URL whose query string can't be parsed, pair by pair" do
+        result = described_class.filter_attributes(request_url: "/cb?token=hunter2&q=100%")[:request_url]
+
+        expect(result).to eq("/cb?token=[FILTERED]&q=100%")
+      end
+
+      # capture-hardening-0-17/REQ-10
+      it "redacts a URL with a bad %-escape, pair by pair" do
+        result = described_class.filter_attributes(request_url: "/login?password=hunter2&x=%zz")[:request_url]
+
+        expect(result).to eq("/login?password=[FILTERED]&x=%zz")
+      end
+
+      # capture-hardening-0-17/REQ-12: every pattern stays linear on
+      # untrusted text; catastrophic backtracking would take seconds here.
+      [
+        [ "a word run", "a" * 10_000 ],
+        [ "colon pairs", "a:" * 5_000 ],
+        [ "equals pairs", "a=" * 5_000 ],
+        [ "JSON keys", '"a":' * 2_500 ],
+        [ "quotes", '"' * 10_000 ],
+        [ "an unterminated JSON string", '{"token":"' + ("x" * 9_990) ],
+        [ "unterminated quoted values", 'a: "' * 2_500 ],
+        [ "Bearer runs", "Bearer " * 1_428 ],
+        [ "many key: value matches", "a: b " * 2_000 ],
+        [ "many JSON pairs", '"a":1,' * 1_666 ]
+      ].each do |label, message|
+        it "filters 10,000 characters of #{label} in under 50 ms" do
+          described_class.filter_attributes(message: "warm up password: x")
+          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          described_class.filter_attributes(message: message)
+          elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+
+          expect(elapsed_ms).to be < 50
+        end
+      end
+    end
+
+    # capture-hardening-0-17/REQ-11: text that isn't JSON is an input shape,
+    # not a filter failure -- it gets the message rules rather than being
+    # stored as it came, or thrown away.
+    context "when params or the cause chain aren't JSON" do
+      before do
+        RailsErrorDashboard.configuration.filter_sensitive_data = true
+        allow(Rails.application.config).to receive(:filter_parameters).and_return([])
+      end
+
+      it "redacts request params with the message rules" do
+        result = described_class.filter_attributes(attributes.merge(request_params: "password=secret123 note=kept"))
+
+        expect(result[:request_params]).to eq("password=[FILTERED] note=kept")
+      end
+
+      it "redacts a cause chain with the message rules" do
+        result = described_class.filter_attributes(attributes.merge(exception_cause: "token=abc123 broke"))
+
+        expect(result[:exception_cause]).to eq("token=[FILTERED] broke")
+      end
+
+      it "filters a JSON array of params" do
+        result = described_class.filter_attributes(attributes.merge(request_params: '[{"password":"secret123","id":1}]'))
+
+        expect(JSON.parse(result[:request_params])).to eq([ { "password" => "[FILTERED]", "id" => 1 } ])
       end
     end
   end

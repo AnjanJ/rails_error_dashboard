@@ -382,4 +382,17 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       expect { gate.admit!(boom) }.to have_enqueued_job(RailsErrorDashboard::StormNotificationJob).exactly(:once)
     end
   end
+
+  # capture-hardening-0-17/REQ-6: the buffered exemplar fails closed too, so
+  # the raw message never reaches the storm flush job's queued arguments.
+  describe "redacting the exemplar message" do
+    after { RailsErrorDashboard.reset_configuration! }
+
+    it "stores [FILTERED] when redaction raises" do
+      RailsErrorDashboard.configuration.filter_sensitive_data = true
+      allow(RailsErrorDashboard::Services::SensitiveDataFilter).to receive(:filter_attributes).and_raise(RuntimeError, "boom")
+
+      expect(gate.send(:redact, "password=hunter2")).to eq("[FILTERED]")
+    end
+  end
 end

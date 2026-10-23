@@ -204,8 +204,10 @@ module RailsErrorDashboard
         return [] unless breadcrumbs.is_a?(Array)
         return breadcrumbs unless RailsErrorDashboard.configuration.filter_sensitive_data
 
+        # Fails closed, like SensitiveDataFilter: breadcrumbs that can't be
+        # filtered are not stored at all.
         filter = SensitiveDataFilter.parameter_filter
-        return breadcrumbs unless filter
+        return [] unless filter
 
         breadcrumbs.map do |crumb|
           filtered = crumb.dup
@@ -224,7 +226,7 @@ module RailsErrorDashboard
         end
       rescue => e
         RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] BreadcrumbCollector.filter_sensitive failed: #{e.message}")
-        breadcrumbs.is_a?(Array) ? breadcrumbs : []
+        []
       end
 
       # Apply the sensitive-data filter to a single breadcrumb's metadata hash,

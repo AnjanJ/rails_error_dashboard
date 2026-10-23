@@ -77,10 +77,12 @@ RSpec.describe "session ID digest" do
       expect(filter.digest_session_id(rack_id)).to eq(filter.digest_session_id(raw))
     end
 
-    it "falls back to a fixed key rather than raising when secret_key_base is blank" do
+    # capture-hardening-0-17/REQ-14: a digest under a key everyone knows
+    # protects nothing, so with no secret there is no digest at all.
+    it "returns nil, not a digest under a fixed key, when secret_key_base is blank" do
       allow(Rails.application).to receive(:secret_key_base).and_return(nil)
 
-      expect(filter.digest_session_id(raw)).to match(/\Ah1:\h{32}\z/)
+      expect(filter.digest_session_id(raw)).to be_nil
     end
 
     it "returns nil rather than raising, and never the raw value, when hashing fails" do
@@ -109,6 +111,15 @@ RSpec.describe "session ID digest" do
 
     it "stores nil when there is no session" do
       RailsErrorDashboard::Commands::LogError.call(boom)
+
+      expect(occurrences.last.session_id).to be_nil
+    end
+
+    # capture-hardening-0-17/REQ-14
+    it "stores no session ID when the app has no secret_key_base" do
+      allow(Rails.application).to receive(:secret_key_base).and_return("")
+
+      RailsErrorDashboard::Commands::LogError.call(boom, session_id: raw)
 
       expect(occurrences.last.session_id).to be_nil
     end
