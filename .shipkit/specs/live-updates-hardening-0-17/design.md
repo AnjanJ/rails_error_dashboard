@@ -119,9 +119,10 @@ expiry has to end it, or "short-lived" covers only the subscribe step.
 - Action Cable's channel test stub records `stream_from` without running the callback, so the spec
   calls the private callback directly. The real path is checked end to end with a raw WebSocket
   client before release.
-- A server that doesn't run Ruby stream callbacks (AnyCable may not) would deliver past expiry. There
-  the token is still checked when a subscription opens. The guide says so if AnyCable's docs confirm
-  it.
+- AnyCable doesn't run Ruby stream callbacks: its compatibility table lists custom stream callbacks
+  as unsupported (docs.anycable.io/rails/compatibility, checked 2026-10-23). There the token is
+  checked when a subscription opens, but an open subscription isn't cut at expiry. The guide says
+  so.
 - Option 2 would show up in a channel spec, but it costs a timer per subscription and leaves a
   window.
 - Option 3 leaves the gap this spec exists to close.
@@ -307,7 +308,9 @@ configuration that is easy to get wrong across Rails 7.0–8.1.
   - it swaps the sources make-before-break, and shows `#red-live-badge` only once every new source
     is `[connected]`;
   - it hides the badge on a failed fetch, or on a swap not connected within 15 s (the new sources
-    are dropped), and then retries after 30 s;
+    are dropped), and then retries after 30 s. A 401 or 403 is not retried on a timer: with Basic
+    auth each refused fetch can raise the browser's login prompt, so the page waits until the tab
+    is shown again;
   - it renews at once on `visibilitychange` (to visible), `pageshow` or `online`, when the last
     success is more than 4 minutes old.
 - **Kept:** `_stats.html.erb` and its keys. Its header comment and the `en.yml` comment are corrected.

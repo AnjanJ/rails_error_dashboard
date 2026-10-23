@@ -2259,7 +2259,11 @@ document.addEventListener('DOMContentLoaded', function() {
         cache: 'no-store',
         headers: { 'Accept': 'application/json' }
       }).then(function(response) {
-        if (!response.ok) throw new Error('renewal answered ' + response.status);
+        if (!response.ok) {
+          var error = new Error('renewal answered ' + response.status);
+          error.status = response.status;
+          throw error;
+        }
         return response.json();
       }).then(function(data) {
         return swap((data && data.tokens) || {});
@@ -2267,9 +2271,12 @@ document.addEventListener('DOMContentLoaded', function() {
         lastSuccess = Date.now();
         showBadge(true);
         schedule(renewEvery);
-      }, function() {
+      }, function(error) {
         showBadge(false);
-        schedule(retryAfter);
+        // A refusal is not retried on a timer: with Basic auth each refused
+        // fetch can raise the browser's login prompt. The page tries again
+        // when the viewer comes back to the tab.
+        if (!(error && (error.status === 401 || error.status === 403))) schedule(retryAfter);
       }).then(function() {
         renewing = false;
       });

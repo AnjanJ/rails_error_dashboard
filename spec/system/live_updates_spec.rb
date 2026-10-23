@@ -147,5 +147,26 @@ RSpec.describe "Live updates in the browser", type: :system do
       RailsErrorDashboard.configuration.enable_live_updates = true
       expect(page).to have_css("#red-live-badge", visible: :visible, wait: 10)
     end
+
+    # live-updates-hardening-0-17/REQ-9: a refusal is not retried on a timer.
+    # With Basic auth every refused fetch can raise the browser's login prompt,
+    # so the page waits until the viewer comes back to the tab.
+    it "stops renewing once the dashboard refuses the viewer" do
+      open_index_and_wait_for_subscriptions
+      renewals = []
+      counter = ->(*, payload) { renewals << payload[:status] if payload[:action] == "live_streams" }
+
+      ActiveSupport::Notifications.subscribed(counter, "process_action.action_controller") do
+        RailsErrorDashboard.configuration.authenticate_with = -> { false }
+        expect(page).to have_css("#red-live-badge", visible: :hidden, wait: 10)
+        refused = renewals.size
+
+        sleep(3 * lifetime / 2.0) # three renewal periods
+
+        expect(renewals.size).to eq(refused)
+      end
+    ensure
+      RailsErrorDashboard.configuration.authenticate_with = nil
+    end
   end
 end
