@@ -34,13 +34,15 @@ module RailsErrorDashboard
 
     # Initialize the engine
     initializer "rails_error_dashboard.middleware" do |app|
-      # Enable Flash middleware for Error Dashboard routes in API-only apps
-      # This ensures flash messages work even when config.api_only = true
+      # An API-only host runs no cookie or session middleware, and the
+      # dashboard's controllers need both (CSRF, the flash, the language
+      # picker). They go on the ENGINE's own stack, which Rails::Engine#app
+      # builds lazily and only requests routed into the dashboard pass
+      # through. The host's stack, and every API endpoint on it, stays as it
+      # is: a host action that writes the session still gets Rails'
+      # DisabledSessionError.
       if app.config.api_only
-        # Insert Flash middleware ONLY for Error Dashboard routes
-        app.middleware.use ActionDispatch::Flash
-        app.middleware.use ActionDispatch::Cookies
-        app.middleware.use ActionDispatch::Session::CookieStore
+        config.middleware.use RailsErrorDashboard::Middleware::DashboardSession
       end
 
       # Add error catching middleware if enabled

@@ -18,7 +18,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
     - `request.flash` works below it
   - After: none
   - Done when: `R rspec spec/lib/rails_error_dashboard/middleware/dashboard_session_spec.rb` → 0 failures
-- [ ] **T2** Session middleware on the engine's stack, not the host's → REQ-1
+- [x] **T2** Session middleware on the engine's stack, not the host's → REQ-1
   - Files: lib/rails_error_dashboard/engine.rb, spec/lib/rails_error_dashboard/engine_api_host_middleware_spec.rb
   - Test: engine_api_host_middleware_spec, with the initializer run against a stand-in:
     - an API-only app's middleware receives nothing from RED's session code;
