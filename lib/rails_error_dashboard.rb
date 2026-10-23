@@ -179,6 +179,7 @@ require "rails_error_dashboard/queries/release_timeline"
 require "rails_error_dashboard/error_reporter"
 require "rails_error_dashboard/middleware/error_catcher"
 require "rails_error_dashboard/middleware/rate_limiter"
+require "rails_error_dashboard/middleware/dashboard_session"
 
 # Plugin system
 require "rails_error_dashboard/plugin"

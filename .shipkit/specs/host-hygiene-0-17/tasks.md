@@ -6,7 +6,7 @@ cites `host-hygiene-0-17/REQ-N`. One commit per task, test and code together.
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. The shell exports a stale
 `RAILS_VERSION` that re-pins the lockfile. Run one rspec process at a time.
 
-- [ ] **T1** The dashboard's own session middleware → REQ-2, REQ-3, REQ-4
+- [x] **T1** The dashboard's own session middleware → REQ-2, REQ-3, REQ-4
   - Files: lib/rails_error_dashboard/middleware/dashboard_session.rb, lib/rails_error_dashboard.rb, spec/lib/rails_error_dashboard/middleware/dashboard_session_spec.rb
   - Test: dashboard_session_spec, with an env built from `Rails.application.env_config`:
     - with no session in the request, the app below sees a working session, and the response sets
