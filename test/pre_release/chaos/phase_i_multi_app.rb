@@ -154,6 +154,41 @@ end
 puts ""
 
 # ---------------------------------------------------------------------------
+# I7: Every one of Beta's migrations ran on the shared database
+# (the harness gives them versions after Alpha's, as a later install would)
+# test-gaps-0-17/REQ-12
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("I7: Second app's migrations replayed on the shared database")
+
+beta_versions = ENV.fetch("BETA_MIGRATION_VERSIONS", "").split(",")
+recorded = RailsErrorDashboard::ErrorLogsRecord.connection
+  .select_values("SELECT version FROM schema_migrations").map(&:to_s)
+missing_versions = beta_versions - recorded
+
+assert "I7: Beta's migration versions were handed over", beta_versions.any?
+assert "I7: all #{beta_versions.size} of Beta's migrations recorded", missing_versions.empty?,
+  "not recorded: #{missing_versions.first(5).inspect}"
+puts ""
+
+# ---------------------------------------------------------------------------
+# I8: Alpha's errors survived Beta's replay, environment and all
+# test-gaps-0-17/REQ-13
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("I8: First app's errors intact after the replay")
+
+snapshot_path = ENV.fetch("ALPHA_SNAPSHOT", "")
+snapshot = File.exist?(snapshot_path) ? JSON.parse(File.read(snapshot_path)).transform_keys(&:to_i) : {}
+current = RailsErrorDashboard::ErrorLog.where(id: snapshot.keys).pluck(:id, :environment).to_h
+lost = snapshot.keys - current.keys
+changed = snapshot.reject { |id, environment| !current.key?(id) || current[id] == environment }
+
+assert "I8: Alpha's snapshot holds errors (#{snapshot.size})", snapshot.any?
+assert "I8: every Alpha error still exists", lost.empty?, "lost ids: #{lost.first(5).inspect}"
+assert "I8: every Alpha error keeps its environment", changed.empty?,
+  "changed: #{changed.first(5).map { |id, env| "#{id}: #{env.inspect} -> #{current[id].inspect}" }.inspect}"
+puts ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 exit_code = PreReleaseTestHarness.summary("PHASE I")
