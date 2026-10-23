@@ -67,13 +67,22 @@ RSpec.describe "Live stream delivery", type: :request do
     # Built before the count is taken: creating the row broadcasts by itself
     # (after_create_commit), and that broadcast is not the one under test.
     row = create(:error_log, application: app_a)
-    wait_until { received["rails_error_dashboard:error_list"].any? }
+    # The async adapter delivers each stream on its own schedule. Wait for the
+    # create broadcast on BOTH streams that get it: a copy that reached the
+    # application stream after the baseline would be counted as delivered.
+    wait_until do
+      received["rails_error_dashboard:error_list"].any? &&
+        received["rails_error_dashboard:error_list_app_#{app_a.id}"].any?
+    end
     # Plain Hash with a 0 default: a stream that has received nothing yet must
     # read as 0 here, not nil.
     baseline = Hash.new(0).merge(streams.to_h { |stream| [ stream, received[stream].size ] })
 
     broadcaster.broadcast_new(row)
-    wait_until { received["rails_error_dashboard:error_list"].size > baseline["rails_error_dashboard:error_list"] }
+    wait_until do
+      received["rails_error_dashboard:error_list"].size > baseline["rails_error_dashboard:error_list"] &&
+        received["rails_error_dashboard:error_list_app_#{app_a.id}"].size > baseline["rails_error_dashboard:error_list_app_#{app_a.id}"]
+    end
 
     delivered = ->(stream) { received[stream].size - baseline[stream] }
 
