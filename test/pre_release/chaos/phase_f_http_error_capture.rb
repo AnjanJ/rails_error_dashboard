@@ -287,6 +287,67 @@ end
 puts ""
 
 # ---------------------------------------------------------------------------
+# F8: TracePoint features (the HTTP chaos app turns them on)
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("F8: Local variables, instance variables, swallowed exceptions")
+
+def parsed_json(text)
+  JSON.parse(text.to_s)
+rescue JSON::ParserError
+  {}
+end
+
+status = http_get("/test/variables_error")
+sleep 1
+refresh_db_connection!
+variables_log = RailsErrorDashboard::ErrorLog.where(error_type: "ChaosVariablesError").order(id: :desc).first
+
+assert "variables: HTTP returned 500 (#{status})", status == 500, "got #{status}"
+assert "variables: error captured", variables_log.present?
+
+# Stored as { name => { "type", "value", "truncated" } }. test-gaps-0-17/REQ-8
+locals = parsed_json(variables_log&.local_variables)
+assert "variables: local widget_count captured", locals.dig("widget_count", "value") == 7,
+  "got #{locals["widget_count"].inspect} (all: #{locals.keys.inspect})"
+assert "variables: local widget_label captured", locals.dig("widget_label", "value") == "chaos-label",
+  "got #{locals["widget_label"].inspect}"
+
+# Instance variables are keyed with their @. test-gaps-0-17/REQ-9
+ivars = parsed_json(variables_log&.instance_variables)
+assert "variables: instance variable @chaos_marker captured",
+  ivars.dig("@chaos_marker", "value") == "ivar-chaos-marker",
+  "got #{ivars["@chaos_marker"].inspect} (all: #{ivars.keys.inspect})"
+
+# A swallowed exception is written when a request on the SAME Puma thread
+# completes after the 1 s flush interval, so each round sends several
+# requests (a new app runs 3 threads), waits out the interval, and sends
+# several more. Buffers left on worker threads die with this server, so the
+# row has to appear during this run. test-gaps-0-17/REQ-10
+if RUBY_VERSION >= "3.3"
+  swallowed = nil
+  deadline = Time.now + 20
+  until swallowed || Time.now > deadline
+    6.times { http_get("/test/swallowed") }
+    sleep 1.2
+    6.times { http_get("/test/swallowed") }
+    refresh_db_connection!
+    swallowed = RailsErrorDashboard::SwallowedException
+      .where(exception_class: "ChaosSwallowedError")
+      .where.not(rescue_location: nil)
+      .first
+  end
+
+  assert "swallowed: ChaosSwallowedError recorded with its rescue", swallowed.present?,
+    "no rescue row within 20 s"
+  assert "swallowed: raise located in the test controller",
+    swallowed&.raise_location.to_s.include?("test_errors_controller.rb"),
+    "got #{swallowed&.raise_location.inspect}"
+else
+  puts "  SKIP: swallowed-exception detection needs Ruby 3.3+ (running #{RUBY_VERSION})"
+end
+puts ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 refresh_db_connection!

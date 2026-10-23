@@ -294,7 +294,19 @@ assert_http "GET /errors/n_plus_one_summary", get_status("/errors/n_plus_one_sum
 assert_http "GET /errors/cache_health_summary", get_status("/errors/cache_health_summary")
 assert_http "GET /errors/job_health_summary", get_status("/errors/job_health_summary")
 assert_http "GET /errors/database_health_summary", get_status("/errors/database_health_summary")
-assert_http "GET /errors/swallowed_exceptions", get_status("/errors/swallowed_exceptions")
+if RailsErrorDashboard.configuration.detect_swallowed_exceptions
+  # The page renders only with the feature on (off, it redirects), and phase F
+  # recorded a ChaosSwallowedError. The tracker also counts framework
+  # raise/rescue pairs, so ask for the largest page. test-gaps-0-17/REQ-11
+  uri = URI.parse("#{HTTP_BASE}/errors/swallowed_exceptions?per_page=100")
+  request = Net::HTTP::Get.new(uri.request_uri)
+  request.basic_auth(HTTP_USER, HTTP_PASS)
+  response = Net::HTTP.start(uri.host, uri.port, open_timeout: 10, read_timeout: 30) { |h| h.request(request) }
+  assert_http "GET /errors/swallowed_exceptions (feature on)", response.code.to_i, 200..200
+  assert "swallowed page lists ChaosSwallowedError", response.body.to_s.include?("ChaosSwallowedError")
+else
+  assert_http "GET /errors/swallowed_exceptions", get_status("/errors/swallowed_exceptions")
+end
 assert_http "GET /errors/rack_attack_summary", get_status("/errors/rack_attack_summary")
 assert_http "GET /errors/actioncable_health_summary", get_status("/errors/actioncable_health_summary")
 assert_http "GET /errors/activestorage_health_summary", get_status("/errors/activestorage_health_summary")

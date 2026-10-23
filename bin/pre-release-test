@@ -455,6 +455,9 @@ inject_test_fixtures() {
   cat > "$app_dir/app/controllers/test_errors_controller.rb" << 'RUBY'
 # Custom error class for testing custom severity rules
 class CustomTestError < StandardError; end
+# Raised in this file, so the TracePoint features see them as app code
+class ChaosVariablesError < StandardError; end
+class ChaosSwallowedError < StandardError; end
 
 class TestErrorsController < ApplicationController
   skip_forgery_protection
@@ -502,6 +505,25 @@ class TestErrorsController < ApplicationController
 
   def runtime_error
     raise RuntimeError, "Runtime error from test controller"
+  end
+
+  # Distinctive locals and an instance variable at the raise, for the variable
+  # capture checks. Names and values no sensitive-name filter matches.
+  def variables_error
+    @chaos_marker = "ivar-chaos-marker"
+    widget_count = 7
+    widget_label = "chaos-label"
+    raise ChaosVariablesError, "Variables error from test controller (#{widget_count} #{widget_label})"
+  end
+
+  # Raises and rescues without re-raising: a swallowed exception.
+  def swallowed
+    begin
+      raise ChaosSwallowedError, "Swallowed on purpose"
+    rescue ChaosSwallowedError
+      nil
+    end
+    render plain: "ok"
   end
 
   # Verification endpoint — returns error count as JSON (no error raised)
@@ -557,6 +579,8 @@ RUBY
   get "test/name_error"       => "test_errors#name_error"
   get "test/custom_error"     => "test_errors#custom_error"
   get "test/runtime_error"    => "test_errors#runtime_error"
+  get "test/variables_error"  => "test_errors#variables_error"
+  get "test/swallowed"        => "test_errors#swallowed"
   get "test/error_count"     => "test_errors#error_count"
 end
 ROUTES
