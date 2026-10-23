@@ -41,8 +41,8 @@ None asked. The maintainer took these decisions on 2026-10-22:
 - concurrent-ruby: floor `"~> 1.3", ">= 1.3.7"` plus a corrected comment.
 
 ## Assumptions made
-- **The API chaos app runs in `bin/pre-release-test all`**, so every chaos run (lefthook and PRs)
-  checks it, not only `release_audit`. It costs about a minute per run.
+- **The API chaos app runs in `bin/pre-release-test all`**, so every lefthook chaos run checks it,
+  not only `release_audit`. It costs about a minute per run. (PR CI runs neither.)
 - **The dashboard in an API host must keep working end to end:** login, a CSRF-protected POST, the
   flash after it, and the language picker. Those are the session's users, so the chaos app
   exercises them, not just page loads.
