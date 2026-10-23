@@ -82,6 +82,22 @@ RSpec.describe "GitHub Actions workflows" do
     end
   end
 
+  describe "every workflow" do
+    # A tag can be moved to other code; a commit SHA can't. Dependabot's
+    # github-actions updates keep the pins current, and the audit job's zizmor
+    # checks each pin against the tag named in its comment.
+    it "pins every action it uses to a full commit SHA (test-gaps-0-17/REQ-19)" do
+      names = Dir[File.join(repo_root, ".github/workflows/*.yml")].map { |path| File.basename(path) }.sort
+      unpinned = names.flat_map do |name|
+        references = steps(name).map { |_job_id, step| step["uses"] }.compact + jobs(name).values.map { |job| job["uses"] }.compact
+        references.reject { |ref| ref.start_with?("./") || ref.match?(/@\h{40}\z/) }.map { |ref| "#{name}: #{ref}" }
+      end
+
+      expect(names).to include("ci.yml", "test.yml", "pages.yml", "release.yml", "smoke-test-demo.yml")
+      expect(unpinned).to eq([])
+    end
+  end
+
   describe "ci.yml and test.yml" do
     it "give every job read access to the repository and nothing else (ci-least-privilege/REQ-2)" do
       %w[ci.yml test.yml].each do |name|
