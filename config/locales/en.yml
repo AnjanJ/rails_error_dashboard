@@ -1098,9 +1098,9 @@ en:
           snoozed: "snoozed"
           muted: "muted"
 
-      # The five stat cards above the error list. Rendered on the index and
-      # re-rendered by ErrorBroadcaster#broadcast_stats over ActionCable, so
-      # these labels must be translated in both paths, not just the request one.
+      # The five stat cards of the errors/_stats partial. No built-in page
+      # renders it since 0.17.0 dropped the live stats broadcast; it stays for
+      # custom index views that render it themselves.
       #
       # Each is a bare noun phrase standing over a number, not a sentence
       # fragment to be joined to one.

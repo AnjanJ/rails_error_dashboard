@@ -28,7 +28,6 @@ RSpec.describe "Live stream delivery", type: :request do
     ActionCable.server.instance_variable_set(:@pubsub, nil)
 
     broadcaster.instance_variable_set(:@broadcast_unavailable_until, nil)
-    broadcaster.reset_throttle!
     RailsErrorDashboard.configuration.enable_live_updates = true
   end
 
@@ -36,7 +35,6 @@ RSpec.describe "Live stream delivery", type: :request do
     RailsErrorDashboard.configuration.enable_live_updates = false
     ActionCable.server.config.cable = @original_cable
     ActionCable.server.instance_variable_set(:@pubsub, nil)
-    broadcaster.reset_throttle!
   end
 
   # The async adapter subscribes and delivers on its own thread, so both the
@@ -56,9 +54,9 @@ RSpec.describe "Live stream delivery", type: :request do
     confirmed = []
 
     streams = [
-      "error_list",
-      "error_list_app_#{app_a.id}",
-      "error_list_app_#{app_b.id}"
+      "rails_error_dashboard:error_list",
+      "rails_error_dashboard:error_list_app_#{app_a.id}",
+      "rails_error_dashboard:error_list_app_#{app_b.id}"
     ]
     streams.each do |stream|
       pubsub.subscribe(stream, ->(message) { received[stream] << message },
@@ -69,57 +67,64 @@ RSpec.describe "Live stream delivery", type: :request do
     # Built before the count is taken: creating the row broadcasts by itself
     # (after_create_commit), and that broadcast is not the one under test.
     row = create(:error_log, application: app_a)
-    wait_until { received["error_list"].any? }
+    # The async adapter delivers each stream on its own schedule. Wait for the
+    # create broadcast on BOTH streams that get it: a copy that reached the
+    # application stream after the baseline would be counted as delivered.
+    wait_until do
+      received["rails_error_dashboard:error_list"].any? &&
+        received["rails_error_dashboard:error_list_app_#{app_a.id}"].any?
+    end
     # Plain Hash with a 0 default: a stream that has received nothing yet must
     # read as 0 here, not nil.
     baseline = Hash.new(0).merge(streams.to_h { |stream| [ stream, received[stream].size ] })
 
     broadcaster.broadcast_new(row)
-    wait_until { received["error_list"].size > baseline["error_list"] }
+    wait_until do
+      received["rails_error_dashboard:error_list"].size > baseline["rails_error_dashboard:error_list"] &&
+        received["rails_error_dashboard:error_list_app_#{app_a.id}"].size > baseline["rails_error_dashboard:error_list_app_#{app_a.id}"]
+    end
 
     delivered = ->(stream) { received[stream].size - baseline[stream] }
 
     aggregate_failures do
-      expect(delivered.call("error_list")).to eq(1)
-      expect(delivered.call("error_list_app_#{app_a.id}")).to eq(1)
-      expect(delivered.call("error_list_app_#{app_b.id}")).to eq(0)
+      expect(delivered.call("rails_error_dashboard:error_list")).to eq(1)
+      expect(delivered.call("rails_error_dashboard:error_list_app_#{app_a.id}")).to eq(1)
+      expect(delivered.call("rails_error_dashboard:error_list_app_#{app_b.id}")).to eq(0)
     end
 
     # The payload is the row itself, not a bare notification: a tab that
     # receives it has everything it needs to prepend.
-    expect(received["error_list_app_#{app_a.id}"].last.to_s).to include("error_#{row.id}")
+    expect(received["rails_error_dashboard:error_list_app_#{app_a.id}"].last.to_s).to include("error_#{row.id}")
   end
 
-  it "delivers application-scoped stats to that application's stream only" do
-    app_a = create(:application, name: "StatsAppA")
-    app_b = create(:application, name: "StatsAppB")
-    row = create(:error_log, application: app_a)
+  # live-updates-hardening-0-17/REQ-4: pages served before 0.17.0 carry Turbo
+  # tokens for these names that never expire. Nothing is broadcast to them.
+  it "sends nothing to the stream names used before 0.17.0" do
+    app = create(:application, name: "LegacyNamesApp")
+    row = create(:error_log, application: app)
 
     received = Hash.new { |hash, key| hash[key] = [] }
     pubsub = ActionCable.server.pubsub
     confirmed = []
 
-    streams = [ "error_stats", "error_stats_app_#{app_a.id}", "error_stats_app_#{app_b.id}" ]
+    legacy = %w[error_list error_updates error_stats].flat_map { |base| [ base, "#{base}_app_#{app.id}" ] }
+    current = [
+      broadcaster.stream_name(:list), broadcaster.stream_name(:list, app.id),
+      broadcaster.stream_name(:updates), broadcaster.stream_name(:updates, app.id)
+    ]
+    streams = (legacy + current).uniq
     streams.each do |stream|
-      pubsub.subscribe(stream, ->(message) { received[stream] << message },
-        -> { confirmed << stream })
+      pubsub.subscribe(stream, ->(message) { received[stream] << message }, -> { confirmed << stream })
     end
     wait_until { confirmed.size == streams.size }
 
-    # One event computes at most one payload, so the global and the scoped
-    # stream are served by two events -- never by one, and never app_b.
-    broadcaster.reset_throttle!
-    broadcaster.broadcast_stats(app_a.id)
-    wait_until { received["error_stats"].any? }
-    broadcaster.broadcast_stats(app_a.id)
-    wait_until { received["error_stats_app_#{app_a.id}"].any? }
+    broadcaster.broadcast_new(row)
+    broadcaster.broadcast_update(row)
+    wait_until { current.all? { |stream| received[stream].any? } }
 
     aggregate_failures do
-      expect(received["error_stats"].size).to eq(1)
-      expect(received["error_stats_app_#{app_a.id}"].size).to eq(1)
-      expect(received["error_stats_app_#{app_b.id}"]).to be_empty
+      current.each { |stream| expect(received[stream]).not_to be_empty, "#{stream} received nothing" }
+      legacy.each { |stream| expect(received[stream]).to be_empty, "#{stream} still receives broadcasts" }
     end
-
-    expect(row.reload.application_id).to eq(app_a.id)
   end
 end

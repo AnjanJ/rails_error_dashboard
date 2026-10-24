@@ -2185,6 +2185,115 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Live updates: the error list's subscriptions carry tokens that expire
+  // (Services::LiveStreamToken). Renew them before they do, from the
+  // dashboard itself (ErrorsController#live_streams), so a viewer who can no
+  // longer open the dashboard can no longer renew.
+  //
+  // Make-before-break: a new source goes in next to each old one, and the old
+  // one leaves only once the new one is connected, so no broadcast falls into
+  // a gap. Turbo drops a duplicate row by id, so the overlap can't double one.
+  // The Live badge shows only while renewal works.
+  (function() {
+    var box = document.getElementById('red-live-streams');
+    if (!box || !box.dataset.renewUrl || !window.fetch || !window.URL) return;
+
+    var renewEvery = parseInt(box.dataset.renewEvery, 10);
+    if (!(renewEvery > 0)) return;
+    var retryAfter = Math.min(30000, renewEvery);
+    var connectTimeout = 15000;
+    var badge = document.getElementById('red-live-badge');
+    var lastSuccess = Date.now();
+    var timer = null;
+    var renewing = false;
+
+    function showBadge(on) {
+      if (badge) badge.style.display = on ? 'inline-flex' : 'none';
+    }
+
+    function schedule(delay) {
+      clearTimeout(timer);
+      timer = setTimeout(renew, delay);
+    }
+
+    // turbo-rails' element marks itself `connected` once subscribed. A
+    // rejected subscription never says so, hence the timeout.
+    function swap(tokens) {
+      var olds = Array.prototype.slice.call(box.querySelectorAll('turbo-cable-stream-source'));
+      var pairs = olds.map(function(old) {
+        var token = tokens[old.getAttribute('red-live-kind')];
+        if (!token) return null;
+        var source = document.createElement('turbo-cable-stream-source');
+        source.setAttribute('channel', old.getAttribute('channel'));
+        source.setAttribute('red-live-kind', old.getAttribute('red-live-kind'));
+        source.setAttribute('signed-stream-name', token);
+        return { old: old, source: source };
+      });
+      if (pairs.length === 0 || pairs.indexOf(null) !== -1) {
+        return Promise.reject(new Error('renewal named other streams'));
+      }
+      pairs.forEach(function(pair) { box.appendChild(pair.source); });
+
+      var startedAt = Date.now();
+      return new Promise(function(resolve, reject) {
+        (function check() {
+          if (pairs.every(function(pair) { return pair.source.hasAttribute('connected'); })) {
+            pairs.forEach(function(pair) { pair.old.remove(); });
+            resolve();
+          } else if (Date.now() - startedAt > connectTimeout) {
+            pairs.forEach(function(pair) { pair.source.remove(); });
+            reject(new Error('renewed subscriptions did not connect'));
+          } else {
+            setTimeout(check, 100);
+          }
+        })();
+      });
+    }
+
+    function renew() {
+      if (renewing) return;
+      renewing = true;
+      // An origin never carries user:password, which fetch refuses in a URL.
+      fetch(new URL(box.dataset.renewUrl, window.location.origin), {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      }).then(function(response) {
+        if (!response.ok) {
+          var error = new Error('renewal answered ' + response.status);
+          error.status = response.status;
+          throw error;
+        }
+        return response.json();
+      }).then(function(data) {
+        return swap((data && data.tokens) || {});
+      }).then(function() {
+        lastSuccess = Date.now();
+        showBadge(true);
+        schedule(renewEvery);
+      }, function(error) {
+        showBadge(false);
+        // A refusal is not retried on a timer: with Basic auth each refused
+        // fetch can raise the browser's login prompt. The page tries again
+        // when the viewer comes back to the tab.
+        if (!(error && (error.status === 401 || error.status === 403))) schedule(retryAfter);
+      }).then(function() {
+        renewing = false;
+      });
+    }
+
+    // Timers stall in a sleeping laptop or a frozen tab: renew on return.
+    function renewIfStale() {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() - lastSuccess > renewEvery * 0.8) renew();
+    }
+    document.addEventListener('visibilitychange', renewIfStale);
+    window.addEventListener('pageshow', renewIfStale);
+    window.addEventListener('online', renewIfStale);
+
+    schedule(renewEvery);
+  })();
+
   // Keyboard Shortcuts
   document.addEventListener('keydown', function(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;

@@ -40,7 +40,7 @@ RSpec.describe "Live updates in the browser", type: :system do
     wait_for_page_load
     # turbo-rails marks each source `connected` once its subscription is
     # confirmed; broadcasting before that would race the subscribe.
-    expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 3, wait: 10)
+    expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 2, wait: 10)
   end
 
   def capture_new_error
@@ -98,5 +98,97 @@ RSpec.describe "Live updates in the browser", type: :system do
       row.find(".local-time-ago")
     )
     expect(row).to have_css(".local-time-ago[data-showing-relative='false']")
+  end
+
+  # Tokens that live 4 seconds, so the page renews every 2 seconds, and its
+  # first tokens expire while the example runs.
+  describe "renewing subscriptions" do
+    let(:lifetime) { 4 }
+
+    before { stub_const("RailsErrorDashboard::Services::LiveStreamToken::LIFETIME", lifetime.seconds) }
+
+    def source_tokens
+      page.evaluate_script(<<~JS)
+        Array.prototype.map.call(document.querySelectorAll('turbo-cable-stream-source'),
+          function(source) { return source.getAttribute('signed-stream-name'); })
+      JS
+    end
+
+    # live-updates-hardening-0-17/REQ-8
+    it "keeps showing new errors after the page's first tokens have expired, without a reload" do
+      opened_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      open_index_and_wait_for_subscriptions
+      first_tokens = source_tokens
+      page.execute_script("window.__redSamePage = true")
+
+      first_tokens.each do |token|
+        expect(page).to have_no_css("turbo-cable-stream-source[signed-stream-name='#{token}']", visible: :all, wait: 10)
+      end
+      # Past the first tokens' expiry: the channel delivers nothing to them now.
+      remaining = opened_at + lifetime + 0.5 - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      sleep(remaining) if remaining.positive?
+      expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 2, wait: 10)
+
+      capture_new_error
+
+      expect(page).to have_content(marker, wait: 10)
+      expect(page.evaluate_script("window.__redSamePage")).to be true
+      expect(source_tokens & first_tokens).to be_empty
+    end
+
+    # live-updates-hardening-0-17/REQ-9
+    it "hides the Live badge while renewal fails, and shows it again once renewal works" do
+      open_index_and_wait_for_subscriptions
+      expect(page).to have_css("#red-live-badge", visible: :visible)
+
+      RailsErrorDashboard.configuration.enable_live_updates = false # renewals now answer 404
+      expect(page).to have_css("#red-live-badge", visible: :hidden, wait: 10)
+
+      RailsErrorDashboard.configuration.enable_live_updates = true
+      expect(page).to have_css("#red-live-badge", visible: :visible, wait: 10)
+    end
+
+    # live-updates-hardening-0-17/REQ-3, end to end through a real Action
+    # Cable server: once renewal is refused, the page keeps its first
+    # subscriptions, and the channel stops delivering to them at expiry.
+    it "stops delivering to subscriptions whose tokens have expired" do
+      opened_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      open_index_and_wait_for_subscriptions
+      RailsErrorDashboard.configuration.authenticate_with = -> { false }
+
+      capture_new_error # control: the tokens are still valid
+      expect(page).to have_content(marker, wait: 10)
+
+      remaining = opened_at + lifetime + 0.5 - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      sleep(remaining) if remaining.positive?
+      expect(page).to have_css("turbo-cable-stream-source[connected]", visible: :all, minimum: 2)
+      late = "arrived late #{Array.new(8) { ('g'..'z').to_a.sample }.join}"
+      RailsErrorDashboard::Commands::LogError.call(RuntimeError.new(late), {})
+
+      expect(page).to have_no_content(late, wait: 5)
+    ensure
+      RailsErrorDashboard.configuration.authenticate_with = nil
+    end
+
+    # live-updates-hardening-0-17/REQ-9: a refusal is not retried on a timer.
+    # With Basic auth every refused fetch can raise the browser's login prompt,
+    # so the page waits until the viewer comes back to the tab.
+    it "stops renewing once the dashboard refuses the viewer" do
+      open_index_and_wait_for_subscriptions
+      renewals = []
+      counter = ->(*, payload) { renewals << payload[:status] if payload[:action] == "live_streams" }
+
+      ActiveSupport::Notifications.subscribed(counter, "process_action.action_controller") do
+        RailsErrorDashboard.configuration.authenticate_with = -> { false }
+        expect(page).to have_css("#red-live-badge", visible: :hidden, wait: 10)
+        refused = renewals.size
+
+        sleep(3 * lifetime / 2.0) # three renewal periods
+
+        expect(renewals.size).to eq(refused)
+      end
+    ensure
+      RailsErrorDashboard.configuration.authenticate_with = nil
+    end
   end
 end

@@ -9,13 +9,42 @@ module RailsErrorDashboard
     LIVE_UPDATES_CLIENT_URL = "https://cdn.jsdelivr.net/npm/@hotwired/turbo-rails@8.0.23/app/assets/javascripts/turbo.js"
     LIVE_UPDATES_CLIENT_INTEGRITY = "sha384-5xP/yV3XlOHXtnycPzjS1hPR65oZljJITGHGkiPsD3yfBUKIEHN8vMjVSChbyb/P"
 
-    # Whether this page should subscribe to live updates: the switch is on,
-    # turbo-rails and ActionCable are loaded, and the pubsub answers
-    # (ErrorBroadcaster.available? checks the switch and the pubsub).
-    def red_live_updates?
-      return false unless defined?(Turbo::StreamsHelper) && defined?(ActionCable) && respond_to?(:turbo_stream_from)
+    # The channel every live-update subscription goes through.
+    LIVE_UPDATES_CHANNEL = "RailsErrorDashboard::LiveUpdatesChannel"
 
+    # Whether this page should subscribe to live updates: the switch is on,
+    # turbo-rails, ActionCable and RED's channel are loaded, and the pubsub
+    # answers (ErrorBroadcaster.available? checks all of it).
+    def red_live_updates?
       Services::ErrorBroadcaster.available?
+    end
+
+    # The page's live-update subscriptions: one <turbo-cable-stream-source>
+    # per stream, through RED's channel, each with a short-lived token. A
+    # custom index view renders these too (with @live_streams).
+    #
+    # Never turbo_stream_from: it signs with Turbo's verifier, whose
+    # signatures never expire, and points at Turbo::StreamsChannel.
+    #
+    # The container carries where and how often the layout's script renews
+    # the tokens (ErrorsController#live_streams), at half their lifetime.
+    #
+    # @param streams [Hash{Symbol => String}] from ErrorBroadcaster.streams_for_view
+    # @param renew_url [String, nil] the renewal path for this list (@live_renew_url)
+    # @return [ActiveSupport::SafeBuffer, nil] nil when a token can't be
+    #   issued: the page then has no live updates, and no Live badge
+    def red_live_updates_tags(streams, renew_url: nil)
+      sources = (streams || {}).map do |kind, stream|
+        token = Services::LiveStreamToken.issue(stream)
+        return nil unless token
+
+        tag.turbo_cable_stream_source(channel: LIVE_UPDATES_CHANNEL, "signed-stream-name": token, "red-live-kind": kind)
+      end
+      return nil if sources.empty?
+
+      renew_every = (Services::LiveStreamToken::LIFETIME / 2).in_milliseconds.to_i if renew_url
+      tag.div(safe_join(sources), id: "red-live-streams", hidden: true,
+        data: { renew_url: renew_url, renew_every: renew_every })
     end
 
     # The client, and where it should connect, for the layout's <head>

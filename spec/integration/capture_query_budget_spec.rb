@@ -4,7 +4,7 @@ require "rails_helper"
 
 # Capturing an error runs inside the HOST app's request thread (sync mode) or
 # its job worker. Whatever the dashboard does as a side effect of a capture --
-# cache invalidation, live stats, spike detection -- must therefore cost a
+# cache invalidation, live updates, spike detection -- must therefore cost a
 # small, bounded amount of work that does not grow with the number of distinct
 # error types already stored. This spec is the guard for that budget.
 RSpec.describe "Capture query budget" do
@@ -35,7 +35,7 @@ RSpec.describe "Capture query budget" do
              baseline_type: "hourly", period_start: 2.weeks.ago, period_end: 1.hour.ago)
     end
 
-    # Live updates on: the stats broadcast is part of the cost being measured.
+    # Live updates on: the row broadcasts are part of the cost being measured.
     allow(RailsErrorDashboard::Services::ErrorBroadcaster).to receive(:available?).and_return(true)
     stub_const("Turbo::StreamsChannel", Class.new) unless defined?(Turbo::StreamsChannel)
     %i[broadcast_prepend_to broadcast_replace_to].each do |name|
@@ -61,11 +61,9 @@ RSpec.describe "Capture query budget" do
     # First capture creates the group; the measured one takes the update path.
     RailsErrorDashboard::Commands::LogError.call(exception, {})
 
-    # Worst case: the stats cache is cold (it expires every minute), so this
-    # capture pays for the whole stats broadcast, spike detection included,
-    # and it is the one capture in the window that is allowed to broadcast.
+    # Worst case: every cache is cold, so this capture pays for spike
+    # detection and the broadcast's column-visibility scans.
     cache.clear
-    RailsErrorDashboard::Services::ErrorBroadcaster.reset_throttle!
 
     statements = count_queries { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
 
@@ -73,8 +71,7 @@ RSpec.describe "Capture query budget" do
       "capture issued #{statements.size} queries:\n" + statements.first(60).join("\n")
   end
 
-  # The common case: caches warm and the stats window already taken by an
-  # earlier event. No stats computation, no column-visibility scans.
+  # The common case: caches warm. No column-visibility scans.
   it "captures a recurrence in fewer than 12 queries when the caches are warm" do
     2.times { RailsErrorDashboard::Commands::LogError.call(exception, {}) }
 

@@ -6,7 +6,7 @@ module RailsErrorDashboard
     # Re-declaring it here moved it to the END of the chain, behind the CSRF check.
     before_action :set_application_context
     before_action :check_default_credentials
-    before_action :load_storm_banner
+    before_action :load_storm_banner, except: :live_streams
 
     FILTERABLE_PARAMS = %i[
       error_type
@@ -102,6 +102,9 @@ module RailsErrorDashboard
         application_id: @current_application_id,
         filtered: live_prepend_unsafe?
       )
+      # Where the page renews them: this list's own query string, unchanged,
+      # so the renewal sees exactly the params this page saw.
+      @live_renew_url = [ live_streams_errors_path, request.query_string.presence ].compact.join("?")
 
       # Get filter options using Query (pass application filter)
       filter_options = Queries::FilterOptions.call(application_id: @current_application_id)
@@ -109,6 +112,27 @@ module RailsErrorDashboard
       @platforms = filter_options[:platforms]
       @environments = filter_options[:environments]
       @assignees = filter_options[:assignees]
+    end
+
+    # Fresh live-update tokens for an open error list, before its current ones
+    # expire. The layout's renewal script calls this with the list's own query
+    # string, so streams_for_view returns the same streams the page has.
+    #
+    # Behind the dashboard's authentication like every page, which is the
+    # point: a viewer who can no longer open the dashboard can no longer renew,
+    # and their live feed ends when its tokens expire.
+    def live_streams
+      response.headers["Cache-Control"] = "no-store"
+      return head(:not_found) unless Services::ErrorBroadcaster.available?
+
+      streams = Services::ErrorBroadcaster.streams_for_view(
+        application_id: @current_application_id,
+        filtered: live_prepend_unsafe?
+      )
+      tokens = streams.transform_values { |stream| Services::LiveStreamToken.issue(stream) }
+      return head(:service_unavailable) if tokens.value?(nil)
+
+      render json: { tokens: tokens }
     end
 
     def show
