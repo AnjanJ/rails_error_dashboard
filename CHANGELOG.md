@@ -5,6 +5,113 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.2...rails_error_dashboard/v0.17.0) (2026-10-24)
+
+
+### ✨ Features
+
+* **live-updates:** make live updates reach the browser, opt-in via enable_live_updates ([#308](https://github.com/AnjanJ/rails_error_dashboard/issues/308)) ([5e3c16c](https://github.com/AnjanJ/rails_error_dashboard/commit/5e3c16c8df75627a4ed9e1a9a2291aa141b21c9e))
+
+
+### 🐛 Bug Fixes
+
+* give async captures the same custom fingerprint as sync and storm captures ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* import boot crashes into the separate error database ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* keep recording an error whose reopen collides with an open group ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* keep the dashboard's session off an API-only host's middleware stack ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* live-update subscriptions are now short-lived, and renew through the dashboard ([ff5c289](https://github.com/AnjanJ/rails_error_dashboard/commit/ff5c289934fb20dee19b735fe7caf00c7f3f6341))
+* load only files the CDN packages publish, each pinned with an integrity hash ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* make secret filtering fail closed, including for crash imports ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* redact key: value, JSON pairs and Bearer tokens in error messages ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* reject stale Linear webhook deliveries, as Linear's docs recommend ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* require concurrent-ruby 1.3.7 or later ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* stop the live stats broadcast, which no built-in page displayed ([ff5c289](https://github.com/AnjanJ/rails_error_dashboard/commit/ff5c289934fb20dee19b735fe7caf00c7f3f6341))
+* store errors with very long messages or params instead of losing them on MySQL ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* store no session ID when the app has no secret_key_base ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+
+### Upgrade instructions
+
+No migrations. One new setting, `enable_live_updates`, off by default:
+
+```sh
+bundle update rails_error_dashboard
+```
+
+Read the sections below that apply to you: live updates, API-only apps, async logging with a
+custom fingerprint, and very large errors.
+
+### Live updates reach the browser, when you turn them on
+
+- The error list never received live updates: no Turbo client was loaded on the page. 0.17.0 loads
+  the turbo-rails client on the error list, pinned with an integrity hash, once you opt in:
+
+  ```ruby
+  RailsErrorDashboard.configure do |config|
+    config.enable_live_updates = true
+  end
+  ```
+
+- **Apps with turbo-rails and Action Cable loaded:** RED stops broadcasting until you opt in. You
+  lose nothing visible, because nothing ever arrived.
+- **Opting in** needs a cross-process cable adapter in production (Solid Cable or Redis), and an
+  `ApplicationCable::Connection` that accepts the dashboard viewer.
+- **Live-update subscriptions are short-lived.** Each lasts 10 minutes and goes through the
+  dashboard's own channel. An open error list renews it through the dashboard, behind the
+  dashboard's authentication, and the Live badge shows only while renewal works.
+- **The live stats broadcast is gone.** No built-in page displayed it. A custom view with a
+  `#dashboard_stats` element shows the stats as of its last page load, and the
+  `rails_error_dashboard/errors/stats` partial is still there.
+- **A custom index view** that subscribed with `turbo_stream_from "error_list"` (or another old
+  stream name) stops receiving updates. Render
+  `red_live_updates_tags(@live_streams, renew_url: @live_renew_url)` instead.
+
+See [Real-time updates](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/REAL_TIME_UPDATES.md#upgrading-to-0170).
+
+### Secret filtering fails closed
+
+- If a filter step fails, the field is stored as `[FILTERED]` instead of as captured. This covers
+  async payloads, storm captures, breadcrumbs, captured variables and crash imports.
+- Error messages are now also redacted for `key: value` pairs, JSON pairs and `Bearer` tokens.
+  Message redaction is best-effort.
+- An app with no `secret_key_base` no longer records session IDs on occurrences.
+
+### Very large errors are stored, within limits
+
+- Messages are kept to 10,000 characters, with a marker, and request params to about 64 KB. A
+  context payload (locals, breadcrumbs, system health) over 64 KB is left out of that row.
+- On MySQL, such errors used to be dropped, because strict mode refused the row.
+
+### API-only apps
+
+- RED no longer adds app-wide sessions or cookies to an API-only app. An endpoint that writes the
+  session raises `DisabledSessionError` again, and cookies that your own API controllers set are
+  no longer sent, as without RED. The dashboard keeps its own session.
+- The dashboard's cookie in an API-only app is now `_rails_error_dashboard_session`. Pick the
+  language again once; a tab left open gets one rejected form post.
+
+### Async logging with a custom fingerprint
+
+With both `async_logging` and `custom_fingerprint` on, each custom-fingerprinted group restarts once
+after the upgrade. New async captures count on the row that sync and storm captures already use.
+
+### Dependencies, CDN files and the release workflow
+
+- concurrent-ruby 1.3.7 or later.
+- Every script and stylesheet the dashboard loads from jsDelivr carries an integrity hash, and three
+  of them now load files their npm packages publish.
+- The release workflow now runs each job with least privilege.
+
+### Fixes
+
+- Boot crashes are imported into the separate error database, when you use one.
+- An error whose reopen collides with an open group is recorded instead of lost.
+- Linear webhook deliveries older than 60 seconds are rejected, as Linear's docs recommend.
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: pin `gem "json", "< 3"` until you upgrade Rails. See
+[Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
 ## [0.16.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.1...rails_error_dashboard/v0.16.2) (2026-10-22)
 
 
