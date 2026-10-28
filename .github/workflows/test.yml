@@ -29,7 +29,7 @@ jobs:
     name: Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}
 
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
@@ -105,7 +105,7 @@ jobs:
       DATABASE_URL: ${{ matrix.adapter == 'postgresql' && 'postgres://red:red@127.0.0.1:5432/red_test?pool=10' || 'trilogy://root:red@127.0.0.1:3306/red_test?pool=10' }}
 
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
@@ -143,7 +143,7 @@ jobs:
     name: Schema parity (schema.rb vs db/migrate)
 
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
@@ -172,7 +172,7 @@ jobs:
     name: System Tests (Chrome)
 
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
