@@ -96,6 +96,10 @@ One contradiction to settle: `ROADMAP.md:698` names a "Full Context Error Report
 
 ## Decisions for the maintainer
 
+> **Decided 2026-10-29:** records `.shipkit/decisions/0002`-`0006`. 0006 corrects the Pagy
+> advice below: widening to `>= 43.0` cannot help bullet_train or govuk-components apps, which
+> need Pagy 9.x, so Pagy stays pinned through 1.0 and is replaced in 1.x.
+
 1. Is 1.0 stability-only, with the roadmap's "v1.0 anchor" moved to 1.1?
 2. Minimum Rails and Ruby at 1.0.
 3. `async_adapter` and `llm_observability_content_capture`: remove or implement?

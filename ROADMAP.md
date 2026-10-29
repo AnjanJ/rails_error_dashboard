@@ -695,7 +695,7 @@ Nothing below is scheduled. These are the genuine remaining candidates, in rough
 | Comparison mode (19) | 1-2 days | Analytics ++ | |
 | AI error summaries (16) | 2-3 days | Buzz +++ | |
 | Inline fix suggestions (18) | 2-3 days | DX ++ | |
-| Full Context Error Report — unified view | 3-5 days | Flagship +++ | The v1.0 anchor |
+| Full Context Error Report — unified view | 3-5 days | Flagship +++ | 1.1 (1.0 is a stability release, decision 0002) |
 | PostgreSQL partitioning / TimescaleDB generator | 1-3 days | Scale ++ | |
 | Rollup/summary tables | 1-2 days | Performance +++ | |
 
