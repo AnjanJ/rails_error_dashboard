@@ -36,12 +36,14 @@ group :development, :test do
   gem "trilogy"
 
   # SQLite3 - version depends on Rails version
-  # Rails 7.0-7.2 require ~> 1.4, Rails 8.0+ requires >= 2.1
+  # Rails 7.0 requires ~> 1.4; 7.1 and later accept 2.x. 2.9.6 fixes two
+  # use-after-free bugs (GHSA-28hh-pr2h-2w89, GHSA-mwm8-39rw-8826), and no
+  # 1.x release does, so only the 7.0 rows still run an affected version.
   rails_env = ENV["RAILS_VERSION"] || "8.1"
-  if rails_env.start_with?("7.") || rails_env.start_with?("~> 7.")
+  if rails_env.start_with?("7.0") || rails_env.start_with?("~> 7.0")
     gem "sqlite3", "~> 1.4"
   else
-    gem "sqlite3", ">= 2.1"
+    gem "sqlite3", ">= 2.9.6"
   end
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
