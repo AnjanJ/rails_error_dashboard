@@ -1,7 +1,7 @@
 # Spec: Host and dependency hygiene for 0.17.0
 
 > Spec accepted at commit `16d2baa` on fix/host-hygiene-0-17 (2026-10-23).
-> Status: open
+> Status: shipped in 0.17.0 (#313)
 > Paths: lib/rails_error_dashboard/engine.rb,lib/rails_error_dashboard/middleware/dashboard_session.rb,lib/rails_error_dashboard.rb,spec/lib/rails_error_dashboard/middleware/dashboard_session_spec.rb,spec/lib/rails_error_dashboard/engine_api_host_middleware_spec.rb,app/views/layouts/rails_error_dashboard.html.erb,spec/requests/cdn_integrity_spec.rb,spec/support/vendor/,spec/support/capybara.rb,docs/guides/ERROR_TREND_VISUALIZATIONS.md,_guides/error-trend-visualizations.md,lefthook.yml,.claude/skills/release/SKILL.md,rails_error_dashboard.gemspec,spec/gemspec_dependencies_spec.rb,CLAUDE.md,docs/FAQ.md,_reference/faq.md,bin/pre-release-test,test/pre_release/templates/full_api_initializer.rb,test/pre_release/chaos/phase_p_api_host.rb
 
 ## Purpose

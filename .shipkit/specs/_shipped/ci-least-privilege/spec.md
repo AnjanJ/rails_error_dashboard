@@ -1,5 +1,5 @@
 > Spec accepted at commit 08c506e on ci/least-privilege (2026-10-22).
-> Status: open
+> Status: shipped in 0.17.0 (#309)
 > Paths: .github/workflows/, Gemfile, spec/ci/
 
 # Spec: CI least privilege

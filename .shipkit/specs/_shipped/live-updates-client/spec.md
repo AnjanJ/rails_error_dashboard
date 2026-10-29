@@ -1,7 +1,7 @@
 # Spec: Live updates reach the browser
 
 > Spec accepted at commit `08c506e` on fix/live-updates-client.
-> Status: open
+> Status: shipped in 0.17.0 (#308)
 > Paths: lib/rails_error_dashboard/configuration.rb,lib/rails_error_dashboard/services/error_broadcaster.rb,app/views/rails_error_dashboard/errors/index.html.erb,app/views/layouts/rails_error_dashboard.html.erb,app/helpers/rails_error_dashboard/application_helper.rb,lib/generators/rails_error_dashboard/install/templates/initializer.rb,docs/,_guides/,_getting_started/,_reference/,README.md,rails_error_dashboard.gemspec
 
 ## Purpose

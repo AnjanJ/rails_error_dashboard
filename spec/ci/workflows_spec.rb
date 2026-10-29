@@ -5,7 +5,7 @@ require "yaml"
 require "open3"
 
 # Guards the least-privilege shape of the GitHub Actions workflows and of the
-# bundle the release job installs (spec: .shipkit/specs/ci-least-privilege).
+# bundle the release job installs (spec: .shipkit/specs/_shipped/ci-least-privilege).
 #
 # WHY THIS EXISTS: GitHub evaluates these files only when they run, and a
 # permission mistake in them shows up as nothing at all. A job silently keeps

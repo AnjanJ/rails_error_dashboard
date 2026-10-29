@@ -1,8 +1,8 @@
 # Spec: Async job rebuilds exceptions without trusting the reported type
 
-> Draft, 2026-10-22, on the local branch `fix/async-job-reconstruct`. Security fix for 0.16.2,
-> disclosed through a private GHSA once the fix is on RubyGems. Keep this branch local until the
-> release sitting.
+> Drafted 2026-10-22 as a security fix for 0.16.2; it was folded into 0.17.0 instead, with no
+> 0.16.x patch release.
+> Status: shipped in 0.17.0 (#306)
 
 ## Purpose
 
