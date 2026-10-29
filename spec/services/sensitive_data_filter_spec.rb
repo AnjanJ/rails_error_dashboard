@@ -367,6 +367,11 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
 
       # capture-hardening-0-17/REQ-12: every pattern stays linear on
       # untrusted text; catastrophic backtracking would take seconds here.
+      #
+      # Each example warms up on its own input and keeps the best of three
+      # runs, so a cold code path or a GC pause on a shared CI runner can't
+      # fail it (one run measured 52 ms that way). Backtracking would be slow
+      # on every run, so the best run still catches it.
       [
         [ "a word run", "a" * 10_000 ],
         [ "colon pairs", "a:" * 5_000 ],
@@ -380,10 +385,12 @@ RSpec.describe RailsErrorDashboard::Services::SensitiveDataFilter do
         [ "many JSON pairs", '"a":1,' * 1_666 ]
       ].each do |label, message|
         it "filters 10,000 characters of #{label} in under 50 ms" do
-          described_class.filter_attributes(message: "warm up password: x")
-          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           described_class.filter_attributes(message: message)
-          elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+          elapsed_ms = Array.new(3) do
+            started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            described_class.filter_attributes(message: message)
+            (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
+          end.min
 
           expect(elapsed_ms).to be < 50
         end
