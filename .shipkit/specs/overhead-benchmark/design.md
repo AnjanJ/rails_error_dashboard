@@ -7,8 +7,8 @@
   1. it requires `spec/dummy/config/application.rb`;
   2. before `initialize!` it sets eager loading on, reloading off and the log level to `warn`, and
      points both databases at a scratch SQLite file in `tmp/` (REQ-5);
-  3. it sets Active Job to a no-op adapter that drops every job, so the number is RED's cost and
-     not a queue backend's;
+  3. it sets Active Job to an adapter that serialises each job, as every real backend does, and
+     then drops it, so the number is RED's cost and not a queue backend's;
   4. it loads the dummy schema into the scratch file.
 
   It never touches `spec/dummy/db/test.sqlite3`, so it can't collide with a running rspec.
@@ -22,7 +22,7 @@
 | Capture (async, the installer's default) | A Rack app that raises a pre-built exception, under `ErrorCatcher` and the `Rails.error` subscriber, minus the same app with RED's middleware and subscriber off | < 5 ms |
 | Storm check, calm | `StormProtection::Gate.admit!` with the breaker closed (`Gate.reset!` before the scenario) | < 5 µs |
 | Storm check, active | the same, with the breaker driven into shedding | < 5 µs |
-| Breadcrumb callback | one `sql.active_record` event with a buffer on the thread, minus the same event with no RED subscriber | < 0.01 ms |
+| Breadcrumb callback | the body of RED's `sql.active_record` subscriber (build the event, then `handle_sql`), with a buffer on the thread | < 0.01 ms |
 | Health snapshot | `SystemHealthSnapshot.capture` | < 1 ms |
 | Capture (sync) | as the first row, with `async_logging = false` | reported |
 | Message filtering | `SensitiveDataFilter.filter_message` on a 400-character message | reported (a 0.17 decision reverses above 1 ms) |
@@ -66,9 +66,12 @@ sample. `benchmark-ips` amortises that over batches and has years of tuning; a h
 get subtle things wrong, such as GC pauses landing in samples. The p95 includes those pauses, which
 is honest, but it's noisier.
 
-**Decision.** We chose option 1.
-**Falsifiability.** We would batch the storm-check samples (100 calls per sample) if the measured
-clock overhead exceeds 5% of the storm-check median on the CI runner.
+**Decision.** We chose option 1, with batching for the microsecond-scale rows (storm check,
+breadcrumb: 100 calls per sample; health snapshot: 10). Added during T3 on 2026-10-30: macOS's
+`CLOCK_MONOTONIC` ticks in whole microseconds, and every unbatched sample there was a whole
+microsecond, so a 2 µs call timed alone was mostly rounding.
+**Falsifiability.** We would batch the capture rows too if their round-to-round spread on the CI
+runner exceeds 20% of the median.
 **Fired-if.** manual
 
 ## Decision: Measure what RED adds, against the same app without RED   (→ REQ-2)

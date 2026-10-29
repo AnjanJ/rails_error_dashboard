@@ -5,10 +5,13 @@
 # Spec: .shipkit/specs/overhead-benchmark/.
 #
 #   env -u RAILS_VERSION bin/with-ruby bundle exec bin/benchmark
-#   ... bin/benchmark --list    the harness and the environment, no timing
+#   ... bin/benchmark --list            the harness and the environment, no timing
+#   ... bin/benchmark --summary FILE    also append the table to FILE
+#                                       (CI passes $GITHUB_STEP_SUMMARY)
 #
-# Don't run it while rspec is running on the same machine: the databases
-# don't collide, but the numbers would be wrong.
+# Exits 1 when a gated median is over its budget. Takes about a minute. Don't
+# run it while rspec is running on the same machine: the databases don't
+# collide, but the numbers would be wrong.
 
 require_relative "../benchmark/harness"
 
@@ -20,3 +23,21 @@ if ARGV.include?("--list")
   end
   exit 0
 end
+
+require_relative "../benchmark/timer"
+require_relative "../benchmark/scenarios"
+require_relative "../benchmark/report"
+
+results = RedBenchmark::Scenarios.all.map do |scenario|
+  $stderr.puts "  #{scenario.name}..."
+  timer = RedBenchmark::Timer.new(iterations: scenario.iterations, warmup: [ scenario.iterations / 5, 1 ].max)
+  scenario.run.call(timer)
+end
+
+report = RedBenchmark::Report.markdown(RedBenchmark::Harness.environment, results)
+puts report
+
+summary = ARGV[ARGV.index("--summary") + 1] if ARGV.include?("--summary")
+File.open(summary, "a") { |file| file.puts(report) } if summary
+
+exit RedBenchmark::Timer.exit_status(results)

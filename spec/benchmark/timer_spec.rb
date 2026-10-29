@@ -31,6 +31,18 @@ RSpec.describe RedBenchmark::Timer do
       expect(result.p95).to be_within(1e-12).of(100e-6)
     end
 
+    it "times a batch of calls per sample and reports the cost of one (overhead-benchmark/REQ-4)" do
+      # macOS's monotonic clock ticks in whole microseconds, so a 2 µs call
+      # timed alone is mostly rounding. Each sample here is 4 calls in 8 µs.
+      calls = 0
+      timer = described_class.new(rounds: 1, iterations: 3, warmup: 0, clock: clock_from(ticks_for([ 8e-6 ] * 3)))
+
+      result = timer.measure("op", batch: 4) { calls += 1 }
+
+      expect(calls).to eq(12)
+      expect(result.median).to be_within(1e-12).of(2e-6)
+    end
+
     it "runs the warm-up iterations before it starts timing (overhead-benchmark/REQ-4)" do
       calls = 0
       timer = described_class.new(rounds: 1, iterations: 3, warmup: 4, clock: clock_from(ticks_for([ 1e-6 ] * 3)))

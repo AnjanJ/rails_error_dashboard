@@ -38,10 +38,13 @@ module RedBenchmark
       @clock = clock
     end
 
-    # Times the block itself.
-    def measure(name, budget: nil, &block)
+    # Times the block itself. With batch > 1 each sample is that many calls
+    # in a row, divided by the count: for operations of a few microseconds,
+    # where one call is close to the clock's resolution (whole microseconds on
+    # macOS) and its own cost.
+    def measure(name, budget: nil, batch: 1, &block)
       @warmup.times(&block)
-      collect(name, budget) { time(&block) }
+      collect(name, budget) { time { batch.times(&block) } / batch }
     end
 
     # What `with` adds over `without`: each sample times the two back to back
