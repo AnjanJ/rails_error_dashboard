@@ -8,7 +8,7 @@ reading the summary, not the exit code).
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. Run one rspec process at a
 time.
 
-- [ ] **T1** The buffer counts a known key in place, and takes its exemplar lazily → REQ-4
+- [x] **T1** The buffer counts a known key in place, and takes its exemplar lazily → REQ-4
   - Files: lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, spec/services/storm_protection/count_buffer_hot_path_spec.rb
   - Test: count_buffer_hot_path_spec:
     - recording a known key calls neither `Time.current` nor the exemplar block, and bumps the
