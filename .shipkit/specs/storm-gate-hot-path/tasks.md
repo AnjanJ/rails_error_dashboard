@@ -35,7 +35,7 @@ time.
     The existing gate and drain specs stay green.
   - After: T1
   - Done when: `R rspec spec/services/storm_protection/` → 0 failures
-- [ ] **T3** The storm rows pass on the machine of record → REQ-6
+- [x] **T3** The storm rows pass on the machine of record → REQ-6
   - Files: .shipkit/specs/storm-gate-hot-path/intake.md
   - Test: `bin/benchmark` on the maintainer's M3 Max: both storm rows PASS. The before and after
     numbers are recorded in `intake.md`, and CI's numbers go in the PR once the benchmark's CI job
