@@ -154,8 +154,8 @@ jobs:
 
   # Smoke-test the live demo once a release has actually published.
   #
-  # smoke-test-demo.yml declares `on: release: [published]` as well, and that
-  # trigger has never once fired: release-please creates the release with the
+  # smoke-test-demo.yml used to declare `on: release: [published]`, and that
+  # trigger never once fired: release-please creates the release with the
   # default GITHUB_TOKEN, and GitHub does not raise workflow events for
   # anything that token creates (it is the standard guard against recursive
   # workflow runs). Calling the workflow from here is what makes the
