@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# RED's overhead on a host app, measured against its documented budgets.
+# Spec: .shipkit/specs/overhead-benchmark/.
+#
+#   env -u RAILS_VERSION bin/with-ruby bundle exec bin/benchmark
+#   ... bin/benchmark --list    the harness and the environment, no timing
+#
+# Don't run it while rspec is running on the same machine: the databases
+# don't collide, but the numbers would be wrong.
+
+require_relative "../benchmark/harness"
+
+RedBenchmark::Harness.boot!
+
+if ARGV.include?("--list")
+  RedBenchmark::Harness.environment.merge(RedBenchmark::Harness.facts).each do |name, value|
+    puts "#{name}: #{value}"
+  end
+  exit 0
+end

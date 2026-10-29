@@ -7,7 +7,7 @@ cites `overhead-benchmark/REQ-N`. One commit per task, test and code together.
 and rspec at the same time on one machine: the numbers would be wrong, though the databases don't
 collide.
 
-- [ ] **T1** The timing core: rounds, median, p95, budget verdict → REQ-4, REQ-7
+- [x] **T1** The timing core: rounds, median, p95, budget verdict → REQ-4, REQ-7
   - Files: benchmark/timer.rb, spec/benchmark/timer_spec.rb
   - Test: timer_spec, with an injected clock:
     - known samples → the expected median, p95 and median of round medians;
@@ -17,8 +17,8 @@ collide.
     - a failing reported-only row doesn't
   - After: none
   - Done when: `R rspec spec/benchmark/timer_spec.rb` → 0 failures
-- [ ] **T2** The harness boots the dummy app like production, on a scratch database → REQ-1, REQ-5, REQ-6
-  - Files: benchmark/harness.rb, bin/benchmark, spec/benchmark/harness_spec.rb
+- [x] **T2** The harness boots the dummy app like production, on a scratch database → REQ-1, REQ-5, REQ-6
+  - Files: benchmark/harness.rb, benchmark/initializers/rails_error_dashboard.rb, bin/benchmark, spec/benchmark/harness_spec.rb, spec/benchmark/offline.rb
   - Test: harness_spec runs `bin/benchmark --list` in a subprocess and asserts:
     - eager loading on, reloading off;
     - the database file is under `tmp/`, not `spec/dummy/db/test.sqlite3`;
