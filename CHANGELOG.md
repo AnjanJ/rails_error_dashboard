@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.2...rails_error_dashboard/v0.17.0) (2026-10-29)
+
+
+### ✨ Features
+
+* **live-updates:** make live updates reach the browser, opt-in via enable_live_updates ([#308](https://github.com/AnjanJ/rails_error_dashboard/issues/308)) ([5e3c16c](https://github.com/AnjanJ/rails_error_dashboard/commit/5e3c16c8df75627a4ed9e1a9a2291aa141b21c9e))
+
+
+### 🐛 Bug Fixes
+
+* give async captures the same custom fingerprint as sync and storm captures ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* import boot crashes into the separate error database ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* keep recording an error whose reopen collides with an open group ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* keep the dashboard's session off an API-only host's middleware stack ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* live-update subscriptions are now short-lived, and renew through the dashboard ([ff5c289](https://github.com/AnjanJ/rails_error_dashboard/commit/ff5c289934fb20dee19b735fe7caf00c7f3f6341))
+* load only files the CDN packages publish, each pinned with an integrity hash ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* make secret filtering fail closed, including for crash imports ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* redact key: value, JSON pairs and Bearer tokens in error messages ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* reject stale Linear webhook deliveries, as Linear's docs recommend ([ecd8cd4](https://github.com/AnjanJ/rails_error_dashboard/commit/ecd8cd401b09fd46950673bbedf481e5a6a87139))
+* require concurrent-ruby 1.3.7 or later ([bf66194](https://github.com/AnjanJ/rails_error_dashboard/commit/bf66194179ffcc28b5ac6f21c8fbe70a90af40ff))
+* stop the live stats broadcast, which no built-in page displayed ([ff5c289](https://github.com/AnjanJ/rails_error_dashboard/commit/ff5c289934fb20dee19b735fe7caf00c7f3f6341))
+* store errors with very long messages or params instead of losing them on MySQL ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+* store no session ID when the app has no secret_key_base ([16d2baa](https://github.com/AnjanJ/rails_error_dashboard/commit/16d2baa93add0719adc159b67da482841a9629d6))
+
 ## [0.16.2](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.1...rails_error_dashboard/v0.16.2) (2026-10-22)
 
 
