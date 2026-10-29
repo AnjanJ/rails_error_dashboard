@@ -150,6 +150,43 @@ run_unauth_test() {
   fi
 }
 
+# Wait for the site to answer before testing. A host that sleeps when idle (the
+# demo does) answers its first requests with a gateway error, or not at all,
+# while it boots. That failed Test 1 and opened an issue for an outage that
+# wasn't one. A real outage still fails: after SMOKE_WAKE_TIMEOUT seconds the
+# tests run against whatever answers.
+wait_until_awake() {
+  local timeout="${SMOKE_WAKE_TIMEOUT:-300}"
+  local deadline=$((SECONDS + timeout))
+  local http_code
+
+  while true; do
+    # curl prints 000 when it gets no response; `|| true` keeps set -e from
+    # exiting on that.
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$DASHBOARD_URL/error_dashboard" 2>/dev/null) || true
+
+    case "$http_code" in
+      000|502|503|504) ;;
+      *)
+        echo "Site is answering (HTTP $http_code)"
+        echo ""
+        return 0
+        ;;
+    esac
+
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo -e "${YELLOW}Still HTTP $http_code after ${timeout}s; running the tests anyway${NC}"
+      echo ""
+      return 0
+    fi
+
+    echo "Waiting for the site to wake up (HTTP $http_code)..."
+    sleep 10
+  done
+}
+
+wait_until_awake
+
 echo -e "${YELLOW}Running authentication tests...${NC}"
 echo ""
 
