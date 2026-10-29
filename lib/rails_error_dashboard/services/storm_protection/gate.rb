@@ -179,10 +179,16 @@ module RailsErrorDashboard
 
           # All identity computation happens here, once, in locals — no
           # shared mutable caches (thread safety by construction).
+          #
+          # Only the gate key is built per event. The exemplar (the redacted,
+          # scrubbed copy the count buffer keeps for a fingerprint) is built
+          # only when the buffer stores a new entry: for every other event it
+          # would be thrown away, and redacting and scrubbing it was most of
+          # the storm check's cost.
           def decide(state, exception, context)
             case state
             when :open
-              count!(exception, context)
+              count!(exception, context, gate_identity(exception, context))
               :count_only
             when :half_open
               # Probe: a trickle of :lite captures tells us whether the storm
@@ -193,31 +199,64 @@ module RailsErrorDashboard
               if next_probe_index % 10 == 1
                 :lite
               else
-                count!(exception, context)
+                count!(exception, context, gate_identity(exception, context))
                 :count_only
               end
             when :shedding
               # Never :full while shedding — context capture is request-thread
               # CPU we can't afford. Buckets still apply their per-fingerprint
               # row sampling underneath.
-              parts = gate_parts(exception, context)
-              if fingerprint_buckets.decide(gate_key(parts)) == :count_only
-                count_buffer.record(gate_key(parts), parts)
+              identity = gate_identity(exception, context)
+              if fingerprint_buckets.decide(gate_key_for(identity)) == :count_only
+                count!(exception, context, identity)
                 :count_only
               else
                 :lite
               end
             else # :closed
-              parts = gate_parts(exception, context)
-              decision = fingerprint_buckets.decide(gate_key(parts))
-              count_buffer.record(gate_key(parts), parts) if decision == :count_only
+              identity = gate_identity(exception, context)
+              decision = fingerprint_buckets.decide(gate_key_for(identity))
+              count!(exception, context, identity) if decision == :count_only
               decision
             end
           end
 
-          def count!(exception, context)
-            parts = gate_parts(exception, context)
-            count_buffer.record(gate_key(parts), parts)
+          def count!(exception, context, identity)
+            count_buffer.record(gate_key_for(identity)) { exemplar(identity, exception, context) }
+          end
+
+          # Who this error is, computed once per event in locals: what the
+          # gate key needs, plus what the exemplar reuses if the buffer stores
+          # a new entry. The identity digest is hashed from the RAW message,
+          # and must match what the sync and async paths hash. The custom
+          # fingerprint lambda is the user's code, so it runs once, here.
+          def gate_identity(exception, context)
+            raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
+            frame = ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                    ErrorHashGenerator.extract_app_frame(exception.backtrace)
+            {
+              raw_message: raw_message,
+              first_app_frame: frame,
+              opaque_identity: ErrorHashGenerator.opaque_identity(
+                error_class: exception.class.name,
+                normalized_message: ErrorHashGenerator.normalize_message(raw_message),
+                frames: frame,
+                controller_name: context[:controller_name]&.to_s,
+                action_name: context[:action_name]&.to_s
+              ),
+              custom_hash: custom_hash_for(exception, context),
+              # Only an EXPLICIT environment from the caller. nil means "the
+              # worker's own environment", resolved at flush time exactly as
+              # LogError resolves it for a full capture.
+              environment: context[:environment].to_s.strip.presence&.[](0, 64)
+            }
+          end
+
+          # The exemplar for one error, identity included: what the count buffer
+          # stores for it. The hot path never calls this; it is the whole thing
+          # in one call, for callers that want the parts up front.
+          def gate_parts(exception, context)
+            exemplar(gate_identity(exception, context), exception, context)
           end
 
           # Cheap in-process bucketing key. Deliberately NOT the canonical
@@ -227,59 +266,34 @@ module RailsErrorDashboard
           # is part of the in-process key too: a staging event and a
           # production event of the same error must not share one entry, or
           # the flush job would reconcile both into whichever environment
-          # the worker runs in.
-          def gate_key(parts)
-            parts[:gate_key] ||= Digest::SHA256.hexdigest(
-              "#{parts[:custom_hash] || identity_key(parts)}|#{parts[:environment]}"
+          # the worker runs in. Scrubbed, as the exemplar's copy is.
+          def gate_key_for(identity)
+            identity[:gate_key] ||= Digest::SHA256.hexdigest(
+              "#{identity[:custom_hash] || identity[:opaque_identity]}|#{EncodingSanitizer.scrub_deep(identity[:environment])}"
             )[0..15]
           end
 
-          def identity_key(parts)
-            parts[:opaque_identity] || ErrorHashGenerator.opaque_identity(
-              error_class: parts[:error_class],
-              normalized_message: ErrorHashGenerator.normalize_message(parts[:message]),
-              frames: parts[:first_app_frame],
-              controller_name: parts[:controller_name],
-              action_name: parts[:action_name]
-            )
-          end
-
-          def gate_parts(exception, context)
-            raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
-
-            # Everything below is buffered, JSON-encoded for StormFlushJob and
-            # later INSERTed, so no String may keep an invalid byte. The identity
-            # digest is computed from the raw message first (it is hex, and must
-            # match what the sync and async paths hash).
+          # What the count buffer keeps for a fingerprint it hasn't seen:
+          # everything below is buffered, JSON-encoded for StormFlushJob and
+          # later INSERTed, so no String may keep an invalid byte.
+          #
+          # The message is redacted before it goes in the buffer, because the
+          # buffer is shipped to StormFlushJob -- a durable queue on Sidekiq or
+          # Solid Queue. It survives as an exemplar for the minimal ErrorLog row
+          # a first-seen fingerprint gets, which FlushStormCounts would redact
+          # at INSERT anyway; doing it here means the secret never reaches the
+          # queue's backing store at all.
+          def exemplar(identity, exception, context)
             EncodingSanitizer.scrub_deep(
               error_class: exception.class.name,
-              # The identity is hashed from the RAW message here, on the hot
-              # path, and only the digest is buffered. The message itself is
-              # redacted before it goes in the buffer, because the buffer is
-              # shipped to StormFlushJob -- a durable queue on Sidekiq or Solid
-              # Queue. It survives as an exemplar for the minimal ErrorLog row
-              # a first-seen fingerprint gets, which FlushStormCounts would
-              # redact at INSERT anyway; doing it here means the secret never
-              # reaches the queue's backing store at all.
-              opaque_identity: ErrorHashGenerator.opaque_identity(
-                error_class: exception.class.name,
-                normalized_message: ErrorHashGenerator.normalize_message(raw_message),
-                frames: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
-                        ErrorHashGenerator.extract_app_frame(exception.backtrace),
-                controller_name: context[:controller_name]&.to_s,
-                action_name: context[:action_name]&.to_s
-              ),
+              opaque_identity: identity[:opaque_identity],
               # Scrubbed before redaction: the filter's regexes raise on invalid bytes.
-              message: redact(EncodingSanitizer.scrub(raw_message)),
-              first_app_frame: ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
-                               ErrorHashGenerator.extract_app_frame(exception.backtrace),
+              message: redact(EncodingSanitizer.scrub(identity[:raw_message])),
+              first_app_frame: identity[:first_app_frame],
               controller_name: context[:controller_name]&.to_s,
               action_name: context[:action_name]&.to_s,
-              custom_hash: custom_hash_for(exception, context),
-              # Only an EXPLICIT environment from the caller. nil means "the
-              # worker's own environment", resolved at flush time exactly as
-              # LogError resolves it for a full capture.
-              environment: context[:environment].to_s.strip.presence&.[](0, 64),
+              custom_hash: identity[:custom_hash],
+              environment: identity[:environment],
               # Whose backtrace first_app_frame came from, for the row the flush
               # may build from it. Not part of the identity or the gate key: a
               # client report and a server capture of one error share an entry,

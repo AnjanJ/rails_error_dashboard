@@ -20,8 +20,8 @@ time.
       `Time.zone`
   - After: none
   - Done when: `R rspec spec/services/storm_protection/` → 0 failures
-- [ ] **T2** The gate builds the key per event and the exemplar only for a new entry → REQ-1, REQ-2, REQ-3, REQ-5
-  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, spec/services/storm_protection/gate_hot_path_spec.rb
+- [x] **T2** The gate builds the key per event and the exemplar only for a new entry → REQ-1, REQ-2, REQ-3, REQ-5
+  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, spec/services/storm_protection/gate_hot_path_spec.rb, spec/services/storm_protection/gate_spec.rb
   - Test: gate_hot_path_spec. Over a table of inputs: invalid bytes in the message and the
     environment, a custom fingerprint lambda, controller and action names, a client capture, and a
     message over 500 characters.
