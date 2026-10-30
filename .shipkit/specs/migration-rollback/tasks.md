@@ -48,7 +48,7 @@ time. The round-trip spec builds its own scratch databases and never touches
   - After: T3
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
     green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
-- [ ] **T4** No `change` branches on an existence check → REQ-7
+- [x] **T4** No `change` branches on an existence check → REQ-7
   - Files: spec/db/migrations/no_guarded_change_spec.rb
   - Test: no_guarded_change_spec parses every `db/migrate/*.rb` with Prism and fails on a `change`
     whose body calls a `*_exists?` check, by an early return or a modifier. Its own examples also
