@@ -109,3 +109,19 @@ tests little. Option 3 rewrites 26 shipped files twice over.
 **Falsifiability.** We would fall back to option 2 for the PostgreSQL and MySQL rows if the
 round-trip spec adds more than 60 seconds to an `adapter-test` row.
 **Fired-if.** manual
+
+**Measured at T1 (2026-10-30, M3 Max).**
+- **The chain builds without the complete schema** on all three databases: 52 migrations, 15 tables.
+  So the upgrade history found no upgrade bug.
+- **A whole chain costs** about 0.3 s on SQLite, 0.5 s on PostgreSQL and 1 to 1.4 s on MySQL. A build
+  per case averages half a chain, so 52 cases are about 30 seconds on MySQL here. That is an
+  estimate of about 80 seconds on a CI runner, past this decision's limit, so the harness doesn't
+  rebuild per case.
+- **It walks each history once instead,** and takes a migration down and up while it's the newest.
+  That's the same state a per-case build gives, because a round trip that doesn't restore the schema
+  rebuilds it before the walk goes on.
+- **It runs in its own process,** where `ActiveRecord::Base` is the scratch database. Several
+  migrations reach for `ActiveRecord::Base` or RED's models, some to write, and in the suite's
+  process those are the suite's database.
+- **The spec file with one migration on both histories,** process boot included: 1.9 s on SQLite,
+  4.1 s on PostgreSQL, 5.2 s on MySQL.

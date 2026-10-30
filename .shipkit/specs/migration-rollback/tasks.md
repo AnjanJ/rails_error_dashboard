@@ -8,7 +8,7 @@ body say "Refs #326", never "Closes".
 time. The round-trip spec builds its own scratch databases and never touches
 `spec/dummy/db/test.sqlite3`.
 
-- [ ] **T1** The round-trip harness, proven on one migration → REQ-1, REQ-4, REQ-6
+- [x] **T1** The round-trip harness, proven on one migration → REQ-1, REQ-4, REQ-6
   - Files: spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, db/migrate/20261010000001_create_missing_translations.rb
   - Test: round_trip_spec, for `create_missing_translations` on both histories:
     - **upgrade:** every migration up to it, complete schema skipped;
