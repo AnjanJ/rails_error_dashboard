@@ -116,6 +116,10 @@ RSpec.describe RedBenchmark::Scenarios do
   end
 
   it "times a reopen that collides and falls back to the row the index names (overhead-benchmark/REQ-3)" do
+    # Keyed on the adapter, not the index: a renamed index has to fail here on
+    # SQLite and PostgreSQL, not skip. bin/benchmark itself only runs on SQLite.
+    skip "MySQL has no partial indexes, so a reopen cannot collide" if RailsErrorDashboard::ErrorLog.connection.adapter_name.match?(/mysql|trilogy/i)
+
     claimed = 0
     allow_any_instance_of(RailsErrorDashboard::Commands::FindOrIncrementError)
       .to receive(:claim_conflicting_row).and_wrap_original { |original, **kwargs| original.call(**kwargs).tap { |row| claimed += 1 if row } }
@@ -123,5 +127,12 @@ RSpec.describe RedBenchmark::Scenarios do
     scenario("Reopen collision fallback").run.call(timer)
 
     expect(claimed).to be >= 4
+  end
+
+  it "refuses to time a reopen that cannot collide, rather than report a plain reopen as the fallback (overhead-benchmark/REQ-3)" do
+    allow(RailsErrorDashboard::ErrorLog.connection).to receive(:index_name_exists?).and_return(false)
+
+    expect { scenario("Reopen collision fallback").run.call(timer) }
+      .to raise_error(/index_error_logs_on_group_identity/)
   end
 end

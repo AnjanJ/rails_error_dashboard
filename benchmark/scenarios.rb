@@ -32,6 +32,8 @@ module RedBenchmark
     # with depth, so every exception here is raised 60 frames down.
     STACK_DEPTH = 60
 
+    GROUP_IDENTITY_INDEX = "index_error_logs_on_group_identity"
+
     # 400 characters, with the shapes the message filter rewrites.
     MESSAGE = ("PG::UniqueViolation: duplicate key value violates unique constraint " \
       "\"index_users_on_email\" DETAIL: Key (email)=(ada@example.com) already exists. " \
@@ -144,8 +146,15 @@ module RedBenchmark
     # 24 hours). Reopening it violates the unique index, and the capture is
     # counted on the row the index names. The reopen rolls back, so every
     # iteration takes the same path.
+    #
+    # Only where that index exists: MySQL has no partial indexes, so a reopen
+    # there never collides. bin/benchmark always runs on SQLite.
     def reopen_collision
       Scenario.new(name: "Reopen collision fallback", budget: nil, iterations: 200, run: lambda do |timer|
+        unless RailsErrorDashboard::ErrorLog.connection.index_name_exists?(RailsErrorDashboard::ErrorLog.table_name, GROUP_IDENTITY_INDEX)
+          raise "the reopen collision needs #{GROUP_IDENTITY_INDEX}, and this database does not have it"
+        end
+
         error_hash = "red-benchmark-reopen-collision"
         application = RailsErrorDashboard::Application.find_or_create_by!(name: "red-benchmark")
         attributes = { application_id: application.id, environment: "production", occurred_at: Time.current }
