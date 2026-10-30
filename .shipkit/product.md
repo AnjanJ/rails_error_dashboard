@@ -12,7 +12,7 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
 
 ## Goals this quarter
 - Ship 1.0 — metric: v1.0.0 published on RubyGems with config and public API frozen; target: released; by: 2026-12-31
-- Prove the overhead budget — metric: capture time and storm-check time, measured by a reproducible benchmark that ships in the repo; target: capture < 5ms, storm check < 5µs (the documented budgets); by: 2026-12-31
+- Prove the overhead budget — metric: capture time and storm-check time, measured by a reproducible benchmark that ships in the repo; target: capture < 5ms, storm check < 15µs, both on the CI benchmark's runner (the documented budgets); by: 2026-12-31
 - Grow adoption — metric: total RubyGems downloads and GitHub stars; target: 100,000 downloads and 200 stars (55,630 and 94 on 2026-10-21); by: 2026-12-31
 
 ## Non-goals

@@ -11,7 +11,7 @@ This gem runs INSIDE the host Rails app's process. Every line of code we write c
 
 1. **Never raise in the error capture path** — rescue at every layer. If our error tracker raises while capturing an error, we've made the situation worse.
 2. **Never block the request path** — all heavy work (notifications, analytics) must be async/background. The request thread must return ASAP.
-3. **Budget every operation** — breadcrumb callback <0.01ms, health snapshot <1ms, total capture <5ms. Measure with `Process.clock_gettime(Process::CLOCK_MONOTONIC)`.
+3. **Budget every operation** — breadcrumb callback <0.01ms, health snapshot <1ms, storm check <15µs, total capture <5ms. Measure with `Process.clock_gettime(Process::CLOCK_MONOTONIC)`.
 4. **Clean up Thread.current** — always use `ensure` blocks. Puma reuses threads across keepalive connections (Puma #823).
 5. **Always re-raise original exceptions** — Sentry #1173: swallowed Sidekiq exceptions prevented retries. After capture, always `raise` the original.
 6. **Feature-detect before calling** — `defined?(Puma)`, `respond_to?(:stats)`. Never assume a server/library exists.
@@ -85,6 +85,7 @@ Every major error-tracking SDK has had an incident where it damaged the host app
 |-----------|--------|-------|
 | Breadcrumb callback | <0.01ms | AS::Notifications subscriber |
 | Health snapshot | <1ms | GC.stat + connection_pool + Thread.list |
+| Storm check | <15µs on the CI benchmark's runner | `StormProtection::Gate.admit!`, on every error |
 | Total error capture | <5ms | Middleware + subscriber path |
 | Notification dispatch | 0ms sync | Always async via ActiveJob |
 | Pattern detection | <10ms | Background job only |

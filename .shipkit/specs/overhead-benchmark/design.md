@@ -25,9 +25,9 @@
 | Measurement | How | Budget |
 |---|---|---|
 | Capture (async, the installer's default) | A Rack app that raises a pre-built exception, under `ErrorCatcher` and the `Rails.error` subscriber, minus the same app with RED's middleware and subscriber off | < 5 ms |
-| Storm check, calm | `StormProtection::Gate.admit!` with the breaker closed (`Gate.reset!` before the scenario) | < 5 µs |
-| Storm check, shedding | the same, with the breaker shedding and the open threshold out of reach | < 5 µs |
-| Storm check, breaker open | the same, with the breaker driven open | < 5 µs |
+| Storm check, calm | `StormProtection::Gate.admit!` with the breaker closed (`Gate.reset!` before the scenario) | < 15 µs |
+| Storm check, shedding | the same, with the breaker shedding and the open threshold out of reach | < 15 µs |
+| Storm check, breaker open | the same, with the breaker driven open | < 15 µs |
 | Breadcrumb callback | the body of RED's `sql.active_record` subscriber (build the event, then `handle_sql`), with a buffer on the thread | < 0.01 ms |
 | Health snapshot | `SystemHealthSnapshot.capture` | < 1 ms |
 | Capture (sync) | as the first row, with `async_logging = false` | reported |
@@ -135,11 +135,46 @@ regression, and it matches what a budget means: the typical cost, not a lucky on
 keeps numbers comparable between runs.
 
 **Case against 1.** CI may fail on runner noise rather than on RED, especially for the storm check,
-where the headroom is about 2x. (Corrected during T4: the shedding row leaves about 1.1x on the M3
-Max.) That's the cost the maintainer accepted. Option 2 rarely flakes, but it reports the best case.
+where the headroom is about 2x. (Corrected during T4: after the budget decision below, the shedding
+row leaves about 1.2x on the runner.) That's the cost the maintainer accepted. Option 2 rarely flakes, but it reports the best case.
 Option 3 would flake constantly on GC pauses.
 
 **Decision.** We chose option 1.
 **Falsifiability.** We would change the gate if, in its first month, the job fails on main three or
 more times with no change to the capture path between the failing run and the green run before it.
+**Fired-if.** manual
+
+## Decision: The storm check's budget is 15 µs on the CI runner, not 5 µs on a laptop   (→ REQ-2, REQ-7, REQ-9)
+
+**Context.** The 5 µs budget had only ever been compared with an M3 Max: 3.3 µs calm, 4.5 µs
+shedding and 4.3 µs open, all with YJIT on. The first CI runs (2026-10-30, three runs, a 4-vCPU AMD
+EPYC 7763, YJIT on) measured 8.6 to 9.1 µs calm, 11.6 to 12.3 µs shedding and 11.4 to 11.8 µs open.
+The runner is about 2.7x slower on every row, and YJIT isn't the difference. Identity is 2.65 µs of
+the M3 Max's 4.5 µs, but a perfect memo of it still pays about 0.7 µs for its lookup and the two
+reads that build its key, which gives about 7 µs on the runner. Reaching 5 µs there means 1.8 µs on
+the M3 Max, and everything outside identity already costs about 1.4 µs.
+
+**Alternatives.**
+1. Gate at 15 µs on the runner.
+2. Gate at 20 µs on the runner.
+3. Memoize the identity, then gate at about 10 µs.
+4. Keep 5 µs as a goal, and report the storm rows without gating them.
+
+**Case for 1.** A host's servers look like the runner, not like an M3 Max, so this is the number
+that means something, and anyone can read it in the job summary. 15 µs sits between today's 12.3 µs
+and the estimated 17 to 24 µs of the code before `storm-gate-hot-path`, so it would have caught that
+regression, which option 2 misses on the calm row. At 12 µs, a process handling 1,000 errors a
+second spends about 1.2% of one core on the check.
+
+**Case against 1.** It's three times the number the README has published, so the claim gets weaker.
+The headroom is about 1.2x against a 6% spread between runs, and GitHub doesn't promise a CPU model,
+so a slower host could fail the job with no change in RED. The 17 to 24 µs estimate is the M3 Max
+figures scaled by 2.7, not a measurement. Option 3 gives a better number, but it reverses the gate's
+"no shared mutable caches" design on the capture path and still doesn't reach 5 µs. Option 4 is the
+quickest, but nothing would fail if the gate regressed.
+
+**Decision.** The maintainer chose option 1 on 2026-10-30.
+**Falsifiability.** We would raise the budget or move to a pinned runner if a storm row fails on
+main on a CPU other than the EPYC 7763 with no change to the capture path. We would add the memo
+(option 3) if a host reports the storm check as a measurable share of a storm.
 **Fired-if.** manual

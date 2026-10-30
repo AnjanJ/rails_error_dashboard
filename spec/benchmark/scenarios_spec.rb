@@ -23,9 +23,9 @@ RSpec.describe RedBenchmark::Scenarios do
 
     expect(budgets).to eq(
       "Capture, async (installer default)" => 5e-3,
-      "Storm check, calm" => 5e-6,
-      "Storm check, shedding" => 5e-6,
-      "Storm check, breaker open" => 5e-6,
+      "Storm check, calm" => 15e-6,
+      "Storm check, shedding" => 15e-6,
+      "Storm check, breaker open" => 15e-6,
       "Breadcrumb callback" => 1e-5,
       "Health snapshot" => 1e-3,
       "Capture, sync" => nil,
