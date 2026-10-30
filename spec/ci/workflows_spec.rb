@@ -210,6 +210,7 @@ RSpec.describe "GitHub Actions workflows" do
 
     it "writes the table to the job summary and fails the job on a breach (overhead-benchmark/REQ-9)" do
       expect(run_step["run"]).to include('bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"')
+      expect(run_step["run"]).not_to include("--smoke")
       expect(benchmark).not_to have_key("continue-on-error")
       expect(run_step).not_to have_key("continue-on-error")
     end

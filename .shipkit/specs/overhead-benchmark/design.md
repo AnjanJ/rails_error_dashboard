@@ -30,11 +30,12 @@
 | Params fitting | `CaptureLimits.request_params` on a 1 MB JSON body | reported (reverses above 5 ms) |
 | Reopen-collision fallback | `FindOrIncrementError` on a resolved row whose identity an unresolved row already holds | reported (reverses above 5 ms) |
 
-  Added during T4's review on 2026-10-30: "protection active" (REQ-2) is two states, and T3 had
-  timed only `:open`. Shedding makes the calm row's bucket decision and then counts as `:open`
-  does, so it's the gate's slowest branch: 4.5 µs against 4.3 µs for open on the M3 Max. Each is
-  a gated row. A breaker only sheds once a bucket rolls, ten seconds in, so the scenario brings the
-  roll forward instead of waiting.
+  Added during T4's review on 2026-10-30: "protection active" (REQ-2) is more than one state, and
+  T3 had timed only `:open`. Shedding makes the calm row's bucket decision and then counts as
+  `:open` does, so it's the gate's slowest branch: 4.5 µs against 4.3 µs for open on the M3 Max.
+  Each is a gated row. `:half_open` isn't timed: it swaps the bucket decision for a cheaper probe
+  counter. A breaker only sheds once a bucket rolls, ten seconds in, so the scenario brings the roll
+  forward instead of waiting.
 - **Output:** a Markdown table: name, median, p95, budget, PASS/FAIL. Above it, the environment
   (REQ-6): Ruby, Rails, adapter, CPU model and count (from `/proc/cpuinfo` or `sysctl`), OS, RED
   commit. With `--summary <file>` the table is also appended to that file. CI passes
@@ -129,8 +130,9 @@ regression, and it matches what a budget means: the typical cost, not a lucky on
 keeps numbers comparable between runs.
 
 **Case against 1.** CI may fail on runner noise rather than on RED, especially for the storm check,
-where the headroom is about 2x. That's the cost the maintainer accepted. Option 2 rarely flakes, but
-it reports the best case. Option 3 would flake constantly on GC pauses.
+where the headroom is about 2x. (Corrected during T4: the shedding row leaves about 1.1x on the M3
+Max.) That's the cost the maintainer accepted. Option 2 rarely flakes, but it reports the best case.
+Option 3 would flake constantly on GC pauses.
 
 **Decision.** We chose option 1.
 **Falsifiability.** We would change the gate if, in its first month, the job fails on main three or
