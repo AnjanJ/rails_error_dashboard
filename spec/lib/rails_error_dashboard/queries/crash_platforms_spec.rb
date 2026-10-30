@@ -83,6 +83,15 @@ RSpec.describe "Crash sources aren't platforms" do
     expect(pairs.map(&:last)).to include("iOS")
   end
 
+  it "decides the live list's Platform column by the index's rule (small-fixes-0-18/REQ-1)" do
+    errors = RailsErrorDashboard::ErrorLog
+    errors.where.not(platform: crash_sources).or(errors.where(platform: nil)).update_all(platform: "iOS")
+    allow(Rails.cache).to receive(:fetch).and_yield
+
+    expect(queries::FilterOptions.call[:platforms].size).to eq(1)
+    expect(RailsErrorDashboard::Services::ErrorBroadcaster.column_visibility(nil)[:platform]).to be(false)
+  end
+
   it "keeps a row with no platform in the scope, which NOT IN alone would drop (small-fixes-0-18/REQ-1)" do
     expect(RailsErrorDashboard::ErrorLog.platform_listed.pluck(:platform)).to contain_exactly("iOS", "API", nil)
   end

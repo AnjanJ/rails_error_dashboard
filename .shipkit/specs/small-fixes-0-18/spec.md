@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: lib/rails_error_dashboard/queries/,lib/rails_error_dashboard/services/pattern_detector.rb,lib/rails_error_dashboard/services/crash_capture.rb,app/models/rails_error_dashboard/error_log.rb,app/helpers/rails_error_dashboard/application_helper.rb,app/views/rails_error_dashboard/errors/,config/locales/,docs/UPGRADING.md,_getting_started/upgrading.md,spec/
+> Paths: lib/rails_error_dashboard/queries/,lib/rails_error_dashboard/services/pattern_detector.rb,lib/rails_error_dashboard/services/crash_capture.rb,lib/rails_error_dashboard/services/error_broadcaster.rb,app/models/rails_error_dashboard/error_log.rb,app/helpers/rails_error_dashboard/application_helper.rb,app/views/rails_error_dashboard/errors/,config/locales/,docs/UPGRADING.md,_getting_started/upgrading.md,spec/
 
 ## Purpose
 Four small things are wrong in what the dashboard shows or records:
