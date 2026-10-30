@@ -20,7 +20,7 @@ cites `host-safety-0-18/REQ-N`. One commit per task, test and code together.
     - `Open3.popen3` raising → `nil` and a message, no raise
   - After: none
   - Done when: `R rspec spec/services/git_blame_reader_spec.rb` → 0 failures
-- [ ] **T2** View Source maps an outside path to its app-relative file, or shows nothing → REQ-5, REQ-6, REQ-7
+- [x] **T2** View Source maps an outside path to its app-relative file, or shows nothing → REQ-5, REQ-6, REQ-7
   - Files: lib/rails_error_dashboard/services/source_code_reader.rb, spec/services/source_code_reader_spec.rb
   - Test: source_code_reader_spec, with a temp `Rails.root`:
     - `/old/release/app/models/user.rb` → reads `Rails.root/app/models/user.rb`;

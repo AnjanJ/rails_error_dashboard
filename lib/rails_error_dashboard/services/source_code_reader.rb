@@ -20,6 +20,7 @@ module RailsErrorDashboard
       # Templates only under an app/ directory (app/views, app/components, an
       # engine's app/): elsewhere .erb is configuration, as in config/database.yml.erb.
       TEMPLATE_EXTENSIONS = %w[.erb .haml .slim .builder .jbuilder].freeze
+      NOT_AVAILABLE = "File not found or not readable"
 
       attr_reader :file_path, :line_number, :error
 
@@ -42,7 +43,10 @@ module RailsErrorDashboard
 
         # Validate and resolve path
         absolute_path = resolve_absolute_path
-        return nil unless absolute_path
+        unless absolute_path
+          @error = NOT_AVAILABLE if file_path.present?
+          return nil
+        end
 
         # Validate path is safe
         unless validate_path!(absolute_path)
@@ -52,7 +56,7 @@ module RailsErrorDashboard
 
         # Check file exists and is readable
         unless File.exist?(absolute_path) && File.readable?(absolute_path)
-          @error = "File not found or not readable"
+          @error = NOT_AVAILABLE
           return nil
         end
 
@@ -98,18 +102,31 @@ module RailsErrorDashboard
         return nil if file_path.blank?
 
         # Handle relative paths from backtrace
-        if file_path.start_with?(Rails.root.to_s)
+        if file_path.start_with?(File.join(Rails.root, ""))
           # Already absolute
           file_path
         elsif file_path.start_with?("/")
-          # Absolute but might be from different root (deployed location)
-          # Try to find relative to Rails.root
-          relative = file_path.sub(%r{^.*/}, "")
-          File.join(Rails.root, relative)
+          # Absolute but from a different root (an earlier deploy)
+          map_outside_path
         else
           # Relative path
           File.join(Rails.root, file_path)
         end
+      end
+
+      # A frame recorded before a deploy names the same app-relative file under
+      # this root. Each trailing part of its path is tried, longest first, so the
+      # earliest segment that fits wins. The basename alone is never tried: that
+      # would match a file only by name. validate_path! still judges the result.
+      #
+      # @return [String, nil] Path of the existing file, or nil
+      def map_outside_path
+        segments = file_path.split("/").reject(&:empty?)
+        return nil if segments.intersect?(%w[. ..])
+
+        (0...segments.size - 1)
+          .map { |start| File.join(Rails.root, *segments[start..]) }
+          .find { |candidate| File.file?(candidate) }
       end
 
       # Validate path is safe to read (security check)
