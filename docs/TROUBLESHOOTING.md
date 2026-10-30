@@ -118,19 +118,22 @@ Four migrations raise `ActiveRecord::IrreversibleMigration` going down:
 
 | Migration | Raises on | Why |
 |---|---|---|
-| `20260915000001`, add group identity unique index | every database | It merged duplicate error groups, and those rows can't be restored |
-| `20260909000001`, replace message GIN with searchable text index | PostgreSQL | It brought two index layouts to one, so there's no single layout to return to |
-| `20260325000001`, fix swallowed exceptions index | MySQL | The previous index is over MySQL's key length limit |
-| `20260106094256`, backfill application for existing errors | every database | It filled in rows that had no application, and nothing recorded which ones |
+| `20260915000001`, `add_group_identity_unique_index_to_error_logs` | every database | It merged duplicate error groups, and those rows can't be restored |
+| `20260909000001`, `replace_message_gin_with_searchable_text_index` | PostgreSQL | It brought two index layouts to one, so there's no single layout to return to |
+| `20260325000001`, `fix_swallowed_exceptions_index_for_mysql` | MySQL | The previous index is over MySQL's key length limit |
+| `20260106094256`, `backfill_application_for_existing_errors` | every database | It filled in rows that had no application, and nothing recorded which ones |
+
+These numbers are the gem's. The installer gives each copy its own timestamp, so find yours by name:
+`ls db/migrate | grep add_group_identity_unique_index`.
 
 **Installs from before 0.18.0 keep their old copies.** The installer copies each migration into
 your app once and skips names you already have, so upgrading doesn't change them. In those old
 copies, 33 migrations print "reverted" and leave their table or column in place, and your schema
 is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove what they add.
 
-**A fresh install can refuse.** `bin/rails db:migrate:down VERSION=20251224000001` (error logs) or
-`VERSION=20260106094220` (applications) fails on PostgreSQL and MySQL while other tables have
-foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
+**A fresh install can refuse.** Migrating down your copy of
+`create_rails_error_dashboard_error_logs` or `create_rails_error_dashboard_applications` fails on
+PostgreSQL and MySQL while other tables have foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
 
 **To remove a leftover table or column by hand**:
 
