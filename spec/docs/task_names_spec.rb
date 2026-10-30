@@ -43,6 +43,40 @@ RSpec.describe "Names in the code and docs" do
     expect(Dir.glob(root.join("config/locales/*.yml")).select { |file| File.read(file).match?(/^\s+async_adapter:/) }).to be_empty
   end
 
+  upgrading.each do |page|
+    describe page do
+      let(:text) { File.read(root.join(page)) }
+      let(:section) { text[/^## Deprecations in 0\.18\.0.*?(?=^## )/m].to_s }
+
+      it "is reachable from the table of releases (deprecations-0-18/REQ-19)" do
+        expect(text).to match(/^\| 0\.18\.0 \|.*deprecations-in-0180/)
+      end
+
+      it "says each dead option's line goes (deprecations-0-18/REQ-19)" do
+        expect(section).to match(/`config\.async_adapter`.*Delete the line/)
+        expect(section).to match(/`config\.llm_observability_content_capture`.*Delete the line/)
+      end
+
+      it "gives each of the 11 tasks its new name (deprecations-0-18/REQ-19)" do
+        names.each do |name|
+          expect(section).to match(/`error_dashboard:#{name}`.*`rails_error_dashboard:#{name}`/)
+        end
+      end
+
+      it "says the generator has gone, and what replaces it (deprecations-0-18/REQ-19)" do
+        expect(section).to match(/rails_error_dashboard:solid_queue`.*rails_error_dashboard:verify`/)
+      end
+
+      it "says what to do about USE_SEPARATE_ERROR_DB (deprecations-0-18/REQ-19)" do
+        expect(section).to match(/`USE_SEPARATE_ERROR_DB`.*`config\.use_separate_database`/)
+      end
+
+      it "gives the Rails and Ruby floors (deprecations-0-18/REQ-19)" do
+        expect(section).to include("Rails 7.2", "Ruby 3.3", "VERSIONING.md")
+      end
+    end
+  end
+
   it "passes the locale checker (deprecations-0-18/REQ-12)" do
     output, status = Open3.capture2e(RbConfig.ruby, root.join("bin/i18n-check").to_s, chdir: root.to_s)
 

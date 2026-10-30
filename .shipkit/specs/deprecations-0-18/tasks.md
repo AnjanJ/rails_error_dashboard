@@ -90,7 +90,7 @@ every example, so one example's warning can't hide another's, in any order.
     - `bin/i18n-check` passes
   - After: T7, T3, T5
   - Done when: `R rspec spec/docs/task_names_spec.rb` → 0 failures, and `bin/i18n-check` exits 0
-- [ ] **T9** The 0.18.0 upgrade notes → REQ-19
+- [x] **T9** The 0.18.0 upgrade notes → REQ-19
   - Files: docs/UPGRADING.md, _getting_started/upgrading.md, spec/docs/task_names_spec.rb
   - Test: task_names_spec: both copies have a 0.18.0 section that names each deprecation, each
     with its replacement line:

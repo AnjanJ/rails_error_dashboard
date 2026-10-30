@@ -4,6 +4,7 @@ require "rails_helper"
 
 # Decision 0004: neither option ever did anything, so both warn and store nothing
 # from 0.18, and an initializer that still assigns them keeps booting.
+# Covers deprecations-0-18/REQ-4 and deprecations-0-18/REQ-6.
 RSpec.describe "Deprecated configuration options" do
   let(:config) { RailsErrorDashboard::Configuration.new }
 
