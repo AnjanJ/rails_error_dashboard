@@ -39,7 +39,7 @@ time. The round-trip spec builds its own scratch databases and never touches
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
     green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
 - [ ] **T6** The seven migrations the issue's list missed, and the rest of REQ-6 → REQ-1, REQ-2, REQ-3, REQ-4, REQ-6
-  - Files: db/migrate/20260220000001_add_exception_cause_to_error_logs.rb, db/migrate/20260220000002_add_enriched_context_to_error_logs.rb, db/migrate/20260221000001_add_environment_info_to_error_logs.rb, db/migrate/20260221000002_add_reopened_at_to_error_logs.rb, db/migrate/20260303000001_add_breadcrumbs_to_error_logs.rb, db/migrate/20260326000001_add_issue_tracking_to_error_logs.rb, db/migrate/20260915000003_add_context_provenance_to_error_logs.rb, spec/db/migrations/round_trip_spec.rb
+  - Files: db/migrate/20260220000001_add_exception_cause_to_error_logs.rb, db/migrate/20260220000002_add_enriched_context_to_error_logs.rb, db/migrate/20260221000001_add_environment_info_to_error_logs.rb, db/migrate/20260221000002_add_reopened_at_to_error_logs.rb, db/migrate/20260303000001_add_breadcrumbs_to_error_logs.rb, db/migrate/20260326000001_add_issue_tracking_to_error_logs.rb, db/migrate/20260915000003_add_context_provenance_to_error_logs.rb, db/migrate/20260106094318_finalize_application_foreign_key.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec:
     - the seven, as the eleven own-object migrations;
     - the 13 that already have `up` and `down`: on the upgrade history down leaves nothing and up

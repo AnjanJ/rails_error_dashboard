@@ -45,6 +45,11 @@ The harness also runs the 13 migrations that already had `up` and `down`, becaus
 guarded `up`. Those never misreported: their `down` removes the object, or raises. Some raise on an
 object that's already gone, which is a loud failure and not this bug, so they're unchanged.
 
+One of the 13 had a real bug of its own. `20260106094318` called `remove_foreign_key` with only a
+column, and on SQLite before Rails 8.1 that guesses the table from the column name, as `applications`,
+and raises. So it could never roll back there. Only the CI matrix showed it: both adapter rows and
+every local run are on 8.1. Naming the table fixes it on every version.
+
 ## Decision: Each `down` removes the object if it exists; the database's own refusals surface as errors   (→ REQ-1, REQ-2, REQ-3)
 
 **Context.** The maintainer chose, at the requirements gate, that all 26 behave alike: `down`
