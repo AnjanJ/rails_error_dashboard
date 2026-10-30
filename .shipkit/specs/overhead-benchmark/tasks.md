@@ -41,7 +41,7 @@ collide.
     each row's median, p95, budget and verdict (REQ-4), under the environment block (REQ-6).
   - After: T2
   - Done when: `R rspec spec/benchmark/scenarios_spec.rb` → 0 failures, and `R bin/benchmark` prints a table with all nine rows
-- [ ] **T4** CI runs it and fails on a breach → REQ-8, REQ-9
+- [x] **T4** CI runs it and fails on a breach → REQ-8, REQ-9
   - Files: .github/workflows/ci.yml, spec/ci/workflows_spec.rb
   - Test: workflows_spec:
     - a `benchmark` job exists with `permissions: contents: read` and SHA-pinned actions;

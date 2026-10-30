@@ -42,6 +42,44 @@ RSpec.describe "GitHub Actions workflows" do
     jobs(name).flat_map { |job_id, job| Array(job["steps"]).map { |step| [ job_id, step ] } }
   end
 
+  # A repository whose HEAD is one commit past origin/main, adding `path`.
+  # Git's hook variables are unset: this spec also runs inside the
+  # pre-commit hook, where they point at the real repository.
+  def repo_changing(path)
+    dir = Dir.mktmpdir("red_changes_gate")
+    git = lambda do |*args|
+      out, status = Open3.capture2e(git_env, "git", "-c", "user.name=spec", "-c", "user.email=spec@example.com",
+        "-c", "commit.gpgsign=false", *args, chdir: dir)
+      raise "git #{args.join(' ')} failed: #{out}" unless status.success?
+    end
+    git.call("init", "-q", "-b", "main")
+    git.call("commit", "-q", "--allow-empty", "-m", "base")
+    git.call("update-ref", "refs/remotes/origin/main", "HEAD")
+    FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+    File.write(File.join(dir, path), "change\n")
+    git.call("add", path)
+    git.call("commit", "-q", "-m", "change")
+    dir
+  end
+
+  def git_env
+    { "GIT_DIR" => nil, "GIT_WORK_TREE" => nil, "GIT_INDEX_FILE" => nil }
+  end
+
+  # Runs a step of ci.yml's changes job the way a runner would and returns what
+  # it wrote to $GITHUB_OUTPUT.
+  def changes_step_output(step_id, changed:, **env)
+    step = jobs("ci.yml").fetch("changes").fetch("steps").find { |candidate| candidate["id"] == step_id }
+    dir = repo_changing(changed)
+    output_file = File.join(dir, "github_output")
+    env = git_env.merge(env.transform_keys(&:to_s), "BASE_REF" => "main", "GITHUB_OUTPUT" => output_file)
+    log, status = Open3.capture2e(env, "bash", "-eo", "pipefail", "-c", step.fetch("run"), chdir: dir)
+    expect(status).to be_success, log
+    File.read(output_file).strip
+  ensure
+    FileUtils.rm_rf(dir) if dir
+  end
+
   # Values a PR author or a dispatcher chooses. Expanded inside `run:`, they
   # become part of the script itself; read from an env var, they stay data.
   UNTRUSTED_EXPRESSION = /\$\{\{[^}]*\b(?:github\.(?:head_ref|base_ref|event\.)|inputs\.)/
@@ -114,45 +152,8 @@ RSpec.describe "GitHub Actions workflows" do
   describe "ci.yml: the upgrade gate" do
     let(:ci_jobs) { jobs("ci.yml") }
 
-    def decide_step
-      ci_jobs.fetch("changes").fetch("steps").find { |step| step["id"] == "decide" }
-    end
-
-    # A repository whose HEAD is one commit past origin/main, adding `path`.
-    # Git's hook variables are unset: this spec also runs inside the
-    # pre-commit hook, where they point at the real repository.
-    def repo_changing(path)
-      dir = Dir.mktmpdir("red_upgrade_gate")
-      git = lambda do |*args|
-        out, status = Open3.capture2e(git_env, "git", "-c", "user.name=spec", "-c", "user.email=spec@example.com",
-          "-c", "commit.gpgsign=false", *args, chdir: dir)
-        raise "git #{args.join(' ')} failed: #{out}" unless status.success?
-      end
-      git.call("init", "-q", "-b", "main")
-      git.call("commit", "-q", "--allow-empty", "-m", "base")
-      git.call("update-ref", "refs/remotes/origin/main", "HEAD")
-      FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
-      File.write(File.join(dir, path), "change\n")
-      git.call("add", path)
-      git.call("commit", "-q", "-m", "change")
-      dir
-    end
-
-    def git_env
-      { "GIT_DIR" => nil, "GIT_WORK_TREE" => nil, "GIT_INDEX_FILE" => nil }
-    end
-
-    # Runs the decide script the way a runner would and returns what it wrote
-    # to $GITHUB_OUTPUT.
     def decide(head_ref:, changed:)
-      dir = repo_changing(changed)
-      output_file = File.join(dir, "github_output")
-      env = git_env.merge("HEAD_REF" => head_ref, "BASE_REF" => "main", "GITHUB_OUTPUT" => output_file)
-      log, status = Open3.capture2e(env, "bash", "-eo", "pipefail", "-c", decide_step.fetch("run"), chdir: dir)
-      expect(status).to be_success, log
-      File.read(output_file).strip
-    ensure
-      FileUtils.rm_rf(dir) if dir
+      changes_step_output("decide", changed: changed, "HEAD_REF" => head_ref)
     end
 
     it "skips the upgrade job at the job level, on the changes job's answer (test-gaps-0-17/REQ-14)" do
@@ -175,6 +176,68 @@ RSpec.describe "GitHub Actions workflows" do
     it "says yes for a release pull request (test-gaps-0-17/REQ-15)" do
       expect(decide(head_ref: "release-please--branches--main--components--rails_error_dashboard",
         changed: "CHANGELOG.md")).to eq("run=true")
+    end
+  end
+
+  # Fails CI when RED goes over a budget. It runs on every push to main, and on
+  # the pull requests that change what it measures.
+  describe "ci.yml: the benchmark job" do
+    let(:benchmark) { jobs("ci.yml").fetch("benchmark") }
+
+    def run_step
+      benchmark.fetch("steps").find { |step| step["run"].to_s.include?("bin/benchmark") }
+    end
+
+    it "reads the repository and nothing else, with its actions pinned (overhead-benchmark/REQ-8)" do
+      references = benchmark.fetch("steps").filter_map { |step| step["uses"] }
+
+      expect(effective_permissions("ci.yml", "benchmark")).to eq({ "contents" => "read" })
+      expect(references).to include(a_string_starting_with("actions/checkout@"), a_string_starting_with("ruby/setup-ruby@"))
+      expect(references).to all(match(/@\h{40}\z/))
+    end
+
+    it "runs on every push to main, and on a pull request when the changes job says so (overhead-benchmark/REQ-8)" do
+      expect(workflow("ci.yml").fetch(true).dig("push", "branches")).to eq([ "main" ])
+      expect(Array(benchmark["needs"])).to eq([ "changes" ])
+      expect(benchmark["if"]).to eq("github.event_name == 'push' || needs.changes.outputs.capture == 'true'")
+      expect(jobs("ci.yml").dig("changes", "outputs", "capture")).to eq("${{ steps.capture.outputs.run }}")
+    end
+
+    it "stays on one pinned row, so its numbers compare between runs (overhead-benchmark/REQ-8)" do
+      expect(benchmark.dig("env", "RAILS_VERSION")).to eq("8.1")
+      expect(benchmark.fetch("steps").find { |step| step["uses"].to_s.start_with?("ruby/setup-ruby@") }.dig("with", "ruby-version")).to eq("3.4")
+    end
+
+    it "writes the table to the job summary and fails the job on a breach (overhead-benchmark/REQ-9)" do
+      expect(run_step["run"]).to include('bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"')
+      expect(benchmark).not_to have_key("continue-on-error")
+      expect(run_step).not_to have_key("continue-on-error")
+    end
+
+    %w[
+      lib/rails_error_dashboard/middleware/error_catcher.rb
+      lib/rails_error_dashboard/subscribers/breadcrumb_subscriber.rb
+      lib/rails_error_dashboard/commands/log_error.rb
+      lib/rails_error_dashboard/services/storm_protection/gate.rb
+      lib/rails_error_dashboard/error_reporter.rb
+      bin/benchmark
+      benchmark/scenarios.rb
+      .github/workflows/ci.yml
+    ].each do |path|
+      it "says yes for a pull request that changes #{path} (overhead-benchmark/REQ-8)" do
+        expect(changes_step_output("capture", changed: path)).to eq("run=true")
+      end
+    end
+
+    %w[
+      lib/rails_error_dashboard/queries/errors_list.rb
+      app/views/rails_error_dashboard/errors/index.html.erb
+      spec/benchmark/timer_spec.rb
+      README.md
+    ].each do |path|
+      it "says no for a pull request that changes only #{path} (overhead-benchmark/REQ-8)" do
+        expect(changes_step_output("capture", changed: path)).to eq("run=false")
+      end
     end
   end
 

@@ -40,7 +40,12 @@
   - it runs on every push to main;
   - on a PR, it runs when the existing `changes` job reports a capture-path change. A new
     `capture` output matches `lib/rails_error_dashboard/(middleware|subscribers|commands|services)/`,
-    `error_reporter.rb` or `bin/benchmark`;
+    `error_reporter.rb` or `bin/benchmark`. Added during T4 on 2026-10-30: it also matches
+    `benchmark/` and `.github/workflows/ci.yml`. A change to a scenario or to this job can move the
+    numbers as much as a change to the capture path, and the PR that changes the job has to be able
+    to run it;
+  - the row sets `RAILS_VERSION` to 8.1 rather than relying on the Gemfile's default, which moves
+    when a new Rails series ships;
   - it isn't added to the ruleset's required checks yet (out of scope).
 - **README** (REQ-10): the three sentences at `README.md:128`, `:145` and `:161`, plus
   `docs/FEATURES.md:572` and `docs/LLM_OBSERVABILITY.md:295`, quote the CI numbers and the runner,
