@@ -38,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](../LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-filtering) section, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
+Reference for the configuration options, with their defaults. Not listed here: the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-filtering) section, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
 
 ### Authentication & Access
 
@@ -246,6 +246,34 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or a subset of `[:sql, :controller, :cache, :job, :mailer, :deprecation, :custom, :action_cable, :active_storage, :rack_attack, :llm, :llm_tool]`). Symbols only: with Strings, no breadcrumb matches |
 | `enable_n_plus_one_detection` | Boolean | `true` | Detect N+1 query patterns in SQL breadcrumbs (display-time analysis) |
 | `n_plus_one_threshold` | Integer | `3` | Min repetitions to flag as N+1 (min: 2) |
+
+### AI Help and LLM Observability
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_llm_observability` | Boolean | `false` | Record LLM calls as breadcrumbs. Needs `enable_breadcrumbs`. See [LLM observability](../LLM_OBSERVABILITY.md) |
+| `llm_pricing_overrides` | Hash | `{}` | Per-model rates as `{ "model" => { input:, output: } }`, in USD per million tokens |
+| `llm_provider` | Symbol | `nil` | `:openai` or `:anthropic` (ENV: `RED_LLM_PROVIDER`) |
+| `llm_api_key` | String or Proc | `nil` | Provider API key (ENV: `RED_LLM_API_KEY`) |
+| `llm_model` | String | `nil` | Model name (ENV: `RED_LLM_MODEL`) |
+| `llm_openai_endpoint` | Symbol | `:auto` | `:responses`, `:chat_completions` or `:auto` (ENV: `RED_LLM_OPENAI_ENDPOINT`) |
+| `llm_timeout_seconds` | Integer | `30` | HTTP timeout for provider calls |
+| `llm_max_output_tokens` | Integer | `900` | Cap on the response length |
+| `llm_system_prompt` | String | `nil` | Optional override of, or addition to, the prompt |
+
+### Code Path Coverage
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_coverage_tracking` | Boolean | `false` | Diagnostic mode: mark which lines ran in View Source. Ruby 3.2+ |
+
+### OpenTelemetry Export
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_otel_export` | Boolean | `false` | Emit RED's operations as spans. Needs OpenTelemetry in the host app |
+| `otel_service_name` | String | `nil` | Falls back to `application_name` |
+| `otel_spans` | Array | `[:capture, :breadcrumbs, :health, :notifications]` | Which kinds of span to emit |
 
 ### System Health Snapshot
 

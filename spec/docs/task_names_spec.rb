@@ -12,6 +12,8 @@ RSpec.describe "Names in the code and docs" do
     retention_cleanup scrub_invalid_encoding backfill_resolved_at digest_session_ids send_digest
   ]
   upgrading = %w[docs/UPGRADING.md _getting_started/upgrading.md]
+  # The list of what 1.x keeps stable has to name what's deprecated: it still works.
+  public_api = %w[docs/PUBLIC_API.md]
   searched = Dir.glob(root.join("{app,lib,config/locales,docs,_guides,_reference,_getting_started,_features}/**/*.{rb,erb,rake,yml,md}"))
     .concat(Dir.glob(root.join("*.md")))
     .map { |file| Pathname(file).relative_path_from(root).to_s } - %w[CHANGELOG.md]
@@ -23,19 +25,19 @@ RSpec.describe "Names in the code and docs" do
   it "names only rails_error_dashboard: tasks, apart from UPGRADING and the aliases (deprecations-0-18/REQ-12)" do
     old_task = /(?<![_a-z])error_dashboard:(?:#{names.join('|')})\b/
 
-    expect(naming(old_task, except: upgrading + %w[lib/tasks/error_dashboard.rake])).to be_empty
+    expect(naming(old_task, except: upgrading + public_api + %w[lib/tasks/error_dashboard.rake])).to be_empty
   end
 
   it "offers USE_SEPARATE_ERROR_DB nowhere (deprecations-0-18/REQ-15)" do
     # UNINSTALL lists it among the variables to remove, which is still right, and
     # PROJECT_MAP notes for contributors what the code still reads.
-    pages = searched.grep(/\.md\z/) - upgrading - %w[docs/UNINSTALL.md _reference/uninstall.md PROJECT_MAP.md]
+    pages = searched.grep(/\.md\z/) - upgrading - public_api - %w[docs/UNINSTALL.md _reference/uninstall.md PROJECT_MAP.md]
 
     expect(pages.select { |file| File.read(root.join(file)).include?("USE_SEPARATE_ERROR_DB") }).to be_empty
   end
 
   it "documents neither dead option (deprecations-0-18/REQ-8)" do
-    pages = searched.grep(/\.md\z/) - upgrading
+    pages = searched.grep(/\.md\z/) - upgrading - public_api
 
     expect(pages.select { |file| File.read(root.join(file)).match?(/async_adapter|llm_observability_content_capture/) }).to be_empty
   end

@@ -7,8 +7,8 @@ cites `public-api-and-policies/REQ-N`. One commit per task, test and code togeth
 time. This spec's PR merges after `deprecations-0-18` and `webhook-v1`; its lists describe the
 surface they leave.
 
-- [ ] **T1** The public API page, and the spec that keeps it in step with the code → REQ-1, REQ-2, REQ-3
-  - Files: docs/PUBLIC_API.md, docs/guides/CONFIGURATION.md, _guides/configuration.md, spec/docs/public_api_spec.rb
+- [x] **T1** The public API page, and the spec that keeps it in step with the code → REQ-1, REQ-2, REQ-3
+  - Files: docs/PUBLIC_API.md, docs/guides/CONFIGURATION.md, _guides/configuration.md, spec/docs/public_api_spec.rb, spec/docs/task_names_spec.rb
   - Test: public_api_spec. Written first, against a page that names only the groups, so it fails
     listing every missing name.
     - **What it enumerates from the code,** as the design's table says:
