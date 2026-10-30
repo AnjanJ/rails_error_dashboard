@@ -55,7 +55,7 @@ time. The round-trip spec builds its own scratch databases and never touches
     run the check on the pre-fix text of one migration of each form and expect a failure.
   - After: T6
   - Done when: `R rspec spec/db/migrations/no_guarded_change_spec.rb` → 0 failures
-- [ ] **T5** The rollback docs say what rolls back → REQ-8
+- [x] **T5** The rollback docs say what rolls back → REQ-8
   - Files: docs/TROUBLESHOOTING.md, docs/GLOSSARY.md, _reference/troubleshooting.md, _reference/glossary.md, spec/docs/rollback_docs_spec.rb
   - Test: rollback_docs_spec, for each of the four pages:
     - it names the four irreversible migrations and `20260915000001` as where `db:rollback` stops;

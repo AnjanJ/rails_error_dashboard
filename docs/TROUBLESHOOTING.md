@@ -91,7 +91,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 2. **Fix the reported error and re-run**: `bin/rails db:migrate` picks up where it stopped. Don't
    roll back with `db:rollback STEP=N`: the count includes your app's own migrations, and four of
-   RED's migrations can't be rolled back. If an install of 0.4.0 to 0.8.1 stopped with
+   RED's migrations can't be rolled back (see [Rolling Back RED's Migrations](#rolling-back-reds-migrations)). If an install of 0.4.0 to 0.8.1 stopped with
    `duplicate column name: instance_variables`, see
    [Stuck at db:migrate](UPGRADING.md#stuck-at-dbmigrate-after-installing-040-to-081).
 
@@ -105,6 +105,42 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    -- PostgreSQL
    GRANT ALL PRIVILEGES ON DATABASE your_db TO your_user;
    ```
+
+---
+
+### Rolling Back RED's Migrations
+
+**What rolls back**: `bin/rails db:rollback` stops at `20260915000001`, the newest migration that
+can't be reversed. Everything newer rolls back. To go further, you have to remove what's left by
+hand (see below).
+
+Four migrations raise `ActiveRecord::IrreversibleMigration` going down:
+
+| Migration | Raises on | Why |
+|---|---|---|
+| `20260915000001`, add group identity unique index | every database | It merged duplicate error groups, and those rows can't be restored |
+| `20260909000001`, replace message GIN with searchable text index | PostgreSQL | It brought two index layouts to one, so there's no single layout to return to |
+| `20260325000001`, fix swallowed exceptions index | MySQL | The previous index is over MySQL's key length limit |
+| `20260106094256`, backfill application for existing errors | every database | It filled in rows that had no application, and nothing recorded which ones |
+
+**Installs from before 0.18.0 keep their old copies.** The installer copies each migration into
+your app once and skips names you already have, so upgrading doesn't change them. In those old
+copies, 33 migrations print "reverted" and leave their table or column in place, and your schema
+is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove what they add.
+
+**A fresh install can refuse.** `bin/rails db:migrate:down VERSION=20251224000001` (error logs) or
+`VERSION=20260106094220` (applications) fails on PostgreSQL and MySQL while other tables have
+foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
+
+**To remove a leftover table or column by hand**:
+
+```bash
+bin/rails runner 'ActiveRecord::Base.connection.drop_table(:rails_error_dashboard_missing_translations, if_exists: true)'
+bin/rails runner 'ActiveRecord::Base.connection.remove_column(:rails_error_dashboard_error_logs, :muted, if_exists: true)'
+```
+
+With a separate error database, use `RailsErrorDashboard::ErrorLogsRecord.connection` instead of
+`ActiveRecord::Base.connection`.
 
 ---
 
