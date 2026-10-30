@@ -181,3 +181,37 @@ main on a CPU other than the EPYC 7763 with no change to the capture path. We wo
 (option 3) if a storm row's median goes over 15 µs on the EPYC 7763 because of a change we want to
 keep.
 **Fired-if.** manual
+
+## Decision: Quote the rows that move with the CPU per CPU, and give the LLM pages their nearest row by name   (→ REQ-10)
+
+**Context.** `ubuntu-latest` isn't one machine. In its first day this job drew four CPU models. The
+health snapshot's code didn't change across those runs, and its median was about 0.45, 0.80 and
+0.85 ms on three of them on main, then 1.24 ms, over the 1 ms budget, on an Intel Xeon Platinum
+8573C on a pull request. The same model moves too: two 9V74 runs gave 0.66 and 0.85 ms. That pull
+request didn't cause it: main and the PR in one Linux container
+gave 598/619/614 and 614/610/611 µs. On Linux the row is about 98% procfs reads, which macOS skips
+(14 µs there, about 610 µs in Linux on the same chip), so only Linux can test it. Separately, the
+benchmark's breadcrumb row times the `sql.active_record` subscriber, so it never measured the
+~4 µs the LLM pages quoted, and the storm rows are about 1.8x apart between the two CPUs that ran
+the final code.
+
+**Alternatives.**
+1. Quote the health snapshot on each CPU, the storm and breadcrumb rows on both final-code CPUs, and
+   say the LLM path has no row of its own.
+2. Quote one run's figures and name its runner, which is the plainest reading of REQ-10.
+3. Quote a range with no CPU names.
+
+**Case for 1.** A reader sees how far the number moves and that a Xeon goes over budget. One run's
+figures would be true and flattering: the last green run on main was the fastest CPU of the four.
+The flat "sub-millisecond" those pages made isn't true of every host, so it goes too.
+
+**Case against 1.** The Xeon figure comes from a pull request's failed run, not a green run on main,
+because no main run has drawn that CPU. Six pages repeat the same sentences, so new figures mean
+six edits; the spec pins the words, so a page left behind fails. The LLM pages end up with no
+number for their own path, where before they had one that nothing could reproduce.
+
+**Decision.** The maintainer chose option 1 on 2026-10-31. The budgets in REQ-2 don't change.
+**Falsifiability.** We would go back to one figure per row if the job moves to a pinned runner, or
+if the health snapshot's median spread between CPUs falls under 20%. We would add an LLM row if a
+page needs a number for that path.
+**Fired-if.** manual

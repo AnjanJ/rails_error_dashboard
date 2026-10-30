@@ -1075,7 +1075,7 @@ config.breadcrumb_categories = [ :sql, :controller ]
 - **Cleanup in ensure** — buffer cleared even on exceptions (Puma thread reuse safe)
 - **Every subscriber wrapped in rescue** — never raises, never blocks
 - **Sensitive data filtered** — values under sensitive names are replaced with `[FILTERED]` before storage; free text gets best-effort redaction
-- **< 0.1ms/request overhead** — events already fired by Rails
+- **Low overhead** — each SQL breadcrumb takes a median of 1.18 µs on CI's AMD EPYC 9V45 runner and 1.89 µs on its AMD EPYC 7763 runner, against a 10 µs budget ([`bin/benchmark`](https://github.com/AnjanJ/rails_error_dashboard/blob/main/bin/benchmark)); the events are already fired by Rails
 
 ---
 
@@ -1107,7 +1107,7 @@ end
 ### Safety
 
 - **Default OFF** — opt-in only
-- **Sub-millisecond**, except the job-queue counts, which are database or Redis queries (cached per process)
+- **Around a millisecond**, except the job-queue counts, which are database or Redis queries (cached per process). The in-process metrics take a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, against a 1 ms budget ([`bin/benchmark`](https://github.com/AnjanJ/rails_error_dashboard/blob/main/bin/benchmark), on CI's shared runners)
 - **Every metric individually wrapped** in `rescue => nil`
 - **Top-level rescue** — returns `{ captured_at: ... }` if everything fails (never raises)
 - **No ObjectSpace scanning** — never calls `each_object` or `count_objects`
