@@ -8,7 +8,7 @@ reading the summary, not the exit code).
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. Run one rspec process at a
 time.
 
-- [ ] **T1** The buffer counts a known key in place, and takes its exemplar lazily → REQ-4
+- [x] **T1** The buffer counts a known key in place, and takes its exemplar lazily → REQ-4
   - Files: lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, spec/services/storm_protection/count_buffer_hot_path_spec.rb
   - Test: count_buffer_hot_path_spec:
     - recording a known key calls neither `Time.current` nor the exemplar block, and bumps the
@@ -20,8 +20,8 @@ time.
       `Time.zone`
   - After: none
   - Done when: `R rspec spec/services/storm_protection/` → 0 failures
-- [ ] **T2** The gate builds the key per event and the exemplar only for a new entry → REQ-1, REQ-2, REQ-3, REQ-5
-  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, spec/services/storm_protection/gate_hot_path_spec.rb
+- [x] **T2** The gate builds the key per event and the exemplar only for a new entry → REQ-1, REQ-2, REQ-3, REQ-5
+  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, spec/services/storm_protection/gate_hot_path_spec.rb, spec/services/storm_protection/gate_spec.rb, spec/commands/flush_storm_counts_spec.rb
   - Test: gate_hot_path_spec. Over a table of inputs: invalid bytes in the message and the
     environment, a custom fingerprint lambda, controller and action names, a client capture, and a
     message over 500 characters.
@@ -35,7 +35,7 @@ time.
     The existing gate and drain specs stay green.
   - After: T1
   - Done when: `R rspec spec/services/storm_protection/` → 0 failures
-- [ ] **T3** The storm rows pass on the machine of record → REQ-6
+- [x] **T3** The storm rows pass on the machine of record → REQ-6
   - Files: .shipkit/specs/storm-gate-hot-path/intake.md
   - Test: `bin/benchmark` on the maintainer's M3 Max: both storm rows PASS. The before and after
     numbers are recorded in `intake.md`, and CI's numbers go in the PR once the benchmark's CI job

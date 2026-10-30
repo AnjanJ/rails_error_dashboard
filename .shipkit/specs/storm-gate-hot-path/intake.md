@@ -40,6 +40,19 @@ benchmark's CI gate lands, rather than land it red or raise the budget.
 - **The flush job never reads the gate key.** It rebuilds the canonical hash from the stored parts
   (`flush_storm_counts.rb`), and buffered times leave as ISO 8601 instants.
 
+## Result (T3, 2026-10-30)
+`bin/benchmark` on the machine of record (Apple M3 Max, 14 CPUs, Ruby 3.4.5, Rails 8.1.4, SQLite),
+storm rows batched 100 calls per sample, median of 5 round medians:
+
+| Row | Before | After | Budget |
+|---|---|---|---|
+| Storm check, calm | 6.41 µs | 3.39 µs | < 5 µs, PASS |
+| Storm check, breaker open | 8.81 µs | 4.57 µs | < 5 µs, PASS |
+
+The other gated rows didn't move: capture 112 µs, breadcrumb 0.63 µs, health 14.0 µs. The open
+row has about 0.4 µs of headroom here. The CI runner's numbers come with the benchmark's CI job
+(`overhead-benchmark` T4).
+
 ## Conflicts found
 - **Paramount: the gate runs on the request thread and must fail open.** Every change keeps the
   existing rescue: any error gives `:full`.

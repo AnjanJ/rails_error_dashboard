@@ -77,14 +77,14 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
     end
   end
 
-  describe ".gate_key" do
+  describe ".gate_key_for" do
     it "separates the same error in different environments so they reconcile onto their own rows" do
-      staging = gate.send(:gate_parts, boom, { environment: "staging" })
-      production = gate.send(:gate_parts, boom, { environment: "production" })
-      implicit = gate.send(:gate_parts, boom, {})
+      staging = gate.send(:gate_identity, boom, { environment: "staging" })
+      production = gate.send(:gate_identity, boom, { environment: "production" })
+      implicit = gate.send(:gate_identity, boom, {})
 
-      expect(gate.send(:gate_key, staging)).not_to eq(gate.send(:gate_key, production))
-      expect(gate.send(:gate_key, implicit)).not_to eq(gate.send(:gate_key, staging))
+      expect(gate.send(:gate_key_for, staging)).not_to eq(gate.send(:gate_key_for, production))
+      expect(gate.send(:gate_key_for, implicit)).not_to eq(gate.send(:gate_key_for, staging))
       expect(implicit[:environment]).to be_nil
     end
   end

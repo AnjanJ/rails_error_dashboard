@@ -58,12 +58,35 @@ module RailsErrorDashboard
         end
 
         # Record one counted-not-stored event.
+        #
+        # The hot path of a storm in count-only mode, so a key the buffer
+        # already holds is counted in place: a plain Time (the same instant as
+        # Time.current, several times cheaper; snapshot! formats it in
+        # Time.zone), no per-event hash or array. The parts are needed only
+        # when the key is new, so a caller may pass a block instead, and it is
+        # called only then -- never for a known key, nor for an event that
+        # lands in the overflow.
+        #
         # @param gate_key [String] cheap in-process bucketing key
-        # @param parts [Hash] identity parts captured at the gate
-        def record(gate_key, parts)
-          now = Time.current
+        # @param parts [Hash, nil] identity parts captured at the gate
+        # @yieldreturn [Hash] the parts, when none were passed and the key is new
+        def record(gate_key, parts = nil, &build_parts)
+          now = Time.now
           @lock.with_read_lock do
-            add(gate_key, parts, 1, now, now, { self.class.bucket_for(now) => 1 })
+            map = @map_ref.get
+            entry = map[gate_key]
+            unless entry
+              if map.size >= max_tracked
+                @overflow.increment
+                return
+              end
+              entry = map.compute_if_absent(gate_key) { new_entry(parts || build_parts.call, now, now) }
+            end
+
+            entry.count.increment
+            entry.last_seen_at = now if now > entry.last_seen_at
+            entry.first_seen_at = now if now < entry.first_seen_at
+            entry.buckets.compute_if_absent(self.class.bucket_for(now)) { Concurrent::AtomicFixnum.new(0) }.increment
           end
         end
 
@@ -123,8 +146,10 @@ module RailsErrorDashboard
               "opaque_identity" => entry.opaque_identity,
               "capture_source" => entry.capture_source,
               "count" => entry.count.value,
-              "first_seen_at" => entry.first_seen_at.iso8601,
-              "last_seen_at" => entry.last_seen_at.iso8601,
+              # In Time.zone, as the wire format always was: live records
+              # hold a plain Time (see #record), restored ones a TimeWithZone.
+              "first_seen_at" => entry.first_seen_at.in_time_zone.iso8601,
+              "last_seen_at" => entry.last_seen_at.in_time_zone.iso8601,
               # { epoch_second => count }. This is the timing evidence: the
               # flush job reconciles each bucket separately, because a total
               # plus last_seen_at cannot say how many events fell on either
@@ -164,13 +189,7 @@ module RailsErrorDashboard
               return
             end
             entry = map.compute_if_absent(gate_key) do
-              Entry.new(
-                parts[:error_class], parts[:message], parts[:first_app_frame],
-                parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
-                parts[:opaque_identity],
-                Concurrent::AtomicFixnum.new(0), first_seen_at || Time.current, last_seen_at || Time.current,
-                Concurrent::Map.new, parts[:capture_source]
-              )
+              new_entry(parts, first_seen_at || Time.current, last_seen_at || Time.current)
             end
           end
 
@@ -183,6 +202,16 @@ module RailsErrorDashboard
           # the write lock's scope is not widened (it still covers only the
           # snapshot swap).
           add_buckets(entry, count, last_seen_at, buckets)
+        end
+
+        def new_entry(parts, first_seen_at, last_seen_at)
+          Entry.new(
+            parts[:error_class], parts[:message], parts[:first_app_frame],
+            parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
+            parts[:opaque_identity],
+            Concurrent::AtomicFixnum.new(0), first_seen_at, last_seen_at,
+            Concurrent::Map.new, parts[:capture_source]
+          )
         end
 
         # Distribute `count` across buckets. A live record supplies exactly one

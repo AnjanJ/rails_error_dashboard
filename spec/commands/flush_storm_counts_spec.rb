@@ -370,9 +370,11 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(staging.environment).to eq("staging")
 
       gate = RailsErrorDashboard::Services::StormProtection::Gate
-      parts = gate.send(:gate_parts, error, { controller_name: "widgets", action_name: "show", environment: "staging" })
+      context = { controller_name: "widgets", action_name: "show", environment: "staging" }
+      parts = gate.send(:gate_parts, error, context)
+      key = gate.send(:gate_key_for, gate.send(:gate_identity, error, context))
       buffer = RailsErrorDashboard::Services::StormProtection::CountBuffer.new
-      3.times { buffer.record(gate.send(:gate_key, parts), parts) }
+      3.times { buffer.record(key, parts) }
 
       described_class.call(entries: buffer.snapshot![:entries])
 
