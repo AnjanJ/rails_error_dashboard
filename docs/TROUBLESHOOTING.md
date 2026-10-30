@@ -91,7 +91,7 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
 
 2. **Fix the reported error and re-run**: `bin/rails db:migrate` picks up where it stopped. Don't
    roll back with `db:rollback STEP=N`: the count includes your app's own migrations, and four of
-   RED's migrations can't be rolled back. If an install of 0.4.0 to 0.8.1 stopped with
+   RED's migrations can't be rolled back (see [Rolling Back RED's Migrations](#rolling-back-reds-migrations)). If an install of 0.4.0 to 0.8.1 stopped with
    `duplicate column name: instance_variables`, see
    [Stuck at db:migrate](UPGRADING.md#stuck-at-dbmigrate-after-installing-040-to-081).
 
@@ -105,6 +105,58 @@ Comprehensive troubleshooting guide for Rails Error Dashboard. Solutions to comm
    -- PostgreSQL
    GRANT ALL PRIVILEGES ON DATABASE your_db TO your_user;
    ```
+
+---
+
+### Rolling Back RED's Migrations
+
+**What rolls back**: `bin/rails db:rollback` stops at `20260915000001`, the newest migration that
+can't be reversed. Everything newer rolls back. To go further, you have to remove what's left by
+hand (see below).
+
+Four migrations raise `ActiveRecord::IrreversibleMigration` going down:
+
+| Migration | Raises on | Why |
+|---|---|---|
+| `20260915000001`, `add_group_identity_unique_index_to_error_logs` | every database | It merged duplicate error groups, and those rows can't be restored |
+| `20260909000001`, `replace_message_gin_with_searchable_text_index` | PostgreSQL | It brought two index layouts to one, so there's no single layout to return to |
+| `20260325000001`, `fix_swallowed_exceptions_index_for_mysql` | MySQL | The previous index is over MySQL's key length limit |
+| `20260106094256`, `backfill_application_for_existing_errors` | every database | It filled in rows that had no application, and nothing recorded which ones |
+
+These numbers are the gem's. The installer gives each copy its own timestamp, so find yours by name:
+`ls db/migrate | grep add_group_identity_unique_index`.
+
+**Installs from before 0.18.0 keep their old copies.** The installer copies each migration into
+your app once and skips names you already have, so upgrading doesn't change them. In those old
+copies, 33 migrations print "reverted" and leave their table, column or index in place, and your schema
+is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove what they add.
+
+**A fresh install can refuse.** Migrating down your copy of
+`create_rails_error_dashboard_error_logs` or `create_rails_error_dashboard_applications` fails on
+PostgreSQL and MySQL while other tables have foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
+
+**A later unique index refuses too.** Going down from a fully migrated database, `add_better_tracking_to_error_logs`,
+`add_application_to_error_logs` and `add_environment_to_error_logs` refuse on PostgreSQL and SQLite. Each
+would remove a column of `index_error_logs_on_group_identity`, the unique index that stops duplicate
+error groups, and nothing would put it back. Nothing changes and the migration stays recorded.
+
+**SQLite can refuse for other indexes.** `add_workflow_fields_to_error_logs` can fail with `no such column`.
+SQLite rebuilds the table to remove a column, and a later migration's index still names it. Nothing
+changes and the migration stays recorded.
+
+**Plain indexes don't refuse.** Removing a column changes any later index that names it, without a
+message: PostgreSQL drops the index and MySQL narrows it. Migrating up again doesn't put it back. These
+indexes affect speed, not correctness.
+
+**To remove a leftover table or column by hand**:
+
+```bash
+bin/rails runner 'ActiveRecord::Base.connection.drop_table(:rails_error_dashboard_missing_translations, if_exists: true)'
+bin/rails runner 'ActiveRecord::Base.connection.remove_column(:rails_error_dashboard_error_logs, :muted, if_exists: true)'
+```
+
+With a separate error database, use `RailsErrorDashboard::ErrorLogsRecord.connection` instead of
+`ActiveRecord::Base.connection`.
 
 ---
 

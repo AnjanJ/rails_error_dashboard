@@ -8,7 +8,7 @@ body say "Refs #326", never "Closes".
 time. The round-trip spec builds its own scratch databases and never touches
 `spec/dummy/db/test.sqlite3`.
 
-- [ ] **T1** The round-trip harness, proven on one migration → REQ-1, REQ-4, REQ-6
+- [x] **T1** The round-trip harness, proven on one migration → REQ-1, REQ-4, REQ-6
   - Files: spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, db/migrate/20261010000001_create_missing_translations.rb
   - Test: round_trip_spec, for `create_missing_translations` on both histories:
     - **upgrade:** every migration up to it, complete schema skipped;
@@ -18,7 +18,7 @@ time. The round-trip spec builds its own scratch databases and never touches
     Also record the per-case runtime in `design.md`.
   - After: none
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures
-- [ ] **T2** The other ten migrations that own their object → REQ-1, REQ-2, REQ-3
+- [x] **T2** The other ten migrations that own their object → REQ-1, REQ-2, REQ-3
   - Files: db/migrate/20260307000001_create_rails_error_dashboard_diagnostic_dumps.rb, db/migrate/20260613000001_create_storm_events.rb, db/migrate/20260730000001_create_rails_error_dashboard_rack_attack_events.rb, db/migrate/20260824000001_add_user_agent_to_rack_attack_events.rb, db/migrate/20260826000001_add_environment_to_error_logs.rb, db/migrate/20260915000004_create_storm_flush_batches.rb, db/migrate/20260919000001_create_event_counts.rb, db/migrate/20260920000001_add_buckets_incomplete_to_storm_events.rb, db/migrate/20260920000002_create_event_timing_gaps.rb, db/migrate/20261015000001_create_rails_error_dashboard_error_occurrence_contexts.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec covers all eleven own-object migrations on both histories:
     - down → object gone;
@@ -26,7 +26,7 @@ time. The round-trip spec builds its own scratch databases and never touches
     - up, then up again → object present, no error (REQ-3)
   - After: T1
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures
-- [ ] **T3** The fifteen migrations the complete schema shadows → REQ-1, REQ-2, REQ-3, REQ-5
+- [x] **T3** The fifteen migrations the complete schema shadows → REQ-1, REQ-2, REQ-3, REQ-5
   - Files: db/migrate/20251224000001_create_rails_error_dashboard_error_logs.rb, db/migrate/20251224081522_add_better_tracking_to_error_logs.rb, db/migrate/20251224101217_add_controller_action_to_error_logs.rb, db/migrate/20251225071314_add_optimized_indexes_to_error_logs.rb, db/migrate/20251225085859_add_enhanced_metrics_to_error_logs.rb, db/migrate/20251225093603_add_similarity_tracking_to_error_logs.rb, db/migrate/20251225100236_create_error_occurrences.rb, db/migrate/20251225101920_create_cascade_patterns.rb, db/migrate/20251225102500_create_error_baselines.rb, db/migrate/20251226020000_add_workflow_fields_to_error_logs.rb, db/migrate/20251226020100_create_error_comments.rb, db/migrate/20251229111223_add_additional_performance_indexes.rb, db/migrate/20260106094220_create_rails_error_dashboard_applications.rb, db/migrate/20260306000003_create_rails_error_dashboard_swallowed_exceptions.rb, db/migrate/20260323000001_add_muted_to_error_logs.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec covers the fifteen:
     - on the upgrade history: down → object gone;
@@ -38,14 +38,24 @@ time. The round-trip spec builds its own scratch databases and never touches
   - After: T2
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
     green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
-- [ ] **T4** No migration returns early from `change` on an existence check → REQ-7
+- [x] **T6** The seven migrations the issue's list missed, and the rest of REQ-6 → REQ-1, REQ-2, REQ-3, REQ-4, REQ-6
+  - Files: db/migrate/20260220000001_add_exception_cause_to_error_logs.rb, db/migrate/20260220000002_add_enriched_context_to_error_logs.rb, db/migrate/20260221000001_add_environment_info_to_error_logs.rb, db/migrate/20260221000002_add_reopened_at_to_error_logs.rb, db/migrate/20260303000001_add_breadcrumbs_to_error_logs.rb, db/migrate/20260326000001_add_issue_tracking_to_error_logs.rb, db/migrate/20260915000003_add_context_provenance_to_error_logs.rb, db/migrate/20260106094318_finalize_application_foreign_key.rb, spec/db/migrations/round_trip_spec.rb
+  - Test: round_trip_spec:
+    - the seven, as the eleven own-object migrations;
+    - the 13 that already have `up` and `down`: on the upgrade history down leaves nothing and up
+      restores; on the fresh history down goes or is refused, never reports success;
+    - a migration with an existence check that's in no list fails the spec
+  - After: T3
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
+    green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
+- [x] **T4** No `change` branches on an existence check → REQ-7
   - Files: spec/db/migrations/no_guarded_change_spec.rb
   - Test: no_guarded_change_spec parses every `db/migrate/*.rb` with Prism and fails on a `change`
-    whose body returns early on a `*_exists?` check. Its own example also runs the check on the
-    pre-fix text of one migration and expects a failure.
-  - After: T3
+    whose body calls a `*_exists?` check, by an early return or a modifier. Its own examples also
+    run the check on the pre-fix text of one migration of each form and expect a failure.
+  - After: T6
   - Done when: `R rspec spec/db/migrations/no_guarded_change_spec.rb` → 0 failures
-- [ ] **T5** The rollback docs say what rolls back → REQ-8
+- [x] **T5** The rollback docs say what rolls back → REQ-8
   - Files: docs/TROUBLESHOOTING.md, docs/GLOSSARY.md, _reference/troubleshooting.md, _reference/glossary.md, spec/docs/rollback_docs_spec.rb
   - Test: rollback_docs_spec, for each of the four pages:
     - it names the four irreversible migrations and `20260915000001` as where `db:rollback` stops;
@@ -54,3 +64,20 @@ time. The round-trip spec builds its own scratch databases and never touches
     - GLOSSARY no longer claims rollbacks are simply supported
   - After: none
   - Done when: `R rspec spec/docs/rollback_docs_spec.rb` → 0 failures
+- [x] **T7** Going down from a fully migrated database, as the issue does → REQ-1
+  - Files: spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, docs/TROUBLESHOOTING.md, _reference/troubleshooting.md, spec/docs/rollback_docs_spec.rb
+  - Test: round_trip_spec, on SQLite and PostgreSQL, each `down` rolled back:
+    - none reports success with its object in place;
+    - only the listed migrations refuse.
+
+    rollback_docs_spec: both Troubleshooting pages explain the SQLite refusal.
+  - After: T6, T5
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb spec/docs/rollback_docs_spec.rb` → 0 failures, and the same files are green across the matrix
+- [x] **T8** A `down` doesn't lose the unique group index → REQ-1
+  - Files: db/migrate/20251224081522_add_better_tracking_to_error_logs.rb, db/migrate/20260106094233_add_application_to_error_logs.rb, db/migrate/20260826000001_add_environment_to_error_logs.rb, spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, spec/docs/rollback_docs_spec.rb, docs/TROUBLESHOOTING.md, _reference/troubleshooting.md
+  - Test: round_trip_spec, on SQLite and PostgreSQL, each `down` rolled back: one that succeeds
+    loses no other migration's unique index on a table still there, and the two refusals on
+    PostgreSQL are listed. rollback_docs_spec: both Troubleshooting pages name the three and say
+    what happens to plain indexes.
+  - After: T7
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb spec/docs/rollback_docs_spec.rb` → 0 failures, and the same on PostgreSQL

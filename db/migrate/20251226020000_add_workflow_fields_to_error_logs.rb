@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the column_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddWorkflowFieldsToErrorLogs < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already added these columns
     return if column_exists?(:rails_error_dashboard_error_logs, :status)
 
@@ -25,6 +27,15 @@ class AddWorkflowFieldsToErrorLogs < ActiveRecord::Migration[7.0]
           WHERE resolved = true
         SQL
       end
+    end
+  end
+
+  def down
+    return unless table_exists?(:rails_error_dashboard_error_logs)
+
+    %i[status assigned_to assigned_at snoozed_until priority_level].each do |column|
+      remove_index :rails_error_dashboard_error_logs, column, if_exists: true
+      remove_column :rails_error_dashboard_error_logs, column if column_exists?(:rails_error_dashboard_error_logs, column)
     end
   end
 end

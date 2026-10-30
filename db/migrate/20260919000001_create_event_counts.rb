@@ -38,8 +38,11 @@
 # (An earlier version of this comment claimed pruning "on bucket_at" that was
 # never implemented. Both mechanisms above are now covered by
 # spec/models/rails_error_dashboard/event_count_cleanup_spec.rb.)
+#
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateEventCounts < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Guard against a squashed schema migration having already created this
     # table -- without it, every later migration is silently cancelled.
     return if table_exists?(:rails_error_dashboard_event_counts)
@@ -67,5 +70,9 @@ class CreateEventCounts < ActiveRecord::Migration[7.0]
     # Window queries scan by time; retention prunes on the same column.
     add_index :rails_error_dashboard_event_counts, :bucket_at,
               name: "index_red_event_counts_on_bucket_at"
+  end
+
+  def down
+    drop_table :rails_error_dashboard_event_counts, if_exists: true
   end
 end

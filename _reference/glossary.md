@@ -395,7 +395,11 @@ Database schema change. Rails Error Dashboard includes migrations for creating t
 Deployment strategy where new code is deployed without stopping the application. Requires backward-compatible migrations.
 
 ### Rollback
-Reverting to a previous version after a failed deployment. Rails Error Dashboard supports database rollbacks via migration down methods.
+Reverting to a previous version after a failed deployment. RED's migrations remove what they add, with limits:
+
+- `bin/rails db:rollback` stops at `20260915000001`, the newest of four migrations that can't be reversed. `20260106094256` can't be reversed on any database, `20260325000001` on MySQL and `20260909000001` on PostgreSQL. These are the gem's numbers: your copies have their own timestamps, so go by the names on the page linked below.
+- Installs from before 0.18.0 keep their old copies, where 33 migrations print "reverted" and leave their table, column or index in place.
+- To remove what's left, use `bin/rails runner` with `drop_table` or `remove_column`. See [Rolling Back RED's Migrations](/rails_error_dashboard/docs/reference/troubleshooting/#rolling-back-reds-migrations).
 
 ---
 

@@ -24,10 +24,13 @@
 #
 # Both are nullable: rows captured before this migration have no recorded
 # provenance, and the view says so rather than inventing one.
+#
+# up/down rather than `change`: the column_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddContextProvenanceToErrorLogs < ActiveRecord::Migration[7.0]
   TABLE = :rails_error_dashboard_error_logs
 
-  def change
+  def up
     return unless table_exists?(TABLE)
 
     unless column_exists?(TABLE, :context_captured_at)
@@ -38,5 +41,12 @@ class AddContextProvenanceToErrorLogs < ActiveRecord::Migration[7.0]
       # 10: "full" / "lite" / "minimal".
       add_column TABLE, :context_fidelity, :string, limit: 10
     end
+  end
+
+  def down
+    return unless table_exists?(TABLE)
+
+    remove_column TABLE, :context_captured_at if column_exists?(TABLE, :context_captured_at)
+    remove_column TABLE, :context_fidelity if column_exists?(TABLE, :context_fidelity)
   end
 end

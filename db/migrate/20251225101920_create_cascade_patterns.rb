@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateCascadePatterns < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already created this table
     return if table_exists?(:rails_error_dashboard_cascade_patterns)
 
@@ -32,5 +34,9 @@ class CreateCascadePatterns < ActiveRecord::Migration[7.0]
     # Index for finding by probability (for high-confidence cascades)
     add_index :rails_error_dashboard_cascade_patterns, :cascade_probability,
               name: 'index_cascade_patterns_on_probability'
+  end
+
+  def down
+    drop_table :rails_error_dashboard_cascade_patterns, if_exists: true
   end
 end

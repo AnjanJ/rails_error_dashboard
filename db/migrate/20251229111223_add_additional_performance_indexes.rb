@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the index_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddAdditionalPerformanceIndexes < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already added these indexes
     return if index_exists?(:rails_error_dashboard_error_logs, [ :assigned_to, :status, :occurred_at ],
                             name: 'index_error_logs_on_assignment_workflow')
@@ -63,12 +65,20 @@ class AddAdditionalPerformanceIndexes < ActiveRecord::Migration[7.0]
             ))
           SQL
         end
-
-        dir.down do
-          execute "DROP INDEX IF EXISTS index_error_logs_on_searchable_text"
-        end
       end
     end
+  end
+
+  def down
+    return unless table_exists?(:rails_error_dashboard_error_logs)
+
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_assignment_workflow', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_priority_resolution', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_platform_status_time', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_version_resolution_time', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_snooze_time', if_exists: true
+
+    execute "DROP INDEX IF EXISTS index_error_logs_on_searchable_text" if postgresql?
   end
 
   private

@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateErrorOccurrences < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already created this table
     return if table_exists?(:rails_error_dashboard_error_occurrences)
 
@@ -30,5 +32,9 @@ class CreateErrorOccurrences < ActiveRecord::Migration[7.0]
     # Index for finding errors by request
     add_index :rails_error_dashboard_error_occurrences, :request_id,
               name: 'index_error_occurrences_on_request'
+  end
+
+  def down
+    drop_table :rails_error_dashboard_error_occurrences, if_exists: true
   end
 end

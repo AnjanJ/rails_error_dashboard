@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateErrorBaselines < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already created this table
     return if table_exists?(:rails_error_dashboard_error_baselines)
 
@@ -37,5 +39,9 @@ class CreateErrorBaselines < ActiveRecord::Migration[7.0]
     add_index :rails_error_dashboard_error_baselines,
               :period_end,
               name: 'index_error_baselines_on_period_end'
+  end
+
+  def down
+    drop_table :rails_error_dashboard_error_baselines, if_exists: true
   end
 end

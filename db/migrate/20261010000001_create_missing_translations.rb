@@ -8,8 +8,11 @@
 # tracker counts misses in memory and upserts them here at the end of the
 # request or job that produced them -- a loop rendering a missing key a
 # thousand times is one UPDATE, not a thousand INSERTs.
+#
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateMissingTranslations < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Guard against the squashed schema migration having already created this
     # table -- without it, every later migration is silently cancelled.
     return if table_exists?(:rails_error_dashboard_missing_translations)
@@ -46,5 +49,9 @@ class CreateMissingTranslations < ActiveRecord::Migration[7.0]
     add_index :rails_error_dashboard_missing_translations,
               :last_seen_at,
               name: "index_red_missing_translations_on_last_seen_at"
+  end
+
+  def down
+    drop_table :rails_error_dashboard_missing_translations, if_exists: true
   end
 end

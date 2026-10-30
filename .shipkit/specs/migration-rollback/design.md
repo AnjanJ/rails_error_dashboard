@@ -1,21 +1,25 @@
 # Design: Migrations that roll back what they add (issue #326)
 
 ## Approach
-- **The 26 migrations change from `change` to `up`/`down`,** on the model of
+- **The 33 migrations change from `change` to `up`/`down`,** on the model of
   `20261015000002_add_capture_source_to_error_occurrences_and_error_logs.rb`, including its comment
   explaining why.
   - `up` keeps today's guard and body unchanged (REQ-3).
   - `down` removes only what exists:
     - `drop_table <t>, if_exists: true`;
-    - `remove_index <t>, name: <n> if index_exists?(<t>, name: <n>)`;
-    - `remove_column <t>, <c> if column_exists?(<t>, <c>)`, after removing any index on that
-      column.
+    - `remove_index <t>, name: <n> if index_name_exists?(<t>, <n>)`, or `remove_index <t>, name: <n>,
+      if_exists: true`, which the Rails 7.1 rows pass. Not `index_exists?`: on Rails 7.1 its column
+      argument is required, so a call with only `name:` raises;
+    - `remove_column <t>, <c>` after checking `table_exists?` and then `column_exists?`, and after
+      removing any index on that column. Not `if_exists: true`: SQLite's `remove_column` ignores it
+      and rebuilds the table anyway, which keeps the schema but loses a host's triggers. `column_exists?` raises on a missing table on all three
+      databases. SQLite and MySQL keep the index if it isn't removed first; PostgreSQL drops it.
 - **The complete-schema migration is not touched** (REQ-5). It creates and drops the same 7 tables.
 - **Two new specs in `spec/db/migrations/`:**
   - a round-trip spec that runs each guarded migration through down and up on a scratch database
     (REQ-4, REQ-6);
   - a static spec that parses every file in `db/migrate` with Prism and fails on a `change` that
-    returns early on an existence check (REQ-7). This is the same parse used to find the 26.
+    branches on an existence check (REQ-7).
 - **The docs** (REQ-8): `docs/TROUBLESHOOTING.md:93-94` and `docs/GLOSSARY.md:408`, plus their
   Jekyll copies (`_reference/`), say:
   - what rolls back;
@@ -23,6 +27,30 @@
   - that installs from before 0.18.0 keep their old copies;
   - the SQL-free way to remove a leftover table or column by hand
     (`bin/rails runner` with `drop_table` / `remove_column`).
+
+## Correction: 33 migrations, not 26 (2026-10-30)
+
+The records below say 26, the issue's count, which is the migrations that return early from
+`change`. The round-trip harness showed the same bug on seven more, whose guard is inside `change`:
+
+```ruby
+def change
+  add_column :t, :c, :text unless column_exists?(:t, :c)
+end
+```
+
+On revert the column exists, so `add_column` is skipped, nothing is recorded, and Rails prints
+"reverted". The seven add 13 columns and no table, so they get the same fix and meet no foreign-key
+refusal. The decisions below hold for all 33.
+
+The harness also runs the 13 migrations that already had `up` and `down`, because REQ-6 says every
+guarded `up`. Those never misreported: their `down` removes the object, or raises. Some raise on an
+object that's already gone, which is a loud failure and not this bug, so they're unchanged.
+
+One of the 13 had a real bug of its own. `20260106094318` called `remove_foreign_key` with only a
+column, and on SQLite before Rails 8.1 that guesses the table from the column name, as `applications`,
+and raises. So it could never roll back there. Only the CI matrix showed it: both adapter rows and
+every local run are on 8.1. Naming the table fixes it on every version.
 
 ## Decision: Each `down` removes the object if it exists; the database's own refusals surface as errors   (→ REQ-1, REQ-2, REQ-3)
 
@@ -70,6 +98,52 @@ depends on it, the migration shall fail with that error rather than report succe
 key in a sequence of rollbacks done in order (not an explicit single `migrate:down`).
 **Fired-if.** manual
 
+**Found at T3 (2026-10-30).**
+- **On a fresh install, exactly two are refused,** on PostgreSQL and MySQL: `error_logs` and
+  `applications`, the two parent tables, each with its version kept. SQLite refuses neither,
+  because the dependents are empty. The spec requires those two refusals, so a `force: :cascade`
+  fails it on PostgreSQL. On MySQL `CASCADE` does nothing, and the database still refuses.
+- **`create_rails_error_dashboard_error_logs` isn't replay-safe while it's the newest.** Its guard
+  also wants `application_id`, which a later migration adds, so a second `up` at that point raises
+  "already exists", as it has since it shipped. REQ-3's "as today" and the out-of-scope line
+  ("changing what any `up` does") both leave that alone, and the spec pins it.
+- **`add_optimized_indexes` already had a `down`, which never ran:** with `change` defined, Rails
+  reverses `change`. It runs now, so it tolerates what isn't there.
+- **From a fully migrated database, found at review.** The harness took each migration down while
+  it was the newest, but `db:migrate:down VERSION=` on a fully migrated database is a different
+  state, and it's the one the issue reproduces. All 33 were run from there, on all three databases.
+  None reported success with its object in place.
+  - MySQL refuses only the two parents, as above. PostgreSQL refuses those and two of the ones
+    below, since the correction further down.
+  - SQLite also refuses `add_better_tracking_to_error_logs` and `add_environment_to_error_logs`,
+    and on the upgrade history `add_workflow_fields_to_error_logs`, with `no such column`. It
+    rebuilds the table to remove a column, and re-creating a later migration's index fails,
+    because that index still names the column. The migration stays recorded and nothing changes.
+  - **Refused, not forced.** The alternative is for `down` to drop that later index first. One of
+    them is `index_error_logs_on_group_identity`, the unique index that stops duplicate groups,
+    and it belongs to an irreversible migration, so nothing would put it back. A loud refusal is
+    this decision's own rule, so REQ-1 now says "another table or an index a later migration added".
+  - **That held only on SQLite, found at the next review.** PostgreSQL doesn't refuse: `DROP COLUMN`
+    takes any index naming the column, and says nothing. So `add_better_tracking_to_error_logs`,
+    `add_application_to_error_logs` and `add_environment_to_error_logs` each reported success and
+    lost `index_error_logs_on_group_identity`, and nothing re-creates it. The spec didn't see it
+    because it compared only a migration's own objects. It now also fails if a `down` that succeeds
+    loses another migration's unique index, on a table that's still there.
+    - Each of the three now raises `ActiveRecord::MigrationError` while that index exists, so
+      PostgreSQL and SQLite give the same answer. `MigrationError`, not `IrreversibleMigration`,
+      because each can still go down in the state where the index isn't there yet.
+    - `add_application_to_error_logs` isn't one of the 33: it always had `up` and `down`. It's here
+      because leaving it would keep the same loss one migration along.
+    - MySQL has no such index (`20260915000001` skips it), so nothing changes there.
+  - **Plain indexes don't get this.** The same `DROP COLUMN` takes up to eight later plain indexes on
+    PostgreSQL (MySQL narrows them instead), and `up` doesn't restore those either. They affect
+    speed, not correctness, so those `down`s go ahead, and Troubleshooting says so.
+  - The spec pins this on SQLite and PostgreSQL by rolling each `down` back. MySQL can't roll DDL
+    back and would need a rebuild per migration, so that result came from a run by hand.
+- **A single-column index goes with its column on all three databases,** so `remove_index` before
+  `remove_column` only changes the result for a composite index (SQLite and MySQL keep a narrower
+  one). It stays for every index, as this design says.
+
 ## Decision: The round-trip spec builds a scratch database along both install histories   (→ REQ-4, REQ-6)
 
 **Context.** The existing migration spec (`spec/db/migrations/add_last_notified_at_spec.rb`) runs
@@ -109,3 +183,26 @@ tests little. Option 3 rewrites 26 shipped files twice over.
 **Falsifiability.** We would fall back to option 2 for the PostgreSQL and MySQL rows if the
 round-trip spec adds more than 60 seconds to an `adapter-test` row.
 **Fired-if.** manual
+
+**Measured at T1 (2026-10-30, M3 Max).**
+- **The chain builds without the complete schema** on all three databases: 52 migrations, 15 tables.
+  So the upgrade history found no upgrade bug.
+- **A whole chain costs** about 0.3 s on SQLite, 0.5 s on PostgreSQL and 1 to 1.4 s on MySQL. A build
+  per case averages half a chain, so 52 cases are about 30 seconds on MySQL here. That is an
+  estimate of about 80 seconds on a CI runner, past this decision's limit, so the harness doesn't
+  rebuild per case.
+- **It walks each history once instead,** and takes a migration down and up while it's the newest.
+  That's the same state a per-case build gives, because a round trip that doesn't restore the schema
+  rebuilds it before the walk goes on.
+- **It runs in its own process,** where `ActiveRecord::Base` is the scratch database. Several
+  migrations reach for `ActiveRecord::Base` or RED's models, some to write, and in the suite's
+  process those are the suite's database.
+- **The spec file with one migration on both histories,** process boot included: 1.9 s on SQLite,
+  4.1 s on PostgreSQL, 5.2 s on MySQL.
+- **All 26 at T3:** a whole run of 5.4 s on SQLite, 11.4 s on PostgreSQL and 13.9 s on MySQL.
+- **All 46 on CI, measured:** 36.9 seconds on the MySQL row and 15.6 on the PostgreSQL row, against
+  the 60-second limit, so option 1 holds. The spec prints this into the job log. A row's total can't
+  answer this: with the spec added, the same run saw MySQL's suite 39 seconds slower and PostgreSQL's
+  24 seconds faster than a run without it, so noise between runs is about the size of the cost.
+- **With the run from a fully migrated database added:** 37.8 seconds on MySQL, which skips it, and
+  30.4 on PostgreSQL.
