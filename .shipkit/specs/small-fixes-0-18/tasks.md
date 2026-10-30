@@ -6,7 +6,7 @@ cites `small-fixes-0-18/REQ-N`. One commit per task, test and code together.
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. Run one rspec process at a
 time. This spec's PR comes after `deprecations-0-18`: both touch UPGRADING.
 
-- [ ] **T1** Crash sources leave every platform list → REQ-1, REQ-2
+- [x] **T1** Crash sources leave every platform list → REQ-1, REQ-2
   - Files: app/models/rails_error_dashboard/error_log.rb, lib/rails_error_dashboard/services/crash_capture.rb, lib/rails_error_dashboard/queries/filter_options.rb, lib/rails_error_dashboard/queries/error_correlation.rb, lib/rails_error_dashboard/queries/mttr_stats.rb, lib/rails_error_dashboard/queries/platform_comparison.rb, lib/rails_error_dashboard/queries/dashboard_stats.rb, lib/rails_error_dashboard/queries/analytics_stats.rb, lib/rails_error_dashboard/queries/baseline_stats.rb, spec/lib/rails_error_dashboard/queries/crash_platforms_spec.rb
   - Test: crash_platforms_spec, with errors on `iOS`, `API`, a NULL platform, `boot_crash` and
     `crash_capture`:

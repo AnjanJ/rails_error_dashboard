@@ -16,7 +16,7 @@ module RailsErrorDashboard
       def call
         {
           error_types: base_scope.distinct.pluck(:error_type).compact.sort,
-          platforms: base_scope.distinct.pluck(:platform).compact,
+          platforms: base_scope.platform_listed.distinct.pluck(:platform).compact,
           environments: environments,
           applications: Application.ordered_by_name.pluck(:name, :id),
           assignees: assignees

@@ -46,7 +46,7 @@ module RailsErrorDashboard
           critical_count = types_for_version.count { |t| Services::SeverityClassifier.classify(t) == :critical }
 
           # Get platforms for this version
-          platforms = errors.distinct.pluck(:platform).compact
+          platforms = errors.platform_listed.distinct.pluck(:platform).compact
 
           result[version] = {
             count: count,
@@ -265,7 +265,7 @@ module RailsErrorDashboard
       # groups first seen in the window left out every chronic error, and
       # ranked a type with many one-off groups above one that fired all day.
       def platform_specific_errors
-        platforms = app_scope.distinct.pluck(:platform).compact
+        platforms = app_scope.platform_listed.distinct.pluck(:platform).compact
         counts_by_platform = platforms.index_with do |platform|
           Queries::EventVolume.by_group_attribute(app_scope.where(platform: platform), :error_type, @start_date)
                               .select { |_, count| count.positive? }

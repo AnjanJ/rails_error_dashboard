@@ -52,7 +52,7 @@ module RailsErrorDashboard
       # events of every older group that recurred inside the window.
       # @return [ActiveRecord::Relation]
       def base_scope
-        scope = ErrorLog.all
+        scope = ErrorLog.platform_listed
         scope = scope.where(application_id: @application_id) if @application_id.present?
         scope
       end

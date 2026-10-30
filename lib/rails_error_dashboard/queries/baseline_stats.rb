@@ -90,6 +90,7 @@ module RailsErrorDashboard
           ErrorLog.all
         end
         relation = relation.where(logs => { application_id: application_id }) if application_id.present?
+        relation = relation.merge(ErrorLog.platform_listed)
 
         since = ->(time) { ErrorLog.sanitize_sql_array([ "SUM(CASE WHEN #{column} >= ? THEN 1 ELSE 0 END)", time ]) }
 
@@ -117,6 +118,7 @@ module RailsErrorDashboard
         return {} if types.empty?
 
         latest = ErrorBaseline.where(error_type: types, baseline_type: BASELINE_PRECEDENCE)
+                              .where.not(platform: Services::CrashCapture::PLATFORMS)
                               .group(:error_type, :platform, :baseline_type)
                               .select(:error_type, :platform, :baseline_type, "MAX(period_start) AS latest_period_start")
 

@@ -73,6 +73,11 @@ module RailsErrorDashboard
     scope :by_error_type, ->(type) { where(error_type: type) }
     scope :by_type, ->(type) { where(error_type: type) }
     scope :by_platform, ->(platform) { where(platform: platform) }
+    # Where the error ran, so not the two crash sources stored in that column. NOT
+    # IN alone would drop rows with no platform: NULL is never true for it.
+    scope :platform_listed, -> {
+      where("#{quoted_table_name}.platform IS NULL OR #{quoted_table_name}.platform NOT IN (?)", Services::CrashCapture::PLATFORMS)
+    }
     scope :by_environment, ->(environment) { where(environment: environment) }
     scope :last_24_hours, -> { where("occurred_at >= ?", 24.hours.ago) }
     scope :last_week, -> { where("occurred_at >= ?", 1.week.ago) }

@@ -37,7 +37,7 @@ module RailsErrorDashboard
               unresolved: base_scope.unresolved.count,
               resolved: base_scope.resolved.count,
               reopened: reopened_count,
-              by_platform: base_scope.group(:platform).count,
+              by_platform: base_scope.platform_listed.group(:platform).count,
               top_errors: top_errors,
               #  Trend visualizations
               errors_trend_7d: errors_trend_7d,
