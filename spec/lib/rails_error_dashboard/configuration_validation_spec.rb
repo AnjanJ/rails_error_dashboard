@@ -1362,6 +1362,63 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "USE_SEPARATE_ERROR_DB" do
+    let(:warnings) { [] }
+
+    before { allow(Rails.logger).to receive(:warn) { |message| warnings << message } }
+
+    after { RailsErrorDashboard::Deprecation.reset! }
+
+    around do |example|
+      saved = ENV["USE_SEPARATE_ERROR_DB"]
+      example.run
+    ensure
+      saved.nil? ? ENV.delete("USE_SEPARATE_ERROR_DB") : ENV["USE_SEPARATE_ERROR_DB"] = saved
+    end
+
+    def deprecations
+      warnings.select { |message| message.include?("DEPRECATION: USE_SEPARATE_ERROR_DB") }
+    end
+
+    # "1" is false on purpose: that's what 0.17.0 gave, and this only warns.
+    { "true" => true, "false" => false, "1" => false }.each do |value, expected|
+      it "warns once and still gives #{expected} for #{value.inspect} (deprecations-0-18/REQ-14)" do
+        ENV["USE_SEPARATE_ERROR_DB"] = value
+        config = described_class.new
+        config.database = :errors
+
+        2.times { config.validate! }
+
+        expect(deprecations.size).to eq(1)
+        expect(config.use_separate_database).to be(expected)
+      end
+    end
+
+    it "says what to do instead, and when it goes (deprecations-0-18/REQ-1)" do
+      ENV["USE_SEPARATE_ERROR_DB"] = "false"
+
+      config.validate!
+
+      expect(deprecations.first).to match(/config\.use_separate_database.*2\.0/)
+    end
+
+    it "warns even when the rest of the configuration is invalid (deprecations-0-18/REQ-14)" do
+      ENV["USE_SEPARATE_ERROR_DB"] = "true"
+
+      expect { described_class.new.validate! }.to raise_error(RailsErrorDashboard::ConfigurationError)
+
+      expect(deprecations.size).to eq(1)
+    end
+
+    it "says nothing when it isn't set (deprecations-0-18/REQ-14)" do
+      ENV.delete("USE_SEPARATE_ERROR_DB")
+
+      config.validate!
+
+      expect(deprecations).to be_empty
+    end
+  end
+
   # rails-70-request-capture/REQ-1, REQ-2: Rails 7.0.0-7.0.8.7 render request
   # exceptions without reporting them, so RED records none. CI's 7.0 rows install
   # 7.0.10, so the version is stubbed rather than taken from the row.

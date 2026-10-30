@@ -60,7 +60,7 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
     The generator's own spec is deleted, and generators_hands_off_spec drops it.
   - After: T4
   - Done when: `R rspec spec/lib/rails_error_dashboard/verify_task_spec.rb spec/generators` → 0 failures
-- [ ] **T6** `USE_SEPARATE_ERROR_DB` warns and behaves as before → REQ-14
+- [x] **T6** `USE_SEPARATE_ERROR_DB` warns and behaves as before → REQ-14
   - Files: lib/rails_error_dashboard/configuration.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb
   - Test: configuration_validation_spec:
     - with the ENV set to `"true"`, `"false"` or `"1"`: one deprecation each, and

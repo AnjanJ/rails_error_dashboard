@@ -621,6 +621,14 @@ module RailsErrorDashboard
       errors = []
       warnings = []
 
+      # An ENV flag can't be the whole switch: a separate database also needs
+      # database.yml and config.database. And the generated initializer assigns
+      # use_separate_database, which overrides it. It only warns, so its value
+      # stays what #initialize read.
+      if ENV.key?("USE_SEPARATE_ERROR_DB")
+        Deprecation.warn(:use_separate_error_db, "USE_SEPARATE_ERROR_DB does nothing once your initializer sets config.use_separate_database. Set that option and unset the variable. It will be removed in 2.0.")
+      end
+
       # Block boot with default or blank credentials anywhere that is not local
       # development or test.
       #
