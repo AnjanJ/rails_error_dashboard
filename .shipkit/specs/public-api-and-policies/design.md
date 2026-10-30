@@ -63,7 +63,9 @@ at all.
 
 **Decision.** We chose option 1, with REQ-1's config bullet reworded to: "every option, by name,
 linked to its type and default in the configuration reference; the deprecated ones marked with the
-version that removes them".
+version that removes them". In practice that's one link above the list rather than one per name, so
+the list stays plain enough for the spec to read, and the two deprecated options have no row to link
+to, as the Approach says.
 **Falsifiability.** We would move to option 3 if the CONFIGURATION.md check fails on main because an
 option was documented in PUBLIC_API.md but not in CONFIGURATION.md, twice in 1.x.
 **Fired-if.** manual

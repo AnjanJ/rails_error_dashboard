@@ -85,9 +85,12 @@ RSpec.describe "The public API page" do
   end
 
   it "marks each deprecated name with the version that removes it (public-api-and-policies/REQ-1)" do
-    deprecated = %w[async_adapter llm_observability_content_capture USE_SEPARATE_ERROR_DB error_dashboard:verify]
+    aliases = Rake::Task.tasks.map(&:name).grep(/\Aerror_dashboard:/)
 
-    deprecated.each { |name| expect(page).to match(/^#{Regexp.escape(name)} +# deprecated, removed in 2\.0$/) }
+    expect(aliases.size).to eq(11)
+    expect(page.scan(/^(\S+) +# deprecated, removed in 2\.0$/).flatten).to match_array(
+      %w[async_adapter llm_observability_content_capture USE_SEPARATE_ERROR_DB] + aliases
+    )
   end
 
   it "lists every generator (public-api-and-policies/REQ-1)" do
