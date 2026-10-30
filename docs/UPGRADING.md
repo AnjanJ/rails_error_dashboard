@@ -77,6 +77,36 @@ links to its full notes in the [CHANGELOG](../CHANGELOG.md).
 | [0.16.1](../CHANGELOG.md#0161-2026-10-20) | No action. Platform health scores change: an evenly split app can now be Healthy, a platform with nothing resolved in the period is scored on volume alone and says so, and a platform with no errors in the period gets no card. On Rails 7.0.0 to 7.0.8.7, RED now logs a warning at boot: upgrade to Rails 7.0.10 or later to record request errors, as in [Troubleshooting](TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70). |
 | [0.16.2](../CHANGELOG.md#0162-2026-10-22) | No action. |
 | [0.17.0](../CHANGELOG.md#0170-2026-10-29) | No migrations. Live updates stay off until you set `enable_live_updates = true`; a custom index view that subscribed to the old streams must render `red_live_updates_tags` instead, as in [Real-time updates](guides/REAL_TIME_UPDATES.md#upgrading-to-0170). API-only apps: RED no longer adds app-wide sessions or cookies, and the dashboard's cookie is `_rails_error_dashboard_session`. With `async_logging` and `custom_fingerprint` both on, custom-fingerprinted groups restart once. Messages over 10,000 characters and params over about 64 KB are cut, with a marker. |
+| 0.18.0 | If you use `webhook_urls`, three event names change and every post gains fields: see [Webhook changes in 0.18.0](#webhook-changes-in-0180). |
+
+## Webhook changes in 0.18.0
+
+Check your receiver before you deploy if you post to `config.webhook_urls`. This is the contract 1.x
+keeps, so it's the last time these names change. See the [Webhook contract](WEBHOOKS.md).
+
+Three events have new names:
+
+| Before | Now |
+|---|---|
+| `error_storm_detected` | `storm.detected` |
+| `new_error_notifications_suppressed` | `notifications.suppressed` |
+| `baseline_anomaly` | `baseline.anomaly_detected` |
+
+`error.created` keeps its name. RED doesn't send the old names as well, so a receiver that matches on
+them stops matching when you upgrade. If old and new versions run side by side during a deploy, accept
+both names until it finishes. Jobs already in the queue post the new names.
+
+Every post gains:
+
+- **`version`** in the body, set to `1`.
+- **`timestamp`** in the body, always UTC. Storm and burst bodies didn't have one. The other two did,
+  in the app's zone, so with a non-UTC `config.time_zone` you'll see `+05:30` become `Z`. That's the
+  same instant, but a receiver comparing it as a string will notice. Other time fields don't change.
+- **`X-Error-Dashboard-Event`**, which only `error.created` had.
+- **`X-Error-Dashboard-ID`** on `baseline.anomaly_detected`, as well as `error.created`.
+
+Every other field keeps its name, type and meaning. Signatures still cover the exact bytes sent. Slack,
+Discord, Telegram, PagerDuty and email messages don't change.
 
 ## Rails before 8.1.4 or 7.2.4: pin json below 3
 

@@ -40,7 +40,7 @@ time.
     - the page states the 1.x promise
   - After: T2
   - Done when: `R rspec spec/docs/webhooks_contract_doc_spec.rb` → 0 failures
-- [ ] **T4** Upgrade notes and the notifications guide show v1 → REQ-15
+- [x] **T4** Upgrade notes and the notifications guide show v1 → REQ-15
   - Files: docs/UPGRADING.md, _getting_started/upgrading.md, docs/guides/NOTIFICATIONS.md, _guides/notifications.md, docs/guides/CONFIGURATION.md, _guides/configuration.md, spec/docs/webhooks_contract_doc_spec.rb
   - Test: webhooks_contract_doc_spec:
     - both UPGRADING copies have a 0.18.0 section naming the three renames, `version`, `timestamp`

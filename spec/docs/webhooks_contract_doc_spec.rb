@@ -54,6 +54,47 @@ RSpec.describe "The webhook contract page" do
     end
   end
 
+  %w[docs/UPGRADING.md _getting_started/upgrading.md].each do |page|
+    describe page do
+      let(:section) { File.read(root.join(page))[/^## Webhook changes in 0\.18\.0.*?(?=^## )/m].to_s }
+
+      it "lists the three renames (webhook-v1/REQ-15)" do
+        expect(section).to include(
+          "`error_storm_detected`", "`storm.detected`",
+          "`new_error_notifications_suppressed`", "`notifications.suppressed`",
+          "`baseline_anomaly`", "`baseline.anomaly_detected`"
+        )
+      end
+
+      it "lists the new fields and headers (webhook-v1/REQ-15)" do
+        expect(section).to include("`version`", "`timestamp`", "X-Error-Dashboard-Event", "X-Error-Dashboard-ID")
+      end
+
+      it "warns that a timestamp in a non-UTC zone changes (webhook-v1/REQ-15)" do
+        expect(section).to match(/config\.time_zone/)
+      end
+
+      it "is reachable from the table of releases (webhook-v1/REQ-15)" do
+        expect(File.read(root.join(page))).to match(/^\| 0\.18\.0 \|.*webhook-changes-in-0180/)
+      end
+    end
+  end
+
+  %w[docs/guides/NOTIFICATIONS.md _guides/notifications.md].each do |page|
+    it "shows a v1 body in #{page} (webhook-v1/REQ-15)" do
+      expect(File.read(root.join(page))).to include(%("version": 1))
+    end
+  end
+
+  it "keeps the old event names out of every page but UPGRADING (webhook-v1/REQ-15)" do
+    pages = Dir.glob(root.join("{docs/**/*.md,_guides/*.md,_getting_started/*.md,_features/*.md,_reference/*.md,README.md}"))
+    pages -= [ root.join("docs/UPGRADING.md").to_s, root.join("_getting_started/upgrading.md").to_s ]
+
+    stale = pages.select { |file| File.read(file).match?(/error_storm_detected|new_error_notifications_suppressed|\bbaseline_anomaly\b/) }
+
+    expect(stale.map { |file| File.basename(file) }).to be_empty
+  end
+
   %w[docs/API_REFERENCE.md _reference/api-reference.md].each do |page|
     it "is linked from #{page} (webhook-v1/REQ-13)" do
       expect(File.read(root.join(page))).to match(/\[Webhook contract\]\([^)]*(WEBHOOKS\.md|webhooks\/)/)
