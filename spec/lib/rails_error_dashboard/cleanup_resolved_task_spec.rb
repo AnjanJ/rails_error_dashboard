@@ -6,12 +6,12 @@ require "rake"
 # The task deleted error logs with one unbounded delete_all and never touched
 # their occurrences, comments or cascade patterns. Those rows reference the
 # log through foreign keys, so the delete failed on any error that had them.
-RSpec.describe "error_dashboard:cleanup_resolved rake task" do
+RSpec.describe "rails_error_dashboard:cleanup_resolved rake task" do
   before(:all) do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("error_dashboard:cleanup_resolved")
+    Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:cleanup_resolved")
   end
 
-  let(:task) { Rake::Task["error_dashboard:cleanup_resolved"] }
+  let(:task) { Rake::Task["rails_error_dashboard:cleanup_resolved"] }
 
   around do |example|
     original = ENV["DAYS"]

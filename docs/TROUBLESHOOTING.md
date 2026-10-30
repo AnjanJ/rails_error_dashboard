@@ -685,10 +685,10 @@ Set it on that command only, never in the runtime environment: while it is set, 
 2. **Manually clean old errors**:
    ```bash
    # Delete errors not seen for retention_days (asks for confirmation)
-   bin/rails error_dashboard:retention_cleanup
+   bin/rails rails_error_dashboard:retention_cleanup
 
    # Delete resolved errors older than 30 days (asks for confirmation)
-   bin/rails error_dashboard:cleanup_resolved DAYS=30
+   bin/rails rails_error_dashboard:cleanup_resolved DAYS=30
 
    # Unattended, e.g. from cron: no confirmation
    bin/rails runner 'RailsErrorDashboard::RetentionCleanupJob.perform_now'
@@ -897,7 +897,7 @@ Set it on that command only, never in the runtime environment: while it is set, 
    # Should return: true
    ```
 
-2. **Try the rake task** — `rails error_dashboard:diagnostic_dump` to verify the feature works outside the dashboard.
+2. **Try the rake task** — `rails rails_error_dashboard:diagnostic_dump` to verify the feature works outside the dashboard.
 
 3. **Check browser console** — the button uses a `<form>` POST, not a JavaScript link. If Turbo is interfering, check for JS errors.
 

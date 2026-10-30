@@ -65,12 +65,12 @@ RSpec.describe RailsErrorDashboard::Commands::BackfillResolvedAt do
     expect(stats[:overall_mttr]).to be_within(0.1).of(4.0)
   end
 
-  describe "rake error_dashboard:backfill_resolved_at" do
-    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("error_dashboard:backfill_resolved_at") }
+  describe "rake rails_error_dashboard:backfill_resolved_at" do
+    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:backfill_resolved_at") }
 
     it "prints the count" do
       resolved_without_timestamp(updated_at: 1.day.ago)
-      task = Rake::Task["error_dashboard:backfill_resolved_at"]
+      task = Rake::Task["rails_error_dashboard:backfill_resolved_at"]
       task.reenable
 
       expect { task.invoke }.to output(/Backfilled resolved_at on 1 resolved error/).to_stdout

@@ -10,7 +10,7 @@ module RailsErrorDashboard
     # render it answer 500. PostgreSQL rejects such rows at INSERT, so there is
     # normally nothing to repair there; the scan is harmless.
     #
-    # Behind `rake error_dashboard:scrub_invalid_encoding`. Safe to re-run: a
+    # Behind `rake rails_error_dashboard:scrub_invalid_encoding`. Safe to re-run: a
     # second pass finds nothing to repair.
     #
     # @example

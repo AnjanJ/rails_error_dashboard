@@ -56,7 +56,7 @@ Reference for the configuration options, with their defaults. Not listed here ye
 | `application_name` | String | Auto-detected | Application identifier (ENV: `APPLICATION_NAME`) |
 | `environment` | String | `Rails.env` | Environment errors are attributed to — `production`, `staging`, `uat`, any name (ENV: `ERROR_DASHBOARD_ENVIRONMENT`) |
 | `database` | Symbol/String | `nil` | Name of the error database's entry in `config/database.yml`. Used only with `use_separate_database = true`, and then required: boot fails without it. The generated initializer sets `:error_dashboard` |
-| `use_separate_database` | Boolean | `false` | Store errors in their own database. ENV: `USE_SEPARATE_ERROR_DB`, which only applies when the initializer doesn't set this option; the generated initializer always sets it |
+| `use_separate_database` | Boolean | `false` | Store errors in their own database |
 
 ### Dashboard UI
 
@@ -187,7 +187,6 @@ On by default. See [Storm Protection](#storm-protection) below.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `async_logging` | Boolean | `false` | Save errors in a background job. The generated initializer sets `true`. Needs a worker: see [Run a worker](../PRODUCTION.md#1-run-a-worker-for-reds-jobs) |
-| `async_adapter` | Symbol | `:sidekiq` | Only checked for a valid value (`:sidekiq`, `:solid_queue`, `:async`). It doesn't choose the backend: RED's jobs run on your app's `config.active_job.queue_adapter` |
 | `sampling_rate` | Float | `1.0` | Fraction of non-critical errors to log, from 0.0 to 1.0. Critical errors are always logged. Outside that range, boot fails |
 | `max_backtrace_lines` | Integer | `100` | Maximum backtrace lines to store |
 
@@ -382,10 +381,6 @@ APPLICATION_NAME=my-api
 ERROR_DASHBOARD_ENVIRONMENT=staging                 # Defaults to Rails.env
 ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS=production  # Comma-separated; unset = notify everywhere
 
-# Database: only when the initializer doesn't set use_separate_database
-# (the generated one does), and config.database must be set too
-USE_SEPARATE_ERROR_DB=true
-
 # Notifications
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 ERROR_NOTIFICATION_EMAILS=team@example.com,ops@example.com
@@ -561,7 +556,7 @@ If an entry is missing, its value is `nil` and the app refuses to boot, saying t
 
 #### Checking your setup
 
-`bin/rails error_dashboard:verify` reports whether the app is using custom, default or blank credentials, using the same rule as the boot check.
+`bin/rails rails_error_dashboard:verify` reports whether the app is using custom, default or blank credentials, using the same rule as the boot check.
 
 #### Upgrading to 0.14.2
 
@@ -734,8 +729,7 @@ end
 ```
 
 The job runs on your app's Active Job adapter (`config.active_job.queue_adapter`): Solid Queue
-(the default since Rails 8.0), Sidekiq, GoodJob, or Rails' in-process `:async` adapter. RED's
-`config.async_adapter` is only checked for a valid value; it doesn't choose the backend.
+(the default since Rails 8.0), Sidekiq, GoodJob, or Rails' in-process `:async` adapter.
 
 A worker has to process RED's two queues, `default` and `error_notifications`. Without a worker,
 set `config.async_logging = false`; notifications still need one. See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
@@ -1159,7 +1153,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-Trigger via dashboard button or `rails error_dashboard:diagnostic_dump NOTE="deploy check"`. Dashboard page at `/errors/diagnostic_dumps`.
+Trigger via dashboard button or `rails rails_error_dashboard:diagnostic_dump NOTE="deploy check"`. Dashboard page at `/errors/diagnostic_dumps`.
 
 ---
 
@@ -1484,7 +1478,7 @@ The job takes the period as an argument: `period: "daily"` (the default) or `per
 `digest_frequency` doesn't change what it sends. See
 [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs) for a Solid Queue
 schedule and a cron line. The email goes through your app's Action Mailer setup, from
-`notification_email_from`. To send one now, `bin/rails error_dashboard:send_digest PERIOD=daily`
+`notification_email_from`. To send one now, `bin/rails rails_error_dashboard:send_digest PERIOD=daily`
 queues the job for your worker.
 
 ---
@@ -2248,7 +2242,6 @@ end
    ```ruby
    # In rails console
    ActiveJob::Base.queue_adapter
-   # (RailsErrorDashboard.configuration.async_adapter doesn't choose it)
    ```
 
 2. **Verify job processor is running, on both queues**

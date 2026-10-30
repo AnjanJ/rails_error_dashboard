@@ -80,7 +80,7 @@ RailsErrorDashboard.configure do |config|
   # Error retention policy: an error is deleted once it has not been seen for
   # this many days (an error that is still occurring is never deleted)
   # Set to nil to keep errors forever (not recommended for production)
-  # Run cleanup manually: rails error_dashboard:retention_cleanup
+  # Run cleanup manually: rails rails_error_dashboard:retention_cleanup
   # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later
   config.retention_days = 90
 
@@ -188,10 +188,8 @@ RailsErrorDashboard.configure do |config|
   # Errors are logged in background jobs, off the request path. The jobs run on
   # your app's Active Job adapter (config.active_job.queue_adapter), so in
   # production a worker must process the default and error_notifications queues
-  # (Rails 8: bin/jobs for Solid Queue). async_adapter below is only validated
-  # and shown on the Settings page; it does not choose the backend.
+  # (Rails 8: bin/jobs for Solid Queue).
   config.async_logging = true
-  config.async_adapter = :async  # Options: :async (built-in), :sidekiq, :solid_queue
   # To disable: Set config.async_logging = false
 
 <% else -%>
@@ -199,7 +197,6 @@ RailsErrorDashboard.configure do |config|
   # Errors are logged synchronously (adds ~1-5ms to requests that trigger errors)
   # To enable: Set config.async_logging = true
   config.async_logging = false
-  # config.async_adapter = :async  # Options: :async (built-in), :sidekiq, :solid_queue
 
 <% end -%>
   # Backtrace size limiting (100 lines is industry standard: Rollbar, Airbrake, Bugsnag)

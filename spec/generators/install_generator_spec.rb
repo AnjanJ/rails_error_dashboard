@@ -268,7 +268,24 @@ RSpec.describe RailsErrorDashboard::Generators::InstallGenerator, type: :generat
 
         expect(initializer_content).to include("# Async Error Logging - ENABLED")
         expect(initializer_content).to include("config.async_logging = true")
-        expect(initializer_content).to include("config.async_adapter = :async")
+      end
+    end
+
+    # Neither ever did anything, so a new initializer shouldn't start life with a
+    # deprecation warning.
+    { "--async_logging" => "true", "--no-async_logging" => "false" }.each do |flag, value|
+      context "with #{flag}" do
+        before { run_generator [ "--no-interactive", flag ] }
+
+        let(:initializer_content) { File.read("#{destination_root}/config/initializers/rails_error_dashboard.rb") }
+
+        it "writes neither dead option, live or commented (deprecations-0-18/REQ-8)" do
+          expect(initializer_content).not_to match(/async_adapter|llm_observability_content_capture/)
+        end
+
+        it "still writes the async logging choice (deprecations-0-18/REQ-8)" do
+          expect(initializer_content).to include("config.async_logging = #{value}")
+        end
       end
     end
 

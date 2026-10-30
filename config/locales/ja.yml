@@ -93,7 +93,7 @@ ja:
         dismiss: このセッションでは表示しない
       solid_queue:
         label: "Solid Queue は RED のジョブを実行しません。"
-        body_html: "<code>config/queue.yml</code> を修正するまで、バックグラウンドで記録されたエラーと通知はキューで待機します。<code>bin/rails error_dashboard:verify</code> を実行して修正方法を確認し、再起動してください。"
+        body_html: "<code>config/queue.yml</code> を修正するまで、バックグラウンドで記録されたエラーと通知はキューで待機します。<code>bin/rails rails_error_dashboard:verify</code> を実行して修正方法を確認し、再起動してください。"
         guide: "RED が Solid Queue に必要とするもの"
       storm:
         active_title: エラーストームが発生中です
@@ -1061,7 +1061,6 @@ ja:
         user_model: ユーザー紐づけに使うモデル名 (未設定の場合は自動検出)
         total_users_for_impact: 影響率の算出に使用 (未設定の場合は自動検出)
         async_logging: バックグラウンドジョブで処理します
-        async_adapter: ジョブキューのアダプタ
         enable_rate_limiting: "ダッシュボードへのリクエストを IP とパスごとに制限します"
         rate_limit_per_minute: IP ごとの1分あたりのリクエスト数
         enable_slack_notifications: リアルタイム通知

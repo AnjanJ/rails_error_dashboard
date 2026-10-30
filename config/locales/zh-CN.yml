@@ -92,7 +92,7 @@ zh-CN:
         dismiss: 本次会话内不再提示
       solid_queue:
         label: "Solid Queue 不会运行 RED 的任务。"
-        body_html: "在修复 <code>config/queue.yml</code> 之前，后台捕获的错误和通知会一直在队列中等待。运行 <code>bin/rails error_dashboard:verify</code> 查看修复方法，然后重启应用。"
+        body_html: "在修复 <code>config/queue.yml</code> 之前，后台捕获的错误和通知会一直在队列中等待。运行 <code>bin/rails rails_error_dashboard:verify</code> 查看修复方法，然后重启应用。"
         guide: "RED 对 Solid Queue 的要求"
       storm:
         active_title: 错误风暴进行中
@@ -1056,7 +1056,6 @@ zh-CN:
         user_model: 用户关联所用的模型名（未设置时自动检测）
         total_users_for_impact: 用于计算影响百分比（未设置时自动检测）
         async_logging: 在后台任务中处理
-        async_adapter: 任务队列适配器
         enable_rate_limiting: "按 IP 和路径限制仪表盘请求"
         rate_limit_per_minute: 每个 IP 每分钟的请求数
         enable_slack_notifications: 实时通知

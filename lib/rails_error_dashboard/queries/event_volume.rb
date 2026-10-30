@@ -401,7 +401,7 @@ module RailsErrorDashboard
             #
             # This needs the server's time-zone tables (mysql_tzinfo_to_sql) --
             # the same requirement groupdate already imposes for every chart on
-            # the dashboard, and which `rails error_dashboard:verify` checks.
+            # the dashboard, and which `rails rails_error_dashboard:verify` checks.
             # See docs/guides/DATABASE_OPTIONS.md.
             "DATE(CONVERT_TZ(#{table}.#{column}, '+00:00', #{ErrorLog.connection.quote(zone.tzinfo.name)}))"
           else

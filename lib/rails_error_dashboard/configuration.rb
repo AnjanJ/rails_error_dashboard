@@ -7,6 +7,7 @@ module RailsErrorDashboard
     # ERROR_DASHBOARD_PASSWORD explicitly supplies the password.
     DEFAULT_DASHBOARD_USERNAME = "gandalf"
     DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
+    VERSIONING_URL = "https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md"
 
     # Settings that hold credentials. #inspect masks them, so printing the
     # configuration in a console (IRB shows results with pp, which uses
@@ -125,7 +126,6 @@ module RailsErrorDashboard
 
     # Async logging configuration
     attr_accessor :async_logging
-    attr_accessor :async_adapter # :sidekiq, :solid_queue, or :async
 
     # Backtrace configuration
     attr_accessor :max_backtrace_lines
@@ -262,7 +262,6 @@ module RailsErrorDashboard
 
     # LLM observability (requires enable_breadcrumbs = true)
     attr_accessor :enable_llm_observability             # Master switch (default: false)
-    attr_accessor :llm_observability_content_capture    # Capture prompt/completion text (default: false — PII risk)
     attr_accessor :llm_pricing_overrides                # Hash of { "model-name" => { input: usd_per_1m, output: usd_per_1m } }
 
     # OpenTelemetry outbound export — emit gem operations as OTel spans for
@@ -389,7 +388,6 @@ module RailsErrorDashboard
       @context_sampling_threshold_per_day = 25
       @context_sampling_keep_every = 10
       @async_logging = false
-      @async_adapter = :sidekiq # Battle-tested default
       @max_backtrace_lines = 100 # Matches industry standard (Rollbar, Airbrake)
 
       # Rate limiting defaults
@@ -533,7 +531,6 @@ module RailsErrorDashboard
       # LLM observability defaults - OFF by default (opt-in, requires breadcrumbs)
       # content_capture stays OFF even when master switch is on (privacy: prompts may contain PII/secrets)
       @enable_llm_observability = false
-      @llm_observability_content_capture = false
       @llm_pricing_overrides = {}
 
       # OTel outbound export defaults — OFF (opt-in). All four span kinds enabled
@@ -575,10 +572,29 @@ module RailsErrorDashboard
     # Whether config/database.yml has the entry config.database names for this
     # environment. Without it the engine skips connects_to and RED uses the
     # main database, where its tables usually don't exist, so nothing is
-    # recorded. The engine and error_dashboard:verify both ask this.
+    # recorded. The engine and rails_error_dashboard:verify both ask this.
     #
     # @param env_name [String] the Rails environment
     # @return [Boolean]
+    # Deprecated (decision 0004). Neither option ever did anything, so assigning
+    # one warns and stores nothing, and reading one gives nil. The setters are what
+    # keep an initializer that still assigns them booting. Both go in 2.0.
+    def async_adapter
+      nil
+    end
+
+    def async_adapter=(_value)
+      Deprecation.warn(:async_adapter, "config.async_adapter does nothing: RED's jobs run on your app's Active Job adapter. Delete the line. It will be removed in 2.0.")
+    end
+
+    def llm_observability_content_capture
+      nil
+    end
+
+    def llm_observability_content_capture=(_value)
+      Deprecation.warn(:llm_observability_content_capture, "config.llm_observability_content_capture does nothing: it was reserved and never used. Delete the line. It will be removed in 2.0.")
+    end
+
     def separate_database_entry?(env_name = Rails.env)
       name = (database || :error_dashboard).to_s
       ActiveRecord::Base.configurations.configs_for(env_name: env_name.to_s).any? { |config| config.name == name }
@@ -605,6 +621,14 @@ module RailsErrorDashboard
     def validate!
       errors = []
       warnings = []
+
+      # An ENV flag can't be the whole switch: a separate database also needs
+      # database.yml and config.database. And the generated initializer assigns
+      # use_separate_database, which overrides it. It only warns, so its value
+      # stays what #initialize read.
+      if ENV.key?("USE_SEPARATE_ERROR_DB")
+        Deprecation.warn(:use_separate_error_db, "USE_SEPARATE_ERROR_DB does nothing once your initializer sets config.use_separate_database. Set that option and unset the variable. It will be removed in 2.0.")
+      end
 
       # Block boot with default or blank credentials anywhere that is not local
       # development or test.
@@ -676,14 +700,6 @@ module RailsErrorDashboard
         end
       end
 
-      # Validate async_adapter (must be valid adapter)
-      if async_logging && async_adapter
-        valid_adapters = %i[sidekiq solid_queue async]
-        unless valid_adapters.include?(async_adapter)
-          errors << "async_adapter must be one of #{valid_adapters.inspect} (got: #{async_adapter.inspect})"
-        end
-      end
-
       # Any other git_branch_strategy links to main. A warning, not an error:
       # a link format is not worth stopping a boot.
       if git_branch_strategy && !%w[commit_sha current_branch main].include?(git_branch_strategy.to_s)
@@ -748,6 +764,9 @@ module RailsErrorDashboard
         warnings << "Rails #{ActionPack.gem_version} does not report the request exceptions it renders as error pages, " \
                     "so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later fixes this."
       end
+
+      report_versions_1_0_drops
+
       # Validate sub-settings only if feature is still active after version check
       if detect_swallowed_exceptions
         if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1
@@ -1124,6 +1143,16 @@ module RailsErrorDashboard
     # environment variable that is set but empty, or the initializer.
     #
     # @return [Array<String>]
+    # Decision 0003. Compared as versions: as strings, 3.10 sorts before 3.3.
+    private def report_versions_1_0_drops
+      if defined?(ActionPack) && ActionPack.gem_version < Gem::Version.new("7.2")
+        Deprecation.warn(:rails_floor, "Rails #{ActionPack.gem_version}: RED 1.0 requires Rails 7.2 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
+      end
+      return unless Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")
+
+      Deprecation.warn(:ruby_floor, "Ruby #{RUBY_VERSION}: RED 1.0 requires Ruby 3.3 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
+    end
+
     private def blank_credential_warnings
       {
         "ERROR_DASHBOARD_USER" => [ :dashboard_username, dashboard_username ],

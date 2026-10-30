@@ -210,7 +210,6 @@ RSpec.describe "Backtrace Limiting", type: :integration do
     before do
       RailsErrorDashboard.configure do |config|
         config.async_logging = true
-        config.async_adapter = :async
         config.max_backtrace_lines = 20
       end
     end

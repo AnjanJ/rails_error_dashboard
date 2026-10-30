@@ -230,7 +230,7 @@ Now that you have the basics working:
 
 **Check**:
 1. Send a test error: `/red/settings` → **Send Test Error**. Errors raised at the console prompt are never captured, so don't test with `raise` there.
-2. Check the setup: `bin/rails error_dashboard:verify` checks the configuration, the database connection and RED's tables.
+2. Check the setup: `bin/rails rails_error_dashboard:verify` checks the configuration, the database connection and RED's tables.
 3. Check the middleware is loaded: `bin/rails middleware | grep RailsErrorDashboard` should print `use RailsErrorDashboard::Middleware::ErrorCatcher`.
 4. With async logging on (the default), a background job writes each error. In production that needs a worker running your app's job backend.
 
@@ -294,13 +294,13 @@ config.enable_middleware = true
 config.enable_error_subscriber = true
 ```
 
-Then run `bin/rails error_dashboard:verify`.
+Then run `bin/rails rails_error_dashboard:verify`.
 
 ## Performance Tips
 
 ### Use Async Logging
 
-Async logging is on by default. RED enqueues each capture on your app's own Active Job adapter (`config.active_job.queue_adapter`), so whatever runs your other jobs runs RED's: Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`. `config.async_adapter` doesn't choose the backend.
+Async logging is on by default. RED enqueues each capture on your app's own Active Job adapter (`config.active_job.queue_adapter`), so whatever runs your other jobs runs RED's: Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`.
 
 - In production, run a worker for the `default` and `error_notifications` queues. With Solid Queue, see [Solid Queue Setup](/rails_error_dashboard/docs/guides/solid-queue-setup/).
 - Rails' in-process `:async` adapter needs no worker, but captures still queued when the process restarts are lost.

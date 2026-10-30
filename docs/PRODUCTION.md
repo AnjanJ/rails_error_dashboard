@@ -17,7 +17,7 @@ stop the app; it loses errors, notifications or scheduled cleanups without telli
 5. [Docker: set SECRET_KEY_BASE_DUMMY only on the build step](#5-docker-set-secret_key_base_dummy-only-on-the-build-step)
 6. [Set the dashboard credentials](#6-set-the-dashboard-credentials)
 
-Then run `bin/rails error_dashboard:verify` in production. It checks the configuration, the
+Then run `bin/rails rails_error_dashboard:verify` in production. It checks the configuration, the
 database, its tables and (with a separate database) its `config/database.yml` entry, the
 credentials, json 3 against your Rails version and, on Solid Queue, `config/queue.yml`. It can't
 tell whether a worker or a scheduler is running. Since 0.14.4 the dashboard also shows a banner when
@@ -27,8 +27,7 @@ Solid Queue's config would never run RED's jobs.
 
 The installer turns on `config.async_logging`, so every captured error is saved by a background
 job. Notifications are always background jobs. They all run on your app's Active Job adapter,
-`config.active_job.queue_adapter`. (`config.async_adapter` in RED's initializer is only checked
-for a valid value; it doesn't choose the backend.)
+`config.active_job.queue_adapter`.
 
 RED's jobs use two queues, and the worker has to process both:
 
@@ -99,7 +98,7 @@ bin/rails runner 'RailsErrorDashboard::ScheduledDigestJob.perform_now(period: "d
 bin/rails runner 'RailsErrorDashboard::CascadeDetectionJob.perform_now(lookback_hours: 1)'   # hourly
 ```
 
-Don't schedule the `error_dashboard:retention_cleanup` rake task: it asks for confirmation before
+Don't schedule the `rails_error_dashboard:retention_cleanup` rake task: it asks for confirmation before
 deleting, so it can't run unattended.
 
 ## 3. Run migrations on every deploy

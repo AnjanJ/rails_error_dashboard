@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-namespace :error_dashboard do
+namespace :rails_error_dashboard do
   desc "Verify Rails Error Dashboard setup (database, tables, configuration)"
   task verify: :environment do
     puts "\n" + "=" * 70
@@ -215,11 +215,12 @@ namespace :error_dashboard do
     # 9. Solid Queue config. A section with workers and no dispatchers runs no
     # dispatcher, so no delayed job ever runs, the app's own included; the
     # retired rails_error_dashboard:solid_queue generator wrote exactly that.
-    # Checked whenever Solid Queue is loaded, not only when it is the current
-    # adapter: Rails 8 sets it in production only, and verify usually runs locally.
+    # Checked whenever the file exists, not only when Solid Queue is the current
+    # adapter or even loaded: Rails 8 sets it in production only, and verify
+    # usually runs locally.
     queue_check = RailsErrorDashboard::Services::SolidQueueConfigCheck
     queue_config = queue_check.config_path(Rails.root)
-    if defined?(SolidQueue) && queue_config.exist?
+    if queue_config.exist?
       print "  Solid Queue config... "
       environments = queue_check.app_environments(Rails.root).presence || [ Rails.env.to_s ]
       result = queue_check.call(queue_config, environments: environments)
@@ -235,6 +236,9 @@ namespace :error_dashboard do
         puts "OK"
         checks_passed += 1
       end
+    elsif defined?(SolidQueue)
+      puts "  Solid Queue config... OK (no #{queue_config.basename}: Solid Queue's defaults, a \"*\" worker and a dispatcher, process RED's queues)"
+      checks_passed += 1
     end
 
     # 10. json 3.0 breaks Rails before 8.1.4 and 7.2.4: dashboard pages return
@@ -412,8 +416,8 @@ namespace :error_dashboard do
     else
             puts "\n✗ Please specify APP_ID or APP_NAME"
             puts "\nExamples:"
-            puts "  rails error_dashboard:app_stats APP_NAME='My App'"
-            puts "  rails error_dashboard:app_stats APP_ID=1"
+            puts "  rails rails_error_dashboard:app_stats APP_NAME='My App'"
+            puts "  rails rails_error_dashboard:app_stats APP_ID=1"
             puts "\n" + "=" * 80 + "\n"
             next
     end
@@ -701,5 +705,24 @@ namespace :error_dashboard do
       locale: RailsErrorDashboard::ApplicationJob.enqueue_locale
     )
     puts "Digest job enqueued."
+  end
+end
+
+# The old names, until 2.0: a crontab that calls one mustn't quietly stop. They
+# have no desc, so `rake -T` lists only the new names.
+namespace :error_dashboard do
+  %w[
+    verify list_applications backfill_application app_stats cleanup_resolved diagnostic_dump
+    retention_cleanup scrub_invalid_encoding backfill_resolved_at digest_session_ids send_digest
+  ].each do |name|
+    task name => :environment do
+      RailsErrorDashboard::Deprecation.warn(
+        "rake:#{name}",
+        "rake error_dashboard:#{name} is now rails_error_dashboard:#{name}. Update your scripts and cron entries. " \
+        "The old name will be removed in 2.0.",
+        stderr: true
+      )
+      Rake::Task["rails_error_dashboard:#{name}"].invoke
+    end
   end
 end

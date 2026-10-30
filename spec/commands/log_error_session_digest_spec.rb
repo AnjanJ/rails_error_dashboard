@@ -175,10 +175,10 @@ RSpec.describe "session ID digest" do
     end
   end
 
-  describe "rake error_dashboard:digest_session_ids" do
-    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("error_dashboard:digest_session_ids") }
+  describe "rake rails_error_dashboard:digest_session_ids" do
+    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:digest_session_ids") }
 
-    let(:task) { Rake::Task["error_dashboard:digest_session_ids"] }
+    let(:task) { Rake::Task["rails_error_dashboard:digest_session_ids"] }
     let(:error_log) { create(:error_log) }
 
     before { task.reenable }

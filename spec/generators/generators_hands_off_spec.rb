@@ -5,7 +5,6 @@ require "rails/generators"
 require "digest"
 require "generators/rails_error_dashboard/install/install_generator"
 require "generators/rails_error_dashboard/uninstall/uninstall_generator"
-require "generators/rails_error_dashboard/solid_queue/solid_queue_generator"
 
 # RED never writes another gem's files (decision 0001). Its old Solid Queue
 # generator overwrote config/queue.yml with a file that started no dispatcher,
@@ -91,16 +90,11 @@ RSpec.describe "RED's generators and the app's other files", type: :generator do
     Dir.chdir(root) { quietly { generator.invoke_all } }
   end
 
-  def solid_queue_generator
-    generator = RailsErrorDashboard::Generators::SolidQueueGenerator.new([], { force: true }, destination_root: root)
-    quietly { generator.invoke_all }
-  end
-
   def red_migrations
     Dir.glob("db/{migrate,error_dashboard_migrate}/*.rails_error_dashboard.rb", base: root)
   end
 
-  it "installs, re-installs, checks Solid Queue and uninstalls without changing any other file" do
+  it "installs, re-installs and uninstalls without changing any other file" do
     before = other_files
 
     install
@@ -108,9 +102,6 @@ RSpec.describe "RED's generators and the app's other files", type: :generator do
     expect(other_files).to eq(before)
 
     install
-    expect(other_files).to eq(before)
-
-    solid_queue_generator
     expect(other_files).to eq(before)
 
     uninstall

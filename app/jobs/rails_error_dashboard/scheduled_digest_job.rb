@@ -8,7 +8,7 @@ module RailsErrorDashboard
   #   RailsErrorDashboard::ScheduledDigestJob.perform_later(period: "daily")
   #
   # @example Schedule via rake
-  #   rails error_dashboard:send_digest PERIOD=daily
+  #   rails rails_error_dashboard:send_digest PERIOD=daily
   class ScheduledDigestJob < ApplicationJob
     queue_as :default
 

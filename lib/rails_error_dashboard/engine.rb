@@ -20,7 +20,7 @@ module RailsErrorDashboard
         # This happens during `rails generate` when the initializer was just created but
         # the user hasn't added the database.yml entry yet. Logged at error level:
         # RED then uses the main database, and unless that has RED's tables no
-        # error is recorded. error_dashboard:verify reports it as FAILED.
+        # error is recorded. rails_error_dashboard:verify reports it as FAILED.
         unless RailsErrorDashboard.configuration.separate_database_entry?
           Rails.logger.error "[Rails Error Dashboard] Separate database '#{database_name}' is not configured in database.yml for the '#{Rails.env}' environment. Skipping connects_to: errors are not recorded until it is added. See https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/guides/DATABASE_OPTIONS.md"
           next

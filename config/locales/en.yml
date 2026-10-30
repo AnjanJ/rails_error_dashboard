@@ -163,7 +163,7 @@ en:
       solid_queue:
         # Shown when Solid Queue runs RED's jobs with a config/queue.yml that never would.
         label: "Solid Queue won't run RED's jobs."
-        body_html: "Errors captured in the background and notifications wait in the queue until <code>config/queue.yml</code> is fixed. Run <code>bin/rails error_dashboard:verify</code> for the fix, then restart."
+        body_html: "Errors captured in the background and notifications wait in the queue until <code>config/queue.yml</code> is fixed. Run <code>bin/rails rails_error_dashboard:verify</code> for the fix, then restart."
         guide: "What RED needs from Solid Queue"
       storm:
         # Whole sentences, not fragments. The English original assembled these
@@ -1630,7 +1630,6 @@ en:
         user_model: "Model name for user associations (auto-detected if not set)"
         total_users_for_impact: "For impact % calculation (auto-detected if not set)"
         async_logging: "Background job processing"
-        async_adapter: "Job queue adapter"
         enable_rate_limiting: "Throttle dashboard requests per IP and path"
         rate_limit_per_minute: "Requests per minute per IP"
         enable_slack_notifications: "Real-time notifications"

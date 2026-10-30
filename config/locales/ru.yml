@@ -93,7 +93,7 @@ ru:
         dismiss: Скрыть до конца сессии
       solid_queue:
         label: "Solid Queue не будет выполнять задания RED."
-        body_html: "Ошибки, записанные в фоне, и уведомления ждут в очереди, пока не исправлен <code>config/queue.yml</code>. Запустите <code>bin/rails error_dashboard:verify</code>, чтобы увидеть исправление, затем перезапустите приложение."
+        body_html: "Ошибки, записанные в фоне, и уведомления ждут в очереди, пока не исправлен <code>config/queue.yml</code>. Запустите <code>bin/rails rails_error_dashboard:verify</code>, чтобы увидеть исправление, затем перезапустите приложение."
         guide: "Что RED нужно от Solid Queue"
       storm:
         active_title: Идёт шторм ошибок
@@ -1249,7 +1249,6 @@ ru:
         total_users_for_impact: Для расчёта % влияния (определяется автоматически,
           если не задано)
         async_logging: Обработка в фоновых задачах
-        async_adapter: Адаптер очереди задач
         enable_rate_limiting: "Ограничивать запросы к панели по IP и пути"
         rate_limit_per_minute: Запросов в минуту на IP
         enable_slack_notifications: Уведомления в реальном времени

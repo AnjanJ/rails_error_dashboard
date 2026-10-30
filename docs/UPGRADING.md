@@ -18,7 +18,7 @@ bin/rails db:migrate
 ```
 
 Then commit the new migration files along with `Gemfile.lock`, and deploy. To check the result,
-run `bin/rails error_dashboard:verify`.
+run `bin/rails rails_error_dashboard:verify`.
 
 On an app that already has RED, the installer:
 
@@ -52,7 +52,7 @@ the installer, as above. On an app without a separate database, the two copy the
 - With a separate database, every environment in `config/database.yml` needs the
   `error_dashboard` entry, with `migrations_paths: db/error_dashboard_migrate`. If an environment
   has no entry, RED logs an error at boot and falls back to the main database, which has no RED
-  tables, so that environment's errors are not recorded anywhere. `bin/rails error_dashboard:verify`
+  tables, so that environment's errors are not recorded anywhere. `bin/rails rails_error_dashboard:verify`
   reports it.
 
 ## Releases that need a step
@@ -77,7 +77,7 @@ links to its full notes in the [CHANGELOG](../CHANGELOG.md).
 | [0.16.1](../CHANGELOG.md#0161-2026-10-20) | No action. Platform health scores change: an evenly split app can now be Healthy, a platform with nothing resolved in the period is scored on volume alone and says so, and a platform with no errors in the period gets no card. On Rails 7.0.0 to 7.0.8.7, RED now logs a warning at boot: upgrade to Rails 7.0.10 or later to record request errors, as in [Troubleshooting](TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70). |
 | [0.16.2](../CHANGELOG.md#0162-2026-10-22) | No action. |
 | [0.17.0](../CHANGELOG.md#0170-2026-10-29) | No migrations. Live updates stay off until you set `enable_live_updates = true`; a custom index view that subscribed to the old streams must render `red_live_updates_tags` instead, as in [Real-time updates](guides/REAL_TIME_UPDATES.md#upgrading-to-0170). API-only apps: RED no longer adds app-wide sessions or cookies, and the dashboard's cookie is `_rails_error_dashboard_session`. With `async_logging` and `custom_fingerprint` both on, custom-fingerprinted groups restart once. Messages over 10,000 characters and params over about 64 KB are cut, with a marker. |
-| 0.18.0 | If you use `webhook_urls`, three event names change and every post gains fields: see [Webhook changes in 0.18.0](#webhook-changes-in-0180). |
+| 0.18.0 | If you use `webhook_urls`, three event names change and every post gains fields: see [Webhook changes in 0.18.0](#webhook-changes-in-0180). Several things are deprecated, none of which stops your app booting: see [Deprecations in 0.18.0](#deprecations-in-0180). |
 
 ## Webhook changes in 0.18.0
 
@@ -108,6 +108,39 @@ Every post gains:
 Every other field keeps its name, type and meaning. Signatures still cover the exact bytes sent. Slack,
 Discord, Telegram, PagerDuty and email messages don't change.
 
+## Deprecations in 0.18.0
+
+Nothing here stops your app booting. Each one logs a warning once, starting
+`[Rails Error Dashboard] DEPRECATION:`, and keeps working until the release shown.
+
+| If you use | Do this | Goes in |
+|---|---|---|
+| `config.async_adapter` | Delete the line. RED's jobs run on your app's Active Job adapter, and this never changed that | 2.0 |
+| `config.llm_observability_content_capture` | Delete the line. It was reserved and never used | 2.0 |
+| `USE_SEPARATE_ERROR_DB` | Set `config.use_separate_database` in your initializer, and unset the variable | 2.0 |
+| `rails generate rails_error_dashboard:solid_queue` | Run `bin/rails rails_error_dashboard:verify`, which makes the same checks | Gone in 0.18.0 |
+
+The rake tasks have one namespace now. The old names still run, and print a deprecation to standard
+error, until 2.0, so update your scripts and cron entries when you can:
+
+| Old name | New name |
+|---|---|
+| `error_dashboard:verify` | `rails_error_dashboard:verify` |
+| `error_dashboard:list_applications` | `rails_error_dashboard:list_applications` |
+| `error_dashboard:backfill_application` | `rails_error_dashboard:backfill_application` |
+| `error_dashboard:app_stats` | `rails_error_dashboard:app_stats` |
+| `error_dashboard:cleanup_resolved` | `rails_error_dashboard:cleanup_resolved` |
+| `error_dashboard:diagnostic_dump` | `rails_error_dashboard:diagnostic_dump` |
+| `error_dashboard:retention_cleanup` | `rails_error_dashboard:retention_cleanup` |
+| `error_dashboard:scrub_invalid_encoding` | `rails_error_dashboard:scrub_invalid_encoding` |
+| `error_dashboard:backfill_resolved_at` | `rails_error_dashboard:backfill_resolved_at` |
+| `error_dashboard:digest_session_ids` | `rails_error_dashboard:digest_session_ids` |
+| `error_dashboard:send_digest` | `rails_error_dashboard:send_digest` |
+
+**Rails and Ruby.** RED 1.0 requires Rails 7.2 and Ruby 3.3. On anything older, this version logs one
+warning and keeps working. See the [versioning policy](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md)
+for how long 0.x is supported.
+
 ## Rails before 8.1.4 or 7.2.4: pin json below 3
 
 json 3.0, released in September 2026, rejects options that older Rails versions still pass. On an
@@ -125,7 +158,7 @@ Then run `bundle update json`. Remove the pin once you're on Rails 8.1.4, 7.2.4 
 
 On Rails 7.2, check that you really got 7.2.4: it caps `minitest` below 6 and `connection_pool`
 below 3, which 7.2.3 doesn't, so Bundler can keep you on 7.2.3 while it moves json to 3.0. Require
-it with `gem "rails", "~> 7.2.4"`. Since 0.14.4, `bin/rails error_dashboard:verify` warns when json
+it with `gem "rails", "~> 7.2.4"`. Since 0.14.4, `bin/rails rails_error_dashboard:verify` warns when json
 3 runs on a Rails it breaks.
 
 ## Stuck at db:migrate after installing 0.4.0 to 0.8.1

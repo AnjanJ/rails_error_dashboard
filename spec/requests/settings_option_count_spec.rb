@@ -15,8 +15,8 @@ RSpec.describe "Settings option counts", type: :request do
     config.authenticate_with, config.async_logging, config.enable_rate_limiting = saved
   end
 
-  # The Performance group: async_logging, async_adapter (shown with async
-  # logging), enable_rate_limiting, rate_limit_per_minute (shown with it)
+  # The Performance group: async_logging, enable_rate_limiting,
+  # rate_limit_per_minute (shown with it)
   def performance_header
     get "/error_dashboard/settings"
     Nokogiri::HTML(response.body).css("button[data-red-action='toggle-next']")

@@ -456,7 +456,7 @@ These are reference benchmarks from testing multi-app support:
 
 1. **Use Async Logging**: Enable `config.async_logging = true` to move error writes out of request cycle
 
-2. **Archive Old Errors**: Schedule `RailsErrorDashboard::RetentionCleanupJob` (see [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs)), or run the `error_dashboard:cleanup_resolved` rake task by hand to remove old resolved errors (it asks for confirmation)
+2. **Archive Old Errors**: Schedule `RailsErrorDashboard::RetentionCleanupJob` (see [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs)), or run the `rails_error_dashboard:cleanup_resolved` rake task by hand to remove old resolved errors (it asks for confirmation)
 
 3. **Separate Database**: Consider dedicated database for error dashboard to isolate performance impact
 
