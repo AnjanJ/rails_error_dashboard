@@ -12,6 +12,14 @@ and returns, and Rails prints "reverted" having dropped nothing. Fix them on the
 "Ship 1.0" (`.shipkit/product.md`): the research's policy that migrations in a minor are additive
 and replay-safe also needs their `down` to be truthful.
 
+## Correction, 2026-10-30
+**The real count is 33, not 26.** The parse below looked for a `change` that returns early, as the
+issue did. Seven more guard the work inside `change` with `unless column_exists?` or a modifier.
+On revert the guard sees the column and skips `add_column`, so nothing is recorded and Rails prints
+"reverted": the same bug. The round-trip harness found them, with 13 columns left in place on both
+histories. They add no table, so the foreign-key question below doesn't touch them. `db:rollback`
+reaches 7 of the 33, because `20260915000003` is newer than the irreversible wall.
+
 ## Verified at 6b1dfab (by parsing every migration with Prism)
 - The 26 are exactly the issue's list: 15 table guards, 9 column guards, 2 index guards.
 - **15 of the 26 add an object that the complete-schema migration (`20251223000000`) also creates on

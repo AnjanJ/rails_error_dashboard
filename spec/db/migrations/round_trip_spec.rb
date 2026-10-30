@@ -6,11 +6,18 @@ require "rails_helper"
 # histories. See spec/support/migration_round_trip.rb.
 RSpec.describe "Migration round trips", type: :migration do
   own_object = {
+    20260220000001 => "add_exception_cause_to_error_logs",
+    20260220000002 => "add_enriched_context_to_error_logs",
+    20260221000001 => "add_environment_info_to_error_logs",
+    20260221000002 => "add_reopened_at_to_error_logs",
+    20260303000001 => "add_breadcrumbs_to_error_logs",
     20260307000001 => "create_rails_error_dashboard_diagnostic_dumps",
     20260613000001 => "create_storm_events",
+    20260326000001 => "add_issue_tracking_to_error_logs",
     20260730000001 => "create_rails_error_dashboard_rack_attack_events",
     20260824000001 => "add_user_agent_to_rack_attack_events",
     20260826000001 => "add_environment_to_error_logs",
+    20260915000003 => "add_context_provenance_to_error_logs",
     20260915000004 => "create_storm_flush_batches",
     20260919000001 => "create_event_counts",
     20260920000001 => "add_buckets_incomplete_to_storm_events",
@@ -40,6 +47,28 @@ RSpec.describe "Migration round trips", type: :migration do
     20260323000001 => "add_muted_to_error_logs"
   }
 
+  # These always had up and down, so they never said "reverted" falsely. Some
+  # raise on an object that's already gone, which is loud, so that isn't checked.
+  already_up_and_down = {
+    20251225074653 => "remove_environment_from_error_logs",
+    20260106094233 => "add_application_to_error_logs",
+    20260106094318 => "finalize_application_foreign_key",
+    20260220000003 => "add_time_series_indexes_to_error_logs",
+    20260304000001 => "add_system_health_to_error_logs",
+    20260306000001 => "add_local_variables_to_error_logs",
+    20260306000002 => "add_instance_variables_to_error_logs",
+    20260503000001 => "backfill_resolved_status",
+    20260908000001 => "add_release_to_error_occurrences",
+    20260908220001 => "add_missing_postgresql_indexes_to_error_logs",
+    20260915000002 => "add_issue_repo_identity_to_error_logs",
+    20260917000001 => "add_last_notified_at_to_error_logs",
+    20261015000002 => "add_capture_source_to_error_occurrences_and_error_logs"
+  }
+
+  # Guarded too, but with no round trip to run: the complete schema has its own
+  # example below, and the others raise IrreversibleMigration.
+  no_round_trip = [ 20251223000000, 20260325000001, 20260909000001, 20260915000001 ]
+
   foreign_key_refusal = /depend on it|foreign key/i
 
   # Its guard also wants application_id, which a later migration adds. So while
@@ -51,7 +80,9 @@ RSpec.describe "Migration round trips", type: :migration do
   # database here by stripping those keys, which is why the example below exists.
   parent_tables = [ create_error_logs, 20260106094220 ]
 
-  before(:context) { @results = RailsErrorDashboard::MigrationRoundTrip.run(own_object.keys + shadowed.keys) }
+  before(:context) do
+    @results = RailsErrorDashboard::MigrationRoundTrip.run(own_object.keys + shadowed.keys + already_up_and_down.keys)
+  end
 
   shared_examples "a full round trip" do
     it "adds something, or there is nothing to check" do
@@ -64,6 +95,19 @@ RSpec.describe "Migration round trips", type: :migration do
 
     it "does nothing going down with its object already gone (migration-rollback/REQ-2)" do
       expect(trip["down_again"]).to eq("error" => nil, "changed" => false)
+    end
+  end
+
+  shared_examples "a down that never reports a false success" do
+    it "goes, or fails on the foreign key and stays recorded (migration-rollback/REQ-1, REQ-6)" do
+      down = trip["down"]
+
+      if down["error"]
+        expect(down["error"]).to match(foreign_key_refusal)
+        expect(down["version_kept"]).to be(true)
+      else
+        expect(down).to include("version_kept" => false, "left" => [])
+      end
     end
   end
 
@@ -110,16 +154,7 @@ RSpec.describe "Migration round trips", type: :migration do
     context "#{name} on the fresh history" do
       let(:trip) { @results.fetch("fresh").fetch(version.to_s) }
 
-      it "goes, or fails on the foreign key and stays recorded, never reports success (migration-rollback/REQ-1)" do
-        down = trip["down"]
-
-        if down["error"]
-          expect(down["error"]).to match(foreign_key_refusal)
-          expect(down["version_kept"]).to be(true)
-        else
-          expect(down).to include("version_kept" => false, "left" => [])
-        end
-      end
+      it_behaves_like "a down that never reports a false success"
 
       if parent_tables.include?(version)
         it "is refused while other tables depend on it (migration-rollback/REQ-1)" do
@@ -131,6 +166,34 @@ RSpec.describe "Migration round trips", type: :migration do
 
       it_behaves_like "a way back up", version
     end
+  end
+
+  already_up_and_down.each do |version, name|
+    context "#{name} on the upgrade history" do
+      let(:trip) { @results.fetch("upgrade").fetch(version.to_s) }
+
+      it "takes what it added away going down (migration-rollback/REQ-6)" do
+        expect(trip["down"]).to include("error" => nil, "version_kept" => false, "left" => [])
+      end
+
+      it_behaves_like "a way back up", version
+    end
+
+    context "#{name} on the fresh history" do
+      let(:trip) { @results.fetch("fresh").fetch(version.to_s) }
+
+      it_behaves_like "a down that never reports a false success"
+    end
+  end
+
+  it "runs every migration with an existence check, or says why not (migration-rollback/REQ-6)" do
+    guarded = Dir[RailsErrorDashboard::Engine.root.join("db/migrate/*.rb")].select do |file|
+      File.read(file).match?(/\w+_exists\?/)
+    end
+
+    expect(guarded.map { |file| File.basename(file)[/\A\d+/].to_i }).to match_array(
+      own_object.keys + shadowed.keys + already_up_and_down.keys + no_round_trip
+    )
   end
 
   RailsErrorDashboard::MigrationRoundTrip::HISTORIES.each do |history|

@@ -38,12 +38,22 @@ time. The round-trip spec builds its own scratch databases and never touches
   - After: T2
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
     green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
-- [ ] **T4** No migration returns early from `change` on an existence check → REQ-7
+- [ ] **T6** The seven migrations the issue's list missed, and the rest of REQ-6 → REQ-1, REQ-2, REQ-3, REQ-4, REQ-6
+  - Files: db/migrate/20260220000001_add_exception_cause_to_error_logs.rb, db/migrate/20260220000002_add_enriched_context_to_error_logs.rb, db/migrate/20260221000001_add_environment_info_to_error_logs.rb, db/migrate/20260221000002_add_reopened_at_to_error_logs.rb, db/migrate/20260303000001_add_breadcrumbs_to_error_logs.rb, db/migrate/20260326000001_add_issue_tracking_to_error_logs.rb, db/migrate/20260915000003_add_context_provenance_to_error_logs.rb, spec/db/migrations/round_trip_spec.rb
+  - Test: round_trip_spec:
+    - the seven, as the eleven own-object migrations;
+    - the 13 that already have `up` and `down`: on the upgrade history down leaves nothing and up
+      restores; on the fresh history down goes or is refused, never reports success;
+    - a migration with an existence check that's in no list fails the spec
+  - After: T3
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
+    green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
+- [ ] **T4** No `change` branches on an existence check → REQ-7
   - Files: spec/db/migrations/no_guarded_change_spec.rb
   - Test: no_guarded_change_spec parses every `db/migrate/*.rb` with Prism and fails on a `change`
-    whose body returns early on a `*_exists?` check. Its own example also runs the check on the
-    pre-fix text of one migration and expects a failure.
-  - After: T3
+    whose body calls a `*_exists?` check, by an early return or a modifier. Its own examples also
+    run the check on the pre-fix text of one migration of each form and expect a failure.
+  - After: T6
   - Done when: `R rspec spec/db/migrations/no_guarded_change_spec.rb` → 0 failures
 - [ ] **T5** The rollback docs say what rolls back → REQ-8
   - Files: docs/TROUBLESHOOTING.md, docs/GLOSSARY.md, _reference/troubleshooting.md, _reference/glossary.md, spec/docs/rollback_docs_spec.rb

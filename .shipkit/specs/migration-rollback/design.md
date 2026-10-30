@@ -1,7 +1,7 @@
 # Design: Migrations that roll back what they add (issue #326)
 
 ## Approach
-- **The 26 migrations change from `change` to `up`/`down`,** on the model of
+- **The 33 migrations change from `change` to `up`/`down`,** on the model of
   `20261015000002_add_capture_source_to_error_occurrences_and_error_logs.rb`, including its comment
   explaining why.
   - `up` keeps today's guard and body unchanged (REQ-3).
@@ -17,7 +17,7 @@
   - a round-trip spec that runs each guarded migration through down and up on a scratch database
     (REQ-4, REQ-6);
   - a static spec that parses every file in `db/migrate` with Prism and fails on a `change` that
-    returns early on an existence check (REQ-7). This is the same parse used to find the 26.
+    branches on an existence check (REQ-7).
 - **The docs** (REQ-8): `docs/TROUBLESHOOTING.md:93-94` and `docs/GLOSSARY.md:408`, plus their
   Jekyll copies (`_reference/`), say:
   - what rolls back;
@@ -25,6 +25,25 @@
   - that installs from before 0.18.0 keep their old copies;
   - the SQL-free way to remove a leftover table or column by hand
     (`bin/rails runner` with `drop_table` / `remove_column`).
+
+## Correction: 33 migrations, not 26 (2026-10-30)
+
+The records below say 26, the issue's count, which is the migrations that return early from
+`change`. The round-trip harness showed the same bug on seven more, whose guard is inside `change`:
+
+```ruby
+def change
+  add_column :t, :c, :text unless column_exists?(:t, :c)
+end
+```
+
+On revert the column exists, so `add_column` is skipped, nothing is recorded, and Rails prints
+"reverted". The seven add 13 columns and no table, so they get the same fix and meet no foreign-key
+refusal. The decisions below hold for all 33.
+
+The harness also runs the 13 migrations that already had `up` and `down`, because REQ-6 says every
+guarded `up`. Those never misreported: their `down` removes the object, or raises. Some raise on an
+object that's already gone, which is a loud failure and not this bug, so they're unchanged.
 
 ## Decision: Each `down` removes the object if it exists; the database's own refusals surface as errors   (→ REQ-1, REQ-2, REQ-3)
 
