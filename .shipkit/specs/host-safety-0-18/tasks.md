@@ -35,8 +35,9 @@ cites `host-safety-0-18/REQ-N`. One commit per task, test and code together.
   - Test: user_model_detector_spec:
     - `Timeout.timeout` is never called;
     - on SQLite, a plain count;
-    - on PostgreSQL, against a view that sleeps past a stubbed limit → `nil`, nothing raised, and
-      `SELECT 1` still works on the same connection;
+    - on PostgreSQL, a scope that sleeps past a stubbed limit → `nil`, nothing raised, and
+      `SELECT 1` still works on the same connection (a scope, not a view: DDL on MySQL commits the
+      example's transaction);
     - on MySQL, the same through `MAX_EXECUTION_TIME`.
 
     The adapter examples are skipped unless the adapter matches.

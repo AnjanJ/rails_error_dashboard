@@ -195,6 +195,118 @@ RSpec.describe RailsErrorDashboard::Helpers::UserModelDetector do
     end
   end
 
+  describe ".query_user_count on a real database" do
+    let(:connection) { ActiveRecord::Base.connection }
+    let(:adapter) { connection.adapter_name.downcase }
+    let(:real_table) { "rails_error_dashboard_applications" }
+
+    before do
+      user_table = real_table
+      stub_const("User", Class.new(ActiveRecord::Base) { self.table_name = user_table })
+      RailsErrorDashboard::Application.create!(name: "counted")
+    end
+
+    def count_statements
+      statements = []
+      collect = ->(*, payload) { statements << payload[:sql] unless %w[SCHEMA TRANSACTION].include?(payload[:name]) }
+      ActiveSupport::Notifications.subscribed(collect, "sql.active_record") { yield }
+      statements
+    end
+
+    it "never interrupts the query from Ruby (host-safety-0-18/REQ-8)" do
+      expect(Timeout).not_to receive(:timeout)
+
+      expect(described_class.query_user_count("User")).to eq(1)
+    end
+
+    it "runs a plain count on SQLite (host-safety-0-18/REQ-8)" do
+      skip "SQLite only" unless adapter.match?(/sqlite/)
+
+      statements = count_statements { described_class.query_user_count("User") }
+
+      expect(statements).to contain_exactly(a_string_matching(/\ASELECT COUNT\(\*\) FROM "#{real_table}"\z/))
+    end
+
+    # A scope, not a view: DDL on MySQL would commit the example's transaction.
+    context "with a count too slow for the limit" do
+      def slow_count(condition)
+        stub_const("#{described_class}::COUNT_TIMEOUT_MS", 100)
+        User.class_eval { default_scope { where(condition) } }
+      end
+
+      shared_examples "a count the database ends" do
+        it "gives nil well before the query would finish, and the connection still works (host-safety-0-18/REQ-8)" do
+          result = :not_called
+          started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+          # An open transaction is the hard case: on PostgreSQL a cancelled
+          # statement would abort it, leaving the connection unusable.
+          ActiveRecord::Base.transaction(requires_new: true) do
+            result = described_class.query_user_count("User")
+            expect(connection.select_value("SELECT 1")).to eq(1)
+          end
+
+          expect(result).to be_nil
+          expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at).to be < 1.5
+          expect(connection.select_value("SELECT 1")).to eq(1)
+        end
+      end
+
+      context "on PostgreSQL" do
+        before do
+          skip "PostgreSQL only" unless adapter.match?(/postgres/)
+          slow_count("pg_sleep(2)::text = ''")
+        end
+
+        it_behaves_like "a count the database ends"
+      end
+
+      context "on MySQL" do
+        before do
+          skip "MySQL only" unless adapter.match?(/mysql|trilogy/)
+          slow_count("SLEEP(2) = 0")
+        end
+
+        it_behaves_like "a count the database ends"
+      end
+    end
+
+    context "on PostgreSQL" do
+      before { skip "PostgreSQL only" unless adapter.match?(/postgres/) }
+
+      it "limits the statement and still counts (host-safety-0-18/REQ-8)" do
+        statements = count_statements do
+          expect(described_class.query_user_count("User")).to eq(1)
+        end
+
+        expect(statements.first).to eq("SET LOCAL statement_timeout = 5000")
+        expect(statements.last).to include("COUNT(*)")
+      end
+
+      it "leaves an open transaction's statement_timeout as it found it (host-safety-0-18/REQ-8)" do
+        ActiveRecord::Base.transaction(requires_new: true) do
+          found = connection.select_value("SHOW statement_timeout")
+
+          described_class.query_user_count("User")
+
+          expect(connection.select_value("SHOW statement_timeout")).to eq(found)
+        end
+      end
+    end
+
+    context "on MySQL" do
+      before { skip "MySQL only" unless adapter.match?(/mysql|trilogy/) }
+
+      it "limits the statement and still counts (host-safety-0-18/REQ-8)" do
+        statements = count_statements do
+          expect(described_class.query_user_count("User")).to eq(1)
+        end
+
+        expect(statements).to contain_exactly(a_string_matching(%r{\ASELECT /\*\+ MAX_EXECUTION_TIME\(5000\) \*/ COUNT\(\*\)}))
+      end
+    end
+  end
+
   describe ".calculate_user_impact" do
     before do
       RailsErrorDashboard.configuration.total_users_for_impact = 1000
