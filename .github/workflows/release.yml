@@ -107,7 +107,8 @@ jobs:
   # Publishes to RubyGems with Trusted Publishing: no API key, the job trades
   # its OIDC token (id-token: write) for a short-lived RubyGems credential.
   # See https://guides.rubygems.org/trusted-publishing/ -- the trusted
-  # publisher on rubygems.org is keyed to this file name, release.yml.
+  # publisher on rubygems.org is keyed to this file name, release.yml, and
+  # to the `rubygems` environment.
   #
   # Also the manual escape hatch: dispatch this workflow with `version` set to
   # the version on main to republish WITHOUT going through release-please. Use
