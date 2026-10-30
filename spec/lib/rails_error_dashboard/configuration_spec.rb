@@ -496,6 +496,7 @@ RSpec.describe RailsErrorDashboard::Configuration do
       it "logs a warning without raising" do
         config.enable_rack_attack_tracking = true
 
+        allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
         expect(Rails.logger).to receive(:warn).with(/rack-attack gem does not appear to be loaded/)
 
         expect { config.validate! }.not_to raise_error
@@ -511,6 +512,7 @@ RSpec.describe RailsErrorDashboard::Configuration do
       it "stays silent when tracking is disabled" do
         config.enable_rack_attack_tracking = false
 
+        allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
         expect(Rails.logger).not_to receive(:warn).with(/rack-attack/)
 
         config.validate!

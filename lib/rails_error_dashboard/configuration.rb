@@ -7,6 +7,7 @@ module RailsErrorDashboard
     # ERROR_DASHBOARD_PASSWORD explicitly supplies the password.
     DEFAULT_DASHBOARD_USERNAME = "gandalf"
     DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
+    VERSIONING_URL = "https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md"
 
     # Settings that hold credentials. #inspect masks them, so printing the
     # configuration in a console (IRB shows results with pp, which uses
@@ -763,6 +764,9 @@ module RailsErrorDashboard
         warnings << "Rails #{ActionPack.gem_version} does not report the request exceptions it renders as error pages, " \
                     "so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later fixes this."
       end
+
+      report_versions_1_0_drops
+
       # Validate sub-settings only if feature is still active after version check
       if detect_swallowed_exceptions
         if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1
@@ -1139,6 +1143,16 @@ module RailsErrorDashboard
     # environment variable that is set but empty, or the initializer.
     #
     # @return [Array<String>]
+    # Decision 0003. Compared as versions: as strings, 3.10 sorts before 3.3.
+    private def report_versions_1_0_drops
+      if defined?(ActionPack) && ActionPack.gem_version < Gem::Version.new("7.2")
+        Deprecation.warn(:rails_floor, "Rails #{ActionPack.gem_version}: RED 1.0 requires Rails 7.2 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
+      end
+      return unless Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")
+
+      Deprecation.warn(:ruby_floor, "Ruby #{RUBY_VERSION}: RED 1.0 requires Ruby 3.3 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
+    end
+
     private def blank_credential_warnings
       {
         "ERROR_DASHBOARD_USER" => [ :dashboard_username, dashboard_username ],

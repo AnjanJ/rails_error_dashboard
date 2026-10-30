@@ -4,8 +4,8 @@ Test first in every task: the cited test fails before the change and passes afte
 cites `deprecations-0-18/REQ-N`. One commit per task, test and code together.
 
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. Run one rspec process at a
-time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s reported keys in an
-`after` hook, so one example's warning can't hide another's.
+time. `spec/support/deprecation.rb` resets `RailsErrorDashboard::Deprecation`'s reported keys after
+every example, so one example's warning can't hide another's, in any order.
 
 - [x] **T1** One reporter for every deprecation → REQ-1, REQ-2, REQ-3
   - Files: lib/rails_error_dashboard/deprecation.rb, lib/rails_error_dashboard.rb, spec/lib/rails_error_dashboard/deprecation_spec.rb
@@ -68,8 +68,8 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
     - unset: no warning
   - After: T2
   - Done when: `R rspec spec/lib/rails_error_dashboard/configuration_validation_spec.rb` → 0 failures
-- [ ] **T7** The Rails and Ruby floor warnings → REQ-16, REQ-17, REQ-18
-  - Files: lib/rails_error_dashboard/configuration.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb
+- [x] **T7** The Rails and Ruby floor warnings → REQ-16, REQ-17, REQ-18
+  - Files: lib/rails_error_dashboard/configuration.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb, spec/lib/rails_error_dashboard/configuration_spec.rb, spec/support/deprecation.rb, spec/lib/rails_error_dashboard/deprecated_options_spec.rb, spec/lib/rails_error_dashboard/rake_aliases_spec.rb, spec/lib/rails_error_dashboard/deprecation_spec.rb
   - Test: configuration_validation_spec, with `ActionPack.gem_version` and `RUBY_VERSION` stubbed
     as the 7.0.10 spec does:
     - 7.1.5 → one warning naming Rails 7.2 and the 0.x support page;

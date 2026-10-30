@@ -5,8 +5,6 @@ require "rails_helper"
 RSpec.describe RailsErrorDashboard::Deprecation do
   let(:message) { "config.old_thing does nothing. Delete the line. It goes in 2.0." }
 
-  after { described_class.reset! }
-
   describe ".warn" do
     it "writes one line, with the prefix, to the log (deprecations-0-18/REQ-1)" do
       allow(Rails.logger).to receive(:warn)

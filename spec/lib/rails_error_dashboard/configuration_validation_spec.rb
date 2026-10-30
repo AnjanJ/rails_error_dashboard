@@ -643,6 +643,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       stub_const("RUBY_VERSION", "3.2.0")
       config.detect_swallowed_exceptions = true
 
+      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
       expect(Rails.logger).to receive(:warn).with(/detect_swallowed_exceptions requires Ruby 3\.3\+/)
       expect { config.validate! }.not_to raise_error
       expect(config.detect_swallowed_exceptions).to be false
@@ -652,6 +653,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       stub_const("RUBY_VERSION", "3.2.4")
       config.detect_swallowed_exceptions = true
 
+      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
       expect(Rails.logger).to receive(:warn).with(/Upgrade Ruby to use this feature/)
       config.validate!
       expect(config.detect_swallowed_exceptions).to be false
@@ -1324,11 +1326,13 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     it "warns about an unknown strategy without raising" do
       config.git_branch_strategy = :master
 
+      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
       expect(Rails.logger).to receive(:warn).with(/git_branch_strategy must be one of.*:master/)
       expect { config.validate! }.not_to raise_error
     end
 
     it "accepts the three strategies as Symbols or Strings" do
+      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
       expect(Rails.logger).not_to receive(:warn).with(/git_branch_strategy/)
 
       %w[commit_sha current_branch main].each do |strategy|
@@ -1366,8 +1370,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     let(:warnings) { [] }
 
     before { allow(Rails.logger).to receive(:warn) { |message| warnings << message } }
-
-    after { RailsErrorDashboard::Deprecation.reset! }
 
     around do |example|
       saved = ENV["USE_SEPARATE_ERROR_DB"]
@@ -1419,6 +1421,89 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  # Decision 0003. The versions are stubbed, because CI's rows run real ones on
+  # both sides of each floor.
+  describe "Rails and Ruby versions that 1.0 drops" do
+    let(:warnings) { [] }
+
+    before do
+      allow(Rails.logger).to receive(:warn) { |message| warnings << message }
+      run_on_rails("8.1.0")
+      stub_const("RUBY_VERSION", "3.4.0")
+    end
+
+    def run_on_rails(version)
+      allow(ActionPack).to receive(:gem_version).and_return(Gem::Version.new(version))
+    end
+
+    def floor_warnings(name)
+      warnings.select { |message| message.include?("RED 1.0 requires #{name}") }
+    end
+
+    it "warns once on Rails before 7.2, saying this version keeps working (deprecations-0-18/REQ-16)" do
+      run_on_rails("7.1.5")
+
+      config.validate!
+
+      expect(floor_warnings("Rails")).to contain_exactly(
+        a_string_including("DEPRECATION", "Rails 7.1.5", "RED 1.0 requires Rails 7.2 or later", "keeps working", "docs/VERSIONING.md")
+      )
+    end
+
+    it "says nothing from Rails 7.2 up (deprecations-0-18/REQ-16)" do
+      run_on_rails("7.2.0")
+
+      config.validate!
+
+      expect(floor_warnings("Rails")).to be_empty
+    end
+
+    it "warns once on Ruby before 3.3, saying this version keeps working (deprecations-0-18/REQ-17)" do
+      stub_const("RUBY_VERSION", "3.2.9")
+
+      config.validate!
+
+      expect(floor_warnings("Ruby")).to contain_exactly(
+        a_string_including("DEPRECATION", "Ruby 3.2.9", "RED 1.0 requires Ruby 3.3 or later", "keeps working", "docs/VERSIONING.md")
+      )
+    end
+
+    it "says nothing from Ruby 3.3 up (deprecations-0-18/REQ-17)" do
+      stub_const("RUBY_VERSION", "3.3.0")
+
+      config.validate!
+
+      expect(floor_warnings("Ruby")).to be_empty
+    end
+
+    it "compares versions, not strings, so 3.10 isn't before 3.3 (deprecations-0-18/REQ-17)" do
+      stub_const("RUBY_VERSION", "3.10.0")
+
+      config.validate!
+
+      expect(floor_warnings("Ruby")).to be_empty
+    end
+
+    it "warns once however often validate! runs, because verify runs it twice (deprecations-0-18/REQ-2)" do
+      run_on_rails("7.1.5")
+      stub_const("RUBY_VERSION", "3.2.9")
+
+      2.times { config.validate! }
+
+      expect(floor_warnings("Rails").size).to eq(1)
+      expect(floor_warnings("Ruby").size).to eq(1)
+    end
+
+    it "changes nothing else: 7.0.8 keeps its own warning, and validation passes (deprecations-0-18/REQ-18)" do
+      run_on_rails("7.0.8")
+
+      expect(config.validate!).to be(true)
+
+      expect(warnings).to include(a_string_including("Upgrading to Rails 7.0.10 or later fixes this"))
+      expect(floor_warnings("Rails").size).to eq(1)
+    end
+  end
+
   # rails-70-request-capture/REQ-1, REQ-2: Rails 7.0.0-7.0.8.7 render request
   # exceptions without reporting them, so RED records none. CI's 7.0 rows install
   # 7.0.10, so the version is stubbed rather than taken from the row.
@@ -1430,7 +1515,7 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
 
     def request_capture_warnings
-      warnings.select { |message| message.include?("7.0.10") }
+      warnings.select { |message| message.include?("Upgrading to Rails 7.0.10") }
     end
 
     def run_on_actionpack(version)

@@ -8,7 +8,6 @@ RSpec.describe "Deprecated configuration options" do
   let(:config) { RailsErrorDashboard::Configuration.new }
 
   before { allow(Rails.logger).to receive(:warn) }
-  after { RailsErrorDashboard::Deprecation.reset! }
 
   { async_adapter: "4", llm_observability_content_capture: "6" }.each do |option, req|
     describe option.to_s do

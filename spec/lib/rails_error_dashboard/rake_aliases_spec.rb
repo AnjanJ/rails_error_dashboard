@@ -14,8 +14,6 @@ RSpec.describe "The old rake task names" do
 
   before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:verify") }
 
-  after { RailsErrorDashboard::Deprecation.reset! }
-
   names.each do |name|
     describe name do
       let(:old_task) { Rake::Task["error_dashboard:#{name}"] }
