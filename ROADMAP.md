@@ -289,7 +289,7 @@ Environment:
 - **Impact:** Reliability ++
 
 ### P. On-Demand Diagnostic Dump — DONE (v0.4.0)
-- **What:** A dashboard button (`POST /errors/create_diagnostic_dump`) or `rake error_dashboard:diagnostic_dump` generates a full diagnostic snapshot (threads, GC, memory, pools, breadcrumbs) into the `diagnostic_dumps` table. Zero overhead until triggered. No `Signal.trap` — host-app safety rule #9
+- **What:** A dashboard button (`POST /errors/create_diagnostic_dump`) or `rake rails_error_dashboard:diagnostic_dump` generates a full diagnostic snapshot (threads, GC, memory, pools, breadcrumbs) into the `diagnostic_dumps` table. Zero overhead until triggered. No `Signal.trap` — host-app safety rule #9
 - **Why:** Standard Unix practice (Puma, Sidekiq, Unicorn all do this). Operators send `kill -USR1 <pid>` during incidents
 - **Implementation:** `DiagnosticDumpGenerator` composes the system-health snapshot, `Thread.list` (names and status only), `GC.stat` and `ObjectSpace.count_objects`; the dashboard lists and displays dumps
 - **Effort:** Half day
@@ -465,7 +465,7 @@ All overhead numbers validated against Sentry's production benchmarks and Ruby d
 - **Why:** `retention_days` defaults to 90 days. In production, the error_logs table would grow unbounded without enforcement. Self-hosted tools must handle their own data lifecycle. GlitchTip uses the same pattern (`GLITCHTIP_MAX_EVENT_LIFE_DAYS`)
 - **Community impact:** Every production deployment will eventually hit this. Having it from day one signals maturity
 - **Effort:** 1 day
-- **Implemented:** `RetentionCleanupJob` with batch deletion (dependents pre-deleted, then errors in 1000-record batches). Default 90-day retention. `rails error_dashboard:retention_cleanup` rake task with confirmation prompt. Verify task checks retention policy. Scheduling guidance in initializer template
+- **Implemented:** `RetentionCleanupJob` with batch deletion (dependents pre-deleted, then errors in 1000-record batches). Default 90-day retention. `rails rails_error_dashboard:retention_cleanup` rake task with confirmation prompt. Verify task checks retention policy. Scheduling guidance in initializer template
 
 ### 5a. BRIN Index + Functional Index for Time-Series Queries (PostgreSQL) — DONE
 - **What:** Add conditional migration that uses BRIN index on `occurred_at` for PostgreSQL (72KB vs 676MB for B-tree, near-identical time-range query performance). Add functional index on `date_trunc('day', occurred_at)` to speed up Groupdate queries by up to 70x

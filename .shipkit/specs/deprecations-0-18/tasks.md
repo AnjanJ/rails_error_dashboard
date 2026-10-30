@@ -101,3 +101,11 @@ every example, so one example's warning can't hide another's, in any order.
     - the Rails and Ruby floors
   - After: T8
   - Done when: `R rspec spec/docs/task_names_spec.rb` → 0 failures
+- [x] **T10** What review found: a page for the warnings, the last old names, the alias's log line → REQ-11, REQ-12, REQ-16, REQ-17
+  - Files: docs/VERSIONING.md, ROADMAP.md, lib/tasks/error_dashboard.rake, spec/lib/rails_error_dashboard/rake_aliases_spec.rb, spec/lib/rails_error_dashboard/deprecation_spec.rb, spec/docs/task_names_spec.rb
+  - Test:
+    - task_names_spec searches every root Markdown file but CHANGELOG, and docs/VERSIONING.md exists with the 0.x dates;
+    - rake_aliases_spec: each alias boots the app first;
+    - deprecation_spec restores the deprecators it sets to `:raise`
+  - After: T9
+  - Done when: `R rspec spec/docs/task_names_spec.rb spec/lib/rails_error_dashboard/rake_aliases_spec.rb spec/lib/rails_error_dashboard/deprecation_spec.rb` → 0 failures

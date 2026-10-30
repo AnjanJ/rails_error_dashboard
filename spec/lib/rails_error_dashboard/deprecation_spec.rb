@@ -72,13 +72,13 @@ RSpec.describe RailsErrorDashboard::Deprecation do
     end
 
     it "doesn't raise when the app sets Active Support deprecations to raise (deprecations-0-18/REQ-3)" do
-      deprecator = Rails.application.respond_to?(:deprecators) ? Rails.application.deprecators : ActiveSupport::Deprecation
-      behavior = deprecator.respond_to?(:behavior) ? deprecator.behavior : nil
-      deprecator.behavior = :raise
+      deprecators = Rails.application.respond_to?(:deprecators) ? Rails.application.deprecators.each.to_a : [ ActiveSupport::Deprecation ]
+      saved = deprecators.map(&:behavior)
+      deprecators.each { |deprecator| deprecator.behavior = :raise }
 
       expect { described_class.warn(:old_thing, message) }.not_to raise_error
     ensure
-      deprecator.behavior = behavior if behavior
+      deprecators.zip(saved) { |deprecator, behavior| deprecator.behavior = behavior }
     end
   end
 end

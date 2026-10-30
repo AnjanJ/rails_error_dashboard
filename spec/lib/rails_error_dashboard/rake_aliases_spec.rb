@@ -31,6 +31,10 @@ RSpec.describe "The old rake task names" do
           .to output(/\[Rails Error Dashboard\] DEPRECATION: .*error_dashboard:#{name} .*rails_error_dashboard:#{name}.*2\.0/).to_stderr
       end
 
+      it "boots the app first, because Rails.logger is nil until then and the log would miss it (deprecations-0-18/REQ-11)" do
+        expect(old_task.prerequisites).to include("environment")
+      end
+
       it "runs the new task once (deprecations-0-18/REQ-11)" do
         silence_stderr { old_task.invoke }
 

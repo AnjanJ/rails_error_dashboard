@@ -13,8 +13,8 @@ RSpec.describe "Names in the code and docs" do
   ]
   upgrading = %w[docs/UPGRADING.md _getting_started/upgrading.md]
   searched = Dir.glob(root.join("{app,lib,config/locales,docs,_guides,_reference,_getting_started,_features}/**/*.{rb,erb,rake,yml,md}"))
-    .push(root.join("README.md").to_s)
-    .map { |file| Pathname(file).relative_path_from(root).to_s }
+    .concat(Dir.glob(root.join("*.md")))
+    .map { |file| Pathname(file).relative_path_from(root).to_s } - %w[CHANGELOG.md]
 
   define_method(:naming) do |pattern, except:|
     (searched - except).select { |file| File.read(root.join(file)).match?(pattern) }
@@ -27,8 +27,9 @@ RSpec.describe "Names in the code and docs" do
   end
 
   it "offers USE_SEPARATE_ERROR_DB nowhere (deprecations-0-18/REQ-15)" do
-    # UNINSTALL lists it among the variables to remove, which is still right.
-    pages = searched.grep(/\.md\z/) - upgrading - %w[docs/UNINSTALL.md _reference/uninstall.md]
+    # UNINSTALL lists it among the variables to remove, which is still right, and
+    # PROJECT_MAP notes for contributors what the code still reads.
+    pages = searched.grep(/\.md\z/) - upgrading - %w[docs/UNINSTALL.md _reference/uninstall.md PROJECT_MAP.md]
 
     expect(pages.select { |file| File.read(root.join(file)).include?("USE_SEPARATE_ERROR_DB") }).to be_empty
   end
@@ -75,6 +76,11 @@ RSpec.describe "Names in the code and docs" do
         expect(section).to include("Rails 7.2", "Ruby 3.3", "VERSIONING.md")
       end
     end
+  end
+
+  it "has the page the Rails and Ruby warnings send people to (deprecations-0-18/REQ-16, deprecations-0-18/REQ-17)" do
+    expect(RailsErrorDashboard::Configuration::VERSIONING_URL).to end_with("docs/VERSIONING.md")
+    expect(root.join("docs/VERSIONING.md").read).to include("Rails 7.2", "Ruby 3.3", "2027-06-30")
   end
 
   it "passes the locale checker (deprecations-0-18/REQ-12)" do

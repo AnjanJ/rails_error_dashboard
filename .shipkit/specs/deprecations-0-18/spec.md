@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: lib/rails_error_dashboard/configuration.rb,lib/rails_error_dashboard/deprecation.rb,lib/rails_error_dashboard/engine.rb,lib/tasks/,lib/generators/rails_error_dashboard/,app/views/rails_error_dashboard/errors/settings.html.erb,config/locales/,docs/,_guides/,_getting_started/,_reference/,_features/,README.md,spec/
+> Paths: app/,lib/,config/locales/,docs/,_guides/,_getting_started/,_reference/,_features/,README.md,ROADMAP.md,spec/
 
 ## Purpose
 1.0 freezes RED's public surface, and some of it shouldn't be frozen as it stands:

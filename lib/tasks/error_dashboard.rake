@@ -715,7 +715,7 @@ namespace :error_dashboard do
     verify list_applications backfill_application app_stats cleanup_resolved diagnostic_dump
     retention_cleanup scrub_invalid_encoding backfill_resolved_at digest_session_ids send_digest
   ].each do |name|
-    task name do
+    task name => :environment do
       RailsErrorDashboard::Deprecation.warn(
         "rake:#{name}",
         "rake error_dashboard:#{name} is now rails_error_dashboard:#{name}. Update your scripts and cron entries. " \
