@@ -137,6 +137,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       upgrade: ${{ steps.decide.outputs.run }}
+      capture: ${{ steps.capture.outputs.run }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -165,6 +166,49 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "No migration changes and not a release PR — skipping."
           fi
+
+      # The benchmark's answer, for pull requests. A push to main always runs
+      # it, whatever this says; the benchmark job's `if` handles that.
+      - name: Decide whether to benchmark
+        id: capture
+        env:
+          BASE_REF: ${{ github.base_ref || 'main' }}
+        run: |
+          if git diff --name-only "origin/$BASE_REF"...HEAD \
+               | grep -qE '^(lib/rails_error_dashboard/((middleware|subscribers|commands|services)/|error_reporter\.rb)|bin/benchmark|benchmark/|\.github/workflows/ci\.yml)'; then
+            echo "run=true"  >> "$GITHUB_OUTPUT"
+            echo "The capture path or the benchmark changed — measuring."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing the benchmark measures changed — skipping."
+          fi
+
+  # Measures RED's overhead against its budgets and writes the table to the job
+  # summary. bin/benchmark exits non-zero when a gated median is over budget,
+  # which fails this job. One pinned row, so the numbers compare between runs.
+  # Not a required check yet: that's decided once it has run for a while.
+  benchmark:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.capture == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: Overhead benchmark
+    env:
+      RAILS_VERSION: '8.1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Run the benchmark
+        run: bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"
 
   upgrade:
     needs: changes

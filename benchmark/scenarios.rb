@@ -25,6 +25,10 @@ module RedBenchmark
       storm_fingerprint_full_per_minute: 1_000_000_000
     }.freeze
 
+    # On the CI job's runner, which is what a host's servers look like: about
+    # 2.7x slower than an M3 Max. The design records why it isn't 5 µs.
+    STORM_BUDGET = 15e-6
+
     # Calls per sample for the microsecond-scale rows (see Timer#measure).
     BATCH = 100
 
@@ -46,6 +50,7 @@ module RedBenchmark
       [
         capture("Capture, async (installer default)", async: true, budget: 5e-3, iterations: 1_000),
         storm_calm,
+        storm_shedding,
         storm_open,
         breadcrumb,
         health_snapshot,
@@ -72,10 +77,30 @@ module RedBenchmark
     end
 
     def storm_calm
-      Scenario.new(name: "Storm check, calm", budget: 5e-6, iterations: 1_000, run: lambda do |timer|
+      Scenario.new(name: "Storm check, calm", budget: STORM_BUDGET, iterations: 1_000, run: lambda do |timer|
         with_config(**CALM_STORM) do
           exception = raised_exception
-          timer.measure("Storm check, calm", budget: 5e-6, batch: BATCH) { gate.admit!(exception, {}) }
+          timer.measure("Storm check, calm", budget: STORM_BUDGET, batch: BATCH) { gate.admit!(exception, {}) }
+        end
+      end)
+    end
+
+    # The gate's worst case: the bucket decision the calm row makes, then the
+    # count the open row makes. A breaker only sheds once a bucket rolls, ten
+    # seconds in, so the roll is brought forward rather than waited for. The
+    # open threshold is out of reach, or the timed calls would trip the breaker
+    # straight through this state.
+    def storm_shedding
+      Scenario.new(name: "Storm check, shedding", budget: STORM_BUDGET, iterations: 1_000, run: lambda do |timer|
+        with_config(enable_storm_protection: true, storm_open_threshold_per_second: 1_000_000_000) do
+          exception = raised_exception
+          breaker = gate.breaker
+          bucket = RailsErrorDashboard::Services::StormProtection::CircuitBreaker::BUCKET_SECONDS
+          (2 * bucket * RailsErrorDashboard.configuration.storm_shedding_threshold_per_second).times { gate.admit!(exception, {}) }
+          breaker.instance_variable_set(:@bucket_start, breaker.instance_variable_get(:@bucket_start) - bucket)
+          raise "the breaker did not start shedding (state: #{gate.state})" unless gate.state == :shedding
+
+          timer.measure("Storm check, shedding", budget: STORM_BUDGET, batch: BATCH) { gate.admit!(exception, {}) }
         end
       end)
     end
@@ -84,7 +109,7 @@ module RedBenchmark
     # the count-only path a real storm takes. The breaker trips open mid-bucket
     # once one bucket holds open_threshold * BUCKET_SECONDS calls.
     def storm_open
-      Scenario.new(name: "Storm check, breaker open", budget: 5e-6, iterations: 1_000, run: lambda do |timer|
+      Scenario.new(name: "Storm check, breaker open", budget: STORM_BUDGET, iterations: 1_000, run: lambda do |timer|
         with_config(enable_storm_protection: true) do
           exception = raised_exception
           trip = RailsErrorDashboard.configuration.storm_open_threshold_per_second *
@@ -92,7 +117,7 @@ module RedBenchmark
           (trip + 1).times { gate.admit!(exception, {}) }
           raise "the breaker did not open (state: #{gate.state})" unless gate.state == :open
 
-          timer.measure("Storm check, breaker open", budget: 5e-6, batch: BATCH) { gate.admit!(exception, {}) }
+          timer.measure("Storm check, breaker open", budget: STORM_BUDGET, batch: BATCH) { gate.admit!(exception, {}) }
         end
       end)
     end

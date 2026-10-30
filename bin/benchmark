@@ -8,6 +8,9 @@
 #   ... bin/benchmark --list            the harness and the environment, no timing
 #   ... bin/benchmark --summary FILE    also append the table to FILE
 #                                       (CI passes $GITHUB_STEP_SUMMARY)
+#   ... bin/benchmark --smoke           every scenario, a few iterations each, to
+#                                       prove the script runs; the numbers mean
+#                                       nothing
 #
 # Exits 1 when a gated median is over its budget. Takes about a minute. Don't
 # run it while rspec is running on the same machine: the databases don't
@@ -28,13 +31,20 @@ require_relative "../benchmark/timer"
 require_relative "../benchmark/scenarios"
 require_relative "../benchmark/report"
 
+smoke = ARGV.include?("--smoke")
+
 results = RedBenchmark::Scenarios.all.map do |scenario|
   $stderr.puts "  #{scenario.name}..."
-  timer = RedBenchmark::Timer.new(iterations: scenario.iterations, warmup: [ scenario.iterations / 5, 1 ].max)
+  timer = if smoke
+    RedBenchmark::Timer.new(rounds: 1, iterations: 3, warmup: 1)
+  else
+    RedBenchmark::Timer.new(iterations: scenario.iterations, warmup: [ scenario.iterations / 5, 1 ].max)
+  end
   scenario.run.call(timer)
 end
 
 report = RedBenchmark::Report.markdown(RedBenchmark::Harness.environment, results)
+report = "Smoke run: a few iterations each, so these numbers mean nothing.\n\n#{report}" if smoke
 puts report
 
 summary = ARGV[ARGV.index("--summary") + 1] if ARGV.include?("--summary")

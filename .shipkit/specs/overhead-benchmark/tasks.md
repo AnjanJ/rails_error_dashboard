@@ -40,15 +40,18 @@ collide.
     reopen collision (`claim_conflicting_row` reached). report_spec: the Markdown table shows
     each row's median, p95, budget and verdict (REQ-4), under the environment block (REQ-6).
   - After: T2
-  - Done when: `R rspec spec/benchmark/scenarios_spec.rb` → 0 failures, and `R bin/benchmark` prints a table with all nine rows
-- [ ] **T4** CI runs it and fails on a breach → REQ-8, REQ-9
-  - Files: .github/workflows/ci.yml, spec/ci/workflows_spec.rb
+  - Done when: `R rspec spec/benchmark/scenarios_spec.rb` → 0 failures, and `R bin/benchmark` prints a table with all ten rows (nine until T4's review added shedding)
+- [x] **T4** CI runs it and fails on a breach → REQ-8, REQ-9
+  - Files: .github/workflows/ci.yml, spec/ci/workflows_spec.rb, bin/benchmark, spec/benchmark/harness_spec.rb
   - Test: workflows_spec:
     - a `benchmark` job exists with `permissions: contents: read` and SHA-pinned actions;
     - it runs on pushes to main;
     - on pull requests it runs when `changes` reports `capture`;
     - the `capture` output matches the capture-path globs and `bin/benchmark`;
-    - the job passes `--summary "$GITHUB_STEP_SUMMARY"`
+    - the job passes `--summary "$GITHUB_STEP_SUMMARY"`, and never `--smoke`.
+
+    harness_spec, added during review: `bin/benchmark --smoke --summary FILE` runs every scenario
+    in a subprocess with the network refused, appends the table to FILE, and exits by its own table
   - After: T3
   - Done when: `R rspec spec/ci/workflows_spec.rb` → 0 failures, and the PR's CI run shows the
     benchmark table in the job summary

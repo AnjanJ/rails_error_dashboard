@@ -27,7 +27,8 @@
 ## Decision: Build the exemplar lazily, from a per-call identity, not from a cache   (→ REQ-1, REQ-2, REQ-3, REQ-5)
 
 **Context.** `gate_parts` (`gate.rb:247-289`) computes everything for every event. Its cost:
-- the identity digest, 1.75 µs;
+- the identity digest, 1.75 µs (reads high: a later probe gave 0.8 µs for all of `opaque_identity`
+  on a 55-byte input);
 - `scrub_deep`, 1.42 µs;
 - normalisation, 1.21 µs;
 - redaction, 0.69 µs;

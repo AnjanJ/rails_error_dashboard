@@ -1,21 +1,16 @@
 # Handoff
 
-> Written 2026-10-29 on branch `spec/0-18-0`, from main `6b1dfab`.
+> Written 2026-10-30 on branch `test/benchmark-ci`.
 
 ## In flight
-- **0.18.0, the 1.0 surface release, is fully specced.** Seven specs under `.shipkit/specs/`. The
-  requirements, designs and tasks were all accepted on 2026-10-29, and `spec-check` shows 0 gaps.
-  No code yet.
-  - for the 0.18.0 release: `deprecations-0-18`, `webhook-v1`, `host-safety-0-18`,
-    `migration-rollback` (issue #326), `small-fixes-0-18`;
-  - their own PRs, with no gem release needed: `overhead-benchmark` (goes first, for the 1.0
-    launch story) and `public-api-and-policies`.
-- The scope answers are in each spec's `intake.md`. Design-gate refinements are marked in the
-  specs they changed:
-  - `migration-rollback` REQ-1 (foreign-key refusals);
-  - `public-api-and-policies` REQ-1 (names linked, not a second table);
-  - `small-fixes-0-18` REQ-3 (all four badge views);
-  - `host-safety-0-18` REQ-8 (the user count).
+- **0.18.0, the 1.0 surface release.** Eight specs under `.shipkit/specs/`, all accepted, with
+  `spec-check` at 0 gaps.
+  - for the 0.18.0 release: `storm-gate-hot-path` (built, #335), `host-safety-0-18`,
+    `migration-rollback` (issue #326), `webhook-v1`, `deprecations-0-18`, `small-fixes-0-18`;
+  - their own PRs, with no gem release needed: `overhead-benchmark` (T1-T3 in #334, T4 in #336) and
+    `public-api-and-policies`.
+- **Four stacked PRs, all based on main; merge in order:** #333 (specs), #334 (benchmark), #335
+  (storm check), #336 (the CI job). After each squash-merge, rebase the next one onto main.
 - New project records: `0007` (versioning, deprecation and support policy) and `0008` (names frozen
   as they are; `rails_error_dashboard:` is the rake namespace).
 
@@ -23,17 +18,14 @@
 - 0.17.0 shipped 2026-10-29. Its eight specs moved to `.shipkit/specs/_shipped/`, each marked
   "shipped in 0.17.0 (#N)".
 - The five 1.0 questions this file used to list are decided: records `0002` to `0006` (#332).
+- The storm budget is decided: 15 µs on the CI runner, recorded in `overhead-benchmark/design.md`.
 
 ## Next step
-Open the spec PR from `spec/0-18-0` (docs only), then implement in this order, one PR per spec:
-1. `overhead-benchmark`;
-2. `host-safety-0-18`;
-3. `migration-rollback`;
-4. `webhook-v1`;
-5. `deprecations-0-18`;
-6. `small-fixes-0-18`;
-7. `public-api-and-policies`;
-8. the 0.18.0 release PR.
+1. Merge #333, #334, #335 and #336, in that order.
+2. `overhead-benchmark` T5: the README and docs quote the numbers from a green run on main.
+3. `host-safety-0-18`, then `migration-rollback`, `webhook-v1`, `deprecations-0-18`,
+   `small-fixes-0-18` and `public-api-and-policies`, one PR per spec.
+4. The 0.18.0 release PR.
 
 ## Path to 1.0
 | Release | Target |
@@ -43,8 +35,7 @@ Open the spec PR from `spec/0-18-0` (docs only), then implement in this order, o
 | 1.0.0 | by 2026-12-31 |
 
 ## Open questions
-- None. All seven specs' requirements were accepted on 2026-10-29. The design of each still needs
-  approval.
+- None.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -58,9 +49,12 @@ Open the spec PR from `spec/0-18-0` (docs only), then implement in this order, o
   - `_shipped/test-gaps-0-17`: the PG/MySQL rows in `test.yml`.
   - Earlier: `_shipped/capture-source` (two) and `_shipped/occurrence-context-history` (one).
 - **Several 0.17 decisions reverse on benchmark numbers.** These are in
-  `_shipped/capture-hardening-0-17` and `_shipped/functional-fixes-0-17`: params fitting, message
-  filtering, the reopen fallback. `overhead-benchmark` REQ-3 measures them; check the clauses once
-  it runs.
+  `_shipped/capture-hardening-0-17` and `_shipped/functional-fixes-0-17`, and the benchmark now
+  measures them. On the CI runner, all under their thresholds: message filtering 48 µs (reverses
+  above 1 ms), params fitting 2.2 ms (above 5 ms), the reopen fallback 2.5 ms (above 5 ms).
+- **Benchmark numbers:** compare runs from the CI job, not from a laptop. The two machines are
+  about 2.7x apart. The health snapshot's Mac number means nothing, because its procfs reads return
+  nil on macOS: it's about 800 µs on the runner, against 1 ms.
 - **Commands:**
   - prefix bundle and commit with `env -u RAILS_VERSION mise exec ruby@3.4.5 --`;
   - doc-only commits use `LEFTHOOK_EXCLUDE=chaos-tests`;

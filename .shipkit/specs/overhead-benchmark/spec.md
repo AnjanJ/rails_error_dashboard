@@ -2,12 +2,12 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: bin/benchmark,benchmark/,.github/workflows/,README.md,_features/,_getting_started/,spec/
+> Paths: bin/benchmark,benchmark/,.github/workflows/,README.md,_features/,_getting_started/,docs/,.claude/skills/host-app-safety/,.shipkit/product.md,spec/
 
 ## Purpose
 RED promises it costs the host app less than its budgets. Today the only evidence is one
 maintainer's laptop numbers in the README. This adds a benchmark anyone can run, and CI runs it and
-fails when a budget is broken. Then "under 5 ms per capture, under 5 µs per storm check" is a claim
+fails when a budget is broken. Then "under 5 ms per capture, under 15 µs per storm check" is a claim
 the repo proves on every change.
 
 ## User stories
@@ -24,7 +24,8 @@ the repo proves on every change.
 - **REQ-2.** The benchmark shall measure each of these against its budget:
   - total capture of one exception, through the middleware and the error subscriber, with the
     installer's default configuration (async logging): under 5 ms;
-  - the storm check per error, with protection calm and with protection active: under 5 µs;
+  - the storm check per error, with protection calm and with protection active: under 15 µs on the CI runner
+    (5 µs until the first CI run on 2026-10-30, see design.md);
   - one breadcrumb callback: under 0.01 ms;
   - one health snapshot: under 1 ms.
 - **REQ-3.** The benchmark shall also report, without a budget gate:
