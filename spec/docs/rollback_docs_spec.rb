@@ -34,6 +34,12 @@ RSpec.describe "The rollback docs" do
         expect(text).to match(/before 0\.18\.0.{0,80}old copies/m).and match(/\b33\b/)
       end
 
+      if page.downcase.include?("troubleshooting")
+        it "says what a later index does on SQLite (migration-rollback/REQ-1)" do
+          expect(text).to match(/SQLite.{0,300}no such column/m)
+        end
+      end
+
       it "shows how to remove a leftover table or column by hand (migration-rollback/REQ-8)" do
         expect(text).to include("bin/rails runner", "drop_table", "remove_column")
       end

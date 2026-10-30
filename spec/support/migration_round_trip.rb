@@ -58,6 +58,7 @@ module RailsErrorDashboard
         @walks_end_clean = {}
         results = HISTORIES.to_h { |history| [ history, walk(history) ] }
         results.merge(
+          "from_the_top" => HISTORIES.to_h { |history| [ history, down_from_the_top(history) ] },
           "walks_end_clean" => @walks_end_clean,
           "empty" => down_on_an_empty_database,
           "complete_schema" => complete_schema_down
@@ -115,6 +116,28 @@ module RailsErrorDashboard
           "up_again" => { "error" => up_again_error, "changed" => ended != after_up },
           "restored" => ended == after
         }
+      end
+
+      # What db:migrate:down VERSION= meets, with everything newer still applied.
+      # Each down is rolled back, so one rebuild serves them all. MySQL can't roll
+      # DDL back, and a rebuild per migration would pass design.md's limit.
+      def down_from_the_top(history)
+        return {} unless ActiveRecord::Base.connection.supports_ddl_transactions?
+
+        chosen = migrations(history).select { |migration| @versions.include?(migration.version) }
+        rebuild(history, through: migrations(history).last.version)
+        present = objects(schema)
+        chosen.to_h { |migration| [ migration.version.to_s, undone_down(migration, @added.fetch(migration.version) & present) ] }
+      end
+
+      def undone_down(migration, object)
+        trip = {}
+        ActiveRecord::Base.transaction(requires_new: true) do
+          trip["error"] = attempt { ActiveRecord::Base.transaction(requires_new: true) { migration.migrate(:down) } }
+          trip["left"] = object & objects(schema)
+          raise ActiveRecord::Rollback
+        end
+        trip
       end
 
       # The far end of "its object doesn't exist": no table either, which the

@@ -19,13 +19,16 @@ both directions, and the docs should say exactly what can and can't be rolled ba
 
 ### Down undoes up
 - **REQ-1.** When any of the 33 guarded migrations is migrated down, it shall leave the database
-  without the table, column or index that migration adds. If the database refuses because another
-  table still depends on it, the migration shall fail with that error rather than report success.
+  without the table, column or index that migration adds. If the database refuses because something
+  still depends on it, another table or an index a later migration added, the migration shall fail
+  with that error rather than report success.
   (Refined at the design gate, 2026-10-29: RED's foreign keys make the database refuse on a fresh
   install, where the complete schema created parent and dependent tables together; see
   `design.md`.)
   (Corrected during the build, 2026-10-30: the issue listed 26, the migrations that return early
   from `change`. Seven more guard with `unless` and have the same bug; see `design.md`.)
+  (Widened at review, 2026-10-30: "another table" became "another table or a later index", after a
+  run from a fully migrated database; see `design.md`.)
 - **REQ-2.** When a guarded migration is migrated down and its object doesn't exist, the migration
   shall succeed and change nothing.
 - **REQ-3.** Each guarded migration's `up` shall stay replay-safe. When its object already exists,

@@ -107,6 +107,21 @@ key in a sequence of rollbacks done in order (not an explicit single `migrate:do
   ("changing what any `up` does") both leave that alone, and the spec pins it.
 - **`add_optimized_indexes` already had a `down`, which never ran:** with `change` defined, Rails
   reverses `change`. It runs now, so it tolerates what isn't there.
+- **From a fully migrated database, found at review.** The harness took each migration down while
+  it was the newest, but `db:migrate:down VERSION=` on a fully migrated database is a different
+  state, and it's the one the issue reproduces. All 33 were run from there, on all three databases.
+  None reported success with its object in place.
+  - PostgreSQL and MySQL refuse only the two parents, as above.
+  - SQLite also refuses `add_better_tracking_to_error_logs` and `add_environment_to_error_logs`,
+    and on the upgrade history `add_workflow_fields_to_error_logs`, with `no such column`. It
+    rebuilds the table to remove a column, and re-creating a later migration's index fails,
+    because that index still names the column. The migration stays recorded and nothing changes.
+  - **Refused, not forced.** The alternative is for `down` to drop that later index first. One of
+    them is `index_error_logs_on_group_identity`, the unique index that stops duplicate groups,
+    and it belongs to an irreversible migration, so nothing would put it back. A loud refusal is
+    this decision's own rule, so REQ-1 now says "another table or an index a later migration added".
+  - The spec pins this on SQLite and PostgreSQL by rolling each `down` back. MySQL can't roll DDL
+    back and would need a rebuild per migration, so that result came from a run by hand.
 - **A single-column index goes with its column on all three databases,** so `remove_index` before
   `remove_column` only changes the result for a composite index (SQLite and MySQL keep a narrower
   one). It stays for every index, as this design says.

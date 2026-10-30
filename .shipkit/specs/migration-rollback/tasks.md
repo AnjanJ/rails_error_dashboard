@@ -64,3 +64,12 @@ time. The round-trip spec builds its own scratch databases and never touches
     - GLOSSARY no longer claims rollbacks are simply supported
   - After: none
   - Done when: `R rspec spec/docs/rollback_docs_spec.rb` → 0 failures
+- [ ] **T7** Going down from a fully migrated database, as the issue does → REQ-1
+  - Files: spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, docs/TROUBLESHOOTING.md, _reference/troubleshooting.md, spec/docs/rollback_docs_spec.rb
+  - Test: round_trip_spec, on SQLite and PostgreSQL, each `down` rolled back:
+    - none reports success with its object in place;
+    - only the listed migrations refuse.
+
+    rollback_docs_spec: both Troubleshooting pages explain the SQLite refusal.
+  - After: T6, T5
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb spec/docs/rollback_docs_spec.rb` → 0 failures, and the same files are green across the matrix

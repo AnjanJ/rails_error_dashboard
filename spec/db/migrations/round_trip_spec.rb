@@ -192,6 +192,46 @@ RSpec.describe "Migration round trips", type: :migration do
     end
   end
 
+  # What db:migrate:down VERSION= meets, which is issue #326's reproduction:
+  # everything newer still applied. The only refusals are the parents, on
+  # PostgreSQL, and on SQLite the columns a later index still names: rebuilding
+  # the table re-creates that index, and it fails. Each one is loud and leaves the
+  # version recorded, and neither reports "reverted" with the object in place.
+  # MySQL can't roll DDL back, so it would need a rebuild per migration. It gave
+  # the same answer by hand: see design.md.
+  refused_from_the_top = {
+    "sqlite" => {
+      "upgrade" => [ 20251224081522, 20251226020000, 20260826000001 ],
+      "fresh" => [ 20251224081522, 20260826000001 ]
+    },
+    "postgresql" => {
+      "upgrade" => [ 20251224000001, 20260106094220 ],
+      "fresh" => [ 20251224000001, 20260106094220 ]
+    }
+  }
+
+  RailsErrorDashboard::MigrationRoundTrip::HISTORIES.each do |history|
+    context "from a fully migrated #{history} database" do
+      let(:adapter) { ActiveRecord::Base.connection.adapter_name.downcase[/sqlite|postgresql/] }
+      let(:guarded) { own_object.keys + shadowed.keys }
+      let(:trips) { @results.fetch("from_the_top").fetch(history).slice(*guarded.map(&:to_s)) }
+
+      before { skip "MySQL can't roll DDL back" unless adapter }
+
+      it "never reports success with the object still there (migration-rollback/REQ-1)" do
+        succeeded = trips.reject { |_, trip| trip["error"] }
+
+        expect(succeeded.select { |_, trip| trip["left"].any? }).to be_empty
+      end
+
+      it "refuses only what depends on something else (migration-rollback/REQ-1)" do
+        refused = trips.select { |_, trip| trip["error"] }.keys.map(&:to_i)
+
+        expect(refused).to match_array(refused_from_the_top.fetch(adapter).fetch(history))
+      end
+    end
+  end
+
   it "runs every migration with an existence check, or says why not (migration-rollback/REQ-6)" do
     guarded = Dir[RailsErrorDashboard::Engine.root.join("db/migrate/*.rb")].select do |file|
       File.read(file).match?(/\w+_exists\?/)

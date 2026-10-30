@@ -135,6 +135,12 @@ is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove wh
 `create_rails_error_dashboard_error_logs` or `create_rails_error_dashboard_applications` fails on
 PostgreSQL and MySQL while other tables have foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
 
+**SQLite can refuse too.** Going down from a fully migrated database, `add_better_tracking_to_error_logs`,
+`add_workflow_fields_to_error_logs` and `add_environment_to_error_logs` can fail with `no such column`.
+SQLite rebuilds the table to remove a column, and a later migration's index still names it. Nothing
+changes and the migration stays recorded. RED doesn't drop that index for you, because one of them
+is what stops duplicate error groups.
+
 **To remove a leftover table or column by hand**:
 
 ```bash
