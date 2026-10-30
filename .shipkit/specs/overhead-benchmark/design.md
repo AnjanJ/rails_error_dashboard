@@ -11,6 +11,11 @@
      then drops it, so the number is RED's cost and not a queue backend's;
   4. it loads the dummy schema into the scratch file.
 
+  Added after T4's first CI run on 2026-10-30: it then turns YJIT on, and the environment block
+  records it. New Rails apps run production with YJIT on, and it's worth about 1.5x on these rows
+  on the M3 Max, so the numbers can't be left to whatever the shell exports. Every number before
+  this was measured with YJIT on by accident, from an exported `RUBY_YJIT_ENABLE`.
+
   It never touches `spec/dummy/db/test.sqlite3`, so it can't collide with a running rspec.
 - **Each measurement runs the same way:** a warm-up, then 5 rounds of N iterations, each timed with
   `Process.clock_gettime(CLOCK_MONOTONIC)`. The script reports the median and p95 of each round, and

@@ -16,7 +16,8 @@ RSpec.describe "bin/benchmark harness" do
     env = {
       "RUBYOPT" => "#{ENV['RUBYOPT']} -r#{File.join(root, 'spec/benchmark/offline.rb')}".strip,
       "RAILS_ENV" => nil,
-      "DATABASE_URL" => nil
+      "DATABASE_URL" => nil,
+      "RUBY_YJIT_ENABLE" => nil
     }
     Open3.capture3(env, "ruby", File.join(root, "bin/benchmark"), *arguments, chdir: root)
   end
@@ -56,6 +57,10 @@ RSpec.describe "bin/benchmark harness" do
     expect(Integer(@facts["CPUs"])).to be_positive
     expect(@facts["OS"]).to be_present
     expect(@facts["RED commit"]).to match(/\A\h{7,}\z/)
+  end
+
+  it "runs with YJIT on wherever this Ruby can turn it on, and records it (overhead-benchmark/REQ-6)" do
+    expect(@facts["YJIT"]).to eq(defined?(RubyVM::YJIT.enable) ? "on" : "not available")
   end
 
   # The whole script, every scenario, once. In a few iterations a gated row can

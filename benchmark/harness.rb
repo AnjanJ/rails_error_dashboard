@@ -27,7 +27,7 @@ module RedBenchmark
   end
 
   # Boots spec/dummy the way a host app runs in production: classes eager
-  # loaded, no code reloading, warnings-only logging. It reads RED's settings
+  # loaded, no code reloading, warnings-only logging, YJIT on. It reads RED's settings
   # from benchmark/initializers/ (the installer's defaults), not from the
   # dummy app's test initializer, and it writes to its own SQLite file under
   # tmp/, so it never touches spec/dummy/db/test.sqlite3 and can't collide
@@ -48,6 +48,9 @@ module RedBenchmark
       configure(Rails.application.config)
       Rails.application.initialize!
       ActiveRecord::Migration.suppress_messages { load SCHEMA }
+      # New Rails apps run production with YJIT on, and it moves these numbers
+      # by half, so neither the shell nor the Rails version gets to decide it.
+      RubyVM::YJIT.enable if defined?(RubyVM::YJIT.enable)
       Rails.application
     end
 
@@ -76,6 +79,7 @@ module RedBenchmark
       uname = Etc.uname
       {
         "Ruby" => RUBY_VERSION,
+        "YJIT" => yjit,
         "Rails" => Rails.version,
         "Database" => ActiveRecord::Base.connection_db_config.adapter,
         "CPU" => cpu_model,
@@ -83,6 +87,12 @@ module RedBenchmark
         "OS" => "#{uname[:sysname]} #{uname[:release]}",
         "RED commit" => commit
       }
+    end
+
+    def yjit
+      return "not available" unless defined?(RubyVM::YJIT.enable)
+
+      RubyVM::YJIT.enabled? ? "on" : "off"
     end
 
     def cpu_model
