@@ -49,7 +49,7 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
     The existing task specs invoke the new names.
   - After: T1
   - Done when: `R rspec spec/lib/rails_error_dashboard/rake_aliases_spec.rb spec/lib/rails_error_dashboard/verify_task_spec.rb spec/lib/rails_error_dashboard/cleanup_resolved_task_spec.rb spec/lib/rails_error_dashboard/db_drop_task_spec.rb` → 0 failures
-- [ ] **T5** `verify` covers what the generator checked, and the generator goes → REQ-13, REQ-20, REQ-21
+- [x] **T5** `verify` covers what the generator checked, and the generator goes → REQ-13, REQ-20, REQ-21
   - Files: lib/tasks/error_dashboard.rake, lib/generators/rails_error_dashboard/solid_queue/solid_queue_generator.rb, spec/generators/solid_queue_generator_spec.rb, spec/generators/generators_hands_off_spec.rb, spec/lib/rails_error_dashboard/verify_task_spec.rb
   - Test: verify_task_spec:
     - with `config/queue.yml` present and `SolidQueue` hidden (`hide_const`), verify still

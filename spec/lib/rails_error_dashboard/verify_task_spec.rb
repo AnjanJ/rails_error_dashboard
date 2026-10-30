@@ -321,9 +321,9 @@ RSpec.describe "rails_error_dashboard:verify rake task" do
   # A config/queue.yml with workers and no dispatchers runs no dispatcher, so no
   # delayed job runs. The retired rails_error_dashboard:solid_queue generator
   # wrote one, and verify is how existing installs find out. It checks whenever
-  # Solid Queue is loaded, not only when it is the current adapter: Rails 8 sets
-  # :solid_queue in production only, and verify is usually run locally (this
-  # suite's adapter is :test).
+  # the file exists, not only when Solid Queue is the current adapter or even
+  # loaded: Rails 8 sets :solid_queue in production only, and verify is usually
+  # run locally (this suite's adapter is :test).
   describe "Solid Queue config check" do
     let(:fixtures) { File.expand_path("../../fixtures/solid_queue", __dir__) }
     let(:check) { RailsErrorDashboard::Services::SolidQueueConfigCheck }
@@ -366,7 +366,28 @@ RSpec.describe "rails_error_dashboard:verify rake task" do
         expect(output).to include("Solid Queue config... OK")
       end
 
-      it "says nothing when the app has no config file" do
+      it "says Solid Queue's defaults process RED's queues when the app has no config file (deprecations-0-18/REQ-21)" do
+        with_config("does_not_exist.yml")
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).to match(/Solid Queue config\.\.\. OK \(.*defaults.*RED's queues\)/)
+      end
+    end
+
+    context "when Solid Queue isn't loaded in this process" do
+      before { hide_const("SolidQueue") if defined?(SolidQueue) }
+
+      it "still checks a config file, as the generator did (deprecations-0-18/REQ-20)" do
+        with_config("red_generator_queue.yml")
+
+        output = capture_stdout { task.invoke }
+
+        expect(output).to include("Solid Queue config... FAILED")
+        expect(output).to match(/no dispatcher/)
+      end
+
+      it "says nothing with no config file either, because the app doesn't use it (deprecations-0-18/REQ-21)" do
         with_config("does_not_exist.yml")
 
         output = capture_stdout { task.invoke }
@@ -375,13 +396,10 @@ RSpec.describe "rails_error_dashboard:verify rake task" do
       end
     end
 
-    it "says nothing when Solid Queue is not loaded" do
-      hide_const("SolidQueue") if defined?(SolidQueue)
-      with_config("red_generator_queue.yml")
+    it "is the only Solid Queue check left, with the generator gone (deprecations-0-18/REQ-13)" do
+      require "rails/generators"
 
-      output = capture_stdout { task.invoke }
-
-      expect(output).not_to include("Solid Queue config")
+      expect(Rails::Generators.find_by_namespace("rails_error_dashboard:solid_queue")).to be_nil
     end
   end
 
