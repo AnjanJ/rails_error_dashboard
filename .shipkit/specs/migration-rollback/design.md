@@ -186,3 +186,5 @@ round-trip spec adds more than 60 seconds to an `adapter-test` row.
   the 60-second limit, so option 1 holds. The spec prints this into the job log. A row's total can't
   answer this: with the spec added, the same run saw MySQL's suite 39 seconds slower and PostgreSQL's
   24 seconds faster than a run without it, so noise between runs is about the size of the cost.
+- **With the run from a fully migrated database added:** 37.8 seconds on MySQL, which skips it, and
+  30.4 on PostgreSQL.
