@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: docs/PUBLIC_API.md,docs/VERSIONING.md,SECURITY.md,README.md,.shipkit/decisions/,spec/docs/
+> Paths: docs/PUBLIC_API.md,docs/VERSIONING.md,docs/guides/CONFIGURATION.md,_guides/configuration.md,SECURITY.md,README.md,.shipkit/decisions/,spec/docs/
 
 ## Purpose
 1.0 promises that every 1.x minor is safe to take on `bundle update`. A promise like that needs two
