@@ -88,15 +88,7 @@
   <% end %>
   <% if local_assigns[:show_platform] %>
     <td style="padding: var(--space-3) var(--space-4); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<%= error.platform || 'API' %>">
-      <% if error.platform == 'iOS' %>
-        <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
-      <% elsif error.platform == 'Android' %>
-        <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
-      <% elsif error.platform == 'Web' %>
-        <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
-      <% else %>
-        <span class="badge badge-api"><i class="bi bi-server"></i> <%= error.platform || 'API' %></span>
-      <% end %>
+      <%= platform_badge(error.platform) %>
     </td>
   <% end %>
   <% if local_assigns[:show_environment] %>

@@ -15,7 +15,7 @@ time. This spec's PR comes after `deprecations-0-18`: both touch UPGRADING.
     - `Queries::BootErrors` and the error list still return both crash errors
   - After: none
   - Done when: `R rspec spec/lib/rails_error_dashboard/queries` → 0 failures
-- [ ] **T2** Platform badges match in any case, from one helper → REQ-3
+- [x] **T2** Platform badges match in any case, from one helper → REQ-3
   - Files: app/helpers/rails_error_dashboard/application_helper.rb, app/views/rails_error_dashboard/errors/_error_row.html.erb, app/views/rails_error_dashboard/errors/_timeline.html.erb, app/views/rails_error_dashboard/errors/_similar_errors.html.erb, app/views/rails_error_dashboard/errors/_sidebar_metadata.html.erb, spec/helpers/platform_badge_spec.rb
   - Test: platform_badge_spec:
     - `ios`, `IOS`, `iOS` → the iOS badge;

@@ -184,6 +184,23 @@ module RailsErrorDashboard
       end
     end
 
+    PLATFORM_BADGE_LABELS = { "ios" => "iOS", "android" => "Android", "web" => "Web" }.freeze
+
+    # The badge for one platform. It ignores case, because a client sets the value.
+    # Anything else keeps its own text on the grey badge.
+    # @param platform [String, nil]
+    # @param css [String, nil] Extra classes for the badge
+    # @return [ActiveSupport::SafeBuffer]
+    def platform_badge(platform, css: nil)
+      key = platform.to_s.downcase
+      label = PLATFORM_BADGE_LABELS[key]
+      badge, icon = label ? [ "badge-#{key}", platform_icon(key) ] : [ "badge-api", platform_icon("api") ]
+
+      tag.span(class: [ "badge", badge, css ].compact) do
+        safe_join([ tag.i(class: "bi #{icon}"), " ", label || platform.presence || "API" ])
+      end
+    end
+
     # Returns platform-specific color class
     # @param platform [String] Platform name (ios, android, web, api)
     # @return [String] CSS color variable

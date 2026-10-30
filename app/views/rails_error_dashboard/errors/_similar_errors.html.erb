@@ -55,15 +55,7 @@
                           </div>
                         </td>
                         <td>
-                          <% if similar_error.platform == 'iOS' %>
-                            <span class="badge badge-ios"><i class="bi bi-apple"></i> iOS</span>
-                          <% elsif similar_error.platform == 'Android' %>
-                            <span class="badge badge-android"><i class="bi bi-android2"></i> Android</span>
-                          <% elsif similar_error.platform == 'Web' %>
-                            <span class="badge badge-web"><i class="bi bi-globe"></i> Web</span>
-                          <% else %>
-                            <span class="badge badge-api"><i class="bi bi-server"></i> <%= similar_error.platform || 'API' %></span>
-                          <% end %>
+                          <%= platform_badge(similar_error.platform) %>
                         </td>
                         <td><span class="badge bg-primary"><%= red_tp("red.errors.similar_errors.occurrences", count: similar_error.occurrence_count) %></span></td>
                         <td>
