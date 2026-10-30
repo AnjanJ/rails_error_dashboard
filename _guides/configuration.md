@@ -38,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here: the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the Sensitive Data Filtering section of the features guide, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
+Reference for the configuration options, with their defaults.
 
 ### Authentication & Access
 
@@ -181,6 +181,15 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `custom_severity_rules` | Hash | `{}` | Exact error class name (a String) → severity. See [Custom Severity Classification](#custom-severity-classification) |
 | `custom_fingerprint` | Lambda | `nil` | `->(exception, context) { String or nil }`: your own grouping key. See [Custom Grouping](#custom-grouping) |
 | `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings or Class objects (both cover subclasses), or Regexps matched against the class name. Class objects are matched since 0.14.4 |
+
+### Sensitive Data
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `filter_sensitive_data` | Boolean | `true` | Replace sensitive values with `[FILTERED]` before storage |
+| `sensitive_data_patterns` | Array | `[]` | Extra patterns to filter, on top of Rails' `filter_parameters`. Regexps or strings |
+
+The Sensitive Data Filtering section of the features guide says what the filter covers, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
 
 ### Performance Optimization
 

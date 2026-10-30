@@ -168,10 +168,13 @@ webhook_urls
 
 ```text
 APPLICATION_NAME
+APP_ID  # rake task input
+APP_NAME  # rake task input
 APP_VERSION
 BASELINE_ALERT_COOLDOWN
 BASELINE_ALERT_THRESHOLD
 DASHBOARD_BASE_URL
+DAYS  # rake task input
 DISCORD_WEBHOOK_URL
 ERROR_DASHBOARD_ENVIRONMENT
 ERROR_DASHBOARD_NOTIFICATION_ENVIRONMENTS
@@ -184,11 +187,9 @@ GIT_SHA
 HEROKU_SLUG_COMMIT
 ISSUE_TRACKER_TOKEN
 ISSUE_WEBHOOK_SECRET
-JIRA_API_TOKEN
-JIRA_PROJECT_KEY
-JIRA_URL
-JIRA_USERNAME
+NOTE  # rake task input
 PAGERDUTY_INTEGRATION_KEY
+PERIOD  # rake task input
 RED_BOT_TOKEN
 RED_LLM_API_KEY
 RED_LLM_MODEL
@@ -307,6 +308,14 @@ rails_error_dashboard:uninstall
 --quick
 ```
 
+### Uninstall generator options
+
+```text
+--keep_data
+--skip_confirmation
+--manual_only
+```
+
 ### Rake tasks
 
 The old `error_dashboard:` names run the same task and print a deprecation first.
@@ -353,7 +362,7 @@ GET /errors/:id
 
 ### Health check fields
 
-`GET /health` answers with these fields, and each check in `checks` has its own `status`.
+`GET /health` answers with these fields. `error` appears only when the health check itself failed.
 
 ```text
 status
@@ -361,11 +370,21 @@ version
 timestamp
 checks
 duration_ms
-database
-errors
-queue
-storm_protection
-active_storage
+error
+```
+
+### Health checks
+
+Each key of `checks`, with the fields it can answer with. Every check has a `status`. Which of the
+others appear depends on the result: `reason`, `skipped` and `error` appear only when there's
+something to report.
+
+```text
+database: status, adapter, separate_database, tables_present, latency_ms, reason, error
+errors: status, last_error_at, last_24h, skipped, error
+queue: status, async_logging, adapter, problems, error
+storm_protection: status, enabled, state, error
+active_storage: status, service, latency_ms, reason, error
 ```
 
 ### Health check statuses
@@ -407,6 +426,10 @@ rails_error_dashboard.application
 rails_error_dashboard.error_id
 rails_error_dashboard.deduplicated
 rails_error_dashboard.severity
+breadcrumb_count
+bytes_serialized_estimate
+channels
+channel_count
 ```
 
 ## What's private
