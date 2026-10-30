@@ -28,7 +28,7 @@ surface they leave.
       - the page links CONFIGURATION.md, API_REFERENCE.md, WEBHOOKS.md and PLUGIN_SYSTEM.md
   - After: none
   - Done when: `R rspec spec/docs/public_api_spec.rb` → 0 failures
-- [ ] **T2** The policy page and SECURITY.md → REQ-4, REQ-5, REQ-6, REQ-7
+- [x] **T2** The policy page and SECURITY.md → REQ-4, REQ-5, REQ-6, REQ-7
   - Files: docs/VERSIONING.md, SECURITY.md, README.md, spec/docs/versioning_policy_spec.rb
   - Test: versioning_policy_spec:
     - VERSIONING.md states each rule in decision 0007, including the 0.x window ending

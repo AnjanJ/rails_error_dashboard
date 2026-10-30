@@ -798,6 +798,10 @@ Rails 7.0–8.1 and Ruby 3.2–4.0.
 - **[Mobile App Integration](docs/guides/MOBILE_APP_INTEGRATION.md)** — log mobile-originated errors through your own API endpoint, tagged by platform
 - **[FAQ](docs/FAQ.md)** — Common questions answered
 
+**Before you pin a version:**
+- **[Public API](docs/PUBLIC_API.md)** — what 1.x keeps stable
+- **[Versioning and Support](docs/VERSIONING.md)** — deprecations, security fixes and the 0.x support dates
+
 [View all documentation →](docs/README.md)
 
 ---
