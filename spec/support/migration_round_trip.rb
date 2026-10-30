@@ -75,7 +75,7 @@ module RailsErrorDashboard
 
         migrations(history).each do |migration|
           chosen = @versions.include?(migration.version)
-          before = schema if chosen
+          before = schema if chosen && !@added.key?(migration.version)
           migrate(:up, migration)
           next unless chosen
 
@@ -83,8 +83,9 @@ module RailsErrorDashboard
           @added[migration.version] ||= objects(after) - objects(before)
           # Limited to what's here: the first migrations add columns that later
           # ones remove, and that the complete schema never had.
-          results[migration.version.to_s] = round_trip(migration, @added[migration.version] & objects(after))
-          rebuild(history, through: migration.version) unless schema == after
+          trip = round_trip(migration, @added[migration.version] & objects(after), after)
+          results[migration.version.to_s] = trip
+          rebuild(history, through: migration.version) unless trip["restored"]
         end
 
         walked = schema
@@ -95,7 +96,7 @@ module RailsErrorDashboard
 
       # object: what this migration adds, taken from the upgrade history, because
       # on the fresh history the complete schema has already added it.
-      def round_trip(migration, object)
+      def round_trip(migration, object, after)
         down_error = attempt { migrate(:down, migration) }
         after_down = schema
         version_kept = migrated?(migration.version)
@@ -104,13 +105,15 @@ module RailsErrorDashboard
         up_error = attempt { migrate(:up, migration) }
         after_up = schema
         up_again_error = attempt { migration.migrate(:up) }
+        ended = schema
 
         {
           "object" => object,
           "down" => { "error" => down_error, "version_kept" => version_kept, "left" => object & objects(after_down) },
           "down_again" => { "error" => down_again_error, "changed" => down_again_changed },
           "up" => { "error" => up_error, "missing" => object - objects(after_up) },
-          "up_again" => { "error" => up_again_error, "changed" => schema != after_up }
+          "up_again" => { "error" => up_again_error, "changed" => ended != after_up },
+          "restored" => ended == after
         }
       end
 

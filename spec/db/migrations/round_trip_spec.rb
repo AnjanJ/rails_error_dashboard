@@ -81,7 +81,13 @@ RSpec.describe "Migration round trips", type: :migration do
   parent_tables = [ create_error_logs, 20260106094220 ]
 
   before(:context) do
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     @results = RailsErrorDashboard::MigrationRoundTrip.run(own_object.keys + shadowed.keys + already_up_and_down.keys)
+
+    # design.md falls back if this passes 60 seconds on an adapter-test row, and
+    # a job's total varies by more than that between runs, so it's printed here.
+    seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+    RSpec.configuration.reporter.message(format("Migration round trips took %.1f seconds", seconds))
   end
 
   shared_examples "a full round trip" do
