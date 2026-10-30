@@ -29,7 +29,7 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
     - the Settings page shows neither option
   - After: T1
   - Done when: `R rspec spec/lib/rails_error_dashboard spec/lib/rails_error_dashboard_spec.rb spec/requests/settings_option_count_spec.rb` → 0 failures
-- [ ] **T3** The installer stops writing `async_adapter` → REQ-8
+- [x] **T3** The installer stops writing `async_adapter` → REQ-8
   - Files: lib/generators/rails_error_dashboard/install/templates/initializer.rb, lib/generators/rails_error_dashboard/install/install_generator.rb, spec/generators/install_generator_spec.rb
   - Test: install_generator_spec:
     - with and without async logging, the generated initializer contains no `async_adapter` and

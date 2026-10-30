@@ -489,9 +489,9 @@ module RailsErrorDashboard
         say "  → Set PAGERDUTY_INTEGRATION_KEY in .env", :yellow if @enable_pagerduty
         say "  → Set WEBHOOK_URLS in .env", :yellow if @enable_webhooks
         if @enable_async_logging
-          # RED's jobs run on the app's own Active Job adapter; async_adapter only
-          # feeds validation and the Settings page. Rails 8 production uses Solid
-          # Queue, which needs a worker, so don't promise that none is needed.
+          # RED's jobs run on the app's own Active Job adapter. Rails 8 production
+          # uses Solid Queue, which needs a worker, so don't promise that none is
+          # needed.
           say "  → Async logging enqueues on your app's config.active_job.queue_adapter.", :yellow
           say "    Run a worker for the default and error_notifications queues, or set config.async_logging = false.", :yellow
         end
