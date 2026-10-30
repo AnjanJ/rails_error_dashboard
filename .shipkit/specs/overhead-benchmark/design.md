@@ -13,8 +13,10 @@
 
   Added after T4's first CI run on 2026-10-30: it then turns YJIT on, and the environment block
   records it. New Rails apps run production with YJIT on, and it's worth about 1.5x on these rows
-  on the M3 Max, so the numbers can't be left to whatever the shell exports. Every number before
-  this was measured with YJIT on by accident, from an exported `RUBY_YJIT_ENABLE`.
+  on the M3 Max. Rails 7.2 and later already turn it on in the harness's `benchmark` environment,
+  through `config.yjit` in `load_defaults`, whatever the shell exports. So the harness line changes
+  nothing on the gated Rails 8.1 row. It holds the state steady if the script runs on Rails 7.0 or
+  7.1, which CI doesn't do, and the environment block shows the state on every run.
 
   It never touches `spec/dummy/db/test.sqlite3`, so it can't collide with a running rspec.
 - **Each measurement runs the same way:** a warm-up, then 5 rounds of N iterations, each timed with
@@ -67,7 +69,7 @@
 
 ## Decision: A hand-rolled timing loop, not benchmark-ips   (→ REQ-1, REQ-4)
 
-**Context.** The budgets are per-operation times ("< 5 µs per storm check"). No benchmark gem is in
+**Context.** The budgets are per-operation times ("< 15 µs per storm check"). No benchmark gem is in
 the Gemfile.
 
 **Alternatives.**
@@ -152,7 +154,7 @@ EPYC 7763, YJIT on) measured 8.6 to 9.1 µs calm, 11.6 to 12.3 µs shedding and 
 The runner is about 2.7x slower on every row, and YJIT isn't the difference. Identity is 2.65 µs of
 the M3 Max's 4.5 µs, but a perfect memo of it still pays about 0.7 µs for its lookup and the two
 reads that build its key, which gives about 7 µs on the runner. Reaching 5 µs there means 1.8 µs on
-the M3 Max, and everything outside identity already costs about 1.4 µs.
+the M3 Max, and everything outside identity already costs about 1.85 µs.
 
 **Alternatives.**
 1. Gate at 15 µs on the runner.
@@ -176,5 +178,6 @@ quickest, but nothing would fail if the gate regressed.
 **Decision.** The maintainer chose option 1 on 2026-10-30.
 **Falsifiability.** We would raise the budget or move to a pinned runner if a storm row fails on
 main on a CPU other than the EPYC 7763 with no change to the capture path. We would add the memo
-(option 3) if a host reports the storm check as a measurable share of a storm.
+(option 3) if a storm row's median goes over 15 µs on the EPYC 7763 because of a change we want to
+keep.
 **Fired-if.** manual

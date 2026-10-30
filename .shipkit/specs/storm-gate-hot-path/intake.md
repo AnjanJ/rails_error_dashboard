@@ -24,7 +24,7 @@ benchmark's CI gate lands, rather than land it red or raise the budget.
 
   | Inside `gate_parts` | Cost |
   |---|---|
-  | `opaque_identity` digest | 1.75 µs |
+  | `opaque_identity` digest | 1.75 µs (reads high: a later probe gave 0.8 µs on a 55-byte input) |
   | `EncodingSanitizer.scrub_deep` over nine values | 1.42 µs |
   | `normalize_message` | 1.21 µs |
   | `redact` | 0.69 µs |

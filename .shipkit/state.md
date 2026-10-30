@@ -52,10 +52,9 @@
   `_shipped/capture-hardening-0-17` and `_shipped/functional-fixes-0-17`, and the benchmark now
   measures them. On the CI runner, all under their thresholds: message filtering 48 µs (reverses
   above 1 ms), params fitting 2.2 ms (above 5 ms), the reopen fallback 2.5 ms (above 5 ms).
-- **Benchmark numbers:** compare runs from the CI job, not from a laptop. Local runs inherit the
-  shell's environment, and the two machines are about 2.7x apart. The health snapshot's Mac number
-  means nothing, because its procfs reads return nil on macOS: it's about 800 µs on the runner,
-  against 1 ms.
+- **Benchmark numbers:** compare runs from the CI job, not from a laptop. The two machines are
+  about 2.7x apart. The health snapshot's Mac number means nothing, because its procfs reads return
+  nil on macOS: it's about 800 µs on the runner, against 1 ms.
 - **Commands:**
   - prefix bundle and commit with `env -u RAILS_VERSION mise exec ruby@3.4.5 --`;
   - doc-only commits use `LEFTHOOK_EXCLUDE=chaos-tests`;
