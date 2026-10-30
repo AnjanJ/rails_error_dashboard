@@ -55,8 +55,13 @@ module RailsErrorDashboard
       def call
         ActiveRecord::Migration.verbose = false
         @config = ActiveRecord::Base.connection_db_config
+        @walks_end_clean = {}
         results = HISTORIES.to_h { |history| [ history, walk(history) ] }
-        results.merge("empty" => down_on_an_empty_database)
+        results.merge(
+          "walks_end_clean" => @walks_end_clean,
+          "empty" => down_on_an_empty_database,
+          "complete_schema" => complete_schema_down
+        )
       ensure
         ActiveRecord::Base.connection_pool.disconnect!
         ActiveRecord::Tasks::DatabaseTasks.drop(@config)
@@ -69,16 +74,22 @@ module RailsErrorDashboard
         rebuild(history)
 
         migrations(history).each do |migration|
-          before = schema
+          chosen = @versions.include?(migration.version)
+          before = schema if chosen
           migrate(:up, migration)
-          next unless @versions.include?(migration.version)
+          next unless chosen
 
           after = schema
           @added[migration.version] ||= objects(after) - objects(before)
-          results[migration.version.to_s] = round_trip(migration, @added[migration.version])
+          # Limited to what's here: the first migrations add columns that later
+          # ones remove, and that the complete schema never had.
+          results[migration.version.to_s] = round_trip(migration, @added[migration.version] & objects(after))
           rebuild(history, through: migration.version) unless schema == after
         end
 
+        walked = schema
+        rebuild(history, through: migrations(history).last.version)
+        @walks_end_clean[history] = schema == walked
         results
       end
 
@@ -109,6 +120,13 @@ module RailsErrorDashboard
         rebuild("fresh")
         chosen = migrations("fresh").select { |migration| @versions.include?(migration.version) }
         chosen.to_h { |migration| [ migration.version.to_s, attempt { migration.migrate(:down) } ] }
+      end
+
+      def complete_schema_down
+        rebuild("fresh", through: COMPLETE_SCHEMA)
+        tables = schema.keys
+        error = attempt { context.run(:down, COMPLETE_SCHEMA) }
+        { "error" => error, "dropped" => tables - schema.keys, "left" => schema.keys }
       end
 
       def attempt

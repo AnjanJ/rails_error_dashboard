@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the index_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
+# The `down` below never ran while `change` existed: Rails reverses `change`.
 class AddOptimizedIndexesToErrorLogs < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Skip if squashed migration already added these indexes
     return if index_exists?(:rails_error_dashboard_error_logs, [ :resolved, :occurred_at ],
                             name: 'index_error_logs_on_resolved_and_occurred_at')
@@ -49,15 +52,17 @@ class AddOptimizedIndexesToErrorLogs < ActiveRecord::Migration[7.0]
   end
 
   def down
+    return unless table_exists?(:rails_error_dashboard_error_logs)
+
     # Remove composite indexes
-    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_resolved_and_occurred_at'
-    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_error_type_and_occurred_at'
-    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_platform_and_occurred_at'
-    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_hash_resolved_occurred'
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_resolved_and_occurred_at', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_error_type_and_occurred_at', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_platform_and_occurred_at', if_exists: true
+    remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_hash_resolved_occurred', if_exists: true
 
     # Remove partial/GIN indexes if PostgreSQL
     if postgresql?
-      remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_occurred_at_unresolved'
+      remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_occurred_at_unresolved', if_exists: true
       execute "DROP INDEX IF EXISTS index_error_logs_on_message_gin"
     end
   end

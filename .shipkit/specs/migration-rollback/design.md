@@ -72,6 +72,21 @@ depends on it, the migration shall fail with that error rather than report succe
 key in a sequence of rollbacks done in order (not an explicit single `migrate:down`).
 **Fired-if.** manual
 
+**Found at T3 (2026-10-30).**
+- **On a fresh install, exactly two are refused,** on PostgreSQL and MySQL: `error_logs` and
+  `applications`, the two parent tables, each with its version kept. SQLite refuses neither,
+  because the dependents are empty. The spec requires those two refusals, so a `force: :cascade`
+  fails it on PostgreSQL. On MySQL `CASCADE` does nothing, and the database still refuses.
+- **`create_rails_error_dashboard_error_logs` isn't replay-safe while it's the newest.** Its guard
+  also wants `application_id`, which a later migration adds, so a second `up` at that point raises
+  "already exists", as it has since it shipped. REQ-3's "as today" and the out-of-scope line
+  ("changing what any `up` does") both leave that alone, and the spec pins it.
+- **`add_optimized_indexes` already had a `down`, which never ran:** with `change` defined, Rails
+  reverses `change`. It runs now, so it tolerates what isn't there.
+- **A single-column index goes with its column on all three databases,** so `remove_index` before
+  `remove_column` only changes the result for a composite index (SQLite and MySQL keep a narrower
+  one). It stays for every index, as this design says.
+
 ## Decision: The round-trip spec builds a scratch database along both install histories   (→ REQ-4, REQ-6)
 
 **Context.** The existing migration spec (`spec/db/migrations/add_last_notified_at_spec.rb`) runs
@@ -127,3 +142,4 @@ round-trip spec adds more than 60 seconds to an `adapter-test` row.
   process those are the suite's database.
 - **The spec file with one migration on both histories,** process boot included: 1.9 s on SQLite,
   4.1 s on PostgreSQL, 5.2 s on MySQL.
+- **All 26 at T3:** a whole run of 5.4 s on SQLite, 11.4 s on PostgreSQL and 13.9 s on MySQL.
