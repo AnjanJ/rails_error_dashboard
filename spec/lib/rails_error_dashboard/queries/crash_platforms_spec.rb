@@ -55,11 +55,23 @@ RSpec.describe "Crash sources aren't platforms" do
     [
       comparison.error_rate_by_platform, comparison.severity_distribution_by_platform,
       comparison.resolution_time_by_platform, comparison.top_errors_by_platform,
-      comparison.platform_stability_scores, comparison.daily_trend_by_platform
+      comparison.platform_stability_scores, comparison.daily_trend_by_platform,
+      comparison.platform_health_summary
     ].each { |breakdown| expect_no_crash_source(breakdown.keys) }
 
     expect(comparison.error_rate_by_platform.keys).to include("iOS")
-    expect(comparison.cross_platform_errors.flat_map { |row| row[:platforms] }).not_to include(*crash_sources)
+    expect(comparison.platform_health_summary.keys).to include("iOS")
+  end
+
+  it "doesn't count a crash source as a second platform for an error (small-fixes-0-18/REQ-1)" do
+    [ "iOS", "API", "boot_crash" ].each do |platform|
+      group = create(:error_log, platform: platform, error_type: "SharedError", occurred_at: 1.hour.ago)
+      create(:error_occurrence, error_log: group, occurred_at: 1.hour.ago)
+    end
+
+    shared = queries::PlatformComparison.new(days: 30).cross_platform_errors.find { |row| row[:error_type] == "SharedError" }
+
+    expect(shared[:platforms]).to contain_exactly("API", "iOS")
   end
 
   it "keeps them out of the dashboard's breakdown, and NULL stays (small-fixes-0-18/REQ-1)" do
