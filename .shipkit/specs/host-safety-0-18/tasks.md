@@ -30,7 +30,7 @@ cites `host-safety-0-18/REQ-N`. One commit per task, test and code together.
     - a mapped path into `.git/` or to a `.yml` → refused by `validate_path!`
   - After: none
   - Done when: `R rspec spec/services/source_code_reader_spec.rb` → 0 failures
-- [ ] **T3** The user count is bounded by the database, not by `Timeout` → REQ-8
+- [x] **T3** The user count is bounded by the database, not by `Timeout` → REQ-8
   - Files: lib/rails_error_dashboard/helpers/user_model_detector.rb, spec/helpers/user_model_detector_spec.rb
   - Test: user_model_detector_spec:
     - `Timeout.timeout` is never called;
