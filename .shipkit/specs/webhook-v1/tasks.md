@@ -6,7 +6,7 @@ cites `webhook-v1/REQ-N`. One commit per task, test and code together.
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. Run one rspec process at a
 time.
 
-- [ ] **T1** One list of event names, and the three renames → REQ-5, REQ-6, REQ-7, REQ-8, REQ-12
+- [x] **T1** One list of event names, and the three renames → REQ-5, REQ-6, REQ-7, REQ-8, REQ-12
   - Files: lib/rails_error_dashboard/webhooks.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/services/webhook_payload_builder.rb, lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb, app/jobs/rails_error_dashboard/storm_notification_job.rb, app/jobs/rails_error_dashboard/notification_burst_summary_job.rb, spec/lib/rails_error_dashboard/webhooks_spec.rb, spec/jobs/rails_error_dashboard/storm_notification_job_spec.rb, spec/jobs/rails_error_dashboard/notification_burst_summary_job_spec.rb, spec/jobs/rails_error_dashboard/baseline_alert_job_spec.rb, spec/lib/rails_error_dashboard/services/baseline_alert_payload_builder_spec.rb, spec/lib/rails_error_dashboard/services/webhook_payload_builder_spec.rb
   - Test:
     - webhooks_spec: `Webhooks::EVENTS` holds exactly `error.created`, `storm.detected`,

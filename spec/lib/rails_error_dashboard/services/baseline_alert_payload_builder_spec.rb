@@ -116,8 +116,8 @@ RSpec.describe RailsErrorDashboard::Services::BaselineAlertPayloadBuilder do
   describe ".webhook_payload" do
     subject(:payload) { described_class.webhook_payload(error_log, anomaly_data) }
 
-    it "sets event to baseline_anomaly" do
-      expect(payload[:event]).to eq("baseline_anomaly")
+    it "sets event to baseline.anomaly_detected (webhook-v1/REQ-7)" do
+      expect(payload[:event]).to eq("baseline.anomaly_detected")
     end
 
     it "includes error details" do

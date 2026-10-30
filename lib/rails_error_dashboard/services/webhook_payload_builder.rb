@@ -28,7 +28,7 @@ module RailsErrorDashboard
         _locale = locale
 
         {
-          event: "error.created",
+          event: Webhooks::ERROR_CREATED,
           timestamp: Time.current.iso8601,
           error: {
             id: error_log.id,

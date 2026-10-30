@@ -212,7 +212,7 @@ RSpec.describe "Notification payload i18n" do
       payload = RailsErrorDashboard::Services::BaselineAlertPayloadBuilder
         .webhook_payload(error_log, anomaly, locale: PAYLOAD_LOCALE)
 
-      expect(payload[:event]).to eq("baseline_anomaly")
+      expect(payload[:event]).to eq("baseline.anomaly_detected")
       expect(payload[:anomaly][:level]).to eq("critical")
     end
   end

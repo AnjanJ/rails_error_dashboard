@@ -61,7 +61,7 @@ RSpec.describe RailsErrorDashboard::NotificationBurstSummaryJob do
     described_class.perform_now(limit: 3, window_seconds: 60)
 
     expect(body_of(webhook_url)).to include(
-      "event" => "new_error_notifications_suppressed", "limit" => 3, "window_seconds" => 60, "application" => "TestApp"
+      "event" => "notifications.suppressed", "limit" => 3, "window_seconds" => 60, "application" => "TestApp"
     )
   end
 
