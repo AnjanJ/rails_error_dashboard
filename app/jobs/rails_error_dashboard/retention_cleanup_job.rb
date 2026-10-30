@@ -36,7 +36,7 @@ module RailsErrorDashboard
     # Deletes error logs and everything that references them: dependents first,
     # all in batches. Occurrences, comments and cascade patterns hold foreign
     # keys to the log, so deleting the logs first fails, and one unbounded
-    # DELETE would lock the table. Public because error_dashboard:cleanup_resolved
+    # DELETE would lock the table. Public because rails_error_dashboard:cleanup_resolved
     # deletes the same way.
     #
     # @param scope [ActiveRecord::Relation] the ErrorLog rows to delete

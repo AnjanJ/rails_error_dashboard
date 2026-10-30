@@ -93,7 +93,7 @@ pt-BR:
         dismiss: Ocultar nesta sessão
       solid_queue:
         label: "O Solid Queue não executará os jobs do RED."
-        body_html: "Erros capturados em segundo plano e notificações aguardam na fila até que <code>config/queue.yml</code> seja corrigido. Execute <code>bin/rails error_dashboard:verify</code> para ver a correção e reinicie."
+        body_html: "Erros capturados em segundo plano e notificações aguardam na fila até que <code>config/queue.yml</code> seja corrigido. Execute <code>bin/rails rails_error_dashboard:verify</code> para ver a correção e reinicie."
         guide: "O que o RED precisa do Solid Queue"
       storm:
         active_title: Tempestade de erros em andamento
@@ -1219,7 +1219,6 @@ pt-BR:
         total_users_for_impact: Para o cálculo do impacto em % (detectado automaticamente
           se não for definido)
         async_logging: Processamento por jobs em segundo plano
-        async_adapter: Adaptador da fila de jobs
         enable_rate_limiting: "Limitar as requisições do painel por IP e caminho"
         rate_limit_per_minute: Requisições por minuto e por IP
         enable_slack_notifications: Notificações em tempo real

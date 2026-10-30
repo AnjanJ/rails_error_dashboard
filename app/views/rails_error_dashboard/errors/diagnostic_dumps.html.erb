@@ -27,7 +27,7 @@
                 the instruction cannot drift from the button it names. %>
             <li><%= red_t("red.errors.diagnostic_dumps_page.how_capture_html",
                           button: content_tag(:strong, red_t("red.errors.diagnostic_dumps_page.capture")),
-                          command: content_tag(:code, "rails error_dashboard:diagnostic_dump")) %></li>
+                          command: content_tag(:code, "rails rails_error_dashboard:diagnostic_dump")) %></li>
             <li><%= red_t("red.errors.diagnostic_dumps_page.how_captures") %></li>
             <li><%= red_t("red.errors.diagnostic_dumps_page.how_saved") %></li>
             <li><%= red_t("red.errors.diagnostic_dumps_page.how_use") %></li>
@@ -180,9 +180,9 @@
           <small class="text-muted">
             <i class="bi bi-lightbulb text-warning"></i>
             <%= red_t("red.errors.diagnostic_dumps_page.footer_tip_html",
-                      command: content_tag(:code, "rails error_dashboard:diagnostic_dump")) %>
+                      command: content_tag(:code, "rails rails_error_dashboard:diagnostic_dump")) %>
             <span class="ms-2"><%= red_t("red.errors.diagnostic_dumps_page.footer_note_html",
-                      command: content_tag(:code, 'NOTE="deploy check" rails error_dashboard:diagnostic_dump')) %></span>
+                      command: content_tag(:code, 'NOTE="deploy check" rails rails_error_dashboard:diagnostic_dump')) %></span>
           </small>
         </div>
         <div>

@@ -93,7 +93,7 @@ pl:
         dismiss: Ukryj na czas tej sesji
       solid_queue:
         label: "Solid Queue nie uruchomi zadań RED."
-        body_html: "Błędy przechwycone w tle i powiadomienia czekają w kolejce, dopóki <code>config/queue.yml</code> nie zostanie poprawiony. Uruchom <code>bin/rails error_dashboard:verify</code>, aby zobaczyć poprawkę, a następnie zrestartuj aplikację."
+        body_html: "Błędy przechwycone w tle i powiadomienia czekają w kolejce, dopóki <code>config/queue.yml</code> nie zostanie poprawiony. Uruchom <code>bin/rails rails_error_dashboard:verify</code>, aby zobaczyć poprawkę, a następnie zrestartuj aplikację."
         guide: "Czego RED potrzebuje od Solid Queue"
       storm:
         active_title: Trwa sztorm błędów
@@ -1247,7 +1247,6 @@ pl:
         total_users_for_impact: Do obliczenia % wpływu (wykrywane automatycznie, jeśli
           nie ustawiono)
         async_logging: Przetwarzanie w zadaniach w tle
-        async_adapter: Adapter kolejki zadań
         enable_rate_limiting: "Ograniczaj żądania do panelu według IP i ścieżki"
         rate_limit_per_minute: Żądań na minutę z jednego IP
         enable_slack_notifications: Powiadomienia w czasie rzeczywistym

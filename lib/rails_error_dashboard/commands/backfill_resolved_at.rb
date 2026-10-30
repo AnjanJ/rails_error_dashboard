@@ -10,7 +10,7 @@ module RailsErrorDashboard
     # unless something touched it afterwards, so updated_at is the closest
     # available value.
     #
-    # Behind `rake error_dashboard:backfill_resolved_at`. Idempotent: it only
+    # Behind `rake rails_error_dashboard:backfill_resolved_at`. Idempotent: it only
     # selects rows whose resolved_at is still NULL.
     #
     # @example

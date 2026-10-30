@@ -572,7 +572,7 @@ module RailsErrorDashboard
     # Whether config/database.yml has the entry config.database names for this
     # environment. Without it the engine skips connects_to and RED uses the
     # main database, where its tables usually don't exist, so nothing is
-    # recorded. The engine and error_dashboard:verify both ask this.
+    # recorded. The engine and rails_error_dashboard:verify both ask this.
     #
     # @param env_name [String] the Rails environment
     # @return [Boolean]

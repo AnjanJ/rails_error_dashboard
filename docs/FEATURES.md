@@ -565,7 +565,7 @@ Three capture paths, all additive:
 
 Captured: provider, model, input/output tokens, duration, cost (auto-estimated from a built-in pricing table covering Claude 4.x / GPT-4o / o1 / Gemini 2.5), status (success/error/timeout), tool names + counts.
 
-**Never captured**: prompt content, completion text, conversation history — the `llm_observability_content_capture` flag is reserved and currently a no-op. Privacy by design — LLM prompts routinely contain user PII, and recording them by default would silently exfiltrate sensitive data into error reports.
+**Never captured**: prompt content, completion text, conversation history. Privacy by design — LLM prompts routinely contain user PII, and recording them by default would silently exfiltrate sensitive data into error reports.
 
 #### Host App Safety
 
@@ -831,7 +831,7 @@ config.occurrence_context_limit = 25  # default; 0 stops storing them
 - At capture, RED stores for that occurrence the same four values it writes to the error record, filtered the same way. A capture with none of them stores nothing, and neither does a storm-protection reduced capture.
 - Only the newest `occurrence_context_limit` occurrences of each error keep theirs: each new one pushes the oldest out.
 - The error page's **History** tab lists them under **Captured occurrences**. Opening one shows its breadcrumbs, system health and variables in the usual cards, under a banner naming the occurrence and its time. The rest of the page, including the request details and Copy for LLM, still shows the latest capture.
-- They are deleted with their error: by retention cleanup, `error_dashboard:cleanup_resolved`, batch delete and destroy.
+- They are deleted with their error: by retention cleanup, `rails_error_dashboard:cleanup_resolved`, batch delete and destroy.
 
 If storing an occurrence's context fails, the error and the occurrence are still recorded, and nothing is raised in your app. The context lives in its own table, `rails_error_dashboard_error_occurrence_contexts`, which the usual upgrade (the installer, then `rails db:migrate`) adds.
 
@@ -906,7 +906,7 @@ Captures a comprehensive snapshot of your application's runtime state — useful
 Two ways to capture a dump:
 
 1. **Dashboard button** — Click "Capture Dump" on the `/errors/diagnostic_dumps` page
-2. **Rake task** — `rails error_dashboard:diagnostic_dump` (optionally with `NOTE="deploy check"`)
+2. **Rake task** — `rails rails_error_dashboard:diagnostic_dump` (optionally with `NOTE="deploy check"`)
 
 ### Dashboard Page
 
@@ -1387,7 +1387,7 @@ Values under keys matching these patterns are replaced with `[FILTERED]`: in req
 
 **Size limits.** A message keeps its first 10,000 characters plus a marker saying how many were cut. Request params over 64,000 bytes keep their smaller values, with the largest replaced by `[TRUNCATED]` and `"_truncated": true` added. Any other text value over 65,535 bytes is cut, or left out when it holds JSON, so an error is always recorded, on MySQL too.
 
-**Session IDs.** While filtering is on, the session ID recorded on each occurrence is stored as a keyed digest (`h1:` followed by 32 hex characters, an HMAC keyed with your `secret_key_base`), never the raw ID. Occurrences from one session still share a value, so `ErrorOccurrence.for_session(raw_id)` keeps working, but the stored value cannot be used to resume a session. Rotating `secret_key_base` breaks that correlation across the rotation. After upgrading from 0.12.x or earlier, run `rails error_dashboard:digest_session_ids` once to convert rows stored before the change; it is idempotent. With `filter_sensitive_data = false` the raw ID is stored. An app with no `secret_key_base` stores no session ID: a digest under a key everyone knows would protect nothing.
+**Session IDs.** While filtering is on, the session ID recorded on each occurrence is stored as a keyed digest (`h1:` followed by 32 hex characters, an HMAC keyed with your `secret_key_base`), never the raw ID. Occurrences from one session still share a value, so `ErrorOccurrence.for_session(raw_id)` keeps working, but the stored value cannot be used to resume a session. Rotating `secret_key_base` breaks that correlation across the rotation. After upgrading from 0.12.x or earlier, run `rails rails_error_dashboard:digest_session_ids` once to convert rows stored before the change; it is idempotent. With `filter_sensitive_data = false` the raw ID is stored. An app with no `secret_key_base` stores no session ID: a digest under a key everyone knows would protect nothing.
 
 ### Auto-Reopen on Recurrence
 

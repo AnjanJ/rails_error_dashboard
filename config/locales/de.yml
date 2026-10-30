@@ -94,7 +94,7 @@ de:
         dismiss: Für diese Sitzung ausblenden
       solid_queue:
         label: "Solid Queue führt die Jobs von RED nicht aus."
-        body_html: "Im Hintergrund erfasste Fehler und Benachrichtigungen warten in der Warteschlange, bis <code>config/queue.yml</code> korrigiert ist. Führen Sie <code>bin/rails error_dashboard:verify</code> aus, um die Korrektur zu sehen, und starten Sie die App danach neu."
+        body_html: "Im Hintergrund erfasste Fehler und Benachrichtigungen warten in der Warteschlange, bis <code>config/queue.yml</code> korrigiert ist. Führen Sie <code>bin/rails rails_error_dashboard:verify</code> aus, um die Korrektur zu sehen, und starten Sie die App danach neu."
         guide: "Was RED von Solid Queue braucht"
       storm:
         active_title: Fehlersturm im Gange
@@ -1182,7 +1182,6 @@ de:
         total_users_for_impact: Für die Berechnung der Auswirkung in % (wird automatisch
           erkannt, wenn nicht gesetzt)
         async_logging: Verarbeitung über Hintergrund-Jobs
-        async_adapter: Adapter für die Job-Warteschlange
         enable_rate_limiting: "Dashboard-Anfragen pro IP und Pfad drosseln"
         rate_limit_per_minute: Anfragen pro Minute und IP
         enable_slack_notifications: Echtzeit-Benachrichtigungen

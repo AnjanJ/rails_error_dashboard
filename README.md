@@ -253,7 +253,7 @@ Capture your app's LLM calls — through a Faraday middleware, OpenTelemetry Gen
 - Three capture paths — pick whichever matches your stack
 - Cost estimated from a built-in pricing table (Claude 4.x, GPT-4o/o1, Gemini 2.5) — override per-model via `config.llm_pricing_overrides`
 - Tool-call requests summarized inline; tool *execution* spans captured separately via the OTel path
-- Prompts and completions are **never recorded** — only token counts and metadata (the `llm_observability_content_capture` flag is reserved and currently a no-op)
+- Prompts and completions are **never recorded** — only token counts and metadata
 - Same host-app safety guarantees as the rest of the gem — never raises, never blocks the request, every callback rescue-wrapped
 
 ```ruby
@@ -369,7 +369,7 @@ config.digest_frequency = :daily  # or :weekly
 # config.digest_recipients = ["team@example.com"]  # defaults to notification_email_recipients
 ```
 
-Schedule: `rails error_dashboard:send_digest PERIOD=daily`
+Schedule: `rails rails_error_dashboard:send_digest PERIOD=daily`
 </details>
 
 <details>

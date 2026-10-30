@@ -476,7 +476,7 @@ module RailsErrorDashboard
 
         say "\nData Retention:", :cyan
         say "  Default: 90 days (change via config.retention_days)", :white
-        say "  Manual cleanup: rails error_dashboard:retention_cleanup", :white
+        say "  Manual cleanup: rails rails_error_dashboard:retention_cleanup", :white
         say "  Schedule daily: RailsErrorDashboard::RetentionCleanupJob.perform_later", :white
 
         say "\n"
@@ -515,7 +515,7 @@ module RailsErrorDashboard
           say "  4. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
           say "  5. Restart your Rails server"
           say "  6. Visit http://localhost:3000/red"
-          say "  7. Verify: rails error_dashboard:verify"
+          say "  7. Verify: rails rails_error_dashboard:verify"
         else
           say "  1. Run: rails db:migrate"
           say "  2. Before deploying: set ERROR_DASHBOARD_USER and ERROR_DASHBOARD_PASSWORD there"
@@ -625,7 +625,7 @@ module RailsErrorDashboard
         if @enable_multi_app
           say "  For multi-app: all apps must point to the same physical database.", :yellow
           say "  Only the FIRST app needs to run migrations.", :yellow
-          say "  Other apps just need the database.yml entry and 'rails error_dashboard:verify'.", :yellow
+          say "  Other apps just need the database.yml entry and 'rails rails_error_dashboard:verify'.", :yellow
           say "\n"
         end
       end

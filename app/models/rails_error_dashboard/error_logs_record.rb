@@ -14,7 +14,7 @@
 # For multi-app setups, point all apps' database.yml "error_dashboard:" entry
 # to the same physical database. Each app is identified by config.application_name.
 #
-# Run "rails error_dashboard:verify" to check your setup.
+# Run "rails rails_error_dashboard:verify" to check your setup.
 #
 # Benefits of separate database:
 # - Performance isolation (error logging doesn't slow down user requests)
@@ -40,7 +40,7 @@ module RailsErrorDashboard
     # (or by anything else), and one such string takes down every page that
     # renders it: ERB raises "invalid byte sequence in UTF-8". Scrubbing on load
     # makes the page render whether or not the operator has run
-    # error_dashboard:scrub_invalid_encoding yet. In memory only: nothing is
+    # rails_error_dashboard:scrub_invalid_encoding yet. In memory only: nothing is
     # written, and the record is not left dirty.
     after_find :scrub_invalid_strings
 

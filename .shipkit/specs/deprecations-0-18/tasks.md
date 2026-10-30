@@ -78,10 +78,10 @@ every example, so one example's warning can't hide another's, in any order.
     - 3.3.0 → none;
     - `validate!` twice → still one of each;
     - 7.0.8 still gets the 7.0.10 warning too, and `validate!` returns true
-  - After: T6
+  - After: T6, T4
   - Done when: `R rspec spec/lib/rails_error_dashboard/configuration_validation_spec.rb` → 0 failures
-- [ ] **T8** Code, UI text and docs name only `rails_error_dashboard:` tasks → REQ-12, REQ-15
-  - Files: README.md, docs/, _guides/, _reference/, _getting_started/, _features/, config/locales/, app/models/rails_error_dashboard/error_logs_record.rb, app/jobs/rails_error_dashboard/scheduled_digest_job.rb, app/jobs/rails_error_dashboard/retention_cleanup_job.rb, app/views/rails_error_dashboard/errors/diagnostic_dumps.html.erb, app/views/rails_error_dashboard/errors/settings/_value_badge.html.erb, lib/rails_error_dashboard/engine.rb, lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/queries/event_volume.rb, lib/rails_error_dashboard/commands/scrub_invalid_encoding.rb, lib/rails_error_dashboard/commands/backfill_resolved_at.rb, lib/rails_error_dashboard/services/solid_queue_config_check.rb, lib/generators/rails_error_dashboard/install/install_generator.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, spec/docs/task_names_spec.rb
+- [x] **T8** Code, UI text and docs name only `rails_error_dashboard:` tasks → REQ-12, REQ-15
+  - Files: README.md, docs/, _guides/, _reference/, _getting_started/, _features/, config/locales/, app/models/rails_error_dashboard/error_logs_record.rb, app/jobs/rails_error_dashboard/scheduled_digest_job.rb, app/jobs/rails_error_dashboard/retention_cleanup_job.rb, app/views/rails_error_dashboard/errors/diagnostic_dumps.html.erb, app/views/rails_error_dashboard/errors/settings/_value_badge.html.erb, lib/rails_error_dashboard/engine.rb, lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/queries/event_volume.rb, lib/rails_error_dashboard/commands/scrub_invalid_encoding.rb, lib/rails_error_dashboard/commands/backfill_resolved_at.rb, lib/rails_error_dashboard/services/solid_queue_config_check.rb, lib/generators/rails_error_dashboard/install/install_generator.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, spec/docs/task_names_spec.rb, spec/requests/summary_pages_i18n_spec.rb
   - Test: task_names_spec:
     - no `error_dashboard:<task>` for any of the 11 names remains under `app/`, `lib/`,
       `config/locales/`, `docs/`, the Jekyll folders or README, except `docs/UPGRADING.md`,

@@ -80,7 +80,7 @@ RailsErrorDashboard.configure do |config|
   # Error retention policy: an error is deleted once it has not been seen for
   # this many days (an error that is still occurring is never deleted)
   # Set to nil to keep errors forever (not recommended for production)
-  # Run cleanup manually: rails error_dashboard:retention_cleanup
+  # Run cleanup manually: rails rails_error_dashboard:retention_cleanup
   # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later
   config.retention_days = 90
 

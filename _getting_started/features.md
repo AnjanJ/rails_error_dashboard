@@ -753,7 +753,7 @@ config.occurrence_context_limit = 25  # default; 0 stops storing them
 - At capture, RED stores for that occurrence the same four values it writes to the error record, filtered the same way. A capture with none of them stores nothing, and neither does a storm-protection reduced capture.
 - Only the newest `occurrence_context_limit` occurrences of each error keep theirs: each new one pushes the oldest out.
 - The error page's **History** tab lists them under **Captured occurrences**. Opening one shows its breadcrumbs, system health and variables in the usual cards, under a banner naming the occurrence and its time. The rest of the page, including the request details and Copy for LLM, still shows the latest capture.
-- They are deleted with their error: by retention cleanup, `error_dashboard:cleanup_resolved`, batch delete and destroy.
+- They are deleted with their error: by retention cleanup, `rails_error_dashboard:cleanup_resolved`, batch delete and destroy.
 
 If storing an occurrence's context fails, the error and the occurrence are still recorded, and nothing is raised in your app. The context lives in its own table, `rails_error_dashboard_error_occurrence_contexts`, which the usual upgrade (the installer, then `rails db:migrate`) adds.
 
@@ -828,7 +828,7 @@ Captures a comprehensive snapshot of your application's runtime state — useful
 Two ways to capture a dump:
 
 1. **Dashboard button** — Click "Capture Dump" on the `/errors/diagnostic_dumps` page
-2. **Rake task** — `rails error_dashboard:diagnostic_dump` (optionally with `NOTE="deploy check"`)
+2. **Rake task** — `rails rails_error_dashboard:diagnostic_dump` (optionally with `NOTE="deploy check"`)
 
 ### Dashboard Page
 

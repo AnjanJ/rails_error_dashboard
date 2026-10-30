@@ -43,7 +43,7 @@ leave them unset.
 | Core Features | `enable_middleware`, `enable_error_subscriber`, `retention_days`, `max_backtrace_lines`, `sampling_rate` |
 | Multi-App Support | `application_name`, `environment`, `database`, `use_separate_database` |
 | User Integration | `user_model`, `total_users_for_impact` |
-| Performance Settings | `async_logging`, `async_adapter`, `enable_rate_limiting`, `rate_limit_per_minute` |
+| Performance Settings | `async_logging`, `enable_rate_limiting`, `rate_limit_per_minute` |
 | Notification Channels | `notification_environments`, `notification_burst_limit`, `notification_burst_window_seconds`, and for each channel (Slack, email, Discord, Telegram, PagerDuty, webhooks) its switch and its URL, key, token or recipients (for email, also `notification_email_from`; for Telegram, `telegram_chat_id` and `telegram_api_base_url`; for webhooks, `webhook_signing_secret`); then `enable_scheduled_digests`, `digest_frequency`, `digest_recipients` |
 | Advanced Analytics Features | `enable_similar_errors`, `enable_co_occurring_errors`, `enable_error_cascades`, `enable_error_correlation`, `enable_platform_comparison`, `enable_occurrence_patterns`, `enable_baseline_alerts`, `baseline_alert_threshold_std_devs`, `baseline_alert_severities`, `baseline_alert_cooldown_minutes` |
 | Source Code Integration | `enable_source_code_integration`, `source_code_context_lines`, `enable_git_blame`, `source_code_cache_ttl`, `only_show_app_code_source`, `git_branch_strategy` |
@@ -87,12 +87,10 @@ Before 0.15.0, the Slack and Discord webhook URLs and the PagerDuty key were sho
 - **`retention_days`** shows the number of days and that `RetentionCleanupJob` deletes errors not
   seen for that long once your scheduler runs it. Nothing in the gem schedules it. See
   [Schedule the periodic jobs](../PRODUCTION.md#2-schedule-the-periodic-jobs).
-- **`async_adapter`** is only checked for a valid value. RED's jobs run on your app's Active Job
-  adapter. See [Run a worker for RED's jobs](../PRODUCTION.md#1-run-a-worker-for-reds-jobs).
 - **`digest_frequency`** is the period `ScheduledDigestJob` reports on when you schedule it without
   one. Digests still go out only as often as you schedule the job.
 - **Enabled doesn't mean working.** A switch can be on while its jobs never run, or before there is
-  enough data to show. To check the setup itself, run `bin/rails error_dashboard:verify`.
+  enough data to show. To check the setup itself, run `bin/rails rails_error_dashboard:verify`.
 
 ---
 

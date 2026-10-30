@@ -8,7 +8,7 @@ order: 2
 
 This guide covers all database configurations for Rails Error Dashboard: single-app, separate database, and multi-app setups.
 
-> **Quick verification:** Run `rails error_dashboard:verify` at any time to check your setup.
+> **Quick verification:** Run `rails rails_error_dashboard:verify` at any time to check your setup.
 
 ---
 
@@ -60,7 +60,7 @@ end
 
 The key name (`error_dashboard:`) must match `config.database`. Add it to **every environment the
 app boots in**, test included. In an environment without it, RED logs an error at boot,
-`bin/rails error_dashboard:verify` fails, and RED falls back to the main database, which has no RED
+`bin/rails rails_error_dashboard:verify` fails, and RED falls back to the main database, which has no RED
 tables, so that environment's errors are not recorded anywhere.
 
 ```yaml
@@ -105,7 +105,7 @@ rails db:migrate:error_dashboard
 ### Step 4: Verify
 
 ```bash
-rails error_dashboard:verify
+rails rails_error_dashboard:verify
 ```
 
 **Best for:** Production apps that want error data isolated from application data.
@@ -211,7 +211,7 @@ Then migrate as usual (RED's migrations are no longer pending) and check the con
 
 ```bash
 bin/rails db:migrate
-bin/rails error_dashboard:verify
+bin/rails rails_error_dashboard:verify
 ```
 
 ### App 3 and beyond
@@ -324,7 +324,7 @@ the copy, this builds RED's tables from scratch. Either way, later upgrades migr
 ### 6. Restart, then check
 
 ```bash
-bin/rails error_dashboard:verify
+bin/rails rails_error_dashboard:verify
 ```
 
 It should report `Database mode... SEPARATE (key: error_dashboard)` and the required tables as OK. In production, steps 3 to 5 need the new
@@ -389,7 +389,7 @@ mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
 ```
 
 Managed MySQL (RDS, Cloud SQL, PlanetScale) ships with the tables loaded.
-`rails error_dashboard:verify` checks the conversion against your app's
+`rails rails_error_dashboard:verify` checks the conversion against your app's
 configured time zone and prints the fix when it is missing.
 
 ## Using a Different Database Server
@@ -423,7 +423,7 @@ production:
 
 ## Troubleshooting
 
-Run `rails error_dashboard:verify` first — it checks everything automatically.
+Run `rails rails_error_dashboard:verify` first — it checks everything automatically.
 
 ### "database configuration is required when use_separate_database is true"
 
@@ -454,7 +454,7 @@ rails db:migrate
    Without it, RED logs `Separate database 'error_dashboard' is not configured in database.yml`
    at boot and records no errors
 3. Restart your Rails server
-4. Run `rails error_dashboard:verify` to check the connection
+4. Run `rails rails_error_dashboard:verify` to check the connection
 5. If moving from the main database, make sure you [copied the data](#4-copy-reds-tables-and-their-data)
 
 ### Multi-app: App 2 doesn't see App 1's errors

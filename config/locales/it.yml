@@ -93,7 +93,7 @@ it:
         dismiss: Nascondi per questa sessione
       solid_queue:
         label: "Solid Queue non eseguirà i job di RED."
-        body_html: "Gli errori acquisiti in background e le notifiche restano in coda finché <code>config/queue.yml</code> non viene corretto. Esegui <code>bin/rails error_dashboard:verify</code> per vedere la correzione, poi riavvia."
+        body_html: "Gli errori acquisiti in background e le notifiche restano in coda finché <code>config/queue.yml</code> non viene corretto. Esegui <code>bin/rails rails_error_dashboard:verify</code> per vedere la correzione, poi riavvia."
         guide: "Cosa serve a RED da Solid Queue"
       storm:
         active_title: Tempesta di errori in corso
@@ -1216,7 +1216,6 @@ it:
         total_users_for_impact: Per il calcolo della % di impatto (rilevato automaticamente
           se non impostato)
         async_logging: Elaborazione in job in background
-        async_adapter: Adapter della coda dei job
         enable_rate_limiting: "Limita le richieste della dashboard per IP e percorso"
         rate_limit_per_minute: Richieste al minuto per IP
         enable_slack_notifications: Notifiche in tempo reale

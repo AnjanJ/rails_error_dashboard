@@ -28,7 +28,7 @@ RED's jobs run on your app's own Active Job adapter. RED writes nothing for Soli
 Check your config with:
 
 ```bash
-bin/rails error_dashboard:verify
+bin/rails rails_error_dashboard:verify
 ```
 
 It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running. The line appears only when Solid Queue is in your bundle and `config/queue.yml` exists. Since 0.14.4, when Solid Queue runs RED's jobs and the running environment's section would never run them, RED also logs an error at boot and shows a banner on every dashboard page.
@@ -46,7 +46,7 @@ Rails 8 apps come with Solid Queue set up. For an older app, follow [Solid Queue
 ### 2. Check Your Config
 
 ```bash
-bin/rails error_dashboard:verify
+bin/rails rails_error_dashboard:verify
 ```
 
 Run it again after any change to `config/queue.yml`: it checks the section for each environment your app defines in `config/environments/`.
@@ -76,8 +76,7 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-RED's jobs then run on whatever `config.active_job.queue_adapter` says. `config.async_adapter` is
-only checked for a valid value; it doesn't choose the backend.
+RED's jobs then run on whatever `config.active_job.queue_adapter` says.
 
 ### 5. Start Workers
 
@@ -139,7 +138,7 @@ production:
   <<: *default
 ```
 
-Run `bin/rails error_dashboard:verify` after editing.
+Run `bin/rails rails_error_dashboard:verify` after editing.
 
 ## Performance Tuning
 

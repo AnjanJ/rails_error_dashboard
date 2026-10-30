@@ -80,7 +80,7 @@ module RailsErrorDashboard
         logger.error(
           "[Rails Error Dashboard] Solid Queue won't run RED's jobs in #{problems.join('; ')}. " \
           "Errors captured in the background and notifications wait in the queue until " \
-          "config/queue.yml is fixed: bin/rails error_dashboard:verify shows how. Guide: #{GUIDE_URL}"
+          "config/queue.yml is fixed: bin/rails rails_error_dashboard:verify shows how. Guide: #{GUIDE_URL}"
         )
       rescue StandardError
         nil

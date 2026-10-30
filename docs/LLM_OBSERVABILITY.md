@@ -205,7 +205,6 @@ Tool calls do NOT carry a cost — they represent execution time on *your* infra
 | `enable_breadcrumbs` | `false` | Master switch for the breadcrumb pipeline. **Required** for LLM observability. |
 | `enable_llm_observability` | `false` | Master switch for LLM capture. Requires `enable_breadcrumbs = true`. |
 | `llm_pricing_overrides` | `{}` | Per-model rate overrides — Hash with `{ input:, output: }` USD/M tokens. |
-| `llm_observability_content_capture` | `false` | (Reserved for future use — prompts/completions are not recorded in v0.7.0.) |
 | `breadcrumb_buffer_size` | `40` | Maximum breadcrumbs per request — LLM crumbs share this buffer with sql / cache / etc. |
 
 If `enable_llm_observability = true` but `enable_breadcrumbs = false`, the gem prints a warning at boot — LLM crumbs ride the breadcrumb pipeline and cannot work without it.
@@ -274,7 +273,7 @@ Zero-cost rows render `—` instead of `$0.000000` to keep Ollama-style local-in
 
 This is intentional. LLM prompts often contain user PII (chat history, support tickets, code snippets), and recording them by default would silently exfiltrate sensitive data into error reports. If you want to record prompts for a specific call, do it yourself via the `tool_arguments` / `tool_result` fields with appropriate scrubbing.
 
-The reserved `llm_observability_content_capture` config flag will be evaluated in a future release for users who explicitly want prompt logging in a controlled subset of calls. For v0.7.0, the answer is "no, we don't capture content."
+RED doesn't capture prompts or completions.
 
 ### Sensitive Data Filtering
 

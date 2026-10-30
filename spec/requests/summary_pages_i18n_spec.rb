@@ -310,7 +310,7 @@ RSpec.describe "Summary page translations", type: :request do
     it "keeps the rake command in a code element" do
       get "/error_dashboard/errors/diagnostic_dumps"
 
-      expect(response.body).to include("<code>rails error_dashboard:diagnostic_dump</code>")
+      expect(response.body).to include("<code>rails rails_error_dashboard:diagnostic_dump</code>")
       expect(response.body).not_to include("&lt;code&gt;rails error_dashboard")
     end
   end

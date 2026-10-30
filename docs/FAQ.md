@@ -52,7 +52,7 @@ end
 
 It also prints the `config/database.yml` entry to add. Add it for every environment, with `migrations_paths: db/error_dashboard_migrate`, then run `bin/rails db:create`.
 
-Both settings matter: `config.database` on its own is ignored unless `use_separate_database` is true. And if `config/database.yml` has no entry for the current environment, RED logs an error at boot, `bin/rails error_dashboard:verify` fails, and RED falls back to your main database, where its tables don't exist, so errors in that environment are not recorded.
+Both settings matter: `config.database` on its own is ignored unless `use_separate_database` is true. And if `config/database.yml` has no entry for the current environment, RED logs an error at boot, `bin/rails rails_error_dashboard:verify` fails, and RED falls back to your main database, where its tables don't exist, so errors in that environment are not recorded.
 
 See [Database Options Guide](guides/DATABASE_OPTIONS.md).
 </details>
@@ -119,7 +119,7 @@ Until you delete them: the gem never deletes errors by itself.
 The generated initializer sets `config.retention_days = 90`. Errors not seen for that many days are deleted when retention cleanup runs. Run it by hand, or schedule it daily with your scheduler (Solid Queue's `config/recurring.yml`, sidekiq-cron, cron):
 
 ```bash
-bin/rails error_dashboard:retention_cleanup
+bin/rails rails_error_dashboard:retention_cleanup
 # or schedule the job: RailsErrorDashboard::RetentionCleanupJob
 ```
 
@@ -127,10 +127,10 @@ To delete only resolved errors:
 
 ```bash
 # Delete resolved errors older than 90 days
-rails error_dashboard:cleanup_resolved DAYS=90
+rails rails_error_dashboard:cleanup_resolved DAYS=90
 
 # Filter by application name
-rails error_dashboard:cleanup_resolved DAYS=30 APP_NAME="My App"
+rails rails_error_dashboard:cleanup_resolved DAYS=30 APP_NAME="My App"
 ```
 
 Or schedule with cron/whenever. See [Database Optimization](guides/DATABASE_OPTIMIZATION.md).
@@ -228,7 +228,7 @@ All other v0.4.0 features (local variables, instance variables, diagnostic dumps
 Two ways:
 
 1. **Dashboard button** — Visit `/errors/diagnostic_dumps` and click "Capture Dump"
-2. **Rake task** — `rails error_dashboard:diagnostic_dump` (add `NOTE="deploy check"` for a note)
+2. **Rake task** — `rails rails_error_dashboard:diagnostic_dump` (add `NOTE="deploy check"` for a note)
 
 Dumps capture: environment, GC stats, threads, connection pool, memory, job queue health, RubyVM/YJIT stats. Requires `config.enable_diagnostic_dump = true`.
 </details>
