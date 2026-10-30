@@ -6,7 +6,7 @@ cites `host-safety-0-18/REQ-N`. One commit per task, test and code together.
 `R` below stands for `env -u RAILS_VERSION bin/with-ruby bundle exec`. The shell exports a stale
 `RAILS_VERSION` that re-pins the lockfile. Run one rspec process at a time.
 
-- [ ] **T1** Git blame ends and reaps a timed-out git, and only that git → REQ-1, REQ-2, REQ-3, REQ-4
+- [x] **T1** Git blame ends and reaps a timed-out git, and only that git → REQ-1, REQ-2, REQ-3, REQ-4
   - Files: lib/rails_error_dashboard/services/git_blame_reader.rb, spec/services/git_blame_reader_spec.rb
   - Test: git_blame_reader_spec:
     - a fake `git` on `PATH` that sleeps past a stubbed `COMMAND_TIMEOUT` of 0.2 s → `nil`,
