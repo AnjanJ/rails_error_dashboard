@@ -35,7 +35,9 @@ both directions, and the docs should say exactly what can and can't be rolled ba
 - **REQ-2.** When a guarded migration is migrated down and its object doesn't exist, the migration
   shall succeed and change nothing.
 - **REQ-3.** Each guarded migration's `up` shall stay replay-safe. When its object already exists,
-  `up` does nothing and succeeds, as today.
+  `up` does nothing and succeeds, as today. One migration already didn't: a second `up` of
+  `create_rails_error_dashboard_error_logs` raises while it's the newest, and that stays; see
+  `design.md`.
 - **REQ-4.** Each of the 33 shall survive up, down, up and end with its object present. This holds
   on SQLite in the main suite, and on PostgreSQL and MySQL in the CI rows that run them.
 - **REQ-5.** The complete-schema migration's `down` shall keep dropping the 7 tables it creates. No

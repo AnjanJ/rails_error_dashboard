@@ -128,7 +128,7 @@ These numbers are the gem's. The installer gives each copy its own timestamp, so
 
 **Installs from before 0.18.0 keep their old copies.** The installer copies each migration into
 your app once and skips names you already have, so upgrading doesn't change them. In those old
-copies, 33 migrations print "reverted" and leave their table or column in place, and your schema
+copies, 33 migrations print "reverted" and leave their table, column or index in place, and your schema
 is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove what they add.
 
 **A fresh install can refuse.** Migrating down your copy of
