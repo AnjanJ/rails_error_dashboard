@@ -10,7 +10,7 @@ RSpec.describe RailsErrorDashboard::Webhooks do
     app/jobs/rails_error_dashboard/notification_burst_summary_job.rb
   ]
 
-  it "lists every event RED can post (webhook-v1/REQ-5, REQ-6, REQ-7, REQ-8)" do
+  it "lists every event RED can post (webhook-v1/REQ-5, webhook-v1/REQ-6, webhook-v1/REQ-7, webhook-v1/REQ-8)" do
     expect(described_class::EVENTS.values).to contain_exactly(
       "error.created", "storm.detected", "notifications.suppressed", "baseline.anomaly_detected"
     )
@@ -21,7 +21,7 @@ RSpec.describe RailsErrorDashboard::Webhooks do
   end
 
   builders.each do |file|
-    it "leaves no event name written out in #{File.basename(file)} (webhook-v1/REQ-5, REQ-6, REQ-7, REQ-8)" do
+    it "leaves no event name written out in #{File.basename(file)} (webhook-v1/REQ-5, webhook-v1/REQ-6, webhook-v1/REQ-7, webhook-v1/REQ-8)" do
       code = File.readlines(RailsErrorDashboard::Engine.root.join(file)).grep_v(/\A\s*#/).join
 
       expect(code).not_to match(/event: "/)

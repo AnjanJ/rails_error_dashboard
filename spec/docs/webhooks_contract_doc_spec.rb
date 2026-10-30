@@ -18,7 +18,7 @@ RSpec.describe "The webhook contract page" do
       let(:examples) { text.scan(/```json\n(.*?)```/m).flatten.map { |json| JSON.parse(json) } }
 
       RailsErrorDashboard::Webhooks::EVENTS.each_value do |event|
-        it "shows #{event} with an example body (webhook-v1/REQ-13, REQ-14)" do
+        it "shows #{event} with an example body (webhook-v1/REQ-13, webhook-v1/REQ-14)" do
           expect(examples.map { |example| example["event"] }).to include(event)
         end
 
