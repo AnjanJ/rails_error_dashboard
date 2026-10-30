@@ -1,7 +1,7 @@
 # Spec: test gaps for 0.17.0
 
 > Spec accepted at commit `bf66194` on test/test-gaps-0-17.
-> Status: open
+> Status: shipped in 0.17.0 (#314)
 > Paths: spec/commands/,spec/lib/rails_error_dashboard/,spec/ci/,test/pre_release/,bin/pre-release-test,.github/workflows/,lefthook.yml
 
 ## Purpose

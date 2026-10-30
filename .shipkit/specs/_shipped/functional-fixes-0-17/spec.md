@@ -1,7 +1,7 @@
 # Spec: Functional fixes for 0.17.0
 
 > Spec accepted at commit `5e3c16c` on fix/functional-fixes-0-17 (2026-10-22).
-> Status: open
+> Status: shipped in 0.17.0 (#311)
 > Paths: lib/rails_error_dashboard/engine.rb,lib/rails_error_dashboard/commands/log_error.rb,lib/rails_error_dashboard/commands/find_or_increment_error.rb,app/controllers/rails_error_dashboard/webhooks_controller.rb,lib/rails_error_dashboard/error_reporter.rb,bin/pre-release-test,test/pre_release/,docs/API_REFERENCE.md,_reference/api-reference.md,spec/commands/find_or_increment_error_spec.rb,spec/commands/log_error_queue_redaction_spec.rb,spec/requests/linear_webhook_spec.rb,spec/requests/issue_webhook_identity_spec.rb
 
 ## Purpose

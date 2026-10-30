@@ -1,7 +1,7 @@
 # Spec: Capture hardening for 0.17.0
 
 > Spec accepted at commit `ecd8cd4` on fix/capture-hardening-0-17 (2026-10-22).
-> Status: open
+> Status: shipped in 0.17.0 (#312)
 > Paths: lib/rails_error_dashboard.rb,lib/rails_error_dashboard/services/sensitive_data_filter.rb,lib/rails_error_dashboard/services/capture_limits.rb,lib/rails_error_dashboard/commands/log_error.rb,lib/rails_error_dashboard/commands/flush_storm_counts.rb,lib/rails_error_dashboard/services/storm_protection/gate.rb,app/models/rails_error_dashboard/error_logs_record.rb,README.md,docs/FEATURES.md,docs/guides/CONFIGURATION.md,_guides/,_features/,_reference/,_getting_started/,lib/rails_error_dashboard/services/crash_capture.rb,spec/services/sensitive_data_filter_spec.rb,spec/services/capture_limits_spec.rb,spec/commands/log_error_capture_limits_spec.rb,spec/models/error_logs_record_clamp_spec.rb,spec/services/crash_capture_spec.rb,spec/commands/log_error_session_digest_spec.rb,spec/commands/log_error_queue_redaction_spec.rb,spec/services/storm_protection/gate_spec.rb,lib/rails_error_dashboard/services/breadcrumb_collector.rb,lib/rails_error_dashboard/services/variable_serializer.rb,spec/services/breadcrumb_collector_spec.rb,spec/services/variable_serializer_spec.rb
 
 ## Purpose
