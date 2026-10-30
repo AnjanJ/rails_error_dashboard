@@ -386,7 +386,106 @@ RSpec.describe RailsErrorDashboard::Services::SourceCodeReader do
       lines, error = read("#{@root}-old/app/models/user.rb")
 
       expect(lines).to be_nil
-      expect(error).to eq("Invalid or unsafe file path")
+      expect(error).to eq("File not found or not readable")
+    end
+  end
+
+  # The common case is Capistrano: Rails.root is releases/NEW once symlinks are
+  # resolved, and errors recorded before a deploy name releases/OLD.
+  describe "a frame from outside Rails.root" do
+    let(:not_available) { [ nil, "File not found or not readable" ] }
+    let(:unsafe) { [ nil, "Invalid or unsafe file path" ] }
+
+    around do |example|
+      Dir.mktmpdir do |dir|
+        @root = File.join(dir, "current")
+        example.run
+      end
+    end
+
+    before { allow(Rails).to receive(:root).and_return(Pathname.new(@root)) }
+
+    def write(path, content = "the app's file\n")
+      absolute = path.start_with?("/") ? path : File.join(@root, path)
+      FileUtils.mkdir_p(File.dirname(absolute))
+      File.write(absolute, content)
+    end
+
+    def read(path)
+      reader = described_class.new(path, 1)
+      [ reader.read_lines&.map { |line| line[:content] }, reader.error ]
+    end
+
+    it "shows the same app-relative file (host-safety-0-18/REQ-5)" do
+      write("app/models/user.rb")
+
+      expect(read("/old/release/app/models/user.rb")).to eq([ [ "the app's file" ], nil ])
+    end
+
+    it "moves past an earlier segment that has no match (host-safety-0-18/REQ-5)" do
+      write("app/models/user.rb")
+
+      expect(read("/var/www/app/releases/OLD/app/models/user.rb")).to eq([ [ "the app's file" ], nil ])
+    end
+
+    it "takes the longest trailing part that exists (host-safety-0-18/REQ-5)" do
+      write("app/models/user.rb", "shorter\n")
+      write("lib/app/models/user.rb", "longer\n")
+
+      expect(read("/old/lib/app/models/user.rb")).to eq([ [ "longer" ], nil ])
+    end
+
+    it "maps a directory beside Rails.root, never reading it (host-safety-0-18/REQ-5)" do
+      write("app/models/user.rb")
+      write("#{@root}-old/app/models/user.rb", "the sibling's file\n")
+
+      expect(read("#{@root}-old/app/models/user.rb")).to eq([ [ "the app's file" ], nil ])
+    end
+
+    it "shows nothing when no app-relative file exists (host-safety-0-18/REQ-6)" do
+      write("app/models/user.rb")
+
+      expect(read("/old/release/app/models/account.rb")).to eq(not_available)
+    end
+
+    %w[/old/release/user.rb /user.rb //user.rb /./user.rb /old/./user.rb].each do |path|
+      it "never shows a file matched only by name, for #{path} (host-safety-0-18/REQ-6)" do
+        write("user.rb")
+
+        expect(read(path)).to eq(not_available)
+      end
+    end
+
+    it "still refuses a mapped path under a dot directory (host-safety-0-18/REQ-7)" do
+      write(".git/hooks/helper.rb")
+
+      expect(read("/old/release/.git/hooks/helper.rb")).to eq(unsafe)
+    end
+
+    it "still refuses a mapped path that isn't source (host-safety-0-18/REQ-7)" do
+      write("config/settings.yml")
+
+      expect(read("/old/release/config/settings.yml")).to eq(unsafe)
+    end
+
+    it "still refuses a mapped sensitive file (host-safety-0-18/REQ-7)" do
+      write("lib/private_key_loader.rb")
+
+      expect(read("/old/release/lib/private_key_loader.rb")).to eq(unsafe)
+    end
+
+    it "doesn't say whether a file exists beyond Rails.root (host-safety-0-18/REQ-7)" do
+      write("app/models/user.rb")
+      File.write(File.join(File.dirname(@root), "secret.rb"), "secret\n")
+
+      expect(read("/old/app/../../secret.rb")).to eq(not_available)
+      expect(read("/old/app/../../missing.rb")).to eq(not_available)
+    end
+
+    it "gives false from file_exists? when nothing maps (host-safety-0-18/REQ-6)" do
+      write("user.rb")
+
+      expect(described_class.new("/old/release/user.rb", 1).file_exists?).to be false
     end
   end
 

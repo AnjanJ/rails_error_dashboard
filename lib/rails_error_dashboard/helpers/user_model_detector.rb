@@ -5,6 +5,8 @@ module RailsErrorDashboard
     # Automatically detects the User model and total users count
     # Handles both single database and separate database setups
     class UserModelDetector
+      COUNT_TIMEOUT_MS = 5_000
+
       class << self
         # Auto-detect the user model name
         # Returns the configured model if set, otherwise tries to detect User model
@@ -94,17 +96,9 @@ module RailsErrorDashboard
 
           # Ensure we're querying the main database, not the error dashboard database
           # User models always connect to the primary/main database
-          if model_class.respond_to?(:count)
-            # Use a timeout to avoid hanging the dashboard
-            Timeout.timeout(5) do
-              model_class.count
-            end
-          end
+          bounded_count(model_class) if model_class.respond_to?(:count)
         rescue NameError, LoadError => e
           log_error("Model not found: #{model_name} - #{e.message}")
-          nil
-        rescue Timeout::Error => e
-          log_error("Timeout querying #{model_name}.count - #{e.message}")
           nil
         rescue StandardError => e
           log_error("Error querying #{model_name}.count: #{e.message}")
@@ -126,6 +120,39 @@ module RailsErrorDashboard
         end
 
         private
+
+        # The database ends a slow count itself and tells the driver cleanly.
+        # Timeout would interrupt this thread wherever it was, inside the driver
+        # included, and could leave the host's connection mid-protocol in its
+        # pool. SQLite's database is a local file; any other adapter gets a plain
+        # count, unbounded but never interrupted.
+        def bounded_count(model_class)
+          return model_class.count unless model_class.respond_to?(:connection_pool)
+
+          model_class.connection_pool.with_connection do |connection|
+            case connection.adapter_name.downcase
+            when /postgres|postgis/
+              postgresql_count(model_class, connection)
+            when /mysql|trilogy/
+              model_class.optimizer_hints("MAX_EXECUTION_TIME(#{COUNT_TIMEOUT_MS})").count
+            else
+              model_class.count
+            end
+          end
+        end
+
+        # The savepoint keeps a cancelled count from aborting a transaction the
+        # host already has open. Rolling it back every time undoes SET LOCAL,
+        # which would otherwise last to the end of that transaction.
+        def postgresql_count(model_class, connection)
+          count = nil
+          model_class.transaction(requires_new: true) do
+            connection.execute("SET LOCAL statement_timeout = #{COUNT_TIMEOUT_MS}")
+            count = model_class.count
+            raise ActiveRecord::Rollback
+          end
+          count
+        end
 
         def log_error(message)
           return unless RailsErrorDashboard.configuration.enable_internal_logging

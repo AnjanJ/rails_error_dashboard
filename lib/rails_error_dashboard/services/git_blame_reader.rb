@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "open3"
-require "timeout"
 
 module RailsErrorDashboard
   module Services
@@ -14,6 +13,8 @@ module RailsErrorDashboard
     #   # => { author: "John Doe", email: "john@example.com", date: Time, sha: "abc123", line: "code" }
     class GitBlameReader
       COMMAND_TIMEOUT = 5 # seconds
+      KILL_GRACE = 1 # seconds a timed-out git gets to exit on TERM, and again on KILL
+      READ_CHUNK = 16_384 # bytes
       PORCELAIN_FIELDS = %w[
         author
         author-mail
@@ -93,9 +94,12 @@ module RailsErrorDashboard
           file_path
         ]
 
-        # Execute with timeout
-        stdout, stderr, status = Timeout.timeout(COMMAND_TIMEOUT) do
-          Open3.capture3(*cmd, chdir: Rails.root)
+        stdout, stderr, status = run_with_deadline(cmd)
+
+        unless status
+          @error = "Git blame timeout"
+          RailsErrorDashboard::Logger.warn("Git blame timeout for #{file_path}:#{line_number}")
+          return nil
         end
 
         unless status.success?
@@ -105,14 +109,81 @@ module RailsErrorDashboard
         end
 
         stdout
-      rescue Timeout::Error
-        @error = "Git blame timeout"
-        RailsErrorDashboard::Logger.warn("Git blame timeout for #{file_path}:#{line_number}")
-        nil
       rescue StandardError => e
         @error = "Git blame execution error: #{e.message}"
         RailsErrorDashboard::Logger.error("Git blame execution error for #{file_path}:#{line_number} - #{e.message}")
         nil
+      end
+
+      # Runs git in its own process group, against a monotonic deadline. Past
+      # it, the group ends. Timeout.timeout would interrupt this thread and
+      # leave git running in the host's process tree.
+      #
+      # Not popen3's block form: its cleanup joins the child with no limit, so a
+      # git stuck in uninterruptible I/O would hold the request for ever.
+      #
+      # @return [Array(String, String, Process::Status), nil] nil at the deadline
+      def run_with_deadline(cmd)
+        deadline = monotonic_now + COMMAND_TIMEOUT
+        options = Gem.win_platform? ? {} : { pgroup: true }
+        stdin, stdout, stderr, wait_thread = Open3.popen3(*cmd, chdir: Rails.root, **options)
+        stdin.close
+
+        output = read_until(deadline, stdout, stderr)
+        status = wait_thread.join([ deadline - monotonic_now, 0 ].max)&.value if output
+        [ *output, status ] if status
+      ensure
+        # On no status, not on wait_thread.alive?: a git that has exited can
+        # leave a child holding the pipes. An ensure, so that a host's own
+        # request timeout raising into this thread ends git too.
+        end_git(wait_thread) if wait_thread && !status
+        [ stdin, stdout, stderr ].compact.each(&:close)
+      end
+
+      # Reads both pipes as they fill: reading one to its end first deadlocks
+      # against a git blocked on writing to the other.
+      #
+      # @return [Array<String>, nil] each pipe's output, or nil at the deadline
+      def read_until(deadline, *pipes)
+        output = pipes.to_h { |pipe| [ pipe, String.new ] }
+        open = pipes.dup
+
+        until open.empty?
+          remaining = deadline - monotonic_now
+          return nil unless remaining.positive?
+
+          ready, = IO.select(open, nil, nil, remaining)
+          return nil unless ready
+
+          ready.each do |pipe|
+            chunk = pipe.read_nonblock(READ_CHUNK, exception: false)
+            next if chunk == :wait_readable
+
+            chunk ? output[pipe] << chunk : open.delete(pipe)
+          end
+        end
+
+        output.values.map { |text| text.force_encoding(Encoding.default_external) }
+      end
+
+      # TERM, then KILL for whatever is left, to the group git leads: that
+      # reaches git and anything it started, and nothing else. The wait thread
+      # reaps git. No signal handler is touched.
+      def end_git(wait_thread)
+        signal_git("TERM", wait_thread.pid)
+        wait_thread.join(KILL_GRACE)
+        signal_git("KILL", wait_thread.pid)
+        wait_thread.join(KILL_GRACE)
+      end
+
+      def signal_git(signal, pid)
+        Process.kill(signal, Gem.win_platform? ? pid : -pid)
+      rescue SystemCallError
+        nil # already gone
+      end
+
+      def monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
 
       # Parse git blame porcelain format output
