@@ -135,11 +135,18 @@ is then newer than `schema_migrations` says. Copies from 0.18.0 onward remove wh
 `create_rails_error_dashboard_error_logs` or `create_rails_error_dashboard_applications` fails on
 PostgreSQL and MySQL while other tables have foreign keys to them. The migration stays recorded. Roll back the tables that depend on them first.
 
-**SQLite can refuse too.** Going down from a fully migrated database, `add_better_tracking_to_error_logs`,
-`add_workflow_fields_to_error_logs` and `add_environment_to_error_logs` can fail with `no such column`.
+**A later unique index refuses too.** Going down from a fully migrated database, `add_better_tracking_to_error_logs`,
+`add_application_to_error_logs` and `add_environment_to_error_logs` refuse on PostgreSQL and SQLite. Each
+would remove a column of `index_error_logs_on_group_identity`, the unique index that stops duplicate
+error groups, and nothing would put it back. Nothing changes and the migration stays recorded.
+
+**SQLite can refuse for other indexes.** `add_workflow_fields_to_error_logs` can fail with `no such column`.
 SQLite rebuilds the table to remove a column, and a later migration's index still names it. Nothing
-changes and the migration stays recorded. RED doesn't drop that index for you, because one of them
-is what stops duplicate error groups.
+changes and the migration stays recorded.
+
+**Plain indexes don't refuse.** Removing a column changes any later index that names it, without a
+message: PostgreSQL drops the index and MySQL narrows it. Migrating up again doesn't put it back. These
+indexes affect speed, not correctness.
 
 **To remove a leftover table or column by hand**:
 

@@ -73,3 +73,11 @@ time. The round-trip spec builds its own scratch databases and never touches
     rollback_docs_spec: both Troubleshooting pages explain the SQLite refusal.
   - After: T6, T5
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb spec/docs/rollback_docs_spec.rb` → 0 failures, and the same files are green across the matrix
+- [x] **T8** A `down` doesn't lose the unique group index → REQ-1
+  - Files: db/migrate/20251224081522_add_better_tracking_to_error_logs.rb, db/migrate/20260106094233_add_application_to_error_logs.rb, db/migrate/20260826000001_add_environment_to_error_logs.rb, spec/support/migration_round_trip.rb, spec/db/migrations/round_trip_spec.rb, spec/docs/rollback_docs_spec.rb, docs/TROUBLESHOOTING.md, _reference/troubleshooting.md
+  - Test: round_trip_spec, on SQLite and PostgreSQL, each `down` rolled back: one that succeeds
+    loses no other migration's unique index on a table still there, and the two refusals on
+    PostgreSQL are listed. rollback_docs_spec: both Troubleshooting pages name the three and say
+    what happens to plain indexes.
+  - After: T7
+  - Done when: `R rspec spec/db/migrations/round_trip_spec.rb spec/docs/rollback_docs_spec.rb` → 0 failures, and the same on PostgreSQL

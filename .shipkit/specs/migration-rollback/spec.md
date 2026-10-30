@@ -21,7 +21,8 @@ both directions, and the docs should say exactly what can and can't be rolled ba
 - **REQ-1.** When any of the 33 guarded migrations is migrated down, it shall leave the database
   without the table, column or index that migration adds. If the database refuses because something
   still depends on it, another table or an index a later migration added, the migration shall fail
-  with that error rather than report success.
+  with that error rather than report success. If removing a column would take a later migration's
+  unique index with it, the migration shall refuse on any database.
   (Refined at the design gate, 2026-10-29: RED's foreign keys make the database refuse on a fresh
   install, where the complete schema created parent and dependent tables together; see
   `design.md`.)
@@ -29,6 +30,8 @@ both directions, and the docs should say exactly what can and can't be rolled ba
   from `change`. Seven more guard with `unless` and have the same bug; see `design.md`.)
   (Widened at review, 2026-10-30: "another table" became "another table or a later index", after a
   run from a fully migrated database; see `design.md`.)
+  (Added at review, 2026-10-30: PostgreSQL drops a later index with its column instead of refusing,
+  so the unique group index needs its own refusal; see `design.md`.)
 - **REQ-2.** When a guarded migration is migrated down and its object doesn't exist, the migration
   shall succeed and change nothing.
 - **REQ-3.** Each guarded migration's `up` shall stay replay-safe. When its object already exists,

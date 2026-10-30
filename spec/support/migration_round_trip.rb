@@ -133,12 +133,24 @@ module RailsErrorDashboard
 
       def undone_down(migration, object)
         trip = {}
+        before = schema
         ActiveRecord::Base.transaction(requires_new: true) do
           trip["error"] = attempt { ActiveRecord::Base.transaction(requires_new: true) { migration.migrate(:down) } }
-          trip["left"] = object & objects(schema)
-          raise ActiveRecord::Rollback
+          after = schema
+          trip["left"] = object & objects(after)
+          trip["unique_indexes_lost"] = unique_indexes(before.slice(*after.keys)) - unique_indexes(after) - object
+              raise ActiveRecord::Rollback
         end
         trip
+      end
+
+      # PostgreSQL drops an index with any column it names, and says nothing. A
+      # comparison of the migration's own objects can't see that. Only tables still
+      # here count: a dropped table takes its indexes, and that's no surprise.
+      def unique_indexes(schema)
+        schema.flat_map do |table, parts|
+          parts[:indexes].select { |index| index[2] }.map { |index| "index #{table}.#{index.first}" }
+        end
       end
 
       # The far end of "its object doesn't exist": no table either, which the

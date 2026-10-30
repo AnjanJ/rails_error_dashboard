@@ -19,6 +19,12 @@ class AddApplicationToErrorLogs < ActiveRecord::Migration[7.0]
   end
 
   def down
+    # PostgreSQL would drop this index with the column and say nothing, and no up
+    # puts it back. It's what stops duplicate error groups.
+    if index_name_exists?(:rails_error_dashboard_error_logs, "index_error_logs_on_group_identity")
+      raise ActiveRecord::MigrationError, "index_error_logs_on_group_identity needs application_id, and nothing would put it back"
+    end
+
     remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_app_resolved'
     remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_app_occurred'
     remove_index :rails_error_dashboard_error_logs, column: :application_id

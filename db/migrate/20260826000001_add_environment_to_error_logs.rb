@@ -30,6 +30,12 @@ class AddEnvironmentToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
+    # PostgreSQL would drop this index with the column and say nothing, and no up
+    # puts it back. It's what stops duplicate error groups.
+    if index_name_exists?(:rails_error_dashboard_error_logs, "index_error_logs_on_group_identity")
+      raise ActiveRecord::MigrationError, "index_error_logs_on_group_identity needs environment, and nothing would put it back"
+    end
+
     if index_name_exists?(:rails_error_dashboard_error_logs, "index_error_logs_on_environment_and_occurred_at")
       remove_index :rails_error_dashboard_error_logs, name: "index_error_logs_on_environment_and_occurred_at"
     end

@@ -38,6 +38,15 @@ RSpec.describe "The rollback docs" do
         it "says what a later index does on SQLite (migration-rollback/REQ-1)" do
           expect(text).to match(/SQLite.{0,300}no such column/m)
         end
+
+        it "names the rollbacks that protect the unique group index (migration-rollback/REQ-1)" do
+          expect(text).to include("add_better_tracking_to_error_logs", "add_application_to_error_logs", "add_environment_to_error_logs")
+          expect(text).to match(/refuse on PostgreSQL and SQLite.{0,120}index_error_logs_on_group_identity/m)
+        end
+
+        it "says plain indexes go without a word (migration-rollback/REQ-1)" do
+          expect(text).to match(/PostgreSQL drops the index and MySQL narrows it/)
+        end
       end
 
       it "shows how to remove a leftover table or column by hand (migration-rollback/REQ-8)" do

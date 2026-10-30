@@ -194,20 +194,21 @@ RSpec.describe "Migration round trips", type: :migration do
   end
 
   # What db:migrate:down VERSION= meets, which is issue #326's reproduction:
-  # everything newer still applied. The only refusals are the parents, on
-  # PostgreSQL, and on SQLite the columns a later index still names: rebuilding
-  # the table re-creates that index, and it fails. Each one is loud and leaves the
-  # version recorded, and neither reports "reverted" with the object in place.
-  # MySQL can't roll DDL back, so it would need a rebuild per migration. It gave
-  # the same answer by hand: see design.md.
+  # everything newer still applied. PostgreSQL refuses the parents. SQLite rebuilds
+  # the table to remove a column, and that fails on any later index naming it. The
+  # columns of the unique group index are refused by the migration itself on both,
+  # because PostgreSQL would drop the index and say nothing. Each one is loud and
+  # leaves the version recorded, and none reports "reverted" with the object in
+  # place. MySQL can't roll DDL back, so it would need a rebuild per migration. It
+  # has no such index, and it gave the answer for the rest by hand: see design.md.
   refused_from_the_top = {
     "sqlite" => {
       "upgrade" => [ 20251224081522, 20251226020000, 20260826000001 ],
       "fresh" => [ 20251224081522, 20260826000001 ]
     },
     "postgresql" => {
-      "upgrade" => [ 20251224000001, 20260106094220 ],
-      "fresh" => [ 20251224000001, 20260106094220 ]
+      "upgrade" => [ 20251224000001, 20251224081522, 20260106094220, 20260826000001 ],
+      "fresh" => [ 20251224000001, 20251224081522, 20260106094220, 20260826000001 ]
     }
   }
 
@@ -229,6 +230,13 @@ RSpec.describe "Migration round trips", type: :migration do
         refused = trips.select { |_, trip| trip["error"] }.keys.map(&:to_i)
 
         expect(refused).to match_array(refused_from_the_top.fetch(adapter).fetch(history))
+      end
+
+      it "refuses rather than lose a later migration's unique index (migration-rollback/REQ-1)" do
+        every_trip = @results.fetch("from_the_top").fetch(history)
+        succeeded = every_trip.reject { |_, trip| trip["error"] }
+
+        expect(succeeded.select { |_, trip| trip["unique_indexes_lost"].any? }.keys).to be_empty
       end
     end
   end

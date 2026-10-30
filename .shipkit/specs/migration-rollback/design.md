@@ -112,7 +112,8 @@ key in a sequence of rollbacks done in order (not an explicit single `migrate:do
   it was the newest, but `db:migrate:down VERSION=` on a fully migrated database is a different
   state, and it's the one the issue reproduces. All 33 were run from there, on all three databases.
   None reported success with its object in place.
-  - PostgreSQL and MySQL refuse only the two parents, as above.
+  - MySQL refuses only the two parents, as above. PostgreSQL refuses those and two of the ones
+    below, since the correction further down.
   - SQLite also refuses `add_better_tracking_to_error_logs` and `add_environment_to_error_logs`,
     and on the upgrade history `add_workflow_fields_to_error_logs`, with `no such column`. It
     rebuilds the table to remove a column, and re-creating a later migration's index fails,
@@ -121,6 +122,21 @@ key in a sequence of rollbacks done in order (not an explicit single `migrate:do
     them is `index_error_logs_on_group_identity`, the unique index that stops duplicate groups,
     and it belongs to an irreversible migration, so nothing would put it back. A loud refusal is
     this decision's own rule, so REQ-1 now says "another table or an index a later migration added".
+  - **That held only on SQLite, found at the next review.** PostgreSQL doesn't refuse: `DROP COLUMN`
+    takes any index naming the column, and says nothing. So `add_better_tracking_to_error_logs`,
+    `add_application_to_error_logs` and `add_environment_to_error_logs` each reported success and
+    lost `index_error_logs_on_group_identity`, and nothing re-creates it. The spec didn't see it
+    because it compared only a migration's own objects. It now also fails if a `down` that succeeds
+    loses another migration's unique index, on a table that's still there.
+    - Each of the three now raises `ActiveRecord::MigrationError` while that index exists, so
+      PostgreSQL and SQLite give the same answer. `MigrationError`, not `IrreversibleMigration`,
+      because each can still go down in the state where the index isn't there yet.
+    - `add_application_to_error_logs` isn't one of the 33: it always had `up` and `down`. It's here
+      because leaving it would keep the same loss one migration along.
+    - MySQL has no such index (`20260915000001` skips it), so nothing changes there.
+  - **Plain indexes don't get this.** The same `DROP COLUMN` takes up to eight later plain indexes on
+    PostgreSQL (MySQL narrows them instead), and `up` doesn't restore those either. They affect
+    speed, not correctness, so those `down`s go ahead, and Troubleshooting says so.
   - The spec pins this on SQLite and PostgreSQL by rolling each `down` back. MySQL can't roll DDL
     back and would need a rebuild per migration, so that result came from a run by hand.
 - **A single-column index goes with its column on all three databases,** so `remove_index` before
