@@ -29,7 +29,8 @@ Migrations in a minor are additive and safe to run twice.
 
 ## Security fixes
 
-Security fixes go to the current major, and to the previous major's last minor.
+Security fixes go to the current major, and to the previous major's last minor. A fix ships as a new
+release, so to get one, update to the latest release of your major.
 
 ## 0.x support
 

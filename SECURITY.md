@@ -4,7 +4,7 @@
 
 | Version | Security fixes |
 | ------- | -------------- |
-| The latest release | :white_check_mark: |
+| The current major: update to its latest release | :white_check_mark: |
 | From 2.0: the previous major's last minor | :white_check_mark: |
 | After 1.0 ships: the last 0.x minor, until 2027-06-30 | :white_check_mark: |
 | Anything older | :x: |

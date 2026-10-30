@@ -26,6 +26,7 @@ RSpec.describe "The versioning policy" do
 
   it "says who gets security fixes (public-api-and-policies/REQ-4)" do
     expect(policy).to match(/current major/).and match(/previous major's last minor/)
+    expect(policy).to match(/update to the latest release of your major/)
   end
 
   it "gives 0.x its window (public-api-and-policies/REQ-4)" do
@@ -34,13 +35,22 @@ RSpec.describe "The versioning policy" do
 
   it "has a SECURITY.md table that says the same (public-api-and-policies/REQ-5)" do
     table = security[/## Supported Versions.*?(?=^## )/m].to_s
+    rows = table.lines.grep(/\A\| /).drop(2).map { |row| row.split("|").values_at(1, 2).map(&:strip) }
 
-    expect(table).to include("previous major's last minor", "2027-06-30", "VERSIONING.md")
-    expect(table).not_to match(/current version only/)
-    expect(table).not_to match(/< Latest/)
+    expect(rows).to eq([
+      [ "The current major: update to its latest release", ":white_check_mark:" ],
+      [ "From 2.0: the previous major's last minor", ":white_check_mark:" ],
+      [ "After 1.0 ships: the last 0.x minor, until 2027-06-30", ":white_check_mark:" ],
+      [ "Anything older", ":x:" ]
+    ])
+    expect(table).to include("VERSIONING.md")
   end
 
   it "is linked from the README, with the public API page (public-api-and-policies/REQ-6)" do
     expect(root.join("README.md").read).to include("docs/PUBLIC_API.md", "docs/VERSIONING.md")
+  end
+
+  it "rests on an accepted decision (public-api-and-policies/REQ-7)" do
+    expect(root.join(".shipkit/decisions/0007-versioning-deprecation-and-support-policy.md").read).to match(/Status: accepted/)
   end
 end
