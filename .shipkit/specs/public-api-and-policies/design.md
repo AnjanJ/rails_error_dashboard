@@ -18,13 +18,22 @@
 | Surface | How the code is enumerated |
 |---|---|
 | Config options | `Configuration.public_instance_methods(false).grep(/=\z/)`, less `reset!` |
-| ENV names | literal `ENV[...]`, `ENV.fetch(...)`, `ENV.key?(...)` reads under `lib/`; one known-internal list, e.g. `SECRET_KEY_BASE_DUMMY` |
+| ENV names | literal `ENV[...]`, `ENV.fetch(...)`, `ENV.key?(...)` reads in the `.rb`, `.rake` and `.erb` files under `app/`, `config/`, `db/` and `lib/`, skipping comment lines; one known-internal list, e.g. `SECRET_KEY_BASE_DUMMY` |
 | Rake tasks | `Rake::Task.tasks` after `Rails.application.load_tasks`, RED's namespaces only, aliases included |
-| Generator options | the install generator's `class_options` |
+| Generators and their options | each `lib/generators/rails_error_dashboard/*/*_generator.rb`, and its own `class_options` |
 | Plugin hooks | `RailsErrorDashboard::Plugin.public_instance_methods(false)` named `on_*` (12 today) |
 | Module methods | `RailsErrorDashboard.singleton_methods(false)`, less `reset_configuration!` and `reset_detected_git_sha!` (test helpers) |
 
-  The spec also checks that every config option appears in CONFIGURATION.md.
+  The spec also compares these, which aren't in REQ-3 but are in REQ-1:
+  - plugin hooks' arguments, with `Plugin.instance_method(hook).parameters`;
+  - `GET /health`'s fields, read from `queries/health_status.rb` with Prism, so a branch that doesn't
+    run in the test still counts;
+  - OTel span names and attributes, read from `lib/`.
+
+  And every live config option must have a table row in CONFIGURATION.md and in its Jekyll copy. A
+  mention isn't enough: a sentence saying the option wasn't documented once passed that check. The
+  two deprecated options have no row, because `deprecations-0-18` removed them from the guide and
+  they do nothing. This page marks them instead, with the version that removes them.
 - **README** links both pages (REQ-6).
 - **Decision record 0007** records the policies (REQ-7).
 - **Order:** the PR merges after `deprecations-0-18` and `webhook-v1`, or its lists describe the
@@ -54,7 +63,9 @@ at all.
 
 **Decision.** We chose option 1, with REQ-1's config bullet reworded to: "every option, by name,
 linked to its type and default in the configuration reference; the deprecated ones marked with the
-version that removes them".
+version that removes them". In practice that's one link above the list rather than one per name, so
+the list stays plain enough for the spec to read, and the two deprecated options have no row to link
+to, as the Approach says.
 **Falsifiability.** We would move to option 3 if the CONFIGURATION.md check fails on main because an
 option was documented in PUBLIC_API.md but not in CONFIGURATION.md, twice in 1.x.
 **Fired-if.** manual

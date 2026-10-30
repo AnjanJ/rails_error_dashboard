@@ -38,7 +38,7 @@ This guide covers all configuration options for Rails Error Dashboard, including
 
 ## Configuration Defaults Reference
 
-Reference for the configuration options, with their defaults. Not listed here yet: AI help (`llm_*`) and OpenTelemetry export (`enable_otel_export`, `otel_service_name`, `otel_spans`), which the generated initializer documents; [LLM observability](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/LLM_OBSERVABILITY.md); coverage tracking; and the sensitive-data filter (`filter_sensitive_data`, `sensitive_data_patterns`), which is described in the Sensitive Data Filtering section of the features guide, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
+Reference for the configuration options, with their defaults.
 
 ### Authentication & Access
 
@@ -182,6 +182,15 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `custom_fingerprint` | Lambda | `nil` | `->(exception, context) { String or nil }`: your own grouping key. See [Custom Grouping](#custom-grouping) |
 | `ignored_exceptions` | Array | `[]` | Exceptions to ignore: class-name Strings or Class objects (both cover subclasses), or Regexps matched against the class name. Class objects are matched since 0.14.4 |
 
+### Sensitive Data
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `filter_sensitive_data` | Boolean | `true` | Replace sensitive values with `[FILTERED]` before storage |
+| `sensitive_data_patterns` | Array | `[]` | Extra patterns to filter, on top of Rails' `filter_parameters`. Regexps or strings |
+
+The Sensitive Data Filtering section of the features guide says what the filter covers, including what its best-effort redaction of free text such as the error message catches, and that it fails closed.
+
 ### Performance Optimization
 
 | Option | Type | Default | Description |
@@ -246,6 +255,34 @@ On by default. See [Storm Protection](#storm-protection) below.
 | `breadcrumb_categories` | Array/nil | `nil` | Categories to capture (`nil` = all; or a subset of `[:sql, :controller, :cache, :job, :mailer, :deprecation, :custom, :action_cable, :active_storage, :rack_attack, :llm, :llm_tool]`). Symbols only: with Strings, no breadcrumb matches |
 | `enable_n_plus_one_detection` | Boolean | `true` | Detect N+1 query patterns in SQL breadcrumbs (display-time analysis) |
 | `n_plus_one_threshold` | Integer | `3` | Min repetitions to flag as N+1 (min: 2) |
+
+### AI Help and LLM Observability
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_llm_observability` | Boolean | `false` | Record LLM calls as breadcrumbs. Needs `enable_breadcrumbs`. See [LLM observability](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/LLM_OBSERVABILITY.md) |
+| `llm_pricing_overrides` | Hash | `{}` | Per-model rates as `{ "model" => { input:, output: } }`, in USD per million tokens |
+| `llm_provider` | Symbol | `nil` | `:openai` or `:anthropic` (ENV: `RED_LLM_PROVIDER`) |
+| `llm_api_key` | String or Proc | `nil` | Provider API key (ENV: `RED_LLM_API_KEY`) |
+| `llm_model` | String | `nil` | Model name (ENV: `RED_LLM_MODEL`) |
+| `llm_openai_endpoint` | Symbol | `:auto` | `:responses`, `:chat_completions` or `:auto` (ENV: `RED_LLM_OPENAI_ENDPOINT`) |
+| `llm_timeout_seconds` | Integer | `30` | HTTP timeout for provider calls |
+| `llm_max_output_tokens` | Integer | `900` | Cap on the response length |
+| `llm_system_prompt` | String | `nil` | Optional override of, or addition to, the prompt |
+
+### Code Path Coverage
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_coverage_tracking` | Boolean | `false` | Diagnostic mode: mark which lines ran in View Source. Ruby 3.2+ |
+
+### OpenTelemetry Export
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable_otel_export` | Boolean | `false` | Emit RED's operations as spans. Needs OpenTelemetry in the host app |
+| `otel_service_name` | String | `nil` | Falls back to `application_name` |
+| `otel_spans` | Array | `[:capture, :breadcrumbs, :health, :notifications]` | Which kinds of span to emit |
 
 ### System Health Snapshot
 

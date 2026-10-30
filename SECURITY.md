@@ -2,14 +2,14 @@
 
 ## Supported Versions
 
-We release security updates for the current version only. Features and bug fixes are provided on a rolling release basis.
+| Version | Security fixes |
+| ------- | -------------- |
+| The current major: update to its latest release | :white_check_mark: |
+| From 2.0: the previous major's last minor | :white_check_mark: |
+| After 1.0 ships: the last 0.x minor, until 2027-06-30 | :white_check_mark: |
+| Anything older | :x: |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Latest  | :white_check_mark: |
-| < Latest | :x: |
-
-If you're using an older version and discover a security issue, please upgrade to the latest version first. If upgrading isn't possible, please mention this in your report so we can understand your constraints.
+The rules behind this table are in the [versioning policy](docs/VERSIONING.md).
 
 ## Reporting a Vulnerability
 
