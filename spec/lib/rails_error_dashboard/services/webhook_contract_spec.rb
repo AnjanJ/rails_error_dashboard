@@ -30,13 +30,16 @@ RSpec.describe "The webhook contract" do
     RailsErrorDashboard::Services::BaselineAlertThrottler.clear!
   end
 
+  # Serialised and run the way a queue backend does, with 0.17.0's arguments, so
+  # every example here is also a job left in the queue across the upgrade.
   def deliver(event)
-    case event
-    when "error.created" then RailsErrorDashboard::WebhookErrorNotificationJob.new.perform(error_log.id)
-    when "baseline.anomaly_detected" then RailsErrorDashboard::BaselineAlertJob.new.perform(error_log.id, anomaly)
-    when "storm.detected" then RailsErrorDashboard::StormNotificationJob.perform_now(started_at: "2026-10-30T10:00:00Z", state: "open")
-    when "notifications.suppressed" then RailsErrorDashboard::NotificationBurstSummaryJob.perform_now(limit: 5, window_seconds: 60)
+    job = case event
+    when "error.created" then RailsErrorDashboard::WebhookErrorNotificationJob.new(error_log.id, "en")
+    when "baseline.anomaly_detected" then RailsErrorDashboard::BaselineAlertJob.new(error_log.id, anomaly, "en")
+    when "storm.detected" then RailsErrorDashboard::StormNotificationJob.new(started_at: "2026-10-30T10:00:00Z", state: "open", locale: "en")
+    when "notifications.suppressed" then RailsErrorDashboard::NotificationBurstSummaryJob.new(limit: 5, window_seconds: 60, locale: "en")
     end
+    ActiveJob::Base.execute(job.serialize)
     sent.last
   end
 
@@ -58,7 +61,7 @@ RSpec.describe "The webhook contract" do
 
   RailsErrorDashboard::WebhookContract::BODIES.each do |event, shape|
     describe event do
-      it "says which contract and which event it is (webhook-v1/REQ-1, REQ-2)" do
+      it "says which contract and which event it is, even from a job already queued (webhook-v1/REQ-1, webhook-v1/REQ-2, webhook-v1/REQ-12)" do
         body = JSON.parse(deliver(event).body)
 
         expect(body).to include("version" => 1, "event" => event)
@@ -109,36 +112,43 @@ RSpec.describe "The webhook contract" do
       config.enable_webhook_notifications = false
     end
 
-    def storm
-      RailsErrorDashboard::StormNotificationJob.perform_now(started_at: "2026-10-30T10:00:00Z", state: "open")
-      sent.last.body
+    let(:started_at) { "2026-10-30T10:00:00Z" }
+
+    # The job's own sentence, so this pins what's on the wire around it, and a
+    # later change to the wording doesn't fail a test about the envelope.
+    let(:message) do
+      RailsErrorDashboard::StormNotificationJob.new.send(:build_message, started_at, "open", config, "en")
     end
 
-    it "leaves Slack's body as it was" do
+    def storm
+      RailsErrorDashboard::StormNotificationJob.perform_now(started_at: started_at, state: "open", locale: "en")
+    end
+
+    it "sends Slack exactly the message and nothing else" do
       config.enable_slack_notifications = true
       config.slack_webhook_url = url
 
-      body = storm
+      storm
 
-      expect(body).to eq({ text: JSON.parse(body).fetch("text") }.to_json)
+      expect(sent.last.body).to eq({ text: message }.to_json)
     end
 
-    it "leaves Discord's body as it was" do
+    it "sends Discord exactly the message and nothing else" do
       config.enable_discord_notifications = true
       config.discord_webhook_url = url
 
-      body = storm
+      storm
 
-      expect(body).to eq({ content: JSON.parse(body).fetch("content") }.to_json)
+      expect(sent.last.body).to eq({ content: message }.to_json)
     end
 
-    it "leaves Telegram's body as it was" do
+    it "sends Telegram exactly the message and nothing else" do
       allow(RailsErrorDashboard::Services::TelegramDelivery).to receive(:configured?).and_return(true)
       allow(RailsErrorDashboard::Services::TelegramDelivery).to receive(:send_message)
 
-      RailsErrorDashboard::StormNotificationJob.perform_now(started_at: "2026-10-30T10:00:00Z", state: "open")
+      storm
 
-      expect(RailsErrorDashboard::Services::TelegramDelivery).to have_received(:send_message).with(a_kind_of(String))
+      expect(RailsErrorDashboard::Services::TelegramDelivery).to have_received(:send_message).with(message)
     end
   end
 end

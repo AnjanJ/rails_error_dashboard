@@ -271,6 +271,7 @@ Webhooks receive a JSON payload with complete error details. This is `error.crea
   "timestamp": "2024-12-24T10:30:45Z",
   "error": {
     "id": 123,
+    "application": "My App",
     "type": "NoMethodError",
     "message": "undefined method `name' for nil:NilClass",
     "severity": "high",

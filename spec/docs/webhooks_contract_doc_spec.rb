@@ -81,8 +81,12 @@ RSpec.describe "The webhook contract page" do
   end
 
   %w[docs/guides/NOTIFICATIONS.md _guides/notifications.md].each do |page|
-    it "shows a v1 body in #{page} (webhook-v1/REQ-15)" do
-      expect(File.read(root.join(page))).to include(%("version": 1))
+    it "shows a whole v1 body in #{page} (webhook-v1/REQ-15)" do
+      example = File.read(root.join(page)).scan(/```json\n(.*?)```/m).flatten.map { |json| JSON.parse(json) }
+        .find { |body| body["event"] == "error.created" }
+
+      expect(example).to include("version" => 1)
+      expect(field_names(example)).to include(*field_names(contract::BODIES.fetch("error.created")))
     end
   end
 
