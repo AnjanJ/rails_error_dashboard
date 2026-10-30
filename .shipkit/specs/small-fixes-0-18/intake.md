@@ -37,3 +37,16 @@ such as a default and what a page lists, so they belong before the freeze.
 
 ## Out of scope
 - Other platform-detection changes (how `platform` is set at capture).
+
+## Reproduced at T4 (2026-10-30): development doesn't record 404s
+REQ-4 is dropped: there is no difference to fix. `spec/requests/development_routing_error_spec.rb`
+boots a real app each way, with `ignored_exceptions` cleared (the dummy app ignores `RoutingError`,
+which would have proved nothing), and stays as the regression guard:
+
+| Settings | Unknown URL | Recorded | A route that raises | Recorded |
+|---|---|---|---|---|
+| Reloading on, local requests, `show_exceptions` on | 404 | 0 | 500 | 1 |
+| Eager loading, production's settings | 404 | 0 | 500 | 1 |
+
+The route that raises is the control: it shows capture was live, so the zero means something. REQ-6
+depended on REQ-4 changing a default, so it's dropped too, and UPGRADING needs no note.

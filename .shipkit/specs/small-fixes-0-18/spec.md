@@ -38,6 +38,7 @@ Each one is a behavior a 1.x minor shouldn't change later, so 0.18.0 fixes them 
 - **REQ-4.** While code reloading is enabled, RED shall record a routing error (an unknown URL)
   exactly when it would with reloading disabled and the same configuration. If the reproduction
   shows no difference, this requirement is dropped, and the evidence goes in `intake.md`.
+  (Dropped at T4, 2026-10-30: no difference. The spec stays as the guard.)
 
 ### Pattern hours (reproduce first)
 - **REQ-5.** Pattern insights shall compute and show hours in the app's `Time.zone`, and name that
@@ -46,7 +47,7 @@ Each one is a behavior a 1.x minor shouldn't change later, so 0.18.0 fixes them 
 
 ### Upgrade notes
 - **REQ-6.** If REQ-4 changes a default, the 0.18.0 section of UPGRADING shall say what changed and
-  how to restore the old behavior.
+  how to restore the old behavior. [untested: dropped with REQ-4, which changed no default]
 
 ## Out of scope
 - How `platform` is set at capture time.
