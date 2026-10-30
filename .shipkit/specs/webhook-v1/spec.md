@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: app/jobs/rails_error_dashboard/,lib/rails_error_dashboard/services/webhook_payload_builder.rb,lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb,lib/rails_error_dashboard/services/webhook_delivery.rb,docs/,_guides/,_getting_started/,spec/
+> Paths: app/jobs/rails_error_dashboard/,lib/rails_error_dashboard/webhooks.rb,lib/rails_error_dashboard.rb,_reference/,lib/rails_error_dashboard/services/webhook_payload_builder.rb,lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb,lib/rails_error_dashboard/services/webhook_delivery.rb,docs/,_guides/,_getting_started/,spec/
 
 ## Purpose
 RED posts four events to the generic webhook URLs, and nothing about them is versioned. Event names

@@ -26,7 +26,8 @@ module RailsErrorDashboard
       config = RailsErrorDashboard.configuration
 
       deliver_plain_message(build_message(limit, window_seconds, config, job_locale(locale)), {
-        event: "new_error_notifications_suppressed",
+        event: Webhooks::NOTIFICATIONS_SUPPRESSED,
+        timestamp: Time.now.utc.iso8601,
         limit: limit,
         window_seconds: window_seconds,
         application: app_name(config)

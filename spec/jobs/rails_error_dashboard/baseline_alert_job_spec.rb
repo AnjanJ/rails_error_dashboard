@@ -228,7 +228,7 @@ RSpec.describe RailsErrorDashboard::BaselineAlertJob, type: :job do
 
           described_class.new.perform(error_log.id, anomaly_data)
 
-          expect(captured_payload[:event]).to eq("baseline_anomaly")
+          expect(captured_payload[:event]).to eq("baseline.anomaly_detected")
           expect(captured_payload[:error][:type]).to eq(error_log.error_type)
           expect(captured_payload[:anomaly][:level]).to eq("high")
           expect(captured_payload[:anomaly][:std_devs_above]).to eq(3.2)

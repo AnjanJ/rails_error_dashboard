@@ -20,7 +20,8 @@ module RailsErrorDashboard
       message = build_message(started_at, state, config, job_locale(locale))
 
       deliver_plain_message(message, {
-        event: "error_storm_detected",
+        event: Webhooks::STORM_DETECTED,
+        timestamp: Time.now.utc.iso8601,
         started_at: started_at,
         state: state,
         application: app_name(config)

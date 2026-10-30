@@ -262,14 +262,16 @@ WEBHOOK_URLS=https://service1.com/webhook,https://service2.com/webhook
 
 ### Webhook Payload
 
-Webhooks receive a JSON payload with complete error details:
+Webhooks receive a JSON payload with complete error details. This is `error.created`; the [Webhook contract](/rails_error_dashboard/docs/reference/webhooks/) has every event and field:
 
 ```json
 {
+  "version": 1,
   "event": "error.created",
   "timestamp": "2024-12-24T10:30:45Z",
   "error": {
     "id": 123,
+    "application": "My App",
     "type": "NoMethodError",
     "message": "undefined method `name' for nil:NilClass",
     "severity": "high",
@@ -314,6 +316,8 @@ X-Error-Dashboard-Event: error.created
 X-Error-Dashboard-ID: 123
 ```
 
+`X-Error-Dashboard-ID` is only on events about one error.
+
 ### Signing (HMAC-SHA256)
 
 Anyone who learns a webhook URL can POST a fake "error" to it. Set a signing secret and every POST to `webhook_urls` carries two extra headers the receiver can verify:
@@ -331,7 +335,7 @@ X-Error-Dashboard-Signature-256: sha256=5d41402abc4b2a76b9719d911017c592...
 
 The signature is `HMAC-SHA256(secret, "<timestamp>.<raw body>")`, hex-encoded. The timestamp (Unix seconds) is part of the signed string, so a captured request cannot be replayed later with a fresh timestamp. Without a secret the headers are absent and the webhook is sent exactly as before.
 
-Every event RED posts to `webhook_urls` is signed the same way: `error.created`, `error_storm_detected`, `new_error_notifications_suppressed` and `baseline_anomaly`. Slack, Discord, Telegram and PagerDuty posts are not signed; those services define their own payloads.
+Every event RED posts to `webhook_urls` is signed the same way: `error.created`, `storm.detected`, `notifications.suppressed` and `baseline.anomaly_detected`. Slack, Discord, Telegram and PagerDuty posts are not signed; those services define their own payloads.
 
 **Verifying in Ruby** (the gem ships the check, or copy the three lines inside it):
 

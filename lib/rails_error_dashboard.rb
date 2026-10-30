@@ -8,6 +8,7 @@ require "rails_error_dashboard/test_error"
 require "rails_error_dashboard/configuration"
 require "rails_error_dashboard/logger"
 require "rails_error_dashboard/manual_error_reporter"
+require "rails_error_dashboard/webhooks"
 
 # Required dependencies
 require "pagy"

@@ -176,8 +176,8 @@ module RailsErrorDashboard
         _locale = locale
 
         {
-          event: "baseline_anomaly",
-          timestamp: Time.current.iso8601,
+          event: Webhooks::BASELINE_ANOMALY_DETECTED,
+          timestamp: Time.now.utc.iso8601,
           error: {
             id: error_log.id,
             application: NotificationHelpers.app_name(error_log),

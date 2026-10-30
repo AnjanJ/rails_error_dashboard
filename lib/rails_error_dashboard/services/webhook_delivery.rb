@@ -15,6 +15,12 @@ module RailsErrorDashboard
     # string is both signed and sent. Slack, Discord and PagerDuty keep their
     # own senders: their payloads are not ours to sign.
     #
+    # It also applies the contract in docs/WEBHOOKS.md: version on every body,
+    # and the event and error headers read from that body. Here rather than in
+    # each builder, because a builder that forgot them is how three of the four
+    # events ended up with no event header. 1.x may add to the contract, but
+    # never rename or remove anything in it.
+    #
     # Errors propagate. Every caller already rescues around its send and logs
     # in its own words (the specs pin those messages), so swallowing here would
     # only hide the failure from them.
@@ -22,16 +28,19 @@ module RailsErrorDashboard
       OPEN_TIMEOUT = 5
       READ_TIMEOUT = 10
       USER_AGENT = "RailsErrorDashboard/1.0"
+      CONTRACT_VERSION = 1
 
       class << self
         # @param url [String]
-        # @param payload [Hash] serialised with #to_json
-        # @param headers [Hash{String => String}] merged over the defaults
+        # @param payload [Hash] serialised with #to_json, with version added
+        # @param headers [Hash{String => String}] merged over the defaults. The
+        #   contract's headers win: they come from the body, so they can't disagree
         # @return [HTTParty::Response, Net::HTTPResponse]
         def post(url, payload, headers: {})
-          body = payload.to_json
+          body = { version: CONTRACT_VERSION }.merge(payload).to_json
           all_headers = { "Content-Type" => "application/json", "User-Agent" => USER_AGENT }
             .merge(headers)
+            .merge(contract_headers(payload))
             .merge(signature_headers(body))
 
           if defined?(HTTParty)
@@ -48,6 +57,14 @@ module RailsErrorDashboard
             request.body = body
             http.request(request)
           end
+        end
+
+        # The event, and the error when the body is about one.
+        def contract_headers(payload)
+          event = payload[:event]
+          Rails.logger.warn("[RailsErrorDashboard] Webhook body has no event: the contract needs one") if event.blank?
+
+          { "X-Error-Dashboard-Event" => event.presence, "X-Error-Dashboard-ID" => payload.dig(:error, :id)&.to_s }.compact
         end
 
         # Signature headers for +body+, or {} when no secret is configured.

@@ -118,7 +118,7 @@ RSpec.describe RailsErrorDashboard::StormNotificationJob do
         RailsErrorDashboard.configuration.webhook_urls = [ webhook_url_a, webhook_url_b ]
       end
 
-      it "posts an 'error_storm_detected' payload to every webhook URL" do
+      it "posts an 'storm.detected' payload to every webhook URL" do
         stub_request(:post, webhook_url_a).to_return(status: 200)
         stub_request(:post, webhook_url_b).to_return(status: 200)
 
@@ -126,9 +126,23 @@ RSpec.describe RailsErrorDashboard::StormNotificationJob do
 
         [ webhook_url_a, webhook_url_b ].each do |url|
           expect(WebMock).to have_requested(:post, url).with { |req|
-            JSON.parse(req.body)["event"] == "error_storm_detected"
+            JSON.parse(req.body)["event"] == "storm.detected"
           }.once
         end
+      end
+
+      # Serialised and run the way a queue backend does, so this is a job 0.17.0
+      # left in the queue, not a call to perform with today's arguments.
+      it "posts storm.detected for a job enqueued by 0.17.0 (webhook-v1/REQ-12)" do
+        stub_request(:post, webhook_url_a).to_return(status: 200)
+        stub_request(:post, webhook_url_b).to_return(status: 200)
+        enqueued = described_class.new(started_at: started_at, state: "open", locale: "en").serialize
+
+        ActiveJob::Base.execute(enqueued)
+
+        expect(WebMock).to have_requested(:post, webhook_url_a).with { |req|
+          JSON.parse(req.body)["event"] == "storm.detected"
+        }.once
       end
 
       it "keeps posting to the next URL when one receiver is down" do
