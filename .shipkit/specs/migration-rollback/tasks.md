@@ -26,7 +26,7 @@ time. The round-trip spec builds its own scratch databases and never touches
     - up, then up again → object present, no error (REQ-3)
   - After: T1
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures
-- [ ] **T3** The fifteen migrations the complete schema shadows → REQ-1, REQ-2, REQ-3, REQ-5
+- [x] **T3** The fifteen migrations the complete schema shadows → REQ-1, REQ-2, REQ-3, REQ-5
   - Files: db/migrate/20251224000001_create_rails_error_dashboard_error_logs.rb, db/migrate/20251224081522_add_better_tracking_to_error_logs.rb, db/migrate/20251224101217_add_controller_action_to_error_logs.rb, db/migrate/20251225071314_add_optimized_indexes_to_error_logs.rb, db/migrate/20251225085859_add_enhanced_metrics_to_error_logs.rb, db/migrate/20251225093603_add_similarity_tracking_to_error_logs.rb, db/migrate/20251225100236_create_error_occurrences.rb, db/migrate/20251225101920_create_cascade_patterns.rb, db/migrate/20251225102500_create_error_baselines.rb, db/migrate/20251226020000_add_workflow_fields_to_error_logs.rb, db/migrate/20251226020100_create_error_comments.rb, db/migrate/20251229111223_add_additional_performance_indexes.rb, db/migrate/20260106094220_create_rails_error_dashboard_applications.rb, db/migrate/20260306000003_create_rails_error_dashboard_swallowed_exceptions.rb, db/migrate/20260323000001_add_muted_to_error_logs.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec covers the fifteen:
     - on the upgrade history: down → object gone;
@@ -38,7 +38,7 @@ time. The round-trip spec builds its own scratch databases and never touches
   - After: T2
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures, and the same file is
     green on the PostgreSQL and MySQL `adapter-test` rows of the PR's CI run
-- [ ] **T6** The seven migrations the issue's list missed, and the rest of REQ-6 → REQ-1, REQ-2, REQ-3, REQ-4, REQ-6
+- [x] **T6** The seven migrations the issue's list missed, and the rest of REQ-6 → REQ-1, REQ-2, REQ-3, REQ-4, REQ-6
   - Files: db/migrate/20260220000001_add_exception_cause_to_error_logs.rb, db/migrate/20260220000002_add_enriched_context_to_error_logs.rb, db/migrate/20260221000001_add_environment_info_to_error_logs.rb, db/migrate/20260221000002_add_reopened_at_to_error_logs.rb, db/migrate/20260303000001_add_breadcrumbs_to_error_logs.rb, db/migrate/20260326000001_add_issue_tracking_to_error_logs.rb, db/migrate/20260915000003_add_context_provenance_to_error_logs.rb, db/migrate/20260106094318_finalize_application_foreign_key.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec:
     - the seven, as the eleven own-object migrations;

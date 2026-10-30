@@ -167,3 +167,7 @@ round-trip spec adds more than 60 seconds to an `adapter-test` row.
 - **The spec file with one migration on both histories,** process boot included: 1.9 s on SQLite,
   4.1 s on PostgreSQL, 5.2 s on MySQL.
 - **All 26 at T3:** a whole run of 5.4 s on SQLite, 11.4 s on PostgreSQL and 13.9 s on MySQL.
+- **All 46 on CI, measured:** 36.9 seconds on the MySQL row and 15.6 on the PostgreSQL row, against
+  the 60-second limit, so option 1 holds. The spec prints this into the job log. A row's total can't
+  answer this: with the spec added, the same run saw MySQL's suite 39 seconds slower and PostgreSQL's
+  24 seconds faster than a run without it, so noise between runs is about the size of the cost.
