@@ -15,9 +15,27 @@ RSpec.describe RailsErrorDashboard::Services::WebhookDelivery do
       described_class.post(url, payload)
 
       expect(WebMock).to have_requested(:post, url).with(
-        body: payload.to_json,
+        body: { version: 1 }.merge(payload).to_json,
         headers: { "Content-Type" => "application/json", "User-Agent" => "RailsErrorDashboard/1.0" }
       )
+    end
+
+    it "warns about a body with no event, and still posts it (webhook-v1/REQ-3)" do
+      stub_request(:post, url).to_return(status: 200)
+      allow(Rails.logger).to receive(:warn)
+
+      described_class.post(url, { error: { id: 1 } })
+
+      expect(Rails.logger).to have_received(:warn).with(/no event/)
+      expect(WebMock).to have_requested(:post, url).once
+    end
+
+    it "takes the event header from the body, so the two can't disagree (webhook-v1/REQ-3)" do
+      stub_request(:post, url).to_return(status: 200)
+
+      described_class.post(url, payload, headers: { "X-Error-Dashboard-Event" => "something.else" })
+
+      expect(WebMock).to have_requested(:post, url).with(headers: { "X-Error-Dashboard-Event" => "error.created" })
     end
 
     it "merges caller headers over the defaults" do

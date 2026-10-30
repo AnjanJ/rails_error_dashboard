@@ -20,7 +20,7 @@ module RailsErrorDashboard
       payload = Services::WebhookPayloadBuilder.call(error_log, locale: job_locale(locale))
 
       urls.each do |url|
-        send_webhook(url, payload, error_log)
+        send_webhook(url, payload)
       end
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Failed to send webhook notification: #{e.message}")
@@ -29,14 +29,10 @@ module RailsErrorDashboard
 
     private
 
-    def send_webhook(url, payload, error_log)
-      headers = {
-        "X-Error-Dashboard-Event" => "error.created",
-        "X-Error-Dashboard-ID" => error_log.id.to_s
-      }
-
-      # Serialises, signs (when webhook_signing_secret is set) and posts.
-      response = Services::WebhookDelivery.post(url, payload, headers: headers)
+    def send_webhook(url, payload)
+      # Adds the contract's version and headers, serialises, signs (when
+      # webhook_signing_secret is set) and posts.
+      response = Services::WebhookDelivery.post(url, payload)
 
       unless response_success?(response)
         Rails.logger.warn("[RailsErrorDashboard] Webhook failed for #{url}: #{response_code(response)}")

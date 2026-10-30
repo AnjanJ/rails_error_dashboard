@@ -17,8 +17,8 @@ time.
       `storm.detected` (REQ-12)
   - After: none
   - Done when: `R rspec spec/lib/rails_error_dashboard/webhooks_spec.rb spec/jobs/rails_error_dashboard spec/lib/rails_error_dashboard/services/baseline_alert_payload_builder_spec.rb spec/lib/rails_error_dashboard/services/webhook_payload_builder_spec.rb` → 0 failures
-- [ ] **T2** The envelope and headers, applied in `WebhookDelivery` → REQ-1, REQ-2, REQ-3, REQ-4, REQ-9, REQ-10, REQ-11
-  - Files: lib/rails_error_dashboard/services/webhook_delivery.rb, lib/rails_error_dashboard/services/webhook_payload_builder.rb, lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb, app/jobs/rails_error_dashboard/storm_notification_job.rb, app/jobs/rails_error_dashboard/notification_burst_summary_job.rb, app/jobs/rails_error_dashboard/webhook_error_notification_job.rb, spec/lib/rails_error_dashboard/services/webhook_delivery_spec.rb, spec/lib/rails_error_dashboard/services/webhook_contract_spec.rb
+- [x] **T2** The envelope and headers, applied in `WebhookDelivery` → REQ-1, REQ-2, REQ-3, REQ-4, REQ-9, REQ-10, REQ-11
+  - Files: lib/rails_error_dashboard/services/webhook_delivery.rb, lib/rails_error_dashboard/services/webhook_payload_builder.rb, lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb, app/jobs/rails_error_dashboard/storm_notification_job.rb, app/jobs/rails_error_dashboard/notification_burst_summary_job.rb, app/jobs/rails_error_dashboard/webhook_error_notification_job.rb, spec/lib/rails_error_dashboard/services/webhook_delivery_spec.rb, spec/lib/rails_error_dashboard/services/webhook_contract_spec.rb, spec/support/webhook_contract.rb
   - Test:
     - webhook_contract_spec, for each of the four events, through the real job with WebMock:
       - the body has `version: 1`, `event`, and a UTC `timestamp`;

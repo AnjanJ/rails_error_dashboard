@@ -29,7 +29,7 @@ module RailsErrorDashboard
 
         {
           event: Webhooks::ERROR_CREATED,
-          timestamp: Time.current.iso8601,
+          timestamp: Time.now.utc.iso8601,
           error: {
             id: error_log.id,
             application: NotificationHelpers.app_name(error_log),

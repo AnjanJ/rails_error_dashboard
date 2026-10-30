@@ -21,6 +21,7 @@ module RailsErrorDashboard
 
       deliver_plain_message(message, {
         event: Webhooks::STORM_DETECTED,
+        timestamp: Time.now.utc.iso8601,
         started_at: started_at,
         state: state,
         application: app_name(config)
