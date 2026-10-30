@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: db/migrate/,spec/db/,docs/TROUBLESHOOTING.md,docs/GLOSSARY.md,_reference/,_guides/
+> Paths: db/migrate/,spec/db/,spec/support/migration_round_trip.rb,spec/docs/rollback_docs_spec.rb,docs/TROUBLESHOOTING.md,docs/GLOSSARY.md,_reference/,_guides/
 
 ## Purpose
 33 of RED's migrations print "reverted" and drop nothing. That leaves the database's schema newer
