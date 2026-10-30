@@ -131,11 +131,12 @@ module RailsErrorDashboard
 
         output = read_until(deadline, stdout, stderr)
         status = wait_thread.join([ deadline - monotonic_now, 0 ].max)&.value if output
-        return [ *output, status ] if status
-
-        end_git(wait_thread)
-        nil
+        [ *output, status ] if status
       ensure
+        # On no status, not on wait_thread.alive?: a git that has exited can
+        # leave a child holding the pipes. An ensure, so that a host's own
+        # request timeout raising into this thread ends git too.
+        end_git(wait_thread) if wait_thread && !status
         [ stdin, stdout, stderr ].compact.each(&:close)
       end
 

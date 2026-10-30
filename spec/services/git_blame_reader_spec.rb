@@ -306,6 +306,30 @@ RSpec.describe RailsErrorDashboard::Services::GitBlameReader do
       expect_gone(recorded_pid("child.pid"))
     end
 
+    it "ends what git left holding its pipes after it exited (host-safety-0-18/REQ-1)" do
+      fake_git "sleep 30 &\necho $! > \"#{@fake_bin}/child.pid\""
+
+      expect(read_blame_in_time).to be_nil
+
+      expect(reader.error).to eq("Git blame timeout")
+      expect_gone(recorded_pid("child.pid"))
+    end
+
+    # A host's own request timeout, such as rack-timeout's, isn't a StandardError
+    # and raises wherever the thread happens to be.
+    it "ends git when something raises into the read, and lets it through (host-safety-0-18/REQ-1)" do
+      fake_git "exec sleep 30"
+      host_timeout = Class.new(Exception) # rubocop:disable Lint/InheritException
+      allow(IO).to receive(:select) do
+        sleep 0.01 until File.exist?(File.join(@fake_bin, "git.pid"))
+        raise host_timeout
+      end
+
+      expect { reader.read_blame }.to raise_error(host_timeout)
+
+      expect { Process.kill(0, recorded_pid("git.pid")) }.to raise_error(Errno::ESRCH)
+    end
+
     it "treats a git that closes its pipes and keeps running as a timeout (host-safety-0-18/REQ-1)" do
       fake_git "exec >&- 2>&-\nexec sleep 30"
 
