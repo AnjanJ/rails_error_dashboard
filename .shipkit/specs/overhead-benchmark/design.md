@@ -38,7 +38,9 @@
 - **Output:** a Markdown table: name, median, p95, budget, PASS/FAIL. Above it, the environment
   (REQ-6): Ruby, Rails, adapter, CPU model and count (from `/proc/cpuinfo` or `sysctl`), OS, RED
   commit. With `--summary <file>` the table is also appended to that file. CI passes
-  `$GITHUB_STEP_SUMMARY`.
+  `$GITHUB_STEP_SUMMARY`. Added during T4's review on 2026-10-30: `--smoke` runs every scenario for
+  a few iterations and labels the output as meaningless, so the suite can run the real script end
+  to end (no network, the summary file, the exit status) in seconds instead of a minute.
 - **CI:** a `benchmark` job in `.github/workflows/ci.yml` (REQ-8, REQ-9):
   - one row: Ruby 3.4, Rails 8.1, SQLite;
   - `permissions: contents: read`, with actions pinned by SHA as `spec/ci/workflows_spec.rb`

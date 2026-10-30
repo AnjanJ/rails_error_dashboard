@@ -2,22 +2,29 @@
 
 require "rails_helper"
 require "open3"
+require "tempfile"
 require_relative "../../benchmark/harness"
+require_relative "../../benchmark/scenarios"
 
 RSpec.describe "bin/benchmark harness" do
   root = File.expand_path("../..", __dir__)
 
-  # One boot of the real script, shared by the examples below: it takes a few
-  # seconds. RUBYOPT keeps the parent's (bundle exec puts bundler/setup there)
-  # and adds WebMock with every connection refused, so a network call anywhere
-  # in the boot fails the run.
-  before(:all) do
+  # Runs the real script. RUBYOPT keeps the parent's (bundle exec puts
+  # bundler/setup there) and adds WebMock with every connection refused, so a
+  # network call anywhere in the run fails it.
+  define_method(:run_script) do |*arguments|
     env = {
       "RUBYOPT" => "#{ENV['RUBYOPT']} -r#{File.join(root, 'spec/benchmark/offline.rb')}".strip,
       "RAILS_ENV" => nil,
       "DATABASE_URL" => nil
     }
-    @output, @errors, @status = Open3.capture3(env, "ruby", File.join(root, "bin/benchmark"), "--list", chdir: root)
+    Open3.capture3(env, "ruby", File.join(root, "bin/benchmark"), *arguments, chdir: root)
+  end
+
+  # One boot of the real script, shared by the examples below: it takes a few
+  # seconds.
+  before(:all) do
+    @output, @errors, @status = run_script("--list")
     @facts = @output.lines.filter_map { |line| line.chomp.split(": ", 2) if line.include?(": ") }.to_h
   end
 
@@ -49,6 +56,40 @@ RSpec.describe "bin/benchmark harness" do
     expect(Integer(@facts["CPUs"])).to be_positive
     expect(@facts["OS"]).to be_present
     expect(@facts["RED commit"]).to match(/\A\h{7,}\z/)
+  end
+
+  # The whole script, every scenario, once. In a few iterations a gated row can
+  # go either way, so these examples hold the script to its own table rather
+  # than to the budgets.
+  describe "a run with --summary" do
+    before(:all) do
+      @summary = Tempfile.new("red_benchmark_summary")
+      @summary.write("From an earlier step\n")
+      @summary.close
+      @run_output, @run_errors, @run_status = run_script("--smoke", "--summary", @summary.path)
+      @written = File.read(@summary.path)
+    end
+
+    after(:all) { @summary.unlink }
+
+    it "runs every scenario without touching the network (overhead-benchmark/REQ-1)" do
+      expect(@run_status.exitstatus).to be_between(0, 1), "bin/benchmark failed:\n#{@run_errors}"
+      expect(@run_output).to include(*RedBenchmark::Scenarios.all.map(&:name))
+    end
+
+    it "appends the table to the summary file, after what is already there (overhead-benchmark/REQ-9)" do
+      expect(@written).to start_with("From an earlier step\n")
+      expect(@written).to include("| Measurement | Median | p95 | Budget | Result |")
+      expect(@written).to include(*RedBenchmark::Scenarios.all.map(&:name))
+    end
+
+    it "exits non-zero exactly when its table shows a FAIL (overhead-benchmark/REQ-7)" do
+      expect(@run_status.exitstatus).to eq(@run_output.include?("| FAIL |") ? 1 : 0)
+    end
+
+    it "says a smoke run's numbers mean nothing (overhead-benchmark/REQ-9)" do
+      expect(@written).to include("Smoke run")
+    end
   end
 
   describe RedBenchmark::NullJobAdapter do
