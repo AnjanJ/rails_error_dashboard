@@ -38,10 +38,6 @@ RSpec.describe RailsErrorDashboard::Configuration do
         expect(config.async_logging).to be false
       end
 
-      it "sets async_adapter to :sidekiq" do
-        expect(config.async_adapter).to eq(:sidekiq)
-      end
-
       it "sets max_backtrace_lines to 100" do
         expect(config.max_backtrace_lines).to eq(100)
       end
@@ -216,26 +212,6 @@ RSpec.describe RailsErrorDashboard::Configuration do
         config.async_logging = false
 
         expect(config.async_logging).to be false
-      end
-    end
-
-    describe "async_adapter" do
-      it "can be set to :sidekiq" do
-        config.async_adapter = :sidekiq
-
-        expect(config.async_adapter).to eq(:sidekiq)
-      end
-
-      it "can be set to :solid_queue" do
-        config.async_adapter = :solid_queue
-
-        expect(config.async_adapter).to eq(:solid_queue)
-      end
-
-      it "can be set to :async" do
-        config.async_adapter = :async
-
-        expect(config.async_adapter).to eq(:async)
       end
     end
 

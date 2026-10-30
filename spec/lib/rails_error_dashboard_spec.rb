@@ -70,14 +70,12 @@ RSpec.describe RailsErrorDashboard do
       described_class.configure do |config|
         config.sampling_rate = 0.1
         config.async_logging = true
-        config.async_adapter = :solid_queue
         config.max_backtrace_lines = 25
       end
 
       config = described_class.configuration
       expect(config.sampling_rate).to eq(0.1)
       expect(config.async_logging).to be true
-      expect(config.async_adapter).to eq(:solid_queue)
       expect(config.max_backtrace_lines).to eq(25)
     end
   end

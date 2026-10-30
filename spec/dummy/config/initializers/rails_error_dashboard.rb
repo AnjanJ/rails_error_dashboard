@@ -18,7 +18,6 @@ RailsErrorDashboard.configure do |config|
 
   # Test async configuration
   config.async_logging = false # Sync for tests
-  config.async_adapter = :sidekiq
 
   # Storm protection OFF in tests (same rationale as async_logging = false):
   # specs that loop LogError.call must capture deterministically. Storm

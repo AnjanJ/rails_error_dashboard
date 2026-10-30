@@ -236,43 +236,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
-  describe "async_adapter validation" do
-    context "when async logging is disabled" do
-      it "does not validate async_adapter" do
-        config.async_logging = false
-        config.async_adapter = :invalid
-        expect { config.validate! }.not_to raise_error
-      end
-    end
-
-    context "when async logging is enabled" do
-      before { config.async_logging = true }
-
-      it "accepts :sidekiq" do
-        config.async_adapter = :sidekiq
-        expect { config.validate! }.not_to raise_error
-      end
-
-      it "accepts :solid_queue" do
-        config.async_adapter = :solid_queue
-        expect { config.validate! }.not_to raise_error
-      end
-
-      it "accepts :async" do
-        config.async_adapter = :async
-        expect { config.validate! }.not_to raise_error
-      end
-
-      it "rejects invalid adapters" do
-        config.async_adapter = :resque
-        expect { config.validate! }.to raise_error(
-          RailsErrorDashboard::ConfigurationError,
-          /async_adapter must be one of.*got: :resque/
-        )
-      end
-    end
-  end
-
   describe "notification validation" do
     describe "Slack notifications" do
       it "requires webhook URL when enabled" do

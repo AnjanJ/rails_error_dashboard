@@ -125,7 +125,6 @@ module RailsErrorDashboard
 
     # Async logging configuration
     attr_accessor :async_logging
-    attr_accessor :async_adapter # :sidekiq, :solid_queue, or :async
 
     # Backtrace configuration
     attr_accessor :max_backtrace_lines
@@ -262,7 +261,6 @@ module RailsErrorDashboard
 
     # LLM observability (requires enable_breadcrumbs = true)
     attr_accessor :enable_llm_observability             # Master switch (default: false)
-    attr_accessor :llm_observability_content_capture    # Capture prompt/completion text (default: false — PII risk)
     attr_accessor :llm_pricing_overrides                # Hash of { "model-name" => { input: usd_per_1m, output: usd_per_1m } }
 
     # OpenTelemetry outbound export — emit gem operations as OTel spans for
@@ -389,7 +387,6 @@ module RailsErrorDashboard
       @context_sampling_threshold_per_day = 25
       @context_sampling_keep_every = 10
       @async_logging = false
-      @async_adapter = :sidekiq # Battle-tested default
       @max_backtrace_lines = 100 # Matches industry standard (Rollbar, Airbrake)
 
       # Rate limiting defaults
@@ -533,7 +530,6 @@ module RailsErrorDashboard
       # LLM observability defaults - OFF by default (opt-in, requires breadcrumbs)
       # content_capture stays OFF even when master switch is on (privacy: prompts may contain PII/secrets)
       @enable_llm_observability = false
-      @llm_observability_content_capture = false
       @llm_pricing_overrides = {}
 
       # OTel outbound export defaults — OFF (opt-in). All four span kinds enabled
@@ -579,6 +575,25 @@ module RailsErrorDashboard
     #
     # @param env_name [String] the Rails environment
     # @return [Boolean]
+    # Deprecated (decision 0004). Neither option ever did anything, so assigning
+    # one warns and stores nothing, and reading one gives nil. The setters are what
+    # keep an initializer that still assigns them booting. Both go in 2.0.
+    def async_adapter
+      nil
+    end
+
+    def async_adapter=(_value)
+      Deprecation.warn(:async_adapter, "config.async_adapter does nothing: RED's jobs run on your app's Active Job adapter. Delete the line. It will be removed in 2.0.")
+    end
+
+    def llm_observability_content_capture
+      nil
+    end
+
+    def llm_observability_content_capture=(_value)
+      Deprecation.warn(:llm_observability_content_capture, "config.llm_observability_content_capture does nothing: it was reserved and never used. Delete the line. It will be removed in 2.0.")
+    end
+
     def separate_database_entry?(env_name = Rails.env)
       name = (database || :error_dashboard).to_s
       ActiveRecord::Base.configurations.configs_for(env_name: env_name.to_s).any? { |config| config.name == name }
@@ -673,14 +688,6 @@ module RailsErrorDashboard
         if invalid_severities.any?
           errors << "baseline_alert_severities contains invalid values: #{invalid_severities.inspect}. " \
                     "Valid options: #{valid_severities.inspect}"
-        end
-      end
-
-      # Validate async_adapter (must be valid adapter)
-      if async_logging && async_adapter
-        valid_adapters = %i[sidekiq solid_queue async]
-        unless valid_adapters.include?(async_adapter)
-          errors << "async_adapter must be one of #{valid_adapters.inspect} (got: #{async_adapter.inspect})"
         end
       end
 

@@ -18,7 +18,7 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
       `ActiveSupport::Deprecation.behavior` on 7.0)
   - After: none
   - Done when: `R rspec spec/lib/rails_error_dashboard/deprecation_spec.rb` → 0 failures
-- [ ] **T2** The two dead options warn and store nothing → REQ-4, REQ-5, REQ-6, REQ-7, REQ-9
+- [x] **T2** The two dead options warn and store nothing → REQ-4, REQ-5, REQ-6, REQ-7, REQ-9
   - Files: lib/rails_error_dashboard/configuration.rb, app/views/rails_error_dashboard/errors/settings.html.erb, spec/lib/rails_error_dashboard/deprecated_options_spec.rb, spec/lib/rails_error_dashboard/configuration_spec.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb, spec/lib/rails_error_dashboard_spec.rb, spec/lib/rails_error_dashboard/commands/async_logging_spec.rb, spec/lib/rails_error_dashboard/commands/backtrace_limiting_spec.rb, spec/requests/settings_option_count_spec.rb, spec/dummy/config/initializers/rails_error_dashboard.rb
   - Test: deprecated_options_spec:
     - assigning either option logs one deprecation and the reader returns nil;

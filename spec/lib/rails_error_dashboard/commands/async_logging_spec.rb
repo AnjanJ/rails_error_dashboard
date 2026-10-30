@@ -111,10 +111,9 @@ RSpec.describe "Async Error Logging", type: :integration do
       RailsErrorDashboard::Commands::LogError.call(error, context)
     end
 
-    it "works with different queue adapters" do
-      # Just verify job is enqueued - the adapter handles the rest
-      [ :sidekiq, :solid_queue, :async ].each do |adapter|
-        RailsErrorDashboard.configure { |c| c.async_adapter = adapter }
+    it "enqueues on the app's adapter, whatever async_adapter says (deprecations-0-18/REQ-7)" do
+      [ nil, :sidekiq, :resque ].each do |adapter|
+        RailsErrorDashboard.configure { |c| c.async_adapter = adapter } if adapter
 
         error = StandardError.new("Adapter test")
         expect {
@@ -193,7 +192,6 @@ RSpec.describe "Async Error Logging", type: :integration do
     before do
       RailsErrorDashboard.configure do |config|
         config.async_logging = true
-        config.async_adapter = :async
       end
     end
 
@@ -256,7 +254,6 @@ RSpec.describe "Async Error Logging", type: :integration do
     before do
       RailsErrorDashboard.configure do |config|
         config.async_logging = true
-        config.async_adapter = :async
         config.ignored_exceptions = [ "ActionController::RoutingError" ]
       end
     end
@@ -279,7 +276,6 @@ RSpec.describe "Async Error Logging", type: :integration do
     before do
       RailsErrorDashboard.configure do |config|
         config.async_logging = true
-        config.async_adapter = :async
       end
     end
 
@@ -317,7 +313,6 @@ RSpec.describe "Async Error Logging", type: :integration do
     before do
       RailsErrorDashboard.configure do |config|
         config.async_logging = true
-        config.async_adapter = :async
         config.sampling_rate = 0.0  # Skip all non-critical
       end
     end

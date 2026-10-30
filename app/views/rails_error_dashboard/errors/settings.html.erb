@@ -37,8 +37,7 @@
       icon: "bi-lightning-charge",
       color: "dark",
       settings: {
-        async_logging: { type: :boolean, extra: :async_adapter },
-        async_adapter: { type: :symbol, show_if: :async_logging },
+        async_logging: { type: :boolean },
         enable_rate_limiting: { type: :boolean },
         rate_limit_per_minute: { type: :integer, show_if: :enable_rate_limiting }
       }
