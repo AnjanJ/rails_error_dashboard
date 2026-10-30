@@ -7,7 +7,7 @@ cites `deprecations-0-18/REQ-N`. One commit per task, test and code together.
 time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s reported keys in an
 `after` hook, so one example's warning can't hide another's.
 
-- [ ] **T1** One reporter for every deprecation → REQ-1, REQ-2, REQ-3
+- [x] **T1** One reporter for every deprecation → REQ-1, REQ-2, REQ-3
   - Files: lib/rails_error_dashboard/deprecation.rb, lib/rails_error_dashboard.rb, spec/lib/rails_error_dashboard/deprecation_spec.rb
   - Test: deprecation_spec:
     - the line starts `[Rails Error Dashboard] DEPRECATION:`;
