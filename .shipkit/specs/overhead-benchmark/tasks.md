@@ -40,7 +40,7 @@ collide.
     reopen collision (`claim_conflicting_row` reached). report_spec: the Markdown table shows
     each row's median, p95, budget and verdict (REQ-4), under the environment block (REQ-6).
   - After: T2
-  - Done when: `R rspec spec/benchmark/scenarios_spec.rb` → 0 failures, and `R bin/benchmark` prints a table with all nine rows
+  - Done when: `R rspec spec/benchmark/scenarios_spec.rb` → 0 failures, and `R bin/benchmark` prints a table with all ten rows (nine until T4's review added shedding)
 - [x] **T4** CI runs it and fails on a breach → REQ-8, REQ-9
   - Files: .github/workflows/ci.yml, spec/ci/workflows_spec.rb
   - Test: workflows_spec:

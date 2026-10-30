@@ -21,7 +21,8 @@
 |---|---|---|
 | Capture (async, the installer's default) | A Rack app that raises a pre-built exception, under `ErrorCatcher` and the `Rails.error` subscriber, minus the same app with RED's middleware and subscriber off | < 5 ms |
 | Storm check, calm | `StormProtection::Gate.admit!` with the breaker closed (`Gate.reset!` before the scenario) | < 5 µs |
-| Storm check, active | the same, with the breaker driven into shedding | < 5 µs |
+| Storm check, shedding | the same, with the breaker shedding and the open threshold out of reach | < 5 µs |
+| Storm check, breaker open | the same, with the breaker driven open | < 5 µs |
 | Breadcrumb callback | the body of RED's `sql.active_record` subscriber (build the event, then `handle_sql`), with a buffer on the thread | < 0.01 ms |
 | Health snapshot | `SystemHealthSnapshot.capture` | < 1 ms |
 | Capture (sync) | as the first row, with `async_logging = false` | reported |
@@ -29,6 +30,11 @@
 | Params fitting | `CaptureLimits.request_params` on a 1 MB JSON body | reported (reverses above 5 ms) |
 | Reopen-collision fallback | `FindOrIncrementError` on a resolved row whose identity an unresolved row already holds | reported (reverses above 5 ms) |
 
+  Added during T4's review on 2026-10-30: "protection active" (REQ-2) is two states, and T3 had
+  timed only `:open`. Shedding makes the calm row's bucket decision and then counts as `:open`
+  does, so it's the gate's slowest branch: 4.5 µs against 4.3 µs for open on the M3 Max. Each is
+  a gated row. A breaker only sheds once a bucket rolls, ten seconds in, so the scenario brings the
+  roll forward instead of waiting.
 - **Output:** a Markdown table: name, median, p95, budget, PASS/FAIL. Above it, the environment
   (REQ-6): Ruby, Rails, adapter, CPU model and count (from `/proc/cpuinfo` or `sysctl`), OS, RED
   commit. With `--summary <file>` the table is also appended to that file. CI passes

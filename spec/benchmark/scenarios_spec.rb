@@ -24,6 +24,7 @@ RSpec.describe RedBenchmark::Scenarios do
     expect(budgets).to eq(
       "Capture, async (installer default)" => 5e-3,
       "Storm check, calm" => 5e-6,
+      "Storm check, shedding" => 5e-6,
       "Storm check, breaker open" => 5e-6,
       "Breadcrumb callback" => 1e-5,
       "Health snapshot" => 1e-3,
@@ -55,6 +56,23 @@ RSpec.describe RedBenchmark::Scenarios do
 
     expect(states.size).to be >= 4
     expect(states.uniq).to eq([ :closed ])
+  end
+
+  it "times the storm check while shedding, which decides and counts (overhead-benchmark/REQ-2)" do
+    gate = RailsErrorDashboard::Services::StormProtection::Gate
+    states = []
+    decisions = []
+    allow(gate).to receive(:admit!).and_wrap_original do |original, *args|
+      original.call(*args).tap do |decision|
+        states << gate.state
+        decisions << decision
+      end
+    end
+
+    scenario("Storm check, shedding").run.call(timer)
+
+    expect(states.last(4).uniq).to eq([ :shedding ])
+    expect(decisions.last(4)).to include(:count_only)
   end
 
   it "times the storm check with the breaker open (overhead-benchmark/REQ-2)" do

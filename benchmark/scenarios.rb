@@ -46,6 +46,7 @@ module RedBenchmark
       [
         capture("Capture, async (installer default)", async: true, budget: 5e-3, iterations: 1_000),
         storm_calm,
+        storm_shedding,
         storm_open,
         breadcrumb,
         health_snapshot,
@@ -76,6 +77,26 @@ module RedBenchmark
         with_config(**CALM_STORM) do
           exception = raised_exception
           timer.measure("Storm check, calm", budget: 5e-6, batch: BATCH) { gate.admit!(exception, {}) }
+        end
+      end)
+    end
+
+    # The gate's worst case: the bucket decision the calm row makes, then the
+    # count the open row makes. A breaker only sheds once a bucket rolls, ten
+    # seconds in, so the roll is brought forward rather than waited for. The
+    # open threshold is out of reach, or the timed calls would trip the breaker
+    # straight through this state.
+    def storm_shedding
+      Scenario.new(name: "Storm check, shedding", budget: 5e-6, iterations: 1_000, run: lambda do |timer|
+        with_config(enable_storm_protection: true, storm_open_threshold_per_second: 1_000_000_000) do
+          exception = raised_exception
+          breaker = gate.breaker
+          bucket = RailsErrorDashboard::Services::StormProtection::CircuitBreaker::BUCKET_SECONDS
+          (2 * bucket * RailsErrorDashboard.configuration.storm_shedding_threshold_per_second).times { gate.admit!(exception, {}) }
+          breaker.instance_variable_set(:@bucket_start, breaker.instance_variable_get(:@bucket_start) - bucket)
+          raise "the breaker did not start shedding (state: #{gate.state})" unless gate.state == :shedding
+
+          timer.measure("Storm check, shedding", budget: 5e-6, batch: BATCH) { gate.admit!(exception, {}) }
         end
       end)
     end
