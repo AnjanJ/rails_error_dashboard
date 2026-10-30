@@ -131,7 +131,7 @@ module RailsErrorDashboard
         Rails.cache.fetch(key, expires_in: COLUMN_VISIBILITY_TTL) do
           scope = application_id ? ErrorLog.where(application_id: application_id) : ErrorLog.all
           {
-            platform: scope.distinct.pluck(:platform).compact.size > 1,
+            platform: scope.platform_listed.distinct.pluck(:platform).compact.size > 1,
             environment: ErrorLog.column_names.include?("environment") &&
               scope.distinct.pluck(:environment).compact.size > 1,
             application: application_id.nil? && Application.count > 1

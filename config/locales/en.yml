@@ -552,6 +552,8 @@ en:
 
         heatmap_title: "Hourly Distribution Heatmap"
         # %{multiplier} is the peak threshold relative to the average.
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Hours are in %{zone}."
         heatmap_legend: "Darker cells = more errors. Red borders indicate peak hours (>%{multiplier}x average)."
         # %{hour} is a formatted hour, %{count} the error count in it.
         heatmap_cell:

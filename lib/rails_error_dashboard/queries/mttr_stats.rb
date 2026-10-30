@@ -49,7 +49,7 @@ module RailsErrorDashboard
       end
 
       def mttr_by_platform
-        platforms_scope = ErrorLog.all
+        platforms_scope = ErrorLog.platform_listed
         platforms_scope = platforms_scope.where(application_id: @application_id) if @application_id.present?
         platforms = platforms_scope.distinct.pluck(:platform).compact
 

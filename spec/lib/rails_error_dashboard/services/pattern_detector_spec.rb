@@ -3,6 +3,33 @@
 require "rails_helper"
 
 RSpec.describe RailsErrorDashboard::Services::PatternDetector do
+  describe "the zone of the hours" do
+    around { |example| Time.use_zone("Asia/Kolkata") { example.run } }
+
+    it "counts a plain UTC time in the app's zone (small-fixes-0-18/REQ-5)" do
+      result = described_class.analyze_cyclical_pattern(timestamps: [ Time.utc(2026, 10, 28, 8) ], days: 30)
+
+      expect(result[:hourly_distribution].keys).to eq([ 13 ])
+    end
+
+    it "counts the weekday in the app's zone too (small-fixes-0-18/REQ-5)" do
+      # Saturday 20:00 UTC is Sunday 01:30 in Kolkata.
+      result = described_class.analyze_cyclical_pattern(timestamps: [ Time.utc(2026, 10, 31, 20) ], days: 30)
+
+      expect(result[:weekday_distribution].keys).to eq([ 0 ])
+    end
+
+    it "gets there from a stored error too, the way the dashboard does (small-fixes-0-18/REQ-5)" do
+      error = create(:error_log, occurred_at: Time.utc(2026, 10, 28, 8))
+      create(:error_occurrence, error_log: error, occurred_at: Time.utc(2026, 10, 28, 8))
+      allow(RailsErrorDashboard.configuration).to receive(:enable_occurrence_patterns).and_return(true)
+
+      travel_to Time.utc(2026, 10, 29, 8) do
+        expect(error.occurrence_pattern(days: 30)[:hourly_distribution].keys).to eq([ 13 ])
+      end
+    end
+  end
+
   describe ".analyze_cyclical_pattern" do
     it "returns empty pattern when no timestamps" do
       result = described_class.analyze_cyclical_pattern(timestamps: [], days: 30)

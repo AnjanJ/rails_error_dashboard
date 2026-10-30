@@ -349,6 +349,8 @@ zh-CN:
             label: 规律较弱
             description: 错误分布相对均匀
         heatmap_title: 按小时分布的热力图
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "时间为 %{zone}。"
         heatmap_legend: 颜色越深表示错误越多。红色边框标示高峰时段（超过平均值的 %{multiplier} 倍）。
         heatmap_cell:
           other: "%{hour} — %{count} 个错误"

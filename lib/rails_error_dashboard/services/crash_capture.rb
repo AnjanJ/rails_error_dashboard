@@ -38,6 +38,7 @@ module RailsErrorDashboard
       RUNTIME_PHASE = "runtime"
       BOOT_PLATFORM = "boot_crash"
       RUNTIME_PLATFORM = "crash_capture"
+      PLATFORMS = [ BOOT_PLATFORM, RUNTIME_PLATFORM ].freeze
 
       # "expected file /app/app/models/foo.rb to define constant Foo, but didn't"
       ZEITWERK_MESSAGE = /expected file (?<file>.+?) to define constant (?<constant>\S+), but didn't/

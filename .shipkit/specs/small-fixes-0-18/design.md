@@ -14,6 +14,10 @@
     - `queries/dashboard_stats.rb:40`;
     - `queries/analytics_stats.rb:123`;
     - `queries/baseline_stats.rb:98`, `:120`.
+  - **Two places can't take the scope, with the same result:** `analytics_stats` filters a grouped
+    hash, and `ErrorBaseline` is another model, whose `platform` can't be NULL.
+  - **`services/error_broadcaster.rb:134`** uses the scope too. It decides the live list's Platform
+    column, which has to match the index's rule, `@platforms.size > 1`.
   - **Unchanged:** `queries/boot_errors.rb`, the error list and error pages (REQ-2).
 - **Badges.** One helper, `platform_badge(platform)`, matches `ios`, `android` and `web` in any
   case. It replaces the four copies of the same `if/elsif` in `errors/_error_row.html.erb:89-99`,

@@ -389,6 +389,8 @@ it:
             label: Schema debole
             description: Errori distribuiti in modo abbastanza uniforme
         heatmap_title: Mappa di calore della distribuzione oraria
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Ore in %{zone}."
         heatmap_legend: Celle più scure = più errori. Il bordo rosso indica le ore
           di picco (>%{multiplier}x la media).
         heatmap_cell:

@@ -395,6 +395,8 @@ uk:
             label: Слабка закономірність
             description: Помилки розподілені досить рівномірно
         heatmap_title: Теплова карта погодинного розподілу
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Час вказано в %{zone}."
         heatmap_legend: Темніші клітинки = більше помилок. Червона рамка позначає
           пікові години (>%{multiplier}x від середнього).
         heatmap_cell:

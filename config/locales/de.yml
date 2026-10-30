@@ -379,6 +379,8 @@ de:
             label: Schwaches Muster
             description: Fehler verteilen sich recht gleichmäßig
         heatmap_title: Heatmap der stündlichen Verteilung
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Uhrzeiten in %{zone}."
         heatmap_legend: Dunklere Zellen = mehr Fehler. Rote Ränder kennzeichnen Spitzenstunden
           (>%{multiplier}x des Durchschnitts).
         heatmap_cell:

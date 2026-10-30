@@ -394,6 +394,8 @@ pt-BR:
             label: Padrão fraco
             description: Os erros se distribuem de forma bastante uniforme
         heatmap_title: Mapa de calor da distribuição por hora
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Horas em %{zone}."
         heatmap_legend: Células mais escuras = mais erros. As bordas vermelhas indicam
           os horários de pico (>%{multiplier}x a média).
         heatmap_cell:

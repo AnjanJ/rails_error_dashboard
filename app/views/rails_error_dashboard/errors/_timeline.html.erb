@@ -35,15 +35,7 @@
                   <% end %>
 
                   <% if error.platform.present? %>
-                    <% if error.platform == 'iOS' %>
-                      <span class="badge badge-ios ms-2"><i class="bi bi-apple"></i> iOS</span>
-                    <% elsif error.platform == 'Android' %>
-                      <span class="badge badge-android ms-2"><i class="bi bi-android2"></i> Android</span>
-                    <% elsif error.platform == 'Web' %>
-                      <span class="badge badge-web ms-2"><i class="bi bi-globe"></i> Web</span>
-                    <% else %>
-                      <span class="badge badge-api ms-2"><i class="bi bi-server"></i> <%= error.platform %></span>
-                    <% end %>
+                    <%= platform_badge(error.platform, css: "ms-2") %>
                   <% end %>
                 </div>
 

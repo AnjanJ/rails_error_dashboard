@@ -120,7 +120,7 @@ module RailsErrorDashboard
       end
 
       def errors_by_platform
-        volume.by_group_attribute(:platform)
+        volume.by_group_attribute(:platform).except(*Services::CrashCapture::PLATFORMS)
       end
 
       # NULL (captured before the column existed) is reported under :unknown
