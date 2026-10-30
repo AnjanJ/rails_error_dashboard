@@ -287,33 +287,33 @@ rails_error_dashboard:uninstall
 --telegram
 --pagerduty
 --webhooks
---async_logging
---error_sampling
---separate_database
+--async-logging
+--error-sampling
+--separate-database
 --database
---baseline_alerts
---similar_errors
---co_occurring_errors
---error_cascades
---error_correlation
---platform_comparison
---occurrence_patterns
---source_code_integration
---git_blame
+--baseline-alerts
+--similar-errors
+--co-occurring-errors
+--error-cascades
+--error-correlation
+--platform-comparison
+--occurrence-patterns
+--source-code-integration
+--git-blame
 --breadcrumbs
---system_health
---swallowed_exceptions
---crash_capture
---diagnostic_dump
+--system-health
+--swallowed-exceptions
+--crash-capture
+--diagnostic-dump
 --quick
 ```
 
 ### Uninstall generator options
 
 ```text
---keep_data
---skip_confirmation
---manual_only
+--keep-data
+--skip-confirmation
+--manual-only
 ```
 
 ### Rake tasks

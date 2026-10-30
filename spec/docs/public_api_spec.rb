@@ -106,7 +106,7 @@ RSpec.describe "The public API page" do
       generator = RailsErrorDashboard::Generators.const_get("#{name.camelize}Generator")
       own = generator.class_options.keys - Rails::Generators::Base.class_options.keys
 
-      expect(listed("#{name.capitalize} generator options")).to match_array(own.map { |option| "--#{option}" })
+      expect(listed("#{name.capitalize} generator options")).to match_array(generator.class_options.values_at(*own).map(&:switch_name))
     end
   end
 
