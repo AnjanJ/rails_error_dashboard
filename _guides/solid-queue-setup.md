@@ -31,7 +31,7 @@ Check your config with:
 bin/rails rails_error_dashboard:verify
 ```
 
-It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running. The line appears only when Solid Queue is in your bundle and `config/queue.yml` exists. Since 0.14.4, when Solid Queue runs RED's jobs and the running environment's section would never run them, RED also logs an error at boot and shows a banner on every dashboard page.
+It reports "Solid Queue config... OK", or the problem in each environment. It checks the file, so it can't tell whether a worker process is running. It checks the file whenever there is one, even if Solid Queue isn't loaded in that process. With Solid Queue and no file, it says Solid Queue's defaults process RED's queues. Since 0.14.4, when Solid Queue runs RED's jobs and the running environment's section would never run them, RED also logs an error at boot and shows a banner on every dashboard page.
 
 ## Quick Start
 

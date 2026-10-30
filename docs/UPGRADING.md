@@ -18,7 +18,7 @@ bin/rails db:migrate
 ```
 
 Then commit the new migration files along with `Gemfile.lock`, and deploy. To check the result,
-run `bin/rails error_dashboard:verify`.
+run `bin/rails rails_error_dashboard:verify`.
 
 On an app that already has RED, the installer:
 
@@ -52,7 +52,7 @@ the installer, as above. On an app without a separate database, the two copy the
 - With a separate database, every environment in `config/database.yml` needs the
   `error_dashboard` entry, with `migrations_paths: db/error_dashboard_migrate`. If an environment
   has no entry, RED logs an error at boot and falls back to the main database, which has no RED
-  tables, so that environment's errors are not recorded anywhere. `bin/rails error_dashboard:verify`
+  tables, so that environment's errors are not recorded anywhere. `bin/rails rails_error_dashboard:verify`
   reports it.
 
 ## Releases that need a step
@@ -158,7 +158,7 @@ Then run `bundle update json`. Remove the pin once you're on Rails 8.1.4, 7.2.4 
 
 On Rails 7.2, check that you really got 7.2.4: it caps `minitest` below 6 and `connection_pool`
 below 3, which 7.2.3 doesn't, so Bundler can keep you on 7.2.3 while it moves json to 3.0. Require
-it with `gem "rails", "~> 7.2.4"`. Since 0.14.4, `bin/rails error_dashboard:verify` warns when json
+it with `gem "rails", "~> 7.2.4"`. Since 0.14.4, `bin/rails rails_error_dashboard:verify` warns when json
 3 runs on a Rails it breaks.
 
 ## Stuck at db:migrate after installing 0.4.0 to 0.8.1
