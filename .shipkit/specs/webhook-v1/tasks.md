@@ -31,8 +31,8 @@ time.
     - Slack, Discord and Telegram bodies are byte-identical to 0.17.0's (REQ-11)
   - After: T1
   - Done when: `R rspec spec/lib/rails_error_dashboard/services/webhook_contract_spec.rb spec/lib/rails_error_dashboard/services/webhook_delivery_spec.rb spec/jobs/rails_error_dashboard` → 0 failures
-- [ ] **T3** The contract page, and a spec that keeps it complete → REQ-13, REQ-14
-  - Files: docs/WEBHOOKS.md, docs/API_REFERENCE.md, spec/docs/webhooks_contract_doc_spec.rb
+- [x] **T3** The contract page, and a spec that keeps it complete → REQ-13, REQ-14
+  - Files: docs/WEBHOOKS.md, _reference/webhooks.md, docs/API_REFERENCE.md, _reference/api-reference.md, spec/docs/webhooks_contract_doc_spec.rb
   - Test: webhooks_contract_doc_spec:
     - every value in `Webhooks::EVENTS` appears on `docs/WEBHOOKS.md` with an example body;
     - the page names every top-level body key from the T2 contract spec's bodies, and every

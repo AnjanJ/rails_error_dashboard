@@ -297,6 +297,8 @@ These routes skip the dashboard's login and CSRF check. They check a signature m
 
 ### Webhooks RED sends
 
+Every event, field and header is in the [Webhook contract](/rails_error_dashboard/docs/reference/webhooks/), including what stays fixed for 1.x.
+
 With `enable_webhook_notifications` and `webhook_urls`, RED POSTs JSON to your URLs (see the
 [Notifications guide](/rails_error_dashboard/docs/guides/notifications/#webhook-notifications-new)). Set `config.webhook_signing_secret`, or
 `WEBHOOK_SIGNING_SECRET`, and every POST is signed:
