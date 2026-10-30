@@ -55,7 +55,8 @@ module RailsErrorDashboard
       def call
         ActiveRecord::Migration.verbose = false
         @config = ActiveRecord::Base.connection_db_config
-        HISTORIES.to_h { |history| [ history, walk(history) ] }
+        results = HISTORIES.to_h { |history| [ history, walk(history) ] }
+        results.merge("empty" => down_on_an_empty_database)
       ensure
         ActiveRecord::Base.connection_pool.disconnect!
         ActiveRecord::Tasks::DatabaseTasks.drop(@config)
@@ -100,6 +101,14 @@ module RailsErrorDashboard
           "up" => { "error" => up_error, "missing" => object - objects(after_up) },
           "up_again" => { "error" => up_again_error, "changed" => schema != after_up }
         }
+      end
+
+      # The far end of "its object doesn't exist": no table either, which the
+      # walk never reaches. column_exists? raises there on all three databases.
+      def down_on_an_empty_database
+        rebuild("fresh")
+        chosen = migrations("fresh").select { |migration| @versions.include?(migration.version) }
+        chosen.to_h { |migration| [ migration.version.to_s, attempt { migration.migrate(:down) } ] }
       end
 
       def attempt

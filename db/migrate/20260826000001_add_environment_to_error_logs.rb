@@ -8,8 +8,11 @@
 # wildcard by FindOrIncrementError and adopted on the next occurrence), not a
 # gap to paper over with a default. `rails_error_dashboard:backfill_environments`
 # fills NULLs from environment_info.rails_env for anyone who wants history too.
+#
+# up/down rather than `change`: the column_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddEnvironmentToErrorLogs < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Guard against the squashed schema migration having already added this
     # column -- without it, every later migration is silently cancelled.
     return if column_exists?(:rails_error_dashboard_error_logs, :environment)
@@ -22,5 +25,16 @@ class AddEnvironmentToErrorLogs < ActiveRecord::Migration[7.0]
     # "this environment, newest first".
     add_index :rails_error_dashboard_error_logs, [ :environment, :occurred_at ],
               name: "index_error_logs_on_environment_and_occurred_at"
+  end
+
+  def down
+    return unless table_exists?(:rails_error_dashboard_error_logs)
+
+    if index_name_exists?(:rails_error_dashboard_error_logs, "index_error_logs_on_environment_and_occurred_at")
+      remove_index :rails_error_dashboard_error_logs, name: "index_error_logs_on_environment_and_occurred_at"
+    end
+    return unless column_exists?(:rails_error_dashboard_error_logs, :environment)
+
+    remove_column :rails_error_dashboard_error_logs, :environment
   end
 end

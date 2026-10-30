@@ -15,11 +15,21 @@
 # Overview report an incomplete dimension instead of presenting a figure of
 # unknown completeness as fact -- exactly as affected_users_incomplete already
 # does for storm-shed occurrence rows.
+#
+# up/down rather than `change`: the column_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddBucketsIncompleteToStormEvents < ActiveRecord::Migration[7.0]
-  def change
+  def up
     return unless table_exists?(:rails_error_dashboard_storm_events)
     return if column_exists?(:rails_error_dashboard_storm_events, :buckets_incomplete)
 
     add_column :rails_error_dashboard_storm_events, :buckets_incomplete, :boolean, default: false
+  end
+
+  def down
+    return unless table_exists?(:rails_error_dashboard_storm_events)
+    return unless column_exists?(:rails_error_dashboard_storm_events, :buckets_incomplete)
+
+    remove_column :rails_error_dashboard_storm_events, :buckets_incomplete
   end
 end

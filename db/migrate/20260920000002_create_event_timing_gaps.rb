@@ -27,8 +27,11 @@
 # Bounded by construction: one row per (application, bucket) per degraded
 # flush, and only while the rollup is actually unusable -- which is a
 # misconfiguration, not a steady state. Retention prunes it by covered_until.
+#
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateEventTimingGaps < ActiveRecord::Migration[7.0]
-  def change
+  def up
     return if table_exists?(:rails_error_dashboard_event_timing_gaps)
 
     create_table :rails_error_dashboard_event_timing_gaps do |t|
@@ -51,5 +54,9 @@ class CreateEventTimingGaps < ActiveRecord::Migration[7.0]
     # app's deploy (see mailboxer#480).
     add_index :rails_error_dashboard_event_timing_gaps, :covered_until,
               name: "index_red_timing_gaps_on_covered_until"
+  end
+
+  def down
+    drop_table :rails_error_dashboard_event_timing_gaps, if_exists: true
   end
 end

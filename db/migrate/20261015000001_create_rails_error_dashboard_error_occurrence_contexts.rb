@@ -7,8 +7,11 @@
 #
 # A side table, not columns on error_occurrences: the co-occurrence queries
 # load occurrence rows whole, and these payloads run to several KB.
+#
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateRailsErrorDashboardErrorOccurrenceContexts < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Guard against the squashed schema migration having already created this
     # table -- without it, every later migration is silently cancelled.
     return if table_exists?(:rails_error_dashboard_error_occurrence_contexts)
@@ -31,5 +34,9 @@ class CreateRailsErrorDashboardErrorOccurrenceContexts < ActiveRecord::Migration
               unique: true, name: "index_red_occurrence_contexts_on_occurrence"
     add_index :rails_error_dashboard_error_occurrence_contexts, :error_log_id,
               name: "index_red_occurrence_contexts_on_error_log"
+  end
+
+  def down
+    drop_table :rails_error_dashboard_error_occurrence_contexts, if_exists: true
   end
 end

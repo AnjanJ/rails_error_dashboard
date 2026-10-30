@@ -3,8 +3,11 @@
 # Storm protection honesty layer: one row per storm episode, powering the
 # dashboard banner ("storm detected, counts recorded, detail sampled") and
 # the storm history page. Small table — a few rows per incident.
+#
+# up/down rather than `change`: the table_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the drop.
 class CreateStormEvents < ActiveRecord::Migration[7.0]
-  def change
+  def up
     return if table_exists?(:rails_error_dashboard_storm_events)
 
     create_table :rails_error_dashboard_storm_events do |t|
@@ -24,5 +27,9 @@ class CreateStormEvents < ActiveRecord::Migration[7.0]
               name: "index_red_storm_events_on_ended_at"
     add_index :rails_error_dashboard_storm_events, :started_at,
               name: "index_red_storm_events_on_started_at"
+  end
+
+  def down
+    drop_table :rails_error_dashboard_storm_events, if_exists: true
   end
 end

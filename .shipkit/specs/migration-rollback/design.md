@@ -7,9 +7,11 @@
   - `up` keeps today's guard and body unchanged (REQ-3).
   - `down` removes only what exists:
     - `drop_table <t>, if_exists: true`;
-    - `remove_index <t>, name: <n> if index_exists?(<t>, name: <n>)`;
-    - `remove_column <t>, <c> if column_exists?(<t>, <c>)`, after removing any index on that
-      column.
+    - `remove_index <t>, name: <n> if index_name_exists?(<t>, <n>)`. Not `index_exists?`: on Rails
+      7.1 its column argument is required, so a call with only `name:` raises;
+    - `remove_column <t>, <c>` after checking `table_exists?` and then `column_exists?`, and after
+      removing any index on that column. `column_exists?` raises on a missing table on all three
+      databases. SQLite and MySQL keep the index if it isn't removed first; PostgreSQL drops it.
 - **The complete-schema migration is not touched** (REQ-5). It creates and drops the same 7 tables.
 - **Two new specs in `spec/db/migrations/`:**
   - a round-trip spec that runs each guarded migration through down and up on a scratch database

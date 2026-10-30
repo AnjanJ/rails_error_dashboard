@@ -18,7 +18,7 @@ time. The round-trip spec builds its own scratch databases and never touches
     Also record the per-case runtime in `design.md`.
   - After: none
   - Done when: `R rspec spec/db/migrations/round_trip_spec.rb` → 0 failures
-- [ ] **T2** The other ten migrations that own their object → REQ-1, REQ-2, REQ-3
+- [x] **T2** The other ten migrations that own their object → REQ-1, REQ-2, REQ-3
   - Files: db/migrate/20260307000001_create_rails_error_dashboard_diagnostic_dumps.rb, db/migrate/20260613000001_create_storm_events.rb, db/migrate/20260730000001_create_rails_error_dashboard_rack_attack_events.rb, db/migrate/20260824000001_add_user_agent_to_rack_attack_events.rb, db/migrate/20260826000001_add_environment_to_error_logs.rb, db/migrate/20260915000004_create_storm_flush_batches.rb, db/migrate/20260919000001_create_event_counts.rb, db/migrate/20260920000001_add_buckets_incomplete_to_storm_events.rb, db/migrate/20260920000002_create_event_timing_gaps.rb, db/migrate/20261015000001_create_rails_error_dashboard_error_occurrence_contexts.rb, spec/db/migrations/round_trip_spec.rb
   - Test: round_trip_spec covers all eleven own-object migrations on both histories:
     - down → object gone;

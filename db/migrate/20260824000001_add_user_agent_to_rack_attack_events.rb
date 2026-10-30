@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+# up/down rather than `change`: the column_exists? guard that makes `up` safe
+# to re-run would make a reversed `change` skip the removal.
 class AddUserAgentToRackAttackEvents < ActiveRecord::Migration[7.0]
-  def change
+  def up
     # Guard against the squashed schema migration having already added this
     # column — without it, every later migration is silently cancelled.
     return if column_exists?(:rails_error_dashboard_rack_attack_events, :user_agent)
@@ -15,5 +17,12 @@ class AddUserAgentToRackAttackEvents < ActiveRecord::Migration[7.0]
     # indexing them would fragment the hourly buckets this table exists to
     # aggregate. It is stored first-write-wins per bucket, like http_method.
     add_column :rails_error_dashboard_rack_attack_events, :user_agent, :string, limit: 191
+  end
+
+  def down
+    return unless table_exists?(:rails_error_dashboard_rack_attack_events)
+    return unless column_exists?(:rails_error_dashboard_rack_attack_events, :user_agent)
+
+    remove_column :rails_error_dashboard_rack_attack_events, :user_agent
   end
 end
