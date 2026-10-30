@@ -17,7 +17,7 @@ class AddSimilarityTrackingToErrorLogs < ActiveRecord::Migration[7.0]
 
     %i[similarity_score backtrace_signature].each do |column|
       remove_index :rails_error_dashboard_error_logs, column, if_exists: true
-      remove_column :rails_error_dashboard_error_logs, column, if_exists: true
+      remove_column :rails_error_dashboard_error_logs, column if column_exists?(:rails_error_dashboard_error_logs, column)
     end
   end
 end

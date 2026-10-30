@@ -12,6 +12,6 @@ class AddReopenedAtToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
-    remove_column :rails_error_dashboard_error_logs, :reopened_at, if_exists: true
+    remove_column :rails_error_dashboard_error_logs, :reopened_at if column_exists?(:rails_error_dashboard_error_logs, :reopened_at)
   end
 end

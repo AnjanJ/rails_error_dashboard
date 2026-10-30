@@ -21,7 +21,7 @@ class AddBetterTrackingToErrorLogs < ActiveRecord::Migration[7.0]
 
     %i[error_hash first_seen_at last_seen_at occurrence_count].each do |column|
       remove_index :rails_error_dashboard_error_logs, column, if_exists: true
-      remove_column :rails_error_dashboard_error_logs, column, if_exists: true
+      remove_column :rails_error_dashboard_error_logs, column if column_exists?(:rails_error_dashboard_error_logs, column)
     end
   end
 end

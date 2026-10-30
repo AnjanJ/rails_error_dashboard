@@ -19,8 +19,8 @@ class AddIssueTrackingToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
-    remove_column :rails_error_dashboard_error_logs, :external_issue_url, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :external_issue_number, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :external_issue_provider, if_exists: true
+    remove_column :rails_error_dashboard_error_logs, :external_issue_url if column_exists?(:rails_error_dashboard_error_logs, :external_issue_url)
+    remove_column :rails_error_dashboard_error_logs, :external_issue_number if column_exists?(:rails_error_dashboard_error_logs, :external_issue_number)
+    remove_column :rails_error_dashboard_error_logs, :external_issue_provider if column_exists?(:rails_error_dashboard_error_logs, :external_issue_provider)
   end
 end

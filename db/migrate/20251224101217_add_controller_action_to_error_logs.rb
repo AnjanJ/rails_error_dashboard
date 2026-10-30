@@ -17,7 +17,7 @@ class AddControllerActionToErrorLogs < ActiveRecord::Migration[7.0]
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
     remove_index :rails_error_dashboard_error_logs, name: 'index_error_logs_on_controller_action_hash', if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :controller_name, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :action_name, if_exists: true
+    remove_column :rails_error_dashboard_error_logs, :controller_name if column_exists?(:rails_error_dashboard_error_logs, :controller_name)
+    remove_column :rails_error_dashboard_error_logs, :action_name if column_exists?(:rails_error_dashboard_error_logs, :action_name)
   end
 end

@@ -46,7 +46,7 @@ class AddContextProvenanceToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(TABLE)
 
-    remove_column TABLE, :context_captured_at, if_exists: true
-    remove_column TABLE, :context_fidelity, if_exists: true
+    remove_column TABLE, :context_captured_at if column_exists?(TABLE, :context_captured_at)
+    remove_column TABLE, :context_fidelity if column_exists?(TABLE, :context_fidelity)
   end
 end

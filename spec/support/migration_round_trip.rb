@@ -101,7 +101,8 @@ module RailsErrorDashboard
         down_error = attempt { migrate(:down, migration) }
         after_down = schema
         version_kept = migrated?(migration.version)
-        down_again_error = attempt { migration.migrate(:down) }
+        down_again_error = nil
+        down_again_writes = writes_during { down_again_error = attempt { migration.migrate(:down) } }
         down_again_changed = schema != after_down
         up_error = attempt { migrate(:up, migration) }
         after_up = schema
@@ -111,7 +112,7 @@ module RailsErrorDashboard
         {
           "object" => object,
           "down" => { "error" => down_error, "version_kept" => version_kept, "left" => object & objects(after_down) },
-          "down_again" => { "error" => down_again_error, "changed" => down_again_changed },
+          "down_again" => { "error" => down_again_error, "changed" => down_again_changed, "writes" => down_again_writes },
           "up" => { "error" => up_error, "missing" => object - objects(after_up) },
           "up_again" => { "error" => up_again_error, "changed" => ended != after_up },
           "restored" => ended == after
@@ -153,6 +154,16 @@ module RailsErrorDashboard
         tables = schema.keys
         error = attempt { context.run(:down, COMPLETE_SCHEMA) }
         { "error" => error, "dropped" => tables - schema.keys, "left" => schema.keys }
+      end
+
+      # A schema comparison can't see a table that was rebuilt the same. SQLite does
+      # that for remove_column, which ignores if_exists there, and a rebuild loses
+      # what the schema doesn't show, such as a host's triggers.
+      def writes_during
+        writes = []
+        collect = ->(*, payload) { writes << payload[:sql] if payload[:sql].match?(/\A\s*(?:DROP|CREATE|ALTER|INSERT|UPDATE|DELETE)\b(?!.*\bIF EXISTS\b)/i) }
+        ActiveSupport::Notifications.subscribed(collect, "sql.active_record") { yield }
+        writes.size
       end
 
       def attempt

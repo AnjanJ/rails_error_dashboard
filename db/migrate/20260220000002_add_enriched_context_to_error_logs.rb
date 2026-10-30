@@ -15,9 +15,9 @@ class AddEnrichedContextToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
-    remove_column :rails_error_dashboard_error_logs, :http_method, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :hostname, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :content_type, if_exists: true
-    remove_column :rails_error_dashboard_error_logs, :request_duration_ms, if_exists: true
+    remove_column :rails_error_dashboard_error_logs, :http_method if column_exists?(:rails_error_dashboard_error_logs, :http_method)
+    remove_column :rails_error_dashboard_error_logs, :hostname if column_exists?(:rails_error_dashboard_error_logs, :hostname)
+    remove_column :rails_error_dashboard_error_logs, :content_type if column_exists?(:rails_error_dashboard_error_logs, :content_type)
+    remove_column :rails_error_dashboard_error_logs, :request_duration_ms if column_exists?(:rails_error_dashboard_error_logs, :request_duration_ms)
   end
 end

@@ -12,6 +12,6 @@ class AddExceptionCauseToErrorLogs < ActiveRecord::Migration[7.0]
   def down
     return unless table_exists?(:rails_error_dashboard_error_logs)
 
-    remove_column :rails_error_dashboard_error_logs, :exception_cause, if_exists: true
+    remove_column :rails_error_dashboard_error_logs, :exception_cause if column_exists?(:rails_error_dashboard_error_logs, :exception_cause)
   end
 end

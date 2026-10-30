@@ -65,8 +65,9 @@ RSpec.describe "Migration round trips", type: :migration do
     20261015000002 => "add_capture_source_to_error_occurrences_and_error_logs"
   }
 
-  # Guarded too, but with no round trip to run: the complete schema has its own
-  # example below, and the others raise IrreversibleMigration.
+  # Guarded too, but left out, as REQ-6 says. The complete schema has its own
+  # example below. The others raise IrreversibleMigration on at least one database,
+  # so they can't round-trip on all three, and REQ-8 documents each one.
   no_round_trip = [ 20251223000000, 20260325000001, 20260909000001, 20260915000001 ]
 
   foreign_key_refusal = /depend on it|foreign key/i
@@ -100,7 +101,7 @@ RSpec.describe "Migration round trips", type: :migration do
     end
 
     it "does nothing going down with its object already gone (migration-rollback/REQ-2)" do
-      expect(trip["down_again"]).to eq("error" => nil, "changed" => false)
+      expect(trip["down_again"]).to eq("error" => nil, "changed" => false, "writes" => 0)
     end
   end
 

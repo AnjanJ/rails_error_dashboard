@@ -35,7 +35,7 @@ class AddWorkflowFieldsToErrorLogs < ActiveRecord::Migration[7.0]
 
     %i[status assigned_to assigned_at snoozed_until priority_level].each do |column|
       remove_index :rails_error_dashboard_error_logs, column, if_exists: true
-      remove_column :rails_error_dashboard_error_logs, column, if_exists: true
+      remove_column :rails_error_dashboard_error_logs, column if column_exists?(:rails_error_dashboard_error_logs, column)
     end
   end
 end

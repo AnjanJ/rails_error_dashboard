@@ -40,7 +40,10 @@ both directions, and the docs should say exactly what can and can't be rolled ba
 
 ### It stays fixed
 - **REQ-6.** A spec shall run every migration in `db/migrate` that has a guarded `up` through up,
-  down and up against a scratch database, and fail if `down` leaves the object in place.
+  down and up against a scratch database, and fail if `down` leaves the object in place. The
+  complete schema has REQ-5 instead, and a migration that raises `IrreversibleMigration` on any
+  database can't round-trip on all three, so it's left out and REQ-8 documents it. (Carve-out
+  written down at review, 2026-10-30.)
 - **REQ-7.** A spec shall fail when a migration in `db/migrate` defines `change` and branches on an
   existence check, by an early return or a modifier. (Widened 2026-10-30: "returns early" would
   have missed the seven.)

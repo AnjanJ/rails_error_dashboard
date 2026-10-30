@@ -20,7 +20,7 @@ class AddEnhancedMetricsToErrorLogs < ActiveRecord::Migration[7.0]
 
     %i[app_version git_sha priority_score].each do |column|
       remove_index :rails_error_dashboard_error_logs, column, if_exists: true
-      remove_column :rails_error_dashboard_error_logs, column, if_exists: true
+      remove_column :rails_error_dashboard_error_logs, column if column_exists?(:rails_error_dashboard_error_logs, column)
     end
   end
 end
