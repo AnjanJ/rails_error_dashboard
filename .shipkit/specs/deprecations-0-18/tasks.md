@@ -37,7 +37,7 @@ time. Every new deprecation spec resets `RailsErrorDashboard::Deprecation`'s rep
     - async logging is still written on
   - After: none
   - Done when: `R rspec spec/generators/install_generator_spec.rb` → 0 failures
-- [ ] **T4** Every task under `rails_error_dashboard:`, with warning aliases → REQ-10, REQ-11
+- [x] **T4** Every task under `rails_error_dashboard:`, with warning aliases → REQ-10, REQ-11
   - Files: lib/tasks/error_dashboard.rake, lib/tasks/rails_error_dashboard_tasks.rake, spec/lib/rails_error_dashboard/rake_aliases_spec.rb, spec/lib/rails_error_dashboard/verify_task_spec.rb, spec/lib/rails_error_dashboard/cleanup_resolved_task_spec.rb, spec/lib/rails_error_dashboard/db_drop_task_spec.rb
   - Test: rake_aliases_spec:
     - each of the 11 names exists as `rails_error_dashboard:<name>`;

@@ -3,13 +3,13 @@
 require "rails_helper"
 require "rake"
 
-RSpec.describe "error_dashboard:verify rake task" do
+RSpec.describe "rails_error_dashboard:verify rake task" do
   before(:all) do
-    Rails.application.load_tasks
+    Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:verify")
   end
 
   let!(:application) { create(:application) }
-  let(:task) { Rake::Task["error_dashboard:verify"] }
+  let(:task) { Rake::Task["rails_error_dashboard:verify"] }
 
   before do
     task.reenable
@@ -397,12 +397,12 @@ RSpec.describe "error_dashboard:verify rake task" do
   end
 end
 
-RSpec.describe "error_dashboard:retention_cleanup rake task" do
+RSpec.describe "rails_error_dashboard:retention_cleanup rake task" do
   before(:all) do
-    Rails.application.load_tasks
+    Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:verify")
   end
 
-  let(:task) { Rake::Task["error_dashboard:retention_cleanup"] }
+  let(:task) { Rake::Task["rails_error_dashboard:retention_cleanup"] }
 
   before do
     task.reenable
@@ -473,12 +473,12 @@ RSpec.describe "error_dashboard:retention_cleanup rake task" do
   end
 end
 
-RSpec.describe "error_dashboard:list_applications rake task" do
+RSpec.describe "rails_error_dashboard:list_applications rake task" do
   before(:all) do
-    Rails.application.load_tasks
+    Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:verify")
   end
 
-  let(:task) { Rake::Task["error_dashboard:list_applications"] }
+  let(:task) { Rake::Task["rails_error_dashboard:list_applications"] }
 
   before do
     task.reenable

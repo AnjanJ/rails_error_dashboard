@@ -97,8 +97,8 @@ RSpec.describe RailsErrorDashboard::Commands::ScrubInvalidEncoding do
     expect(result[:unreadable]).to eq([ "ErrorLog##{first.id} (ActiveRecord::StatementInvalid)" ])
   end
 
-  describe "rake error_dashboard:scrub_invalid_encoding", type: :request do
-    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("error_dashboard:scrub_invalid_encoding") }
+  describe "rake rails_error_dashboard:scrub_invalid_encoding", type: :request do
+    before(:all) { Rails.application.load_tasks unless Rake::Task.task_defined?("rails_error_dashboard:scrub_invalid_encoding") }
 
     it "prints the counts and repairs what is stored" do
       RailsErrorDashboard.configuration.authenticate_with = -> { true }
@@ -112,7 +112,7 @@ RSpec.describe RailsErrorDashboard::Commands::ScrubInvalidEncoding do
       expect(response).to have_http_status(:ok)
       expect(stored("rails_error_dashboard_error_logs", "message", dirty.id)).not_to be_valid_encoding
 
-      task = Rake::Task["error_dashboard:scrub_invalid_encoding"]
+      task = Rake::Task["rails_error_dashboard:scrub_invalid_encoding"]
       task.reenable
       expect { task.invoke }.to output(/repaired:\s+1\n\s+unreadable:\s+0/).to_stdout
 

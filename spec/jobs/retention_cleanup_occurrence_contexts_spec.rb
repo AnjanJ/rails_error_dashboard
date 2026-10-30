@@ -15,7 +15,7 @@ RSpec.describe "Deleting errors deletes their occurrence contexts" do
   end
 
   # delete_all skips the has_many :dependent callbacks, so retention and
-  # error_dashboard:cleanup_resolved (which share this method) must name the table
+  # rails_error_dashboard:cleanup_resolved (which share this method) must name the table
   it "removes them in delete_with_dependents, and only for the deleted errors" do
     doomed = error_with_context
     kept = error_with_context

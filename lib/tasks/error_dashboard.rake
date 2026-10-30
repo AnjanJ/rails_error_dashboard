@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-namespace :error_dashboard do
+namespace :rails_error_dashboard do
   desc "Verify Rails Error Dashboard setup (database, tables, configuration)"
   task verify: :environment do
     puts "\n" + "=" * 70
@@ -412,8 +412,8 @@ namespace :error_dashboard do
     else
             puts "\n✗ Please specify APP_ID or APP_NAME"
             puts "\nExamples:"
-            puts "  rails error_dashboard:app_stats APP_NAME='My App'"
-            puts "  rails error_dashboard:app_stats APP_ID=1"
+            puts "  rails rails_error_dashboard:app_stats APP_NAME='My App'"
+            puts "  rails rails_error_dashboard:app_stats APP_ID=1"
             puts "\n" + "=" * 80 + "\n"
             next
     end
@@ -701,5 +701,24 @@ namespace :error_dashboard do
       locale: RailsErrorDashboard::ApplicationJob.enqueue_locale
     )
     puts "Digest job enqueued."
+  end
+end
+
+# The old names, until 2.0: a crontab that calls one mustn't quietly stop. They
+# have no desc, so `rake -T` lists only the new names.
+namespace :error_dashboard do
+  %w[
+    verify list_applications backfill_application app_stats cleanup_resolved diagnostic_dump
+    retention_cleanup scrub_invalid_encoding backfill_resolved_at digest_session_ids send_digest
+  ].each do |name|
+    task name do
+      RailsErrorDashboard::Deprecation.warn(
+        "rake:#{name}",
+        "rake error_dashboard:#{name} is now rails_error_dashboard:#{name}. Update your scripts and cron entries. " \
+        "The old name will be removed in 2.0.",
+        stderr: true
+      )
+      Rake::Task["rails_error_dashboard:#{name}"].invoke
+    end
   end
 end
