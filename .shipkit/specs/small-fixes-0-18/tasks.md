@@ -24,8 +24,8 @@ time. This spec's PR comes after `deprecations-0-18`: both touch UPGRADING.
     - each of the four partials renders through the helper
   - After: none
   - Done when: `R rspec spec/helpers/platform_badge_spec.rb` → 0 failures
-- [ ] **T3** Pattern hours in `Time.zone`, labelled → REQ-5
-  - Files: lib/rails_error_dashboard/queries/analytics_stats.rb, lib/rails_error_dashboard/services/pattern_detector.rb, app/views/rails_error_dashboard/errors/_pattern_insights.html.erb, config/locales/, spec/lib/rails_error_dashboard/services/pattern_detector_spec.rb
+- [x] **T3** Pattern hours in `Time.zone`, labelled → REQ-5
+  - Files: lib/rails_error_dashboard/queries/analytics_stats.rb, lib/rails_error_dashboard/services/pattern_detector.rb, app/views/rails_error_dashboard/errors/_pattern_insights.html.erb, config/locales/, spec/lib/rails_error_dashboard/services/pattern_detector_spec.rb, spec/views/rails_error_dashboard/errors/_pattern_insights.html.erb_spec.rb
   - Test: pattern_detector_spec, with `Time.zone = "Asia/Kolkata"`:
     - an error at 08:00 UTC lands in hour 13;
     - the rendered insights name the zone next to the heatmap and the peak hours;

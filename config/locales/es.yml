@@ -394,6 +394,8 @@ es:
             label: Patrón débil
             description: Los errores se distribuyen de forma bastante uniforme
         heatmap_title: Mapa de calor de la distribución horaria
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Horas en %{zone}."
         heatmap_legend: Celdas más oscuras = más errores. Los bordes rojos señalan
           las horas punta (>%{multiplier}x la media).
         heatmap_cell:

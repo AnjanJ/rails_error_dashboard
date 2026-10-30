@@ -396,6 +396,8 @@ pl:
             label: Słaby wzorzec
             description: Błędy rozłożone dość równomiernie
         heatmap_title: Mapa cieplna rozkładu godzinowego
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Godziny w strefie %{zone}."
         heatmap_legend: Ciemniejsze komórki = więcej błędów. Czerwona ramka oznacza
           godziny szczytu (>%{multiplier}x średniej).
         heatmap_cell:

@@ -115,6 +115,7 @@
           <div class="mt-2 small text-muted">
             <i class="bi bi-info-circle"></i>
             <%= red_t("red.errors.patterns.heatmap_legend", multiplier: peak_hour_multiplier) %>
+            <%= red_t("red.errors.patterns.hours_zone", zone: Time.zone.name) %>
           </div>
         </div>
       <% end %>
@@ -124,6 +125,7 @@
         <div class="alert alert-info">
           <strong><i class="bi bi-clock-fill"></i> <%= red_t("red.errors.patterns.peak_hours") %></strong>
           <%= pattern_data[:peak_hours].map { |h| "#{h}:00" }.join(", ") %>
+          <small><%= red_t("red.errors.patterns.hours_zone", zone: Time.zone.name) %></small>
           <br>
           <small>
             <%= red_t("red.errors.patterns.peak_hours_hint") %>

@@ -395,6 +395,8 @@ fr:
             label: Motif faible
             description: Les erreurs se répartissent assez uniformément
         heatmap_title: Carte thermique de la répartition horaire
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Heures en %{zone}."
         heatmap_legend: Cellules plus sombres = plus d'erreurs. Les bordures rouges
           signalent les heures de pointe (>%{multiplier}x la moyenne).
         heatmap_cell:

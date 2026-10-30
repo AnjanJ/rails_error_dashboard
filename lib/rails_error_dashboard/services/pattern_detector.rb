@@ -41,8 +41,11 @@ module RailsErrorDashboard
         weekday_distribution = Hash.new(0)
 
         timestamps.each do |timestamp|
-          hour = timestamp.hour
-          wday = timestamp.wday # 0 = Sunday, 6 = Saturday
+          # The app's zone, which is what the dashboard labels these hours with.
+          # A stored time arrives in it already; a plain Time wouldn't.
+          local = timestamp.in_time_zone
+          hour = local.hour
+          wday = local.wday # 0 = Sunday, 6 = Saturday
           hourly_distribution[hour] += 1
           weekday_distribution[wday] += 1
         end

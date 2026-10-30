@@ -351,6 +351,8 @@ ja:
             label: 弱いパターン
             description: エラーはほぼ均等に分布しています
         heatmap_title: 時間帯別ヒートマップ
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "時刻は %{zone} です。"
         heatmap_legend: セルの色が濃いほどエラーが多いことを示します。赤い枠線はピーク時間帯(平均の%{multiplier}倍超)を表します。
         heatmap_cell:
           other: "%{hour} - %{count}件のエラー"

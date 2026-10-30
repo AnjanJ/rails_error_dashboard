@@ -399,6 +399,8 @@ ru:
             label: Слабая закономерность
             description: Ошибки распределены довольно равномерно
         heatmap_title: Тепловая карта почасового распределения
+        # %{zone} is the app's time zone, such as Europe/Berlin.
+        hours_zone: "Время указано в %{zone}."
         heatmap_legend: Чем темнее ячейка, тем больше ошибок. Красная рамка отмечает
           пиковые часы (>%{multiplier}x среднего).
         heatmap_cell:
