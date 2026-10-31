@@ -140,6 +140,33 @@ RSpec.describe "bin/benchmark harness" do
     end
   end
 
+  describe "CPU time stolen during a run" do
+    harness = RedBenchmark::Harness
+
+    # /proc/stat's first line: user nice system idle iowait irq softirq steal
+    # guest guest_nice. Guest time is already counted in user.
+    define_method(:ticks) do |busy, idle, steal|
+      harness.cpu_ticks("cpu  #{busy} 0 0 #{idle} 0 0 0 #{steal} 500 500\ncpu0 1 2 3 4 5 6 7 8 9 10\n")
+    end
+
+    it "gives the share of the CPU time between two readings (deploy-shape-benchmark/REQ-7)" do
+      expect(harness.stolen_share(ticks(100, 100, 0), ticks(190, 190, 20))).to eq("10.00%")
+    end
+
+    it "says 0.00%, not a failure, when nothing was stolen (deploy-shape-benchmark/REQ-7)" do
+      expect(harness.stolen_share(ticks(100, 100, 5), ticks(200, 200, 5))).to eq("0.00%")
+    end
+
+    it "copes with two readings of the same instant (deploy-shape-benchmark/REQ-7)" do
+      expect(harness.stolen_share(ticks(100, 100, 5), ticks(100, 100, 5))).to eq("0.00%")
+    end
+
+    it "says not available where there's no /proc/stat, rather than a false 0 (deploy-shape-benchmark/REQ-7)" do
+      expect(harness.cpu_ticks("")).to be_nil
+      expect(harness.stolen_share(nil, nil)).to eq("not available")
+    end
+  end
+
   it "runs with YJIT on wherever this Ruby can turn it on, and records it (overhead-benchmark/REQ-6)" do
     expect(@facts["YJIT"]).to eq(defined?(RubyVM::YJIT.enable) ? "on" : "not available")
   end
@@ -171,6 +198,10 @@ RSpec.describe "bin/benchmark harness" do
 
     it "exits non-zero exactly when its table shows a FAIL (overhead-benchmark/REQ-7)" do
       expect(@run_status.exitstatus).to eq(@run_output.include?("| FAIL |") ? 1 : 0)
+    end
+
+    it "reports the CPU time stolen during the run (deploy-shape-benchmark/REQ-7)" do
+      expect(@written).to match(/^\| CPU time stolen \| (\d+\.\d\d%|not available) \|$/)
     end
 
     it "says a smoke run's numbers mean nothing (overhead-benchmark/REQ-9)" do

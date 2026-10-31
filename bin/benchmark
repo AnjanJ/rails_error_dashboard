@@ -32,6 +32,7 @@ require_relative "../benchmark/scenarios"
 require_relative "../benchmark/report"
 
 smoke = ARGV.include?("--smoke")
+ticks_before = RedBenchmark::Harness.cpu_ticks
 
 results = RedBenchmark::Scenarios.all.map do |scenario|
   $stderr.puts "  #{scenario.name}..."
@@ -43,7 +44,9 @@ results = RedBenchmark::Scenarios.all.map do |scenario|
   scenario.run.call(timer)
 end
 
-report = RedBenchmark::Report.markdown(RedBenchmark::Harness.environment, results)
+stolen = RedBenchmark::Harness.stolen_share(ticks_before, RedBenchmark::Harness.cpu_ticks)
+environment = RedBenchmark::Harness.environment.merge("CPU time stolen" => stolen)
+report = RedBenchmark::Report.markdown(environment, results)
 report = "Smoke run: a few iterations each, so these numbers mean nothing.\n\n#{report}" if smoke
 puts report
 

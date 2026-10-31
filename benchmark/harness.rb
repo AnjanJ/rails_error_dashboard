@@ -36,6 +36,7 @@ module RedBenchmark
     DATABASE = File.join(ROOT, "tmp", "benchmark", "benchmark.sqlite3")
     SCHEMA = File.join(ROOT, "spec", "dummy", "db", "schema.rb")
     CGROUP = "/sys/fs/cgroup"
+    PROC_STAT = "/proc/stat"
 
     module_function
 
@@ -143,6 +144,21 @@ module RedBenchmark
     def read_cgroup(cgroup, name)
       path = File.join(cgroup, name)
       File.read(path).strip if File.readable?(path)
+    end
+
+    # The whole machine's CPU ticks, read before and after a run, or nil where
+    # there's no /proc/stat. The eight fields summed leave out guest time, which
+    # the kernel already counts in user.
+    def cpu_ticks(stat = File.readable?(PROC_STAT) ? File.read(PROC_STAT) : "")
+      fields = stat[/^cpu\s+(.+)$/, 1]&.split&.map(&:to_i)
+      { steal: fields[7].to_i, total: fields.first(8).sum } if fields
+    end
+
+    def stolen_share(before, after)
+      return "not available" unless before && after
+
+      total = after[:total] - before[:total]
+      format("%.2f%%", total.positive? ? 100.0 * (after[:steal] - before[:steal]) / total : 0)
     end
 
     def commit
