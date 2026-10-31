@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.17.0...rails_error_dashboard/v0.18.0) (2026-10-31)
+
+
+### ✨ Features
+
+* deprecate what 1.0 won't freeze ([#339](https://github.com/AnjanJ/rails_error_dashboard/issues/339)) ([3e77d38](https://github.com/AnjanJ/rails_error_dashboard/commit/3e77d38d2e346c236bab4eb6aa5471d07f3fe1fd))
+* freeze the webhook contract as version 1 ([#338](https://github.com/AnjanJ/rails_error_dashboard/issues/338)) ([7063209](https://github.com/AnjanJ/rails_error_dashboard/commit/7063209a1ae673ede749654f01b63c3dcda85160))
+
+
+### 🐛 Bug Fixes
+
+* keep crash sources off platform lists, and label pattern hours ([#340](https://github.com/AnjanJ/rails_error_dashboard/issues/340)) ([d18df31](https://github.com/AnjanJ/rails_error_dashboard/commit/d18df31530585aa39229e44c05d86cb15a7e5f11))
+* make git blame, View Source and the user count safe inside the host app ([#337](https://github.com/AnjanJ/rails_error_dashboard/issues/337)) ([34170a1](https://github.com/AnjanJ/rails_error_dashboard/commit/34170a19fb519deee15950c313f59d221beb8d8a))
+* make RED's migrations roll back what they add ([#341](https://github.com/AnjanJ/rails_error_dashboard/issues/341)) ([6312c30](https://github.com/AnjanJ/rails_error_dashboard/commit/6312c3071c4b73bb98e9ad6f5116b470b776f6cb))
+
+
+### ⚡ Performance
+
+* **storm:** make the storm check about twice as fast ([#335](https://github.com/AnjanJ/rails_error_dashboard/issues/335)) ([960b82e](https://github.com/AnjanJ/rails_error_dashboard/commit/960b82e33605adc0aacd33bd7e6ec31b688e626e))
+
 ## [0.17.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.2...rails_error_dashboard/v0.17.0) (2026-10-29)
 
 
