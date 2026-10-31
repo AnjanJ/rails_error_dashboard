@@ -233,6 +233,29 @@ RSpec.describe "bin/benchmark harness" do
       expect(errors).not_to match(refusal)
     end
 
+    it "holds only PostgreSQL to its limit: a long SQLite file runs (deploy-shape-benchmark/REQ-1)" do
+      long_file = File.join(File.dirname(@path), "#{'b' * 60}_benchmark.sqlite3")
+
+      output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "sqlite3:#{long_file}" })
+
+      expect(status).to be_success, errors
+      expect(facts_from(output)["Scratch database"]).to eq(long_file)
+    end
+
+    it "holds only PostgreSQL to its limit: a long MySQL name reaches the server (deploy-shape-benchmark/REQ-1)" do
+      long_name = "#{'c' * 55}benchmark"
+      _output, errors, = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "trilogy://127.0.0.1:1/#{long_name}" })
+
+      expect(long_name.bytesize).to eq(64)
+      expect(errors).not_to match(refusal)
+    end
+
+    it "says how long a name can be when it refuses one for its length (deploy-shape-benchmark/REQ-2)" do
+      _output, errors, = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://127.0.0.1:1/#{'a' * 63}_benchmark" })
+
+      expect(errors).to include("63 bytes")
+    end
+
     it "refuses a URL that names no database (deploy-shape-benchmark/REQ-2)" do
       output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red@127.0.0.1" })
 

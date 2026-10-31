@@ -49,8 +49,9 @@ module RedBenchmark
     # have a password in it.
     BENCHMARK_NAME = /\A[\w.-]*benchmark[\w.-]*\z/
     # PostgreSQL opens only this much of a name, so a longer one could be cut
-    # back to another database's, after this check has passed it.
-    LONGEST_NAME = 63
+    # back to another database's, after this check has passed it. Nothing else
+    # cuts one: MySQL refuses a name too long for it, and a file is a file.
+    POSTGRESQL_LONGEST_NAME = 63
     QUEUES = %w[solid_queue sidekiq].freeze
     SOLID_QUEUE_SCHEMA = "lib/generators/solid_queue/install/templates/db/queue_schema.rb"
 
@@ -86,9 +87,14 @@ module RedBenchmark
     # slash in a password makes the rest of the password the database's name.
     def refuse_unless_named_for_benchmarking
       name = database_name
-      return if name.bytesize <= LONGEST_NAME && name.match?(BENCHMARK_NAME)
+      return if name.match?(BENCHMARK_NAME) && !cut_short?(name)
 
-      abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" in a plain name."
+      abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" in a plain name, " \
+        "of at most #{POSTGRESQL_LONGEST_NAME} bytes on PostgreSQL."
+    end
+
+    def cut_short?(name)
+      ActiveRecord::Base.connection_db_config.adapter.start_with?("postg") && name.bytesize > POSTGRESQL_LONGEST_NAME
     end
 
     # Only a SQLite path has folders to ignore. In a file: URI, what follows the
