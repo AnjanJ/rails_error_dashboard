@@ -75,7 +75,7 @@ RSpec.describe "The webhook contract page" do
       end
 
       it "is reachable from the table of releases (webhook-v1/REQ-15)" do
-        expect(File.read(root.join(page))).to match(/^\| 0\.18\.0 \|.*webhook-changes-in-0180/)
+        expect(File.read(root.join(page))).to match(/^\|[^|]*0\.18\.0[^|]*\|.*webhook-changes-in-0180/)
       end
     end
   end

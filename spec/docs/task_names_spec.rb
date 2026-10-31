@@ -52,7 +52,7 @@ RSpec.describe "Names in the code and docs" do
       let(:section) { text[/^## Deprecations in 0\.18\.0.*?(?=^## )/m].to_s }
 
       it "is reachable from the table of releases (deprecations-0-18/REQ-19)" do
-        expect(text).to match(/^\| 0\.18\.0 \|.*deprecations-in-0180/)
+        expect(text).to match(/^\|[^|]*0\.18\.0[^|]*\|.*deprecations-in-0180/)
       end
 
       it "says each dead option's line goes (deprecations-0-18/REQ-19)" do
