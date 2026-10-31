@@ -35,6 +35,7 @@ module RedBenchmark
   module Harness
     DATABASE = File.join(ROOT, "tmp", "benchmark", "benchmark.sqlite3")
     SCHEMA = File.join(ROOT, "spec", "dummy", "db", "schema.rb")
+    CGROUP = "/sys/fs/cgroup"
 
     module_function
 
@@ -85,6 +86,8 @@ module RedBenchmark
         "CPU" => cpu_model,
         "Architecture" => uname[:machine],
         "CPUs" => Etc.nprocessors.to_s,
+        "CPU limit" => cpu_limit,
+        "Memory limit" => memory_limit,
         "OS" => "#{uname[:sysname]} #{uname[:release]}",
         "RED commit" => commit
       }
@@ -118,6 +121,28 @@ module RedBenchmark
       implementer = cpuinfo[/^CPU implementer\s*:\s*(\S+)$/, 1]
       part = cpuinfo[/^CPU part\s*:\s*(\S+)$/, 1]
       "ARM implementer #{implementer}, part #{part}" if implementer && part
+    end
+
+    # A cgroup v2 quota is "<microseconds> <period>", or "max <period>" for none.
+    def cpu_limit(cgroup = CGROUP)
+      quota, period = read_cgroup(cgroup, "cpu.max").to_s.split
+      return "not available" unless quota
+      return "none" if quota == "max"
+
+      format("%.2f CPU", quota.to_f / period.to_f)
+    end
+
+    def memory_limit(cgroup = CGROUP)
+      limit = read_cgroup(cgroup, "memory.max")
+      return "not available" unless limit
+      return "none" if limit == "max"
+
+      format("%.2f GB", limit.to_f / 1024**3)
+    end
+
+    def read_cgroup(cgroup, name)
+      path = File.join(cgroup, name)
+      File.read(path).strip if File.readable?(path)
     end
 
     def commit

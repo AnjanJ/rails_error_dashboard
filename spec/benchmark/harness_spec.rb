@@ -92,6 +92,54 @@ RSpec.describe "bin/benchmark harness" do
     end
   end
 
+  describe "the limits it runs under" do
+    harness = RedBenchmark::Harness
+
+    around do |example|
+      Dir.mktmpdir("red_cgroup") do |dir|
+        @cgroup = dir
+        example.run
+      end
+    end
+
+    def write_cgroup(name, content)
+      File.write(File.join(@cgroup, name), content)
+    end
+
+    it "states a CPU quota in CPUs (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("cpu.max", "40000 100000\n")
+
+      expect(harness.cpu_limit(@cgroup)).to eq("0.40 CPU")
+    end
+
+    it "says none when the process has no CPU quota (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("cpu.max", "max 100000\n")
+
+      expect(harness.cpu_limit(@cgroup)).to eq("none")
+    end
+
+    it "states a memory limit in GB (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("memory.max", "4294967296\n")
+
+      expect(harness.memory_limit(@cgroup)).to eq("4.00 GB")
+    end
+
+    it "says none when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("memory.max", "max\n")
+
+      expect(harness.memory_limit(@cgroup)).to eq("none")
+    end
+
+    it "says not available where the platform has no cgroup files (deploy-shape-benchmark/REQ-6)" do
+      expect(harness.cpu_limit(@cgroup)).to eq("not available")
+      expect(harness.memory_limit(@cgroup)).to eq("not available")
+    end
+
+    it "reports both with the environment (deploy-shape-benchmark/REQ-6)" do
+      expect(@facts).to include("CPU limit", "Memory limit")
+    end
+  end
+
   it "runs with YJIT on wherever this Ruby can turn it on, and records it (overhead-benchmark/REQ-6)" do
     expect(@facts["YJIT"]).to eq(defined?(RubyVM::YJIT.enable) ? "on" : "not available")
   end
