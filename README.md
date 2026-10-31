@@ -125,7 +125,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 ## Safety, performance and compatibility
 
 - **Host-app safety** — nothing in the capture path raises into your app; every subscriber and callback is rescue-wrapped, `Thread.current` is cleaned up in `ensure`, and the original exception is always re-raised. Variables, health and breadcrumbs are opt-in and off by default; storm protection is on by default and fails open.
-- **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are a maintainer's single-machine measurements and no benchmark script ships with the gem yet.
+- **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are medians from [`bin/benchmark`](bin/benchmark), which is in this repo, not in the gem, and runs in CI on every push to main. Each names the runner it came from.
 - **Security** — HTTP Basic Auth or your own `authenticate_with` lambda (Devise, Warden, session); your Rails `filter_parameters` are applied to params, variables and breadcrumbs; prompts are never recorded by LLM observability. Vulnerability reports: [SECURITY.md](SECURITY.md).
 - **Compatibility** — Rails 7.0–8.1 (on Rails 7.0.0 to 7.0.8.7, unhandled request errors are not recorded; Rails 7.0.10 fixes it), Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; live updates are opt-in (`enable_live_updates`) and need `turbo-rails` plus ActionCable (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
 
@@ -142,7 +142,7 @@ Error capture from controllers, jobs, and middleware. Custom-designed dashboard 
 <details>
 <summary><strong>Storm Protection — Circuit Breaker + Adaptive Sampling</strong></summary>
 
-When the error rate spikes (a bad deploy throwing thousands of errors a minute), the nightmare scenario for any in-process tracker is amplifying the outage with its own database writes. Storm protection is designed to **shed the gem's own expensive work first** — ON by default. The behaviour is measured (see Overhead below), though a bundled, reproducible benchmark is still to come.
+When the error rate spikes (a bad deploy throwing thousands of errors a minute), the nightmare scenario for any in-process tracker is amplifying the outage with its own database writes. Storm protection is designed to **shed the gem's own expensive work first** — ON by default. Its cost is measured (see Overhead below).
 
 - **Per-fingerprint caps:** past N occurrences/minute per error, context is shed, then rows are sampled deterministically (a fresh exemplar is always kept each minute)
 - **Global circuit breaker:** sustained floods flip the gem to count-only mode — zero per-event I/O, exact in-memory counts reconciled onto error records every 30s. Async mode is gated too (a SolidQueue enqueue is itself a DB write)
@@ -158,7 +158,7 @@ config.storm_open_threshold_per_second = 50  # per process
 
 All thresholds are per process and individually configurable. Disable with one flag.
 
-**Overhead:** the check is a digest plus an atomic increment; there is no I/O on the hot path. The maintainer's single-machine measurement (Apple Silicon, Ruby 4.0) was 2.4µs/error with protection active and calm, 2.95µs in count-only mode and 0.2µs when disabled, against a 5µs budget — a reproducible benchmark script is not yet part of the gem.
+**Overhead:** the check is a digest plus an atomic increment; there is no I/O on the hot path. [`bin/benchmark`](bin/benchmark) measures a median per error of 4.95µs calm, 6.58µs shedding and 6.40µs with the breaker open on CI's AMD EPYC 9V45 runner, and 8.78µs, 12.05µs and 11.88µs on its AMD EPYC 7763 runner, against a 15µs budget. Both have 4 CPUs and run Ruby 3.4.12 with YJIT on, Rails 8.1.4 and SQLite.
 </details>
 
 <details>
@@ -184,7 +184,7 @@ config.enable_breadcrumbs = true
 
 Know your app's runtime state at the moment of failure — GC stats, process memory, thread count, connection pool utilization, Puma thread stats, RubyVM cache health, YJIT compilation stats, and deep runtime insights captured automatically.
 
-- Sub-millisecond for the in-process metrics, every metric individually rescue-wrapped. The one exception is job-queue depth (five `COUNT`s for Solid Queue, a Redis round-trip for Sidekiq): those are queries against your queue store, cached for 10 s per process and switchable off with `config.system_health_queue_stats = false`
+- Every metric is individually rescue-wrapped. The in-process metrics take a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, against a 1 ms budget, so whether they stay under it depends on the host ([`bin/benchmark`](bin/benchmark), on CI's shared runners). The one exception is job-queue depth (five `COUNT`s for Solid Queue, a Redis round-trip for Sidekiq): those are queries against your queue store, cached for 10 s per process and switchable off with `config.system_health_queue_stats = false`
 - No ObjectSpace scanning, no Thread backtraces, no subprocess calls
 - RubyVM.stat: constant cache invalidations, shape cache stats
 - YJIT runtime stats: compiled iseqs, invalidation count, code region sizes

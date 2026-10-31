@@ -569,7 +569,7 @@ Captured: provider, model, input/output tokens, duration, cost (auto-estimated f
 
 #### Host App Safety
 
-Same guarantees as the rest of the gem. Worst-case hot-path cost was **~4 microseconds per breadcrumb** in a maintainer's single-machine measurement (~125× under the 0.5ms-per-op budget); no benchmark script ships with the gem. The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
+Same guarantees as the rest of the gem. [`bin/benchmark`](../bin/benchmark) has no row for LLM breadcrumbs. Its nearest row, the SQL breadcrumb callback, has a median of 1.18 µs on CI's AMD EPYC 9V45 runner and 1.89 µs on its AMD EPYC 7763 runner, against a 10 µs budget. The Faraday middleware always re-raises upstream exceptions — never interferes with your error handling. See [`docs/LLM_OBSERVABILITY.md`](LLM_OBSERVABILITY.md) for full reference, including the AS::Notifications payload contract, configuration options, troubleshooting, and FAQ.
 
 ### AI Help — Ask an LLM About the Current Error
 
@@ -632,7 +632,7 @@ Breadcrumbs are designed with host app safety as the top priority:
 - **Message truncation** — SQL capped at 200 chars, messages at 500 chars, metadata at 10 keys
 - **Internal queries filtered** — Gem's own SQL queries excluded to prevent recursion
 - **Sensitive data filtered** — Passwords, tokens, secrets scrubbed via existing `SensitiveDataFilter`
-- **Overhead** — < 0.1ms per request (events are already fired by Rails)
+- **Overhead** — each SQL breadcrumb takes a median of 1.18 µs on CI's AMD EPYC 9V45 runner and 1.89 µs on its AMD EPYC 7763 runner, against a 10 µs budget ([`bin/benchmark`](../bin/benchmark)); the events are already fired by Rails
 
 ### Async Logging Compatibility
 
@@ -679,7 +679,7 @@ end
 
 System health snapshots are designed with host app safety as the top priority:
 
-- **Sub-millisecond in-process metrics** — GC, memory, threads, pool, VM stats complete in < 1ms. Job-queue depth counts are the documented exception: they query the queue store, so they are cached per process (`system_health_queue_stats_cache_seconds`, default 10) and can be disabled (`system_health_queue_stats = false`)
+- **Around a millisecond for in-process metrics** — GC, memory, threads, pool, VM stats take a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, against a 1 ms budget, so whether they stay under it depends on the host ([`bin/benchmark`](../bin/benchmark), on CI's shared runners). Job-queue depth counts are the documented exception: they query the queue store, so they are cached per process (`system_health_queue_stats_cache_seconds`, default 10) and can be disabled (`system_health_queue_stats = false`)
 - **Every metric individually wrapped** in `rescue => nil` — one failure doesn't affect others
 - **Top-level rescue** — If everything fails, returns `{ captured_at: ... }` (never raises)
 - **No ObjectSpace** — Never calls `ObjectSpace.each_object` or `ObjectSpace.count_objects` (heap scan)

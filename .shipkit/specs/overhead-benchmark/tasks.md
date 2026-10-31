@@ -55,8 +55,8 @@ collide.
   - After: T3
   - Done when: `R rspec spec/ci/workflows_spec.rb` → 0 failures, and the PR's CI run shows the
     benchmark table in the job summary
-- [ ] **T5** README and docs quote the CI numbers → REQ-10
-  - Files: README.md, docs/FEATURES.md, docs/LLM_OBSERVABILITY.md, _features/, _getting_started/, spec/docs/benchmark_claims_spec.rb
+- [x] **T5** README and docs quote the CI numbers → REQ-10
+  - Files: README.md, docs/FEATURES.md, docs/LLM_OBSERVABILITY.md, docs/guides/CONFIGURATION.md, _features/, _getting_started/, _guides/, spec/docs/benchmark_claims_spec.rb
   - Test: benchmark_claims_spec:
     - README no longer says no benchmark ships;
     - it links `bin/benchmark`;

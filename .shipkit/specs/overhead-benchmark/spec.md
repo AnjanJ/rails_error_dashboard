@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
 > Status: open
-> Paths: bin/benchmark,benchmark/,.github/workflows/,README.md,_features/,_getting_started/,docs/,.claude/skills/host-app-safety/,.shipkit/product.md,spec/
+> Paths: bin/benchmark,benchmark/,.github/workflows/,README.md,_features/,_getting_started/,_guides/,docs/,.claude/skills/host-app-safety/,.shipkit/product.md,spec/
 
 ## Purpose
 RED promises it costs the host app less than its budgets. Today the only evidence is one
