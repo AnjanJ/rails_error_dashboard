@@ -32,6 +32,10 @@ module RedBenchmark
   # dummy app's test initializer, and it writes to its own SQLite file under
   # tmp/, so it never touches spec/dummy/db/test.sqlite3 and can't collide
   # with an rspec run.
+  #
+  # BENCHMARK_DATABASE_URL points it at another database, which it empties and
+  # rebuilds from db/migrate: schema.rb is hand-kept for SQLite, and a host gets
+  # its PostgreSQL-only indexes from the migrations.
   module Harness
     DATABASE = File.join(ROOT, "tmp", "benchmark", "benchmark.sqlite3")
     SCHEMA = File.join(ROOT, "spec", "dummy", "db", "schema.rb")
@@ -41,19 +45,38 @@ module RedBenchmark
     module_function
 
     def boot!
-      FileUtils.mkdir_p(File.dirname(DATABASE))
-      FileUtils.rm_f(Dir["#{DATABASE}*"])
+      database_url = ENV["BENCHMARK_DATABASE_URL"].to_s
       ENV["RAILS_ENV"] = "benchmark"
-      ENV["DATABASE_URL"] = "sqlite3:#{DATABASE}"
+      ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
 
       require File.join(ROOT, "spec", "dummy", "config", "application")
       configure(Rails.application.config)
       Rails.application.initialize!
-      ActiveRecord::Migration.suppress_messages { load SCHEMA }
+      database_url.empty? ? load_schema : rebuild_from_migrations
       # New Rails apps run production with YJIT on, and it moves these numbers
       # by half, so neither the shell nor the Rails version gets to decide it.
       RubyVM::YJIT.enable if defined?(RubyVM::YJIT.enable)
       Rails.application
+    end
+
+    def fresh_scratch_url
+      FileUtils.mkdir_p(File.dirname(DATABASE))
+      FileUtils.rm_f(Dir["#{DATABASE}*"])
+      "sqlite3:#{DATABASE}"
+    end
+
+    def load_schema
+      ActiveRecord::Migration.suppress_messages { load SCHEMA }
+    end
+
+    def rebuild_from_migrations
+      require File.join(ROOT, "spec", "support", "test_schema")
+
+      connection = ActiveRecord::Base.connection
+      connection.disable_referential_integrity do
+        connection.tables.each { |table| connection.drop_table(table, force: :cascade) }
+      end
+      RailsErrorDashboard::TestSchema.migrate!
     end
 
     def configure(config)
@@ -71,9 +94,15 @@ module RedBenchmark
       {
         "Eager loading" => app.eager_load ? "on" : "off",
         "Code reloading" => app.cache_classes ? "off" : "on",
-        "Scratch database" => File.expand_path(ActiveRecord::Base.connection_db_config.database, Rails.root),
+        "Scratch database" => scratch_database,
         "Job adapter" => ActiveJob::Base.queue_adapter.class.name
       }
+    end
+
+    # SQLite's database is a path, and a server's is a name.
+    def scratch_database
+      config = ActiveRecord::Base.connection_db_config
+      config.adapter.start_with?("sqlite") ? File.expand_path(config.database, Rails.root) : config.database
     end
 
     # Where the numbers came from: printed above every results table.

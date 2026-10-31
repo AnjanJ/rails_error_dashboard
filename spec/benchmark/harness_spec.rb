@@ -12,21 +12,26 @@ RSpec.describe "bin/benchmark harness" do
   # Runs the real script. RUBYOPT keeps the parent's (bundle exec puts
   # bundler/setup there) and adds WebMock with every connection refused, so a
   # network call anywhere in the run fails it.
-  define_method(:run_script) do |*arguments|
-    env = {
+  define_method(:run_script) do |*arguments, env: {}|
+    base = {
       "RUBYOPT" => "#{ENV['RUBYOPT']} -r#{File.join(root, 'spec/benchmark/offline.rb')}".strip,
       "RAILS_ENV" => nil,
       "DATABASE_URL" => nil,
+      "BENCHMARK_DATABASE_URL" => nil,
       "RUBY_YJIT_ENABLE" => nil
     }
-    Open3.capture3(env, "ruby", File.join(root, "bin/benchmark"), *arguments, chdir: root)
+    Open3.capture3(base.merge(env), "ruby", File.join(root, "bin/benchmark"), *arguments, chdir: root)
+  end
+
+  define_method(:facts_from) do |output|
+    output.lines.filter_map { |line| line.chomp.split(": ", 2) if line.include?(": ") }.to_h
   end
 
   # One boot of the real script, shared by the examples below: it takes a few
   # seconds.
   before(:all) do
     @output, @errors, @status = run_script("--list")
-    @facts = @output.lines.filter_map { |line| line.chomp.split(": ", 2) if line.include?(": ") }.to_h
+    @facts = facts_from(@output)
   end
 
   it "boots without touching the network (overhead-benchmark/REQ-1)" do
@@ -43,6 +48,53 @@ RSpec.describe "bin/benchmark harness" do
 
     expect(database).to start_with(File.join(root, "tmp", ""))
     expect(database).not_to end_with("spec/dummy/db/test.sqlite3")
+  end
+
+  # A SQLite file stands in for a server: the script reaches both through the
+  # same variable, and this needs no database running.
+  describe "with BENCHMARK_DATABASE_URL" do
+    around do |example|
+      Dir.mktmpdir("red_benchmark_database") do |dir|
+        @path = File.join(dir, "other_benchmark.sqlite3")
+        example.run
+      end
+    end
+
+    let(:env) { { "BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}" } }
+
+    def database_values(sql)
+      database = SQLite3::Database.new(@path)
+      database.execute(sql).flatten
+    ensure
+      database&.close
+    end
+
+    it "runs against that database (deploy-shape-benchmark/REQ-1)" do
+      output, errors, status = run_script("--list", env: env)
+
+      expect(status).to be_success, errors
+      expect(facts_from(output)["Scratch database"]).to eq(@path)
+      expect(database_values("SELECT name FROM sqlite_master WHERE type = 'table'")).to include("rails_error_dashboard_error_logs")
+    end
+
+    it "builds the schema from db/migrate, as a host does, not from schema.rb (deploy-shape-benchmark/REQ-1)" do
+      _output, errors, status = run_script("--list", env: env)
+      migrations = Dir[File.join(root, "db/migrate/*.rb")].map { |path| File.basename(path)[/\A\d+/] }
+
+      expect(status).to be_success, errors
+      expect(database_values("SELECT version FROM schema_migrations")).to match_array(migrations)
+    end
+
+    it "starts from an empty database, so an earlier run can't colour this one (deploy-shape-benchmark/REQ-1)" do
+      database = SQLite3::Database.new(@path)
+      database.execute("CREATE TABLE left_by_an_earlier_run (id INTEGER)")
+      database.close
+
+      _output, errors, status = run_script("--list", env: env)
+
+      expect(status).to be_success, errors
+      expect(database_values("SELECT name FROM sqlite_master WHERE type = 'table'")).not_to include("left_by_an_earlier_run")
+    end
   end
 
   it "enqueues jobs into an adapter that drops them (overhead-benchmark/REQ-1)" do
