@@ -40,7 +40,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - After: T6
   - Done when: `rspec spec/benchmark` → 0 failures; a not-applicable row never changes the exit status
 - [ ] **T8** `BENCHMARK_QUEUE` enqueues through Solid Queue or Sidekiq → REQ-3
-  - Files: Gemfile, benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Files: Gemfile, benchmark/harness.rb, bin/benchmark, .github/workflows/deploy-benchmark.yml, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, the `--list` facts name the real adapter; `Capture, async` on Solid Queue leaves rows in its jobs table
   - After: T7
   - Done when: `rspec spec/benchmark` → 0 failures; `bin/benchmark` with neither variable set prints the same rows as before

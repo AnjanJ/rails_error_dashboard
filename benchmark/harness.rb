@@ -36,25 +36,31 @@ module RedBenchmark
   #
   # BENCHMARK_DATABASE_URL points it at another database, which it empties and
   # rebuilds from db/migrate: schema.rb is hand-kept for SQLite, and a host gets
-  # its PostgreSQL-only indexes from the migrations.
+  # its PostgreSQL-only indexes from the migrations. BENCHMARK_QUEUE enqueues
+  # through a real adapter instead of NullJobAdapter.
   module Harness
     DATABASE = File.join(ROOT, "tmp", "benchmark", "benchmark.sqlite3")
     SCHEMA = File.join(ROOT, "spec", "dummy", "db", "schema.rb")
     CGROUP = "/sys/fs/cgroup"
     PROC_STAT = "/proc/stat"
+    QUEUES = %w[solid_queue sidekiq].freeze
+    SOLID_QUEUE_SCHEMA = "lib/generators/solid_queue/install/templates/db/queue_schema.rb"
 
     module_function
 
     def boot!
       database_url = ENV["BENCHMARK_DATABASE_URL"].to_s
+      queue = ENV["BENCHMARK_QUEUE"].to_s
       refuse_unless_named_for_benchmarking(database_url) unless database_url.empty?
+      refuse_unknown_queue(queue) unless queue.empty?
       ENV["RAILS_ENV"] = "benchmark"
       ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
 
       require File.join(ROOT, "spec", "dummy", "config", "application")
-      configure(Rails.application.config)
+      configure(Rails.application.config, queue)
       Rails.application.initialize!
       database_url.empty? ? load_schema : rebuild_from_migrations
+      load_solid_queue_schema if queue == "solid_queue"
       # New Rails apps run production with YJIT on, and it moves these numbers
       # by half, so neither the shell nor the Rails version gets to decide it.
       RubyVM::YJIT.enable if defined?(RubyVM::YJIT.enable)
@@ -70,6 +76,13 @@ module RedBenchmark
 
       abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" " \
         "in its name. BENCHMARK_DATABASE_URL names #{name.empty? ? 'no database' : name.inspect}."
+    end
+
+    # A typo must not fall back to the null adapter and pass as a real queue.
+    def refuse_unknown_queue(queue)
+      return if QUEUES.include?(queue)
+
+      abort "BENCHMARK_QUEUE is #{queue.inspect}, and bin/benchmark only knows #{QUEUES.join(' and ')}."
     end
 
     # The database itself, never the host or a folder on the way to it. Empty
@@ -101,13 +114,27 @@ module RedBenchmark
       RailsErrorDashboard::TestSchema.migrate!
     end
 
-    def configure(config)
+    # In the same database as RED's tables, as a new Rails app's Solid Queue is
+    # when it shares one. The file is the gem's own, and it's only ever loaded here.
+    def load_solid_queue_schema
+      schema = File.join(Gem.loaded_specs.fetch("solid_queue").full_gem_path, SOLID_QUEUE_SCHEMA)
+      ActiveRecord::Migration.suppress_messages { load schema }
+    end
+
+    def configure(config, queue = "")
       config.eager_load = true
       config.cache_classes = true # Rails 7.1+ reads this as enable_reloading = false
       config.logger = ActiveSupport::Logger.new($stderr, level: :warn)
       config.log_level = :warn
-      config.active_job.queue_adapter = NullJobAdapter.new
+      config.active_job.queue_adapter = job_adapter(queue)
       config.paths["config/initializers"] = File.join(__dir__, "initializers")
+    end
+
+    def job_adapter(queue)
+      return NullJobAdapter.new if queue.empty?
+
+      require queue
+      queue.to_sym
     end
 
     # What the harness set up, for `bin/benchmark --list` and its spec.

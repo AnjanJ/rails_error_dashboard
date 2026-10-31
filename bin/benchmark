@@ -12,6 +12,10 @@
 #                                       prove the script runs; the numbers mean
 #                                       nothing
 #
+# BENCHMARK_DATABASE_URL runs on another database, and EMPTIES it first, so its
+# name must have "benchmark" in it. BENCHMARK_QUEUE=solid_queue or sidekiq
+# enqueues for real. CI's gated job sets neither.
+#
 # Exits 1 when a gated median is over its budget. Takes about a minute. Don't
 # run it while rspec is running on the same machine: the databases don't
 # collide, but the numbers would be wrong.

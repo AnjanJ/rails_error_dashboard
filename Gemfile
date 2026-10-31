@@ -81,6 +81,9 @@ group :development, :test do
   unless rails_env.start_with?("7.0") || rails_env.start_with?("~> 7.0")
     gem "solid_queue", require: false
   end
+  # Not loaded into the test process either. bin/benchmark enqueues through it
+  # when BENCHMARK_QUEUE=sidekiq, to measure a real queue.
+  gem "sidekiq", require: false
 end
 
 # Start debugger with binding.b [https://github.com/ruby/debug]

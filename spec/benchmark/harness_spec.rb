@@ -140,6 +140,44 @@ RSpec.describe "bin/benchmark harness" do
     end
   end
 
+  describe "with BENCHMARK_QUEUE" do
+    around do |example|
+      Dir.mktmpdir("red_benchmark_queue") do |dir|
+        @path = File.join(dir, "queue_benchmark.sqlite3")
+        example.run
+      end
+    end
+
+    it "enqueues through Solid Queue, into its real tables (deploy-shape-benchmark/REQ-3)" do
+      skip "Solid Queue needs Rails 7.1+" if Gem::Specification.find_all_by_name("solid_queue").empty?
+
+      env = { "BENCHMARK_QUEUE" => "solid_queue", "BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}" }
+      output, errors, = run_script("--list", env: env)
+      _run_output, run_errors, run_status = run_script("--smoke", env: env)
+
+      expect(facts_from(output)["Job adapter"]).to eq("ActiveJob::QueueAdapters::SolidQueueAdapter"), errors
+      expect(run_status.exitstatus).to be_between(0, 1), run_errors
+      database = SQLite3::Database.new(@path)
+      expect(database.get_first_value("SELECT COUNT(*) FROM solid_queue_jobs")).to be_positive
+      database.close
+    end
+
+    it "enqueues through Sidekiq (deploy-shape-benchmark/REQ-3)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_QUEUE" => "sidekiq" })
+
+      expect(status).to be_success, errors
+      expect(facts_from(output)["Job adapter"]).to match(/Sidekiq/)
+    end
+
+    it "refuses a queue it doesn't know, rather than quietly use the null adapter (deploy-shape-benchmark/REQ-3)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_QUEUE" => "solidqueue" })
+
+      expect(status).not_to be_success
+      expect(errors).to include("solidqueue", "solid_queue", "sidekiq")
+      expect(output).to be_empty
+    end
+  end
+
   it "enqueues jobs into an adapter that drops them (overhead-benchmark/REQ-1)" do
     expect(@facts["Job adapter"]).to eq("RedBenchmark::NullJobAdapter")
   end
