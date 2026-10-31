@@ -31,4 +31,20 @@ RSpec.describe RedBenchmark::Report do
     expect(markdown).to include("| Capture, async (installer default) | 6.20 ms | 8.00 ms | < 5.00 ms | FAIL |")
     expect(markdown).to include("| Capture, sync | 1.25 ms | 2.00 ms | none | reported |")
   end
+
+  describe "a row that couldn't run" do
+    let(:skipped) { RedBenchmark::Timer::Skipped.new(name: "Reopen collision fallback", reason: "this database has no such index") }
+
+    it "says not applicable and why, with no figures (deploy-shape-benchmark/REQ-4)" do
+      table = described_class.markdown(environment, results + [ skipped ])
+
+      expect(table).to include("| Reopen collision fallback | n/a | n/a | none | not applicable: this database has no such index |")
+    end
+
+    it "still counts the rounds when it comes first (deploy-shape-benchmark/REQ-4)" do
+      table = described_class.markdown(environment, [ skipped ] + results)
+
+      expect(table).to include("Medians are the median of 1 round medians.")
+    end
+  end
 end

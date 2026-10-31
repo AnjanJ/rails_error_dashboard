@@ -222,10 +222,32 @@ and your OK before any build task can start.
 **Falsifiability.** We would use option 2 if GitHub stops running a branch's version of a workflow under `--ref`.
 **Fired-if.** manual
 
+## What the probe found
+
+Run 41214442263 on main, `cd148d6`, 2026-10-31, on `ubuntu-24.04` and `ubuntu-24.04-arm`. Every check passed on both.
+
+| Check | x64 (Xeon 8370C) | arm64 |
+|---|---|---|
+| `cpuset`: `Etc.nprocessors` | 2 | 2 |
+| Memory | 4 GB, swap 0 | 4 GB, swap 0 |
+| Quota of 0.4 CPU | 0.41 used, throttled 101 times | 0.41 used, throttled 101 times |
+| `netem` at 1 ms | added 1.06 ms | added 1.07 ms |
+| CPUs 0 and 1 | one core's two threads | two cores |
+| CPU steal, all CPUs busy for 10 s | 0.00% | 0.00% |
+
+So the design's assumptions hold, and Toxiproxy isn't needed. Two things to carry forward:
+
+- **The two `medium` shapes aren't like-for-like.** On x64, `medium` is one core with two threads, as `t3.medium` is. On
+  arm64 it's two cores, as `t4g.medium` is. Reports state the topology, and nothing should compare the two directly.
+- **On x64 the app gets one core and everything else gets the other,** because CPUs 2 and 3 are a separate core. That's a
+  cleaner split than the design assumed.
+
 ## Data / interface changes
 
 **Environment variables for `bin/benchmark`** (REQ-1, REQ-2, REQ-3). `BENCHMARK_DATABASE_URL` and `BENCHMARK_QUEUE`.
-`load SCHEMA` drops tables, which is why REQ-2 exists. `ci.yml`'s job sets neither, so the gated row doesn't change.
+`ci.yml`'s job sets neither, so the gated row doesn't change. With a database URL the schema comes from `db/migrate`,
+not `spec/dummy/db/schema.rb`: that file is hand-kept for SQLite, and a host gets its PostgreSQL-only indexes from the
+migrations. Building that schema drops every table first, which is why REQ-2 exists.
 
 **Sidekiq** isn't in the Gemfile. It goes in the development group with `require: false`, as `solid_queue` already does,
 so loading it changes nothing for other specs. Solid Queue's tables come from its own schema file, in the scratch

@@ -6,10 +6,21 @@ require "rack/mock"
 module RedBenchmark
   class BenchmarkError < StandardError; end
 
+  # A scenario raises this when the database it's on can't run it.
+  class NotApplicable < StandardError; end
+
   # One measurement. `run` takes a Timer and returns its Result; `iterations`
   # is how many timed calls bin/benchmark gives it per round (the specs pass
   # their own small timer). A nil budget is a row that is reported, not gated.
-  Scenario = Struct.new(:name, :budget, :iterations, :run, keyword_init: true)
+  Scenario = Struct.new(:name, :budget, :iterations, :run, keyword_init: true) do
+    # A Result, or a row saying this database can't run it. Any other error
+    # still stops the run: a broken scenario mustn't pass as not applicable.
+    def measure(timer)
+      run.call(timer)
+    rescue NotApplicable => e
+      Timer::Skipped.new(name: name, reason: e.message)
+    end
+  end
 
   # What bin/benchmark measures. The budgets are the host-app-safety skill's
   # (.claude/skills/host-app-safety/SKILL.md); the reported-only rows are the
@@ -173,11 +184,11 @@ module RedBenchmark
     # iteration takes the same path.
     #
     # Only where that index exists: MySQL has no partial indexes, so a reopen
-    # there never collides. bin/benchmark always runs on SQLite.
+    # there never collides, and timing one would report a plain reopen as this.
     def reopen_collision
       Scenario.new(name: "Reopen collision fallback", budget: nil, iterations: 200, run: lambda do |timer|
         unless RailsErrorDashboard::ErrorLog.connection.index_name_exists?(RailsErrorDashboard::ErrorLog.table_name, GROUP_IDENTITY_INDEX)
-          raise "the reopen collision needs #{GROUP_IDENTITY_INDEX}, and this database does not have it"
+          raise NotApplicable, "needs #{GROUP_IDENTITY_INDEX}, which this database doesn't have"
         end
 
         error_hash = "red-benchmark-reopen-collision"

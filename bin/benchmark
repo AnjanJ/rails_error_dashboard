@@ -12,6 +12,10 @@
 #                                       prove the script runs; the numbers mean
 #                                       nothing
 #
+# BENCHMARK_DATABASE_URL runs on another database, and EMPTIES it first, so its
+# name must have "benchmark" in it. BENCHMARK_QUEUE=solid_queue or sidekiq
+# enqueues for real. CI's gated job sets neither.
+#
 # Exits 1 when a gated median is over its budget. Takes about a minute. Don't
 # run it while rspec is running on the same machine: the databases don't
 # collide, but the numbers would be wrong.
@@ -32,6 +36,7 @@ require_relative "../benchmark/scenarios"
 require_relative "../benchmark/report"
 
 smoke = ARGV.include?("--smoke")
+ticks_before = RedBenchmark::Harness.cpu_ticks
 
 results = RedBenchmark::Scenarios.all.map do |scenario|
   $stderr.puts "  #{scenario.name}..."
@@ -40,10 +45,12 @@ results = RedBenchmark::Scenarios.all.map do |scenario|
   else
     RedBenchmark::Timer.new(iterations: scenario.iterations, warmup: [ scenario.iterations / 5, 1 ].max)
   end
-  scenario.run.call(timer)
+  scenario.measure(timer)
 end
 
-report = RedBenchmark::Report.markdown(RedBenchmark::Harness.environment, results)
+stolen = RedBenchmark::Harness.stolen_share(ticks_before, RedBenchmark::Harness.cpu_ticks)
+environment = RedBenchmark::Harness.environment.merge("CPU time stolen" => stolen)
+report = RedBenchmark::Report.markdown(environment, results)
 report = "Smoke run: a few iterations each, so these numbers mean nothing.\n\n#{report}" if smoke
 puts report
 
