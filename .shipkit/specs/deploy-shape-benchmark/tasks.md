@@ -1,0 +1,106 @@
+# Tasks: Overhead on deploy shapes
+
+Five pull requests, in order: T1 (the probe, with this spec), T2-T8 (the rows), T9-T15 (the load test), T16-T18 (the
+shapes), T19-T20 (compare and results). A workflow can't be dispatched until its file is on main, so T1 lands first.
+Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
+
+- [ ] **T1** A dispatch-only workflow that tries the design's assumptions on real runners → REQ-18
+  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/probe.sh, spec/ci/workflows_spec.rb, .shipkit/state.md
+  - Test: spec/ci/workflows_spec.rb "deploy-benchmark.yml" examples, and the workflow joins `hardened_workflows`
+  - After: none
+  - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; after it lands, a dispatch on main shows what cpuset, the quota, netem and steal really do on x64 and arm64, and the results are reported before T2 starts
+- [ ] **T2** The report names the architecture, and a CPU on ARM Linux → REQ-5
+  - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, with a sample aarch64 `/proc/cpuinfo` that has no `model name`
+  - After: T1
+  - Done when: `rspec spec/benchmark` → 0 failures; a dispatch on the arm64 runner shows a named CPU
+- [ ] **T3** The report states the CPU and memory limits it runs under → REQ-6
+  - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, with sample cgroup files, limited and unlimited
+  - After: T2
+  - Done when: `rspec spec/benchmark` → 0 failures
+- [ ] **T4** The report states the share of CPU time stolen during the run → REQ-7
+  - Files: benchmark/harness.rb, bin/benchmark, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, with two sample `/proc/stat` readings
+  - After: T3
+  - Done when: `rspec spec/benchmark` → 0 failures; on macOS the row says "not available" rather than 0
+- [ ] **T5** `BENCHMARK_DATABASE_URL` points the rows at another database → REQ-1
+  - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, a subprocess run against a second SQLite file through the URL
+  - After: T4
+  - Done when: `rspec spec/benchmark` → 0 failures; a dispatch runs the rows on PostgreSQL
+- [ ] **T6** Refuse a database without `benchmark` in its name → REQ-2
+  - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, a subprocess run that exits non-zero and leaves the named SQLite file's bytes unchanged
+  - After: T5
+  - Done when: `rspec spec/benchmark` → 0 failures
+- [ ] **T7** A scenario that can't run reports not applicable, and the run finishes → REQ-4
+  - Files: benchmark/scenarios.rb, benchmark/timer.rb, benchmark/report.rb, bin/benchmark, spec/benchmark/scenarios_spec.rb, spec/benchmark/report_spec.rb
+  - Test: spec/benchmark/scenarios_spec.rb, with the group identity index absent; spec/benchmark/report_spec.rb for the row
+  - After: T6
+  - Done when: `rspec spec/benchmark` → 0 failures; a not-applicable row never changes the exit status
+- [ ] **T8** `BENCHMARK_QUEUE` enqueues through Solid Queue or Sidekiq → REQ-3
+  - Files: Gemfile, benchmark/harness.rb, spec/benchmark/harness_spec.rb
+  - Test: spec/benchmark/harness_spec.rb, the `--list` facts name the real adapter; `Capture, async` on Solid Queue leaves rows in its jobs table
+  - After: T7
+  - Done when: `rspec spec/benchmark` → 0 failures; `bin/benchmark` with neither variable set prints the same rows as before
+- [ ] **T9** A real Rails app, on the generator's defaults, with RED added by its installer → REQ-8
+  - Files: benchmark/load/app/, benchmark/load/Dockerfile, benchmark/load/compose.yml, spec/benchmark/load_app_spec.rb
+  - Test: spec/benchmark/load_app_spec.rb reads the template and asserts production mode, Puma, jemalloc, one process and 3 threads
+  - After: T8
+  - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; the app boots in compose and a failing request reaches RED's table
+- [ ] **T10** RED off is the same image with the gem not required → REQ-8
+  - Files: benchmark/load/app/, spec/benchmark/load_app_spec.rb
+  - Test: spec/benchmark/load_app_spec.rb, and a boot with `RED=off` that asserts no RED class is loaded
+  - After: T9
+  - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; a failing request with `RED=off` leaves RED's table empty
+- [ ] **T11** k6 sends a fixed arrival rate, in three traffic mixes → REQ-9, REQ-12
+  - Files: benchmark/load/traffic.js, spec/benchmark/load_traffic_spec.rb
+  - Test: spec/benchmark/load_traffic_spec.rb reads the script and asserts `constant-arrival-rate` and the three mixes
+  - After: T10
+  - Done when: `rspec spec/benchmark/load_traffic_spec.rb` → 0 failures; a run against a deliberately slowed app keeps its arrival rate
+- [ ] **T12** With no rate given, measure capacity with RED off and use half → REQ-10
+  - Files: bin/benchmark-load, benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+  - Test: spec/benchmark/load_runner_spec.rb, with a fake driver that saturates at a known rate
+  - After: T11
+  - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures; a given rate skips the search
+- [ ] **T13** Windows alternate RED off and on, ABBA, five pairs per mix → REQ-11
+  - Files: benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+  - Test: spec/benchmark/load_runner_spec.rb asserts the order, the same rate on both sides, and a restart before each window
+  - After: T12
+  - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures
+- [ ] **T14** The report gives the percentiles, what RED added and the steal per window → REQ-13, REQ-14
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+  - Test: spec/benchmark/load_report_spec.rb, with known windows, including a negative difference shown as it is
+  - After: T13
+  - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; a deliberate delay in RED's path raises what the report says RED added by about that much
+- [ ] **T15** A window that drops requests or returns an unexpected status is invalid → REQ-15
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+  - Test: spec/benchmark/load_report_spec.rb, a window with dropped iterations and one with an unexpected status
+  - After: T14
+  - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; an invalid window is listed and left out of every figure
+- [ ] **T16** Run the rows and the load test held to a shape's limits → REQ-16
+  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/probe.sh, benchmark/load/compose.yml, benchmark/load/shapes.rb, spec/ci/workflows_spec.rb, spec/benchmark/load_shapes_spec.rb
+  - Test: spec/benchmark/load_shapes_spec.rb asserts each shape's limits; spec/ci/workflows_spec.rb keeps REQ-18 on the full workflow
+  - After: T15
+  - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each shape reports its limits, and `medium-throttled` shows throttling in `cpu.stat`
+- [ ] **T17** Add the shape's network delay between the app and the database → REQ-17
+  - Files: benchmark/load/compose.yml, benchmark/load/runner.rb, spec/benchmark/load_shapes_spec.rb
+  - Test: spec/benchmark/load_shapes_spec.rb asserts a network stack sets the delay and SQLite doesn't
+  - After: T16
+  - Done when: a dispatch reports a measured round trip within 20% of the setting
+- [ ] **T18** A shape's report says it measures the shape, not the machine → REQ-19
+  - Files: benchmark/load/load_report.rb, benchmark/report.rb, spec/benchmark/load_report_spec.rb, spec/benchmark/report_spec.rb
+  - Test: spec/benchmark/load_report_spec.rb and spec/benchmark/report_spec.rb
+  - After: T17
+  - Done when: `rspec spec/benchmark` → 0 failures
+- [ ] **T19** The compare tool prints what RED added in two reports, and the ratio → REQ-20
+  - Files: benchmark/load/compare.rb, bin/benchmark-load, spec/benchmark/load_compare_spec.rb
+  - Test: spec/benchmark/load_compare_spec.rb, with two known reports, and a mix only one of them has
+  - After: T18
+  - Done when: `rspec spec/benchmark/load_compare_spec.rb` → 0 failures
+- [ ] **T20** The research file holds every figure with its shape, CPU, commit and date → REQ-21
+  - Files: .shipkit/research/deploy-shape-benchmark.md
+  - Test: none, prose verified by reading
+  - After: T19
+  - Done when: each shape has a real run recorded, and the file says what a shape can't show

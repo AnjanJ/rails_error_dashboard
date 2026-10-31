@@ -1,12 +1,12 @@
 # Handoff
 
-> Written 2026-10-31 at commit `5ec8a3c`, after 0.18.0 shipped.
+> Written 2026-10-31 at commit `5e7d7be`, after 0.18.0 shipped.
 
 ## In flight
-- Nothing is being built. `.shipkit/specs/` holds no live specs, and no release PR is open.
-- **RED's overhead on real deploy hardware** is being planned. It needs paid servers, so it needs the
-  maintainer's OK and a budget before any server exists. It comes before rc1 (decided 2026-10-31),
-  because a code change for small boxes after rc1 would restart the quiet period.
+- **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
+  target, in GitHub CI, by hand. The maintainer chose CI only on 2026-10-31: no servers, accounts or spend.
+  It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
+- No release PR is open.
 
 ## Done
 - 0.18.0 shipped 2026-10-31, about three weeks ahead of its target. RubyGems, the GitHub Release, both
@@ -15,7 +15,8 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Get the deploy-hardware benchmark's plan and budget approved, then run it, before rc1.
+1. Build `deploy-shape-benchmark` task by task, before rc1. T1's probe lands first, because a workflow can't
+   be dispatched until its file is on main.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
@@ -36,7 +37,7 @@
 - **Does the benchmark gate change?** `Overhead benchmark` failed on main on `5ec8a3c`: health snapshot
   1.15 ms on a Xeon 8573C, against 1 ms. It isn't a regression, because that commit changed only the
   version and docs. The job wasn't re-run and the gate is unchanged. The Xeon has failed both times it
-  was drawn, so the deploy-hardware results should set the budget.
+  was drawn. The shape benchmark runs on the same runners, so it won't settle this.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
