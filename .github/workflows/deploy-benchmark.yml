@@ -1,0 +1,31 @@
+name: Deploy benchmark
+
+# Measures what RED adds on the shape of a deploy target, by hand only. It holds
+# no secrets and reaches nothing outside the runner. For now it runs the probe,
+# which tries what the shapes rely on, on both of the free runner architectures.
+# Spec: .shipkit/specs/deploy-shape-benchmark/.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm ]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    name: Runner probe (${{ matrix.runner }})
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Try what the shapes rely on
+        run: benchmark/load/probe.sh "$GITHUB_STEP_SUMMARY"
