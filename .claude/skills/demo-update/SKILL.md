@@ -6,187 +6,125 @@ disable-model-invocation: true
 
 # /demo-update — Update Demo App
 
-Point the live demo app at a newly released gem version. Render auto-deploys on
-push to `main`.
+Point the live demo app at a newly released gem version. A workflow in the demo
+repo does the update. Your job is to start it, read the result, and do the one part
+it can't: seeds and feature cards.
 
 ## Usage
 
-- `/demo-update` — update to the latest released version
-- `/demo-update 0.8.4` — update to a specific version
+- `/demo-update` — update to the latest version on RubyGems
 
-## Before you start
+The workflow always targets the latest published version. It can't pick an older one.
 
-**The gem must already be live on RubyGems.** If it isn't, `bundle lock` silently
-re-resolves to the previous version and you push a no-op. Check first:
+## How the automation works
 
-```bash
-curl -s https://rubygems.org/api/v1/gems/rails_error_dashboard.json | jq -r .version
-```
+`.github/workflows/update-demo-release.yml` in the demo repo runs at :17 and :47
+past each hour, and on demand. When RubyGems has a version the demo doesn't run, it:
 
-**The Gemfile usually does not need editing.** It pins `~> 0.9`, and in
-RubyGems `~> 0.9` means `>= 0.9, < 1.0` — it pins at the *first* component, so
-it already allows every 0.x minor including 0.10.0. Only the lockfile changes.
-You would edit it only to cross into 1.x. When unsure, check rather than guess:
+1. Reads that version's GitHub Release, and stops if it's a draft or a prerelease.
+2. Picks the hero pill's text: the `summary` input, else the notes'
+   `<!-- demo-summary: ... -->` comment, else the first `###` heading that isn't
+   generic, else the first bullet. It cuts anything over 95 characters, and fails if
+   it finds no text at all.
+3. Updates the lockfile with `--conservative`, using the Bundler the lockfile names.
+4. Copies any new migrations from the gem into `db/migrate`, skipping names the demo
+   already has.
+5. Writes `config/demo_release.json`, which the hero pill reads, and regenerates the
+   schema dumps by migrating.
+6. Runs the demo's tests, system tests, RuboCop, Brakeman and bundler-audit. A failure
+   here stops the run before anything is pushed.
+7. Commits to `main` as `chore: update demo to rails_error_dashboard X.Y.Z`, and Render
+   deploys that commit.
+8. Polls the live site for up to ten minutes, until the landing page shows the new
+   version and four dashboard pages return 200.
 
-```bash
-ruby -e 'puts Gem::Requirement.new("~> 0.9").satisfied_by?(Gem::Version.new("0.10.0"))'
-```
-
-## The lockfile hazard
-
-A plain `bundle lock --update=rails_error_dashboard` run with the wrong Bundler
-will quietly wreck the lockfile. Observed on a real update:
-
-- **`BUNDLED WITH` downgraded 4.0.3 -> 2.6.9**, because the local Ruby shipped an
-  older Bundler than the demo expects
-- **8 unrelated gems bumped** (`rack`, `zeitwerk`, `json`, `reline`, `erb`,
-  `io-console`, `rbs`)
-- **local platform added** (`arm64-darwin-23`), which does not belong in a
-  lockfile deployed to Linux
-
-Any of these can break the Render deploy for reasons unrelated to the gem bump.
-The demo pins **Ruby 3.4.5** and **Bundler 4.0.3** — match both.
+Never hand-edit the schema dumps or the lockfile for a release. Step 5 and step 3 exist
+because doing that by hand broke the demo.
 
 ## Steps
 
-1. **Verify the target version is published** (see above).
-
-2. **Use the demo's Bundler**, not whatever is on PATH:
+1. **Check the gem is live on RubyGems.** The run needs it there:
    ```bash
-   gem install bundler -v 4.0.3 --no-document   # once per machine
+   curl -s https://rubygems.org/api/v1/gems/rails_error_dashboard.json | jq -r .version
    ```
 
-3. **Update the lockfile conservatively** — `--conservative` stops Bundler
-   bumping unrelated gems:
+2. **Start the workflow**, or let the schedule pick the release up:
    ```bash
-   cd /Users/anjan/code/RED/rails_error_dashboard_demo_app
-   bundler _4.0.3_ lock --conservative --update=rails_error_dashboard
+   gh workflow run update-demo-release.yml -R AnjanJ/rails_error_dashboard_demo_app
    ```
-   Use `bundle lock`, never `bundle install` — installing compiles native gems
-   (sqlite3 does not build cleanly on recent macOS) and is unnecessary here.
+   Add `-f summary="Short description"` to set the pill's text. On a version the demo
+   already runs, that changes only the pill.
 
-4. **Remove the local platform line** if Bundler added one. It re-adds the
-   running machine's platform on every resolve, so strip it after the final
-   `lock` and do not re-resolve afterwards:
+3. **Read the result:**
    ```bash
-   sed -i '' '/^  arm64-darwin-2[0-9]$/d' Gemfile.lock   # keep 24/25 if already tracked
+   gh run list -R AnjanJ/rails_error_dashboard_demo_app --workflow update-demo-release.yml --limit 3
+   gh run view <run-id> -R AnjanJ/rails_error_dashboard_demo_app --log-failed
    ```
-   Check `PLATFORMS` afterwards — it must still list `x86_64-linux` for Render.
+   "Demo already runs X.Y.Z" means the schedule got there first. A failed gate pushes
+   nothing, so read the log and fix the cause. A new Brakeman release fails this gate
+   until the demo bumps `brakeman`.
 
-5. **Review the diff before committing.** A clean patch bump is exactly two
-   lines, the version and its checksum:
-   ```bash
-   git diff Gemfile.lock | grep -E "^[+-]" | grep -v "^[+-][+-]"
-   ```
-   If you see `BUNDLED WITH`, unrelated gem versions, or new platforms, reset with
-   `git checkout Gemfile.lock` and redo from step 2.
+4. **Load `/` and read the pill.** The version tag and the summary beside it must
+   describe the same release.
 
-6. **IF THE RELEASE SHIPS A MIGRATION, COMMIT IT AND BOTH SCHEMA DUMPS.**
+5. **Check whether seeds or feature cards need work**, below. Patch releases with no
+   user-visible feature don't.
 
-   This is not cosmetic — miss it and the affected dashboard page 500s in
-   production. `bin/docker-entrypoint` runs `db:prepare` on boot, which applies
-   *pending* migrations, but only ones that exist in the repo. A lockfile bump
-   alone gives the demo gem code that reads a column its database lacks.
+## What the workflow doesn't do
 
-   Check first:
-   ```bash
-   ls /Users/anjan/code/RED/rails_error_dashboard/db/migrate/ | tail -3
-   grep -n 'define(version' db/schema.rb
-   ```
-   If the gem has a migration newer than the demo's schema version, copy it by
-   hand — `bin/rails error_dashboard:install:migrations` **cannot run here**,
-   because the demo's gems are not installed and step 3 forbids
-   `bundle install`:
-   ```bash
-   cp ../rails_error_dashboard/db/migrate/<TS>_<name>.rb \
-      db/migrate/<TS>_<name>.rails_error_dashboard.rb
-   ```
-   Add the provenance line its siblings carry, directly above the class:
-   `# This migration comes from rails_error_dashboard (originally <TS>)`
+These live in the demo repo. The workflow pushes to its `main`, so pull before you edit:
+a local clone falls behind on every release.
 
-   Then hand-edit **both** `db/schema.rb` and `db/error_dashboard_schema.rb`:
-   bump `define(version:)` to the new timestamp and add the column.
-   **Column order is by type, not alphabetical** — Rails groups `t.string`
-   together, so a new string column can land *before* `updated_at`. Diff
-   against the gem's `spec/dummy/db/schema.rb`, which is authoritative:
-   ```bash
-   diff <(sed -n '/create_table "<table>"/,/^  end/p' db/error_dashboard_schema.rb) \
-        <(sed -n '/create_table "<table>"/,/^  end/p' ../rails_error_dashboard/spec/dummy/db/schema.rb)
-   ```
+### Seeds
 
-   Note: `config/database.yml` names `migrations_paths: db/error_dashboard_migrate`
-   for the error_dashboard database, but that directory does not exist — every
-   RED migration lives in `db/migrate/`. Follow the precedent (commit 8859bc4,
-   which added `rack_attack_events` in 0.8.3), not the config.
+`db/seeds.rb` only needs work if the new version added a feature that requires demo
+data to show anything.
 
-7. **Check whether the seed file needs updating** — `db/seeds.rb` only needs work
-   if the new version added a feature that requires demo data to show anything.
+**The test is not "did the feature ship", it is "can a visitor SEE it".** If you are
+about to add a landing-page card for the feature, that card links to a page which must
+not be empty. 0.10.0 shipped AI crawler tracking and
+`/red/errors/rack_attack_summary` read "no events can be recorded", because nothing
+had ever written to that table on the demo.
 
-   **The test is not "did the feature ship", it is "can a visitor SEE it".** If
-   step 8 is about to add a landing-page card for the feature, that card links
-   to a page which must not be empty. 0.10.0 shipped AI crawler tracking and
-   `/red/errors/rack_attack_summary` read "no events can be recorded", because
-   nothing had ever written to that table on the demo.
+Seeding notes learned there:
+- Check the table's **unique index** before writing rows. `rack_attack_events`
+  is keyed on `(rule, match_type, discriminator, path, period_hour,
+  application_id)`, so every seeded row must differ in at least one.
+- Some tables are **hourly aggregates, not request logs**. Seed buckets
+  across a range of hours so the page's time filters have something to do.
+- Where a classifier decides what renders (`AiAgentClassifier` here), verify
+  your fixture strings against it rather than assuming — and include a
+  negative case (Googlebot is named but `ai=false`) so the page demonstrates
+  the distinction rather than counting everything as a hit.
+- Vary the shape. Flat identical counts across every bucket read as
+  synthetic; assistants spiking in working hours while crawlers grind
+  steadily reads as traffic.
+- **Add the model to the `CLEAR_BEFORE_SEED` block.** `bin/docker-entrypoint`
+  reseeds on every boot, so anything missing there accumulates per deploy.
+- Guard new model references with `defined?`, so the seed still runs against
+  an older gem.
 
-   Seeding notes learned there:
-   - Check the table's **unique index** before writing rows. `rack_attack_events`
-     is keyed on `(rule, match_type, discriminator, path, period_hour,
-     application_id)`, so every seeded row must differ in at least one.
-   - Some tables are **hourly aggregates, not request logs**. Seed buckets
-     across a range of hours so the page's time filters have something to do.
-   - Where a classifier decides what renders (`AiAgentClassifier` here), verify
-     your fixture strings against it rather than assuming — and include a
-     negative case (Googlebot is named but `ai=false`) so the page demonstrates
-     the distinction rather than counting everything as a hit.
-   - Vary the shape. Flat identical counts across every bucket read as
-     synthetic; assistants spiking in working hours while crawlers grind
-     steadily reads as traffic.
-   - **Add the model to the `CLEAR_BEFORE_SEED` block.** `bin/docker-entrypoint`
-     reseeds on every boot, so anything missing there accumulates per deploy.
-   - Guard new model references with `defined?`, so the seed still runs against
-     an older gem.
+### Feature cards
 
-8. **UPDATE THE LANDING-PAGE COPY. This is the step that gets missed.**
+| What | Where | Auto? |
+|---|---|---|
+| Hero pill version and summary | `config/demo_release.json` | **yes** |
+| Footer / install snippet version | `<%= @version %>` | **yes** |
+| **Feature card** | a `.gcell` in the `grid-features` section of `app/views/pages/home.html.erb` | **NO** |
+| **Card version badge** | `<span class="vbadge">vX.Y.Z</span>` | **NO** |
 
-   `app/views/pages/home.html.erb` has three places that describe *what* the
-   release contains. None of them update themselves, and the version number
-   sitting next to them DOES — so a stale headline reads as a fresh claim about
-   the new version. The hero pill shipped reading
-   `v0.9.0 · Storm protection` for two releases after storm protection landed
-   in 0.8.2.
+For a release with a user-visible headline feature, add a `.gcell` to the
+`grid-features` grid, newest first, with a `<span class="vbadge">` naming the version
+that introduced it. Badge the version the feature SHIPPED IN, not the current version.
+Storm protection stays `v0.8.2` forever.
 
-   | What | Where | Auto? |
-   |---|---|---|
-   | Hero pill version tag | `<span class="pill-tag">v<%= @version %></span>` | **yes** — `@version` is `RailsErrorDashboard::VERSION` |
-   | **Hero pill headline** | the `<span>` right after it | **NO — hardcoded** |
-   | **Feature card** | a `.gcell` in the `grid-features` section | **NO** |
-   | **Card version badge** | `<span class="vbadge">vX.Y.Z</span>` | **NO** |
-   | Footer / install snippet version | `<%= @version %>` | **yes** |
+## Crossing into 1.x
 
-   For a release with a user-visible headline feature:
-   - Rewrite the hero pill headline to name it (short — it sits on one line).
-   - Add a `.gcell` to the `grid-features` grid, newest first, with a
-     `<span class="vbadge">` naming the version that introduced it.
-   - Badge the version the feature SHIPPED IN, not the current version. Storm
-     protection stays `v0.8.2` forever.
+The demo's Gemfile pins `~> 0.9`, and in RubyGems that means `>= 0.9, < 1.0`. It allows
+every 0.x minor and nothing from 1.0 on, so the run will fail with `Resolved X, expected
+1.0.0` until that line changes. Change it before the 1.0.0 release.
 
-   For a patch release with no user-visible feature (a security or bug fix),
-   leave the copy alone — the version numbers update themselves.
-
-   Verify by loading `/` and reading the pill: the version tag and the headline
-   beside it must describe the same release.
-
-9. **Commit and push**:
-   ```bash
-   git add Gemfile.lock            # add Gemfile too only if you edited it
-   git add app/views/pages/home.html.erb   # if you changed the copy in step 8
-   git commit -m "chore: update rails_error_dashboard to X.Y.Z"
-   git push origin main
-   ```
-
-10. **Confirm the deploy** — Render redeploys automatically; the site updates
-   within a few minutes. Load the dashboard and confirm the footer version, and
-   load `/` to confirm the hero pill reads correctly.
+The workflow only accepts a stable `X.Y.Z`, so it won't deploy `1.0.0.rc1`.
 
 ## Demo App Details
 
