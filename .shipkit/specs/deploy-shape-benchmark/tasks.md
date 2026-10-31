@@ -9,37 +9,37 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/ci/workflows_spec.rb "deploy-benchmark.yml" examples, and the workflow joins `hardened_workflows`
   - After: none
   - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; after it lands, a dispatch on main shows what cpuset, the quota, netem and steal really do on x64 and arm64, and the results are reported before T2 starts
-- [ ] **T2** The report names the architecture, and a CPU on ARM Linux → REQ-5
+- [x] **T2** The report names the architecture, and a CPU on ARM Linux → REQ-5
   - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, with a sample aarch64 `/proc/cpuinfo` that has no `model name`
   - After: T1
   - Done when: `rspec spec/benchmark` → 0 failures; T5's dispatch shows a named CPU on the arm64 runner
-- [ ] **T3** The report states the CPU and memory limits it runs under → REQ-6
+- [x] **T3** The report states the CPU and memory limits it runs under → REQ-6
   - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, with sample cgroup files, limited and unlimited
   - After: T2
   - Done when: `rspec spec/benchmark` → 0 failures
-- [ ] **T4** The report states the share of CPU time stolen during the run → REQ-7
+- [x] **T4** The report states the share of CPU time stolen during the run → REQ-7
   - Files: benchmark/harness.rb, bin/benchmark, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, with two sample `/proc/stat` readings
   - After: T3
   - Done when: `rspec spec/benchmark` → 0 failures; on macOS the row says "not available" rather than 0
-- [ ] **T5** `BENCHMARK_DATABASE_URL` points the rows at another database, built from `db/migrate` → REQ-1
+- [x] **T5** `BENCHMARK_DATABASE_URL` points the rows at another database, built from `db/migrate` → REQ-1
   - Files: benchmark/harness.rb, .github/workflows/deploy-benchmark.yml, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, a subprocess run against a second SQLite file through the URL
   - After: T4
   - Done when: `rspec spec/benchmark` → 0 failures; a dispatch runs the rows on PostgreSQL, on both runners, with the group identity index present
-- [ ] **T6** Refuse a database without `benchmark` in its name → REQ-2
+- [x] **T6** Refuse a database without `benchmark` in its name → REQ-2
   - Files: benchmark/harness.rb, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, a subprocess run that exits non-zero and leaves the named SQLite file's bytes unchanged
   - After: T5
   - Done when: `rspec spec/benchmark` → 0 failures
-- [ ] **T7** A scenario that can't run reports not applicable, and the run finishes → REQ-4
+- [x] **T7** A scenario that can't run reports not applicable, and the run finishes → REQ-4
   - Files: benchmark/scenarios.rb, benchmark/timer.rb, benchmark/report.rb, bin/benchmark, spec/benchmark/scenarios_spec.rb, spec/benchmark/report_spec.rb
   - Test: spec/benchmark/scenarios_spec.rb, with the group identity index absent; spec/benchmark/report_spec.rb for the row
   - After: T6
   - Done when: `rspec spec/benchmark` → 0 failures; a not-applicable row never changes the exit status
-- [ ] **T8** `BENCHMARK_QUEUE` enqueues through Solid Queue or Sidekiq → REQ-3
+- [x] **T8** `BENCHMARK_QUEUE` enqueues through Solid Queue or Sidekiq → REQ-3
   - Files: Gemfile, benchmark/harness.rb, bin/benchmark, .github/workflows/deploy-benchmark.yml, spec/benchmark/harness_spec.rb
   - Test: spec/benchmark/harness_spec.rb, the `--list` facts name the real adapter; `Capture, async` on Solid Queue leaves rows in its jobs table
   - After: T7
