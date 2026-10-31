@@ -41,7 +41,7 @@ results = RedBenchmark::Scenarios.all.map do |scenario|
   else
     RedBenchmark::Timer.new(iterations: scenario.iterations, warmup: [ scenario.iterations / 5, 1 ].max)
   end
-  scenario.run.call(timer)
+  scenario.measure(timer)
 end
 
 stolen = RedBenchmark::Harness.stolen_share(ticks_before, RedBenchmark::Harness.cpu_ticks)

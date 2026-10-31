@@ -23,6 +23,25 @@ module RedBenchmark
       def pass?
         !gated? || median <= budget
       end
+
+      def skipped?
+        false
+      end
+    end
+
+    # A row the database can't run: no figures, and it can't fail a run.
+    Skipped = Struct.new(:name, :reason, keyword_init: true) do
+      def gated?
+        false
+      end
+
+      def pass?
+        true
+      end
+
+      def skipped?
+        true
+      end
     end
 
     # 1 when any gated row is over its budget, else 0. Reported-only rows never
