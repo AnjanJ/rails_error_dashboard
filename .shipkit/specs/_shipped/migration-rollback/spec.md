@@ -1,7 +1,7 @@
 # Spec: Migrations that roll back what they add (issue #326)
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#341)
 > Paths: db/migrate/,spec/db/,spec/support/migration_round_trip.rb,spec/docs/rollback_docs_spec.rb,docs/TROUBLESHOOTING.md,docs/GLOSSARY.md,_reference/,_guides/
 
 ## Purpose

@@ -1,7 +1,7 @@
 # Spec: Deprecations for 0.18.0
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#339)
 > Paths: app/,lib/,config/locales/,docs/,_guides/,_getting_started/,_reference/,_features/,README.md,ROADMAP.md,spec/
 
 ## Purpose

@@ -1,7 +1,7 @@
 # Spec: The public API document and the release policies
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#342)
 > Paths: docs/PUBLIC_API.md,docs/VERSIONING.md,docs/guides/CONFIGURATION.md,_guides/configuration.md,SECURITY.md,README.md,.shipkit/decisions/,spec/docs/
 
 ## Purpose

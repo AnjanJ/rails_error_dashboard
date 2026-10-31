@@ -1,7 +1,7 @@
 # Spec: Bring the storm check back under its budget
 
 > Spec accepted at commit `5a1fee6` on spec/0-18-0 (2026-10-30).
-> Status: open
+> Status: shipped in 0.18.0 (#335)
 > Paths: lib/rails_error_dashboard/services/storm_protection/gate.rb,lib/rails_error_dashboard/services/storm_protection/count_buffer.rb,spec/services/storm_protection/
 
 ## Purpose

@@ -1,7 +1,7 @@
 # Spec: Webhook contract v1
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#338)
 > Paths: app/jobs/rails_error_dashboard/,lib/rails_error_dashboard/webhooks.rb,lib/rails_error_dashboard.rb,_reference/,lib/rails_error_dashboard/services/webhook_payload_builder.rb,lib/rails_error_dashboard/services/baseline_alert_payload_builder.rb,lib/rails_error_dashboard/services/webhook_delivery.rb,docs/,_guides/,_getting_started/,spec/
 
 ## Purpose
