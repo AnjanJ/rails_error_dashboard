@@ -25,6 +25,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **storm:** make the storm check about twice as fast ([#335](https://github.com/AnjanJ/rails_error_dashboard/issues/335)) ([960b82e](https://github.com/AnjanJ/rails_error_dashboard/commit/960b82e33605adc0aacd33bd7e6ec31b688e626e))
 
+### Upgrade instructions
+
+No migrations and no new dependencies:
+
+```sh
+bundle update rails_error_dashboard
+```
+
+Two changes can need action:
+
+- **If you post to `config.webhook_urls`,** three event names change. Update your receiver before you
+  deploy, because RED doesn't send the old names as well.
+- **If a script runs `rails generate rails_error_dashboard:solid_queue`,** that generator is gone. Run
+  `bin/rails rails_error_dashboard:verify` instead.
+
+Everything else here keeps working. The full steps are in
+[Webhook changes](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#webhook-changes-in-0180)
+and [Deprecations](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#deprecations-in-0180).
+
+### What 1.x will keep stable
+
+This release settles RED's public surface ahead of 1.0.
+
+- **[Public API](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/PUBLIC_API.md)** lists
+  what 1.x keeps stable. Anything not named there is private and can change in any release.
+- **[Versioning policy](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md)**
+  says how changes are made. After 1.0 ships, 0.x gets security fixes only, on its last minor, until
+  2027-06-30.
+- **[Webhook contract](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/WEBHOOKS.md)**
+  is version 1. 1.x may add events, but never renames or removes one.
+
+### Webhook changes
+
+Three events have new names:
+
+| Before | Now |
+|---|---|
+| `error_storm_detected` | `storm.detected` |
+| `new_error_notifications_suppressed` | `notifications.suppressed` |
+| `baseline_anomaly` | `baseline.anomaly_detected` |
+
+`error.created` keeps its name. A receiver that matches on an old name stops matching when you
+upgrade. If old and new versions run side by side during a deploy, accept both names until it
+finishes. Jobs already in the queue post the new names.
+
+Every post gains:
+
+- **`version`** in the body, set to `1`.
+- **`timestamp`** in the body, always UTC. Storm and burst bodies didn't have one. `error.created` and
+  the baseline event did, in the app's zone, so with a non-UTC `config.time_zone` you'll see `+05:30`
+  become `Z`. That's the same instant, but a receiver comparing it as a string will notice.
+- **`X-Error-Dashboard-Event`**, which only `error.created` had.
+- **`X-Error-Dashboard-ID`** on `baseline.anomaly_detected`, as well as `error.created`.
+
+Every other field keeps its name, type and meaning. Signatures still cover the exact bytes sent. Slack,
+Discord, Telegram, PagerDuty and email messages don't change.
+
+### Deprecations
+
+Nothing here stops your app booting. Each one logs a warning once per process, starting
+`[Rails Error Dashboard] DEPRECATION:`, and keeps working until 2.0.
+
+| If you use | Do this |
+|---|---|
+| `config.async_adapter` | Delete the line. RED's jobs run on your app's Active Job adapter, and this never changed that |
+| `config.llm_observability_content_capture` | Delete the line. It was reserved and never used |
+| `USE_SEPARATE_ERROR_DB` | Set `config.use_separate_database` in your initializer, and unset the variable |
+
+- **Rake tasks have one namespace now.** All 11 `error_dashboard:` tasks are `rails_error_dashboard:`
+  tasks, such as `rails_error_dashboard:verify`. The old names still run, and print a deprecation to
+  standard error, so update your scripts and cron entries when you can.
+- **The `rails_error_dashboard:solid_queue` generator is gone.** `rails_error_dashboard:verify` makes
+  the same checks. Older versions of the generator wrote a config with workers and no dispatcher, which
+  stops every delayed job in your app, so run `verify` if you ever used it.
+- **RED 1.0 requires Rails 7.2 and Ruby 3.3.** On anything older, this version logs one warning and
+  keeps working.
+
+### Migrations roll back what they add
+
+33 of RED's migrations guarded with an existence check inside `change`, which Rails can't reverse.
+`db:migrate:down` printed "reverted", recorded it and left the table or column in place. They now have
+an `up` and a `down`, and each `up` does what it did.
+
+- **Upgrading doesn't change the copies you have.** The installer copies each migration into your app
+  once and skips names you already have. Copies from 0.18.0 onward remove what they add.
+- **`db:rollback` stops at `add_group_identity_unique_index_to_error_logs`,** the newest migration that
+  can't be reversed.
+- **Some rollbacks refuse on purpose.** On PostgreSQL and SQLite, three migrations won't remove a column
+  of the unique index that stops duplicate error groups, because nothing would put it back. On
+  PostgreSQL and MySQL, a parent table won't drop while other tables have foreign keys to it. In each
+  case nothing changes and the migration stays recorded.
+
+[Rolling back RED's migrations](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/TROUBLESHOOTING.md#rolling-back-reds-migrations)
+has the details, and how to remove a leftover table or column by hand.
+
+### Safer inside your app
+
+- **git blame:** a timed-out `git blame` is now ended, along with any child process it left, on every
+  path out, so it can't hold a worker.
+- **View Source:** a frame from outside `Rails.root`, such as one recorded before a deploy, used to be
+  cut down to its file name and looked up at your app's root, so it could show a different file with
+  the same name. RED now finds the same app-relative file, or shows no source.
+- **User count:** on PostgreSQL and MySQL the database now ends a slow count itself. The old Ruby
+  `Timeout` could interrupt the driver and leave a connection mid-protocol in your pool. On SQLite and
+  other adapters it's a plain count, with no time limit.
+
+### Platforms and patterns
+
+- `boot_crash` and `crash_capture` say how an error was captured, not where it ran, so they're off the
+  platform filter, the breakdowns, the comparison page and the live list's column.
+- Platform badges match in any letter case.
+- Pattern hours now say which time zone they're in, in all 11 locales. They were already in your app's
+  zone, so stored errors don't move.
+
+### Performance
+
+- **The storm check is about twice as fast:** on an M3 Max, 6.41 to 3.39 µs calm and 8.81 to 4.57 µs
+  with the breaker open. A known fingerprint is counted in place, and the gate builds only its key per
+  event.
+- **RED's overhead now has a benchmark.** `bin/benchmark` is in the repo, not the gem. CI runs it on
+  every push to main and on pull requests that touch the capture path, and fails when a gated median
+  goes over budget. The [README](https://github.com/AnjanJ/rails_error_dashboard#readme) quotes each
+  figure with the CPU it came from.
+
+### Known issue: json 3 on Rails before 8.1.4 or 7.2.4
+
+Unchanged from 0.14.3: pin `gem "json", "< 3"` until you upgrade Rails. See
+[Upgrading](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+
 ## [0.17.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.16.2...rails_error_dashboard/v0.17.0) (2026-10-29)
 
 
