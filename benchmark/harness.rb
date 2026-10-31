@@ -2,6 +2,7 @@
 
 require "etc"
 require "fileutils"
+require "uri"
 
 module RedBenchmark
   ROOT = File.expand_path("..", __dir__)
@@ -46,6 +47,7 @@ module RedBenchmark
 
     def boot!
       database_url = ENV["BENCHMARK_DATABASE_URL"].to_s
+      refuse_unless_named_for_benchmarking(database_url) unless database_url.empty?
       ENV["RAILS_ENV"] = "benchmark"
       ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
 
@@ -57,6 +59,26 @@ module RedBenchmark
       # by half, so neither the shell nor the Rails version gets to decide it.
       RubyVM::YJIT.enable if defined?(RubyVM::YJIT.enable)
       Rails.application
+    end
+
+    # A run drops every table, so one mistyped variable could empty a real
+    # database. The name has to say this one is for benchmarking, and this runs
+    # before anything connects. It prints only the name: the URL holds a password.
+    def refuse_unless_named_for_benchmarking(url)
+      name = database_name(url)
+      return if name.include?("benchmark")
+
+      abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" " \
+        "in its name. BENCHMARK_DATABASE_URL names #{name.empty? ? 'no database' : name.inspect}."
+    end
+
+    # The database itself, never the host or a folder on the way to it. Empty
+    # when the URL can't be read, which the guard above refuses.
+    def database_name(url)
+      path = url.start_with?("sqlite3:") ? url.delete_prefix("sqlite3:") : URI(url).path.to_s
+      File.basename(path.split("?").first.to_s)
+    rescue URI::InvalidURIError
+      ""
     end
 
     def fresh_scratch_url

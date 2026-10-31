@@ -95,6 +95,49 @@ RSpec.describe "bin/benchmark harness" do
       expect(status).to be_success, errors
       expect(database_values("SELECT name FROM sqlite_master WHERE type = 'table'")).not_to include("left_by_an_earlier_run")
     end
+
+    # The run drops every table, so one mistyped variable could empty a real
+    # database. The refusal has to come first, before the app or Rails loads.
+    describe "when the database isn't named for benchmarking" do
+      around do |example|
+        Dir.mktmpdir("red_benchmark_refusal") do |dir|
+          @production = File.join(dir, "production.sqlite3")
+          database = SQLite3::Database.new(@production)
+          database.execute("CREATE TABLE orders (id INTEGER)")
+          database.execute("INSERT INTO orders VALUES (42)")
+          database.close
+          example.run
+        end
+      end
+
+      it "exits with an error and changes nothing (deploy-shape-benchmark/REQ-2)" do
+        before = File.binread(@production)
+
+        output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "sqlite3:#{@production}" })
+
+        expect(status).not_to be_success
+        expect(errors).to include("production.sqlite3", "benchmark")
+        expect(output).to be_empty
+        expect(File.binread(@production)).to eq(before)
+      end
+    end
+
+    {
+      "postgres://red:red@127.0.0.1:5432/red_benchmark?pool=10" => "red_benchmark",
+      "postgres://benchmark.internal/production" => "production",
+      "trilogy://root:red@127.0.0.1:3306/benchmark_mysql" => "benchmark_mysql",
+      "sqlite3:/tmp/benchmark/production.sqlite3" => "production.sqlite3",
+      "sqlite3:tmp/other_benchmark.sqlite3?pool=5" => "other_benchmark.sqlite3",
+      "postgres://red@127.0.0.1" => ""
+    }.each do |url, name|
+      it "reads #{name.inspect} from #{url}, not the host or a folder (deploy-shape-benchmark/REQ-2)" do
+        expect(RedBenchmark::Harness.database_name(url)).to eq(name)
+      end
+    end
+
+    it "refuses a URL it can't read (deploy-shape-benchmark/REQ-2)" do
+      expect(RedBenchmark::Harness.database_name("not a url at all")).to eq("")
+    end
   end
 
   it "enqueues jobs into an adapter that drops them (overhead-benchmark/REQ-1)" do
