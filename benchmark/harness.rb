@@ -2,7 +2,6 @@
 
 require "etc"
 require "fileutils"
-require "uri"
 
 module RedBenchmark
   ROOT = File.expand_path("..", __dir__)
@@ -43,6 +42,10 @@ module RedBenchmark
     SCHEMA = File.join(ROOT, "spec", "dummy", "db", "schema.rb")
     CGROUP = "/sys/fs/cgroup"
     PROC_STAT = "/proc/stat"
+    PROC_CGROUP = "/proc/self/cgroup"
+    # Plain characters only. SQLite opens a file: URI's file and ignores what
+    # follows a ? or #, so a looser check would take "production.sqlite3?benchmark".
+    BENCHMARK_NAME = /\A[\w.-]*benchmark[\w.-]*\z/
     QUEUES = %w[solid_queue sidekiq].freeze
     SOLID_QUEUE_SCHEMA = "lib/generators/solid_queue/install/templates/db/queue_schema.rb"
 
@@ -52,11 +55,11 @@ module RedBenchmark
       database_url = ENV["BENCHMARK_DATABASE_URL"].to_s
       queue = ENV["BENCHMARK_QUEUE"].to_s
       refuse_unknown_queue(queue) unless queue.empty?
-      refuse_unreadable_url(database_url)
       ENV["RAILS_ENV"] = "benchmark"
       ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
 
       require File.join(ROOT, "spec", "dummy", "config", "application")
+      refuse_unreadable_url(database_url) unless database_url.empty?
       configure(Rails.application.config, queue)
       Rails.application.initialize!
       refuse_unless_named_for_benchmarking
@@ -75,17 +78,19 @@ module RedBenchmark
     # or a host, and it prints only that name, because the URL holds a password.
     def refuse_unless_named_for_benchmarking
       name = File.basename(ActiveRecord::Base.connection_db_config.database.to_s)
-      return if name.include?("benchmark")
+      return if name.match?(BENCHMARK_NAME)
 
       abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" " \
-        "in its name. This run would open #{name.empty? ? 'no database' : name.inspect}."
+        "in a plain name. This run would open #{name.empty? ? 'no database' : name.inspect}."
     end
 
     # Rails puts a URL it can't read in its error message, password and all, and
-    # this runs in CI's logs. Whether it's safe to run on is still the check above.
+    # this runs in CI's logs. It asks Rails' own parser, so the two can't disagree.
+    # Whether it's safe to run on is still the check above.
     def refuse_unreadable_url(url)
-      URI.parse(url)
-    rescue URI::InvalidURIError
+      require "active_record/database_configurations"
+      ActiveRecord::DatabaseConfigurations::ConnectionUrlResolver.new(url).to_hash
+    rescue URI::Error
       abort "BENCHMARK_DATABASE_URL can't be read as a URL."
     end
 
@@ -205,26 +210,40 @@ module RedBenchmark
     end
 
     # A cgroup v2 quota is "<microseconds> <period>", or "max <period>" for none.
-    def cpu_limit(cgroup = CGROUP)
-      quota, period = read_cgroup(cgroup, "cpu.max").to_s.split
-      return no_limit_file(cgroup) unless quota
-      return "none" if quota == "max"
+    def cpu_limit(cgroup = CGROUP, own = own_cgroup)
+      return "not available" unless cgroup_visible?(cgroup, own)
 
-      format("%.2f CPU", quota.to_f / period.to_f)
+      quotas = cgroup_chain(cgroup, own, "cpu.max").filter_map do |line|
+        quota, period = line.split
+        quota.to_f / period.to_f unless quota == "max"
+      end
+      quotas.empty? ? "none" : format("%.2f CPU", quotas.min)
     end
 
-    def memory_limit(cgroup = CGROUP)
-      limit = read_cgroup(cgroup, "memory.max")
-      return no_limit_file(cgroup) unless limit
-      return "none" if limit == "max"
+    def memory_limit(cgroup = CGROUP, own = own_cgroup)
+      return "not available" unless cgroup_visible?(cgroup, own)
 
-      format("%.2f GB", limit.to_f / 1024**3)
+      limits = cgroup_chain(cgroup, own, "memory.max").reject { |limit| limit == "max" }.map(&:to_f)
+      limits.empty? ? "none" : format("%.2f GB", limits.min / 1024**3)
     end
 
-    # The kernel has no limit files at a cgroup root, which is what a process
-    # outside any container sees. Not available means there are no cgroups here.
-    def no_limit_file(cgroup)
-      File.exist?(File.join(cgroup, "cgroup.controllers")) ? "none" : "not available"
+    # The process's cgroup, from the kernel's cgroup v2 line. A container with its
+    # own namespace sees "/", and its limits are at the root of what it can see.
+    def own_cgroup(lines = File.readable?(PROC_CGROUP) ? File.read(PROC_CGROUP) : "")
+      lines[%r{^0::(/\S*)$}, 1] || "/"
+    end
+
+    # A path with ".." means the process is outside what this mount shows, so
+    # finding no limit there would say nothing about the limits it's under.
+    def cgroup_visible?(cgroup, own)
+      File.exist?(File.join(cgroup, "cgroup.controllers")) && !own.include?("/..")
+    end
+
+    # The file's value in the process's cgroup and each one above it, since any
+    # of them can limit it. The root has no limit files, so it adds nothing.
+    def cgroup_chain(cgroup, own, file)
+      parts = own.split("/").reject(&:empty?)
+      (0..parts.size).filter_map { |depth| read_cgroup(File.join(cgroup, *parts.first(depth)), file) }
     end
 
     def read_cgroup(cgroup, name)

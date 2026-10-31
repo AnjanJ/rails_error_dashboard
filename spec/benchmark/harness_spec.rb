@@ -139,6 +139,25 @@ RSpec.describe "bin/benchmark harness" do
         expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@production}#benchmark")
       end
 
+      # SQLite opens the file, and ignores what follows it, while the name Rails
+      # reports still has "benchmark" in it.
+      it "isn't fooled by a query inside a SQLite file: URI (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:file:#{@production}%3Fbenchmark=1")
+      end
+
+      it "isn't fooled by a fragment inside a SQLite file: URI (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:file:#{@production}%23benchmark")
+      end
+
+      it "isn't fooled by a file: URI in a query (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}?database=file:#{@production}%3Fbenchmark=1")
+      end
+
+      it "isn't fooled by an encoded path (deploy-shape-benchmark/REQ-2)" do
+        folder = File.dirname(@production)
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:file:#{folder}/benchmark%252F..%252Fproduction.sqlite3")
+      end
+
       it "checks the database Rails opens when another variable overrides the URL (deploy-shape-benchmark/REQ-2)" do
         expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}", "PRIMARY_DATABASE_URL" => "sqlite3:#{@production}")
       end
@@ -165,7 +184,12 @@ RSpec.describe "bin/benchmark harness" do
     end
 
     it "never prints a password, even from a URL it can't read (deploy-shape-benchmark/REQ-2)" do
-      [ "postgres://red:s3cret@benchmark.internal/production", "postgres://red:s3cret@not a host/red_benchmark" ].each do |url|
+      [
+        "postgres://red:s3cret@benchmark.internal/production",
+        "postgres://red:s3cret@not a host/red_benchmark",
+        "postgres://red:s3cret@my_db/red_benchmark",
+        "trilogy://red:s3cret@db_1:3306/red_benchmark"
+      ].each do |url|
         output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => url })
 
         expect(status).not_to be_success
@@ -270,43 +294,94 @@ RSpec.describe "bin/benchmark harness" do
     end
 
     def write_cgroup(name, content)
-      File.write(File.join(@cgroup, name), content)
+      path = File.join(@cgroup, name)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, content)
     end
 
-    it "states a CPU quota in CPUs (deploy-shape-benchmark/REQ-6)" do
-      write_cgroup("cpu.max", "40000 100000\n")
+    describe "in a container, where its own cgroup looks like the root" do
+      before { write_cgroup("cgroup.controllers", "cpu memory\n") }
 
-      expect(harness.cpu_limit(@cgroup)).to eq("0.40 CPU")
+      it "states a CPU quota in CPUs (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("cpu.max", "40000 100000\n")
+
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("0.40 CPU")
+      end
+
+      it "says none when the process has no CPU quota (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("cpu.max", "max 100000\n")
+
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("none")
+      end
+
+      it "states a memory limit in GB (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("memory.max", "4294967296\n")
+
+        expect(harness.memory_limit(@cgroup, "/")).to eq("4.00 GB")
+      end
+
+      it "says none when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("memory.max", "max\n")
+
+        expect(harness.memory_limit(@cgroup, "/")).to eq("none")
+      end
     end
 
-    it "says none when the process has no CPU quota (deploy-shape-benchmark/REQ-6)" do
-      write_cgroup("cpu.max", "max 100000\n")
+    describe "at the real root, where the kernel has no limit files" do
+      before { write_cgroup("cgroup.controllers", "cpu memory\n") }
 
-      expect(harness.cpu_limit(@cgroup)).to eq("none")
+      it "says none (deploy-shape-benchmark/REQ-6)" do
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("none")
+        expect(harness.memory_limit(@cgroup, "/")).to eq("none")
+      end
     end
 
-    it "states a memory limit in GB (deploy-shape-benchmark/REQ-6)" do
-      write_cgroup("memory.max", "4294967296\n")
+    describe "in a child cgroup, as under a systemd service" do
+      before { write_cgroup("cgroup.controllers", "cpu memory\n") }
 
-      expect(harness.memory_limit(@cgroup)).to eq("4.00 GB")
+      let(:own) { "/system.slice/red.service" }
+
+      it "reads the limits on its own cgroup, not the root's (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("system.slice/red.service/cpu.max", "50000 100000\n")
+        write_cgroup("system.slice/red.service/memory.max", "1073741824\n")
+
+        expect(harness.cpu_limit(@cgroup, own)).to eq("0.50 CPU")
+        expect(harness.memory_limit(@cgroup, own)).to eq("1.00 GB")
+      end
+
+      it "takes the tightest limit on the way up to the root (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("system.slice/cpu.max", "20000 100000\n")
+        write_cgroup("system.slice/memory.max", "1073741824\n")
+        write_cgroup("system.slice/red.service/cpu.max", "max 100000\n")
+        write_cgroup("system.slice/red.service/memory.max", "2147483648\n")
+
+        expect(harness.cpu_limit(@cgroup, own)).to eq("0.20 CPU")
+        expect(harness.memory_limit(@cgroup, own)).to eq("1.00 GB")
+      end
+
+      it "says none when nothing on the way up limits it (deploy-shape-benchmark/REQ-6)" do
+        write_cgroup("system.slice/red.service/cpu.max", "max 100000\n")
+        write_cgroup("system.slice/red.service/memory.max", "max\n")
+
+        expect(harness.cpu_limit(@cgroup, own)).to eq("none")
+        expect(harness.memory_limit(@cgroup, own)).to eq("none")
+      end
+
+      it "says not available, not none, when its cgroup is outside what it can see (deploy-shape-benchmark/REQ-6)" do
+        expect(harness.cpu_limit(@cgroup, "/../elsewhere")).to eq("not available")
+        expect(harness.memory_limit(@cgroup, "/../elsewhere")).to eq("not available")
+      end
     end
 
-    it "says none when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
-      write_cgroup("memory.max", "max\n")
-
-      expect(harness.memory_limit(@cgroup)).to eq("none")
-    end
-
-    it "says none at a cgroup root, where the kernel has no limit files (deploy-shape-benchmark/REQ-6)" do
-      write_cgroup("cgroup.controllers", "cpu memory\n")
-
-      expect(harness.cpu_limit(@cgroup)).to eq("none")
-      expect(harness.memory_limit(@cgroup)).to eq("none")
+    it "reads its own cgroup from the kernel's cgroup v2 line (deploy-shape-benchmark/REQ-6)" do
+      expect(harness.own_cgroup("0::/system.slice/red.service\n")).to eq("/system.slice/red.service")
+      expect(harness.own_cgroup("0::/\n")).to eq("/")
+      expect(harness.own_cgroup("")).to eq("/")
     end
 
     it "says not available where the platform has no cgroup files (deploy-shape-benchmark/REQ-6)" do
-      expect(harness.cpu_limit(@cgroup)).to eq("not available")
-      expect(harness.memory_limit(@cgroup)).to eq("not available")
+      expect(harness.cpu_limit(@cgroup, "/")).to eq("not available")
+      expect(harness.memory_limit(@cgroup, "/")).to eq("not available")
     end
 
     it "reports both with the environment (deploy-shape-benchmark/REQ-6)" do
