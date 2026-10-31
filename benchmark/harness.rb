@@ -51,14 +51,15 @@ module RedBenchmark
     def boot!
       database_url = ENV["BENCHMARK_DATABASE_URL"].to_s
       queue = ENV["BENCHMARK_QUEUE"].to_s
-      refuse_unless_named_for_benchmarking(database_url) unless database_url.empty?
       refuse_unknown_queue(queue) unless queue.empty?
+      refuse_unreadable_url(database_url)
       ENV["RAILS_ENV"] = "benchmark"
       ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
 
       require File.join(ROOT, "spec", "dummy", "config", "application")
       configure(Rails.application.config, queue)
       Rails.application.initialize!
+      refuse_unless_named_for_benchmarking
       database_url.empty? ? load_schema : rebuild_from_migrations
       load_solid_queue_schema if queue == "solid_queue"
       # New Rails apps run production with YJIT on, and it moves these numbers
@@ -67,15 +68,25 @@ module RedBenchmark
       Rails.application
     end
 
-    # A run drops every table, so one mistyped variable could empty a real
-    # database. The name has to say this one is for benchmarking, and this runs
-    # before anything connects. It prints only the name: the URL holds a password.
-    def refuse_unless_named_for_benchmarking(url)
-      name = database_name(url)
+    # Building the database drops tables, so one mistyped variable could empty a
+    # real one. This asks Rails what it resolved rather than reading the URL:
+    # Rails lets a query name another database, and PRIMARY_DATABASE_URL beats
+    # DATABASE_URL. It's the file or database itself that counts, never a folder
+    # or a host, and it prints only that name, because the URL holds a password.
+    def refuse_unless_named_for_benchmarking
+      name = File.basename(ActiveRecord::Base.connection_db_config.database.to_s)
       return if name.include?("benchmark")
 
       abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" " \
-        "in its name. BENCHMARK_DATABASE_URL names #{name.empty? ? 'no database' : name.inspect}."
+        "in its name. This run would open #{name.empty? ? 'no database' : name.inspect}."
+    end
+
+    # Rails puts a URL it can't read in its error message, password and all, and
+    # this runs in CI's logs. Whether it's safe to run on is still the check above.
+    def refuse_unreadable_url(url)
+      URI.parse(url)
+    rescue URI::InvalidURIError
+      abort "BENCHMARK_DATABASE_URL can't be read as a URL."
     end
 
     # A typo must not fall back to the null adapter and pass as a real queue.
@@ -83,15 +94,6 @@ module RedBenchmark
       return if QUEUES.include?(queue)
 
       abort "BENCHMARK_QUEUE is #{queue.inspect}, and bin/benchmark only knows #{QUEUES.join(' and ')}."
-    end
-
-    # The database itself, never the host or a folder on the way to it. Empty
-    # when the URL can't be read, which the guard above refuses.
-    def database_name(url)
-      path = url.start_with?("sqlite3:") ? url.delete_prefix("sqlite3:") : URI(url).path.to_s
-      File.basename(path.split("?").first.to_s)
-    rescue URI::InvalidURIError
-      ""
     end
 
     def fresh_scratch_url
@@ -205,7 +207,7 @@ module RedBenchmark
     # A cgroup v2 quota is "<microseconds> <period>", or "max <period>" for none.
     def cpu_limit(cgroup = CGROUP)
       quota, period = read_cgroup(cgroup, "cpu.max").to_s.split
-      return "not available" unless quota
+      return no_limit_file(cgroup) unless quota
       return "none" if quota == "max"
 
       format("%.2f CPU", quota.to_f / period.to_f)
@@ -213,10 +215,16 @@ module RedBenchmark
 
     def memory_limit(cgroup = CGROUP)
       limit = read_cgroup(cgroup, "memory.max")
-      return "not available" unless limit
+      return no_limit_file(cgroup) unless limit
       return "none" if limit == "max"
 
       format("%.2f GB", limit.to_f / 1024**3)
+    end
+
+    # The kernel has no limit files at a cgroup root, which is what a process
+    # outside any container sees. Not available means there are no cgroups here.
+    def no_limit_file(cgroup)
+      File.exist?(File.join(cgroup, "cgroup.controllers")) ? "none" : "not available"
     end
 
     def read_cgroup(cgroup, name)

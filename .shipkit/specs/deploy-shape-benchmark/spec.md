@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `5e7d7be` on spec/deploy-shape-benchmark (2026-10-31).
 > Status: open
-> Paths: bin/benchmark,bin/benchmark-load,benchmark/,.github/workflows/deploy-benchmark.yml,spec/benchmark/,spec/ci/,.shipkit/research/
+> Paths: Gemfile,bin/benchmark,bin/benchmark-load,benchmark/,.github/workflows/deploy-benchmark.yml,spec/benchmark/,spec/ci/,.shipkit/research/
 
 ## Purpose
 RED's figures come from GitHub's runners and an M3 Max, on one idle process with SQLite and a fake queue. This

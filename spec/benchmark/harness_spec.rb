@@ -2,6 +2,7 @@
 
 require "rails_helper"
 require "open3"
+require "sqlite3"
 require "tempfile"
 require_relative "../../benchmark/harness"
 require_relative "../../benchmark/scenarios"
@@ -17,7 +18,9 @@ RSpec.describe "bin/benchmark harness" do
       "RUBYOPT" => "#{ENV['RUBYOPT']} -r#{File.join(root, 'spec/benchmark/offline.rb')}".strip,
       "RAILS_ENV" => nil,
       "DATABASE_URL" => nil,
+      "PRIMARY_DATABASE_URL" => nil,
       "BENCHMARK_DATABASE_URL" => nil,
+      "BENCHMARK_QUEUE" => nil,
       "RUBY_YJIT_ENABLE" => nil
     }
     Open3.capture3(base.merge(env), "ruby", File.join(root, "bin/benchmark"), *arguments, chdir: root)
@@ -96,12 +99,15 @@ RSpec.describe "bin/benchmark harness" do
       expect(database_values("SELECT name FROM sqlite_master WHERE type = 'table'")).not_to include("left_by_an_earlier_run")
     end
 
-    # The run drops every table, so one mistyped variable could empty a real
-    # database. The refusal has to come first, before the app or Rails loads.
+    # A run drops every table, so one mistyped variable could empty a real
+    # database. What counts is the database Rails really opens: a URL can name
+    # one and open another, and another variable can override it. The file sits
+    # in a folder named benchmark, so a folder can't pass for its name.
     describe "when the database isn't named for benchmarking" do
       around do |example|
         Dir.mktmpdir("red_benchmark_refusal") do |dir|
-          @production = File.join(dir, "production.sqlite3")
+          FileUtils.mkdir_p(File.join(dir, "benchmark"))
+          @production = File.join(dir, "benchmark", "production.sqlite3")
           database = SQLite3::Database.new(@production)
           database.execute("CREATE TABLE orders (id INTEGER)")
           database.execute("INSERT INTO orders VALUES (42)")
@@ -110,33 +116,61 @@ RSpec.describe "bin/benchmark harness" do
         end
       end
 
-      it "exits with an error and changes nothing (deploy-shape-benchmark/REQ-2)" do
+      def expect_refused(env)
         before = File.binread(@production)
 
-        output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "sqlite3:#{@production}" })
+        output, errors, status = run_script("--list", env: env)
 
         expect(status).not_to be_success
         expect(errors).to include("production.sqlite3", "benchmark")
         expect(output).to be_empty
         expect(File.binread(@production)).to eq(before)
       end
-    end
 
-    {
-      "postgres://red:red@127.0.0.1:5432/red_benchmark?pool=10" => "red_benchmark",
-      "postgres://benchmark.internal/production" => "production",
-      "trilogy://root:red@127.0.0.1:3306/benchmark_mysql" => "benchmark_mysql",
-      "sqlite3:/tmp/benchmark/production.sqlite3" => "production.sqlite3",
-      "sqlite3:tmp/other_benchmark.sqlite3?pool=5" => "other_benchmark.sqlite3",
-      "postgres://red@127.0.0.1" => ""
-    }.each do |url, name|
-      it "reads #{name.inspect} from #{url}, not the host or a folder (deploy-shape-benchmark/REQ-2)" do
-        expect(RedBenchmark::Harness.database_name(url)).to eq(name)
+      it "exits with an error and changes nothing (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@production}")
+      end
+
+      it "isn't fooled by a query that opens another database (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}?database=#{@production}")
+      end
+
+      it "isn't fooled by a fragment (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@production}#benchmark")
+      end
+
+      it "checks the database Rails opens when another variable overrides the URL (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}", "PRIMARY_DATABASE_URL" => "sqlite3:#{@production}")
+      end
+
+      it "protects a default run too, which would load the schema over it (deploy-shape-benchmark/REQ-2)" do
+        expect_refused("PRIMARY_DATABASE_URL" => "sqlite3:#{@production}")
       end
     end
 
-    it "refuses a URL it can't read (deploy-shape-benchmark/REQ-2)" do
-      expect(RedBenchmark::Harness.database_name("not a url at all")).to eq("")
+    it "judges a server's database by its own name, not its host (deploy-shape-benchmark/REQ-2)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red:s3cret@benchmark.internal/production" })
+
+      expect(status).not_to be_success
+      expect(errors).to include("production")
+      expect(output).to be_empty
+    end
+
+    it "refuses a URL that names no database (deploy-shape-benchmark/REQ-2)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red@127.0.0.1" })
+
+      expect(status).not_to be_success
+      expect(errors).to include("no database")
+      expect(output).to be_empty
+    end
+
+    it "never prints a password, even from a URL it can't read (deploy-shape-benchmark/REQ-2)" do
+      [ "postgres://red:s3cret@benchmark.internal/production", "postgres://red:s3cret@not a host/red_benchmark" ].each do |url|
+        output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => url })
+
+        expect(status).not_to be_success
+        expect(output + errors).not_to include("s3cret")
+      end
     end
   end
 
@@ -260,6 +294,13 @@ RSpec.describe "bin/benchmark harness" do
     it "says none when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
       write_cgroup("memory.max", "max\n")
 
+      expect(harness.memory_limit(@cgroup)).to eq("none")
+    end
+
+    it "says none at a cgroup root, where the kernel has no limit files (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("cgroup.controllers", "cpu memory\n")
+
+      expect(harness.cpu_limit(@cgroup)).to eq("none")
       expect(harness.memory_limit(@cgroup)).to eq("none")
     end
 
