@@ -83,6 +83,7 @@ module RedBenchmark
         "Rails" => Rails.version,
         "Database" => ActiveRecord::Base.connection_db_config.adapter,
         "CPU" => cpu_model,
+        "Architecture" => uname[:machine],
         "CPUs" => Etc.nprocessors.to_s,
         "OS" => "#{uname[:sysname]} #{uname[:release]}",
         "RED commit" => commit
@@ -96,20 +97,38 @@ module RedBenchmark
     end
 
     def cpu_model
-      if File.readable?("/proc/cpuinfo")
-        File.read("/proc/cpuinfo")[/^model name\s*:\s*(.+)$/, 1]
-      else
-        IO.popen([ "sysctl", "-n", "machdep.cpu.brand_string" ], err: File::NULL, &:read).strip
-      end.then { |model| model.to_s.empty? ? "unknown" : model }
-    rescue SystemCallError
-      "unknown"
+      cpuinfo = File.readable?("/proc/cpuinfo") ? File.read("/proc/cpuinfo") : ""
+      named_cpu(cpuinfo, command_output("lscpu"), command_output("sysctl", "-n", "machdep.cpu.brand_string"))
+    end
+
+    # x86 Linux gives a `model name`. ARM Linux usually doesn't, so lscpu decodes
+    # the part number there, and prints "-" for a part it doesn't know. macOS has
+    # neither, and has sysctl.
+    def named_cpu(cpuinfo, lscpu, sysctl = "")
+      names = [
+        cpuinfo[/^model name\s*:\s*(.+)$/, 1],
+        lscpu[/^Model name:\s*(.+)$/, 1],
+        arm_part(cpuinfo),
+        sysctl
+      ]
+      names.map { |name| name.to_s.strip }.find { |name| !name.empty? && name != "-" } || "unknown"
+    end
+
+    def arm_part(cpuinfo)
+      implementer = cpuinfo[/^CPU implementer\s*:\s*(\S+)$/, 1]
+      part = cpuinfo[/^CPU part\s*:\s*(\S+)$/, 1]
+      "ARM implementer #{implementer}, part #{part}" if implementer && part
     end
 
     def commit
-      sha = IO.popen([ "git", "-C", ROOT, "rev-parse", "--short", "HEAD" ], err: File::NULL, &:read).strip
+      sha = command_output("git", "-C", ROOT, "rev-parse", "--short", "HEAD").strip
       sha.empty? ? "unknown" : sha
+    end
+
+    def command_output(*command)
+      IO.popen(command, err: File::NULL, &:read)
     rescue SystemCallError
-      "unknown"
+      ""
     end
   end
 end

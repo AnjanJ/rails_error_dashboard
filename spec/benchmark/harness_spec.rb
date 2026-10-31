@@ -59,6 +59,39 @@ RSpec.describe "bin/benchmark harness" do
     expect(@facts["RED commit"]).to match(/\A\h{7,}\z/)
   end
 
+  it "names the machine's architecture (deploy-shape-benchmark/REQ-5)" do
+    expect(@facts["Architecture"]).to eq(Etc.uname[:machine])
+  end
+
+  describe "naming the CPU" do
+    harness = RedBenchmark::Harness
+    # /proc/cpuinfo on an aarch64 runner: numbers, and no `model name`.
+    arm_cpuinfo = "processor\t: 0\nBogoMIPS\t: 2000.00\nCPU implementer\t: 0x41\nCPU part\t: 0xd49\n"
+
+    it "uses the model name where the platform gives one (deploy-shape-benchmark/REQ-5)" do
+      cpuinfo = "processor\t: 0\nmodel name\t: AMD EPYC 7763 64-Core Processor\n"
+
+      expect(harness.named_cpu(cpuinfo, "")).to eq("AMD EPYC 7763 64-Core Processor")
+    end
+
+    it "asks lscpu on ARM Linux, which has no model name (deploy-shape-benchmark/REQ-5)" do
+      expect(harness.named_cpu(arm_cpuinfo, "Vendor ID:  ARM\nModel name:  Neoverse-N2\n")).to eq("Neoverse-N2")
+    end
+
+    it "falls back to the part number when lscpu can't name it (deploy-shape-benchmark/REQ-5)" do
+      expect(harness.named_cpu(arm_cpuinfo, "Vendor ID:  ARM\nModel name:  -\n")).to eq("ARM implementer 0x41, part 0xd49")
+      expect(harness.named_cpu(arm_cpuinfo, "")).to eq("ARM implementer 0x41, part 0xd49")
+    end
+
+    it "uses sysctl's name where there's no /proc/cpuinfo (deploy-shape-benchmark/REQ-5)" do
+      expect(harness.named_cpu("", "", "Apple M3 Max")).to eq("Apple M3 Max")
+    end
+
+    it "says unknown rather than leaving the row blank (deploy-shape-benchmark/REQ-5)" do
+      expect(harness.named_cpu("", "")).to eq("unknown")
+    end
+  end
+
   it "runs with YJIT on wherever this Ruby can turn it on, and records it (overhead-benchmark/REQ-6)" do
     expect(@facts["YJIT"]).to eq(defined?(RubyVM::YJIT.enable) ? "on" : "not available")
   end
