@@ -8,7 +8,7 @@ module RedBenchmark
   # number that is gated is the median of the round medians: it shrugs off a
   # noisy round or two (a GC pause, a busy CI neighbour) without hiding a real
   # regression. The p95 of every sample is reported too, but never gated, since
-  # it moves with GC on any shared machine. (.shipkit/specs/overhead-benchmark/
+  # it moves with GC on any shared machine. (.shipkit/specs/_shipped/overhead-benchmark/
   # design.md records why this is not benchmark-ips.)
   class Timer
     MONOTONIC = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }

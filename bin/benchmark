@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 # RED's overhead on a host app, measured against its documented budgets.
-# Spec: .shipkit/specs/overhead-benchmark/.
+# Spec: .shipkit/specs/_shipped/overhead-benchmark/.
 #
 #   env -u RAILS_VERSION bin/with-ruby bundle exec bin/benchmark
 #   ... bin/benchmark --list            the harness and the environment, no timing

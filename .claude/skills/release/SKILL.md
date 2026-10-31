@@ -70,12 +70,20 @@ To change what version ships, change the commits, not the PR.
    bin/pre-release-test all # builds 5 apps (one API-only); the summary says "Apps passed: 6"
                             # because the HTTP app records two runs. Expect 0 failed assertions
    ```
+   Test the release head, not main. Chaos loads the gem by `path:`, so it tests
+   whatever is checked out: `git switch --detach <release head>` first, and switch
+   back afterwards. In the main tree a bare `rubocop` also counts gitignored local
+   files, so run it on a `git archive` of the head, with `BUNDLE_GEMFILE` pointing
+   back at the repo's Gemfile.
 
 4. **Check CI on the release PR**:
    ```bash
    gh pr checks <PR>
    ```
-   All 29 checks must pass (the upgrade path runs on a release PR). If the PR shows `BLOCKED` with checks stuck at
+   There are 30 rows. The 29 required checks must pass (the upgrade path runs on a
+   release PR), and `Overhead benchmark`, which isn't required, shows as skipped.
+   `gh pr checks` shows nothing while runs are held, so read them by head SHA with
+   `gh run list --commit <head sha>`. If the PR shows `BLOCKED` with checks stuck at
    `action_required`, GitHub is holding workflow runs because the PR was opened
    by a bot. Approve them:
    ```bash
@@ -88,6 +96,11 @@ To change what version ships, change the commits, not the PR.
    ```bash
    curl -s https://rubygems.org/api/v1/gems/rails_error_dashboard.json | jq -r .version
    ```
+
+6. **Draft the release notes locally. Don't push them yet.** Write them on a local
+   branch cut from the release head, then run `bundle exec rspec spec/docs`. Doc specs
+   can catch a problem here that would otherwise fail CI on the release head. Prove any
+   link check can fail by breaking one anchor once.
 
 ## MANDATORY APPROVAL GATE
 
@@ -103,25 +116,48 @@ publish action. There is no separate, later `gem push` step to gate on.
 
 ## Publish
 
-6. **Merge the release PR** (squash — the repo allows no other method, and the
-   `chore(main): release` subject is what the workflow keys on):
-   ```bash
-   gh pr merge <PR> --squash
-   ```
+7. **Put the notes on the release PR, last thing on merge day.** Any later push to
+   `main` rebuilds the release PR, which drops the notes and can bring back `closes`
+   lines. The GitHub Release page is built from the PR body, so the text goes in two
+   places:
+   - on the release branch, as a `docs:` commit;
+   - in the PR body, with a `<!-- demo-summary: A short description -->` comment for
+     the demo's hero pill.
 
-7. **Verify all four artifacts**, not just the workflow's exit status:
+   Then wait for CI on the new head. A human push needs no approval. A PATCH to a PR
+   right after a push can return the old head, so re-read it before trusting it.
+
+8. **Merge the release PR** (squash — the repo allows no other method, and the
+   `chore(main): release` subject is what the workflow keys on). Use `gh api`, because
+   `gh pr merge` hangs here. Compare first, and pin the head so nothing else can slip in:
+   ```bash
+   R=repos/AnjanJ/rails_error_dashboard
+   gh api "$R/compare/main...<head sha>" --jq '{ahead_by, behind_by, files: [.files[].filename]}'
+   gh api -X PUT "$R/pulls/<PR>/merge" -f merge_method=squash -f sha=<head sha> \
+     -f commit_title='chore(main): release rails_error_dashboard X.Y.Z (#<PR>)' \
+     -F commit_message=@<body file>
+   ```
+   `behind_by` must be 0 and the file list must be what you expect. The body file must
+   hold no closing keywords.
+
+9. **Verify all four artifacts**, not just the workflow's exit status:
    ```bash
    curl -s https://rubygems.org/api/v1/gems/rails_error_dashboard.json | jq -r .version
    gh release list --limit 2
    git fetch --tags && git tag --sort=-creatordate | head -2
    git -C . log --oneline -1 origin/main
+   gh run list --commit <merge sha>
    ```
    Note: releases are tagged **twice** — `vX.Y.Z` and
    `rails_error_dashboard/vX.Y.Z`. `gh release view vX.Y.Z` fails; the release is
    named with the component prefix. Use `gh release list` instead.
 
-8. **Update the demo app** — see `/demo-update`. Do not do this before the gem is
-   actually live on RubyGems; `bundle lock` will silently keep the old version.
+   Read every workflow on the merge commit, not only Release. `Overhead benchmark`
+   runs on main alongside the publish, so it can go red after the gem is out. That
+   isn't a release failure. If it fails a gated row, stop and ask.
+
+10. **Update the demo app** — see `/demo-update`. Do not do this before the gem is
+    actually live on RubyGems.
 
 ## If the publish step fails
 

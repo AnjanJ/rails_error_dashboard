@@ -1,7 +1,7 @@
 # Spec: Host-safety fixes for 0.18.0
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#337)
 > Paths: lib/rails_error_dashboard/services/git_blame_reader.rb,lib/rails_error_dashboard/services/source_code_reader.rb,lib/rails_error_dashboard/helpers/user_model_detector.rb,spec/services/,spec/helpers/,spec/lib/
 
 ## Purpose

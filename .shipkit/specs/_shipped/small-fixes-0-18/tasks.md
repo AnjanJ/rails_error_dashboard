@@ -33,7 +33,7 @@ time. This spec's PR comes after `deprecations-0-18`: both touch UPGRADING.
   - After: T1
   - Done when: `R rspec spec/lib/rails_error_dashboard/services/pattern_detector_spec.rb` → 0 failures, and `bin/i18n-check` exits 0
 - [x] **T4** Reproduce development 404s; fix only if real → REQ-4, REQ-6
-  - Files: spec/requests/development_routing_error_spec.rb, .shipkit/specs/small-fixes-0-18/intake.md
+  - Files: spec/requests/development_routing_error_spec.rb, .shipkit/specs/_shipped/small-fixes-0-18/intake.md
   - Test: development_routing_error_spec runs the dummy app with reloading on and
     `show_exceptions = :all`, and again with production's settings. In each, a request for an
     unknown URL is made, and the spec asserts RED records it in neither.

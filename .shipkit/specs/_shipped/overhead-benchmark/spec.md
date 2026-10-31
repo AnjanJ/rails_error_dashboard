@@ -1,7 +1,7 @@
 # Spec: Overhead benchmark
 
 > Spec accepted at commit `6b1dfab` on spec/0-18-0 (2026-10-29).
-> Status: open
+> Status: shipped in 0.18.0 (#334, #336, #344). `bin/benchmark` is repo tooling and isn't in the gem.
 > Paths: bin/benchmark,benchmark/,.github/workflows/,README.md,_features/,_getting_started/,_guides/,docs/,.claude/skills/host-app-safety/,.shipkit/product.md,spec/
 
 ## Purpose
