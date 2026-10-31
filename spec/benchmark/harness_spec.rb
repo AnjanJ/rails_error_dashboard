@@ -213,6 +213,26 @@ RSpec.describe "bin/benchmark harness" do
       expect(output).to be_empty
     end
 
+    # PostgreSQL opens the first 63 bytes, so the benchmark in a longer name can
+    # be cut off after this check has seen it.
+    it "refuses a name a server would cut short (deploy-shape-benchmark/REQ-2)" do
+      long_name = "#{'a' * 63}_benchmark"
+      output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://127.0.0.1:1/#{long_name}" })
+
+      expect(status).not_to be_success
+      expect(errors).to match(refusal)
+      expect(output).to be_empty
+    end
+
+    # Nothing listens on port 1, so getting as far as connecting is the pass.
+    it "takes a name a server keeps whole (deploy-shape-benchmark/REQ-2)" do
+      longest_name = "#{'a' * 54}benchmark"
+      _output, errors, = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://127.0.0.1:1/#{longest_name}" })
+
+      expect(longest_name.bytesize).to eq(63)
+      expect(errors).not_to match(refusal)
+    end
+
     it "refuses a URL that names no database (deploy-shape-benchmark/REQ-2)" do
       output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red@127.0.0.1" })
 
@@ -272,6 +292,7 @@ RSpec.describe "bin/benchmark harness" do
       expect(run_status.exitstatus).to be_between(0, 1), run_errors
       database = SQLite3::Database.new(@path)
       expect(database.get_first_value("SELECT COUNT(*) FROM solid_queue_jobs")).to be_positive
+      expect(database.execute("SELECT DISTINCT queue_name FROM solid_queue_jobs").flatten).to all(start_with("benchmark_"))
       database.close
     end
 
@@ -286,8 +307,16 @@ RSpec.describe "bin/benchmark harness" do
       output, errors, status = run_script("--list", env: { "BENCHMARK_QUEUE" => "solidqueue" })
 
       expect(status).not_to be_success
-      expect(errors).to include("solidqueue", "solid_queue", "sidekiq")
+      expect(errors).to include("solid_queue", "sidekiq")
       expect(output).to be_empty
+    end
+
+    # It's easy to paste the server's URL here instead of the adapter's name.
+    it "doesn't print what it refused, which can hold a password (deploy-shape-benchmark/REQ-3)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_QUEUE" => "redis://:s3cret@127.0.0.1:6379/0" })
+
+      expect(status).not_to be_success
+      expect(output + errors).not_to include("s3cret")
     end
   end
 
@@ -448,7 +477,7 @@ RSpec.describe "bin/benchmark harness" do
     it "reads its own cgroup from the kernel's cgroup v2 line (deploy-shape-benchmark/REQ-6)" do
       expect(harness.own_cgroup("0::/system.slice/red.service\n")).to eq("/system.slice/red.service")
       expect(harness.own_cgroup("0::/\n")).to eq("/")
-      expect(harness.own_cgroup("")).to eq("/")
+      expect(harness.own_cgroup("")).to be_nil
     end
 
     it "keeps a cgroup name with a space or a tab whole (deploy-shape-benchmark/REQ-6)" do
@@ -464,6 +493,13 @@ RSpec.describe "bin/benchmark harness" do
       expect(harness.cgroup_mount_root(bound)).to eq("/../..")
       expect(harness.cgroup_mount_root("31 25 0:27 / /sys/fs/cgroup ro - cgroup2 cgroup rw\n")).to eq("/")
       expect(harness.cgroup_mount_root("")).to eq("/")
+    end
+
+    it "says not available when the kernel won't say which cgroup it's in (deploy-shape-benchmark/REQ-6)" do
+      write_cgroup("cgroup.controllers", "cpu memory\n")
+
+      expect(harness.cpu_limit(@cgroup, nil)).to eq("not available")
+      expect(harness.memory_limit(@cgroup, nil)).to eq("not available")
     end
 
     it "says not available where the platform has no cgroup files (deploy-shape-benchmark/REQ-6)" do

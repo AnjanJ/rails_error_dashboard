@@ -48,6 +48,9 @@ module RedBenchmark
     # follows a ? or #, and anything else here is a URL gone wrong, which can
     # have a password in it.
     BENCHMARK_NAME = /\A[\w.-]*benchmark[\w.-]*\z/
+    # PostgreSQL opens only this much of a name, so a longer one could be cut
+    # back to another database's, after this check has passed it.
+    LONGEST_NAME = 63
     QUEUES = %w[solid_queue sidekiq].freeze
     SOLID_QUEUE_SCHEMA = "lib/generators/solid_queue/install/templates/db/queue_schema.rb"
 
@@ -82,7 +85,8 @@ module RedBenchmark
     # itself that counts, never a folder or a host. It names nothing, because a
     # slash in a password makes the rest of the password the database's name.
     def refuse_unless_named_for_benchmarking
-      return if database_name.match?(BENCHMARK_NAME)
+      name = database_name
+      return if name.bytesize <= LONGEST_NAME && name.match?(BENCHMARK_NAME)
 
       abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" in a plain name."
     end
@@ -105,11 +109,12 @@ module RedBenchmark
       abort "BENCHMARK_DATABASE_URL can't be read as a URL."
     end
 
-    # A typo must not fall back to the null adapter and pass as a real queue.
+    # A typo must not fall back to the null adapter and pass as a real queue. It
+    # doesn't repeat what it was given: a URL pasted here can hold a password.
     def refuse_unknown_queue(queue)
       return if QUEUES.include?(queue)
 
-      abort "BENCHMARK_QUEUE is #{queue.inspect}, and bin/benchmark only knows #{QUEUES.join(' and ')}."
+      abort "BENCHMARK_QUEUE can only be #{QUEUES.join(' or ')}."
     end
 
     def fresh_scratch_url
@@ -145,6 +150,9 @@ module RedBenchmark
       config.logger = ActiveSupport::Logger.new($stderr, level: :warn)
       config.log_level = :warn
       config.active_job.queue_adapter = job_adapter(queue)
+      # Workers only poll the queues they're told to, so any on this server, or
+      # in this database, leave the benchmark's jobs alone.
+      config.active_job.queue_name_prefix = "benchmark" unless queue.empty?
       config.paths["config/initializers"] = File.join(__dir__, "initializers")
     end
 
@@ -240,17 +248,18 @@ module RedBenchmark
       limits.empty? ? "none found" : format("%.2f GB", limits.min / 1024**3)
     end
 
-    # The process's cgroup, from the kernel's cgroup v2 line. A container with its
-    # own namespace sees "/", and its limits are at the root of what it can see.
+    # The process's cgroup, from the kernel's cgroup v2 line, or nil with no such
+    # line. A container with its own namespace sees "/", and its limits are at
+    # the root of what it can see.
     def own_cgroup(lines = File.readable?(PROC_CGROUP) ? File.read(PROC_CGROUP) : "")
-      lines[%r{^0::(/.*)$}, 1] || "/"
+      lines[%r{^0::(/.*)$}, 1]
     end
 
     # Finding no limit only means something when this mount shows the process's
     # own cgroup. A path with ".." is outside it, and so is any path, "/" among
     # them, on a mount that isn't rooted where the process's namespace is.
     def cgroup_visible?(cgroup, own, mount = cgroup_mount_root)
-      mount == "/" && !own.include?("/..") && File.exist?(File.join(cgroup, own, "cgroup.controllers"))
+      own && mount == "/" && !own.include?("/..") && File.exist?(File.join(cgroup, own, "cgroup.controllers"))
     end
 
     # Field four of the cgroup v2 mount's line: where the tree it shows starts,
