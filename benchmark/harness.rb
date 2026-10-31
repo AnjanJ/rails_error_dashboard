@@ -43,8 +43,10 @@ module RedBenchmark
     CGROUP = "/sys/fs/cgroup"
     PROC_STAT = "/proc/stat"
     PROC_CGROUP = "/proc/self/cgroup"
+    PROC_MOUNTINFO = "/proc/self/mountinfo"
     # Plain characters only. SQLite opens a file: URI's file and ignores what
-    # follows a ? or #, so a looser check would take "production.sqlite3?benchmark".
+    # follows a ? or #, and anything else here is a URL gone wrong, which can
+    # have a password in it.
     BENCHMARK_NAME = /\A[\w.-]*benchmark[\w.-]*\z/
     QUEUES = %w[solid_queue sidekiq].freeze
     SOLID_QUEUE_SCHEMA = "lib/generators/solid_queue/install/templates/db/queue_schema.rb"
@@ -57,6 +59,9 @@ module RedBenchmark
       refuse_unknown_queue(queue) unless queue.empty?
       ENV["RAILS_ENV"] = "benchmark"
       ENV["DATABASE_URL"] = database_url.empty? ? fresh_scratch_url : database_url
+      # Rails lets this one beat DATABASE_URL, so one left in a shell would pick
+      # the database this run empties.
+      ENV.delete("PRIMARY_DATABASE_URL")
 
       require File.join(ROOT, "spec", "dummy", "config", "application")
       refuse_unreadable_url(database_url) unless database_url.empty?
@@ -72,16 +77,22 @@ module RedBenchmark
     end
 
     # Building the database drops tables, so one mistyped variable could empty a
-    # real one. This asks Rails what it resolved rather than reading the URL:
-    # Rails lets a query name another database, and PRIMARY_DATABASE_URL beats
-    # DATABASE_URL. It's the file or database itself that counts, never a folder
-    # or a host, and it prints only that name, because the URL holds a password.
+    # real one. This asks Rails what it resolved rather than reading the URL,
+    # because Rails lets a query name another database. It's the file or database
+    # itself that counts, never a folder or a host. It names nothing, because a
+    # slash in a password makes the rest of the password the database's name.
     def refuse_unless_named_for_benchmarking
-      name = File.basename(ActiveRecord::Base.connection_db_config.database.to_s)
-      return if name.match?(BENCHMARK_NAME)
+      return if database_name.match?(BENCHMARK_NAME)
 
-      abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" " \
-        "in a plain name. This run would open #{name.empty? ? 'no database' : name.inspect}."
+      abort "bin/benchmark empties the database it runs on, so it only runs on one with \"benchmark\" in a plain name."
+    end
+
+    # Only a SQLite path has folders to ignore. In a file: URI, what follows the
+    # last slash can be its query, and a server's name has no folders at all.
+    def database_name
+      config = ActiveRecord::Base.connection_db_config
+      database = config.database.to_s
+      config.adapter.start_with?("sqlite") && !database.start_with?("file:") ? File.basename(database) : database
     end
 
     # Rails puts a URL it can't read in its error message, password and all, and
@@ -210,6 +221,8 @@ module RedBenchmark
     end
 
     # A cgroup v2 quota is "<microseconds> <period>", or "max <period>" for none.
+    # A namespace hides the cgroups above its root, so "none found" is all a
+    # process can say: one of those could still limit it.
     def cpu_limit(cgroup = CGROUP, own = own_cgroup)
       return "not available" unless cgroup_visible?(cgroup, own)
 
@@ -217,26 +230,33 @@ module RedBenchmark
         quota, period = line.split
         quota.to_f / period.to_f unless quota == "max"
       end
-      quotas.empty? ? "none" : format("%.2f CPU", quotas.min)
+      quotas.empty? ? "none found" : format("%.2f CPU", quotas.min)
     end
 
     def memory_limit(cgroup = CGROUP, own = own_cgroup)
       return "not available" unless cgroup_visible?(cgroup, own)
 
       limits = cgroup_chain(cgroup, own, "memory.max").reject { |limit| limit == "max" }.map(&:to_f)
-      limits.empty? ? "none" : format("%.2f GB", limits.min / 1024**3)
+      limits.empty? ? "none found" : format("%.2f GB", limits.min / 1024**3)
     end
 
     # The process's cgroup, from the kernel's cgroup v2 line. A container with its
     # own namespace sees "/", and its limits are at the root of what it can see.
     def own_cgroup(lines = File.readable?(PROC_CGROUP) ? File.read(PROC_CGROUP) : "")
-      lines[%r{^0::(/\S*)$}, 1] || "/"
+      lines[%r{^0::(/.*)$}, 1] || "/"
     end
 
-    # A path with ".." means the process is outside what this mount shows, so
-    # finding no limit there would say nothing about the limits it's under.
-    def cgroup_visible?(cgroup, own)
-      File.exist?(File.join(cgroup, "cgroup.controllers")) && !own.include?("/..")
+    # Finding no limit only means something when this mount shows the process's
+    # own cgroup. A path with ".." is outside it, and so is any path, "/" among
+    # them, on a mount that isn't rooted where the process's namespace is.
+    def cgroup_visible?(cgroup, own, mount = cgroup_mount_root)
+      mount == "/" && !own.include?("/..") && File.exist?(File.join(cgroup, own, "cgroup.controllers"))
+    end
+
+    # Field four of the cgroup v2 mount's line: where the tree it shows starts,
+    # seen from this process's namespace. The last mount there is the one in use.
+    def cgroup_mount_root(lines = File.readable?(PROC_MOUNTINFO) ? File.read(PROC_MOUNTINFO) : "")
+      lines.scan(%r{^\S+ \S+ \S+ (\S+) #{CGROUP} .* - cgroup2 }).flatten.last || "/"
     end
 
     # The file's value in the process's cgroup and each one above it, since any

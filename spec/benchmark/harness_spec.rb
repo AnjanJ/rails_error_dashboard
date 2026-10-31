@@ -64,6 +64,7 @@ RSpec.describe "bin/benchmark harness" do
     end
 
     let(:env) { { "BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}" } }
+    let(:refusal) { /only runs on one with "benchmark"/ }
 
     def database_values(sql)
       database = SQLite3::Database.new(@path)
@@ -122,7 +123,7 @@ RSpec.describe "bin/benchmark harness" do
         output, errors, status = run_script("--list", env: env)
 
         expect(status).not_to be_success
-        expect(errors).to include("production.sqlite3", "benchmark")
+        expect(errors).to match(refusal)
         expect(output).to be_empty
         expect(File.binread(@production)).to eq(before)
       end
@@ -158,12 +159,40 @@ RSpec.describe "bin/benchmark harness" do
         expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:file:#{folder}/benchmark%252F..%252Fproduction.sqlite3")
       end
 
-      it "checks the database Rails opens when another variable overrides the URL (deploy-shape-benchmark/REQ-2)" do
-        expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}", "PRIMARY_DATABASE_URL" => "sqlite3:#{@production}")
+      # After a slash, the end of a query or fragment looks like the file's name,
+      # while SQLite still opens the file before it.
+      it "isn't fooled by a slash after the file in a SQLite file: URI (deploy-shape-benchmark/REQ-2)" do
+        [
+          "file:#{@production}%3Fx=/benchmark",
+          "file:#{@production}%23/benchmark",
+          "file:#{@production}%3Fx=/red_benchmark.sqlite3",
+          "file:#{@production}%3F/../benchmark",
+          "file:#{@production}%3Fcache=shared%26x=/benchmark",
+          "file://localhost#{@production}%3Fx=/benchmark",
+          "#{@path}?database=file:#{@production}%3Fx=/benchmark"
+        ].each { |url| expect_refused("BENCHMARK_DATABASE_URL" => "sqlite3:#{url}") }
       end
 
-      it "protects a default run too, which would load the schema over it (deploy-shape-benchmark/REQ-2)" do
-        expect_refused("PRIMARY_DATABASE_URL" => "sqlite3:#{@production}")
+      # Rails lets PRIMARY_DATABASE_URL beat DATABASE_URL, so one left in a shell
+      # would choose the database, and the harness would empty it.
+      it "runs where BENCHMARK_DATABASE_URL says, whatever PRIMARY_DATABASE_URL says (deploy-shape-benchmark/REQ-2)" do
+        before = File.binread(@production)
+
+        output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}", "PRIMARY_DATABASE_URL" => "sqlite3:#{@production}" })
+
+        expect(status).to be_success, errors
+        expect(facts_from(output)["Scratch database"]).to eq(@path)
+        expect(File.binread(@production)).to eq(before)
+      end
+
+      it "keeps a default run on its scratch file, whatever PRIMARY_DATABASE_URL says (deploy-shape-benchmark/REQ-2)" do
+        before = File.binread(@production)
+
+        output, errors, status = run_script("--list", env: { "PRIMARY_DATABASE_URL" => "sqlite3:#{@production}" })
+
+        expect(status).to be_success, errors
+        expect(facts_from(output)["Scratch database"]).to start_with(File.join(root, "tmp", ""))
+        expect(File.binread(@production)).to eq(before)
       end
     end
 
@@ -171,7 +200,16 @@ RSpec.describe "bin/benchmark harness" do
       output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red:s3cret@benchmark.internal/production" })
 
       expect(status).not_to be_success
-      expect(errors).to include("production")
+      expect(errors).to match(refusal)
+      expect(output).to be_empty
+    end
+
+    # A server's database has no folders, so the end of the path can't vouch for it.
+    it "judges a server's database by its whole name (deploy-shape-benchmark/REQ-2)" do
+      output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://127.0.0.1:1/production/benchmark" })
+
+      expect(status).not_to be_success
+      expect(errors).to match(refusal)
       expect(output).to be_empty
     end
 
@@ -179,20 +217,37 @@ RSpec.describe "bin/benchmark harness" do
       output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => "postgres://red@127.0.0.1" })
 
       expect(status).not_to be_success
-      expect(errors).to include("no database")
+      expect(errors).to match(refusal)
       expect(output).to be_empty
     end
 
+    # The last group has a password with a slash in it, unescaped, so Rails takes
+    # the rest of it for the database's name.
     it "never prints a password, even from a URL it can't read (deploy-shape-benchmark/REQ-2)" do
       [
         "postgres://red:s3cret@benchmark.internal/production",
         "postgres://red:s3cret@not a host/red_benchmark",
         "postgres://red:s3cret@my_db/red_benchmark",
-        "trilogy://red:s3cret@db_1:3306/red_benchmark"
+        "trilogy://red:s3cret@db_1:3306/red_benchmark",
+        "postgres://red:5432/s3cret@127.0.0.1",
+        "postgres://red:/s3cret@127.0.0.1",
+        "postgres://red:123/x/s3cret#y@127.0.0.1",
+        "postgres://127.0.0.1:1/s3cret@x/red_benchmark"
       ].each do |url|
         output, errors, status = run_script("--list", env: { "BENCHMARK_DATABASE_URL" => url })
 
         expect(status).not_to be_success
+        expect(output + errors).not_to include("s3cret")
+      end
+    end
+
+    it "never prints a password from a PRIMARY_DATABASE_URL left in the shell (deploy-shape-benchmark/REQ-2)" do
+      [
+        "postgres://red:s3cret@my_db/red_benchmark",
+        "postgres://red:s3cret@not a host/red_benchmark"
+      ].each do |url|
+        output, errors, = run_script("--list", env: { "PRIMARY_DATABASE_URL" => url })
+
         expect(output + errors).not_to include("s3cret")
       end
     end
@@ -308,10 +363,10 @@ RSpec.describe "bin/benchmark harness" do
         expect(harness.cpu_limit(@cgroup, "/")).to eq("0.40 CPU")
       end
 
-      it "says none when the process has no CPU quota (deploy-shape-benchmark/REQ-6)" do
+      it "says none found when the process has no CPU quota (deploy-shape-benchmark/REQ-6)" do
         write_cgroup("cpu.max", "max 100000\n")
 
-        expect(harness.cpu_limit(@cgroup, "/")).to eq("none")
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("none found")
       end
 
       it "states a memory limit in GB (deploy-shape-benchmark/REQ-6)" do
@@ -320,24 +375,27 @@ RSpec.describe "bin/benchmark harness" do
         expect(harness.memory_limit(@cgroup, "/")).to eq("4.00 GB")
       end
 
-      it "says none when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
+      it "says none found when the process has no memory limit (deploy-shape-benchmark/REQ-6)" do
         write_cgroup("memory.max", "max\n")
 
-        expect(harness.memory_limit(@cgroup, "/")).to eq("none")
+        expect(harness.memory_limit(@cgroup, "/")).to eq("none found")
       end
     end
 
     describe "at the real root, where the kernel has no limit files" do
       before { write_cgroup("cgroup.controllers", "cpu memory\n") }
 
-      it "says none (deploy-shape-benchmark/REQ-6)" do
-        expect(harness.cpu_limit(@cgroup, "/")).to eq("none")
-        expect(harness.memory_limit(@cgroup, "/")).to eq("none")
+      it "says none found (deploy-shape-benchmark/REQ-6)" do
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("none found")
+        expect(harness.memory_limit(@cgroup, "/")).to eq("none found")
       end
     end
 
     describe "in a child cgroup, as under a systemd service" do
-      before { write_cgroup("cgroup.controllers", "cpu memory\n") }
+      before do
+        write_cgroup("cgroup.controllers", "cpu memory\n")
+        write_cgroup("system.slice/red.service/cgroup.controllers", "cpu memory\n")
+      end
 
       let(:own) { "/system.slice/red.service" }
 
@@ -359,17 +417,31 @@ RSpec.describe "bin/benchmark harness" do
         expect(harness.memory_limit(@cgroup, own)).to eq("1.00 GB")
       end
 
-      it "says none when nothing on the way up limits it (deploy-shape-benchmark/REQ-6)" do
+      it "says none found when nothing on the way up limits it (deploy-shape-benchmark/REQ-6)" do
         write_cgroup("system.slice/red.service/cpu.max", "max 100000\n")
         write_cgroup("system.slice/red.service/memory.max", "max\n")
 
-        expect(harness.cpu_limit(@cgroup, own)).to eq("none")
-        expect(harness.memory_limit(@cgroup, own)).to eq("none")
+        expect(harness.cpu_limit(@cgroup, own)).to eq("none found")
+        expect(harness.memory_limit(@cgroup, own)).to eq("none found")
       end
 
-      it "says not available, not none, when its cgroup is outside what it can see (deploy-shape-benchmark/REQ-6)" do
+      it "says not available, not none found, when its cgroup is outside what it can see (deploy-shape-benchmark/REQ-6)" do
         expect(harness.cpu_limit(@cgroup, "/../elsewhere")).to eq("not available")
         expect(harness.memory_limit(@cgroup, "/../elsewhere")).to eq("not available")
+      end
+
+      it "says not available when this mount doesn't hold its cgroup (deploy-shape-benchmark/REQ-6)" do
+        expect(harness.cpu_limit(@cgroup, "/other.slice/red.service")).to eq("not available")
+        expect(harness.memory_limit(@cgroup, "/other.slice/red.service")).to eq("not available")
+      end
+
+      # The host's tree, bind-mounted into a container with its own namespace: the
+      # process says "/", which on this mount is the host's root, not its cgroup.
+      it "says not available when the mount isn't rooted where the process is (deploy-shape-benchmark/REQ-6)" do
+        allow(harness).to receive(:cgroup_mount_root).and_return("/../..")
+
+        expect(harness.cpu_limit(@cgroup, "/")).to eq("not available")
+        expect(harness.memory_limit(@cgroup, "/")).to eq("not available")
       end
     end
 
@@ -377,6 +449,21 @@ RSpec.describe "bin/benchmark harness" do
       expect(harness.own_cgroup("0::/system.slice/red.service\n")).to eq("/system.slice/red.service")
       expect(harness.own_cgroup("0::/\n")).to eq("/")
       expect(harness.own_cgroup("")).to eq("/")
+    end
+
+    it "keeps a cgroup name with a space or a tab whole (deploy-shape-benchmark/REQ-6)" do
+      expect(harness.own_cgroup("0::/lab/a job/b\tc\n")).to eq("/lab/a job/b\tc")
+    end
+
+    it "reads the root of the cgroup mount from mountinfo (deploy-shape-benchmark/REQ-6)" do
+      bound = <<~MOUNTS
+        30 25 0:26 / /proc rw,nosuid - proc proc rw
+        31 25 0:27 /../.. /sys/fs/cgroup ro,nosuid master:9 - cgroup2 cgroup2 rw
+      MOUNTS
+
+      expect(harness.cgroup_mount_root(bound)).to eq("/../..")
+      expect(harness.cgroup_mount_root("31 25 0:27 / /sys/fs/cgroup ro - cgroup2 cgroup rw\n")).to eq("/")
+      expect(harness.cgroup_mount_root("")).to eq("/")
     end
 
     it "says not available where the platform has no cgroup files (deploy-shape-benchmark/REQ-6)" do
