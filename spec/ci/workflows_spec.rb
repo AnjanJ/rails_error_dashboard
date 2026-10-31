@@ -86,7 +86,7 @@ RSpec.describe "GitHub Actions workflows" do
 
   # The workflows this spec holds to least privilege.
   def hardened_workflows
-    %w[ci.yml test.yml smoke-test-demo.yml release.yml]
+    %w[ci.yml test.yml smoke-test-demo.yml release.yml deploy-benchmark.yml]
   end
 
   describe "every hardened workflow" do
@@ -275,6 +275,30 @@ RSpec.describe "GitHub Actions workflows" do
       expect(step["run"]).not_to include("--offline")
       expect(step.dig("env", "GH_TOKEN")).to eq("${{ github.token }}")
       expect(audit.dig("env", "ZIZMOR_VERSION")).to match(/\A\d+\.\d+\.\d+\z/)
+    end
+  end
+
+  # By hand only. This repository is public, so nothing a stranger's pull request
+  # does may reach this workflow, and it needs nothing but the code.
+  describe "deploy-benchmark.yml" do
+    let(:text) { File.read(File.join(repo_root, ".github/workflows/deploy-benchmark.yml")) }
+
+    it "runs only when dispatched by hand (deploy-shape-benchmark/REQ-18)" do
+      expect(workflow("deploy-benchmark.yml").fetch(true).keys).to eq([ "workflow_dispatch" ])
+    end
+
+    it "gives every job read access to the repository and nothing else (deploy-shape-benchmark/REQ-18)" do
+      permissions = jobs("deploy-benchmark.yml").keys.map { |job_id| effective_permissions("deploy-benchmark.yml", job_id) }
+
+      expect(permissions).to all(eq({ "contents" => "read" }))
+    end
+
+    it "uses no secrets, and not even the job's own token (deploy-shape-benchmark/REQ-18)" do
+      expect(text).not_to match(/secrets\.|github\.token|GITHUB_TOKEN/)
+    end
+
+    it "runs on GitHub's hosted runners only (deploy-shape-benchmark/REQ-18)" do
+      expect(text).not_to include("self-hosted")
     end
   end
 
