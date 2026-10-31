@@ -135,7 +135,7 @@ RSpec.describe RedBenchmark::Scenarios do
 
   it "times a reopen that collides and falls back to the row the index names (overhead-benchmark/REQ-3)" do
     # Keyed on the adapter, not the index: a renamed index has to fail here on
-    # SQLite and PostgreSQL, not skip. bin/benchmark itself only runs on SQLite.
+    # SQLite and PostgreSQL, not skip.
     skip "MySQL has no partial indexes, so a reopen cannot collide" if RailsErrorDashboard::ErrorLog.connection.adapter_name.match?(/mysql|trilogy/i)
 
     claimed = 0
@@ -151,6 +151,32 @@ RSpec.describe RedBenchmark::Scenarios do
     allow(RailsErrorDashboard::ErrorLog.connection).to receive(:index_name_exists?).and_return(false)
 
     expect { scenario("Reopen collision fallback").run.call(timer) }
-      .to raise_error(/index_error_logs_on_group_identity/)
+      .to raise_error(RedBenchmark::NotApplicable, /index_error_logs_on_group_identity/)
+  end
+
+  describe "a scenario this database can't run" do
+    before { allow(RailsErrorDashboard::ErrorLog.connection).to receive(:index_name_exists?).and_return(false) }
+
+    let(:result) { scenario("Reopen collision fallback").measure(timer) }
+
+    it "comes back as a row that says so, and why (deploy-shape-benchmark/REQ-4)" do
+      expect(result).to be_skipped
+      expect(result.name).to eq("Reopen collision fallback")
+      expect(result.reason).to include("index_error_logs_on_group_identity")
+    end
+
+    it "never fails a run (deploy-shape-benchmark/REQ-4)" do
+      expect(RedBenchmark::Timer.exit_status([ result ])).to eq(0)
+    end
+  end
+
+  it "lets any other error through, so a broken scenario can't pass as not applicable (deploy-shape-benchmark/REQ-4)" do
+    broken = RedBenchmark::Scenario.new(name: "Broken", run: ->(_timer) { raise ArgumentError, "a real bug" })
+
+    expect { broken.measure(timer) }.to raise_error(ArgumentError, "a real bug")
+  end
+
+  it "measures a scenario that can run (deploy-shape-benchmark/REQ-4)" do
+    expect(scenario("Storm check, calm").measure(timer)).not_to be_skipped
   end
 end

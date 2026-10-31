@@ -29,3 +29,51 @@ jobs:
 
       - name: Try what the shapes rely on
         run: benchmark/load/probe.sh "$GITHUB_STEP_SUMMARY"
+
+  rows:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm ]
+        queue: [ none, solid_queue, sidekiq ]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    name: Rows on PostgreSQL, queue ${{ matrix.queue }} (${{ matrix.runner }})
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: red
+          POSTGRES_PASSWORD: red
+          POSTGRES_DB: red_benchmark
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: [ "6379:6379" ]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      RAILS_VERSION: '8.1'
+      BENCHMARK_DATABASE_URL: postgres://red:red@127.0.0.1:5432/red_benchmark?pool=10
+      BENCHMARK_QUEUE: ${{ matrix.queue != 'none' && matrix.queue || '' }}
+      REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Run the rows
+        run: bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"
