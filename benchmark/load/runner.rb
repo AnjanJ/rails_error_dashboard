@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "json"
 require "optparse"
+require_relative "../harness"
+require_relative "load_report"
 
 module RedBenchmark
   # The load test (.shipkit/specs/deploy-shape-benchmark/): what RED adds to a
@@ -9,14 +13,16 @@ module RedBenchmark
     # A failure the run can't go on from. bin/benchmark-load prints its message.
     class Error < StandardError; end
 
-    USAGE = "Usage: bin/benchmark-load [--rate N]"
+    USAGE = "Usage: bin/benchmark-load [--rate N] [--json FILE] [--summary FILE]"
 
     # Works the stack through a driver. ComposeDriver runs it in Docker, and the
-    # specs pass a fake. A driver answers four calls:
+    # specs pass a fake. A driver answers these calls:
     #
     #   up                          build the app, and start it and its database
+    #   environment                 bin/benchmark's environment block, as the app has it
     #   start(red:)                 restart the app with RED on or off, and wait until it answers
     #   run(rate:, mix:, seconds:)  k6's summary of traffic.js's mix at that rate
+    #   cpu_ticks                   the machine's CPU ticks, as Harness.cpu_ticks reads them
     #   down                        remove the stack
     class Runner
       # With no rate given, the windows run at half the app's capacity with RED
@@ -44,9 +50,13 @@ module RedBenchmark
       PAIRS = 5
       WINDOW = { warmup: 60, seconds: 120 }.freeze
 
-      # One window: its mix, its pair, whether RED was on, and k6's summary of
-      # its measured run.
-      Window = Data.define(:mix, :pair, :red, :summary)
+      # One window: its mix, its pair, whether RED was on, k6's summary of its
+      # measured run, and the share of the machine's CPU time stolen during that
+      # run (REQ-14).
+      Window = Data.define(:mix, :pair, :red, :summary, :steal)
+
+      # How long each window warms the app, and measures it
+      attr_reader :window
 
       def initialize(driver, rate: nil, probe: PROBE, window: WINDOW, log: $stderr)
         @driver = driver
@@ -119,7 +129,7 @@ module RedBenchmark
       end
 
       def holds?(rate)
-        summary = measure(red: false, rate: rate, mix: HEALTHY, **@probe)
+        summary, = measure(red: false, rate: rate, mix: HEALTHY, **@probe)
         shortfall = self.class.shortfall(summary, rate, @probe[:seconds])
         @log.puts "  #{rate} a second: #{shortfall ? "didn't hold (#{shortfall})" : "held"}"
         shortfall.nil?
@@ -129,31 +139,37 @@ module RedBenchmark
       def pair_of(mix, pair)
         (pair.odd? ? [ false, true ] : [ true, false ]).map do |red|
           @log.puts "  #{mix}, pair #{pair} of #{PAIRS}, RED #{red ? "on" : "off"}"
-          Window.new(mix: mix, pair: pair, red: red, summary: measure(red: red, rate: rate, mix: mix, **@window))
+          summary, steal = measure(red: red, rate: rate, mix: mix, **@window)
+          Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal)
         end
       end
 
       # Restarts the app with RED on or off, warms it at the rate and throws that
-      # away, and returns k6's summary of the run that follows.
+      # away, then runs it again. Returns k6's summary of that run, and the share
+      # of the machine's CPU time stolen while it went.
       def measure(red:, rate:, mix:, warmup:, seconds:)
         @driver.start(red: red)
         @driver.run(rate: rate, mix: mix, seconds: warmup)
-        @driver.run(rate: rate, mix: mix, seconds: seconds)
+        before = @driver.cpu_ticks
+        summary = @driver.run(rate: rate, mix: mix, seconds: seconds)
+        [ summary, Harness.stolen_share(before, @driver.cpu_ticks) ]
       end
     end
 
     # bin/benchmark-load, given the stack's driver. Returns the exit status.
     def self.main(argv, driver:, out: $stdout, log: $stderr)
-      rate = rate_given(argv)
-      begin
+      options = parse_options(argv)
+      report = begin
         driver.up
-        runner = Runner.new(driver, rate: rate, log: log)
-        runner.rate # the capacity search, when no rate was given
-        out.puts rate_line(runner)
-        runner.windows
+        environment = driver.environment
+        runner = Runner.new(driver, rate: options[:rate], log: log)
+        log.puts LoadReport.rate_line(runner.rate, runner.capacity)
+        LoadReport.build(environment: environment, rate: runner.rate, capacity: runner.capacity,
+          window: runner.window, windows: runner.windows)
       ensure
         driver.down
       end
+      publish(report, options, out)
       0
     rescue OptionParser::ParseError => error
       log.puts error.message, USAGE
@@ -163,24 +179,31 @@ module RedBenchmark
       1
     end
 
-    # The rate --rate gives, or nil. It's a whole number above 0, because k6
-    # starts whole requests.
-    def self.rate_given(argv)
-      rate = nil
-      extra = OptionParser.new(USAGE) { |parser| parser.on("--rate N", Integer) { |value| rate = value } }.parse(argv)
+    # --rate is a whole number above 0, because k6 starts whole requests.
+    def self.parse_options(argv)
+      options = {}
+      parser = OptionParser.new(USAGE)
+      parser.on("--rate N", Integer) { |value| options[:rate] = value }
+      parser.on("--json FILE") { |value| options[:json] = value }
+      parser.on("--summary FILE") { |value| options[:summary] = value }
+      extra = parser.parse(argv)
       raise OptionParser::NeedlessArgument, extra.join(" ") unless extra.empty?
-      raise OptionParser::InvalidArgument, "--rate #{rate}" unless rate.nil? || rate.positive?
+      raise OptionParser::InvalidArgument, "--rate #{options[:rate]}" unless options.fetch(:rate, 1).positive?
 
-      rate
+      options
     end
 
-    def self.rate_line(runner)
-      if runner.capacity
-        "Rate: #{runner.rate} requests a second, half the #{runner.capacity} the app held with RED off."
-      else
-        "Rate: #{runner.rate} requests a second, as given."
+    # The report's figures as JSON when asked, and the report as Markdown on
+    # stdout, and added to a summary file when asked, as bin/benchmark does.
+    def self.publish(report, options, out)
+      if options[:json]
+        FileUtils.mkdir_p(File.dirname(options[:json]))
+        File.write(options[:json], "#{JSON.pretty_generate(report)}\n")
       end
+      markdown = LoadReport.markdown(report)
+      out.puts markdown
+      File.open(options[:summary], "a") { |file| file.puts(markdown) } if options[:summary]
     end
-    private_class_method :rate_given, :rate_line
+    private_class_method :parse_options, :publish
   end
 end

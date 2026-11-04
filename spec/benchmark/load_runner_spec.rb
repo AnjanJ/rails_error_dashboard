@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "json"
 require "open3"
 require "stringio"
+require "tmpdir"
 require_relative "../../benchmark/load/runner"
 require_relative "../../benchmark/load/compose_driver"
 
@@ -14,8 +16,10 @@ RSpec.describe RedBenchmark::Load::Runner do
   # with an error, or requests k6 gave up on before they finished. A run that
   # keeps up at R a second for D seconds has R × D + 1 requests, as k6 sends.
   # A cold app falls behind on its first run after each start, at any rate.
+  # Its machine counts 1,000 CPU ticks in each run, and has one stolen for
+  # every 10 s the run lasts.
   fake_driver = Class.new do
-    attr_reader :calls
+    attr_reader :calls, :cpu_ticks
 
     def initialize(capacity:, overload: :drops, cold: false)
       @capacity = capacity
@@ -23,6 +27,11 @@ RSpec.describe RedBenchmark::Load::Runner do
       @cold = cold
       @calls = []
       @runs_since_start = 0
+      @cpu_ticks = { steal: 0, total: 0 }
+    end
+
+    def environment
+      { "Ruby" => "3.4.7", "CPU" => "AMD EPYC 9V74 80-Core Processor", "RED commit" => "abc1234" }
     end
 
     def up
@@ -41,6 +50,7 @@ RSpec.describe RedBenchmark::Load::Runner do
     def run(rate:, mix:, seconds:)
       @calls << [ :run, rate, mix, seconds ]
       @runs_since_start += 1
+      @cpu_ticks = { steal: @cpu_ticks[:steal] + seconds / 10, total: @cpu_ticks[:total] + 1000 }
       sent = rate * seconds + 1
       kept_up = rate <= @capacity && !(@cold && @runs_since_start == 1)
       summary(sent, kept_up ? 0 : [ sent - @capacity * seconds, 1 ].max)
@@ -172,6 +182,14 @@ RSpec.describe RedBenchmark::Load::Runner do
       # The cold app fell behind in every warm-up, and no window kept that run
       expect(windows.map { |window| described_class.shortfall(window.summary, 40, seconds) }).to all(be_nil)
     end
+
+    # 12 ticks of 1,000 in a measured run's 120 s, against 6 in a warm-up's
+    # 60 s: both runs together would read 0.90%.
+    it "each give the share of CPU time stolen during their measured run (deploy-shape-benchmark/REQ-14)" do
+      windows = runner_for(fake_driver.new(capacity: 333), rate: 40).windows
+
+      expect(windows.map(&:steal).uniq).to eq([ "1.20%" ])
+    end
   end
 
   describe "RedBenchmark::Load.main, which bin/benchmark-load runs" do
@@ -195,6 +213,22 @@ RSpec.describe RedBenchmark::Load::Runner do
       expect(main("--rate", "40", driver: driver)).to eq(0)
       expect(driver.calls.select { |call| call.first == :run }.map { |run| run[1] }).to all(eq(40))
       expect(out.string).to include("Rate: 40 requests a second, as given.")
+    end
+
+    it "prints the report, writes its figures as JSON, and adds it to a summary file (deploy-shape-benchmark/REQ-13)" do
+      Dir.mktmpdir("red_load_report") do |dir|
+        json = File.join(dir, "reports", "load.json")
+        summary = File.join(dir, "summary.md")
+        File.write(summary, "before\n")
+
+        expect(main("--rate", "40", "--json", json, "--summary", summary, driver: fake_driver.new(capacity: 333))).to eq(0)
+        expect(out.string).to start_with("## What RED adds under load\n")
+        figures = JSON.parse(File.read(json))
+        expect(figures["windows"].size).to eq(30)
+        expect(figures["environment"]).to include("Ruby" => "3.4.7")
+        expect(RedBenchmark::Load::LoadReport.markdown(figures)).to eq(out.string)
+        expect(File.read(summary)).to eq("before\n#{out.string}")
+      end
     end
 
     it "runs every window, at the rate it says, before it removes the stack (deploy-shape-benchmark/REQ-11)" do
@@ -262,6 +296,14 @@ RSpec.describe RedBenchmark::Load::ComposeDriver, if: ENV["LOAD_APP_BOOT"] == "1
     expect(RedBenchmark::Load::Runner.shortfall(overload, 80, 15)).to match(/\A\d+ dropped/)
   ensure
     remove_delay
+  end
+
+  it "reads bin/benchmark's environment block inside the app's container, with this checkout's commit (deploy-shape-benchmark/REQ-13)" do
+    environment = @driver.environment
+
+    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys)
+    expect(environment).to include("Rails" => start_with("8.1."), "Database" => "postgresql",
+      "RED commit" => RedBenchmark::Harness.commit)
   end
 
   def compose

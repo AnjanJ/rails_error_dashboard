@@ -11,6 +11,7 @@ module RedBenchmark
     # RED out when it's "off".
     class ComposeDriver
       FILE = File.join(__dir__, "compose.yml")
+      HARNESS = File.expand_path("../harness.rb", __dir__)
       # Seconds to wait for the app to answer after a start. Its healthcheck
       # gives a new container 120 s before a failed check counts.
       WAIT = 300
@@ -20,6 +21,24 @@ module RedBenchmark
       # reads RED's models, which RED off doesn't load.
       def up
         compose!({ "RED" => "on" }, "up", "--build", "--wait", "--wait-timeout", WAIT.to_s)
+      end
+
+      # bin/benchmark's environment block, read inside the app's container by the
+      # same code, so the Ruby, CPUs and limits are the ones the app has. The
+      # container has no git, so the commit is this checkout's.
+      def environment
+        script = "#{File.read(HARNESS)}\nputs JSON.generate(RedBenchmark::Harness.environment)\n"
+        output = compose!({}, "exec", "-T", "app", "bin/rails", "runner", "-", stdin: script)
+        line = output.lines.reverse.find { |each| each.start_with?("{") }
+        raise Error, "The app printed no environment:\n#{output}" unless line
+
+        JSON.parse(line).merge("RED commit" => Harness.commit)
+      end
+
+      # The machine's CPU ticks, for the share stolen during a window. On a
+      # runner, its containers share them.
+      def cpu_ticks
+        Harness.cpu_ticks
       end
 
       # A new app container, with RED on or off, once it answers. The database,
@@ -50,8 +69,8 @@ module RedBenchmark
         [ "docker", "compose", "--file", FILE ]
       end
 
-      def compose!(env, *arguments)
-        output, errors, status = Open3.capture3(env, *command, *arguments)
+      def compose!(env, *arguments, stdin: "")
+        output, errors, status = Open3.capture3(env, *command, *arguments, stdin_data: stdin)
         raise Error, "docker compose #{arguments.first} failed:\n#{errors}#{output}" unless status.success?
 
         output
