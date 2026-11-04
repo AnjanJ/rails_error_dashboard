@@ -54,7 +54,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_app_spec.rb, and a boot with `RED=off` that asserts no RED class is loaded
   - After: T9
   - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; a failing request with `RED=off` leaves RED's table empty
-- [ ] **T11** k6 sends a fixed arrival rate, in three traffic mixes → REQ-9, REQ-12
+- [x] **T11** k6 sends a fixed arrival rate, in three traffic mixes → REQ-9, REQ-12
   - Files: benchmark/load/traffic.js, spec/benchmark/load_traffic_spec.rb
   - Test: spec/benchmark/load_traffic_spec.rb reads the script and asserts `constant-arrival-rate` and the three mixes
   - After: T10
