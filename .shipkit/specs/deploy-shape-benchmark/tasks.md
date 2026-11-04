@@ -64,8 +64,8 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_runner_spec.rb, with a fake driver that saturates at a known rate
   - After: T11
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures; a given rate skips the search
-- [ ] **T13** Windows alternate RED off and on, ABBA, five pairs per mix → REQ-11
-  - Files: benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+- [x] **T13** Windows alternate RED off and on, ABBA, five pairs per mix → REQ-11
+  - Files: benchmark/load/runner.rb, bin/benchmark-load, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_runner_spec.rb asserts the order, the same rate on both sides, and a restart before each window
   - After: T12
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures

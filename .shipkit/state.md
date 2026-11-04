@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `a577b42`, with T9 to T12 of the deploy shape benchmark built on a branch.
+> Written 2026-11-05 at commit `5a66c1e`, with T9 to T13 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,15 +8,21 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 to T12 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
+  - T9 to T13 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
     `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
     failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
     `RED=off`: the same request then left RED's table empty. T11 is `benchmark/load/traffic.js`, k6 at a
     fixed arrival rate in three mixes, with compose's `k6` service pinned by digest. T12 is
     `bin/benchmark-load`: with no rate given, it finds the most the app holds with RED off and uses half,
     and `--rate N` skips that search. The search lives in `benchmark/load/runner.rb`, and its specs drive
-    it with a fake. `compose_driver.rb` runs it in Docker, and hasn't yet been run against the stack.
-  - T13-T15, the rest of the load test, go on the same branch, and T9-T15 become one pull request.
+    it with a fake. `compose_driver.rb` runs it in Docker, and is checked against the stack with
+    `LOAD_APP_BOOT=1`. T13 runs the windows: for each mix, five pairs of RED off and on in ABBA order,
+    each a restart, 60 s of warm-up thrown away and 120 s measured, all at the one rate. Run for real with
+    5 s windows at 10 a second, all 30 held, and RED recorded only in its on windows.
+  - T14 and T15, the report and its invalid windows, go on the same branch, and T9-T15 become one pull
+    request.
+- **PR #349, `fix/keep-module-name`,** is open with every check green, and waits for the maintainer's
+  merge. Merging it makes release-please propose 0.18.1, and releasing that needs the maintainer's yes.
 - No release PR is open.
 
 ## Done
@@ -26,10 +32,9 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Run T12's Docker driver against the stack, and keep that as a `LOAD_APP_BOOT=1` check, as T9-T11's are:
-   a restart with RED off and on, an easy rate that holds, and an overload that doesn't. Then build T13-T15
-   on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the shapes, and
-   T19-T20, the compare tool and the research file, all before rc1.
+1. Build T14, the report, and T15, its invalid windows, on `test/benchmark-load-app`, then open the load
+   test's pull request. T14 reuses `bin/benchmark`'s environment code, as the design says. Then T16-T18,
+   the shapes, and T19-T20, the compare tool and the research file, all before rc1.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
@@ -57,9 +62,9 @@
   Is the budget per architecture?
 - **`AiAgentClassifier.name(user_agent)` replaces `Class#name` for that class.** A host app's code that calls
   `name` on every class, as `ObjectSpace.each_object(Class).map(&:name)` does, raises ArgumentError once RED
-  is loaded. Found 2026-11-04. Fixed on its own branch, `fix/keep-module-name`, not pushed: spec
-  `keep-module-name`, the lookup renamed to `agent_name`, and a check over every RED class. Its review
-  passed. It's a `fix:`, so merging it makes release-please propose 0.18.1.
+  is loaded. Found 2026-11-04, and fixed in PR #349: spec `keep-module-name`, the lookup renamed to
+  `agent_name`, and a check over every RED class. Its review passed, and so did its 29 checks. It's a
+  `fix:`, so merging it makes release-please propose 0.18.1.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -97,6 +102,14 @@
   and with it `--summary-export` writes nothing. A run of R requests a second for D seconds sends R×D+1,
   one at each end. Warm the app before a delayed run: a cold one opening its database connections
   through a 100 ms delay fell behind at 20 a second, and k6 dropped 23 requests.
+- **What a run costs.** On a Mac's Docker Desktop with no limits, `bin/benchmark-load`'s search tried 11
+  rates in 19 minutes: it held 800 a second with RED off and not 880, and chose 400. That isn't a shape's
+  figure. A restart takes about 6 s. k6 peaked at 1.23 GiB with all 5,120 VUs of an overloaded 1,280 a
+  second, about 0.24 MiB each, so its memory isn't a worry at these rates. At 10% over capacity, a 60 s
+  probe dropped 3,320 requests, so the probe is long enough to see a small overload.
+- **Two Dependabot alerts stay open until rc1.** Both are sqlite3 in the development Gemfile
+  (GHSA-mwm8-39rw-8826 and GHSA-28hh-pr2h-2w89), from its Rails 7.0 branch, `~> 1.4`, because no 1.x
+  release fixes them (#331). Raising the floor to Rails 7.2 at rc1 removes that branch.
 - **`RED=off` still defines `RailsErrorDashboard::VERSION`.** Bundler reads a path gem's gemspec at boot, and
   RED's requires `version.rb`. No RED class, middleware, error subscriber or route loads, so the design's
   "two images" clause, which watches for a RED class, hasn't fired.
