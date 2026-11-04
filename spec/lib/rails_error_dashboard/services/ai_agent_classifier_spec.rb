@@ -36,22 +36,22 @@ RSpec.describe RailsErrorDashboard::Services::AiAgentClassifier do
     end
   end
 
-  describe ".name" do
+  describe ".agent_name (keep-module-name/REQ-2)" do
     it "returns the canonical agent name" do
-      expect(described_class.name("Mozilla/5.0 (compatible; ClaudeBot/1.0)")).to eq("ClaudeBot")
+      expect(described_class.agent_name("Mozilla/5.0 (compatible; ClaudeBot/1.0)")).to eq("ClaudeBot")
     end
 
     it "returns nil for an unrecognised agent rather than guessing" do
-      expect(described_class.name("TotallyNovelAgent/1.0")).to be_nil
+      expect(described_class.agent_name("TotallyNovelAgent/1.0")).to be_nil
     end
 
     it "returns nil for a plain browser" do
-      expect(described_class.name("Mozilla/5.0 (Windows NT 10.0) Chrome/120.0")).to be_nil
+      expect(described_class.agent_name("Mozilla/5.0 (Windows NT 10.0) Chrome/120.0")).to be_nil
     end
 
     it "returns nil for blank input" do
-      expect(described_class.name(nil)).to be_nil
-      expect(described_class.name("")).to be_nil
+      expect(described_class.agent_name(nil)).to be_nil
+      expect(described_class.agent_name("")).to be_nil
     end
   end
 
@@ -90,13 +90,13 @@ RSpec.describe RailsErrorDashboard::Services::AiAgentClassifier do
     it "names the observed runtime agent and counts it as AI" do
       ua = "GitHubCopilotRuntime-WebFetch"
 
-      expect(described_class.name(ua)).to eq("GitHub Copilot")
+      expect(described_class.agent_name(ua)).to eq("GitHub Copilot")
       expect(described_class.kind(ua)).to eq(:ai_assistant)
       expect(described_class.ai?(ua)).to be true
     end
 
     it "matches other GitHubCopilotRuntime suffixes" do
-      expect(described_class.name("GitHubCopilotRuntime/1.0")).to eq("GitHub Copilot")
+      expect(described_class.agent_name("GitHubCopilotRuntime/1.0")).to eq("GitHub Copilot")
     end
 
     # A bare /Copilot/i would swallow ordinary browser traffic: Microsoft applies

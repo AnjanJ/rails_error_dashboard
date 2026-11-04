@@ -130,7 +130,7 @@ module RailsErrorDashboard
         #
         # @param user_agent [String, nil]
         # @return [String, nil]
-        def name(user_agent)
+        def agent_name(user_agent)
           ua = user_agent.to_s
           return nil if ua.strip.empty?
 
@@ -156,7 +156,7 @@ module RailsErrorDashboard
           k = kind(user_agent)
           {
             kind: k,
-            name: name(user_agent),
+            name: agent_name(user_agent),
             ai: %i[ai_assistant ai_crawler].include?(k)
           }
         end
