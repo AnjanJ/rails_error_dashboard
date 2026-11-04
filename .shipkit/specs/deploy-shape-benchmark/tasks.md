@@ -49,7 +49,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_app_spec.rb reads the template and asserts production mode, Puma, jemalloc, one process and 3 threads
   - After: T8
   - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; the app boots in compose and a failing request reaches RED's table
-- [ ] **T10** RED off is the same image with the gem not required → REQ-8
+- [x] **T10** RED off is the same image with the gem not required → REQ-8
   - Files: benchmark/load/app/, spec/benchmark/load_app_spec.rb
   - Test: spec/benchmark/load_app_spec.rb, and a boot with `RED=off` that asserts no RED class is loaded
   - After: T9

@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-04 at commit `37ceb3f`, with T9 of the deploy shape benchmark built on a branch.
+> Written 2026-11-04 at commit `37ceb3f`, with T9 and T10 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,10 +8,11 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 is committed on `test/benchmark-load-app` and not pushed: the load test's app in `benchmark/load/`,
-    a new Rails 8.1 app with RED added by its installer. It booted in compose, and a failing request reached
-    RED's table through Solid Queue.
-  - T10-T15, the rest of the load test, go on the same branch and become one pull request.
+  - T9 and T10 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
+    `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
+    failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
+    `RED=off`: the same request then left RED's table empty.
+  - T11-T15, the rest of the load test, go on the same branch and become one pull request.
 - No release PR is open.
 
 ## Done
@@ -21,7 +22,7 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Build T10-T15 on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the
+1. Build T11-T15 on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the
    shapes, and T19-T20, the compare tool and the research file, all before rc1.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
@@ -48,6 +49,10 @@
   arm64 rows read 1.23 to 1.27 ms on a Neoverse-N2, against the 1 ms budget, while every x64 row passed
   (0.51 to 0.69 ms). The gated job runs only on x64, so CI can't see it. The `medium-arm` shape will meet it.
   Is the budget per architecture?
+- **`AiAgentClassifier.name(user_agent)` replaces `Class#name` for that class.** A host app's code that calls
+  `name` on every class, as `ObjectSpace.each_object(Class).map(&:name)` does, raises ArgumentError once RED
+  is loaded. The class isn't in `docs/PUBLIC_API.md`, and its one caller is
+  `queries/rack_attack_summary.rb:80`. Found 2026-11-04, not fixed.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -75,6 +80,12 @@
   - `_shipped/webhook-v1`: revert the UTC `timestamp` if an issue reports a broken receiver by 2026-11-30.
   - `_shipped/migration-rollback`: fall back to a cheaper check if the round-trip spec adds over 60 s to an
     adapter row (24 to 35 s when it landed).
+- **The load runner (T12, T13) must prepare a new database with RED on.** One of RED's migrations,
+  `BackfillApplicationForExistingErrors`, reads RED's models, so `db:prepare` with `RED=off` fails on an
+  empty database, and T12's capacity search starts with RED off. Later boots have nothing to migrate.
+- **`RED=off` still defines `RailsErrorDashboard::VERSION`.** Bundler reads a path gem's gemspec at boot, and
+  RED's requires `version.rb`. No RED class, middleware, error subscriber or route loads, so the design's
+  "two images" clause, which watches for a RED class, hasn't fired.
 - **Several 0.17 decisions reverse on benchmark numbers.** These are in
   `_shipped/capture-hardening-0-17` and `_shipped/functional-fixes-0-17`, and the benchmark now
   measures them. On the CI runner, all under their thresholds: message filtering 48 µs (reverses
