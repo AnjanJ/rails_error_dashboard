@@ -6,7 +6,13 @@
 # generator made it (.shipkit/specs/deploy-shape-benchmark/, REQ-8).
 
 # The RED under test: this checkout, which the Dockerfile copies to /red.
-gem "rails_error_dashboard", path: "/red"
+# RED=off runs the same image without it: the gem isn't required, and the
+# installer's initializer and mount are skipped. RED's migrations stay in the
+# app, and one of them reads RED's models, so prepare a new database with RED on.
+append_to_file "Gemfile", <<~RUBY
+
+  gem "rails_error_dashboard", path: "/red", require: ENV["RED"] != "off"
+RUBY
 
 after_bundle do
   # The app's own data: a healthy request reads an order and renders it.
@@ -48,4 +54,10 @@ after_bundle do
   route 'get "orders/:number" => "orders#show"'
 
   generate "rails_error_dashboard:install", "--no-interactive"
+
+  # RED=off's switch, in the two places the installer wrote RED into the app.
+  # The initializer's goes below its magic comment, which only counts above any
+  # code. gsub_file! fails the build if either place has moved.
+  gsub_file! "config/initializers/rails_error_dashboard.rb", /\A# frozen_string_literal: true\n/, %(\\0\nreturn if ENV["RED"] == "off"\n)
+  gsub_file! "config/routes.rb", %r{^(\s*mount RailsErrorDashboard::Engine => '/red')}, %(\\1 unless ENV["RED"] == "off")
 end

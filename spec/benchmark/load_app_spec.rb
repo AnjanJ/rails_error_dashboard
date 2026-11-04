@@ -41,7 +41,15 @@ RSpec.describe "the load test's app" do
 
   it "adds RED with its installer, not by hand (deploy-shape-benchmark/REQ-8)" do
     expect(template).to include('generate "rails_error_dashboard:install", "--no-interactive"')
-    expect(template).not_to include("config/initializers", "RailsErrorDashboard.configure")
+    expect(template).not_to include("RailsErrorDashboard.configure")
+    # The one thing it writes into an initializer is RED off's switch.
+    expect(template.lines.grep(%r{config/initializers})).to all(include(%(return if ENV["RED"] == "off")))
+  end
+
+  it "leaves RED out when RED=off: not required, and its initializer and mount skipped (deploy-shape-benchmark/REQ-8)" do
+    expect(template.lines.grep(/gem "rails_error_dashboard"/)).to contain_exactly(include(%(require: ENV["RED"] != "off")))
+    expect(template.lines.grep(%r{config/initializers/rails_error_dashboard\.rb})).to contain_exactly(include(%(return if ENV["RED"] == "off")))
+    expect(template.lines.grep(%r{config/routes\.rb})).to contain_exactly(include(%(unless ENV["RED"] == "off")))
   end
 
   it "leaves the job queue on the generator's Solid Queue, inside Puma as its deploy file does (deploy-shape-benchmark/REQ-8)" do
