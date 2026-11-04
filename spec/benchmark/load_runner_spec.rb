@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "open3"
 require "stringio"
 require_relative "../../benchmark/load/runner"
+require_relative "../../benchmark/load/compose_driver"
 
 # The load test's procedure, benchmark/load/runner.rb. A fake stands in for
 # compose's app and k6 here, so none of it needs Docker.
@@ -178,5 +180,75 @@ RSpec.describe RedBenchmark::Load::Runner do
       expect(driver.calls.last).to eq([ :down ])
       expect(log.string).to include("held no rate")
     end
+  end
+end
+
+# The driver the runner uses in Docker, against the real stack. It needs Docker
+# and a couple of minutes, so it runs only when asked:
+#
+#   LOAD_APP_BOOT=1 bundle exec rspec spec/benchmark/load_runner_spec.rb
+RSpec.describe RedBenchmark::Load::ComposeDriver, if: ENV["LOAD_APP_BOOT"] == "1" do
+  before(:all) do
+    @driver = described_class.new
+    @driver.up
+  end
+
+  after(:all) { @driver.down }
+
+  it "restarts the app with RED off or on, as asked (deploy-shape-benchmark/REQ-10)" do
+    @driver.start(red: false)
+    expect(status_of("/red")).to eq("404")
+
+    # RED's dashboard is mounted, and asks for its login
+    @driver.start(red: true)
+    expect(status_of("/red")).to eq("401")
+  end
+
+  # Three Puma threads each waiting 100 ms on the database answer about 30 a
+  # second, so 80 a second leaves k6 with no VU free to start a request.
+  it "returns k6's summary, in which an easy rate holds and an overload doesn't (deploy-shape-benchmark/REQ-10)" do
+    @driver.start(red: false)
+    @driver.run(rate: 10, mix: "healthy", seconds: 5)
+    easy = @driver.run(rate: 10, mix: "healthy", seconds: 10)
+    expect(RedBenchmark::Load::Runner.shortfall(easy, 10, 10)).to be_nil
+
+    delay_database(100)
+    overload = @driver.run(rate: 80, mix: "healthy", seconds: 15)
+    expect(RedBenchmark::Load::Runner.shortfall(overload, 80, 15)).to match(/\A\d+ dropped/)
+  ensure
+    remove_delay
+  end
+
+  def compose
+    [ "docker", "compose", "--file", described_class::FILE ]
+  end
+
+  def run!(*command)
+    output, status = Open3.capture2e(*command)
+    raise "#{command.join(" ")} failed:\n#{output}" unless status.success?
+
+    output
+  end
+
+  def status_of(path)
+    run!(*compose, "exec", "-T", "app", "curl", "--silent", "--output", "/dev/null", "--write-out", "%{http_code}",
+      "http://localhost#{path}")
+  end
+
+  # Delays everything the database sends, with tc netem in a container sharing
+  # its network. The app restarts; the database doesn't, so the delay stays.
+  def delay_database(milliseconds)
+    run!(*netem("add dev eth0 root netem delay #{milliseconds}ms"))
+  end
+
+  # Quietly, so a failure here can't hide the example's own.
+  def remove_delay
+    system(*netem("del dev eth0 root"), out: File::NULL, err: File::NULL)
+  end
+
+  def netem(change)
+    database = run!(*compose, "ps", "--quiet", "db").strip
+    [ "docker", "run", "--rm", "--network", "container:#{database}", "--cap-add", "NET_ADMIN", "alpine:3.20",
+      "sh", "-c", "apk add --no-cache --quiet iproute2 && tc qdisc #{change}" ]
   end
 end
