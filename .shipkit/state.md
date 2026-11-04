@@ -100,7 +100,8 @@
   - the pre-commit `bundle-audit` reads the gitignored local `Gemfile.lock`, which CI never uses. When it
     blocks a commit, update the gems it names with `bundle update --conservative`;
   - the load test needs Docker: `docker compose -f benchmark/load/compose.yml up --build --wait`, then
-    `down --volumes`;
+    `down --volumes`. `LOAD_APP_BOOT=1` adds the examples in `spec/benchmark/load_app_spec.rb` that boot
+    the app and check it with RED on and off, about a minute on a built image;
   - push over HTTPS and merge with `gh api`;
   - main requires 29 checks and an up-to-date branch. CI shows 30 rows, because `Overhead benchmark`
     isn't required.
