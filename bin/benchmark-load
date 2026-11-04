@@ -10,7 +10,10 @@
 #
 # Needs Docker. It builds benchmark/load's app from this checkout, runs it in
 # compose with its database and k6, and removes them, volumes and all, when
-# it's done. Each rate the search tries takes a restart and 90 s of traffic.
+# it's done. Each rate the search tries takes a restart and 90 s of traffic,
+# and it tries about ten. Then come the windows: five pairs of RED off and on
+# for each of three mixes, each a restart and 3 minutes of traffic, an hour
+# and a half in all.
 
 require_relative "../benchmark/load/runner"
 require_relative "../benchmark/load/compose_driver"

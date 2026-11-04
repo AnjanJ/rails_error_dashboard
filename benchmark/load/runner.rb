@@ -35,10 +35,24 @@ module RedBenchmark
       PROBE = { warmup: 30, seconds: 60 }.freeze
       HEALTHY = "healthy"
 
-      def initialize(driver, rate: nil, probe: PROBE, log: $stderr)
+      # The windows (REQ-11): RED off and on in turn, all at the one rate, in
+      # pairs whose order alternates, ABBA: off then on, on then off, and so on,
+      # so a steady drift in the runner's speed falls on both sides alike. Each
+      # window restarts the app, so neither side inherits the other's warm-up,
+      # and throws its warm-up away.
+      MIXES = %w[healthy failing storm].freeze
+      PAIRS = 5
+      WINDOW = { warmup: 60, seconds: 120 }.freeze
+
+      # One window: its mix, its pair, whether RED was on, and k6's summary of
+      # its measured run.
+      Window = Data.define(:mix, :pair, :red, :summary)
+
+      def initialize(driver, rate: nil, probe: PROBE, window: WINDOW, log: $stderr)
         @driver = driver
         @given = rate
         @probe = probe
+        @window = window
         @log = log
       end
 
@@ -51,6 +65,15 @@ module RedBenchmark
       # rate was given and nothing was measured.
       def capacity
         @capacity ||= search unless @given
+      end
+
+      # Every window, in the order they ran: each mix in turn, PAIRS pairs of it.
+      def windows
+        @windows ||= begin
+          @log.puts "Windows at #{rate} requests a second: #{PAIRS} pairs of RED off and on for each mix, each " \
+            "window a restart, #{@window[:warmup]} s of warm-up and #{@window[:seconds]} s measured."
+          MIXES.flat_map { |mix| (1..PAIRS).flat_map { |pair| pair_of(mix, pair) } }
+        end
       end
 
       # Why a k6 run didn't hold its rate, or nil when it did. It didn't if k6
@@ -102,6 +125,14 @@ module RedBenchmark
         shortfall.nil?
       end
 
+      # An odd pair runs RED off then on, and an even one on then off.
+      def pair_of(mix, pair)
+        (pair.odd? ? [ false, true ] : [ true, false ]).map do |red|
+          @log.puts "  #{mix}, pair #{pair} of #{PAIRS}, RED #{red ? "on" : "off"}"
+          Window.new(mix: mix, pair: pair, red: red, summary: measure(red: red, rate: rate, mix: mix, **@window))
+        end
+      end
+
       # Restarts the app with RED on or off, warms it at the rate and throws that
       # away, and returns k6's summary of the run that follows.
       def measure(red:, rate:, mix:, warmup:, seconds:)
@@ -119,6 +150,7 @@ module RedBenchmark
         runner = Runner.new(driver, rate: rate, log: log)
         runner.rate # the capacity search, when no rate was given
         out.puts rate_line(runner)
+        runner.windows
       ensure
         driver.down
       end

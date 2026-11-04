@@ -68,8 +68,9 @@ RSpec.describe RedBenchmark::Load::Runner do
     described_class.new(driver, rate: rate, log: log)
   end
 
-  # Each probe, as the driver saw it: a start, then its runs.
-  def probes_in(calls)
+  # The driver's calls, split at each start: a probe or a window is a start,
+  # then its runs.
+  def restarts_in(calls)
     calls.slice_before { |call| call.first == :start }.select { |probe| probe.first.first == :start }
   end
 
@@ -81,8 +82,8 @@ RSpec.describe RedBenchmark::Load::Runner do
       # Never more than the app held, and within the search's 10% of it
       expect(runner.capacity).to be_between(300, 333)
       expect(runner.rate).to eq(runner.capacity / 2)
-      expect(probes_in(driver.calls)).not_to be_empty
-      expect(probes_in(driver.calls).map(&:first)).to all(eq([ :start, false ]))
+      expect(restarts_in(driver.calls)).not_to be_empty
+      expect(restarts_in(driver.calls).map(&:first)).to all(eq([ :start, false ]))
     end
 
     it "restarts the app before each probe, and judges only what follows its warm-up (deploy-shape-benchmark/REQ-10)" do
@@ -90,7 +91,7 @@ RSpec.describe RedBenchmark::Load::Runner do
       warmup, seconds = described_class::PROBE.values_at(:warmup, :seconds)
 
       expect(runner_for(driver).capacity).to be_between(300, 333)
-      probes = probes_in(driver.calls)
+      probes = restarts_in(driver.calls)
       # No run comes before a restart, and each probe is a restart, its
       # warm-up and its measured run, both at the probe's rate.
       expect(probes.flatten(1)).to eq(driver.calls)
@@ -139,6 +140,40 @@ RSpec.describe RedBenchmark::Load::Runner do
     expect(driver.calls).to be_empty
   end
 
+  describe "the windows" do
+    it "alternate RED off and on in ABBA order, five pairs for each mix (deploy-shape-benchmark/REQ-11)" do
+      windows = runner_for(fake_driver.new(capacity: 333), rate: 40).windows
+
+      expect(windows.map(&:mix).uniq).to eq(%w[healthy failing storm])
+      windows.group_by(&:mix).each_value do |mix|
+        expect(mix.map(&:red)).to eq([ false, true, true, false, false, true, true, false, false, true ])
+        expect(mix.map(&:pair)).to eq([ 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 ])
+      end
+    end
+
+    it "all run at the same rate, half the capacity when none was given (deploy-shape-benchmark/REQ-11)" do
+      driver = fake_driver.new(capacity: 333)
+      runner = runner_for(driver)
+      runner.rate
+      driver.calls.clear
+
+      runner.windows
+      expect(driver.calls.select { |call| call.first == :run }.map { |run| run[1] }.uniq).to eq([ 160 ])
+    end
+
+    it "each restart the app with RED as the window has it, and keep what follows the warm-up (deploy-shape-benchmark/REQ-11)" do
+      driver = fake_driver.new(capacity: 333, cold: true)
+      windows = runner_for(driver, rate: 40).windows
+      warmup, seconds = described_class::WINDOW.values_at(:warmup, :seconds)
+
+      expect(restarts_in(driver.calls)).to eq(windows.map { |window|
+        [ [ :start, window.red ], [ :run, 40, window.mix, warmup ], [ :run, 40, window.mix, seconds ] ]
+      })
+      # The cold app fell behind in every warm-up, and no window kept that run
+      expect(windows.map { |window| described_class.shortfall(window.summary, 40, seconds) }).to all(be_nil)
+    end
+  end
+
   describe "RedBenchmark::Load.main, which bin/benchmark-load runs" do
     let(:out) { StringIO.new }
 
@@ -160,6 +195,16 @@ RSpec.describe RedBenchmark::Load::Runner do
       expect(main("--rate", "40", driver: driver)).to eq(0)
       expect(driver.calls.select { |call| call.first == :run }.map { |run| run[1] }).to all(eq(40))
       expect(out.string).to include("Rate: 40 requests a second, as given.")
+    end
+
+    it "runs every window, at the rate it says, before it removes the stack (deploy-shape-benchmark/REQ-11)" do
+      driver = fake_driver.new(capacity: 333)
+
+      expect(main("--rate", "40", driver: driver)).to eq(0)
+      windows = restarts_in(driver.calls)
+      expect(windows.size).to eq(described_class::MIXES.size * described_class::PAIRS * 2)
+      expect(windows.flatten(1).select { |call| call.first == :run }.map { |run| run[1] }.uniq).to eq([ 40 ])
+      expect(driver.calls.last).to eq([ :down ])
     end
 
     it "refuses a rate that isn't a whole number above 0, before it starts anything (deploy-shape-benchmark/REQ-10)" do
