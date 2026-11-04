@@ -1,7 +1,7 @@
 # The load test's stack (.shipkit/specs/deploy-shape-benchmark/, REQ-8): the app
 # from ./Dockerfile, on Puma behind Thruster in production mode, and the
 # PostgreSQL the generator set it up for. The app's settings are the generator's;
-# its environment below holds only what a deploy has to supply.
+# its environment below holds only what a deploy has to supply, and RED's switch.
 #
 #   docker compose -f benchmark/load/compose.yml up --build --wait
 #   docker compose -f benchmark/load/compose.yml down --volumes
@@ -23,6 +23,9 @@ services:
       # RED refuses to boot in production on its published default login.
       ERROR_DASHBOARD_USER: benchmark
       ERROR_DASHBOARD_PASSWORD: benchmark
+      # The load test's switch, which a deploy wouldn't have: "off" runs the
+      # same app without RED. bin/benchmark-load sets it for each window.
+      RED: "${RED:-on}"
     depends_on:
       db:
         condition: service_healthy

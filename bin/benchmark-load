@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# What RED adds to a real Rails app under load: a new Rails app with RED added
+# by its installer, on PostgreSQL, sent a fixed arrival rate by k6 with RED off
+# and on. Spec: .shipkit/specs/deploy-shape-benchmark/.
+#
+#   bin/benchmark-load            measure the app's capacity with RED off, and use half of it
+#   bin/benchmark-load --rate N   send N requests a second, and skip that search
+#
+# Needs Docker. It builds benchmark/load's app from this checkout, runs it in
+# compose with its database and k6, and removes them, volumes and all, when
+# it's done. Each rate the search tries takes a restart and 90 s of traffic.
+
+require_relative "../benchmark/load/runner"
+require_relative "../benchmark/load/compose_driver"
+
+exit RedBenchmark::Load.main(ARGV, driver: RedBenchmark::Load::ComposeDriver.new)
