@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-04 at commit `37ceb3f`, with T9 to T11 of the deploy shape benchmark built on a branch.
+> Written 2026-11-05 at commit `a577b42`, with T9 to T12 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,12 +8,15 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 to T11 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
+  - T9 to T12 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
     `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
     failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
     `RED=off`: the same request then left RED's table empty. T11 is `benchmark/load/traffic.js`, k6 at a
-    fixed arrival rate in three mixes, with compose's `k6` service pinned by digest.
-  - T12-T15, the rest of the load test, go on the same branch and become one pull request.
+    fixed arrival rate in three mixes, with compose's `k6` service pinned by digest. T12 is
+    `bin/benchmark-load`: with no rate given, it finds the most the app holds with RED off and uses half,
+    and `--rate N` skips that search. The search lives in `benchmark/load/runner.rb`, and its specs drive
+    it with a fake. `compose_driver.rb` runs it in Docker, and hasn't yet been run against the stack.
+  - T13-T15, the rest of the load test, go on the same branch, and T9-T15 become one pull request.
 - No release PR is open.
 
 ## Done
@@ -23,8 +26,10 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Build T12-T15 on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the
-   shapes, and T19-T20, the compare tool and the research file, all before rc1.
+1. Run T12's Docker driver against the stack, and keep that as a `LOAD_APP_BOOT=1` check, as T9-T11's are:
+   a restart with RED off and on, an easy rate that holds, and an overload that doesn't. Then build T13-T15
+   on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the shapes, and
+   T19-T20, the compare tool and the research file, all before rc1.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
@@ -82,14 +87,16 @@
   - `_shipped/webhook-v1`: revert the UTC `timestamp` if an issue reports a broken receiver by 2026-11-30.
   - `_shipped/migration-rollback`: fall back to a cheaper check if the round-trip spec adds over 60 s to an
     adapter row (24 to 35 s when it landed).
-- **The load runner (T12, T13) must prepare a new database with RED on.** One of RED's migrations,
+- **A new database must be prepared with RED on.** One of RED's migrations,
   `BackfillApplicationForExistingErrors`, reads RED's models, so `db:prepare` with `RED=off` fails on an
-  empty database, and T12's capacity search starts with RED off. Later boots have nothing to migrate.
-- **k6 1.8, for the runner (T12).** `traffic.js`'s `handleSummary` prints the summary as JSON on stdout,
-  with each kind of request counted on its own. `--no-summary` is deprecated, and with it `--summary-export`
-  writes nothing. A run of R requests a second for D seconds sends R×D+1, one at each end. Warm the app
-  before a delayed run: a cold one opening its database connections through a 100 ms delay fell behind at
-  20 a second, and k6 dropped 23 requests.
+  empty database. `ComposeDriver#up` starts the stack with RED on for that, before the capacity search
+  restarts it with RED off. Later boots have nothing to migrate. Keep it that way in T13.
+- **k6 1.8, for the runner.** `traffic.js`'s `handleSummary` prints the summary as JSON on stdout, with
+  each kind of request counted on its own. In it, `http_req_failed`'s `passes` is the number of failed
+  requests, and `dropped_iterations` is left out entirely when none dropped. `--no-summary` is deprecated,
+  and with it `--summary-export` writes nothing. A run of R requests a second for D seconds sends R×D+1,
+  one at each end. Warm the app before a delayed run: a cold one opening its database connections
+  through a 100 ms delay fell behind at 20 a second, and k6 dropped 23 requests.
 - **`RED=off` still defines `RailsErrorDashboard::VERSION`.** Bundler reads a path gem's gemspec at boot, and
   RED's requires `version.rb`. No RED class, middleware, error subscriber or route loads, so the design's
   "two images" clause, which watches for a RED class, hasn't fired.
@@ -106,8 +113,8 @@
   - doc-only commits use `LEFTHOOK_EXCLUDE=chaos-tests`;
   - the pre-commit `bundle-audit` reads the gitignored local `Gemfile.lock`, which CI never uses. When it
     blocks a commit, update the gems it names with `bundle update --conservative`;
-  - the load test needs Docker: `docker compose -f benchmark/load/compose.yml up --build --wait`, then
-    `down --volumes`. `LOAD_APP_BOOT=1` adds the examples in `spec/benchmark/load_app_spec.rb` and `load_traffic_spec.rb` that boot
+  - the load test needs Docker: `bin/benchmark-load [--rate N]` runs it, and removes the stack after.
+    By hand, `docker compose -f benchmark/load/compose.yml up --build --wait`, then `down --volumes`. `LOAD_APP_BOOT=1` adds the examples in `spec/benchmark/load_app_spec.rb` and `load_traffic_spec.rb` that boot
     the app and check it with RED on and off, about a minute on a built image;
   - push over HTTPS and merge with `gh api`;
   - main requires 29 checks and an up-to-date branch. CI shows 30 rows, because `Overhead benchmark`

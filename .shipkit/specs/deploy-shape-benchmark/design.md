@@ -271,6 +271,12 @@ every request. Storm protection's defaults are 30 full captures per fingerprint 
 second and opening at 50, so what a mix exercises depends on the rate. The report states the rate and the errors per
 second, and a reader shouldn't compare mixes at different rates.
 
+**The rate** (REQ-10). `bin/benchmark-load --rate N` sets it. Without it, the runner finds the most the app holds with RED
+off, and uses half. Each probe restarts the app, warms it at the probe's rate for 30 s and throws that away, then measures
+60 s of the healthy mix. The app held the rate if k6 dropped nothing, every request got the status its kind expects, and
+every request k6 started finished. The search doubles from 10 a second until a rate doesn't hold, then halves the gap
+until the two are within 10%. That's about ten probes, each a restart and 90 s of traffic.
+
 **Reports** (REQ-13, REQ-14, REQ-19, REQ-20). `bin/benchmark-load` writes JSON, and Markdown from it. The compare tool
 reads the JSON. Each window records its mix, RED off or on, the three percentiles, requests, dropped iterations,
 unexpected statuses, CPU steal, `cpu.stat` throttling and whether it's valid. The header carries the environment block,

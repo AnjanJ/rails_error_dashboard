@@ -59,8 +59,8 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_traffic_spec.rb reads the script and asserts `constant-arrival-rate` and the three mixes
   - After: T10
   - Done when: `rspec spec/benchmark/load_traffic_spec.rb` → 0 failures; a run against a deliberately slowed app keeps its arrival rate
-- [ ] **T12** With no rate given, measure capacity with RED off and use half → REQ-10
-  - Files: bin/benchmark-load, benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+- [x] **T12** With no rate given, measure capacity with RED off and use half → REQ-10
+  - Files: bin/benchmark-load, benchmark/load/runner.rb, benchmark/load/compose_driver.rb, benchmark/load/compose.yml, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_runner_spec.rb, with a fake driver that saturates at a known rate
   - After: T11
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures; a given rate skips the search
