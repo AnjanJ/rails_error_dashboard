@@ -44,7 +44,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/harness_spec.rb, the `--list` facts name the real adapter; `Capture, async` on Solid Queue leaves rows in its jobs table
   - After: T7
   - Done when: `rspec spec/benchmark` → 0 failures; `bin/benchmark` with neither variable set prints the same rows as before
-- [ ] **T9** A real Rails app, on the generator's defaults, with RED added by its installer → REQ-8
+- [x] **T9** A real Rails app, on the generator's defaults, with RED added by its installer → REQ-8
   - Files: benchmark/load/app/, benchmark/load/Dockerfile, benchmark/load/compose.yml, spec/benchmark/load_app_spec.rb
   - Test: spec/benchmark/load_app_spec.rb reads the template and asserts production mode, Puma, jemalloc, one process and 3 threads
   - After: T8

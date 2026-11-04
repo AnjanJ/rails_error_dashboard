@@ -1,11 +1,17 @@
 # Handoff
 
-> Written 2026-10-31 at commit `5e7d7be`, after 0.18.0 shipped.
+> Written 2026-11-04 at commit `37ceb3f`, with T9 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
   target, in GitHub CI, by hand. The maintainer chose CI only on 2026-10-31: no servers, accounts or spend.
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
+  - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
+    Sidekiq, and report the CPU, its limits and the time stolen.
+  - T9 is committed on `test/benchmark-load-app` and not pushed: the load test's app in `benchmark/load/`,
+    a new Rails 8.1 app with RED added by its installer. It booted in compose, and a failing request reached
+    RED's table through Solid Queue.
+  - T10-T15, the rest of the load test, go on the same branch and become one pull request.
 - No release PR is open.
 
 ## Done
@@ -15,8 +21,8 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Build `deploy-shape-benchmark` task by task, before rc1. T1's probe lands first, because a workflow can't
-   be dispatched until its file is on main.
+1. Build T10-T15 on `test/benchmark-load-app` and open the load test's pull request. Then T16-T18, the
+   shapes, and T19-T20, the compare tool and the research file, all before rc1.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
@@ -38,6 +44,10 @@
   1.15 ms on a Xeon 8573C, against 1 ms. It isn't a regression, because that commit changed only the
   version and docs. The job wasn't re-run and the gate is unchanged. The Xeon has failed both times it
   was drawn. The shape benchmark runs on the same runners, so it won't settle this.
+- **The health snapshot misses 1 ms on arm64.** On #347's dispatch (run 41216679726, `a5e5c47`), all three
+  arm64 rows read 1.23 to 1.27 ms on a Neoverse-N2, against the 1 ms budget, while every x64 row passed
+  (0.51 to 0.69 ms). The gated job runs only on x64, so CI can't see it. The `medium-arm` shape will meet it.
+  Is the budget per architecture?
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -76,6 +86,10 @@
 - **Commands:**
   - prefix bundle and commit with `env -u RAILS_VERSION mise exec ruby@3.4.5 --`;
   - doc-only commits use `LEFTHOOK_EXCLUDE=chaos-tests`;
+  - the pre-commit `bundle-audit` reads the gitignored local `Gemfile.lock`, which CI never uses. When it
+    blocks a commit, update the gems it names with `bundle update --conservative`;
+  - the load test needs Docker: `docker compose -f benchmark/load/compose.yml up --build --wait`, then
+    `down --volumes`;
   - push over HTTPS and merge with `gh api`;
   - main requires 29 checks and an up-to-date branch. CI shows 30 rows, because `Overhead benchmark`
     isn't required.
