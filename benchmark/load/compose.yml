@@ -43,3 +43,14 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+
+  # The load generator, pinned by digest. It's in the `load` profile, so `up`
+  # leaves it out and it runs only when asked:
+  #
+  #   docker compose -f benchmark/load/compose.yml run --rm \
+  #     --env RATE=50 --env MIX=healthy k6 run /scripts/traffic.js
+  k6:
+    image: grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
+    profiles: [ load ]
+    volumes:
+      - ./traffic.js:/scripts/traffic.js:ro
