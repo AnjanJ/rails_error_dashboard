@@ -86,7 +86,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - After: T15
   - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each shape reports its limits, and `medium-throttled` shows throttling in `cpu.stat`
 - [ ] **T17** Add the shape's network delay between the app and the database → REQ-17
-  - Files: benchmark/load/compose.yml, benchmark/load/runner.rb, spec/benchmark/load_shapes_spec.rb
+  - Files: benchmark/load/shapes.rb, benchmark/load/compose_driver.rb, .github/workflows/deploy-benchmark.yml, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/ci/workflows_spec.rb
   - Test: spec/benchmark/load_shapes_spec.rb asserts a network stack sets the delay and SQLite doesn't
   - After: T16
   - Done when: a dispatch reports a measured round trip within 20% of the setting

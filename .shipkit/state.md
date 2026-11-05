@@ -44,6 +44,17 @@
     and the queue rows. On Docker Desktop the app saw 1 CPU and 1.00 GB under `small`, and 2 CPUs, a 0.40
     CPU quota and throttling under `medium-throttled`. T16 stays unticked until a dispatch of each shape
     shows its limits, and `medium-throttled` its throttling.
+  - T17 is committed on the same branch (`3f5c3ac`). Every shape delays its database's replies by 1 ms with
+    tc netem, from a pinned Alpine container sharing the database's network. The driver measures the
+    app's round trip to the database from inside its container (median of 20 TCP connects, before and
+    after), and the environment block gains "Database round trip". A run that can't add its delay stops.
+    The workflow delays the rows' PostgreSQL too, and the rows reach it at its own address: a published
+    port is answered by Docker's port proxy on the host, so a connect there timed the proxy, and a delay
+    didn't show. On Docker Desktop, 1 ms added 1.08 to 1.29 ms, as its VM overshoots; the 20% T17 asks
+    for is judged on a runner. `Socket.tcp` with a timeout returned a socket for a refused connect on
+    macOS, so the round trip uses `TCPSocket`. T17 stays unticked until a dispatch shows the round trip.
+  - T18 still owes the CPU topology the design's "Shapes are Docker limits" decision says the report
+    records (`lscpu`): the 5.1.0 review on Sonnet listed it as not built.
   - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
     Ruby beside the shape, after T20: the design names four stacks and Ruby 4.0, and no task built them.
 - **Release PR #351 proposes 0.18.1**, from #349's `fix:`. Releasing it needs the maintainer's yes.
