@@ -17,17 +17,19 @@ RSpec.describe RedBenchmark::Load::Runner do
   # keeps up at R a second for D seconds has R × D + 1 requests, as k6 sends.
   # A cold app falls behind on its first run after each start, at any rate.
   # Its machine counts 1,000 CPU ticks in each run, and has one stolen for
-  # every 10 s the run lasts.
+  # every 10 s the run lasts. Its app's quota holds it back twice a second, for
+  # 1 ms each time, or it has no cgroup to say.
   fake_driver = Class.new do
-    attr_reader :calls, :cpu_ticks
+    attr_reader :calls, :cpu_ticks, :throttling
 
-    def initialize(capacity:, overload: :drops, cold: false)
+    def initialize(capacity:, overload: :drops, cold: false, cgroup: true)
       @capacity = capacity
       @overload = overload
       @cold = cold
       @calls = []
       @runs_since_start = 0
       @cpu_ticks = { steal: 0, total: 0 }
+      @throttling = { times: 0, usec: 0 } if cgroup
     end
 
     def environment
@@ -51,6 +53,7 @@ RSpec.describe RedBenchmark::Load::Runner do
       @calls << [ :run, rate, mix, seconds ]
       @runs_since_start += 1
       @cpu_ticks = { steal: @cpu_ticks[:steal] + seconds / 10, total: @cpu_ticks[:total] + 1000 }
+      @throttling &&= { times: @throttling[:times] + seconds * 2, usec: @throttling[:usec] + seconds * 2000 }
       sent = rate * seconds + 1
       kept_up = rate <= @capacity && !(@cold && @runs_since_start == 1)
       summary(sent, kept_up ? 0 : [ sent - @capacity * seconds, 1 ].max)
@@ -195,13 +198,45 @@ RSpec.describe RedBenchmark::Load::Runner do
 
       expect(windows.map(&:steal).uniq).to eq([ "1.20%" ])
     end
+
+    # Twice a second for 1 ms in a measured run's 120 s, and none of the
+    # warm-up's.
+    it "each say how often the app's CPU quota held it back during their measured run (deploy-shape-benchmark/REQ-16)" do
+      expect(runner_for(fake_driver.new(capacity: 333), rate: 40).windows.map(&:throttled).uniq)
+        .to eq([ "240 times, 0.24 s" ])
+      expect(runner_for(fake_driver.new(capacity: 333, cgroup: false), rate: 40).windows.map(&:throttled).uniq)
+        .to eq([ "not available" ])
+      expect(described_class.throttled({ times: 4, usec: 0 }, { times: 5, usec: 61_000 })).to eq("1 time, 0.06 s")
+    end
   end
 
   describe "RedBenchmark::Load.main, which bin/benchmark-load runs" do
     let(:out) { StringIO.new }
 
+    # bin/benchmark-load makes its driver once it knows the shape, if any.
     def main(*arguments, driver:)
-      RedBenchmark::Load.main(arguments, driver: driver, out: out, log: log)
+      RedBenchmark::Load.main(arguments, driver: ->(shape) { @shape = shape; driver }, out: out, log: log)
+    end
+
+    it "holds the stack to the shape it's given, and to none without one (deploy-shape-benchmark/REQ-16)" do
+      expect(main("--rate", "40", "--shape", "small", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(@shape).to eq(RedBenchmark::Load::Shapes.fetch("small"))
+
+      expect(main("--rate", "40", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(@shape).to be_nil
+    end
+
+    it "says in its report which shape it measured (deploy-shape-benchmark/REQ-19)" do
+      expect(main("--rate", "40", "--shape", "small", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(out.string).to include(RedBenchmark::Report.shape_line("small", "a 1 vCPU, 1 GB plan"))
+    end
+
+    it "refuses a shape it doesn't have, before it starts anything (deploy-shape-benchmark/REQ-16)" do
+      driver = fake_driver.new(capacity: 333)
+
+      expect(main("--shape", "large", driver: driver)).to eq(1)
+      expect(driver.calls).to be_empty
+      expect(log.string).to include("--shape large", "Usage: bin/benchmark-load [--rate N] [--shape NAME]")
     end
 
     it "starts the stack, measures the rate with RED off, says what it is, and removes the stack (deploy-shape-benchmark/REQ-10)" do
@@ -306,7 +341,7 @@ RSpec.describe RedBenchmark::Load::ComposeDriver, if: ENV["LOAD_APP_BOOT"] == "1
   it "reads bin/benchmark's environment block inside the app's container, with this checkout's commit (deploy-shape-benchmark/REQ-13)" do
     environment = @driver.environment
 
-    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys)
+    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys + [ "Database round trip" ])
     expect(environment).to include("Rails" => start_with("8.1."), "Database" => "postgresql",
       "RED commit" => RedBenchmark::Harness.commit)
   end

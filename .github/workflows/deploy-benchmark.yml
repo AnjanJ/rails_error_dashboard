@@ -1,17 +1,26 @@
 name: Deploy benchmark
 
 # Measures what RED adds on the shape of a deploy target, by hand only. It holds
-# no secrets and reaches nothing outside the runner. For now it runs the probe,
-# which tries what the shapes rely on, on both of the free runner architectures.
+# no secrets and reaches nothing outside the runner. A shape runs the rows and
+# the load test held to that shape's CPUs and memory (benchmark/load/shapes.rb).
+# "none" runs the probe, which tries what the shapes rely on, and the rows on
+# each queue, on both of the free runner architectures.
 # Spec: .shipkit/specs/deploy-shape-benchmark/.
 on:
   workflow_dispatch:
+    inputs:
+      shape:
+        description: The deploy shape to hold the app to, or none for the probe and the queue rows
+        type: choice
+        default: medium
+        options: [ medium, small, medium-throttled, medium-arm, none ]
 
 permissions:
   contents: read
 
 jobs:
   probe:
+    if: inputs.shape == 'none'
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +40,7 @@ jobs:
         run: benchmark/load/probe.sh "$GITHUB_STEP_SUMMARY"
 
   rows:
+    if: inputs.shape == 'none'
     strategy:
       fail-fast: false
       matrix:
@@ -77,3 +87,92 @@ jobs:
 
       - name: Run the rows
         run: bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"
+
+  # The app gets the shape's CPUs, quota and memory, with no swap. Its database
+  # and k6, and the rows' PostgreSQL, get CPUs 2 and 3, so neither eats into the
+  # other. The rows run in a container held to the same limits, after their
+  # gems install in one held to none.
+  shape:
+    if: inputs.shape != 'none'
+    runs-on: ${{ inputs.shape == 'medium-arm' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    # About 20 minutes to find the rate, and 95 for the windows
+    timeout-minutes: 180
+    name: Shape ${{ inputs.shape }}
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: red
+          POSTGRES_PASSWORD: red
+          POSTGRES_DB: red_benchmark
+        # No published port: the rows reach it at its own address, as below
+        options: >-
+          --cpuset-cpus 2,3
+          --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # For shapes.rb and bin/benchmark-load, which need no gems
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: '3.4'
+
+      # The rows' database across the shape's network, as the load test's is.
+      # The rows reach it at its own address: a published port is answered by
+      # Docker's port proxy on the host, which a connect would time instead.
+      # Each script reads shapes.rb into a variable first: bash -e doesn't see a
+      # failure inside a pipe or a process substitution.
+      - name: Delay the rows' database, as the shape's network would
+        env:
+          SHAPE: ${{ inputs.shape }}
+          DATABASE: ${{ job.services.postgres.id }}
+        run: |
+          sudo modprobe sch_netem
+          database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
+          round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" 5432)
+          echo "$round_trip"
+          printf '%s\n\n' "$round_trip" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the rows, held to the shape
+        env:
+          SHAPE: ${{ inputs.shape }}
+          DATABASE: ${{ job.services.postgres.id }}
+        run: |
+          limits_text=$(ruby benchmark/load/shapes.rb "$SHAPE")
+          mapfile -t limits <<<"$limits_text"
+          database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
+          mkdir -p tmp/deploy-benchmark
+          # The checkout belongs to the runner's user, and git won't read it as
+          # root without being told it's safe.
+          container=(--volume "$PWD:/red" --workdir /red --volume red-bundle:/usr/local/bundle --network host
+            --env RAILS_VERSION=8.1 --env BENCHMARK_QUEUE=solid_queue --env "BENCHMARK_SHAPE=$SHAPE"
+            --env "BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"
+            --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/red
+            ruby:3.4)
+          docker run --rm "${container[@]}" bundle install --jobs 4
+          # A row over its budget fails the step, after its table reaches the summary
+          docker run --rm "${limits[@]}" "${container[@]}" bundle exec bin/benchmark --summary tmp/deploy-benchmark/rows.md || rows_status=$?
+          cat tmp/deploy-benchmark/rows.md >> "$GITHUB_STEP_SUMMARY"
+          exit "${rows_status:-0}"
+
+      # Whatever the rows did, as a row over its budget mustn't cost the load test
+      - name: Run the load test, held to the shape
+        if: ${{ !cancelled() }}
+        env:
+          SHAPE: ${{ inputs.shape }}
+        run: ruby bin/benchmark-load --shape "$SHAPE" --json tmp/deploy-benchmark/load.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: deploy-benchmark-${{ inputs.shape }}
+          path: tmp/deploy-benchmark/
+          if-no-files-found: warn

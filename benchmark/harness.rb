@@ -44,6 +44,8 @@ module RedBenchmark
     PROC_STAT = "/proc/stat"
     PROC_CGROUP = "/proc/self/cgroup"
     PROC_MOUNTINFO = "/proc/self/mountinfo"
+    PROC_STATUS = "/proc/self/status"
+    SYS_CPU = "/sys/devices/system/cpu"
     # Plain characters only. SQLite opens a file: URI's file and ignores what
     # follows a ? or #, and anything else here is a URL gone wrong, which can
     # have a password in it.
@@ -197,6 +199,7 @@ module RedBenchmark
         "CPU" => cpu_model,
         "Architecture" => uname[:machine],
         "CPUs" => Etc.nprocessors.to_s,
+        "CPU topology" => cpu_topology,
         "CPU limit" => cpu_limit,
         "Memory limit" => memory_limit,
         "OS" => "#{uname[:sysname]} #{uname[:release]}",
@@ -284,6 +287,31 @@ module RedBenchmark
     def read_cgroup(cgroup, name)
       path = File.join(cgroup, name)
       File.read(path).strip if File.readable?(path)
+    end
+
+    # The CPUs this process may run on and the cores under them, from the same
+    # per-CPU kernel files lscpu reads, so a shape's report says whether its
+    # two CPUs are one core's two threads or two cores (the design's "Shapes
+    # are Docker limits"). "not available" where the kernel doesn't say.
+    def cpu_topology(status = File.readable?(PROC_STATUS) ? File.read(PROC_STATUS) : "", sys = SYS_CPU)
+      list = status[/^Cpus_allowed_list:\s*(\S+)/, 1] or return "not available"
+      cpus = list.split(",").flat_map { |part| first, last = part.split("-").map(&:to_i); (first..(last || first)).to_a }
+      cores = cpus.map { |cpu| read_cgroup(File.join(sys, "cpu#{cpu}", "topology"), "thread_siblings_list") }
+      return "not available" if cores.include?(nil)
+
+      format("%d %s on %d %s", cpus.size, cpus.size == 1 ? "CPU" : "CPUs", cores.uniq.size, cores.uniq.size == 1 ? "core" : "cores")
+    end
+
+    # The deploy shape bin/benchmark's rows run in, from BENCHMARK_SHAPE, or nil
+    # (REQ-19). One it doesn't have stops the run before anything is measured.
+    # Shapes loads here, not at the top: the load test pipes this file's source
+    # alone into the app's container, where a require_relative finds nothing.
+    def shape(env = ENV)
+      name = env["BENCHMARK_SHAPE"].to_s
+      require_relative "load/shapes" unless name.empty?
+      Load::Shapes.fetch(name) unless name.empty?
+    rescue KeyError => error
+      abort error.message
     end
 
     # The whole machine's CPU ticks, read before and after a run, or nil where

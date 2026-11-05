@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "load/shapes"
+
 module RedBenchmark
   # The benchmark's output: the environment the numbers came from, then one
   # row per measurement. Markdown, so the same text reads in a terminal and in
@@ -7,8 +9,11 @@ module RedBenchmark
   module Report
     module_function
 
-    def markdown(environment, results)
-      lines = [ "## RED overhead benchmark", "", *environment_table(environment) ]
+    # shape is the deploy shape the rows ran in, or nil (REQ-19)
+    def markdown(environment, results, shape: nil)
+      lines = [ "## RED overhead benchmark", "" ]
+      lines.push(shape_line(shape.name, shape.size_of), "") if shape
+      lines.push(*environment_table(environment))
       lines.push("", "| Measurement | Median | p95 | Budget | Result |", "|---|---|---|---|---|")
       results.each { |result| lines << row(result) }
       rounds = results.find { |result| !result.skipped? }&.round_medians&.size || 0
@@ -16,6 +21,14 @@ module RedBenchmark
         "Capture rows are what RED adds to a failing request (with RED minus without). " \
         "Rows marked \"reported\" have no budget and never fail the run.")
       lines.join("\n") + "\n"
+    end
+
+    # What a report from a deploy shape measures (REQ-19): the shape's limits on
+    # a runner, which no plan's own machine is. Both reports put it under their
+    # heading.
+    def shape_line(name, size_of)
+      "Shape: #{name}, the size of #{size_of}, held to its limits on a GitHub runner. " \
+        "These figures measure that shape, not any plan's machine."
     end
 
     # Where the numbers came from, as a table. bin/benchmark-load's report

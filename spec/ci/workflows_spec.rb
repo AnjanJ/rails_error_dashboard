@@ -300,6 +300,110 @@ RSpec.describe "GitHub Actions workflows" do
     it "runs on GitHub's hosted runners only (deploy-shape-benchmark/REQ-18)" do
       expect(text).not_to include("self-hosted")
     end
+
+    describe "a shape" do
+      let(:shapes) { RedBenchmark::Load::Shapes }
+      let(:shape_job) { jobs("deploy-benchmark.yml").fetch("shape") }
+
+      before { require_relative "../../benchmark/load/shapes" }
+
+      def runs(command)
+        shape_job.fetch("steps").find { |step| step["run"].to_s.include?(command) }
+      end
+
+      it "is chosen at dispatch from the load test's shapes, or none for the probe and the queue rows (deploy-shape-benchmark/REQ-16)" do
+        input = workflow("deploy-benchmark.yml").dig(true, "workflow_dispatch", "inputs", "shape")
+
+        expect(input).to include("type" => "choice", "default" => "medium", "options" => shapes.names + [ "none" ])
+        expect(jobs("deploy-benchmark.yml").transform_values { |job| job["if"] }).to eq(
+          "probe" => "inputs.shape == 'none'", "rows" => "inputs.shape == 'none'", "shape" => "inputs.shape != 'none'"
+        )
+      end
+
+      it "runs on the runner of its architecture (deploy-shape-benchmark/REQ-16)" do
+        arm, x64 = shapes::ALL.partition { |shape| shape.runner == "ubuntu-24.04-arm" }
+
+        expect(x64.map(&:runner).uniq).to eq([ "ubuntu-24.04" ])
+        expect(shape_job.fetch("runs-on"))
+          .to eq("${{ #{arm.map { |shape| "inputs.shape == '#{shape.name}'" }.join(" || ")} && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}")
+      end
+
+      it "runs the rows inside a container held to the shape's limits (deploy-shape-benchmark/REQ-16)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("SHAPE" => "${{ inputs.shape }}")
+        expect(rows.fetch("run")).to include('ruby benchmark/load/shapes.rb "$SHAPE"', 'docker run --rm "${limits[@]}"')
+      end
+
+      it "tells the rows which shape they run in, so their report says so (deploy-shape-benchmark/REQ-19)" do
+        expect(runs("bin/benchmark ").fetch("run")).to include('--env "BENCHMARK_SHAPE=$SHAPE"')
+      end
+
+      it "runs the load test held to the shape (deploy-shape-benchmark/REQ-16)" do
+        load = runs("bin/benchmark-load")
+
+        expect(load.fetch("env")).to include("SHAPE" => "${{ inputs.shape }}")
+        expect(load.fetch("run")).to include('bin/benchmark-load --shape "$SHAPE"')
+      end
+
+      # bin/benchmark exits 1 when a row misses its budget, as the health
+      # snapshot does on arm64, and that mustn't throw the load test away.
+      it "runs the load test even when a row misses its budget (deploy-shape-benchmark/REQ-16)" do
+        expect(runs("bin/benchmark-load")).to include("if" => "${{ !cancelled() }}")
+        # The rows' table still reaches the summary, and the step still fails
+        expect(runs("bin/benchmark ").fetch("run").lines.last(2).map(&:strip))
+          .to eq([ 'cat tmp/deploy-benchmark/rows.md >> "$GITHUB_STEP_SUMMARY"', 'exit "${rows_status:-0}"' ])
+        expect(runs("bin/benchmark ").fetch("run")).to include("--summary tmp/deploy-benchmark/rows.md || rows_status=$?")
+      end
+
+      it "delays the rows' database as the shape's network would, before the rows run (deploy-shape-benchmark/REQ-17)" do
+        steps = shape_job.fetch("steps")
+        delay = steps.find { |step| step["run"].to_s.include?("shapes.rb --delay") }
+
+        expect(delay.fetch("env")).to eq("SHAPE" => "${{ inputs.shape }}", "DATABASE" => "${{ job.services.postgres.id }}")
+        expect(delay.fetch("run")).to include("sudo modprobe sch_netem", database_address,
+          'round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" 5432)')
+        expect(steps.index(delay)).to be < steps.index(runs("bin/benchmark "))
+      end
+
+      # A published port is answered by Docker's port proxy on the host, so a
+      # connect there times the proxy, not the database across its network.
+      let(:database_address) do
+        %q(database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE"))
+      end
+
+      it "has the rows reach their database at its own address, not through Docker's port proxy (deploy-shape-benchmark/REQ-17)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("DATABASE" => "${{ job.services.postgres.id }}")
+        expect(rows.fetch("run")).to include(database_address,
+          '"BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"')
+        expect(shape_job.dig("services", "postgres")).not_to have_key("ports")
+      end
+
+      # A run script has bash -e but not pipefail, and -e doesn't see a failure
+      # inside a pipe or a process substitution, so either would go on without
+      # the delay or the limits.
+      it "stops when shapes.rb fails, rather than go on without the delay or the limits (deploy-shape-benchmark/REQ-17)" do
+        scripts = shape_job.fetch("steps").filter_map { |step| step["run"] if step["run"].to_s.include?("shapes.rb") }
+
+        expect(scripts.size).to eq(2)
+        expect(scripts).to all(match(/=\$\(ruby benchmark\/load\/shapes\.rb /))
+        expect(scripts.join).not_to match(/shapes\.rb[^\n]*\||<\(ruby/)
+      end
+
+      it "keeps the rows' database and queue off the app's CPUs (deploy-shape-benchmark/REQ-16)" do
+        expect(shape_job.fetch("services").values.map { |service| service["options"] })
+          .to all(include("--cpuset-cpus #{shapes::REST}"))
+      end
+
+      it "keeps the reports when the run ends, however it ended (deploy-shape-benchmark/REQ-16)" do
+        upload = shape_job.fetch("steps").find { |step| step["uses"].to_s.start_with?("actions/upload-artifact@") }
+
+        expect(upload).to include("if" => "always()")
+        expect(upload.dig("with", "path")).to include("tmp/deploy-benchmark/")
+      end
+    end
   end
 
   describe "release.yml" do

@@ -32,6 +32,24 @@ RSpec.describe RedBenchmark::Report do
     expect(markdown).to include("| Capture, sync | 1.25 ms | 2.00 ms | none | reported |")
   end
 
+  describe "a report from a shape" do
+    let(:line) do
+      "Shape: small, the size of a 1 vCPU, 1 GB plan, held to its limits on a GitHub runner. " \
+        "These figures measure that shape, not any plan's machine."
+    end
+
+    it "says it measures the shape, not the machine, under the heading (deploy-shape-benchmark/REQ-19)" do
+      expect(described_class.shape_line("small", "a 1 vCPU, 1 GB plan")).to eq(line)
+      expect(described_class.markdown(environment, results, shape: RedBenchmark::Load::Shapes.fetch("small")))
+        .to start_with("## RED overhead benchmark\n\n#{line}\n\n| | |\n")
+    end
+
+    it "says nothing of a shape when there's none (deploy-shape-benchmark/REQ-19)" do
+      expect(markdown).to start_with("## RED overhead benchmark\n\n| | |\n")
+      expect(markdown).not_to include("Shape:")
+    end
+  end
+
   describe "a row that couldn't run" do
     let(:skipped) { RedBenchmark::Timer::Skipped.new(name: "Reopen collision fallback", reason: "this database has no such index") }
 
