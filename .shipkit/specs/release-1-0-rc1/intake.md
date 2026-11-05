@@ -47,16 +47,28 @@ by: 2026-12-31
    the CPUs CI draws (Xeon 8573C and 8370C, 1.15 to 1.30 ms) and on every arm64 run (1.23 to 1.33 ms),
    while AMD x64 runs pass (0.47 to 0.86 ms). The gate's own clause counts failures on main until
    2026-11-30 (1 of 3 so far). Freeze 1 ms everywhere and change the gate, set the budget per
-   architecture, or raise it? — *unanswered*
+   architecture, or raise it?
+   — **Health snapshot:** 1.5 ms on every CPU, keeping the gate (maintainer, 2026-11-05). It doesn't touch
+   the database: 437 µs on x64 with the 1 ms delay.
+   — **Capture:** first count its round trips (maintainer, 2026-11-05). Counted the same day, one failing
+   request through ErrorCatcher on PostgreSQL with Solid Queue: async sends 7 statements on the request's
+   thread, all of them Solid Queue's enqueue (BEGIN, the job INSERT, a savepoint, a SELECT of the job,
+   the ready execution INSERT, RELEASE, COMMIT), and none of RED's own; sync sends 9 in two
+   transactions. Which way the budget goes is still to decide, from that count.
 2. **Which 0.x releases the upgrade test starts from.** Blocker 7 says every 0.x minor; today's
    "Upgrade Path (published → this branch)" job starts from the latest release only. Every minor from
-   0.1, the minors still in use (which would need download figures), or the last few? — *unanswered*
+   0.1, the minors still in use (which would need download figures), or the last few?
+   — The latest patch of every minor from 0.1 to 0.18, on PostgreSQL, MySQL and SQLite, in a
+   dispatch-only job run before rc1 and before 1.0 (maintainer, 2026-11-05).
 3. **The demo during the quiet weeks.** Run rc1 on the demo, so the release candidate is tried in
    production, which means widening its `~> 0.9` pin and teaching its update workflow about a
-   prerelease, or keep the demo on 0.18.x until 1.0.0? — *unanswered*
+   prerelease, or keep the demo on 0.18.x until 1.0.0?
+   — Run rc1 on the demo: widen the pin and teach the update workflow (maintainer, 2026-11-05). Each
+   deploy still needs the maintainer's yes.
 4. **What of `deploy-shape-benchmark` must land before rc1.** T18 (the shape line) and T19-T20 (the
    compare tool and the research file) are planned before rc1; T21 (stacks and Ruby 4.0) was added
-   on 2026-11-05 "if there's time". Is T21 needed before rc1, or after 1.0? — *unanswered*
+   on 2026-11-05 "if there's time". Is T21 needed before rc1, or after 1.0?
+   — Before rc1, after T18-T20 (maintainer, 2026-11-05).
 
 ## Assumptions made
 - **The floors** follow decision `0003` exactly: the gemspec requires Rails >= 7.2 and Ruby >= 3.3, CI
