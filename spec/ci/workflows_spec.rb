@@ -352,6 +352,42 @@ RSpec.describe "GitHub Actions workflows" do
         expect(runs("bin/benchmark ").fetch("run")).to include("--summary tmp/deploy-benchmark/rows.md || rows_status=$?")
       end
 
+      it "delays the rows' database as the shape's network would, before the rows run (deploy-shape-benchmark/REQ-17)" do
+        steps = shape_job.fetch("steps")
+        delay = steps.find { |step| step["run"].to_s.include?("shapes.rb --delay") }
+
+        expect(delay.fetch("env")).to eq("SHAPE" => "${{ inputs.shape }}", "DATABASE" => "${{ job.services.postgres.id }}")
+        expect(delay.fetch("run")).to include("sudo modprobe sch_netem", database_address,
+          'round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" 5432)')
+        expect(steps.index(delay)).to be < steps.index(runs("bin/benchmark "))
+      end
+
+      # A published port is answered by Docker's port proxy on the host, so a
+      # connect there times the proxy, not the database across its network.
+      let(:database_address) do
+        %q(database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE"))
+      end
+
+      it "has the rows reach their database at its own address, not through Docker's port proxy (deploy-shape-benchmark/REQ-17)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("DATABASE" => "${{ job.services.postgres.id }}")
+        expect(rows.fetch("run")).to include(database_address,
+          '"BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"')
+        expect(shape_job.dig("services", "postgres")).not_to have_key("ports")
+      end
+
+      # A run script has bash -e but not pipefail, and -e doesn't see a failure
+      # inside a pipe or a process substitution, so either would go on without
+      # the delay or the limits.
+      it "stops when shapes.rb fails, rather than go on without the delay or the limits (deploy-shape-benchmark/REQ-17)" do
+        scripts = shape_job.fetch("steps").filter_map { |step| step["run"] if step["run"].to_s.include?("shapes.rb") }
+
+        expect(scripts.size).to eq(2)
+        expect(scripts).to all(match(/=\$\(ruby benchmark\/load\/shapes\.rb /))
+        expect(scripts.join).not_to match(/shapes\.rb[^\n]*\||<\(ruby/)
+      end
+
       it "keeps the rows' database and queue off the app's CPUs (deploy-shape-benchmark/REQ-16)" do
         expect(shape_job.fetch("services").values.map { |service| service["options"] })
           .to all(include("--cpuset-cpus #{shapes::REST}"))

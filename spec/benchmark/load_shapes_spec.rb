@@ -52,6 +52,49 @@ RSpec.describe RedBenchmark::Load::Shapes do
     expect(output).to include("No shape large")
   end
 
+  describe "the network delay to the database" do
+    let(:script) { File.join(__dir__, "../../benchmark/load/shapes.rb") }
+
+    it "is 1 ms on every shape (deploy-shape-benchmark/REQ-17)" do
+      expect(described_class::ALL.to_h { |each| [ each.name, each.delay_ms ] })
+        .to eq("medium" => 1, "small" => 1, "medium-throttled" => 1, "medium-arm" => 1)
+    end
+
+    it "is added by tc netem, in a pinned container sharing the database's network (deploy-shape-benchmark/REQ-17)" do
+      expect(described_class.netem("abc123", 1)).to eq([
+        "docker", "run", "--rm", "--network", "container:abc123", "--cap-add", "NET_ADMIN", described_class::NETEM_IMAGE,
+        "sh", "-c", "apk add --no-cache --quiet iproute2 && tc qdisc add dev eth0 root netem delay 1ms"
+      ])
+      expect(described_class::NETEM_IMAGE).to match(/\Aalpine:3\.20@sha256:\h{64}\z/)
+    end
+
+    it "is reported as the round trip measured, the part of it added, and the setting (deploy-shape-benchmark/REQ-17)" do
+      expect(described_class.round_trip_line(0.08, 1.12, 1)).to eq("1.12 ms, 1.04 ms of it added (1 ms set)")
+      expect(described_class.round_trip_line(0.08, 0.09, nil)).to eq("0.09 ms, nothing added")
+      expect(described_class.round_trip_line(nil, 1.12, 1)).to eq("not available")
+      expect(described_class.round_trip_line(0.08, nil, 1)).to eq("not available")
+    end
+
+    it "is measured as the median of TCP connects, and reads nil where nothing answers (deploy-shape-benchmark/REQ-17)" do
+      server = TCPServer.new("127.0.0.1", 0)
+      port = server.addr[1]
+      expect(described_class.round_trip("127.0.0.1", port, connects: 5)).to be_between(0, 50)
+
+      server.close
+      expect(described_class.round_trip("127.0.0.1", port, connects: 5)).to be_nil
+    end
+
+    it "is added from a workflow's shell for a shape, and refuses what it can't use (deploy-shape-benchmark/REQ-17)" do
+      output, status = Open3.capture2e(RbConfig.ruby, script, "--delay", "medium")
+      expect(status).not_to be_success
+      expect(output).to include("Usage: ruby benchmark/load/shapes.rb --delay SHAPE CONTAINER HOST PORT")
+
+      output, status = Open3.capture2e(RbConfig.ruby, script, "--delay", "large", "abc123", "127.0.0.1", "5432")
+      expect(status).not_to be_success
+      expect(output).to include("No shape large")
+    end
+  end
+
   describe "benchmark/load/compose.yml" do
     let(:services) { YAML.load_file(RedBenchmark::Load::ComposeDriver::FILE).fetch("services") }
 
@@ -68,26 +111,72 @@ RSpec.describe RedBenchmark::Load::Shapes do
   end
 
   describe RedBenchmark::Load::ComposeDriver do
-    it "passes the shape's limits to every compose command (deploy-shape-benchmark/REQ-16)" do
-      seen = []
-      success = instance_double(Process::Status, success?: true)
-      allow(Open3).to receive(:capture3) { |env, *| seen << env; [ "", "", success ] }
+    # Answers each command as Docker would, and keeps them in order: compose ps
+    # gives the database's container, Ruby in the app's container a round trip
+    # each time, and bin/rails runner the environment block.
+    def stub_docker(round_trips: [ "0.08", "1.12" ], fail_netem: false)
+      calls = []
+      allow(Open3).to receive(:capture3) do |env, *argv, **|
+        calls << [ env, argv ]
+        output = if argv.include?("ps") then "abc123\n"
+        elsif argv.last(2) == [ "ruby", "-" ] then round_trips.shift.to_s
+        elsif argv.include?("runner") then %({"Ruby":"3.4.12","RED commit":"unknown"}\n)
+        else ""
+        end
+        failed = fail_netem && argv.first(2) == [ "docker", "run" ]
+        [ output, failed ? "RTNETLINK answers: Operation not permitted" : "", instance_double(Process::Status, success?: !failed) ]
+      end
+      calls
+    end
 
+    def compose_calls(calls)
+      calls.select { |_env, argv| argv.first(2) == [ "docker", "compose" ] }
+    end
+
+    it "passes the shape's limits to every compose command (deploy-shape-benchmark/REQ-16)" do
+      calls = stub_docker
       driver = described_class.new(shape: shape("small"))
       driver.up
       driver.start(red: false)
 
-      expect(seen).to eq([ shape("small").compose_env.merge("RED" => "on"), shape("small").compose_env.merge("RED" => "off") ])
+      expect(compose_calls(calls).map(&:first)).to all(include(shape("small").compose_env))
+      expect(compose_calls(calls).filter_map { |env, _argv| env["RED"] }).to eq(%w[on off])
     end
 
     it "passes no limits with no shape (deploy-shape-benchmark/REQ-16)" do
-      seen = []
-      success = instance_double(Process::Status, success?: true)
-      allow(Open3).to receive(:capture3) { |env, *| seen << env; [ "", "", success ] }
-
+      calls = stub_docker
       described_class.new.start(red: true)
 
-      expect(seen).to eq([ { "RED" => "on" } ])
+      expect(calls.map(&:first)).to eq([ { "RED" => "on" } ])
+    end
+
+    it "delays the database's network once the stack is up, and reports the round trip from the app (deploy-shape-benchmark/REQ-17)" do
+      calls = stub_docker
+      driver = described_class.new(shape: shape("small"))
+      driver.up
+
+      commands = calls.map(&:last)
+      netem = commands.index(RedBenchmark::Load::Shapes.netem("abc123", 1))
+      expect(netem).to be > commands.index { |argv| argv.include?("up") }
+      # Measured from the app's container, before the delay and after it
+      expect(commands.first(netem).count { |argv| argv.last(2) == [ "ruby", "-" ] && argv.include?("app") }).to eq(1)
+      expect(driver.environment).to include("Database round trip" => "1.12 ms, 1.04 ms of it added (1 ms set)")
+    end
+
+    it "adds no delay with no shape, and still reports the round trip (deploy-shape-benchmark/REQ-17)" do
+      calls = stub_docker(round_trips: [ "0.08", "0.09" ])
+      driver = described_class.new
+      driver.up
+
+      expect(calls.map(&:last)).not_to include(start_with("docker", "run"))
+      expect(driver.environment).to include("Database round trip" => "0.09 ms, nothing added")
+    end
+
+    it "stops the run when it can't add the delay, rather than measure without it (deploy-shape-benchmark/REQ-17)" do
+      stub_docker(fail_netem: true)
+
+      expect { described_class.new(shape: shape("small")).up }
+        .to raise_error(RedBenchmark::Load::Error, /Operation not permitted/)
     end
 
     it "reads how often the app's CPU quota held it back, from its container's cpu.stat (deploy-shape-benchmark/REQ-16)" do
@@ -119,6 +208,17 @@ RSpec.describe "The load test's app held to a shape", if: ENV["LOAD_APP_BOOT"] =
   it "sees the shape's CPUs and memory inside the app's container (deploy-shape-benchmark/REQ-16)" do
     held_to("small") do |driver|
       expect(driver.environment).to include("CPUs" => "1", "Memory limit" => "1.00 GB", "CPU limit" => "none found")
+    end
+  end
+
+  # On a runner, 1 ms set added 1.06 and 1.07 ms in the probe, and the 20% that
+  # T17 asks for is judged on a dispatch. Docker Desktop's VM overshoots: three
+  # tries there added 1.08, 1.28 and 1.19 ms. So this only checks the delay
+  # arrived, at about its size.
+  it "adds about the shape's delay to the app's round trip to the database (deploy-shape-benchmark/REQ-17)" do
+    held_to("medium") do |driver|
+      added = driver.environment.fetch("Database round trip")[/([\d.]+) ms of it added \(1 ms set\)/, 1]
+      expect(added.to_f).to be_between(0.8, 2.0)
     end
   end
 

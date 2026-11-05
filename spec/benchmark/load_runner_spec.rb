@@ -336,7 +336,7 @@ RSpec.describe RedBenchmark::Load::ComposeDriver, if: ENV["LOAD_APP_BOOT"] == "1
   it "reads bin/benchmark's environment block inside the app's container, with this checkout's commit (deploy-shape-benchmark/REQ-13)" do
     environment = @driver.environment
 
-    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys)
+    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys + [ "Database round trip" ])
     expect(environment).to include("Rails" => start_with("8.1."), "Database" => "postgresql",
       "RED commit" => RedBenchmark::Harness.commit)
   end

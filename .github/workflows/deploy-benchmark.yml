@@ -107,7 +107,7 @@ jobs:
           POSTGRES_USER: red
           POSTGRES_PASSWORD: red
           POSTGRES_DB: red_benchmark
-        ports: [ "5432:5432" ]
+        # No published port: the rows reach it at its own address, as below
         options: >-
           --cpuset-cpus 2,3
           --health-cmd "pg_isready -U red" --health-interval 5s
@@ -124,17 +124,36 @@ jobs:
         with:
           ruby-version: '3.4'
 
+      # The rows' database across the shape's network, as the load test's is.
+      # The rows reach it at its own address: a published port is answered by
+      # Docker's port proxy on the host, which a connect would time instead.
+      # Each script reads shapes.rb into a variable first: bash -e doesn't see a
+      # failure inside a pipe or a process substitution.
+      - name: Delay the rows' database, as the shape's network would
+        env:
+          SHAPE: ${{ inputs.shape }}
+          DATABASE: ${{ job.services.postgres.id }}
+        run: |
+          sudo modprobe sch_netem
+          database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
+          round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" 5432)
+          echo "$round_trip"
+          printf '%s\n\n' "$round_trip" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run the rows, held to the shape
         env:
           SHAPE: ${{ inputs.shape }}
+          DATABASE: ${{ job.services.postgres.id }}
         run: |
-          mapfile -t limits < <(ruby benchmark/load/shapes.rb "$SHAPE")
+          limits_text=$(ruby benchmark/load/shapes.rb "$SHAPE")
+          mapfile -t limits <<<"$limits_text"
+          database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
           mkdir -p tmp/deploy-benchmark
           # The checkout belongs to the runner's user, and git won't read it as
           # root without being told it's safe.
           container=(--volume "$PWD:/red" --workdir /red --volume red-bundle:/usr/local/bundle --network host
             --env RAILS_VERSION=8.1 --env BENCHMARK_QUEUE=solid_queue
-            --env "BENCHMARK_DATABASE_URL=postgres://red:red@127.0.0.1:5432/red_benchmark?pool=10"
+            --env "BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/red
             ruby:3.4)
           docker run --rm "${container[@]}" bundle install --jobs 4
