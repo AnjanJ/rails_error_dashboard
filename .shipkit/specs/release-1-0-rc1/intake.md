@@ -54,7 +54,8 @@ by: 2026-12-31
    request through ErrorCatcher on PostgreSQL with Solid Queue: async sends 7 statements on the request's
    thread, all of them Solid Queue's enqueue (BEGIN, the job INSERT, a savepoint, a SELECT of the job,
    the ready execution INSERT, RELEASE, COMMIT), and none of RED's own; sync sends 9 in two
-   transactions. Which way the budget goes is still to decide, from that count.
+   transactions. Decided on 2026-11-05: async capture enqueues after the response where the server
+   allows it (decision `0009`). The spec makes it a task, test-first.
 2. **Which 0.x releases the upgrade test starts from.** Blocker 7 says every 0.x minor; today's
    "Upgrade Path (published → this branch)" job starts from the latest release only. Every minor from
    0.1, the minors still in use (which would need download figures), or the last few?
