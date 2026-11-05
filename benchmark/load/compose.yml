@@ -1,0 +1,59 @@
+# The load test's stack (.shipkit/specs/deploy-shape-benchmark/, REQ-8): the app
+# from ./Dockerfile, on Puma behind Thruster in production mode, and the
+# PostgreSQL the generator set it up for. The app's settings are the generator's;
+# its environment below holds only what a deploy has to supply, and RED's switch.
+#
+#   docker compose -f benchmark/load/compose.yml up --build --wait
+#   docker compose -f benchmark/load/compose.yml down --volumes
+name: red-load
+
+services:
+  app:
+    build:
+      context: .
+      additional_contexts:
+        red: ../..
+    environment:
+      # The generated production database settings name the user and read this
+      # password. libpq reads the host.
+      PGHOST: db
+      SHOP_DATABASE_PASSWORD: benchmark
+      # Solid Queue's supervisor inside Puma, as the generator's deploy file runs it.
+      SOLID_QUEUE_IN_PUMA: "true"
+      # RED refuses to boot in production on its published default login.
+      ERROR_DASHBOARD_USER: benchmark
+      ERROR_DASHBOARD_PASSWORD: benchmark
+      # The load test's switch, which a deploy wouldn't have: "off" runs the
+      # same app without RED. bin/benchmark-load sets it for each window.
+      RED: "${RED:-on}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://localhost/up" ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: benchmark
+    healthcheck:
+      test: [ "CMD", "pg_isready", "--username", "shop" ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # The load generator, pinned by digest. It's in the `load` profile, so `up`
+  # leaves it out and it runs only when asked:
+  #
+  #   docker compose -f benchmark/load/compose.yml run --rm \
+  #     --env RATE=50 --env MIX=healthy k6 run /scripts/traffic.js
+  k6:
+    image: grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
+    profiles: [ load ]
+    volumes:
+      - ./traffic.js:/scripts/traffic.js:ro
