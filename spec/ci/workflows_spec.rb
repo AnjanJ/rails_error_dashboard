@@ -342,6 +342,16 @@ RSpec.describe "GitHub Actions workflows" do
         expect(load.fetch("run")).to include('bin/benchmark-load --shape "$SHAPE"')
       end
 
+      # bin/benchmark exits 1 when a row misses its budget, as the health
+      # snapshot does on arm64, and that mustn't throw the load test away.
+      it "runs the load test even when a row misses its budget (deploy-shape-benchmark/REQ-16)" do
+        expect(runs("bin/benchmark-load")).to include("if" => "${{ !cancelled() }}")
+        # The rows' table still reaches the summary, and the step still fails
+        expect(runs("bin/benchmark ").fetch("run").lines.last(2).map(&:strip))
+          .to eq([ 'cat tmp/deploy-benchmark/rows.md >> "$GITHUB_STEP_SUMMARY"', 'exit "${rows_status:-0}"' ])
+        expect(runs("bin/benchmark ").fetch("run")).to include("--summary tmp/deploy-benchmark/rows.md || rows_status=$?")
+      end
+
       it "keeps the rows' database and queue off the app's CPUs (deploy-shape-benchmark/REQ-16)" do
         expect(shape_job.fetch("services").values.map { |service| service["options"] })
           .to all(include("--cpuset-cpus #{shapes::REST}"))

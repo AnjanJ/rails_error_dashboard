@@ -138,10 +138,14 @@ jobs:
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/red
             ruby:3.4)
           docker run --rm "${container[@]}" bundle install --jobs 4
-          docker run --rm "${limits[@]}" "${container[@]}" bundle exec bin/benchmark --summary tmp/deploy-benchmark/rows.md
+          # A row over its budget fails the step, after its table reaches the summary
+          docker run --rm "${limits[@]}" "${container[@]}" bundle exec bin/benchmark --summary tmp/deploy-benchmark/rows.md || rows_status=$?
           cat tmp/deploy-benchmark/rows.md >> "$GITHUB_STEP_SUMMARY"
+          exit "${rows_status:-0}"
 
+      # Whatever the rows did, as a row over its budget mustn't cost the load test
       - name: Run the load test, held to the shape
+        if: ${{ !cancelled() }}
         env:
           SHAPE: ${{ inputs.shape }}
         run: ruby bin/benchmark-load --shape "$SHAPE" --json tmp/deploy-benchmark/load.json --summary "$GITHUB_STEP_SUMMARY"
