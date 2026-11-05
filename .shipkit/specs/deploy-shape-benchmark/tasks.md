@@ -95,8 +95,8 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_report_spec.rb and spec/benchmark/report_spec.rb
   - After: T17
   - Done when: `rspec spec/benchmark` → 0 failures
-- [ ] **T19** The compare tool prints what RED added in two reports, and the ratio → REQ-20
-  - Files: benchmark/load/compare.rb, bin/benchmark-load, spec/benchmark/load_compare_spec.rb
+- [x] **T19** The compare tool prints what RED added in two reports, and the ratio → REQ-20
+  - Files: benchmark/load/compare.rb, benchmark/load/runner.rb, bin/benchmark-load, spec/benchmark/load_compare_spec.rb
   - Test: spec/benchmark/load_compare_spec.rb, with two known reports, and a mix only one of them has
   - After: T18
   - Done when: `rspec spec/benchmark/load_compare_spec.rb` → 0 failures
