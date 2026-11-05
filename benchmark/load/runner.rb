@@ -4,6 +4,7 @@ require "fileutils"
 require "json"
 require "optparse"
 require_relative "../harness"
+require_relative "compare"
 require_relative "load_report"
 require_relative "shapes"
 
@@ -14,7 +15,8 @@ module RedBenchmark
     # A failure the run can't go on from. bin/benchmark-load prints its message.
     class Error < StandardError; end
 
-    USAGE = "Usage: bin/benchmark-load [--rate N] [--shape NAME] [--json FILE] [--summary FILE]"
+    USAGE = "Usage: bin/benchmark-load [--rate N] [--shape NAME] [--json FILE] [--summary FILE]\n" \
+      "       bin/benchmark-load --compare FIRST.json SECOND.json [--summary FILE]"
 
     # Works the stack through a driver. ComposeDriver runs it in Docker, and the
     # specs pass a fake. A driver answers these calls:
@@ -176,6 +178,8 @@ module RedBenchmark
     # for none. Returns the exit status.
     def self.main(argv, driver:, out: $stdout, log: $stderr)
       options = parse_options(argv)
+      return compare(options, out) if options[:compare]
+
       shape = options[:shape] && Shapes.fetch(options[:shape])
       driver = driver.call(shape)
       report = begin
@@ -199,7 +203,8 @@ module RedBenchmark
     end
 
     # --rate is a whole number above 0, because k6 starts whole requests.
-    # --shape is one of Shapes'.
+    # --shape is one of Shapes'. --compare takes two reports and nothing that
+    # measures, as it starts no stack (REQ-20).
     def self.parse_options(argv)
       options = {}
       parser = OptionParser.new(USAGE)
@@ -207,11 +212,30 @@ module RedBenchmark
       parser.on("--shape NAME", Shapes.names) { |value| options[:shape] = value }
       parser.on("--json FILE") { |value| options[:json] = value }
       parser.on("--summary FILE") { |value| options[:summary] = value }
+      parser.on("--compare") { options[:compare] = true }
       extra = parser.parse(argv)
+      if options[:compare]
+        raise OptionParser::InvalidArgument, "--compare needs two reports" unless extra.size == 2
+        measuring = (options.keys & [ :rate, :shape, :json ]).map { |name| "--#{name}" }
+        raise OptionParser::InvalidArgument, "--compare with #{measuring.join(", ")}" unless measuring.empty?
+
+        options[:reports] = extra
+        return options
+      end
       raise OptionParser::NeedlessArgument, extra.join(" ") unless extra.empty?
       raise OptionParser::InvalidArgument, "--rate #{options[:rate]}" unless options.fetch(:rate, 1).positive?
 
       options
+    end
+
+    # Two reports side by side, on stdout, and added to a summary file when
+    # asked (REQ-20). It reads both before it prints anything.
+    def self.compare(options, out)
+      first, second = options[:reports].map { |path| Compare.read(path) }
+      markdown = Compare.markdown(first, second, names: options[:reports])
+      out.puts markdown
+      File.open(options[:summary], "a") { |file| file.puts(markdown) } if options[:summary]
+      0
     end
 
     # The report's figures as JSON when asked, and the report as Markdown on
@@ -225,6 +249,6 @@ module RedBenchmark
       out.puts markdown
       File.open(options[:summary], "a") { |file| file.puts(markdown) } if options[:summary]
     end
-    private_class_method :parse_options, :publish
+    private_class_method :parse_options, :compare, :publish
   end
 end

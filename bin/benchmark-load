@@ -13,6 +13,10 @@
 #   ... --json FILE               also write the report's figures to FILE, as JSON
 #   ... --summary FILE            also append the report to FILE (CI passes
 #                                 $GITHUB_STEP_SUMMARY)
+#   bin/benchmark-load --compare FIRST.json SECOND.json
+#                                 print what RED added in two reports --json
+#                                 wrote, per mix, and the ratio between them.
+#                                 It starts nothing, so needs no Docker.
 #
 # It prints the report as Markdown: for each mix, p50, p95 and p99 with RED off
 # and on, what RED added in each pair, and every window with the CPU time stolen
