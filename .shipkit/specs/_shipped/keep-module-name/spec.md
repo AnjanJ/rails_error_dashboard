@@ -1,7 +1,7 @@
 # Spec: Keep Ruby's own `name` on RED's classes
 
 > Spec accepted at commit `37ceb3f` on fix/keep-module-name (2026-11-04).
-> Status: open
+> Status: shipped in 0.18.1 (#349)
 > Paths: lib/rails_error_dashboard/services/ai_agent_classifier.rb,lib/rails_error_dashboard/queries/rack_attack_summary.rb,spec/lib/rails_error_dashboard/services/ai_agent_classifier_spec.rb,spec/lib/rails_error_dashboard/module_names_spec.rb
 
 ## Purpose

@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `1c6efc4`, with T16 to T18 of the deploy shape benchmark built and proved on a branch.
+> Written 2026-11-05 at commit `dbe513a`, after 0.18.1 shipped and T16 to T18 of the deploy shape benchmark merged.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -33,7 +33,7 @@
     the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
-  - T16 to T18 are on `test/benchmark-shapes`, pushed for their dispatches, with no pull request yet.
+  - T16 to T18 merged in #352 (`dbe513a`).
     T16 (`5765635`, and `6b56cb6` so a row over budget doesn't skip the load test): `benchmark/load/shapes.rb` has
     four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
     0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
@@ -82,7 +82,6 @@
     step does: async capture read 8.00 ms against 5 ms, the finding above.
   - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
     Ruby beside the shape, after T20: the design names four stacks and Ruby 4.0, and no task built them.
-- **Release PR #351 proposes 0.18.1**, from #349's `fix:`. Releasing it needs the maintainer's yes.
 
 ## Done
 - 0.18.0 shipped 2026-10-31, about three weeks ahead of its target. RubyGems, the GitHub Release, both
@@ -92,11 +91,19 @@
 - #349 merged 2026-11-05 (`05fa121`): `AiAgentClassifier.name(user_agent)` no longer replaces `Class#name`;
   the lookup is `agent_name`. Also merged that day: #348 (setup-ruby 1.336.0), and the demo's #74 (five
   flagged gems) and #75 (Rails 8.1.4.1, for GHSA-wm3x-v3qw-4jh3).
+- 0.18.1 shipped 2026-11-05 (#351, `657ea2a`), with #349's fix. RubyGems and the GitHub Release carry
+  it. `keep-module-name` moved to `.shipkit/specs/_shipped/`, marked "shipped in 0.18.1 (#349)".
+- The same day GitHub's `ubuntu-latest` became ubuntu-26.04, where setup-ruby builds only the latest
+  patch of each Ruby series, so 3.4.5 stopped setting up. #353 moved `lint` and `audit` to 3.4.12, and
+  #354 the release's `test` and `publish` jobs, which read `.ruby-version`; that file stays 3.4.5 for
+  local work. The demo moved `.ruby-version` and its Dockerfile to 3.4.12 in its #76, and its errors
+  recorded Ruby 3.4.12 after the deploy.
 
 ## Next step
-1. Open T16-T18's pull request from `test/benchmark-shapes`, each task proved on its dispatches. Then T19-T20, the compare tool and the research file, all
-   before rc1, and T21 if there's time.
-2. Plan and spec 1.0.0.rc1:
+1. T19-T20, the compare tool and the research file, then T21 (stacks and Ruby 4.0), all before rc1
+   (maintainer, 2026-11-05).
+2. Build 1.0.0.rc1. Its spec was accepted on 2026-11-06 on the local branch `spec/release-1-0-rc1`, not yet
+   on main, with decision `0009`. It covers:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
    - how the version gets set: release-please has no `bump-minor-pre-major`, and `Release-As:` survives
@@ -139,7 +146,9 @@
 - **Manual clauses someone has to watch.** `decision-check.sh` can't measure these, and they've left its
   list too. Each is in its `design.md`. Most other 0.18 clauses wait on an issue being reported.
   - `_shipped/overhead-benchmark`, the gate: change it if the job fails on main three times by 2026-11-30
-    with no capture-path change. **The count is 1** (`5ec8a3c`).
+    with no capture-path change. **The count is 2**: `5ec8a3c`, and `657ea2a` (0.18.1's release, 2026-11-05),
+    whose health snapshot read 1.10 ms on a Xeon 8573C. The change is already chosen: 1.5 ms on every CPU,
+    in the rc1 spec.
   - `_shipped/overhead-benchmark`, the storm budget: raise it or pin the runner if a storm row fails on
     main on any CPU but the EPYC 7763 with no capture-path change.
   - `_shipped/overhead-benchmark`, the figures: go back to one figure per row if the job moves to a pinned
