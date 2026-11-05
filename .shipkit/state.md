@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `cb270a8`, with T16 and T17 of the deploy shape benchmark built and proved on a branch.
+> Written 2026-11-05 at commit `1c6efc4`, with T16 to T18 of the deploy shape benchmark built and proved on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -33,7 +33,7 @@
     the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
-  - T16 and T17 are on `test/benchmark-shapes`, pushed for their dispatches, with no pull request yet.
+  - T16 to T18 are on `test/benchmark-shapes`, pushed for their dispatches, with no pull request yet.
     T16 (`5765635`, and `6b56cb6` so a row over budget doesn't skip the load test): `benchmark/load/shapes.rb` has
     four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
     0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
@@ -69,9 +69,17 @@
     statements on the request's thread, all of them Solid Queue's enqueue, none of RED's own. The rc1
     intake carries it; the maintainer is weighing deferring the enqueue until after the response.
   - A window counts as not finished when even one request is short: storm pair 3 on the T17 `medium`
-    re-run was invalid for 40,799 of 40,800. Worth a tolerance? Not decided.
-  - T18 still owes the CPU topology the design's "Shapes are Docker limits" decision says the report
-    records (`lscpu`): the 5.1.0 review on Sonnet listed it as not built.
+    re-run was invalid for 40,799 of 40,800. Kept (maintainer, 2026-11-05).
+  - T18 (`c4a5945`, and `1c6efc4`, which loads the shapes only when the rows ask for one). A shape's
+    reports open with "Shape: medium, the size of a 2 vCPU, 4 GB plan, held to its limits on a GitHub
+    runner. These figures measure that shape, not any plan's machine.", and the environment block gains
+    "CPU topology", from `lscpu`. The first dispatch (run 42055160402) failed in its first minutes:
+    `harness.rb` had a top-level `require_relative`, and the load test pipes that file's source alone into
+    `bin/rails runner -` in the app's container, where the path doesn't exist. `1c6efc4` moves it into
+    `Harness.shape`, which only `bin/benchmark` calls, and every `LOAD_APP_BOOT=1` example passed after it (66). Ticked on run
+    42058012637 (`medium`, EPYC 7763): both reports carry the shape line and "2 CPUs on 1 core", and the
+    load test read "1.10 ms, 1.03 ms of it added (1 ms set)". The run ends "failure" only because the rows
+    step does: async capture read 8.00 ms against 5 ms, the finding above.
   - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
     Ruby beside the shape, after T20: the design names four stacks and Ruby 4.0, and no task built them.
 - **Release PR #351 proposes 0.18.1**, from #349's `fix:`. Releasing it needs the maintainer's yes.
@@ -86,8 +94,7 @@
   flagged gems) and #75 (Rails 8.1.4.1, for GHSA-wm3x-v3qw-4jh3).
 
 ## Next step
-1. Dispatch each shape on `test/benchmark-shapes` with `--ref`, then T17 (the network delay) and T18 (the
-   shape line), and open T16-T18's pull request. Then T19-T20, the compare tool and the research file, all
+1. Open T16-T18's pull request from `test/benchmark-shapes`, each task proved on its dispatches. Then T19-T20, the compare tool and the research file, all
    before rc1, and T21 if there's time.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);

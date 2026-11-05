@@ -90,8 +90,8 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_shapes_spec.rb asserts a network stack sets the delay and SQLite doesn't
   - After: T16
   - Done when: a dispatch reports a measured round trip within 20% of the setting
-- [ ] **T18** A shape's report says it measures the shape, not the machine → REQ-19
-  - Files: benchmark/load/load_report.rb, benchmark/report.rb, spec/benchmark/load_report_spec.rb, spec/benchmark/report_spec.rb
+- [x] **T18** A shape's report says it measures the shape, not the machine → REQ-19
+  - Files: benchmark/load/load_report.rb, benchmark/report.rb, benchmark/harness.rb, benchmark/load/runner.rb, bin/benchmark, .github/workflows/deploy-benchmark.yml, spec/benchmark/load_report_spec.rb, spec/benchmark/report_spec.rb, spec/benchmark/harness_spec.rb, spec/benchmark/load_runner_spec.rb, spec/ci/workflows_spec.rb
   - Test: spec/benchmark/load_report_spec.rb and spec/benchmark/report_spec.rb
   - After: T17
   - Done when: `rspec spec/benchmark` → 0 failures
