@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.0...rails_error_dashboard/v0.18.1) (2026-11-05)
+
+
+### 🐛 Bug Fixes
+
+* stop AiAgentClassifier replacing Class#name ([#349](https://github.com/AnjanJ/rails_error_dashboard/issues/349)) ([05fa121](https://github.com/AnjanJ/rails_error_dashboard/commit/05fa121dc7b09cff732f307c34b188e914d85be3))
+
 ## [0.18.0](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.17.0...rails_error_dashboard/v0.18.0) (2026-10-31)
 
 
