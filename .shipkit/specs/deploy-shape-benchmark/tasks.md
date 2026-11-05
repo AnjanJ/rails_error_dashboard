@@ -69,13 +69,13 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_runner_spec.rb asserts the order, the same rate on both sides, and a restart before each window
   - After: T12
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures
-- [ ] **T14** The report gives the percentiles, what RED added and the steal per window → REQ-13, REQ-14
-  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+- [x] **T14** The report gives the percentiles, what RED added and the steal per window → REQ-13, REQ-14
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, benchmark/load/compose_driver.rb, benchmark/report.rb, bin/benchmark-load, spec/benchmark/load_report_spec.rb, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_report_spec.rb, with known windows, including a negative difference shown as it is
   - After: T13
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; a deliberate delay in RED's path raises what the report says RED added by about that much
-- [ ] **T15** A window that drops requests or returns an unexpected status is invalid → REQ-15
-  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+- [x] **T15** A window that drops requests or returns an unexpected status is invalid → REQ-15
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_report_spec.rb, a window with dropped iterations and one with an unexpected status
   - After: T14
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; an invalid window is listed and left out of every figure

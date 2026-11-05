@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `5a66c1e`, with T9 to T13 of the deploy shape benchmark built on a branch.
+> Written 2026-11-05 at commit `515418e`, with T9 to T15 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,7 +8,7 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 to T13 are committed on `test/benchmark-load-app` and not pushed. T9 is the load test's app in
+  - T9 to T15 are committed on `test/benchmark-load-app`, and go up as one pull request. T9 is the load test's app in
     `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
     failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
     `RED=off`: the same request then left RED's table empty. T11 is `benchmark/load/traffic.js`, k6 at a
@@ -19,8 +19,20 @@
     `LOAD_APP_BOOT=1`. T13 runs the windows: for each mix, five pairs of RED off and on in ABBA order,
     each a restart, 60 s of warm-up thrown away and 120 s measured, all at the one rate. Run for real with
     5 s windows at 10 a second, all 30 held, and RED recorded only in its on windows.
-  - T14 and T15, the report and its invalid windows, go on the same branch, and T9-T15 become one pull
-    request.
+  - T14 is the report, printed by `bin/benchmark-load` in Markdown, with `--json` and `--summary`. For
+    each mix, p50, p95 and p99 with RED off and on, each the median of that side's windows, and what RED
+    added: the median of each pair's on minus off, every pair's beside it, negatives as they are. Then
+    every window, with the CPU time stolen during it. Its environment block is `bin/benchmark`'s, read
+    inside the app's container.
+  - T15 judges each window as a probe is judged. One that dropped requests, got a status its kind doesn't
+    expect, or didn't finish is invalid: it's listed with its reason, it leaves its side's median, and
+    its pair leaves what RED added.
+  - **The delay check, T14's "Done when".** At 20 a second with 3 s warm-ups and 8 s windows, RED added
+    +0.24, +0.04 and +0.19 ms at p50 (healthy, failing, storm). With `sleep 0.02` at the top of
+    `ErrorCatcher#call` it read +27.19, +26.94 and +27.50 ms, every pair between 25.8 and 28.2. Most of
+    the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
+    the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
+    maintainer has to accept or ask to have chased down.
 - **PR #349, `fix/keep-module-name`,** is open with every check green, and waits for the maintainer's
   merge. Merging it makes release-please propose 0.18.1, and releasing that needs the maintainer's yes.
 - No release PR is open.
@@ -32,9 +44,8 @@
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
 
 ## Next step
-1. Build T14, the report, and T15, its invalid windows, on `test/benchmark-load-app`, then open the load
-   test's pull request. T14 reuses `bin/benchmark`'s environment code, as the design says. Then T16-T18,
-   the shapes, and T19-T20, the compare tool and the research file, all before rc1.
+1. Get the load test's pull request (T9-T15) through CI and the maintainer's merge. Then T16-T18, the
+   shapes, and T19-T20, the compare tool and the research file, all before rc1.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
