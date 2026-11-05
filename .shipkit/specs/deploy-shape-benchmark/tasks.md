@@ -80,12 +80,12 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_report_spec.rb, a window with dropped iterations and one with an unexpected status
   - After: T14
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; an invalid window is listed and left out of every figure
-- [ ] **T16** Run the rows and the load test held to a shape's limits → REQ-16
+- [x] **T16** Run the rows and the load test held to a shape's limits → REQ-16
   - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/shapes.rb, benchmark/load/compose.yml, benchmark/load/compose_driver.rb, benchmark/load/runner.rb, benchmark/load/load_report.rb, bin/benchmark-load, spec/ci/workflows_spec.rb, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/benchmark/load_report_spec.rb
   - Test: spec/benchmark/load_shapes_spec.rb asserts each shape's limits; spec/ci/workflows_spec.rb keeps REQ-18 on the full workflow
   - After: T15
   - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each shape reports its limits, and `medium-throttled` shows throttling in `cpu.stat`
-- [ ] **T17** Add the shape's network delay between the app and the database → REQ-17
+- [x] **T17** Add the shape's network delay between the app and the database → REQ-17
   - Files: benchmark/load/shapes.rb, benchmark/load/compose_driver.rb, .github/workflows/deploy-benchmark.yml, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/ci/workflows_spec.rb
   - Test: spec/benchmark/load_shapes_spec.rb asserts a network stack sets the delay and SQLite doesn't
   - After: T16

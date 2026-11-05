@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `5765635`, with T16 of the deploy shape benchmark built on a branch.
+> Written 2026-11-05 at commit `cb270a8`, with T16 and T17 of the deploy shape benchmark built and proved on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -33,8 +33,8 @@
     the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
-  - T16 is committed on `test/benchmark-shapes` (`5765635`), pushed for its dispatches with no pull request
-    yet. `benchmark/load/shapes.rb` has
+  - T16 and T17 are on `test/benchmark-shapes`, pushed for their dispatches, with no pull request yet.
+    T16 (`5765635`, and `6b56cb6` so a row over budget doesn't skip the load test): `benchmark/load/shapes.rb` has
     four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
     0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
     and the rows' PostgreSQL get CPUs 2 and 3. `bin/benchmark-load --shape NAME` passes the limits to every
@@ -42,9 +42,18 @@
     held it back, from its container's `cpu.stat`. The workflow takes a `shape` input: a shape runs the
     rows in a container held to it, then the load test, and uploads both reports; `none` runs the probe
     and the queue rows. On Docker Desktop the app saw 1 CPU and 1.00 GB under `small`, and 2 CPUs, a 0.40
-    CPU quota and throttling under `medium-throttled`. T16 stays unticked until a dispatch of each shape
-    shows its limits, and `medium-throttled` its throttling.
-  - T17 is committed on the same branch (`3f5c3ac`). Every shape delays its database's replies by 1 ms with
+    CPU quota and throttling under `medium-throttled`. Ticked on its dispatches (runs 41994820359,
+    41994824736, 41994828606, 41996203643), every window valid:
+
+    | Shape | CPU | Limits the app saw | Rate | Throttled | RED added, healthy p50 |
+    |---|---|---|---|---|---|
+    | `medium` | EPYC 9V45 | 2 CPUs, 4.00 GB | 380/s | 0 | +0.02 ms |
+    | `small` | EPYC 7763 | 1 CPU, 1.00 GB | 240/s | 0 | -0.01 ms |
+    | `medium-throttled` | EPYC 7763 | 2 CPUs, 0.40 CPU, 4.00 GB | 55/s | 60-98 times a window | +0.11 ms |
+    | `medium-arm` | Neoverse-N2 | 2 CPUs, 4.00 GB | 190/s | 0 | +0.05 ms |
+
+    Under `medium-throttled`, RED added +5.84 ms at p99 to the 1% failing mix, every pair positive.
+  - T17 (`3f5c3ac`, and `cb270a8`, which looks the name up once). Every shape delays its database's replies by 1 ms with
     tc netem, from a pinned Alpine container sharing the database's network. The driver measures the
     app's round trip to the database from inside its container (median of 20 TCP connects, before and
     after), and the environment block gains "Database round trip". A run that can't add its delay stops.
@@ -52,7 +61,15 @@
     port is answered by Docker's port proxy on the host, so a connect there timed the proxy, and a delay
     didn't show. On Docker Desktop, 1 ms added 1.08 to 1.29 ms, as its VM overshoots; the 20% T17 asks
     for is judged on a runner. `Socket.tcp` with a timeout returned a socket for a refused connect on
-    macOS, so the round trip uses `TCPSocket`. T17 stays unticked until a dispatch shows the round trip.
+    macOS, so the round trip uses `TCPSocket`. By name, each connect also timed Docker's DNS: the first
+    dispatches read 7.56 and 4.17 ms with nothing added, until the name was looked up once. Ticked on
+    runs 42028790110 and 42028794330: the load test read 1.03 and 1.04 ms added, the rows 1.00 and 1.07.
+  - **Capture misses 5 ms with the database 1 ms away.** Capture with the installer's async default read
+    7.12 to 7.23 ms on x64 and 8.78 to 8.90 ms on arm64 (sync 12 to 15 ms). Counted locally, async sends 7
+    statements on the request's thread, all of them Solid Queue's enqueue, none of RED's own. The rc1
+    intake carries it; the maintainer is weighing deferring the enqueue until after the response.
+  - A window counts as not finished when even one request is short: storm pair 3 on the T17 `medium`
+    re-run was invalid for 40,799 of 40,800. Worth a tolerance? Not decided.
   - T18 still owes the CPU topology the design's "Shapes are Docker limits" decision says the report
     records (`lscpu`): the 5.1.0 review on Sonnet listed it as not built.
   - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
