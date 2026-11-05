@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `dbe513a`, after 0.18.1 shipped and T16 to T18 of the deploy shape benchmark merged.
+> Written 2026-11-06 at commit `9ec0693`, with T19 of the deploy shape benchmark built on a branch, after 0.18.1 shipped.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -34,6 +34,13 @@
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
   - T16 to T18 merged in #352 (`dbe513a`).
+  - T19 (`9ec0693`): `bin/benchmark-load --compare FIRST.json SECOND.json` prints, for each mix and latency,
+    what RED added in two reports `--json` wrote, and the second's over the first's. Its header names each
+    report's shape, CPU, topology, limits, round trip, commit and rate. A mix only one ran reads "not run";
+    the ratio reads n/a unless RED added time in both; a report from before T18 reads its shape as "not
+    recorded". It starts no stack. On the real `medium` (run 42058012637) and `medium-throttled` (run
+    41994828606) reports, RED added +0.71 and +5.84 ms at p99 to the failing mix, 8.26x. The 5.1.0 review on
+    Sonnet found REQ-20 met and no decision contradicted; its FAIL is REQ-21, the research file, which is T20.
     T16 (`5765635`, and `6b56cb6` so a row over budget doesn't skip the load test): `benchmark/load/shapes.rb` has
     four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
     0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
@@ -100,8 +107,7 @@
   recorded Ruby 3.4.12 after the deploy.
 
 ## Next step
-1. T19-T20, the compare tool and the research file, then T21 (stacks and Ruby 4.0), all before rc1
-   (maintainer, 2026-11-05).
+1. T20, the research file, then T21 (stacks and Ruby 4.0), both before rc1 (maintainer, 2026-11-05).
 2. Build 1.0.0.rc1. Its spec was accepted on 2026-11-06 on the local branch `spec/release-1-0-rc1`, not yet
    on main, with decision `0009`. It covers:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
