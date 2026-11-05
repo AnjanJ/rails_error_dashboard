@@ -335,6 +335,10 @@ RSpec.describe "GitHub Actions workflows" do
         expect(rows.fetch("run")).to include('ruby benchmark/load/shapes.rb "$SHAPE"', 'docker run --rm "${limits[@]}"')
       end
 
+      it "tells the rows which shape they run in, so their report says so (deploy-shape-benchmark/REQ-19)" do
+        expect(runs("bin/benchmark ").fetch("run")).to include('--env "BENCHMARK_SHAPE=$SHAPE"')
+      end
+
       it "runs the load test held to the shape (deploy-shape-benchmark/REQ-16)" do
         load = runs("bin/benchmark-load")
 

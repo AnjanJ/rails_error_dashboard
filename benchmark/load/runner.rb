@@ -176,14 +176,15 @@ module RedBenchmark
     # for none. Returns the exit status.
     def self.main(argv, driver:, out: $stdout, log: $stderr)
       options = parse_options(argv)
-      driver = driver.call(options[:shape] && Shapes.fetch(options[:shape]))
+      shape = options[:shape] && Shapes.fetch(options[:shape])
+      driver = driver.call(shape)
       report = begin
         driver.up
         environment = driver.environment
         runner = Runner.new(driver, rate: options[:rate], log: log)
         log.puts LoadReport.rate_line(runner.rate, runner.capacity)
         LoadReport.build(environment: environment, rate: runner.rate, capacity: runner.capacity,
-          window: runner.window, windows: runner.windows)
+          window: runner.window, windows: runner.windows, shape: shape)
       ensure
         driver.down
       end

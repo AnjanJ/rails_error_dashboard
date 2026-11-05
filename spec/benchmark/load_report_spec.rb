@@ -103,6 +103,17 @@ RSpec.describe RedBenchmark::Load::LoadReport do
     expect(described_class.markdown(build(healthy, capacity: nil))).to include("Rate: 20 requests a second, as given.")
   end
 
+  it "says a shape's report measures the shape, not the machine, and keeps the shape in the JSON (deploy-shape-benchmark/REQ-19)" do
+    shaped = described_class.build(environment: environment, rate: 20, capacity: 40, window: { warmup: 60, seconds: 120 },
+      windows: healthy, shape: RedBenchmark::Load::Shapes.fetch("medium"))
+    line = RedBenchmark::Report.shape_line("medium", "a 2 vCPU, 4 GB plan")
+
+    expect(shaped["shape"]).to eq("name" => "medium", "size_of" => "a 2 vCPU, 4 GB plan")
+    expect(described_class.markdown(JSON.parse(JSON.generate(shaped)))).to start_with("## What RED adds under load\n\n#{line}\n\n| | |\n")
+    expect(report["shape"]).to be_nil
+    expect(markdown).not_to include("Shape:")
+  end
+
   it "renders the Markdown from the figures the JSON keeps (deploy-shape-benchmark/REQ-13)" do
     expect(described_class.markdown(JSON.parse(JSON.generate(report)))).to eq(markdown)
   end

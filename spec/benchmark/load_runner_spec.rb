@@ -226,6 +226,11 @@ RSpec.describe RedBenchmark::Load::Runner do
       expect(@shape).to be_nil
     end
 
+    it "says in its report which shape it measured (deploy-shape-benchmark/REQ-19)" do
+      expect(main("--rate", "40", "--shape", "small", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(out.string).to include(RedBenchmark::Report.shape_line("small", "a 1 vCPU, 1 GB plan"))
+    end
+
     it "refuses a shape it doesn't have, before it starts anything (deploy-shape-benchmark/REQ-16)" do
       driver = fake_driver.new(capacity: 333)
 

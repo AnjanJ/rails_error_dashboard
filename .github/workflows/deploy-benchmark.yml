@@ -152,7 +152,7 @@ jobs:
           # The checkout belongs to the runner's user, and git won't read it as
           # root without being told it's safe.
           container=(--volume "$PWD:/red" --workdir /red --volume red-bundle:/usr/local/bundle --network host
-            --env RAILS_VERSION=8.1 --env BENCHMARK_QUEUE=solid_queue
+            --env RAILS_VERSION=8.1 --env BENCHMARK_QUEUE=solid_queue --env "BENCHMARK_SHAPE=$SHAPE"
             --env "BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/red
             ruby:3.4)

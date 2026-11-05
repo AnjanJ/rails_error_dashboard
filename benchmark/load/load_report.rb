@@ -19,9 +19,11 @@ module RedBenchmark
 
       # The windows are the runner's: each has its mix, pair, whether RED was
       # on, k6's summary of its measured run, and the CPU time stolen.
-      def build(environment:, rate:, capacity:, window:, windows:)
+      # shape is the deploy shape the app was held to, or nil (REQ-19).
+      def build(environment:, rate:, capacity:, window:, windows:, shape: nil)
         rows = windows.map { |each| row(each) }
         {
+          "shape" => (shape && { "name" => shape.name, "size_of" => shape.size_of }),
           "environment" => environment,
           "rate" => rate,
           "capacity" => capacity,
@@ -33,7 +35,10 @@ module RedBenchmark
       end
 
       def markdown(report)
-        lines = [ "## What RED adds under load", "", *Report.environment_table(report["environment"]), "",
+        shape = report["shape"]
+        lines = [ "## What RED adds under load", "",
+          *(shape ? [ Report.shape_line(shape["name"], shape["size_of"]), "" ] : []),
+          *Report.environment_table(report["environment"]), "",
           "#{rate_line(report["rate"], report["capacity"])} Each window restarts the app, throws away " \
           "#{report["warmup"]} s of warm-up, then measures #{report["seconds"]} s.", "",
           "| Mix | Errors a second | Latency | RED off | RED on | RED added | In each pair (ms) |",

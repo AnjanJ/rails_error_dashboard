@@ -22,6 +22,9 @@
 
 require_relative "../benchmark/harness"
 
+# The deploy shape these rows run in, from BENCHMARK_SHAPE, refused before
+# anything boots if it isn't one
+shape = RedBenchmark::Harness.shape
 RedBenchmark::Harness.boot!
 
 if ARGV.include?("--list")
@@ -50,7 +53,7 @@ end
 
 stolen = RedBenchmark::Harness.stolen_share(ticks_before, RedBenchmark::Harness.cpu_ticks)
 environment = RedBenchmark::Harness.environment.merge("CPU time stolen" => stolen)
-report = RedBenchmark::Report.markdown(environment, results)
+report = RedBenchmark::Report.markdown(environment, results, shape: shape)
 report = "Smoke run: a few iterations each, so these numbers mean nothing.\n\n#{report}" if smoke
 puts report
 
