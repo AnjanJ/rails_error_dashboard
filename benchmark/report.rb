@@ -8,8 +8,7 @@ module RedBenchmark
     module_function
 
     def markdown(environment, results)
-      lines = [ "## RED overhead benchmark", "", "| | |", "|---|---|" ]
-      environment.each { |name, value| lines << "| #{name} | #{value} |" }
+      lines = [ "## RED overhead benchmark", "", *environment_table(environment) ]
       lines.push("", "| Measurement | Median | p95 | Budget | Result |", "|---|---|---|---|---|")
       results.each { |result| lines << row(result) }
       rounds = results.find { |result| !result.skipped? }&.round_medians&.size || 0
@@ -17,6 +16,12 @@ module RedBenchmark
         "Capture rows are what RED adds to a failing request (with RED minus without). " \
         "Rows marked \"reported\" have no budget and never fail the run.")
       lines.join("\n") + "\n"
+    end
+
+    # Where the numbers came from, as a table. bin/benchmark-load's report
+    # puts the same one above its figures.
+    def environment_table(environment)
+      [ "| | |", "|---|---|", *environment.map { |name, value| "| #{name} | #{value} |" } ]
     end
 
     def row(result)

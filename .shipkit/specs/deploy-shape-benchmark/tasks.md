@@ -44,38 +44,38 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/harness_spec.rb, the `--list` facts name the real adapter; `Capture, async` on Solid Queue leaves rows in its jobs table
   - After: T7
   - Done when: `rspec spec/benchmark` → 0 failures; `bin/benchmark` with neither variable set prints the same rows as before
-- [ ] **T9** A real Rails app, on the generator's defaults, with RED added by its installer → REQ-8
+- [x] **T9** A real Rails app, on the generator's defaults, with RED added by its installer → REQ-8
   - Files: benchmark/load/app/, benchmark/load/Dockerfile, benchmark/load/compose.yml, spec/benchmark/load_app_spec.rb
   - Test: spec/benchmark/load_app_spec.rb reads the template and asserts production mode, Puma, jemalloc, one process and 3 threads
   - After: T8
   - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; the app boots in compose and a failing request reaches RED's table
-- [ ] **T10** RED off is the same image with the gem not required → REQ-8
+- [x] **T10** RED off is the same image with the gem not required → REQ-8
   - Files: benchmark/load/app/, spec/benchmark/load_app_spec.rb
   - Test: spec/benchmark/load_app_spec.rb, and a boot with `RED=off` that asserts no RED class is loaded
   - After: T9
   - Done when: `rspec spec/benchmark/load_app_spec.rb` → 0 failures; a failing request with `RED=off` leaves RED's table empty
-- [ ] **T11** k6 sends a fixed arrival rate, in three traffic mixes → REQ-9, REQ-12
+- [x] **T11** k6 sends a fixed arrival rate, in three traffic mixes → REQ-9, REQ-12
   - Files: benchmark/load/traffic.js, spec/benchmark/load_traffic_spec.rb
   - Test: spec/benchmark/load_traffic_spec.rb reads the script and asserts `constant-arrival-rate` and the three mixes
   - After: T10
   - Done when: `rspec spec/benchmark/load_traffic_spec.rb` → 0 failures; a run against a deliberately slowed app keeps its arrival rate
-- [ ] **T12** With no rate given, measure capacity with RED off and use half → REQ-10
-  - Files: bin/benchmark-load, benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+- [x] **T12** With no rate given, measure capacity with RED off and use half → REQ-10
+  - Files: bin/benchmark-load, benchmark/load/runner.rb, benchmark/load/compose_driver.rb, benchmark/load/compose.yml, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_runner_spec.rb, with a fake driver that saturates at a known rate
   - After: T11
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures; a given rate skips the search
-- [ ] **T13** Windows alternate RED off and on, ABBA, five pairs per mix → REQ-11
-  - Files: benchmark/load/runner.rb, spec/benchmark/load_runner_spec.rb
+- [x] **T13** Windows alternate RED off and on, ABBA, five pairs per mix → REQ-11
+  - Files: benchmark/load/runner.rb, bin/benchmark-load, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_runner_spec.rb asserts the order, the same rate on both sides, and a restart before each window
   - After: T12
   - Done when: `rspec spec/benchmark/load_runner_spec.rb` → 0 failures
-- [ ] **T14** The report gives the percentiles, what RED added and the steal per window → REQ-13, REQ-14
-  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+- [x] **T14** The report gives the percentiles, what RED added and the steal per window → REQ-13, REQ-14
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, benchmark/load/compose_driver.rb, benchmark/report.rb, bin/benchmark-load, spec/benchmark/load_report_spec.rb, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_report_spec.rb, with known windows, including a negative difference shown as it is
   - After: T13
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; a deliberate delay in RED's path raises what the report says RED added by about that much
-- [ ] **T15** A window that drops requests or returns an unexpected status is invalid → REQ-15
-  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb
+- [x] **T15** A window that drops requests or returns an unexpected status is invalid → REQ-15
+  - Files: benchmark/load/load_report.rb, benchmark/load/runner.rb, spec/benchmark/load_report_spec.rb, spec/benchmark/load_runner_spec.rb
   - Test: spec/benchmark/load_report_spec.rb, a window with dropped iterations and one with an unexpected status
   - After: T14
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; an invalid window is listed and left out of every figure
