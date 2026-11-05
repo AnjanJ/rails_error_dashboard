@@ -77,7 +77,7 @@ module RailsErrorDashboard
           entry[:ips] << discriminator.to_s if discriminator.present?
           entry[:path_counts][path.to_s] += count if path.present?
           if user_agent.present?
-            agent = Services::AiAgentClassifier.name(user_agent) || user_agent.to_s
+            agent = Services::AiAgentClassifier.agent_name(user_agent) || user_agent.to_s
             entry[:agent_counts][agent] += count
             entry[:ai_count] += count if Services::AiAgentClassifier.ai?(user_agent)
           end
