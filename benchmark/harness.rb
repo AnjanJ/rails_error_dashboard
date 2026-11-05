@@ -2,7 +2,6 @@
 
 require "etc"
 require "fileutils"
-require_relative "load/shapes"
 
 module RedBenchmark
   ROOT = File.expand_path("..", __dir__)
@@ -305,8 +304,11 @@ module RedBenchmark
 
     # The deploy shape bin/benchmark's rows run in, from BENCHMARK_SHAPE, or nil
     # (REQ-19). One it doesn't have stops the run before anything is measured.
+    # Shapes loads here, not at the top: the load test pipes this file's source
+    # alone into the app's container, where a require_relative finds nothing.
     def shape(env = ENV)
       name = env["BENCHMARK_SHAPE"].to_s
+      require_relative "load/shapes" unless name.empty?
       Load::Shapes.fetch(name) unless name.empty?
     rescue KeyError => error
       abort error.message

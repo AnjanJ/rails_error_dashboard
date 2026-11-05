@@ -568,6 +568,18 @@ RSpec.describe "bin/benchmark harness" do
     end
   end
 
+  # The load test pipes this file's source into bin/rails runner inside the
+  # app's container, where nothing beside it exists, to read the environment
+  # block there. A top-level require_relative broke that on a runner.
+  it "loads from its source alone, as the load test pipes it into the app's container (deploy-shape-benchmark/REQ-13)" do
+    source = File.read(File.expand_path("../../benchmark/harness.rb", __dir__))
+    output, status = Dir.mktmpdir("red_piped_harness") do |dir|
+      Open3.capture2e(RbConfig.ruby, "-", stdin_data: "#{source}\nputs RedBenchmark::Harness.cpu_topology\n", chdir: dir)
+    end
+
+    expect(status).to be_success, output
+  end
+
   describe "the shape the rows run in" do
     harness = RedBenchmark::Harness
 
