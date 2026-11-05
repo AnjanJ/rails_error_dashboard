@@ -1,7 +1,8 @@
 # Spec: 1.0.0.rc1
 
-> Spec not yet accepted.
-> Status: draft
+> Spec accepted at commit `3e87854` on spec/release-1-0-rc1 (2026-11-06).
+> Status: open
+> Paths: rails_error_dashboard.gemspec,Gemfile,lib/,app/,config/locales/,benchmark/,.github/workflows/,spec/,test/pre_release/,bin/pre-release-test,docs/,README.md,_getting_started/,.release-please-config.json,ROADMAP.md,.claude/skills/,.shipkit/product.md,.shipkit/research/
 
 ## Purpose
 1.0.0.rc1 is the release candidate for 1.0.0. It goes out in early December, then about two quiet weeks
