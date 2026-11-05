@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `515418e`, with T9 to T15 of the deploy shape benchmark built on a branch.
+> Written 2026-11-05 at commit `5765635`, with T16 of the deploy shape benchmark built on a branch.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,7 +8,7 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 to T15 are committed on `test/benchmark-load-app`, and go up as one pull request. T9 is the load test's app in
+  - T9 to T15 merged in #350 (`b4f4f8e`), the load test. T9 is the load test's app in
     `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
     failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
     `RED=off`: the same request then left RED's table empty. T11 is `benchmark/load/traffic.js`, k6 at a
@@ -33,19 +33,34 @@
     the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
-- **PR #349, `fix/keep-module-name`,** is open with every check green, and waits for the maintainer's
-  merge. Merging it makes release-please propose 0.18.1, and releasing that needs the maintainer's yes.
-- No release PR is open.
+  - T16 is committed on `test/benchmark-shapes` (`5765635`), pushed for its dispatches with no pull request
+    yet. `benchmark/load/shapes.rb` has
+    four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
+    0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
+    and the rows' PostgreSQL get CPUs 2 and 3. `bin/benchmark-load --shape NAME` passes the limits to every
+    compose command; with no shape nothing is limited. Each window also gives how often the app's quota
+    held it back, from its container's `cpu.stat`. The workflow takes a `shape` input: a shape runs the
+    rows in a container held to it, then the load test, and uploads both reports; `none` runs the probe
+    and the queue rows. On Docker Desktop the app saw 1 CPU and 1.00 GB under `small`, and 2 CPUs, a 0.40
+    CPU quota and throttling under `medium-throttled`. T16 stays unticked until a dispatch of each shape
+    shows its limits, and `medium-throttled` its throttling.
+  - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
+    Ruby beside the shape, after T20: the design names four stacks and Ruby 4.0, and no task built them.
+- **Release PR #351 proposes 0.18.1**, from #349's `fix:`. Releasing it needs the maintainer's yes.
 
 ## Done
 - 0.18.0 shipped 2026-10-31, about three weeks ahead of its target. RubyGems, the GitHub Release, both
   tags and the demo all carry it. Its eight specs moved to `.shipkit/specs/_shipped/`, each marked
   "shipped in 0.18.0 (#N)".
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
+- #349 merged 2026-11-05 (`05fa121`): `AiAgentClassifier.name(user_agent)` no longer replaces `Class#name`;
+  the lookup is `agent_name`. Also merged that day: #348 (setup-ruby 1.336.0), and the demo's #74 (five
+  flagged gems) and #75 (Rails 8.1.4.1, for GHSA-wm3x-v3qw-4jh3).
 
 ## Next step
-1. Get the load test's pull request (T9-T15) through CI and the maintainer's merge. Then T16-T18, the
-   shapes, and T19-T20, the compare tool and the research file, all before rc1.
+1. Dispatch each shape on `test/benchmark-shapes` with `--ref`, then T17 (the network delay) and T18 (the
+   shape line), and open T16-T18's pull request. Then T19-T20, the compare tool and the research file, all
+   before rc1, and T21 if there's time.
 2. Plan and spec 1.0.0.rc1:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
@@ -66,16 +81,12 @@
 - **Does the benchmark gate change?** `Overhead benchmark` failed on main on `5ec8a3c`: health snapshot
   1.15 ms on a Xeon 8573C, against 1 ms. It isn't a regression, because that commit changed only the
   version and docs. The job wasn't re-run and the gate is unchanged. The Xeon has failed both times it
-  was drawn. The shape benchmark runs on the same runners, so it won't settle this.
+  was drawn. The shape benchmark runs on the same runners, so it won't settle this. On #349's branch, a
+  Xeon 8370C read 1.30 ms on 2026-11-05, as one read 1.29 ms on #347's: PR runs, so the count stays 1.
 - **The health snapshot misses 1 ms on arm64.** On #347's dispatch (run 41216679726, `a5e5c47`), all three
   arm64 rows read 1.23 to 1.27 ms on a Neoverse-N2, against the 1 ms budget, while every x64 row passed
   (0.51 to 0.69 ms). The gated job runs only on x64, so CI can't see it. The `medium-arm` shape will meet it.
   Is the budget per architecture?
-- **`AiAgentClassifier.name(user_agent)` replaces `Class#name` for that class.** A host app's code that calls
-  `name` on every class, as `ObjectSpace.each_object(Class).map(&:name)` does, raises ArgumentError once RED
-  is loaded. Found 2026-11-04, and fixed in PR #349: spec `keep-module-name`, the lookup renamed to
-  `agent_name`, and a check over every RED class. Its review passed, and so did its 29 checks. It's a
-  `fix:`, so merging it makes release-please propose 0.18.1.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
