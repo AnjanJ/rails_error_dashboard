@@ -5,6 +5,11 @@
 #
 #   docker compose -f benchmark/load/compose.yml up --build --wait
 #   docker compose -f benchmark/load/compose.yml down --volumes
+#
+# A shape (benchmark/load/shapes.rb, REQ-16) holds the app to its CPUs, quota
+# and memory, with no swap, and the database and k6 to the other CPUs.
+# bin/benchmark-load --shape sets these variables; with none set, nothing is
+# held to anything.
 name: red-load
 
 services:
@@ -26,6 +31,10 @@ services:
       # The load test's switch, which a deploy wouldn't have: "off" runs the
       # same app without RED. bin/benchmark-load sets it for each window.
       RED: "${RED:-on}"
+    cpuset: "${APP_CPUSET:-}"
+    cpus: "${APP_CPUS:-0}"
+    mem_limit: "${APP_MEMORY:-0}"
+    memswap_limit: "${APP_MEMORY:-0}"
     depends_on:
       db:
         condition: service_healthy
@@ -38,6 +47,7 @@ services:
 
   db:
     image: postgres:16
+    cpuset: "${REST_CPUSET:-}"
     environment:
       POSTGRES_USER: shop
       POSTGRES_PASSWORD: benchmark
@@ -55,5 +65,6 @@ services:
   k6:
     image: grafana/k6:1.8.2@sha256:00fdcebafbc86cb0137d429529b1caa401a02e09025f02fc74866fa6e2b004d8
     profiles: [ load ]
+    cpuset: "${REST_CPUSET:-}"
     volumes:
       - ./traffic.js:/scripts/traffic.js:ro

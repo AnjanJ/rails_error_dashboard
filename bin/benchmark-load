@@ -7,12 +7,16 @@
 #
 #   bin/benchmark-load            measure the app's capacity with RED off, and use half of it
 #   bin/benchmark-load --rate N   send N requests a second, and skip that search
+#   ... --shape NAME              hold the app to a deploy shape's CPUs and memory,
+#                                 and the rest to the other CPUs: medium, small,
+#                                 medium-throttled or medium-arm (benchmark/load/shapes.rb)
 #   ... --json FILE               also write the report's figures to FILE, as JSON
 #   ... --summary FILE            also append the report to FILE (CI passes
 #                                 $GITHUB_STEP_SUMMARY)
 #
 # It prints the report as Markdown: for each mix, p50, p95 and p99 with RED off
-# and on, what RED added in each pair, and every window with the CPU time stolen.
+# and on, what RED added in each pair, and every window with the CPU time stolen
+# and, under a shape's quota, throttled.
 #
 # Needs Docker. It builds benchmark/load's app from this checkout, runs it in
 # compose with its database and k6, and removes them, volumes and all, when
@@ -24,4 +28,4 @@
 require_relative "../benchmark/load/runner"
 require_relative "../benchmark/load/compose_driver"
 
-exit RedBenchmark::Load.main(ARGV, driver: RedBenchmark::Load::ComposeDriver.new)
+exit RedBenchmark::Load.main(ARGV, driver: ->(shape) { RedBenchmark::Load::ComposeDriver.new(shape: shape) })

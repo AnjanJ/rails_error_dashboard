@@ -8,13 +8,19 @@ module RedBenchmark
   module Load
     # The stack Runner works, in Docker: compose.yml's app and PostgreSQL, and
     # its k6 service for each run. compose hands RED to the app, which leaves
-    # RED out when it's "off".
+    # RED out when it's "off". Given a shape, every command passes on its
+    # limits, which compose.yml holds the app and the rest to (REQ-16).
     class ComposeDriver
       FILE = File.join(__dir__, "compose.yml")
       HARNESS = File.expand_path("../harness.rb", __dir__)
       # Seconds to wait for the app to answer after a start. Its healthcheck
       # gives a new container 120 s before a failed check counts.
       WAIT = 300
+
+      # The shape's limits, or none
+      def initialize(shape: nil)
+        @limits = shape ? shape.compose_env : {}
+      end
 
       # Builds the app's image from this checkout, and starts the stack with RED
       # on. A new database needs RED on to be prepared: one of RED's migrations
@@ -41,6 +47,18 @@ module RedBenchmark
         Harness.cpu_ticks
       end
 
+      # How often, and for how many microseconds in all, the app's CPU quota has
+      # held it back since its container started, from its cgroup's cpu.stat
+      # (REQ-16). nil where the container has no such file, as under cgroup v1.
+      def throttling
+        stat = compose!({}, "exec", "-T", "app", "cat", "/sys/fs/cgroup/cpu.stat")
+        times = stat[/^nr_throttled (\d+)$/, 1]
+        usec = stat[/^throttled_usec (\d+)$/, 1]
+        { times: times.to_i, usec: usec.to_i } if times && usec
+      rescue Error
+        nil
+      end
+
       # A new app container, with RED on or off, once it answers. The database,
       # and what's in it, stay.
       def start(red:)
@@ -60,7 +78,7 @@ module RedBenchmark
       # Removes the stack, volumes and all. Quietly, because it runs however the
       # run ended, and mustn't hide why.
       def down
-        system(*command, "down", "--volumes", out: File::NULL, err: File::NULL)
+        system(@limits, *command, "down", "--volumes", out: File::NULL, err: File::NULL)
       end
 
       private
@@ -70,7 +88,7 @@ module RedBenchmark
       end
 
       def compose!(env, *arguments, stdin: "")
-        output, errors, status = Open3.capture3(env, *command, *arguments, stdin_data: stdin)
+        output, errors, status = Open3.capture3(@limits.merge(env), *command, *arguments, stdin_data: stdin)
         raise Error, "docker compose #{arguments.first} failed:\n#{errors}#{output}" unless status.success?
 
         output

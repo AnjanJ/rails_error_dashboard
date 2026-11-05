@@ -300,6 +300,60 @@ RSpec.describe "GitHub Actions workflows" do
     it "runs on GitHub's hosted runners only (deploy-shape-benchmark/REQ-18)" do
       expect(text).not_to include("self-hosted")
     end
+
+    describe "a shape" do
+      let(:shapes) { RedBenchmark::Load::Shapes }
+      let(:shape_job) { jobs("deploy-benchmark.yml").fetch("shape") }
+
+      before { require_relative "../../benchmark/load/shapes" }
+
+      def runs(command)
+        shape_job.fetch("steps").find { |step| step["run"].to_s.include?(command) }
+      end
+
+      it "is chosen at dispatch from the load test's shapes, or none for the probe and the queue rows (deploy-shape-benchmark/REQ-16)" do
+        input = workflow("deploy-benchmark.yml").dig(true, "workflow_dispatch", "inputs", "shape")
+
+        expect(input).to include("type" => "choice", "default" => "medium", "options" => shapes.names + [ "none" ])
+        expect(jobs("deploy-benchmark.yml").transform_values { |job| job["if"] }).to eq(
+          "probe" => "inputs.shape == 'none'", "rows" => "inputs.shape == 'none'", "shape" => "inputs.shape != 'none'"
+        )
+      end
+
+      it "runs on the runner of its architecture (deploy-shape-benchmark/REQ-16)" do
+        arm, x64 = shapes::ALL.partition { |shape| shape.runner == "ubuntu-24.04-arm" }
+
+        expect(x64.map(&:runner).uniq).to eq([ "ubuntu-24.04" ])
+        expect(shape_job.fetch("runs-on"))
+          .to eq("${{ #{arm.map { |shape| "inputs.shape == '#{shape.name}'" }.join(" || ")} && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}")
+      end
+
+      it "runs the rows inside a container held to the shape's limits (deploy-shape-benchmark/REQ-16)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("SHAPE" => "${{ inputs.shape }}")
+        expect(rows.fetch("run")).to include('ruby benchmark/load/shapes.rb "$SHAPE"', 'docker run --rm "${limits[@]}"')
+      end
+
+      it "runs the load test held to the shape (deploy-shape-benchmark/REQ-16)" do
+        load = runs("bin/benchmark-load")
+
+        expect(load.fetch("env")).to include("SHAPE" => "${{ inputs.shape }}")
+        expect(load.fetch("run")).to include('bin/benchmark-load --shape "$SHAPE"')
+      end
+
+      it "keeps the rows' database and queue off the app's CPUs (deploy-shape-benchmark/REQ-16)" do
+        expect(shape_job.fetch("services").values.map { |service| service["options"] })
+          .to all(include("--cpuset-cpus #{shapes::REST}"))
+      end
+
+      it "keeps the reports when the run ends, however it ended (deploy-shape-benchmark/REQ-16)" do
+        upload = shape_job.fetch("steps").find { |step| step["uses"].to_s.start_with?("actions/upload-artifact@") }
+
+        expect(upload).to include("if" => "always()")
+        expect(upload.dig("with", "path")).to include("tmp/deploy-benchmark/")
+      end
+    end
   end
 
   describe "release.yml" do
