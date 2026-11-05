@@ -51,9 +51,10 @@ module RedBenchmark
       WINDOW = { warmup: 60, seconds: 120 }.freeze
 
       # One window: its mix, its pair, whether RED was on, k6's summary of its
-      # measured run, and the share of the machine's CPU time stolen during that
-      # run (REQ-14).
-      Window = Data.define(:mix, :pair, :red, :summary, :steal)
+      # measured run, the share of the machine's CPU time stolen during that run
+      # (REQ-14), and why it didn't hold its rate, judged as a probe is, or nil
+      # (REQ-15).
+      Window = Data.define(:mix, :pair, :red, :summary, :steal, :shortfall)
 
       # How long each window warms the app, and measures it
       attr_reader :window
@@ -99,7 +100,7 @@ module RedBenchmark
 
         reasons = []
         reasons << "#{dropped} dropped" if dropped.positive?
-        reasons << "#{failed} failed" if failed.positive?
+        reasons << "#{failed} with an unexpected status" if failed.positive?
         reasons << "#{finished} of #{rate * seconds} finished" if finished + dropped < rate * seconds
         reasons.join(", ") unless reasons.empty?
       end
@@ -140,7 +141,8 @@ module RedBenchmark
         (pair.odd? ? [ false, true ] : [ true, false ]).map do |red|
           @log.puts "  #{mix}, pair #{pair} of #{PAIRS}, RED #{red ? "on" : "off"}"
           summary, steal = measure(red: red, rate: rate, mix: mix, **@window)
-          Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal)
+          Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal,
+            shortfall: self.class.shortfall(summary, rate, @window[:seconds]))
         end
       end
 

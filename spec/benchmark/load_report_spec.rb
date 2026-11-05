@@ -21,8 +21,12 @@ RSpec.describe RedBenchmark::Load::LoadReport do
     { "metrics" => metrics }
   end
 
+  # The runner judges each window as it does a probe, at the report's 20 a
+  # second for 120 s.
   def window(mix, pair, red, steal: "0.00%", **counts)
-    RedBenchmark::Load::Runner::Window.new(mix: mix, pair: pair, red: red, summary: summary(**counts), steal: steal)
+    summary = summary(**counts)
+    RedBenchmark::Load::Runner::Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal,
+      shortfall: RedBenchmark::Load::Runner.shortfall(summary, 20, 120))
   end
 
   # Five healthy pairs in the order they ran, ABBA. RED's side was faster in
@@ -94,5 +98,46 @@ RSpec.describe RedBenchmark::Load::LoadReport do
 
   it "renders the Markdown from the figures the JSON keeps (deploy-shape-benchmark/REQ-13)" do
     expect(described_class.markdown(JSON.parse(JSON.generate(report)))).to eq(markdown)
+  end
+
+  describe "a window that didn't hold its rate" do
+    # Pair 2's RED-on window dropped 40 requests and, behind, answered slowly.
+    # The 1% mix's RED-off window got three statuses it didn't expect.
+    let(:healthy_with_drops) do
+      healthy.map do |each|
+        next each unless each.pair == 2 && each.red
+
+        window("healthy", 2, true, p50: 500.0, p95: 900.0, p99: 990.0, requests: 2361, dropped: 40)
+      end
+    end
+    let(:failing_with_errors) do
+      [ window("failing", 1, false, p50: 9.0, p95: 22.0, p99: 40.0, errors: 25, unexpected: 3), failing.last ]
+    end
+
+    subject(:report) { build(healthy_with_drops + failing_with_errors) }
+
+    it "is invalid when it dropped requests, and left out of every figure (deploy-shape-benchmark/REQ-15)" do
+      # The RED-on median is of the other four, and RED added is of the other four pairs.
+      expect(report.dig("mixes", "healthy", "p50"))
+        .to eq("off" => 7.25, "on" => 8.0, "added" => 0.875, "pairs" => [ 1.0, -0.5, 1.5, 0.75 ])
+      expect(report["windows"].find { |row| row["pair"] == 2 && row["red"] == "on" })
+        .to include("invalid" => "40 dropped")
+    end
+
+    it "is invalid when a request got a status its kind doesn't expect, and left out of every figure (deploy-shape-benchmark/REQ-15)" do
+      expect(report.dig("mixes", "failing", "p50")).to eq("off" => nil, "on" => 12.0, "added" => nil, "pairs" => [])
+      expect(report["windows"].find { |row| row["mix"] == "failing" && row["red"] == "off" })
+        .to include("invalid" => "3 with an unexpected status")
+      expect(markdown).to include("| failing | 0.2 | p50 | n/a | 12.00 ms | n/a | none |")
+    end
+
+    it "is listed, with why (deploy-shape-benchmark/REQ-15)" do
+      expect(markdown).to include(
+        "Left out of every figure, for not holding the rate: healthy pair 2 RED on (40 dropped), " \
+        "failing pair 1 RED off (3 with an unexpected status).",
+        "| healthy | 2 | on | 500.00 ms | 900.00 ms | 990.00 ms | 2361 | 0 | 40 | 0 | 0.00% | no |"
+      )
+      expect(described_class.markdown(build(healthy))).to include("Every window held its rate.")
+    end
   end
 end

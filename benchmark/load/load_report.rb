@@ -6,9 +6,10 @@ module RedBenchmark
   module Load
     # The load test's report (REQ-13, REQ-14). For each mix, p50, p95 and p99
     # with RED off and on, and what RED added in each pair. Then every window,
-    # with the share of CPU time stolen while it ran. build gives the figures as
-    # plain data, which bin/benchmark-load writes as JSON for the compare tool,
-    # and markdown renders that same data.
+    # with the share of CPU time stolen while it ran. A window that didn't hold
+    # its rate is invalid: it's listed, and left out of every figure (REQ-15).
+    # build gives the figures as plain data, which bin/benchmark-load writes as
+    # JSON for the compare tool, and markdown renders that same data.
     module LoadReport
       # Each latency, by the name k6's summary gives it in http_req_duration
       LATENCIES = { "p50" => "med", "p95" => "p(95)", "p99" => "p(99)" }.freeze
@@ -39,13 +40,23 @@ module RedBenchmark
         report["mixes"].each do |mix, figures|
           LATENCIES.each_key { |name| lines << figure_row(mix, figures, name) }
         end
-        lines.push("", "RED off and RED on are the median of each side's windows. RED added is the median of each " \
-          "pair's RED on minus RED off, and a negative one is a pair whose RED-on window was faster.",
+        lines.push("", "RED off and RED on are the median of each side's valid windows. RED added is the median of " \
+          "each pair's RED on minus RED off, from the pairs whose windows are both valid, and a negative one is a " \
+          "pair whose RED-on window was faster.", "", invalid_line(report["windows"]),
           "", "### Windows", "",
-          "| Mix | Pair | RED | p50 | p95 | p99 | Requests | Errors | Dropped | Unexpected | CPU stolen |",
-          "|---|---|---|---|---|---|---|---|---|---|---|")
+          "| Mix | Pair | RED | p50 | p95 | p99 | Requests | Errors | Dropped | Unexpected | CPU stolen | Valid |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|")
         report["windows"].each { |row| lines << window_row(row) }
         lines.join("\n") + "\n"
+      end
+
+      # Which windows didn't hold their rate, and why
+      def invalid_line(rows)
+        invalid = rows.select { |row| row["invalid"] }
+        return "Every window held its rate." if invalid.empty?
+
+        "Left out of every figure, for not holding the rate: " +
+          invalid.map { |row| "#{row["mix"]} pair #{row["pair"]} RED #{row["red"]} (#{row["invalid"]})" }.join(", ") + "."
       end
 
       def rate_line(rate, capacity)
@@ -69,13 +80,16 @@ module RedBenchmark
           "errors" => count.call("http_reqs{kind:failing}"),
           "dropped" => count.call("dropped_iterations"),
           "unexpected" => count.call("http_req_failed", "passes"),
-          "cpu_stolen" => window.steal
+          "cpu_stolen" => window.steal,
+          "invalid" => window.shortfall
         }
       end
 
-      # RED off and on are the median of each side's windows. RED added is the
-      # median of each pair's on minus off, and every pair's is kept beside it.
+      # RED off and on are the median of each side's valid windows. RED added is
+      # the median of each pair's on minus off, from the pairs whose windows are
+      # both valid, and every such pair's is kept beside it.
       def figures(rows, seconds)
+        rows = rows.reject { |row| row["invalid"] }
         sides = rows.group_by { |row| row["red"] }
         pairs = rows.group_by { |row| row["pair"] }.values.filter_map do |pair|
           off = pair.find { |row| row["red"] == "off" }
@@ -89,20 +103,24 @@ module RedBenchmark
                     "added" => median(added),
                     "pairs" => added } ]
         end
-        { "errors_a_second" => median(rows.map { |row| row["errors"] }).to_f / seconds, **latencies }
+        errors = median(rows.map { |row| row["errors"] })
+        { "errors_a_second" => (errors.to_f / seconds if errors), **latencies }
       end
 
       def figure_row(mix, figures, name)
         latency = figures[name]
         each_pair = latency["pairs"].map { |added| format("%+.2f", added) }.join(", ")
-        "| #{mix} | #{format("%.1f", figures["errors_a_second"])} | #{name} | #{ms(latency["off"])} | " \
+        each_pair = "none" if each_pair.empty?
+        errors = figures["errors_a_second"] ? format("%.1f", figures["errors_a_second"]) : "n/a"
+        "| #{mix} | #{errors} | #{name} | #{ms(latency["off"])} | " \
           "#{ms(latency["on"])} | #{ms(latency["added"], sign: true)} | #{each_pair} |"
       end
 
       def window_row(row)
         latencies = LATENCIES.keys.map { |name| ms(row[name]) }
         counts = row.values_at("requests", "errors", "dropped", "unexpected", "cpu_stolen")
-        "| #{row["mix"]} | #{row["pair"]} | #{row["red"]} | #{(latencies + counts).join(" | ")} |"
+        valid = row["invalid"] ? "no" : "yes"
+        "| #{row["mix"]} | #{row["pair"]} | #{row["red"]} | #{(latencies + counts).join(" | ")} | #{valid} |"
       end
 
       def median(values)

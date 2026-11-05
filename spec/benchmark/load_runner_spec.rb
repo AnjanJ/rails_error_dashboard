@@ -121,7 +121,7 @@ RSpec.describe RedBenchmark::Load::Runner do
       runner = runner_for(fake_driver.new(capacity: 333, overload: :errors))
 
       expect(runner.capacity).to be_between(300, 333)
-      expect(log.string).to match(/640 a second: didn't hold \(\d+ failed\)/)
+      expect(log.string).to match(/640 a second: didn't hold \(\d+ with an unexpected status\)/)
     end
 
     it "counts requests that didn't finish as not holding the rate (deploy-shape-benchmark/REQ-10)" do
@@ -181,6 +181,11 @@ RSpec.describe RedBenchmark::Load::Runner do
       })
       # The cold app fell behind in every warm-up, and no window kept that run
       expect(windows.map { |window| described_class.shortfall(window.summary, 40, seconds) }).to all(be_nil)
+    end
+
+    it "each say why they didn't hold their rate, as a probe would (deploy-shape-benchmark/REQ-15)" do
+      expect(runner_for(fake_driver.new(capacity: 333), rate: 40).windows.map(&:shortfall)).to all(be_nil)
+      expect(runner_for(fake_driver.new(capacity: 30), rate: 40).windows.map(&:shortfall)).to all(match(/\A\d+ dropped\z/))
     end
 
     # 12 ticks of 1,000 in a measured run's 120 s, against 6 in a warm-up's
