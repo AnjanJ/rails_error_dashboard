@@ -84,6 +84,21 @@ RSpec.describe RedBenchmark::Load::Shapes do
       expect(described_class.round_trip("127.0.0.1", port, connects: 5)).to be_nil
     end
 
+    # By name, every connect also asked Docker's DNS, and on a runner that read
+    # 7.56 ms with the 1 ms delay lost in it.
+    it "resolves the host's name once, so the round trip doesn't time a lookup (deploy-shape-benchmark/REQ-17)" do
+      server = TCPServer.new("localhost", 0)
+      port = server.addr[1]
+      allow(Addrinfo).to receive(:getaddrinfo).and_call_original
+      allow(TCPSocket).to receive(:new).and_call_original
+
+      expect(described_class.round_trip("localhost", port, connects: 5)).to be_between(0, 50)
+      expect(Addrinfo).to have_received(:getaddrinfo).once
+      expect(TCPSocket).to have_received(:new).with(server.addr[3], port, connect_timeout: 2).exactly(5).times
+    ensure
+      server&.close
+    end
+
     it "is added from a workflow's shell for a shape, and refuses what it can't use (deploy-shape-benchmark/REQ-17)" do
       output, status = Open3.capture2e(RbConfig.ruby, script, "--delay", "medium")
       expect(status).not_to be_success

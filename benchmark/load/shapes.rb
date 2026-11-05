@@ -77,12 +77,15 @@ module RedBenchmark
       end
 
       # The median time in ms to open a TCP connection to host:port, or nil when
-      # nothing answers there. TCPSocket, because Socket.tcp with a timeout
-      # returned a socket for a refused connect on macOS (Ruby 3.4.5).
+      # nothing answers there. The name is looked up once, so no connect times a
+      # DNS query too: by name, a runner read 7.56 ms with 1 ms set. TCPSocket,
+      # because Socket.tcp with a timeout returned a socket for a refused
+      # connect on macOS (Ruby 3.4.5).
       def self.round_trip(host, port, connects: CONNECTS)
+        address = Addrinfo.getaddrinfo(host, port, nil, :STREAM).first.ip_address
         times = Array.new(connects) do
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          TCPSocket.new(host, port, connect_timeout: 2).close
+          TCPSocket.new(address, port, connect_timeout: 2).close
           (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000
         end
         times.sort[times.size / 2]
