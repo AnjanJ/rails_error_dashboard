@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-06 at commit `9ec0693`, with T19 of the deploy shape benchmark built on a branch, after 0.18.1 shipped.
+> Written 2026-11-06 at commit `4146259`, with T19 merged in #356 and T20 written on a branch, after 0.18.1 shipped.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -34,7 +34,7 @@
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
   - T16 to T18 merged in #352 (`dbe513a`).
-  - T19 (`9ec0693`): `bin/benchmark-load --compare FIRST.json SECOND.json` prints, for each mix and latency,
+  - T19 merged in #356 (`4146259`): `bin/benchmark-load --compare FIRST.json SECOND.json` prints, for each mix and latency,
     what RED added in two reports `--json` wrote, and the second's over the first's. Its header names each
     report's shape, CPU, topology, limits, round trip, commit and rate. A mix only one ran reads "not run";
     the ratio reads n/a unless RED added time in both; a report from before T18 reads its shape as "not
@@ -107,7 +107,9 @@
   recorded Ruby 3.4.12 after the deploy.
 
 ## Next step
-1. T20, the research file, then T21 (stacks and Ruby 4.0), both before rc1 (maintainer, 2026-11-05).
+1. T21 (stacks and Ruby 4.0), before rc1 (maintainer, 2026-11-05). T20's research file,
+   `.shipkit/research/deploy-shape-benchmark.md`, holds every figure from the 13 dispatches with its run, shape,
+   CPU, commit and date, and what a shape can't show.
 2. Build 1.0.0.rc1. Its spec was accepted on 2026-11-06 on the local branch `spec/release-1-0-rc1`, not yet
    on main, with decision `0009`. It covers:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);

@@ -100,7 +100,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_compare_spec.rb, with two known reports, and a mix only one of them has
   - After: T18
   - Done when: `rspec spec/benchmark/load_compare_spec.rb` → 0 failures
-- [ ] **T20** The research file holds every figure with its shape, CPU, commit and date → REQ-21
+- [x] **T20** The research file holds every figure with its shape, CPU, commit and date → REQ-21
   - Files: .shipkit/research/deploy-shape-benchmark.md
   - Test: none, prose verified by reading
   - After: T19
