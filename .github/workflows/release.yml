@@ -87,7 +87,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
-          ruby-version: .ruby-version
+          ruby-version: ruby-3.4.12
           bundler-cache: false
 
       - name: Install dependencies
@@ -144,7 +144,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
-          ruby-version: .ruby-version
+          ruby-version: ruby-3.4.12
           bundler-cache: false
 
       - name: Install runtime dependencies only
