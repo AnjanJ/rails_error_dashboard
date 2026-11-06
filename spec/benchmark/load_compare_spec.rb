@@ -94,7 +94,7 @@ RSpec.describe RedBenchmark::Load::Compare do
     let(:log) { StringIO.new }
 
     def main(*arguments)
-      RedBenchmark::Load.main(arguments, driver: ->(_shape) { raise "compare must not start the stack" }, out: out, log: log)
+      RedBenchmark::Load.main(arguments, driver: ->(**) { raise "compare must not start the stack" }, out: out, log: log)
     end
 
     def with_reports
@@ -123,7 +123,9 @@ RSpec.describe RedBenchmark::Load::Compare do
       with_reports do |first_path, second_path|
         [ [ "--compare", first_path ], [ "--compare", first_path, second_path, first_path ],
           [ "--compare", first_path, second_path, "--rate", "40" ], [ "--compare", first_path, second_path, "--json", "x.json" ],
-          [ "--compare", first_path, second_path, "--shape", "small" ] ].each do |arguments|
+          [ "--compare", first_path, second_path, "--shape", "small" ],
+          [ "--compare", first_path, second_path, "--stack", "postgres-sidekiq" ],
+          [ "--compare", first_path, second_path, "--ruby", "4.0" ] ].each do |arguments|
           expect(main(*arguments)).to eq(1), arguments.inspect
         end
       end

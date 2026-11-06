@@ -1,0 +1,30 @@
+# PostgreSQL, the default stack's database (benchmark/load/stacks.rb), laid over
+# ../compose.yml. The app is generated for it, with the packages the generator's
+# Dockerfile installs for it, and reaches it across the network (REQ-17).
+services:
+  app:
+    build:
+      args:
+        DATABASE: postgresql
+        DATABASE_PACKAGE: postgresql-client
+        DATABASE_BUILD_PACKAGE: libpq-dev
+    environment:
+      # The generated production database settings name the user and read this
+      # password. libpq reads the host.
+      PGHOST: db
+      SHOP_DATABASE_PASSWORD: benchmark
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    cpuset: "${REST_CPUSET:-}"
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: benchmark
+    healthcheck:
+      test: [ "CMD", "pg_isready", "--username", "shop" ]
+      interval: 2s
+      timeout: 5s
+      retries: 30

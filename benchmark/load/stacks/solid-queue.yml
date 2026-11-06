@@ -1,0 +1,8 @@
+# Solid Queue, the default stack's queue (benchmark/load/stacks.rb), laid over
+# ../compose.yml and a database's file. It's the generator's, in the database's
+# server, or its own file for SQLite.
+services:
+  app:
+    environment:
+      # Solid Queue's supervisor inside Puma, as the generator's deploy file runs it.
+      SOLID_QUEUE_IN_PUMA: "true"

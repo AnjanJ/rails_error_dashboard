@@ -7,6 +7,7 @@ require_relative "../harness"
 require_relative "compare"
 require_relative "load_report"
 require_relative "shapes"
+require_relative "stacks"
 
 module RedBenchmark
   # The load test (.shipkit/specs/deploy-shape-benchmark/): what RED adds to a
@@ -15,7 +16,7 @@ module RedBenchmark
     # A failure the run can't go on from. bin/benchmark-load prints its message.
     class Error < StandardError; end
 
-    USAGE = "Usage: bin/benchmark-load [--rate N] [--shape NAME] [--json FILE] [--summary FILE]\n" \
+    USAGE = "Usage: bin/benchmark-load [--rate N] [--shape NAME] [--stack NAME] [--ruby VERSION] [--json FILE] [--summary FILE]\n" \
       "       bin/benchmark-load --compare FIRST.json SECOND.json [--summary FILE]"
 
     # Works the stack through a driver. ComposeDriver runs it in Docker, and the
@@ -175,13 +176,14 @@ module RedBenchmark
     end
 
     # bin/benchmark-load, given what makes the stack's driver for a shape, or
-    # for none. Returns the exit status.
+    # for none, a stack and a Ruby. Returns the exit status.
     def self.main(argv, driver:, out: $stdout, log: $stderr)
       options = parse_options(argv)
       return compare(options, out) if options[:compare]
 
       shape = options[:shape] && Shapes.fetch(options[:shape])
-      driver = driver.call(shape)
+      stack = Stacks.fetch(options.fetch(:stack, Stacks::DEFAULT))
+      driver = driver.call(shape: shape, stack: stack, ruby: options.fetch(:ruby, Stacks::DEFAULT_RUBY))
       report = begin
         driver.up
         environment = driver.environment
@@ -203,20 +205,23 @@ module RedBenchmark
     end
 
     # --rate is a whole number above 0, because k6 starts whole requests.
-    # --shape is one of Shapes'. --compare takes two reports and nothing that
-    # measures, as it starts no stack (REQ-20).
+    # --shape is one of Shapes', --stack one of Stacks' and --ruby one of its
+    # Rubies. --compare takes two reports and nothing that measures, as it
+    # starts no stack (REQ-20).
     def self.parse_options(argv)
       options = {}
       parser = OptionParser.new(USAGE)
       parser.on("--rate N", Integer) { |value| options[:rate] = value }
       parser.on("--shape NAME", Shapes.names) { |value| options[:shape] = value }
+      parser.on("--stack NAME", Stacks.names) { |value| options[:stack] = value }
+      parser.on("--ruby VERSION", Stacks::RUBIES) { |value| options[:ruby] = value }
       parser.on("--json FILE") { |value| options[:json] = value }
       parser.on("--summary FILE") { |value| options[:summary] = value }
       parser.on("--compare") { options[:compare] = true }
       extra = parser.parse(argv)
       if options[:compare]
         raise OptionParser::InvalidArgument, "--compare needs two reports" unless extra.size == 2
-        measuring = (options.keys & [ :rate, :shape, :json ]).map { |name| "--#{name}" }
+        measuring = (options.keys & [ :rate, :shape, :stack, :ruby, :json ]).map { |name| "--#{name}" }
         raise OptionParser::InvalidArgument, "--compare with #{measuring.join(", ")}" unless measuring.empty?
 
         options[:reports] = extra

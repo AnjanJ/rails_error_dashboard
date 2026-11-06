@@ -213,17 +213,38 @@ RSpec.describe RedBenchmark::Load::Runner do
   describe "RedBenchmark::Load.main, which bin/benchmark-load runs" do
     let(:out) { StringIO.new }
 
-    # bin/benchmark-load makes its driver once it knows the shape, if any.
+    # bin/benchmark-load makes its driver once it knows the shape, if any, the
+    # stack and the Ruby.
     def main(*arguments, driver:)
-      RedBenchmark::Load.main(arguments, driver: ->(shape) { @shape = shape; driver }, out: out, log: log)
+      RedBenchmark::Load.main(arguments, driver: ->(**options) { @options = options; driver }, out: out, log: log)
     end
 
     it "holds the stack to the shape it's given, and to none without one (deploy-shape-benchmark/REQ-16)" do
       expect(main("--rate", "40", "--shape", "small", driver: fake_driver.new(capacity: 333))).to eq(0)
-      expect(@shape).to eq(RedBenchmark::Load::Shapes.fetch("small"))
+      expect(@options[:shape]).to eq(RedBenchmark::Load::Shapes.fetch("small"))
 
       expect(main("--rate", "40", driver: fake_driver.new(capacity: 333))).to eq(0)
-      expect(@shape).to be_nil
+      expect(@options[:shape]).to be_nil
+    end
+
+    it "runs the stack and Ruby it's given, and the default stack on Ruby 3.4 without them (deploy-shape-benchmark/REQ-16)" do
+      stacks = RedBenchmark::Load::Stacks
+
+      expect(main("--rate", "40", "--stack", "mysql-solid-queue", "--ruby", "4.0", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(@options).to eq(shape: nil, stack: stacks.fetch("mysql-solid-queue"), ruby: "4.0")
+
+      expect(main("--rate", "40", driver: fake_driver.new(capacity: 333))).to eq(0)
+      expect(@options).to eq(shape: nil, stack: stacks.fetch("postgres-solid-queue"), ruby: "3.4")
+    end
+
+    it "refuses a stack or a Ruby it doesn't have, before it starts anything (deploy-shape-benchmark/REQ-16)" do
+      [ [ "--stack", "oracle-resque" ], [ "--ruby", "3.3" ], [ "--stack" ], [ "--ruby" ] ].each do |arguments|
+        driver = fake_driver.new(capacity: 333)
+
+        expect(main(*arguments, driver: driver)).to eq(1), arguments.inspect
+        expect(driver.calls).to be_empty, arguments.inspect
+      end
+      expect(log.string).to include("--stack oracle-resque", "--ruby 3.3", "[--stack NAME] [--ruby VERSION]")
     end
 
     it "says in its report which shape it measured (deploy-shape-benchmark/REQ-19)" do
@@ -341,17 +362,17 @@ RSpec.describe RedBenchmark::Load::ComposeDriver, if: ENV["LOAD_APP_BOOT"] == "1
   it "reads bin/benchmark's environment block inside the app's container, with this checkout's commit (deploy-shape-benchmark/REQ-13)" do
     environment = @driver.environment
 
-    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys + [ "Database round trip" ])
+    expect(environment.keys).to eq(RedBenchmark::Harness.environment.keys + [ "Stack", "Database round trip" ])
     expect(environment).to include("Rails" => start_with("8.1."), "Database" => "postgresql",
       "RED commit" => RedBenchmark::Harness.commit)
   end
 
   def compose
-    [ "docker", "compose", "--file", described_class::FILE ]
+    [ "docker", "compose", *RedBenchmark::Load::Stacks.fetch(RedBenchmark::Load::Stacks::DEFAULT).compose_args ]
   end
 
   def run!(*command)
-    output, status = Open3.capture2e(*command)
+    output, status = Open3.capture2e({ "APP_RUBY" => RedBenchmark::Load::Stacks::DEFAULT_RUBY }, *command)
     raise "#{command.join(" ")} failed:\n#{output}" unless status.success?
 
     output

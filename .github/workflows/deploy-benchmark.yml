@@ -2,7 +2,8 @@ name: Deploy benchmark
 
 # Measures what RED adds on the shape of a deploy target, by hand only. It holds
 # no secrets and reaches nothing outside the runner. A shape runs the rows and
-# the load test held to that shape's CPUs and memory (benchmark/load/shapes.rb).
+# the load test held to that shape's CPUs and memory (benchmark/load/shapes.rb),
+# on the stack and Ruby chosen beside it (benchmark/load/stacks.rb).
 # "none" runs the probe, which tries what the shapes rely on, and the rows on
 # each queue, on both of the free runner architectures.
 # Spec: .shipkit/specs/deploy-shape-benchmark/.
@@ -14,6 +15,16 @@ on:
         type: choice
         default: medium
         options: [ medium, small, medium-throttled, medium-arm, none ]
+      stack:
+        description: The database and queue the app and the rows run on, with a shape
+        type: choice
+        default: postgres-solid-queue
+        options: [ postgres-solid-queue, postgres-sidekiq, mysql-solid-queue, sqlite-solid-queue ]
+      ruby:
+        description: The Ruby the app and the rows run on, with a shape
+        type: choice
+        default: '3.4'
+        options: [ '3.4', '4.0' ]
 
 permissions:
   contents: read
@@ -88,29 +99,46 @@ jobs:
       - name: Run the rows
         run: bundle exec bin/benchmark --summary "$GITHUB_STEP_SUMMARY"
 
-  # The app gets the shape's CPUs, quota and memory, with no swap. Its database
-  # and k6, and the rows' PostgreSQL, get CPUs 2 and 3, so neither eats into the
-  # other. The rows run in a container held to the same limits, after their
-  # gems install in one held to none.
+  # The app gets the shape's CPUs, quota and memory, with no swap. Its database,
+  # Redis and k6, and the rows' database and Redis, get CPUs 2 and 3, so neither
+  # eats into the other. The rows run in a container held to the same limits,
+  # after their gems install in one held to none. Both run on the stack and the
+  # Ruby chosen: a service the stack has no use for has an empty image, and an
+  # empty image doesn't start.
   shape:
     if: inputs.shape != 'none'
     runs-on: ${{ inputs.shape == 'medium-arm' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     # About 20 minutes to find the rate, and 95 for the windows
     timeout-minutes: 180
-    name: Shape ${{ inputs.shape }}
+    name: Shape ${{ inputs.shape }}, ${{ inputs.stack }}, Ruby ${{ inputs.ruby }}
     permissions:
       contents: read
+    # No published ports: the rows reach each at its own address, as below
     services:
       postgres:
-        image: postgres:16
+        image: ${{ (inputs.stack == 'postgres-solid-queue' || inputs.stack == 'postgres-sidekiq') && 'postgres:16' || '' }}
         env:
           POSTGRES_USER: red
           POSTGRES_PASSWORD: red
           POSTGRES_DB: red_benchmark
-        # No published port: the rows reach it at its own address, as below
         options: >-
           --cpuset-cpus 2,3
           --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      mysql:
+        image: ${{ inputs.stack == 'mysql-solid-queue' && 'mysql:8.4' || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: red
+          MYSQL_DATABASE: red_benchmark
+        options: >-
+          --cpuset-cpus 2,3
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pred" --health-interval 5s
+          --health-timeout 5s --health-retries 20
+      redis:
+        image: ${{ inputs.stack == 'postgres-sidekiq' && 'redis:7' || '' }}
+        options: >-
+          --cpuset-cpus 2,3
+          --health-cmd "redis-cli ping" --health-interval 5s
           --health-timeout 5s --health-retries 10
     steps:
       - name: Checkout code
@@ -118,44 +146,71 @@ jobs:
         with:
           persist-credentials: false
 
-      # For shapes.rb and bin/benchmark-load, which need no gems
+      # For shapes.rb, stacks.rb and bin/benchmark-load, which need no gems
       - name: Set up Ruby
         uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           ruby-version: '3.4'
 
-      # The rows' database across the shape's network, as the load test's is.
-      # The rows reach it at its own address: a published port is answered by
+      # The rows' database server across the shape's network, as the load
+      # test's is. SQLite is a file, so nothing crosses a network to it. The
+      # rows reach it at its own address: a published port is answered by
       # Docker's port proxy on the host, which a connect would time instead.
-      # Each script reads shapes.rb into a variable first: bash -e doesn't see a
-      # failure inside a pipe or a process substitution.
+      # Each script reads shapes.rb and stacks.rb into a variable first: bash -e
+      # doesn't see a failure inside a pipe or a process substitution.
       - name: Delay the rows' database, as the shape's network would
+        if: (inputs.stack == 'postgres-solid-queue' || inputs.stack == 'postgres-sidekiq' || inputs.stack == 'mysql-solid-queue')
         env:
           SHAPE: ${{ inputs.shape }}
-          DATABASE: ${{ job.services.postgres.id }}
+          DATABASE: ${{ job.services.postgres.id || job.services.mysql.id }}
+          PORT: ${{ inputs.stack == 'mysql-solid-queue' && '3306' || '5432' }}
         run: |
           sudo modprobe sch_netem
           database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
-          round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" 5432)
+          round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" "$PORT")
           echo "$round_trip"
           printf '%s\n\n' "$round_trip" >> "$GITHUB_STEP_SUMMARY"
 
+      # Sidekiq's Redis is across the network too, with the same delay
+      - name: Delay the rows' Redis, as the shape's network would
+        if: inputs.stack == 'postgres-sidekiq'
+        env:
+          SHAPE: ${{ inputs.shape }}
+          REDIS: ${{ job.services.redis.id }}
+        run: |
+          sudo modprobe sch_netem
+          redis_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$REDIS")
+          round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$REDIS" "$redis_ip" 6379 Redis)
+          echo "$round_trip"
+          printf '%s\n\n' "$round_trip" >> "$GITHUB_STEP_SUMMARY"
+
+      # The stack names the rows' database and queue, from the addresses of the
+      # containers it started. With neither, as on SQLite, the rows use their
+      # own scratch file.
       - name: Run the rows, held to the shape
         env:
           SHAPE: ${{ inputs.shape }}
-          DATABASE: ${{ job.services.postgres.id }}
+          STACK: ${{ inputs.stack }}
+          RUBY: ${{ inputs.ruby }}
+          DATABASE: ${{ job.services.postgres.id || job.services.mysql.id }}
+          REDIS: ${{ job.services.redis.id }}
         run: |
+          address() { docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$1"; }
           limits_text=$(ruby benchmark/load/shapes.rb "$SHAPE")
           mapfile -t limits <<<"$limits_text"
-          database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE")
+          database_ip=
+          redis_ip=
+          if [ -n "$DATABASE" ]; then database_ip=$(address "$DATABASE"); fi
+          if [ -n "$REDIS" ]; then redis_ip=$(address "$REDIS"); fi
+          stack_text=$(ruby benchmark/load/stacks.rb --rows "$STACK" "$database_ip" "$redis_ip")
+          mapfile -t stack <<<"$stack_text"
           mkdir -p tmp/deploy-benchmark
           # The checkout belongs to the runner's user, and git won't read it as
           # root without being told it's safe.
           container=(--volume "$PWD:/red" --workdir /red --volume red-bundle:/usr/local/bundle --network host
-            --env RAILS_VERSION=8.1 --env BENCHMARK_QUEUE=solid_queue --env "BENCHMARK_SHAPE=$SHAPE"
-            --env "BENCHMARK_DATABASE_URL=postgres://red:red@$database_ip:5432/red_benchmark?pool=10"
+            --env RAILS_VERSION=8.1 "${stack[@]}" --env "BENCHMARK_SHAPE=$SHAPE"
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/red
-            ruby:3.4)
+            "ruby:$RUBY")
           docker run --rm "${container[@]}" bundle install --jobs 4
           # A row over its budget fails the step, after its table reaches the summary
           docker run --rm "${limits[@]}" "${container[@]}" bundle exec bin/benchmark --summary tmp/deploy-benchmark/rows.md || rows_status=$?
@@ -167,12 +222,14 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           SHAPE: ${{ inputs.shape }}
-        run: ruby bin/benchmark-load --shape "$SHAPE" --json tmp/deploy-benchmark/load.json --summary "$GITHUB_STEP_SUMMARY"
+          STACK: ${{ inputs.stack }}
+          RUBY: ${{ inputs.ruby }}
+        run: ruby bin/benchmark-load --shape "$SHAPE" --stack "$STACK" --ruby "$RUBY" --json tmp/deploy-benchmark/load.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: deploy-benchmark-${{ inputs.shape }}
+          name: deploy-benchmark-${{ inputs.shape }}-${{ inputs.stack }}-ruby-${{ inputs.ruby }}
           path: tmp/deploy-benchmark/
           if-no-files-found: warn
