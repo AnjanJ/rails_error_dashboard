@@ -68,7 +68,7 @@ Live demo: https://rails-error-dashboard.anjan.dev
 Documentation: https://AnjanJ.github.io/rails_error_dashboard
   DESC
   spec.license     = "MIT"
-  spec.required_ruby_version = ">= 3.2.0"
+  spec.required_ruby_version = ">= 3.3.0"
 
   spec.post_install_message = <<~MESSAGE
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -108,7 +108,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   end
 
   # Rails dependencies
-  spec.add_dependency "rails", ">= 7.0.0"
+  spec.add_dependency "rails", ">= 7.2.0"
 
   # Pagination
   spec.add_dependency "pagy", "~> 43.0"
@@ -165,8 +165,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   spec.add_development_dependency "shoulda-matchers", "~> 6.0"
   spec.add_development_dependency "webmock", "~> 3.0"
   spec.add_development_dependency "simplecov", "~> 1.1"
-  # Note: sqlite3 version is specified in Gemfile based on Rails version
-  # Rails 7.0 requires ~> 1.4, Rails 8.0 requires >= 2.1
+  # Note: sqlite3 is specified in the Gemfile
 
   # System tests (browser-based UI testing)
   spec.add_development_dependency "capybara", "~> 3.40"
