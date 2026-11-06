@@ -18,9 +18,10 @@ module RedBenchmark
     #
     #   ruby benchmark/load/shapes.rb NAME
     #       print NAME's docker run limits, one to a line
-    #   ruby benchmark/load/shapes.rb --delay SHAPE CONTAINER HOST PORT
+    #   ruby benchmark/load/shapes.rb --delay SHAPE CONTAINER HOST PORT [NAME]
     #       delay CONTAINER's network by SHAPE's delay, and print the round trip
-    #       to HOST:PORT measured before and after it
+    #       to HOST:PORT measured before and after it, as NAME's (the
+    #       database's unless told another, such as Redis)
     module Shapes
       # The CPUs everything but the app runs on
       REST = "2,3"
@@ -32,7 +33,7 @@ module RedBenchmark
       # TCP connects whose median is the round trip: a connect takes exactly one
       CONNECTS = 20
 
-      USAGE = "Usage: ruby benchmark/load/shapes.rb --delay SHAPE CONTAINER HOST PORT"
+      USAGE = "Usage: ruby benchmark/load/shapes.rb --delay SHAPE CONTAINER HOST PORT [NAME]"
 
       # cpus: the app's CPUs. quota: how much of them it may use, in CPUs, or nil.
       # memory: its memory, with no swap. delay_ms: what the network adds to the
@@ -110,12 +111,13 @@ if __FILE__ == $PROGRAM_NAME && File.file?(__FILE__)
   shapes = RedBenchmark::Load::Shapes
   begin
     if ARGV.first == "--delay"
-      abort shapes::USAGE unless ARGV.size == 5
-      _, name, container, host, port = ARGV
+      abort shapes::USAGE unless ARGV.size.between?(5, 6)
+      _, name, container, host, port, part = ARGV
+      part ||= "database"
       shape = shapes.fetch(name)
       before = shapes.round_trip(host, Integer(port))
       system(*shapes.netem(container, shape.delay_ms)) or abort "Couldn't delay #{container}'s network"
-      puts "Rows' database round trip: #{shapes.round_trip_line(before, shapes.round_trip(host, Integer(port)), shape.delay_ms)}"
+      puts "Rows' #{part} round trip: #{shapes.round_trip_line(before, shapes.round_trip(host, Integer(port)), shape.delay_ms)}"
     else
       puts shapes.fetch(ARGV.fetch(0, "")).docker_args
     end

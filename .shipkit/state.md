@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-06 at commit `4146259`, with T19 merged in #356 and T20 written on a branch, after 0.18.1 shipped.
+> Written 2026-11-06 at commit `8d20630`, T21's code on the branch `test/benchmark-stacks`, after T20 merged in #357.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -87,8 +87,18 @@
     42058012637 (`medium`, EPYC 7763): both reports carry the shape line and "2 CPUs on 1 core", and the
     load test read "1.10 ms, 1.03 ms of it added (1 ms set)". The run ends "failure" only because the rows
     step does: async capture read 8.00 ms against 5 ms, the finding above.
-  - The tasks plan T16-T18 as one pull request. T21, added 2026-11-05, gives the workflow a stack and a
-    Ruby beside the shape, after T20: the design names four stacks and Ruby 4.0, and no task built them.
+  - The tasks plan T16-T18 as one pull request.
+  - T21 (`8d20630`, on `test/benchmark-stacks`, its PR not yet merged): the workflow takes a stack and a Ruby
+    beside the shape. `benchmark/load/stacks.rb` names four stacks, `postgres-solid-queue` (the default),
+    `postgres-sidekiq`, `mysql-solid-queue` and `sqlite-solid-queue`, each a database's and a queue's compose file
+    from `benchmark/load/stacks/` laid over `compose.yml`, on Ruby 3.4 (the default) or 4.0. The rows follow the
+    stack. Redis gets the 1 ms delay too, with its own round-trip line. Sidekiq runs beside Puma in the app's
+    container, and its init stops it with Puma in about a second. The Dockerfile runs
+    `env -u DATABASE rails new`, because Solid Cache's installer reads `DATABASE` as its database's name, and every
+    app exited on boot until it did. Ticked on five `medium` dispatches (runs 42166023618, 42166026955,
+    42166030030, 42166033190, 42166036449), every window valid. Async capture failed 5 ms only where Solid Queue
+    sits in a database server 1 ms away: 7.76 ms on PostgreSQL, 7.96 on Ruby 4.0, 8.85 on MySQL, against 1.47 with
+    Sidekiq and 885 µs on SQLite. The research file has every figure.
 
 ## Done
 - 0.18.0 shipped 2026-10-31, about three weeks ahead of its target. RubyGems, the GitHub Release, both
@@ -107,9 +117,9 @@
   recorded Ruby 3.4.12 after the deploy.
 
 ## Next step
-1. T21 (stacks and Ruby 4.0), before rc1 (maintainer, 2026-11-05). T20's research file,
-   `.shipkit/research/deploy-shape-benchmark.md`, holds every figure from the 13 dispatches with its run, shape,
-   CPU, commit and date, and what a shape can't show.
+1. T21's pull request from `test/benchmark-stacks`, which merges only on the maintainer's yes. That ends
+   `deploy-shape-benchmark`. `.shipkit/research/deploy-shape-benchmark.md` holds every figure from the 18
+   dispatches with its run, shape, CPU, commit and date, and what a shape can't show.
 2. Build 1.0.0.rc1. Its spec was accepted on 2026-11-06 on the local branch `spec/release-1-0-rc1`, not yet
    on main, with decision `0009`. It covers:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);

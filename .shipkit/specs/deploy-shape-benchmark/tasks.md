@@ -105,8 +105,8 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: none, prose verified by reading
   - After: T19
   - Done when: each shape has a real run recorded, and the file says what a shape can't show
-- [ ] **T21** The workflow takes a stack and a Ruby beside the shape → REQ-16, REQ-17
-  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/Dockerfile, benchmark/load/app/template.rb, benchmark/load/compose.yml, spec/ci/workflows_spec.rb, spec/benchmark/load_app_spec.rb
+- [x] **T21** The workflow takes a stack and a Ruby beside the shape → REQ-16, REQ-17
+  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/Dockerfile, benchmark/load/app/template.rb, benchmark/load/compose.yml, benchmark/load/stacks.rb, benchmark/load/stacks/*.yml, benchmark/load/compose_driver.rb, benchmark/load/runner.rb, bin/benchmark-load, benchmark/load/shapes.rb, spec/ci/workflows_spec.rb, spec/benchmark/load_app_spec.rb, spec/benchmark/load_stacks_spec.rb, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/benchmark/load_compare_spec.rb, spec/benchmark/compose_files.rb
   - Test: spec/ci/workflows_spec.rb asserts the stack and Ruby choices; spec/benchmark/load_app_spec.rb asserts each stack's app
   - After: T20
   - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each stack, and of Ruby 4.0, finishes with its report

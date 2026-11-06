@@ -1,13 +1,16 @@
 # The load test's stack (.shipkit/specs/deploy-shape-benchmark/, REQ-8): the app
-# from ./Dockerfile, on Puma behind Thruster in production mode, and the
-# PostgreSQL the generator set it up for. The app's settings are the generator's;
-# its environment below holds only what a deploy has to supply, and RED's switch.
+# from ./Dockerfile, on Puma behind Thruster in production mode, and k6. The
+# app's settings are the generator's; its environment holds only what a deploy
+# has to supply, and RED's switch. A stack's database and queue are laid over
+# this file from stacks/, one file for each (benchmark/load/stacks.rb, REQ-16),
+# and APP_RUBY picks the Ruby, 3.4 unless 4.0 is asked for. The default stack:
 #
-#   docker compose -f benchmark/load/compose.yml up --build --wait
-#   docker compose -f benchmark/load/compose.yml down --volumes
+#   docker compose -f benchmark/load/compose.yml -f benchmark/load/stacks/postgres.yml \
+#     -f benchmark/load/stacks/solid-queue.yml up --build --wait
+#   ... down --volumes
 #
 # A shape (benchmark/load/shapes.rb, REQ-16) holds the app to its CPUs, quota
-# and memory, with no swap, and the database and k6 to the other CPUs.
+# and memory, with no swap, and the database, Redis and k6 to the other CPUs.
 # bin/benchmark-load --shape sets these variables; with none set, nothing is
 # held to anything.
 name: red-load
@@ -18,13 +21,9 @@ services:
       context: .
       additional_contexts:
         red: ../..
+      args:
+        RUBY_VERSION: "${APP_RUBY:-3.4}"
     environment:
-      # The generated production database settings name the user and read this
-      # password. libpq reads the host.
-      PGHOST: db
-      SHOP_DATABASE_PASSWORD: benchmark
-      # Solid Queue's supervisor inside Puma, as the generator's deploy file runs it.
-      SOLID_QUEUE_IN_PUMA: "true"
       # RED refuses to boot in production on its published default login.
       ERROR_DASHBOARD_USER: benchmark
       ERROR_DASHBOARD_PASSWORD: benchmark
@@ -35,27 +34,12 @@ services:
     cpus: "${APP_CPUS:-0}"
     mem_limit: "${APP_MEMORY:-0}"
     memswap_limit: "${APP_MEMORY:-0}"
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://localhost/up" ]
       interval: 2s
       timeout: 5s
       retries: 30
       start_period: 120s
-
-  db:
-    image: postgres:16
-    cpuset: "${REST_CPUSET:-}"
-    environment:
-      POSTGRES_USER: shop
-      POSTGRES_PASSWORD: benchmark
-    healthcheck:
-      test: [ "CMD", "pg_isready", "--username", "shop" ]
-      interval: 2s
-      timeout: 5s
-      retries: 30
 
   # The load generator, pinned by digest. It's in the `load` profile, so `up`
   # leaves it out and it runs only when asked:
