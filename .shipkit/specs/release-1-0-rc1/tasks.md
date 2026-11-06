@@ -11,7 +11,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/lib/rails_error_dashboard/floors_spec.rb reads the gemspec's `required_ruby_version` and its `rails` dependency
   - After: none
   - Done when: `rspec spec/lib/rails_error_dashboard/floors_spec.rb` → 0 failures; the Gemfile no longer selects sqlite3 `~> 1.4` for Rails 7.0
-- [ ] **T2** CI runs 9 rows, each Ruby named by its series → REQ-2
+- [x] **T2** CI runs 9 rows, each Ruby named by its series → REQ-2
   - Files: .github/workflows/test.yml, spec/ci/workflows_spec.rb
   - Test: spec/ci/workflows_spec.rb asserts the matrix is Ruby 3.3, 3.4 and 4.0 by Rails 7.2, 8.0 and 8.1, with no patch release named
   - After: T1
