@@ -146,6 +146,35 @@ RSpec.describe "GitHub Actions workflows" do
     end
   end
 
+  # 1.0's floors are Rails 7.2 and Ruby 3.3 (decision 0003), so CI runs every
+  # supported Ruby against every supported Rails, and nothing older. Each Ruby
+  # is a series, so setup-ruby takes its latest patch: ubuntu-26.04 builds
+  # only those, and a pinned patch stops setting up when the next one ships.
+  describe "test.yml: the test matrix" do
+    let(:test_job) { jobs("test.yml").fetch("test") }
+    let(:matrix) { test_job.fetch("strategy").fetch("matrix") }
+
+    it "runs Ruby 3.3, 3.4 and 4.0 against Rails 7.2, 8.0 and 8.1, and nothing else (release-1-0-rc1/REQ-2)" do
+      aggregate_failures do
+        expect(matrix.keys).to contain_exactly("ruby", "rails")
+        expect(matrix.fetch("ruby")).to eq(%w[3.3 3.4 4.0])
+        expect(matrix.fetch("rails")).to eq(%w[7.2 8.0 8.1])
+        expect(matrix.fetch("ruby").product(matrix.fetch("rails")).size).to eq(9)
+      end
+    end
+
+    it "names each Ruby by its series, never a patch release (release-1-0-rc1/REQ-2)" do
+      expect(matrix.fetch("ruby")).to all(match(/\A\d+\.\d+\z/))
+      expect(test_job.fetch("steps").find { |step| step["name"] == "Set up Ruby" }.dig("with", "ruby-version"))
+        .to eq("${{ matrix.ruby }}")
+    end
+
+    # main's ruleset requires these rows by name.
+    it "names each row by its Ruby series and Rails series (release-1-0-rc1/REQ-2)" do
+      expect(test_job.fetch("name")).to eq("Ruby ${{ matrix.ruby }} / Rails ${{ matrix.rails }}")
+    end
+  end
+
   # The upgrade-path test runs only when it can catch something. A job skipped
   # by its `if` shows as Skipped and counts as passing for a required check; a
   # job that skips all its own steps shows as a pass that ran nothing.
