@@ -1,0 +1,17 @@
+# SQLite (benchmark/load/stacks.rb), laid over ../compose.yml. The app is
+# generated for it, with the package the generator's Dockerfile installs for it.
+# Its databases are files in storage/, in a volume, so they outlive each restart
+# of the app as a database server would. Nothing crosses a network to reach
+# them, so no delay applies (REQ-17).
+services:
+  app:
+    build:
+      args:
+        DATABASE: sqlite3
+        DATABASE_PACKAGE: sqlite3
+        DATABASE_BUILD_PACKAGE: ""
+    volumes:
+      - storage:/rails/storage
+
+volumes:
+  storage:

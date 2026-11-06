@@ -6,8 +6,9 @@ module RedBenchmark
   module Load
     # The load test's report (REQ-13, REQ-14). For each mix, p50, p95 and p99
     # with RED off and on, and what RED added in each pair. Then every window,
-    # with the share of CPU time stolen while it ran. A window that didn't hold
-    # its rate is invalid: it's listed, and left out of every figure (REQ-15).
+    # with the share of CPU time stolen while it ran, and how often a shape's CPU
+    # quota held the app back (REQ-16). A window that didn't hold its rate is
+    # invalid: it's listed, and left out of every figure (REQ-15).
     # build gives the figures as plain data, which bin/benchmark-load writes as
     # JSON for the compare tool, and markdown renders that same data.
     module LoadReport
@@ -18,9 +19,11 @@ module RedBenchmark
 
       # The windows are the runner's: each has its mix, pair, whether RED was
       # on, k6's summary of its measured run, and the CPU time stolen.
-      def build(environment:, rate:, capacity:, window:, windows:)
+      # shape is the deploy shape the app was held to, or nil (REQ-19).
+      def build(environment:, rate:, capacity:, window:, windows:, shape: nil)
         rows = windows.map { |each| row(each) }
         {
+          "shape" => (shape && { "name" => shape.name, "size_of" => shape.size_of }),
           "environment" => environment,
           "rate" => rate,
           "capacity" => capacity,
@@ -32,7 +35,10 @@ module RedBenchmark
       end
 
       def markdown(report)
-        lines = [ "## What RED adds under load", "", *Report.environment_table(report["environment"]), "",
+        shape = report["shape"]
+        lines = [ "## What RED adds under load", "",
+          *(shape ? [ Report.shape_line(shape["name"], shape["size_of"]), "" ] : []),
+          *Report.environment_table(report["environment"]), "",
           "#{rate_line(report["rate"], report["capacity"])} Each window restarts the app, throws away " \
           "#{report["warmup"]} s of warm-up, then measures #{report["seconds"]} s.", "",
           "| Mix | Errors a second | Latency | RED off | RED on | RED added | In each pair (ms) |",
@@ -44,8 +50,9 @@ module RedBenchmark
           "each pair's RED on minus RED off, from the pairs whose windows are both valid, and a negative one is a " \
           "pair whose RED-on window was faster.", "", invalid_line(report["windows"]),
           "", "### Windows", "",
-          "| Mix | Pair | RED | p50 | p95 | p99 | Requests | Errors | Dropped | Unexpected | CPU stolen | Valid |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|")
+          "| Mix | Pair | RED | p50 | p95 | p99 | Requests | Errors | Dropped | Unexpected | CPU stolen | " \
+            "CPU throttled | Valid |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         report["windows"].each { |row| lines << window_row(row) }
         lines.join("\n") + "\n"
       end
@@ -81,6 +88,7 @@ module RedBenchmark
           "dropped" => count.call("dropped_iterations"),
           "unexpected" => count.call("http_req_failed", "passes"),
           "cpu_stolen" => window.steal,
+          "cpu_throttled" => window.throttled,
           "invalid" => window.shortfall
         }
       end
@@ -118,7 +126,7 @@ module RedBenchmark
 
       def window_row(row)
         latencies = LATENCIES.keys.map { |name| ms(row[name]) }
-        counts = row.values_at("requests", "errors", "dropped", "unexpected", "cpu_stolen")
+        counts = row.values_at("requests", "errors", "dropped", "unexpected", "cpu_stolen", "cpu_throttled")
         valid = row["invalid"] ? "no" : "yes"
         "| #{row["mix"]} | #{row["pair"]} | #{row["red"]} | #{(latencies + counts).join(" | ")} | #{valid} |"
       end

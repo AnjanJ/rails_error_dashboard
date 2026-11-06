@@ -1,7 +1,8 @@
 # Tasks: Overhead on deploy shapes
 
-Five pull requests, in order: T1 (the probe, with this spec), T2-T8 (the rows), T9-T15 (the load test), T16-T18 (the
-shapes), T19-T20 (compare and results). A workflow can't be dispatched until its file is on main, so T1 lands first.
+Six pull requests, in order: T1 (the probe, with this spec), T2-T8 (the rows), T9-T15 (the load test), T16-T18 (the
+shapes), T19-T20 (compare and results), then T21 (stacks and Ruby) on its own. A workflow can't be dispatched until
+its file is on main, so T1 lands first.
 Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
 
 - [x] **T1** A dispatch-only workflow that tries the design's assumptions on real runners → REQ-18
@@ -79,28 +80,33 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/load_report_spec.rb, a window with dropped iterations and one with an unexpected status
   - After: T14
   - Done when: `rspec spec/benchmark/load_report_spec.rb` → 0 failures; an invalid window is listed and left out of every figure
-- [ ] **T16** Run the rows and the load test held to a shape's limits → REQ-16
-  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/probe.sh, benchmark/load/compose.yml, benchmark/load/shapes.rb, spec/ci/workflows_spec.rb, spec/benchmark/load_shapes_spec.rb
+- [x] **T16** Run the rows and the load test held to a shape's limits → REQ-16
+  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/shapes.rb, benchmark/load/compose.yml, benchmark/load/compose_driver.rb, benchmark/load/runner.rb, benchmark/load/load_report.rb, bin/benchmark-load, spec/ci/workflows_spec.rb, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/benchmark/load_report_spec.rb
   - Test: spec/benchmark/load_shapes_spec.rb asserts each shape's limits; spec/ci/workflows_spec.rb keeps REQ-18 on the full workflow
   - After: T15
   - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each shape reports its limits, and `medium-throttled` shows throttling in `cpu.stat`
-- [ ] **T17** Add the shape's network delay between the app and the database → REQ-17
-  - Files: benchmark/load/compose.yml, benchmark/load/runner.rb, spec/benchmark/load_shapes_spec.rb
+- [x] **T17** Add the shape's network delay between the app and the database → REQ-17
+  - Files: benchmark/load/shapes.rb, benchmark/load/compose_driver.rb, .github/workflows/deploy-benchmark.yml, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/ci/workflows_spec.rb
   - Test: spec/benchmark/load_shapes_spec.rb asserts a network stack sets the delay and SQLite doesn't
   - After: T16
   - Done when: a dispatch reports a measured round trip within 20% of the setting
-- [ ] **T18** A shape's report says it measures the shape, not the machine → REQ-19
-  - Files: benchmark/load/load_report.rb, benchmark/report.rb, spec/benchmark/load_report_spec.rb, spec/benchmark/report_spec.rb
+- [x] **T18** A shape's report says it measures the shape, not the machine → REQ-19
+  - Files: benchmark/load/load_report.rb, benchmark/report.rb, benchmark/harness.rb, benchmark/load/runner.rb, bin/benchmark, .github/workflows/deploy-benchmark.yml, spec/benchmark/load_report_spec.rb, spec/benchmark/report_spec.rb, spec/benchmark/harness_spec.rb, spec/benchmark/load_runner_spec.rb, spec/ci/workflows_spec.rb
   - Test: spec/benchmark/load_report_spec.rb and spec/benchmark/report_spec.rb
   - After: T17
   - Done when: `rspec spec/benchmark` → 0 failures
-- [ ] **T19** The compare tool prints what RED added in two reports, and the ratio → REQ-20
-  - Files: benchmark/load/compare.rb, bin/benchmark-load, spec/benchmark/load_compare_spec.rb
+- [x] **T19** The compare tool prints what RED added in two reports, and the ratio → REQ-20
+  - Files: benchmark/load/compare.rb, benchmark/load/runner.rb, bin/benchmark-load, spec/benchmark/load_compare_spec.rb
   - Test: spec/benchmark/load_compare_spec.rb, with two known reports, and a mix only one of them has
   - After: T18
   - Done when: `rspec spec/benchmark/load_compare_spec.rb` → 0 failures
-- [ ] **T20** The research file holds every figure with its shape, CPU, commit and date → REQ-21
+- [x] **T20** The research file holds every figure with its shape, CPU, commit and date → REQ-21
   - Files: .shipkit/research/deploy-shape-benchmark.md
   - Test: none, prose verified by reading
   - After: T19
   - Done when: each shape has a real run recorded, and the file says what a shape can't show
+- [x] **T21** The workflow takes a stack and a Ruby beside the shape → REQ-16, REQ-17
+  - Files: .github/workflows/deploy-benchmark.yml, benchmark/load/Dockerfile, benchmark/load/app/template.rb, benchmark/load/compose.yml, benchmark/load/stacks.rb, benchmark/load/stacks/*.yml, benchmark/load/compose_driver.rb, benchmark/load/runner.rb, bin/benchmark-load, benchmark/load/shapes.rb, spec/ci/workflows_spec.rb, spec/benchmark/load_app_spec.rb, spec/benchmark/load_stacks_spec.rb, spec/benchmark/load_shapes_spec.rb, spec/benchmark/load_runner_spec.rb, spec/benchmark/load_compare_spec.rb, spec/benchmark/compose_files.rb
+  - Test: spec/ci/workflows_spec.rb asserts the stack and Ruby choices; spec/benchmark/load_app_spec.rb asserts each stack's app
+  - After: T20
+  - Done when: `rspec spec/benchmark spec/ci/workflows_spec.rb` → 0 failures; a dispatch of each stack, and of Ruby 4.0, finishes with its report

@@ -1,0 +1,32 @@
+# Sidekiq in Solid Queue's place (benchmark/load/stacks.rb), laid over
+# ../compose.yml and a database's file. The template adds it and hands it
+# Active Job when the QUEUE build arg says so.
+#
+# Sidekiq runs beside Puma in the app's container, so in its CPUs and memory,
+# as Solid Queue runs inside Puma, and as both would on a one-machine deploy,
+# with its own defaults. The generator's command comes last, as its entrypoint
+# prepares the database only before that. The init process stops Sidekiq with
+# Puma, as it signals their whole process group. Redis is across the network
+# (REQ-17), off the app's CPUs.
+services:
+  app:
+    build:
+      args:
+        QUEUE: sidekiq
+    init: true
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      TINI_KILL_PROCESS_GROUP: "1"
+    command: [ "sh", "-c", 'bundle exec sidekiq & exec "$$@"', "sh", "./bin/thrust", "./bin/rails", "server" ]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7
+    cpuset: "${REST_CPUSET:-}"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 2s
+      timeout: 5s
+      retries: 30

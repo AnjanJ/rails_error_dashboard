@@ -4,7 +4,10 @@ require "fileutils"
 require "json"
 require "optparse"
 require_relative "../harness"
+require_relative "compare"
 require_relative "load_report"
+require_relative "shapes"
+require_relative "stacks"
 
 module RedBenchmark
   # The load test (.shipkit/specs/deploy-shape-benchmark/): what RED adds to a
@@ -13,7 +16,8 @@ module RedBenchmark
     # A failure the run can't go on from. bin/benchmark-load prints its message.
     class Error < StandardError; end
 
-    USAGE = "Usage: bin/benchmark-load [--rate N] [--json FILE] [--summary FILE]"
+    USAGE = "Usage: bin/benchmark-load [--rate N] [--shape NAME] [--stack NAME] [--ruby VERSION] [--json FILE] [--summary FILE]\n" \
+      "       bin/benchmark-load --compare FIRST.json SECOND.json [--summary FILE]"
 
     # Works the stack through a driver. ComposeDriver runs it in Docker, and the
     # specs pass a fake. A driver answers these calls:
@@ -23,6 +27,7 @@ module RedBenchmark
     #   start(red:)                 restart the app with RED on or off, and wait until it answers
     #   run(rate:, mix:, seconds:)  k6's summary of traffic.js's mix at that rate
     #   cpu_ticks                   the machine's CPU ticks, as Harness.cpu_ticks reads them
+    #   throttling                  { times:, usec: } the app's CPU quota held it back, or nil
     #   down                        remove the stack
     class Runner
       # With no rate given, the windows run at half the app's capacity with RED
@@ -52,9 +57,10 @@ module RedBenchmark
 
       # One window: its mix, its pair, whether RED was on, k6's summary of its
       # measured run, the share of the machine's CPU time stolen during that run
-      # (REQ-14), and why it didn't hold its rate, judged as a probe is, or nil
-      # (REQ-15).
-      Window = Data.define(:mix, :pair, :red, :summary, :steal, :shortfall)
+      # (REQ-14), how often and how long the app's CPU quota held it back during
+      # that run (REQ-16), and why it didn't hold its rate, judged as a probe is,
+      # or nil (REQ-15).
+      Window = Data.define(:mix, :pair, :red, :summary, :steal, :throttled, :shortfall)
 
       # How long each window warms the app, and measures it
       attr_reader :window
@@ -105,6 +111,15 @@ module RedBenchmark
         reasons.join(", ") unless reasons.empty?
       end
 
+      # How often, and for how long, the app's CPU quota held it back between two
+      # of the driver's readings. A shape with no quota reads 0 times.
+      def self.throttled(before, after)
+        return "not available" unless before && after
+
+        times = after[:times] - before[:times]
+        format("%d %s, %.2f s", times, times == 1 ? "time" : "times", (after[:usec] - before[:usec]) / 1_000_000.0)
+      end
+
       private
 
       def search
@@ -140,34 +155,42 @@ module RedBenchmark
       def pair_of(mix, pair)
         (pair.odd? ? [ false, true ] : [ true, false ]).map do |red|
           @log.puts "  #{mix}, pair #{pair} of #{PAIRS}, RED #{red ? "on" : "off"}"
-          summary, steal = measure(red: red, rate: rate, mix: mix, **@window)
-          Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal,
+          summary, steal, throttled = measure(red: red, rate: rate, mix: mix, **@window)
+          Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal, throttled: throttled,
             shortfall: self.class.shortfall(summary, rate, @window[:seconds]))
         end
       end
 
       # Restarts the app with RED on or off, warms it at the rate and throws that
-      # away, then runs it again. Returns k6's summary of that run, and the share
-      # of the machine's CPU time stolen while it went.
+      # away, then runs it again. Returns k6's summary of that run, the share of
+      # the machine's CPU time stolen while it went, and how the app's CPU quota
+      # held it back.
       def measure(red:, rate:, mix:, warmup:, seconds:)
         @driver.start(red: red)
         @driver.run(rate: rate, mix: mix, seconds: warmup)
-        before = @driver.cpu_ticks
+        ticks = @driver.cpu_ticks
+        throttling = @driver.throttling
         summary = @driver.run(rate: rate, mix: mix, seconds: seconds)
-        [ summary, Harness.stolen_share(before, @driver.cpu_ticks) ]
+        [ summary, Harness.stolen_share(ticks, @driver.cpu_ticks), self.class.throttled(throttling, @driver.throttling) ]
       end
     end
 
-    # bin/benchmark-load, given the stack's driver. Returns the exit status.
+    # bin/benchmark-load, given what makes the stack's driver for a shape, or
+    # for none, a stack and a Ruby. Returns the exit status.
     def self.main(argv, driver:, out: $stdout, log: $stderr)
       options = parse_options(argv)
+      return compare(options, out) if options[:compare]
+
+      shape = options[:shape] && Shapes.fetch(options[:shape])
+      stack = Stacks.fetch(options.fetch(:stack, Stacks::DEFAULT))
+      driver = driver.call(shape: shape, stack: stack, ruby: options.fetch(:ruby, Stacks::DEFAULT_RUBY))
       report = begin
         driver.up
         environment = driver.environment
         runner = Runner.new(driver, rate: options[:rate], log: log)
         log.puts LoadReport.rate_line(runner.rate, runner.capacity)
         LoadReport.build(environment: environment, rate: runner.rate, capacity: runner.capacity,
-          window: runner.window, windows: runner.windows)
+          window: runner.window, windows: runner.windows, shape: shape)
       ensure
         driver.down
       end
@@ -182,17 +205,42 @@ module RedBenchmark
     end
 
     # --rate is a whole number above 0, because k6 starts whole requests.
+    # --shape is one of Shapes', --stack one of Stacks' and --ruby one of its
+    # Rubies. --compare takes two reports and nothing that measures, as it
+    # starts no stack (REQ-20).
     def self.parse_options(argv)
       options = {}
       parser = OptionParser.new(USAGE)
       parser.on("--rate N", Integer) { |value| options[:rate] = value }
+      parser.on("--shape NAME", Shapes.names) { |value| options[:shape] = value }
+      parser.on("--stack NAME", Stacks.names) { |value| options[:stack] = value }
+      parser.on("--ruby VERSION", Stacks::RUBIES) { |value| options[:ruby] = value }
       parser.on("--json FILE") { |value| options[:json] = value }
       parser.on("--summary FILE") { |value| options[:summary] = value }
+      parser.on("--compare") { options[:compare] = true }
       extra = parser.parse(argv)
+      if options[:compare]
+        raise OptionParser::InvalidArgument, "--compare needs two reports" unless extra.size == 2
+        measuring = (options.keys & [ :rate, :shape, :stack, :ruby, :json ]).map { |name| "--#{name}" }
+        raise OptionParser::InvalidArgument, "--compare with #{measuring.join(", ")}" unless measuring.empty?
+
+        options[:reports] = extra
+        return options
+      end
       raise OptionParser::NeedlessArgument, extra.join(" ") unless extra.empty?
       raise OptionParser::InvalidArgument, "--rate #{options[:rate]}" unless options.fetch(:rate, 1).positive?
 
       options
+    end
+
+    # Two reports side by side, on stdout, and added to a summary file when
+    # asked (REQ-20). It reads both before it prints anything.
+    def self.compare(options, out)
+      first, second = options[:reports].map { |path| Compare.read(path) }
+      markdown = Compare.markdown(first, second, names: options[:reports])
+      out.puts markdown
+      File.open(options[:summary], "a") { |file| file.puts(markdown) } if options[:summary]
+      0
     end
 
     # The report's figures as JSON when asked, and the report as Markdown on
@@ -206,6 +254,6 @@ module RedBenchmark
       out.puts markdown
       File.open(options[:summary], "a") { |file| file.puts(markdown) } if options[:summary]
     end
-    private_class_method :parse_options, :publish
+    private_class_method :parse_options, :compare, :publish
   end
 end

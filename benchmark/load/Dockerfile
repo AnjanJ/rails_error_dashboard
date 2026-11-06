@@ -6,12 +6,23 @@
 # add RED with its installer. From `base` down, this is the Dockerfile Rails 8.1.4
 # generates for that app, except that it copies the app from the first stage
 # instead of a checkout, and brings the RED checkout along. Build it through
-# compose.yml, which passes in the RED checkout under test as the `red` context:
+# compose.yml and a stack's files, which pass in the RED checkout under test as
+# the `red` context:
 #
-#   docker compose -f benchmark/load/compose.yml up --build --wait
+#   docker compose -f benchmark/load/compose.yml -f benchmark/load/stacks/postgres.yml \
+#     -f benchmark/load/stacks/solid-queue.yml up --build --wait
 
 # The Ruby the app runs on: 3.4, the default, or 4.0.
 ARG RUBY_VERSION=3.4
+
+# The stack (benchmark/load/stacks.rb): the database, as `rails new --database`
+# names it, the packages Rails 8.1's generator installs for it, one the app runs
+# with and one its gems build against, and the queue. A stack's files in
+# stacks/ set them; these are the default stack's.
+ARG DATABASE=postgresql
+ARG DATABASE_PACKAGE=postgresql-client
+ARG DATABASE_BUILD_PACKAGE=libpq-dev
+ARG QUEUE=solid_queue
 
 # Throw-away stage that makes the app, as a developer would on their machine
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS generate
@@ -19,11 +30,15 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS generate
 # The Rails that generates the app. The Gemfile it writes asks for "~> 8.1.4",
 # so the app runs the newest 8.1 release, as a new app would.
 ARG RAILS_VERSION=8.1.4
+ARG DATABASE
+ARG DATABASE_BUILD_PACKAGE
+# Read by app/template.rb
+ARG QUEUE
 
 WORKDIR /rails
 
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git $DATABASE_BUILD_PACKAGE libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 RUN gem install rails --version "$RAILS_VERSION" --no-document
@@ -36,17 +51,20 @@ COPY --from=red db /red/db
 COPY --from=red lib /red/lib
 
 COPY app/template.rb /template.rb
-RUN rails new . --name=shop --database=postgresql --template=/template.rb
+# DATABASE stays out of the generator's environment, as on a developer's
+# machine: Solid Cache's installer reads it as its database's name.
+RUN env -u DATABASE rails new . --name=shop --database="$DATABASE" --template=/template.rb
 
 # The same Ruby as the stage that wrote the app's .ruby-version
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+ARG DATABASE_PACKAGE
 
 # Rails app lives here
 WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips $DATABASE_PACKAGE && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -59,10 +77,11 @@ ENV RAILS_ENV="production" \
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
+ARG DATABASE_BUILD_PACKAGE
 
 # Install packages needed to build gems
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git $DATABASE_BUILD_PACKAGE libvips libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # The RED checkout the app's Gemfile points at

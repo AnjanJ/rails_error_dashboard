@@ -2,20 +2,32 @@
 # frozen_string_literal: true
 
 # What RED adds to a real Rails app under load: a new Rails app with RED added
-# by its installer, on PostgreSQL, sent a fixed arrival rate by k6 with RED off
-# and on. Spec: .shipkit/specs/deploy-shape-benchmark/.
+# by its installer, on a stack's database and queue, sent a fixed arrival rate
+# by k6 with RED off and on. Spec: .shipkit/specs/deploy-shape-benchmark/.
 #
 #   bin/benchmark-load            measure the app's capacity with RED off, and use half of it
 #   bin/benchmark-load --rate N   send N requests a second, and skip that search
+#   ... --shape NAME              hold the app to a deploy shape's CPUs and memory,
+#                                 and the rest to the other CPUs: medium, small,
+#                                 medium-throttled or medium-arm (benchmark/load/shapes.rb)
+#   ... --stack NAME              run the app on a stack's database and queue:
+#                                 postgres-solid-queue (the default), postgres-sidekiq,
+#                                 mysql-solid-queue or sqlite-solid-queue (benchmark/load/stacks.rb)
+#   ... --ruby VERSION            build the app on Ruby 3.4 (the default) or 4.0
 #   ... --json FILE               also write the report's figures to FILE, as JSON
 #   ... --summary FILE            also append the report to FILE (CI passes
 #                                 $GITHUB_STEP_SUMMARY)
+#   bin/benchmark-load --compare FIRST.json SECOND.json
+#                                 print what RED added in two reports --json
+#                                 wrote, per mix, and the ratio between them.
+#                                 It starts nothing, so needs no Docker.
 #
 # It prints the report as Markdown: for each mix, p50, p95 and p99 with RED off
-# and on, what RED added in each pair, and every window with the CPU time stolen.
+# and on, what RED added in each pair, and every window with the CPU time stolen
+# and, under a shape's quota, throttled.
 #
 # Needs Docker. It builds benchmark/load's app from this checkout, runs it in
-# compose with its database and k6, and removes them, volumes and all, when
+# compose with its database, any Redis, and k6, and removes them, volumes and all, when
 # it's done. Each rate the search tries takes a restart and 90 s of traffic,
 # and it tries about ten. Then come the windows: five pairs of RED off and on
 # for each of three mixes, each a restart and 3 minutes of traffic, an hour
@@ -24,4 +36,4 @@
 require_relative "../benchmark/load/runner"
 require_relative "../benchmark/load/compose_driver"
 
-exit RedBenchmark::Load.main(ARGV, driver: RedBenchmark::Load::ComposeDriver.new)
+exit RedBenchmark::Load.main(ARGV, driver: ->(**options) { RedBenchmark::Load::ComposeDriver.new(**options) })

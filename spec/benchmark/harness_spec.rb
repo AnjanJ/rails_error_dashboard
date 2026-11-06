@@ -535,6 +535,66 @@ RSpec.describe "bin/benchmark harness" do
     end
   end
 
+  # The CPUs the process may run on, and the cores they sit on, from the same
+  # per-CPU kernel files lscpu reads. On x64 a runner's CPUs 0 and 1 are one
+  # core's two threads, and on arm64 two cores (the design's probe).
+  describe "the CPU topology" do
+    harness = RedBenchmark::Harness
+
+    define_method(:topology) do |allowed, siblings|
+      Dir.mktmpdir("red_cpu_topology") do |sys|
+        siblings.each_with_index do |list, cpu|
+          FileUtils.mkdir_p(File.join(sys, "cpu#{cpu}", "topology"))
+          File.write(File.join(sys, "cpu#{cpu}", "topology", "thread_siblings_list"), "#{list}\n")
+        end
+        harness.cpu_topology("Name:\truby\nCpus_allowed_list:\t#{allowed}\n", sys)
+      end
+    end
+
+    it "counts the cores under the CPUs the process may run on (deploy-shape-benchmark/REQ-16)" do
+      expect(topology("0-1", %w[0-1 0-1 2-3 2-3])).to eq("2 CPUs on 1 core")
+      expect(topology("0-1", %w[0 1 2 3])).to eq("2 CPUs on 2 cores")
+      expect(topology("0", %w[0-1 0-1 2-3 2-3])).to eq("1 CPU on 1 core")
+      expect(topology("0,2-3", %w[0-1 0-1 2-3 2-3])).to eq("3 CPUs on 2 cores")
+    end
+
+    it "says not available where the kernel doesn't say (deploy-shape-benchmark/REQ-16)" do
+      expect(harness.cpu_topology("", "/nonexistent")).to eq("not available")
+      expect(topology("0-3", %w[0-1 0-1])).to eq("not available")
+    end
+
+    it "reports it with the environment (deploy-shape-benchmark/REQ-16)" do
+      expect(@facts).to include("CPU topology")
+    end
+  end
+
+  # The load test pipes this file's source into bin/rails runner inside the
+  # app's container, where nothing beside it exists, to read the environment
+  # block there. A top-level require_relative broke that on a runner.
+  it "loads from its source alone, as the load test pipes it into the app's container (deploy-shape-benchmark/REQ-13)" do
+    source = File.read(File.expand_path("../../benchmark/harness.rb", __dir__))
+    output, status = Dir.mktmpdir("red_piped_harness") do |dir|
+      Open3.capture2e(RbConfig.ruby, "-", stdin_data: "#{source}\nputs RedBenchmark::Harness.cpu_topology\n", chdir: dir)
+    end
+
+    expect(status).to be_success, output
+  end
+
+  describe "the shape the rows run in" do
+    harness = RedBenchmark::Harness
+
+    it "comes from BENCHMARK_SHAPE, or is none (deploy-shape-benchmark/REQ-19)" do
+      expect(harness.shape("BENCHMARK_SHAPE" => "small")).to eq(RedBenchmark::Load::Shapes.fetch("small"))
+      expect(harness.shape({})).to be_nil
+      expect(harness.shape("BENCHMARK_SHAPE" => "")).to be_nil
+    end
+
+    it "refuses a shape it doesn't have, before anything runs (deploy-shape-benchmark/REQ-19)" do
+      expect { harness.shape("BENCHMARK_SHAPE" => "large") }
+        .to raise_error(SystemExit).and output(/No shape large: medium, small/).to_stderr
+    end
+  end
+
   describe "CPU time stolen during a run" do
     harness = RedBenchmark::Harness
 

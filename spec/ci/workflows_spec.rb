@@ -300,6 +300,183 @@ RSpec.describe "GitHub Actions workflows" do
     it "runs on GitHub's hosted runners only (deploy-shape-benchmark/REQ-18)" do
       expect(text).not_to include("self-hosted")
     end
+
+    describe "a shape" do
+      let(:shapes) { RedBenchmark::Load::Shapes }
+      let(:stacks) { RedBenchmark::Load::Stacks }
+      let(:shape_job) { jobs("deploy-benchmark.yml").fetch("shape") }
+
+      before do
+        require_relative "../../benchmark/load/shapes"
+        require_relative "../../benchmark/load/stacks"
+      end
+
+      def runs(command)
+        shape_job.fetch("steps").find { |step| step["run"].to_s.include?(command) }
+      end
+
+      # The expression that is true for these stacks and no other
+      def only_on(names)
+        names.map { |name| "inputs.stack == '#{name}'" }.join(" || ").then { |any| names.size > 1 ? "(#{any})" : any }
+      end
+
+      # The stacks whose network has the service at the port
+      def stacks_with(label, port = nil)
+        stacks::ALL.select { |stack| stack.network[label] && (port.nil? || stack.network[label].last == port) }.map(&:name)
+      end
+
+      # The rows' database container, whichever of the two the stack started
+      let(:database_container) { "${{ job.services.postgres.id || job.services.mysql.id }}" }
+
+      it "is chosen at dispatch from the load test's shapes, or none for the probe and the queue rows (deploy-shape-benchmark/REQ-16)" do
+        input = workflow("deploy-benchmark.yml").dig(true, "workflow_dispatch", "inputs", "shape")
+
+        expect(input).to include("type" => "choice", "default" => "medium", "options" => shapes.names + [ "none" ])
+        expect(jobs("deploy-benchmark.yml").transform_values { |job| job["if"] }).to eq(
+          "probe" => "inputs.shape == 'none'", "rows" => "inputs.shape == 'none'", "shape" => "inputs.shape != 'none'"
+        )
+      end
+
+      it "is dispatched with a stack and a Ruby beside the shape, the default stack on Ruby 3.4 unless chosen (deploy-shape-benchmark/REQ-16)" do
+        inputs = workflow("deploy-benchmark.yml").dig(true, "workflow_dispatch", "inputs")
+
+        expect(inputs.fetch("stack")).to include("type" => "choice", "default" => stacks::DEFAULT, "options" => stacks.names)
+        expect(inputs.fetch("ruby")).to include("type" => "choice", "default" => stacks::DEFAULT_RUBY, "options" => stacks::RUBIES)
+        expect(shape_job.fetch("name")).to eq("Shape ${{ inputs.shape }}, ${{ inputs.stack }}, Ruby ${{ inputs.ruby }}")
+      end
+
+      # A service whose image is empty doesn't start
+      it "starts only the services the stack has: its network database, and Redis for Sidekiq (deploy-shape-benchmark/REQ-16)" do
+        services = shape_job.fetch("services")
+
+        expect(services.transform_values { |service| service["image"] }).to eq(
+          "postgres" => "${{ #{only_on(stacks_with("Database", 5432))} && 'postgres:16' || '' }}",
+          "mysql" => "${{ #{only_on(stacks_with("Database", 3306))} && 'mysql:8.4' || '' }}",
+          "redis" => "${{ #{only_on(stacks_with("Redis"))} && 'redis:7' || '' }}"
+        )
+        # The user, password and database the rows' URLs name (benchmark/load/stacks.rb)
+        expect(services.dig("postgres", "env")).to eq("POSTGRES_USER" => "red", "POSTGRES_PASSWORD" => "red", "POSTGRES_DB" => "red_benchmark")
+        expect(services.dig("mysql", "env")).to eq("MYSQL_ROOT_PASSWORD" => "red", "MYSQL_DATABASE" => "red_benchmark")
+      end
+
+      it "runs on the runner of its architecture (deploy-shape-benchmark/REQ-16)" do
+        arm, x64 = shapes::ALL.partition { |shape| shape.runner == "ubuntu-24.04-arm" }
+
+        expect(x64.map(&:runner).uniq).to eq([ "ubuntu-24.04" ])
+        expect(shape_job.fetch("runs-on"))
+          .to eq("${{ #{arm.map { |shape| "inputs.shape == '#{shape.name}'" }.join(" || ")} && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}")
+      end
+
+      it "runs the rows inside a container held to the shape's limits (deploy-shape-benchmark/REQ-16)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("SHAPE" => "${{ inputs.shape }}")
+        expect(rows.fetch("run")).to include('ruby benchmark/load/shapes.rb "$SHAPE"', 'docker run --rm "${limits[@]}"')
+      end
+
+      it "tells the rows which shape they run in, so their report says so (deploy-shape-benchmark/REQ-19)" do
+        expect(runs("bin/benchmark ").fetch("run")).to include('--env "BENCHMARK_SHAPE=$SHAPE"')
+      end
+
+      it "runs the load test held to the shape, on the stack and Ruby chosen (deploy-shape-benchmark/REQ-16)" do
+        load = runs("bin/benchmark-load")
+
+        expect(load.fetch("env")).to eq("SHAPE" => "${{ inputs.shape }}", "STACK" => "${{ inputs.stack }}", "RUBY" => "${{ inputs.ruby }}")
+        expect(load.fetch("run")).to include('bin/benchmark-load --shape "$SHAPE" --stack "$STACK" --ruby "$RUBY" ')
+      end
+
+      it "runs the rows on the stack's database and queue, and on the Ruby chosen (deploy-shape-benchmark/REQ-16)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("env")).to include("STACK" => "${{ inputs.stack }}", "RUBY" => "${{ inputs.ruby }}",
+          "DATABASE" => database_container, "REDIS" => "${{ job.services.redis.id }}")
+        expect(rows.fetch("run")).to include(
+          'stack_text=$(ruby benchmark/load/stacks.rb --rows "$STACK" "$database_ip" "$redis_ip")',
+          'mapfile -t stack <<<"$stack_text"', '"${stack[@]}"', '"ruby:$RUBY")'
+        )
+        # Only the stack says where the rows' database and queue are
+        expect(rows.fetch("run")).not_to include("BENCHMARK_QUEUE", "BENCHMARK_DATABASE_URL", "REDIS_URL")
+        # An address is looked up only for a container the stack started
+        expect(rows.fetch("run")).to include(%(if [ -n "$DATABASE" ]; then database_ip=$(address "$DATABASE"); fi),
+          %(if [ -n "$REDIS" ]; then redis_ip=$(address "$REDIS"); fi))
+      end
+
+      # bin/benchmark exits 1 when a row misses its budget, as the health
+      # snapshot does on arm64, and that mustn't throw the load test away.
+      it "runs the load test even when a row misses its budget (deploy-shape-benchmark/REQ-16)" do
+        expect(runs("bin/benchmark-load")).to include("if" => "${{ !cancelled() }}")
+        # The rows' table still reaches the summary, and the step still fails
+        expect(runs("bin/benchmark ").fetch("run").lines.last(2).map(&:strip))
+          .to eq([ 'cat tmp/deploy-benchmark/rows.md >> "$GITHUB_STEP_SUMMARY"', 'exit "${rows_status:-0}"' ])
+        expect(runs("bin/benchmark ").fetch("run")).to include("--summary tmp/deploy-benchmark/rows.md || rows_status=$?")
+      end
+
+      it "delays the rows' network database as the shape's network would, before the rows run (deploy-shape-benchmark/REQ-17)" do
+        steps = shape_job.fetch("steps")
+        delay = steps.find { |step| step["run"].to_s.include?('shapes.rb --delay "$SHAPE" "$DATABASE"') }
+
+        expect(delay).to include("if" => only_on(stacks_with("Database")))
+        expect(delay.fetch("env")).to eq("SHAPE" => "${{ inputs.shape }}", "DATABASE" => database_container,
+          "PORT" => "${{ #{only_on(stacks_with("Database", 3306))} && '3306' || '5432' }}")
+        expect(stacks::ALL.flat_map { |stack| stack.network.fetch("Database", []).drop(1) }.uniq).to contain_exactly(5432, 3306)
+        expect(delay.fetch("run")).to include("sudo modprobe sch_netem", database_address,
+          'round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$DATABASE" "$database_ip" "$PORT")')
+        expect(steps.index(delay)).to be < steps.index(runs("bin/benchmark "))
+      end
+
+      it "delays the rows' Redis as well on Sidekiq's stack, before the rows run (deploy-shape-benchmark/REQ-17)" do
+        steps = shape_job.fetch("steps")
+        delay = steps.find { |step| step["run"].to_s.include?('shapes.rb --delay "$SHAPE" "$REDIS"') }
+
+        expect(delay).to include("if" => only_on(stacks_with("Redis")))
+        expect(delay.fetch("env")).to eq("SHAPE" => "${{ inputs.shape }}", "REDIS" => "${{ job.services.redis.id }}")
+        expect(delay.fetch("run")).to include("sudo modprobe sch_netem",
+          %q(redis_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$REDIS")),
+          'round_trip=$(ruby benchmark/load/shapes.rb --delay "$SHAPE" "$REDIS" "$redis_ip" 6379 Redis)')
+        expect(stacks::ALL.filter_map { |stack| stack.network["Redis"] }.uniq).to eq([ [ "redis", 6379 ] ])
+        expect(steps.index(delay)).to be < steps.index(runs("bin/benchmark "))
+      end
+
+      # A published port is answered by Docker's port proxy on the host, so a
+      # connect there times the proxy, not the database across its network.
+      let(:database_address) do
+        %q(database_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DATABASE"))
+      end
+
+      it "has the rows reach their database and Redis at their own addresses, not through Docker's port proxy (deploy-shape-benchmark/REQ-17)" do
+        rows = runs("bin/benchmark ")
+
+        expect(rows.fetch("run")).to include(
+          %q(address() { docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$1"; })
+        )
+        expect(shape_job.fetch("services").values).to all(satisfy { |service| !service.key?("ports") })
+      end
+
+      # A run script has bash -e but not pipefail, and -e doesn't see a failure
+      # inside a pipe or a process substitution, so either would go on without
+      # the delay or the limits.
+      it "stops when shapes.rb or stacks.rb fails, rather than go on without the delay, the limits or the stack (deploy-shape-benchmark/REQ-17)" do
+        scripts = shape_job.fetch("steps").filter_map { |step| step["run"] if step["run"].to_s.match?(/s(hape|tack)s\.rb/) }
+
+        expect(scripts.size).to eq(3)
+        expect(scripts).to all(match(/=\$\(ruby benchmark\/load\/shapes\.rb /))
+        expect(scripts.join.scan(/^.*s(?:hap|tack)s\.rb.*$/)).to all(match(/=\$\(ruby benchmark\/load\/s(hape|tack)s\.rb /))
+        expect(scripts.join).not_to match(/s(hape|tack)s\.rb[^\n]*\||<\(ruby/)
+      end
+
+      it "keeps the rows' database and queue off the app's CPUs (deploy-shape-benchmark/REQ-16)" do
+        expect(shape_job.fetch("services").values.map { |service| service["options"] })
+          .to all(include("--cpuset-cpus #{shapes::REST}"))
+      end
+
+      it "keeps the reports when the run ends, however it ended (deploy-shape-benchmark/REQ-16)" do
+        upload = shape_job.fetch("steps").find { |step| step["uses"].to_s.start_with?("actions/upload-artifact@") }
+
+        expect(upload).to include("if" => "always()")
+        expect(upload.dig("with", "path")).to include("tmp/deploy-benchmark/")
+        expect(upload.dig("with", "name")).to eq("deploy-benchmark-${{ inputs.shape }}-${{ inputs.stack }}-ruby-${{ inputs.ruby }}")
+      end
+    end
   end
 
   describe "release.yml" do

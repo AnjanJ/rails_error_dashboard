@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-05 at commit `515418e`, with T9 to T15 of the deploy shape benchmark built on a branch.
+> Written 2026-11-06 at commit `8d20630`, T21's code on the branch `test/benchmark-stacks`, after T20 merged in #357.
 
 ## In flight
 - **`deploy-shape-benchmark`** is the one open spec. It measures what RED adds on the shape of a deploy
@@ -8,7 +8,7 @@
   It comes before rc1, because a code change for small boxes after rc1 would restart the quiet period.
   - T1 merged in #346, and T2-T8 in #347 (`37ceb3f`): the rows run on PostgreSQL with Solid Queue or
     Sidekiq, and report the CPU, its limits and the time stolen.
-  - T9 to T15 are committed on `test/benchmark-load-app`, and go up as one pull request. T9 is the load test's app in
+  - T9 to T15 merged in #350 (`b4f4f8e`), the load test. T9 is the load test's app in
     `benchmark/load/`, a new Rails 8.1 app with RED added by its installer: it booted in compose, and a
     failing request reached RED's table through Solid Queue. T10 runs the same image without RED when
     `RED=off`: the same request then left RED's table empty. T11 is `benchmark/load/traffic.js`, k6 at a
@@ -33,20 +33,95 @@
     the 7 ms over 20 is the sleep itself: 500 timed `sleep 0.02` calls took 23.9 ms at p50 (p95 25.1) in
     the app's image, and 24.9 ms on the Mac outside Docker. That leaves about 3 ms unexplained, which the
     maintainer has to accept or ask to have chased down.
-- **PR #349, `fix/keep-module-name`,** is open with every check green, and waits for the maintainer's
-  merge. Merging it makes release-please propose 0.18.1, and releasing that needs the maintainer's yes.
-- No release PR is open.
+  - T16 to T18 merged in #352 (`dbe513a`).
+  - T19 merged in #356 (`4146259`): `bin/benchmark-load --compare FIRST.json SECOND.json` prints, for each mix and latency,
+    what RED added in two reports `--json` wrote, and the second's over the first's. Its header names each
+    report's shape, CPU, topology, limits, round trip, commit and rate. A mix only one ran reads "not run";
+    the ratio reads n/a unless RED added time in both; a report from before T18 reads its shape as "not
+    recorded". It starts no stack. On the real `medium` (run 42058012637) and `medium-throttled` (run
+    41994828606) reports, RED added +0.71 and +5.84 ms at p99 to the failing mix, 8.26x. The 5.1.0 review on
+    Sonnet found REQ-20 met and no decision contradicted; its FAIL is REQ-21, the research file, which is T20.
+    T16 (`5765635`, and `6b56cb6` so a row over budget doesn't skip the load test): `benchmark/load/shapes.rb` has
+    four shapes: `medium` (CPUs 0 and 1, 4 GB), `small` (CPU 0, 1 GB), `medium-throttled` (CPUs 0 and 1 at
+    0.4 of a CPU, 4 GB) and `medium-arm` (`medium` on the arm64 runner). Swap is off, and the database, k6
+    and the rows' PostgreSQL get CPUs 2 and 3. `bin/benchmark-load --shape NAME` passes the limits to every
+    compose command; with no shape nothing is limited. Each window also gives how often the app's quota
+    held it back, from its container's `cpu.stat`. The workflow takes a `shape` input: a shape runs the
+    rows in a container held to it, then the load test, and uploads both reports; `none` runs the probe
+    and the queue rows. On Docker Desktop the app saw 1 CPU and 1.00 GB under `small`, and 2 CPUs, a 0.40
+    CPU quota and throttling under `medium-throttled`. Ticked on its dispatches (runs 41994820359,
+    41994824736, 41994828606, 41996203643), every window valid:
+
+    | Shape | CPU | Limits the app saw | Rate | Throttled | RED added, healthy p50 |
+    |---|---|---|---|---|---|
+    | `medium` | EPYC 9V45 | 2 CPUs, 4.00 GB | 380/s | 0 | +0.02 ms |
+    | `small` | EPYC 7763 | 1 CPU, 1.00 GB | 240/s | 0 | -0.01 ms |
+    | `medium-throttled` | EPYC 7763 | 2 CPUs, 0.40 CPU, 4.00 GB | 55/s | 60-98 times a window | +0.11 ms |
+    | `medium-arm` | Neoverse-N2 | 2 CPUs, 4.00 GB | 190/s | 0 | +0.05 ms |
+
+    Under `medium-throttled`, RED added +5.84 ms at p99 to the 1% failing mix, every pair positive.
+  - T17 (`3f5c3ac`, and `cb270a8`, which looks the name up once). Every shape delays its database's replies by 1 ms with
+    tc netem, from a pinned Alpine container sharing the database's network. The driver measures the
+    app's round trip to the database from inside its container (median of 20 TCP connects, before and
+    after), and the environment block gains "Database round trip". A run that can't add its delay stops.
+    The workflow delays the rows' PostgreSQL too, and the rows reach it at its own address: a published
+    port is answered by Docker's port proxy on the host, so a connect there timed the proxy, and a delay
+    didn't show. On Docker Desktop, 1 ms added 1.08 to 1.29 ms, as its VM overshoots; the 20% T17 asks
+    for is judged on a runner. `Socket.tcp` with a timeout returned a socket for a refused connect on
+    macOS, so the round trip uses `TCPSocket`. By name, each connect also timed Docker's DNS: the first
+    dispatches read 7.56 and 4.17 ms with nothing added, until the name was looked up once. Ticked on
+    runs 42028790110 and 42028794330: the load test read 1.03 and 1.04 ms added, the rows 1.00 and 1.07.
+  - **Capture misses 5 ms with the database 1 ms away.** Capture with the installer's async default read
+    7.12 to 7.23 ms on x64 and 8.78 to 8.90 ms on arm64 (sync 12 to 15 ms). Counted locally, async sends 7
+    statements on the request's thread, all of them Solid Queue's enqueue, none of RED's own. The rc1
+    intake carries it; the maintainer is weighing deferring the enqueue until after the response.
+  - A window counts as not finished when even one request is short: storm pair 3 on the T17 `medium`
+    re-run was invalid for 40,799 of 40,800. Kept (maintainer, 2026-11-05).
+  - T18 (`c4a5945`, and `1c6efc4`, which loads the shapes only when the rows ask for one). A shape's
+    reports open with "Shape: medium, the size of a 2 vCPU, 4 GB plan, held to its limits on a GitHub
+    runner. These figures measure that shape, not any plan's machine.", and the environment block gains
+    "CPU topology", from `lscpu`. The first dispatch (run 42055160402) failed in its first minutes:
+    `harness.rb` had a top-level `require_relative`, and the load test pipes that file's source alone into
+    `bin/rails runner -` in the app's container, where the path doesn't exist. `1c6efc4` moves it into
+    `Harness.shape`, which only `bin/benchmark` calls, and every `LOAD_APP_BOOT=1` example passed after it (66). Ticked on run
+    42058012637 (`medium`, EPYC 7763): both reports carry the shape line and "2 CPUs on 1 core", and the
+    load test read "1.10 ms, 1.03 ms of it added (1 ms set)". The run ends "failure" only because the rows
+    step does: async capture read 8.00 ms against 5 ms, the finding above.
+  - The tasks plan T16-T18 as one pull request.
+  - T21 (`8d20630`, on `test/benchmark-stacks`, its PR not yet merged): the workflow takes a stack and a Ruby
+    beside the shape. `benchmark/load/stacks.rb` names four stacks, `postgres-solid-queue` (the default),
+    `postgres-sidekiq`, `mysql-solid-queue` and `sqlite-solid-queue`, each a database's and a queue's compose file
+    from `benchmark/load/stacks/` laid over `compose.yml`, on Ruby 3.4 (the default) or 4.0. The rows follow the
+    stack. Redis gets the 1 ms delay too, with its own round-trip line. Sidekiq runs beside Puma in the app's
+    container, and its init stops it with Puma in about a second. The Dockerfile runs
+    `env -u DATABASE rails new`, because Solid Cache's installer reads `DATABASE` as its database's name, and every
+    app exited on boot until it did. Ticked on five `medium` dispatches (runs 42166023618, 42166026955,
+    42166030030, 42166033190, 42166036449), every window valid. Async capture failed 5 ms only where Solid Queue
+    sits in a database server 1 ms away: 7.76 ms on PostgreSQL, 7.96 on Ruby 4.0, 8.85 on MySQL, against 1.47 with
+    Sidekiq and 885 µs on SQLite. The research file has every figure.
 
 ## Done
 - 0.18.0 shipped 2026-10-31, about three weeks ahead of its target. RubyGems, the GitHub Release, both
   tags and the demo all carry it. Its eight specs moved to `.shipkit/specs/_shipped/`, each marked
   "shipped in 0.18.0 (#N)".
 - Issue #326 is closed. #341 fixed it on 33 migrations, not the 26 in its title.
+- #349 merged 2026-11-05 (`05fa121`): `AiAgentClassifier.name(user_agent)` no longer replaces `Class#name`;
+  the lookup is `agent_name`. Also merged that day: #348 (setup-ruby 1.336.0), and the demo's #74 (five
+  flagged gems) and #75 (Rails 8.1.4.1, for GHSA-wm3x-v3qw-4jh3).
+- 0.18.1 shipped 2026-11-05 (#351, `657ea2a`), with #349's fix. RubyGems and the GitHub Release carry
+  it. `keep-module-name` moved to `.shipkit/specs/_shipped/`, marked "shipped in 0.18.1 (#349)".
+- The same day GitHub's `ubuntu-latest` became ubuntu-26.04, where setup-ruby builds only the latest
+  patch of each Ruby series, so 3.4.5 stopped setting up. #353 moved `lint` and `audit` to 3.4.12, and
+  #354 the release's `test` and `publish` jobs, which read `.ruby-version`; that file stays 3.4.5 for
+  local work. The demo moved `.ruby-version` and its Dockerfile to 3.4.12 in its #76, and its errors
+  recorded Ruby 3.4.12 after the deploy.
 
 ## Next step
-1. Get the load test's pull request (T9-T15) through CI and the maintainer's merge. Then T16-T18, the
-   shapes, and T19-T20, the compare tool and the research file, all before rc1.
-2. Plan and spec 1.0.0.rc1:
+1. T21's pull request from `test/benchmark-stacks`, which merges only on the maintainer's yes. That ends
+   `deploy-shape-benchmark`. `.shipkit/research/deploy-shape-benchmark.md` holds every figure from the 18
+   dispatches with its run, shape, CPU, commit and date, and what a shape can't show.
+2. Build 1.0.0.rc1. Its spec was accepted on 2026-11-06 on the local branch `spec/release-1-0-rc1`, not yet
+   on main, with decision `0009`. It covers:
    - raise the floors to Rails 7.2 and Ruby 3.3, and CI from 20 rows to 9 (decision `0003`);
    - a tested 0.x to 1.0 upgrade;
    - how the version gets set: release-please has no `bump-minor-pre-major`, and `Release-As:` survives
@@ -66,16 +141,12 @@
 - **Does the benchmark gate change?** `Overhead benchmark` failed on main on `5ec8a3c`: health snapshot
   1.15 ms on a Xeon 8573C, against 1 ms. It isn't a regression, because that commit changed only the
   version and docs. The job wasn't re-run and the gate is unchanged. The Xeon has failed both times it
-  was drawn. The shape benchmark runs on the same runners, so it won't settle this.
+  was drawn. The shape benchmark runs on the same runners, so it won't settle this. On #349's branch, a
+  Xeon 8370C read 1.30 ms on 2026-11-05, as one read 1.29 ms on #347's: PR runs, so the count stays 1.
 - **The health snapshot misses 1 ms on arm64.** On #347's dispatch (run 41216679726, `a5e5c47`), all three
   arm64 rows read 1.23 to 1.27 ms on a Neoverse-N2, against the 1 ms budget, while every x64 row passed
   (0.51 to 0.69 ms). The gated job runs only on x64, so CI can't see it. The `medium-arm` shape will meet it.
   Is the budget per architecture?
-- **`AiAgentClassifier.name(user_agent)` replaces `Class#name` for that class.** A host app's code that calls
-  `name` on every class, as `ObjectSpace.each_object(Class).map(&:name)` does, raises ArgumentError once RED
-  is loaded. Found 2026-11-04, and fixed in PR #349: spec `keep-module-name`, the lookup renamed to
-  `agent_name`, and a check over every RED class. Its review passed, and so did its 29 checks. It's a
-  `fix:`, so merging it makes release-please propose 0.18.1.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -93,7 +164,9 @@
 - **Manual clauses someone has to watch.** `decision-check.sh` can't measure these, and they've left its
   list too. Each is in its `design.md`. Most other 0.18 clauses wait on an issue being reported.
   - `_shipped/overhead-benchmark`, the gate: change it if the job fails on main three times by 2026-11-30
-    with no capture-path change. **The count is 1** (`5ec8a3c`).
+    with no capture-path change. **The count is 2**: `5ec8a3c`, and `657ea2a` (0.18.1's release, 2026-11-05),
+    whose health snapshot read 1.10 ms on a Xeon 8573C. The change is already chosen: 1.5 ms on every CPU,
+    in the rc1 spec.
   - `_shipped/overhead-benchmark`, the storm budget: raise it or pin the runner if a storm row fails on
     main on any CPU but the EPYC 7763 with no capture-path change.
   - `_shipped/overhead-benchmark`, the figures: go back to one figure per row if the job moves to a pinned

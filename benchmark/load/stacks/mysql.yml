@@ -1,0 +1,43 @@
+# MySQL 8.4 (benchmark/load/stacks.rb), laid over ../compose.yml. The app is
+# generated for it, with the packages the generator's Dockerfile installs for
+# it, and reaches it across the network (REQ-17).
+services:
+  app:
+    build:
+      args:
+        DATABASE: mysql
+        DATABASE_PACKAGE: default-mysql-client
+        DATABASE_BUILD_PACKAGE: default-libmysqlclient-dev
+    environment:
+      # The generated production database settings name the user and read this
+      # password, and the host from DB_HOST.
+      DB_HOST: db
+      SHOP_DATABASE_PASSWORD: benchmark
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    cpuset: "${REST_CPUSET:-}"
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: benchmark
+    configs:
+      - source: shop-databases
+        target: /docker-entrypoint-initdb.d/shop.sql
+    # Over TCP, so it fails until the server that serves the app is up, and not
+    # the one the image starts on a socket alone to set itself up
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "--host", "127.0.0.1", "--user", "shop", "--password=benchmark" ]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+# The generated production settings name four databases, which the app makes
+# when it first boots. PostgreSQL's user may make them; MySQL's needs leave to.
+configs:
+  shop-databases:
+    content: |
+      GRANT ALL ON `shop\_production%`.* TO 'shop'@'%';

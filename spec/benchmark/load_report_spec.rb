@@ -23,10 +23,10 @@ RSpec.describe RedBenchmark::Load::LoadReport do
 
   # The runner judges each window as it does a probe, at the report's 20 a
   # second for 120 s.
-  def window(mix, pair, red, steal: "0.00%", **counts)
+  def window(mix, pair, red, steal: "0.00%", throttled: "0 times, 0.00 s", **counts)
     summary = summary(**counts)
     RedBenchmark::Load::Runner::Window.new(mix: mix, pair: pair, red: red, summary: summary, steal: steal,
-      shortfall: RedBenchmark::Load::Runner.shortfall(summary, 20, 120))
+      throttled: throttled, shortfall: RedBenchmark::Load::Runner.shortfall(summary, 20, 120))
   end
 
   # Five healthy pairs in the order they ran, ABBA. RED's side was faster in
@@ -35,7 +35,7 @@ RSpec.describe RedBenchmark::Load::LoadReport do
     [
       window("healthy", 1, false, p50: 7.0, p95: 18.0, p99: 30.0, steal: "0.00%"),
       window("healthy", 1, true, p50: 8.0, p95: 19.0, p99: 33.0, steal: "0.25%"),
-      window("healthy", 2, true, p50: 9.5, p95: 21.0, p99: 35.0),
+      window("healthy", 2, true, p50: 9.5, p95: 21.0, p99: 35.0, throttled: "37 times, 0.52 s"),
       window("healthy", 2, false, p50: 7.5, p95: 19.0, p99: 31.0),
       window("healthy", 3, false, p50: 8.0, p95: 20.0, p99: 34.0),
       window("healthy", 3, true, p50: 7.5, p95: 19.5, p99: 33.0),
@@ -89,11 +89,29 @@ RSpec.describe RedBenchmark::Load::LoadReport do
     expect(markdown).to include("| healthy | 1 | on | 8.00 ms | 19.00 ms | 33.00 ms | 2401 | 0 | 0 | 0 | 0.25% |")
   end
 
+  it "gives how often the app's CPU quota held it back in each window (deploy-shape-benchmark/REQ-16)" do
+    expect(report["windows"].map { |row| row["cpu_throttled"] }.tally)
+      .to eq("0 times, 0.00 s" => 11, "37 times, 0.52 s" => 1)
+    expect(markdown).to include("| Unexpected | CPU stolen | CPU throttled | Valid |",
+      "| healthy | 2 | on | 9.50 ms | 21.00 ms | 35.00 ms | 2401 | 0 | 0 | 0 | 0.00% | 37 times, 0.52 s | yes |")
+  end
+
   it "puts the environment and the rate above the figures (deploy-shape-benchmark/REQ-13)" do
     expect(markdown).to include("\n| | |\n|---|---|\n| Ruby | 3.4.7 |\n", "| RED commit | abc1234 |",
       "Rate: 20 requests a second, half the 40 the app held with RED off.")
     expect(markdown.index("| RED commit |")).to be < markdown.index("| Mix |")
     expect(described_class.markdown(build(healthy, capacity: nil))).to include("Rate: 20 requests a second, as given.")
+  end
+
+  it "says a shape's report measures the shape, not the machine, and keeps the shape in the JSON (deploy-shape-benchmark/REQ-19)" do
+    shaped = described_class.build(environment: environment, rate: 20, capacity: 40, window: { warmup: 60, seconds: 120 },
+      windows: healthy, shape: RedBenchmark::Load::Shapes.fetch("medium"))
+    line = RedBenchmark::Report.shape_line("medium", "a 2 vCPU, 4 GB plan")
+
+    expect(shaped["shape"]).to eq("name" => "medium", "size_of" => "a 2 vCPU, 4 GB plan")
+    expect(described_class.markdown(JSON.parse(JSON.generate(shaped)))).to start_with("## What RED adds under load\n\n#{line}\n\n| | |\n")
+    expect(report["shape"]).to be_nil
+    expect(markdown).not_to include("Shape:")
   end
 
   it "renders the Markdown from the figures the JSON keeps (deploy-shape-benchmark/REQ-13)" do
@@ -135,7 +153,7 @@ RSpec.describe RedBenchmark::Load::LoadReport do
       expect(markdown).to include(
         "Left out of every figure, for not holding the rate: healthy pair 2 RED on (40 dropped), " \
         "failing pair 1 RED off (3 with an unexpected status).",
-        "| healthy | 2 | on | 500.00 ms | 900.00 ms | 990.00 ms | 2361 | 0 | 40 | 0 | 0.00% | no |"
+        "| healthy | 2 | on | 500.00 ms | 900.00 ms | 990.00 ms | 2361 | 0 | 40 | 0 | 0.00% | 0 times, 0.00 s | no |"
       )
       expect(described_class.markdown(build(healthy))).to include("Every window held its rate.")
     end

@@ -14,6 +14,12 @@ append_to_file "Gemfile", <<~RUBY
   gem "rails_error_dashboard", path: "/red", require: ENV["RED"] != "off"
 RUBY
 
+# The stack's queue (benchmark/load/stacks.rb): the generator's Solid Queue, or
+# Sidekiq in its place, as an app that picks it adds it. The Dockerfile passes
+# the QUEUE build arg.
+sidekiq = ENV["QUEUE"] == "sidekiq"
+gem "sidekiq" if sidekiq
+
 after_bundle do
   # The app's own data: a healthy request reads an order and renders it.
   generate "model", "Order", "number:string:uniq", "total_cents:integer"
@@ -52,6 +58,8 @@ after_bundle do
 
   route 'get "orders/:number/charge" => "orders#charge"'
   route 'get "orders/:number" => "orders#show"'
+
+  gsub_file! "config/environments/production.rb", "queue_adapter = :solid_queue", "queue_adapter = :sidekiq" if sidekiq
 
   generate "rails_error_dashboard:install", "--no-interactive"
 
