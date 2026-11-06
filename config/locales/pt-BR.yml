@@ -1368,8 +1368,6 @@ pt-BR:
         logged: Erro de teste registrado com sucesso. Verifique seus canais de notificação
           (Slack, Discord, e-mail etc.) para confirmar a entrega.
         failed: 'Não foi possível registrar o erro de teste: %{message}'
-      swallowed_requires_ruby: A detecção de exceções engolidas requer Ruby 3.3+ (você
-        tem %{version}). Atualize o Ruby para usar este recurso.
       ai_help:
         not_configured: A ajuda com IA não está configurada
         blank_question: A pergunta não pode ficar em branco

@@ -91,19 +91,7 @@ RSpec.describe RailsErrorDashboard::Services::CoverageTracker do
     end
   end
 
-  describe ".supported?" do
-    it "returns true on Ruby 3.2+" do
-      expect(described_class.supported?).to be true
-    end
-  end
-
   describe "edge cases" do
-    it "returns false from enable! when not supported" do
-      allow(described_class).to receive(:supported?).and_return(false)
-      expect(described_class.enable!).to be false
-      expect(described_class.active?).to be false
-    end
-
     it "returns empty hash when peeking with empty string file path" do
       described_class.enable!
       expect(described_class.peek("")).to eq({})

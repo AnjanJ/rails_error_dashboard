@@ -4,7 +4,7 @@ source "https://rubygems.org"
 gemspec
 
 # Allow testing against different Rails versions via RAILS_VERSION env var
-# Use pessimistic version to get latest patch versions (e.g. ~> 7.0.0 gets latest 7.0.x)
+# Use pessimistic version to get latest patch versions (e.g. ~> 8.0.0 gets latest 8.0.x)
 rails_version = ENV["RAILS_VERSION"] || "~> 8.1.0"
 rails_version = "~> #{rails_version}.0" if rails_version =~ /^\d+\.\d+$/
 # The first release in each series that works with json 3 (see below).
@@ -12,10 +12,10 @@ json3_floor = { "7.2" => "7.2.4", "8.1" => "8.1.4" }[rails_version[/\A~> (\d+\.\
 gem "rails", rails_version, *([ ">= #{json3_floor}" ] if json3_floor)
 
 # json 3.0 (2026-09-07) raises ArgumentError on options that older Rails
-# versions still pass: `quirks_mode` on 7.0-8.0 and on 7.2 before 7.2.4, and a
+# versions still pass: `quirks_mode` on 8.0 and on 7.2 before 7.2.4, and a
 # positional options hash in ActiveSupport::JSON.decode on 8.1 before 8.1.4
 # (breaks every session/flash read). Rails 8.1.4 and 7.2.4 carry the fix
-# (rails/rails#58601, #58685); 8.0, 7.1 and 7.0 never will. The 7.2 and 8.1
+# (rails/rails#58601, #58685); 8.0 never will. The 7.2 and 8.1
 # rows test json 3 on those releases. The floor above matters: 7.2.4 caps
 # minitest < 6 and connection_pool < 3, so without it Bundler prefers 7.2.3
 # (no caps, newer minitest and json) and json 3 breaks it. Every other
@@ -48,12 +48,6 @@ group :development, :test do
   # Security audit for dependencies
   gem "bundler-audit", require: false
 
-  # spec/gemspec_description_spec.rb renders the gemspec description the way
-  # rubygems.org does, with RDoc::Markup. rdoc stopped being a default gem in
-  # Ruby 4.0, and only the Rails 7.1+ bundles pull it in transitively, so the
-  # Ruby 4.0 / Rails 7.0 CI row failed to load the spec without this line.
-  gem "rdoc", require: false
-
   # Optional gem dependencies — needed in development/test for full feature coverage
   gem "browser", "~> 6.0"
   gem "chartkick", "~> 5.0"
@@ -70,11 +64,7 @@ group :development, :test do
   # spec runs its real config parser in a child process and checks that
   # SolidQueueConfigCheck agrees with it. CI resolves the newest release on every
   # run, so a Solid Queue change that breaks the check shows up here first.
-  # Solid Queue needs Rails 7.1+.
-  rails_env = ENV["RAILS_VERSION"] || "8.1"
-  unless rails_env.start_with?("7.0") || rails_env.start_with?("~> 7.0")
-    gem "solid_queue", require: false
-  end
+  gem "solid_queue", require: false
   # Not loaded into the test process either. bin/benchmark enqueues through it
   # when BENCHMARK_QUEUE=sidekiq, to measure a real queue.
   gem "sidekiq", require: false

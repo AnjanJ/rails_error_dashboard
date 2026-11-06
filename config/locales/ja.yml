@@ -1187,8 +1187,6 @@ ja:
       test_error:
         logged: テストエラーを記録しました。通知チャネル (Slack、Discord、メールなど) で受信をご確認ください。
         failed: 'テストエラーの記録に失敗しました: %{message}'
-      swallowed_requires_ruby: 握りつぶされた例外の検出には Ruby 3.3 以上が必要です (現在%{version})。この機能を使うには
-        Ruby をアップグレードしてください。
       ai_help:
         not_configured: AI サポートが設定されていません
         blank_question: 質問を入力してください

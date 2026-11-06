@@ -1330,9 +1330,6 @@ de:
         logged: Testfehler erfolgreich protokolliert. Prüfen Sie Ihre Benachrichtigungskanäle
           (Slack, Discord, E-Mail usw.), um die Zustellung zu bestätigen.
         failed: 'Testfehler konnte nicht protokolliert werden: %{message}'
-      swallowed_requires_ruby: Die Erkennung verschluckter Exceptions erfordert Ruby
-        3.3+ (Sie haben %{version}). Aktualisieren Sie Ruby, um diese Funktion zu
-        nutzen.
       ai_help:
         not_configured: KI-Hilfe ist nicht konfiguriert
         blank_question: Die Frage darf nicht leer sein

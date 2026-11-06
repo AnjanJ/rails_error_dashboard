@@ -15,22 +15,15 @@ module RailsErrorDashboard
     # - oneshot_lines mode has near-zero ongoing overhead
     # - peek_result is read-only, does not mutate state
     # - Every method rescue-wrapped (never raises)
-    # - Ruby 3.2+ required for Coverage.setup with oneshot_lines
     class CoverageTracker
       @active = false
       @we_started = false
       @mutex = Mutex.new
 
       class << self
-        # Check if the current Ruby version supports Coverage with oneshot_lines
-        def supported?
-          RUBY_VERSION >= "3.2"
-        end
-
         # Start coverage collection in oneshot_lines mode
         # @return [Boolean] true if successfully enabled
         def enable!
-          return false unless supported?
           return true if @active
 
           @mutex.synchronize do

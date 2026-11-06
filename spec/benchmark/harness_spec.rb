@@ -305,8 +305,6 @@ RSpec.describe "bin/benchmark harness" do
     end
 
     it "enqueues through Solid Queue, into its real tables (deploy-shape-benchmark/REQ-3)" do
-      skip "Solid Queue needs Rails 7.1+" if Gem::Specification.find_all_by_name("solid_queue").empty?
-
       env = { "BENCHMARK_QUEUE" => "solid_queue", "BENCHMARK_DATABASE_URL" => "sqlite3:#{@path}" }
       output, errors, = run_script("--list", env: env)
       _run_output, run_errors, run_status = run_script("--smoke", env: env)

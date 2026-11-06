@@ -1802,7 +1802,6 @@ en:
 
       # %{version} is the running Ruby version. "Ruby 3.3+" is a literal
       # requirement, not prose.
-      swallowed_requires_ruby: "Swallowed exception detection requires Ruby 3.3+ (you have %{version}). Upgrade Ruby to use this feature."
 
       # JSON error bodies for the AI help endpoint. The message is rendered in
       # the help panel, so it is translated; the HTTP status carrying it is the

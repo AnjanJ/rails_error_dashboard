@@ -19,36 +19,20 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
   end
 
   describe ".enable!" do
-    context "on Ruby 3.3+" do
-      before do
-        skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
-      end
-
-      it "enables both TracePoints" do
-        result = described_class.enable!
-        expect(result).to be true
-        expect(described_class.enabled?).to be true
-      end
-
-      it "returns true if already enabled" do
-        described_class.enable!
-        expect(described_class.enable!).to be true
-      end
+    it "enables both TracePoints" do
+      result = described_class.enable!
+      expect(result).to be true
+      expect(described_class.enabled?).to be true
     end
 
-    context "on Ruby < 3.3" do
-      it "returns false and logs a warning" do
-        skip "Test only meaningful on Ruby < 3.3" if RUBY_VERSION >= "3.3"
-        result = described_class.enable!
-        expect(result).to be false
-        expect(described_class.enabled?).to be false
-      end
+    it "returns true if already enabled" do
+      described_class.enable!
+      expect(described_class.enable!).to be true
     end
   end
 
   describe ".disable!" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -60,7 +44,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "raise/rescue tracking", :aggregate_failures do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -106,7 +89,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "flow-control filtering" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -151,7 +133,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "LRU eviction" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       RailsErrorDashboard.configuration.swallowed_exception_max_cache_size = 3
       described_class.enable!
     end
@@ -174,7 +155,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe ".flush!" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -239,7 +219,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "raise without rescue" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -258,7 +237,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "multiple raises same key" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -280,7 +258,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "adversarial ivar injection" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -303,7 +280,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "maybe_flush! timing" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       RailsErrorDashboard.configuration.swallowed_exception_flush_interval = 3600
       described_class.enable!
     end
@@ -322,7 +298,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "dispatch_flush with empty snapshots" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 
@@ -339,7 +314,6 @@ RSpec.describe RailsErrorDashboard::Services::SwallowedExceptionTracker do
 
   describe "safety" do
     before do
-      skip "Requires Ruby 3.3+" unless RUBY_VERSION >= "3.3"
       described_class.enable!
     end
 

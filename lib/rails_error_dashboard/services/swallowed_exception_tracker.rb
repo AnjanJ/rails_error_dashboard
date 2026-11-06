@@ -57,15 +57,8 @@ module RailsErrorDashboard
       ].freeze
 
       class << self
-        # Enable both TracePoints. No-op on Ruby < 3.3 or if already enabled.
+        # Enable both TracePoints. No-op if already enabled.
         def enable!
-          unless RUBY_VERSION >= "3.3"
-            RailsErrorDashboard::Logger.debug(
-              "[RailsErrorDashboard] SwallowedExceptionTracker requires Ruby 3.3+ (current: #{RUBY_VERSION}). Skipping."
-            )
-            return false
-          end
-
           return true if enabled?
 
           @raise_tracepoint = TracePoint.new(:raise) do |tp|

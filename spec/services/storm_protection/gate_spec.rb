@@ -68,7 +68,10 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate do
       expect(gate.count_buffer.any?).to be(true)
 
       handed_off = nil
-      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later) { |**kwargs| handed_off = kwargs }
+      allow(RailsErrorDashboard::StormFlushJob).to receive(:perform_later) do |**kwargs|
+        handed_off = kwargs
+        double("job", successfully_enqueued?: true)
+      end
       gate.instance_variable_set(:@last_flush, 0)
       gate.send(:maybe_flush!)
 

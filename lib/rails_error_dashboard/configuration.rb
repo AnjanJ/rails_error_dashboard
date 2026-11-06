@@ -7,7 +7,6 @@ module RailsErrorDashboard
     # ERROR_DASHBOARD_PASSWORD explicitly supplies the password.
     DEFAULT_DASHBOARD_USERNAME = "gandalf"
     DEFAULT_DASHBOARD_PASSWORD = "youshallnotpass"
-    VERSIONING_URL = "https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md"
 
     # Settings that hold credentials. #inspect masks them, so printing the
     # configuration in a console (IRB shows results with pp, which uses
@@ -240,7 +239,7 @@ module RailsErrorDashboard
     # On-demand diagnostic dump (rake task + dashboard endpoint)
     attr_accessor :enable_diagnostic_dump               # Master switch (default: false)
 
-    # Code path coverage (diagnostic mode — Ruby 3.2+)
+    # Code path coverage (diagnostic mode)
     attr_accessor :enable_coverage_tracking             # Master switch (default: false)
 
     # Rack Attack event tracking — persists throttle/blocklist/track events to
@@ -505,7 +504,7 @@ module RailsErrorDashboard
       # Diagnostic dump defaults - OFF by default (opt-in)
       @enable_diagnostic_dump = false   # On-demand system state snapshot
 
-      # Code path coverage defaults - OFF by default (opt-in, Ruby 3.2+)
+      # Code path coverage defaults - OFF by default (opt-in)
       @enable_coverage_tracking = false
 
       # Rack Attack event tracking defaults - OFF by default (opt-in).
@@ -750,24 +749,6 @@ module RailsErrorDashboard
       end
 
       # Validate swallowed exception detection settings
-      # Auto-disable on Ruby < 3.3 (warn, don't crash)
-      if detect_swallowed_exceptions && RUBY_VERSION < "3.3"
-        warnings << "detect_swallowed_exceptions requires Ruby 3.3+ (current: #{RUBY_VERSION}). " \
-                    "TracePoint(:rescue) was added in Ruby 3.3 (Feature #19572). " \
-                    "Feature has been auto-disabled. Upgrade Ruby to use this feature."
-        @detect_swallowed_exceptions = false
-      end
-
-      # Rails 7.0.0-7.0.8.7 render request exceptions without reporting them, so
-      # RED never sees them. Rails 7.0.10 backported 7.1's reporting.
-      if defined?(ActionPack) && ActionPack.gem_version < Gem::Version.new("7.0.10")
-        warnings << "Rails #{ActionPack.gem_version} does not report the request exceptions it renders as error pages, " \
-                    "so unhandled request errors are not recorded. Upgrading to Rails 7.0.10 or later fixes this."
-      end
-
-      report_versions_1_0_drops
-
-      # Validate sub-settings only if feature is still active after version check
       if detect_swallowed_exceptions
         if swallowed_exception_max_cache_size && swallowed_exception_max_cache_size < 1
           errors << "swallowed_exception_max_cache_size must be at least 1 (got: #{swallowed_exception_max_cache_size})"
@@ -1143,16 +1124,6 @@ module RailsErrorDashboard
     # environment variable that is set but empty, or the initializer.
     #
     # @return [Array<String>]
-    # Decision 0003. Compared as versions: as strings, 3.10 sorts before 3.3.
-    private def report_versions_1_0_drops
-      if defined?(ActionPack) && ActionPack.gem_version < Gem::Version.new("7.2")
-        Deprecation.warn(:rails_floor, "Rails #{ActionPack.gem_version}: RED 1.0 requires Rails 7.2 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
-      end
-      return unless Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")
-
-      Deprecation.warn(:ruby_floor, "Ruby #{RUBY_VERSION}: RED 1.0 requires Ruby 3.3 or later. This version of RED keeps working. See #{VERSIONING_URL} for how long 0.x is supported.")
-    end
-
     private def blank_credential_warnings
       {
         "ERROR_DASHBOARD_USER" => [ :dashboard_username, dashboard_username ],

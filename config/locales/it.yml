@@ -1367,8 +1367,6 @@ it:
         logged: Errore di prova registrato correttamente. Controlla i tuoi canali
           di notifica (Slack, Discord, e-mail, ecc.) per confermare la consegna.
         failed: 'Impossibile registrare l''errore di prova: %{message}'
-      swallowed_requires_ruby: Il rilevamento delle eccezioni soppresse richiede Ruby
-        3.3+ (hai %{version}). Aggiorna Ruby per usare questa funzione.
       ai_help:
         not_configured: L'aiuto AI non è configurato
         blank_question: La domanda non può essere vuota

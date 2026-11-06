@@ -1181,7 +1181,6 @@ zh-CN:
       test_error:
         logged: 测试错误已记录。请检查你的通知渠道（Slack、Discord、邮件等）以确认送达。
         failed: 记录测试错误失败：%{message}
-      swallowed_requires_ruby: 被吞异常检测需要 Ruby 3.3 及以上版本（当前为 %{version}）。请升级 Ruby 以使用此功能。
       ai_help:
         not_configured: AI 助手尚未配置
         blank_question: 问题不能为空

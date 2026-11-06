@@ -23,7 +23,7 @@ RSpec.describe "A request for an unknown URL" do
     config.cache_classes = !reloading
     config.eager_load = !reloading
     config.consider_all_requests_local = reloading
-    config.action_dispatch.show_exceptions = Rails.gem_version >= Gem::Version.new("7.1") ? :all : true
+    config.action_dispatch.show_exceptions = :all
     config.logger = ActiveSupport::Logger.new(File::NULL)
 
     Rails.application.initialize!

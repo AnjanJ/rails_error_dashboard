@@ -1398,8 +1398,6 @@ pl:
         logged: Błąd testowy został zapisany. Sprawdź swoje kanały powiadomień (Slack,
           Discord, e-mail itp.), aby potwierdzić dostarczenie.
         failed: 'Nie udało się zapisać błędu testowego: %{message}'
-      swallowed_requires_ruby: Wykrywanie wyciszonych wyjątków wymaga Ruby 3.3+ (masz
-        %{version}). Zaktualizuj Ruby, aby korzystać z tej funkcji.
       ai_help:
         not_configured: Pomoc AI nie jest skonfigurowana
         blank_question: Pytanie nie może być puste

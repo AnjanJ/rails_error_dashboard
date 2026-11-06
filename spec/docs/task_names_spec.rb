@@ -80,8 +80,7 @@ RSpec.describe "Names in the code and docs" do
     end
   end
 
-  it "has the page the Rails and Ruby warnings send people to (deprecations-0-18/REQ-16, deprecations-0-18/REQ-17)" do
-    expect(RailsErrorDashboard::Configuration::VERSIONING_URL).to end_with("docs/VERSIONING.md")
+  it "has the versioning page, with the floors and how long 0.x is supported" do
     expect(root.join("docs/VERSIONING.md").read).to include("Rails 7.2", "Ruby 3.3", "2027-06-30")
   end
 

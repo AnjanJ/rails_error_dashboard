@@ -1377,8 +1377,6 @@ fr:
         logged: Erreur de test enregistrée avec succès. Vérifiez vos canaux de notification
           (Slack, Discord, e-mail, etc.) pour confirmer la réception.
         failed: 'Échec de l''enregistrement de l''erreur de test : %{message}'
-      swallowed_requires_ruby: La détection des exceptions avalées nécessite Ruby
-        3.3+ (vous avez %{version}). Mettez Ruby à jour pour utiliser cette fonctionnalité.
       ai_help:
         not_configured: L'aide IA n'est pas configurée
         blank_question: La question ne peut pas être vide
