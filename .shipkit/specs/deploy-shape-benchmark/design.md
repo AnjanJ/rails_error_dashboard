@@ -263,7 +263,14 @@ database only. Neither touches a host app.
 | `medium-arm` | 2 | none | 4 GB | a 2 vCPU, 4 GB ARM plan, on the free arm64 runner |
 
 **Stacks.** `postgres-solid-queue` (the default), `postgres-sidekiq`, `mysql-solid-queue`, `sqlite-solid-queue`.
-SQLite has no network delay. Ruby is `3.4` (the default) or `4.0`.
+Ruby is `3.4` (the default) or `4.0`, on every stack. `benchmark/load/stacks.rb` names each one. Its name is a database
+and a queue, and each part is a compose file in `benchmark/load/stacks/`, laid over `compose.yml`'s app and k6. The app
+is generated with `rails new --database` for the stack's database, with the packages Rails 8.1's generator installs for
+it: PostgreSQL 16, or MySQL 8.4 through mysql2. Sidekiq runs with its defaults beside Puma in the app's container, so in
+the shape's limits, and the container's init stops it with Puma. Redis 7, like a database server, runs on CPUs 2 and 3
+and gets the same 1 ms delay, with its own round-trip line in the report. SQLite is files in a volume in the app's
+container, so it has no delay. The rows follow the stack: MySQL rows, Redis and Sidekiq rows, or SQLite rows on
+`bin/benchmark`'s own scratch file.
 
 **Traffic mixes** (REQ-12). All are at the same rate. Healthy reads an order from the database and renders it. A failing
 request raises 60 frames down, as `bin/benchmark` does. 1% failing is one such request in a hundred, and the storm is

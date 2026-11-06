@@ -40,8 +40,9 @@
 - **A real network.** The delay is a fixed 1 ms on Docker's bridge, with no jitter, loss or congestion.
 - **A real app.** The load test's app has one healthy action and one that raises. A real app's requests do more
   work, which changes what share of its time RED takes.
-- **Other stacks and Rubies.** Every run here is PostgreSQL, Ruby 3.4.12, Rails 8.1.4.1 and YJIT. MySQL, SQLite,
-  Sidekiq in the load test and Ruby 4.0 aren't measured yet.
+- **Other stacks and Rubies.** Each was measured once, on `medium` only, as "Stacks and Ruby 4.0" below lists: one
+  run each of Sidekiq, MySQL 8.4 and SQLite on Ruby 3.4.12, and of PostgreSQL with Solid Queue on Ruby 4.0.9. No
+  other shape ran on them, and one run on one CPU each can't separate a stack from its CPU.
 
 ## The runner probe
 
@@ -137,6 +138,40 @@ What RED added under load, p50 / p95 / p99, in ms:
 On 42028790110 one window didn't finish: storm pair 3, RED on, 40,799 of 40,800 requests. It's left out, so that
 storm row has four pairs. It is the only invalid window of the 270.
 
+## Stacks and Ruby 4.0
+
+2026-11-06, commit `8d20630`, shape `medium`, each stack's database 1 ms away, and Redis too on Sidekiq's. The
+app and the rows both ran on the stack and Ruby named. Every window of the 150 held its rate.
+
+| Run | Stack | Ruby | CPU | Round trip, load test | Round trip, rows | Rate (capacity) |
+|---|---|---|---|---|---|---|
+| 42166023618 | `postgres-solid-queue` | 3.4.12 | Xeon Platinum 8573C | 1.04 ms, 1.01 added | 1.04 ms, 1.02 added | 260/s (520) |
+| 42166026955 | `postgres-sidekiq` | 3.4.12 | EPYC 9V74 | database 1.12 ms, 1.08 added; Redis 1.10 ms, 1.05 added | database 1.11 ms, 1.07 added; Redis 1.09 ms, 1.04 added | 260/s (520) |
+| 42166030030 | `mysql-solid-queue` | 3.4.12 | EPYC 7763 | 1.10 ms, 1.02 added | 1.10 ms, 1.04 added | 200/s (400) |
+| 42166033190 | `sqlite-solid-queue` | 3.4.12 | EPYC 9V74 | none: a file in the app's container | none | 300/s (600) |
+| 42166036449 | `postgres-solid-queue` | 4.0.9 | EPYC 7763 | 1.09 ms, 1.02 added | 1.09 ms, 1.01 added | 280/s (560) |
+
+The rows, median (p95). The rows reach MySQL through trilogy, as the test suite does, and the app through mysql2,
+as `rails new --database=mysql` makes it:
+
+| Run | Capture, async | Capture, sync | Health snapshot | Storm check, calm | Reopen collision fallback |
+|---|---|---|---|---|---|
+| 42166023618 PostgreSQL, Solid Queue | 7.76 ms (9.40), fails 5 ms | 13.47 ms (15.26) | 1.11 ms (1.23), fails 1 ms | 7.13 µs (15.87) | 15.50 ms (16.39) |
+| 42166026955 PostgreSQL, Sidekiq | 1.47 ms (2.11) | 15.15 ms (18.92) | 653 µs (729) | 6.05 µs (13.01) | 17.00 ms (19.77) |
+| 42166030030 MySQL, Solid Queue | 8.85 ms (10.54), fails 5 ms | 14.51 ms (17.73) | 781 µs (873) | 8.60 µs (20.36) | not applicable: its index is PostgreSQL's |
+| 42166033190 SQLite, Solid Queue | 885 µs (1.64 ms) | 2.00 ms (2.90) | 640 µs (706) | 6.16 µs (14.63) | 1.91 ms (2.49) |
+| 42166036449 PostgreSQL, Solid Queue, Ruby 4.0 | 7.96 ms (9.11), fails 5 ms | 14.36 ms (17.81) | 765 µs (831) | 7.01 µs (11.07) | 16.36 ms (17.68) |
+
+What RED added under load, p50 / p95 / p99, in ms:
+
+| Run | `healthy` | `failing` | `storm` |
+|---|---|---|---|
+| 42166023618 PostgreSQL, Solid Queue | -0.00 / -0.28 / -0.09 | +0.04 / -0.09 / +0.83 | +0.11 / +0.26 / -1.26 |
+| 42166026955 PostgreSQL, Sidekiq | -0.04 / -0.13 / -0.25 | -0.01 / +0.10 / +0.74 | -0.04 / -0.81 / -2.18 |
+| 42166030030 MySQL, Solid Queue | +0.14 / -0.11 / +0.09 | -0.08 / -0.34 / +0.82 | +0.15 / +0.21 / +0.04 |
+| 42166033190 SQLite, Solid Queue | +0.00 / -0.10 / +0.04 | -0.02 / -0.13 / +0.82 | +0.11 / +0.26 / -1.25 |
+| 42166036449 PostgreSQL, Solid Queue, Ruby 4.0 | -0.01 / -0.33 / -0.24 | +0.02 / +0.27 / +1.35 | +0.12 / +0.17 / +0.60 |
+
 ## Runs with no load report
 
 - 41994832334, `medium-arm`, Neoverse-N2, `677dfd0`, 2026-11-05: the health snapshot row failed (1.24 ms), and the
@@ -174,3 +209,9 @@ storm row has four pairs. It is the only invalid window of the 270.
 7. **The shapes held.** Each showed the app its limits from inside its container, `medium-throttled` was throttled
    in all 30 windows, the delay read 1.03 and 1.04 ms added against 1 ms set, and 269 of 270 windows held their
    rate.
+8. **Capture's miss is Solid Queue's enqueue across the network, on every stack that has one.** Async capture failed
+   5 ms on PostgreSQL (7.76 ms, and 7.96 on Ruby 4.0) and on MySQL (8.85 ms), with Solid Queue in the database
+   server 1 ms away. It passed with Sidekiq (1.47 ms), whose enqueue is one call to Redis, and on SQLite (885 µs),
+   where nothing crosses a network. Under load the stacks read alike: `healthy` within -0.04 to +0.14 ms at p50,
+   and `failing` p99 +0.74 to +1.35 ms. Ruby 4.0's run read like Ruby 3.4's, on a different CPU. The health
+   snapshot's one miss, 1.11 ms, was on the Xeon Platinum 8573C, where CI's overhead benchmark has missed it too.
