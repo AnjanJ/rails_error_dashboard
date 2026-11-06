@@ -11,6 +11,12 @@
 - The floors pull request also needs main's ruleset changed: it requires the 20 matrix rows by name, and the
   11 for Ruby 3.2, Rails 7.0 and Rails 7.1 will never report again. That change needs the maintainer's yes.
 - Benchmark dispatches for rc1's tasks, such as T9's shape re-runs, need the maintainer's yes.
+- The floors branch, `feat/rc1-floors`, has T1-T3. T3 reached past the files its task lists, because REQ-3
+  covers all of lib/ and app/: the subscriber's Rails 7.0 de-duplication (`error_reporter.rb`), four jobs
+  that used the Rails 7.0 retry delay, a stale comment in `missing_translation_tracker.rb`, and the
+  `swallowed_requires_ruby` key in all 11 locales (T14 also edits those files). Left for later tasks:
+  phase F's Ruby 3.3 and Rails 7.1 branches (T5 edits that file), and the docs that still name Ruby 3.2
+  or Rails 7.0 (T12, T13).
 
 ## Done
 - **`deploy-shape-benchmark` is finished.** T21 merged in #358 (`27720d6c`) on 2026-11-06, the last of its
