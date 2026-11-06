@@ -6,7 +6,7 @@ T16-T17 in the demo's repository. T6-T9 wait for `deploy-shape-benchmark` to fin
 its rows. Code tasks write their test first, and cite `release-1-0-rc1/REQ-N`.
 Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
 
-- [ ] **T1** The gemspec requires Rails 7.2 and Ruby 3.3 → REQ-1
+- [x] **T1** The gemspec requires Rails 7.2 and Ruby 3.3 → REQ-1
   - Files: rails_error_dashboard.gemspec, Gemfile, spec/lib/rails_error_dashboard/floors_spec.rb
   - Test: spec/lib/rails_error_dashboard/floors_spec.rb reads the gemspec's `required_ruby_version` and its `rails` dependency
   - After: none
