@@ -74,10 +74,60 @@ links to its full notes in the [CHANGELOG](../CHANGELOG.md).
 | [0.14.4](../CHANGELOG.md#0144-2026-10-02) | No action, but three settings now do what their docs said, which can change behavior. `rate_limit_per_minute` is applied (default 300, the limit already in force, so only a value you set changes anything). `baseline_alert_severities` filters by the error's own severity, so baseline alerts start at the threshold (2 standard deviations by default) instead of 3. `ignored_exceptions` matches class objects as well as names. `error_dashboard:verify` now fails when a separate error database has no `config/database.yml` entry. |
 | [0.15.0](../CHANGELOG.md#0150-2026-10-15) | Run the installer and `db:migrate`, as in [The upgrade](#the-upgrade): one new migration, for missing-translation tracking. Behaviour to check: Send Test Error now reaches every channel, PagerDuty included; resolving in bulk closes linked issues; with source code integration on, only Ruby files and view templates under `app/` get View Source. |
 | [0.16.0](../CHANGELOG.md#0160-2026-10-15) | Run the installer and `db:migrate`, as in [The upgrade](#the-upgrade): two new migrations, for occurrence context history and the capture source. Behaviour to check: with source code integration on, errors reported through `ManualErrorReporter` no longer get View Source; Platform Comparison shows an app with errors on only one platform as "Not rated"; an invalid `git_branch_strategy` is now a warning at boot. |
-| [0.16.1](../CHANGELOG.md#0161-2026-10-20) | No action. Platform health scores change: an evenly split app can now be Healthy, a platform with nothing resolved in the period is scored on volume alone and says so, and a platform with no errors in the period gets no card. On Rails 7.0.0 to 7.0.8.7, RED now logs a warning at boot: upgrade to Rails 7.0.10 or later to record request errors, as in [Troubleshooting](TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70). |
+| [0.16.1](../CHANGELOG.md#0161-2026-10-20) | No action. Platform health scores change: an evenly split app can now be Healthy, a platform with nothing resolved in the period is scored on volume alone and says so, and a platform with no errors in the period gets no card. On Rails 7.0.0 to 7.0.8.7, RED now logs a warning at boot: upgrade to Rails 7.0.10 or later to record request errors. (RED 1.0 needs Rails 7.2.) |
 | [0.16.2](../CHANGELOG.md#0162-2026-10-22) | No action. |
 | [0.17.0](../CHANGELOG.md#0170-2026-10-29) | No migrations. Live updates stay off until you set `enable_live_updates = true`; a custom index view that subscribed to the old streams must render `red_live_updates_tags` instead, as in [Real-time updates](guides/REAL_TIME_UPDATES.md#upgrading-to-0170). API-only apps: RED no longer adds app-wide sessions or cookies, and the dashboard's cookie is `_rails_error_dashboard_session`. With `async_logging` and `custom_fingerprint` both on, custom-fingerprinted groups restart once. Messages over 10,000 characters and params over about 64 KB are cut, with a marker. |
 | [0.18.0](../CHANGELOG.md#0180-2026-10-31) | No migrations. If you use `webhook_urls`, three event names change and every post gains fields: see [Webhook changes in 0.18.0](#webhook-changes-in-0180). Several things are deprecated, none of which stops your app booting: see [Deprecations in 0.18.0](#deprecations-in-0180). |
+| 1.0.0 | Needs Rails 7.2 and Ruby 3.3. See [0.x to 1.0](#0x-to-10). |
+
+## 0.x to 1.0
+
+1.0 is a stability release: from it on, what [docs/PUBLIC_API.md](PUBLIC_API.md) lists changes only as
+the [versioning policy](VERSIONING.md) allows. Most of what changes in 1.0 is what it stops supporting.
+
+### What you need first
+
+- **Rails 7.2 or newer, and Ruby 3.3 or newer.** RED 1.0 is tested on Rails 7.2, 8.0 and 8.1, each with
+  Ruby 3.3, 3.4 and 4.0. On Rails 7.0 or 7.1, or Ruby 3.2, Bundler won't install 1.0, and your app stays
+  on 0.18.x, which keeps working and logs one warning at boot about it.
+- **RED 0.18.x.** Upgrade to the latest 0.18 first, deploy it, and fix every warning starting
+  `[Rails Error Dashboard] DEPRECATION:` in your logs, as in [Deprecations in 0.18.0](#deprecations-in-0180).
+  The deprecated settings and the old rake task names still work in 1.0, and go in 2.0.
+
+### What 1.0 removes
+
+- **Support for Rails 7.0 and 7.1 and Ruby 3.2**, with every warning and workaround RED kept for them.
+  That includes the boot warning for Rails 7.0.0 to 7.0.8.7, which can't run 1.0.
+- **The `errors/_stats` partial and its five `red.errors.stats.*` locale keys.** No page has rendered it
+  since 0.17.0. A custom view that renders `rails_error_dashboard/errors/stats` raises
+  `ActionView::MissingTemplate` on 1.0; copy the partial from 0.18.x into your app to keep it.
+
+Nothing in [docs/PUBLIC_API.md](PUBLIC_API.md) is removed.
+
+### What behaves differently
+
+- **Async capture enqueues its job after the response is sent**, under a server that runs
+  `rack.response_finished` callbacks, such as Puma. The request no longer waits for the queue: with
+  Solid Queue on a database 1 ms away, capture added under 0.4 ms to a failing request instead of about
+  8 ms. The work still runs on the same server thread, just after the response. If the process dies in
+  between, that one error isn't recorded. Without the hook, outside a request, or with
+  `config.enable_middleware = false`, the job is enqueued at once, as before. Sync capture is unchanged.
+- **RED's own jobs retry on Rails' `:polynomially_longer` schedule.** The delays are the same as before;
+  the random spread now follows your app's `retry_jitter` setting.
+
+### The steps
+
+1. On RED 0.18.x, move the app to Rails 7.2+ and Ruby 3.3+, and deploy.
+2. Clear the 0.18 deprecation warnings, as above.
+3. Point the Gemfile at 1.0 and run [the upgrade](#the-upgrade). 1.0 adds no migrations, so the installer
+   copies none, but run it anyway: it's what every upgrade runs. To try a release candidate, name its
+   version exactly as RubyGems lists it, because Bundler takes a prerelease only when the Gemfile names one.
+4. Run `bin/rails rails_error_dashboard:verify`, then deploy.
+
+Before 1.0.0.rc1 and again before 1.0.0, a fresh app is upgraded from the latest patch of every 0.x
+minor on SQLite, PostgreSQL and MySQL. 0.4.2, 0.5.15, 0.6.4 and 0.7.2, and 0.1.38 on MySQL, can't be installed fresh
+(each fails its own migrations), so those starting points are untested. An app already running one of
+them reached it through earlier releases; if your upgrade from one fails, please open an issue.
 
 ## Webhook changes in 0.18.0
 
