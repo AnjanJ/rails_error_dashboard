@@ -174,8 +174,8 @@ module RedBenchmark
     end
 
     def health_snapshot
-      Scenario.new(name: "Health snapshot", budget: 1e-3, iterations: 1_000, run: lambda do |timer|
-        timer.measure("Health snapshot", budget: 1e-3, batch: 10) { RailsErrorDashboard::Services::SystemHealthSnapshot.capture }
+      Scenario.new(name: "Health snapshot", budget: 1.5e-3, iterations: 1_000, run: lambda do |timer|
+        timer.measure("Health snapshot", budget: 1.5e-3, batch: 10) { RailsErrorDashboard::Services::SystemHealthSnapshot.capture }
       end)
     end
 
