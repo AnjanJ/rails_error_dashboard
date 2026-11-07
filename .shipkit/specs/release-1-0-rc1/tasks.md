@@ -51,7 +51,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: none, prose and dispatches verified by reading
   - After: T8
   - Done when: a dispatch of each shape on main shows "Capture, async" under 5 ms with "1 ms set", its run recorded in the research file; the five files state the same budgets
-- [ ] **T10** The upgrade test takes a from-version and a database → REQ-13
+- [x] **T10** The upgrade test takes a from-version and a database → REQ-13
   - Files: bin/pre-release-test, test/pre_release/chaos/phase_j0_seed_old_data.rb, test/pre_release/chaos/phase_j_upgrade_verification.rb
   - Test: `bin/pre-release-test full_upgrade` with `UPGRADE_FROM_VERSION=0.1.38` on SQLite, and with the oldest and newest minors on PostgreSQL and MySQL, locally
   - After: none
