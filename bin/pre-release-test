@@ -24,7 +24,15 @@ set -uo pipefail
 #   bin/pre-release-test full_multi_app    # Two apps sharing one DB
 #   bin/pre-release-test full_solid_queue  # Async via SolidQueue adapter
 #   bin/pre-release-test full_upgrade      # latest published → working copy upgrade
+#   UPGRADE_FROM_VERSION=0.1.38 UPGRADE_DATABASE=postgresql \
+#     UPGRADE_DATABASE_URL=postgres://user:pass@host/db bin/pre-release-test full_upgrade
+#                                          # from a chosen release, on a database
+#                                          # server (see test_full_upgrade)
 #   bin/pre-release-test                   # Same as 'all'
+#
+# Exits 0 when every app passes, 1 when anything fails, and 3 when nothing
+# failed but an upgrade had no release to start from: the from-version's own
+# migrations fail on that database, so it can't be installed fresh.
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -1150,17 +1158,74 @@ RUBY
     "$CHAOS_DIR/phase_c_queries.rb"
 }
 
+use_database_server() {
+  local app_dir=$1
+
+  # configure_for_production wrote SQLite; production moves to the server.
+  # The URL's scheme picks the adapter, and stays out of this file.
+  cat > "$app_dir/config/database.yml" << 'YAML'
+production:
+  url: <%= ENV.fetch("UPGRADE_DATABASE_URL") %>
+  pool: 5
+YAML
+
+  log_step "Creating a fresh database on the server..."
+  # The app boots RED with no initializer yet, and production refuses RED's
+  # built-in dashboard credentials, so it gets the test's, as the generator does.
+  if ! (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 \
+        DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rails db:drop db:create > /tmp/red_chaos_db_create.log 2>&1); then
+    tail -20 /tmp/red_chaos_db_create.log
+    log_error "Could not create the database at UPGRADE_DATABASE_URL"
+    return 1
+  fi
+}
+
+# The upgrade test's settings, for the dispatch-only upgrade matrix
+# (release-1-0-rc1/REQ-13). With none, it upgrades from the latest release on
+# SQLite, which is what the PR job's "Upgrade Path" runs.
+#
+#   UPGRADE_FROM_VERSION   a published version to start from, e.g. 0.1.38
+#   UPGRADE_DATABASE       sqlite (the default), postgresql or mysql
+#   UPGRADE_DATABASE_URL   the server, for postgresql or mysql: postgres://... or
+#                          mysql2://... Its database is dropped and created.
 test_full_upgrade() {
-  # Resolve the from-version at runtime rather than pinning it. See
+  # With no version given, resolve it at runtime rather than pinning it. See
   # latest_published_version() for why.
-  local from_version
-  from_version="$(latest_published_version)"
+  local from_version="${UPGRADE_FROM_VERSION:-}"
+  if [ -z "$from_version" ]; then
+    from_version="$(latest_published_version)"
+  fi
 
   if [ -z "$from_version" ]; then
     log_error "Could not resolve the latest published version from RubyGems."
     log_error "The upgrade test needs network access to rubygems.org. Skipping is NOT"
     log_error "safe here — a green run would mean the upgrade path went unverified."
-    FAILED=$((FAILED + 1))
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return 1
+  fi
+
+  if ! [[ "$from_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    log_error "UPGRADE_FROM_VERSION must be a published release like 0.1.38, not '${from_version}'."
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return 1
+  fi
+
+  local database="${UPGRADE_DATABASE:-sqlite}"
+  local rails_database
+  case "$database" in
+    sqlite)     rails_database=sqlite3 ;;
+    postgresql) rails_database=postgresql ;;
+    mysql)      rails_database=mysql ;;
+    *)
+      log_error "UPGRADE_DATABASE must be sqlite, postgresql or mysql, not '${database}'."
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      return 1
+      ;;
+  esac
+
+  if [ "$database" != "sqlite" ] && [ -z "${UPGRADE_DATABASE_URL:-}" ]; then
+    log_error "UPGRADE_DATABASE=${database} needs UPGRADE_DATABASE_URL, the server to upgrade on."
+    echo "0:1:ERR" >> "$RESULTS_FILE"
     return 1
   fi
 
@@ -1168,11 +1233,15 @@ test_full_upgrade() {
   # literal version (the chaos phases run via `rails runner`, inheriting env).
   export UPGRADE_FROM_VERSION="$from_version"
 
-  log_header "APP 9/9: full_upgrade — Upgrade Path v${from_version} → working copy (production)"
+  log_header "APP 9/9: full_upgrade — Upgrade Path v${from_version} → working copy on ${database} (production)"
 
-  create_app "full_upgrade_app"
+  create_app "full_upgrade_app" --database="$rails_database"
 
   local app_dir="$TEST_DIR/full_upgrade_app"
+
+  if [ "$database" != "sqlite" ]; then
+    use_database_server "$app_dir" || { echo "0:1:ERR" >> "$RESULTS_FILE"; return 1; }
+  fi
 
   # --- Phase 1: Install the currently published version from RubyGems ---
   log_step "Installing published v${from_version} from RubyGems..."
@@ -1192,9 +1261,22 @@ test_full_upgrade() {
   log_step "Applying v${from_version} initializer..."
   cp "$TEMPLATES_DIR/upgrade_pre_initializer.rb" "$app_dir/config/initializers/rails_error_dashboard.rb"
 
-  # Run migrations
+  # Run migrations. A failure stops the test here: on a database without
+  # transactional DDL the tables can exist while the migration that made them
+  # is unrecorded, and the phases would then run against a broken schema.
   log_step "Running v${from_version} migrations..."
-  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -3)
+  if ! (cd "$app_dir" && bin/rails db:migrate > /tmp/red_chaos_upgrade_migrate.log 2>&1); then
+    # The error, not the log's end: Rails prints it before the trace
+    grep -E -m 8 "aborted|Error:|ERROR:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
+    # Not an upgrade failure: the release itself can't be installed fresh on
+    # this database (0.1.x-0.6.2 on MySQL, issue #84; 0.6.4 anywhere, a
+    # duplicate column), so there is no old app to upgrade. Users on it got
+    # there release by release. Reported as its own outcome, exit 3, so the
+    # upgrade matrix can show it without counting it as a failure.
+    echo -e "  ${YELLOW}!${NC} v${from_version} doesn't install on ${database}: its own migrations failed, so there is nothing to upgrade"
+    echo "0:0:NOT_INSTALLABLE" >> "$RESULTS_FILE"
+    return 0
+  fi
 
   log_success "v${from_version} installed"
 
@@ -1218,7 +1300,13 @@ test_full_upgrade() {
 
   # Run new migrations
   log_step "Running working-copy migrations..."
-  (cd "$app_dir" && bin/rails db:migrate 2>&1 | tail -5)
+  if ! (cd "$app_dir" && bin/rails db:migrate > /tmp/red_chaos_upgrade_migrate.log 2>&1); then
+    # The error, not the log's end: Rails prints it before the trace
+    grep -E -m 8 "aborted|Error:|ERROR:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
+    log_error "The upgrade's migrations FAILED on ${database}, from v${from_version}"
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return 1
+  fi
 
   # Apply the full initializer, now that the new version is in place
   log_step "Applying working-copy initializer..."
@@ -1318,6 +1406,7 @@ TOTAL_PASS=0
 TOTAL_FAIL=0
 APPS_TESTED=0
 APPS_PASSED=0
+APPS_NOT_INSTALLABLE=0
 
 while IFS=: read -r pass fail status; do
   TOTAL_PASS=$((TOTAL_PASS + pass))
@@ -1325,6 +1414,8 @@ while IFS=: read -r pass fail status; do
   APPS_TESTED=$((APPS_TESTED + 1))
   if [ "$status" = "OK" ]; then
     APPS_PASSED=$((APPS_PASSED + 1))
+  elif [ "$status" = "NOT_INSTALLABLE" ]; then
+    APPS_NOT_INSTALLABLE=$((APPS_NOT_INSTALLABLE + 1))
   fi
 done < "$RESULTS_FILE"
 
@@ -1341,7 +1432,14 @@ echo ""
 echo -e "  Duration: ${BOLD}${ELAPSED}s${NC}"
 echo ""
 
-if [ "$TOTAL_FAIL" -eq 0 ] && [ "$APPS_TESTED" -eq "$APPS_PASSED" ]; then
+if [ "$TOTAL_FAIL" -eq 0 ] && [ "$APPS_NOT_INSTALLABLE" -gt 0 ] && \
+   [ "$APPS_TESTED" -eq $((APPS_PASSED + APPS_NOT_INSTALLABLE)) ]; then
+  # Nothing failed, but an upgrade had no release to start from.
+  echo -e "  ${YELLOW}${BOLD}NO UPGRADE TO TEST${NC}: v${UPGRADE_FROM_VERSION:-?} doesn't install on ${UPGRADE_DATABASE:-sqlite}"
+  echo ""
+  rm -rf "$TEST_DIR"
+  exit 3
+elif [ "$TOTAL_FAIL" -eq 0 ] && [ "$APPS_TESTED" -eq "$APPS_PASSED" ]; then
   echo -e "  ${GREEN}${BOLD}ALL TESTS PASSED${NC} ✓"
   echo ""
 
