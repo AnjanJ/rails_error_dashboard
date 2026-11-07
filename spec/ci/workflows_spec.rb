@@ -86,7 +86,7 @@ RSpec.describe "GitHub Actions workflows" do
 
   # The workflows this spec holds to least privilege.
   def hardened_workflows
-    %w[ci.yml test.yml smoke-test-demo.yml release.yml deploy-benchmark.yml]
+    %w[ci.yml test.yml smoke-test-demo.yml release.yml deploy-benchmark.yml upgrade-matrix.yml]
   end
 
   describe "every hardened workflow" do
@@ -632,6 +632,126 @@ RSpec.describe "GitHub Actions workflows" do
 
         expect(status).not_to be_success
         expect(output).to include("does not match")
+      end
+    end
+  end
+
+  # Upgrades a fresh app from the latest patch of every 0.x minor to the
+  # branch, on all three databases, when the maintainer dispatches it.
+  describe "upgrade-matrix.yml" do
+    let(:name) { "upgrade-matrix.yml" }
+    let(:text) { File.read(File.join(repo_root, ".github/workflows", name)) }
+    let(:upgrade_job) { jobs(name).fetch("upgrade") }
+
+    def step_named(job_id, step_name)
+      jobs(name).fetch(job_id).fetch("steps").find { |step| step["name"] == step_name } or
+        raise "no step #{step_name.inspect} in #{job_id}"
+    end
+
+    # Runs a step's script in an empty directory, the way a runner would, with
+    # the given programs stubbed ahead of the real ones on PATH.
+    def run_step(script, stubs:, env: {})
+      Dir.mktmpdir("red_upgrade_matrix") do |dir|
+        stubs.each do |path, body|
+          FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+          File.write(File.join(dir, path), "#!/bin/sh\n#{body}\n")
+          File.chmod(0o755, File.join(dir, path))
+        end
+        output = File.join(dir, "github_output")
+        summary = File.join(dir, "step_summary")
+        env = git_env.merge("PATH" => "#{File.join(dir, 'stub')}:#{ENV.fetch('PATH')}",
+          "GITHUB_OUTPUT" => output, "GITHUB_STEP_SUMMARY" => summary).merge(env)
+        log, status = Open3.capture2e(env, "bash", "-eo", "pipefail", "-c", script, chdir: dir)
+        read = ->(file) { File.exist?(file) ? File.read(file) : "" }
+        { status: status, log: log, output: read.call(output), summary: read.call(summary) }
+      end
+    end
+
+    it "runs only when dispatched by hand (release-1-0-rc1/REQ-14)" do
+      expect(workflow(name).fetch(true).keys).to eq([ "workflow_dispatch" ])
+    end
+
+    it "gives every job read access to the repository and nothing else (release-1-0-rc1/REQ-14)" do
+      permissions = jobs(name).keys.map { |job_id| effective_permissions(name, job_id) }
+
+      expect(permissions).to all(eq({ "contents" => "read" }))
+    end
+
+    it "uses no secrets, and not even the job's own token (release-1-0-rc1/REQ-14)" do
+      expect(text).not_to match(/secrets\.|github\.token|GITHUB_TOKEN/)
+    end
+
+    it "is held to least privilege with the other workflows (release-1-0-rc1/REQ-14)" do
+      expect(hardened_workflows).to include(name)
+    end
+
+    it "upgrades every picked release on SQLite, PostgreSQL and MySQL, each row on its own (release-1-0-rc1/REQ-13)" do
+      strategy = upgrade_job.fetch("strategy")
+
+      expect(strategy.fetch("fail-fast")).to be(false)
+      expect(strategy.fetch("matrix").fetch("database")).to eq(%w[sqlite postgresql mysql])
+      expect(strategy.fetch("matrix").fetch("from_version")).to eq("${{ fromJSON(needs.versions.outputs.versions) }}")
+      expect(upgrade_job.fetch("needs")).to eq("versions")
+    end
+
+    it "starts only the row's own database server (release-1-0-rc1/REQ-13)" do
+      services = upgrade_job.fetch("services")
+
+      expect(services.fetch("postgres").fetch("image")).to eq("${{ matrix.database == 'postgresql' && 'postgres:16' || '' }}")
+      expect(services.fetch("mysql").fetch("image")).to eq("${{ matrix.database == 'mysql' && 'mysql:8.4' || '' }}")
+      expect(upgrade_job.fetch("env").fetch("UPGRADE_DATABASE")).to eq("${{ matrix.database }}")
+      expect(upgrade_job.fetch("env").fetch("UPGRADE_FROM_VERSION")).to eq("${{ matrix.from_version }}")
+    end
+
+    it "picks the latest stable patch of every 0.x minor from RubyGems (release-1-0-rc1/REQ-13)" do
+      listing = %w[0.1.1 0.1.38 0.1.9 0.2.4 0.10.0 0.18.0 0.18.1].map { |v| { "number" => v, "prerelease" => false } } +
+        [ { "number" => "1.0.0.rc1", "prerelease" => true }, { "number" => "0.19.0.pre", "prerelease" => true },
+          { "number" => "1.2.0", "prerelease" => false } ]
+      Dir.mktmpdir do |fixtures|
+        File.write(File.join(fixtures, "versions.json"), JSON.generate(listing))
+        result = run_step(step_named("versions", "Pick the latest patch of every 0.x minor").fetch("run"),
+          stubs: { "stub/curl" => "cat #{File.join(fixtures, 'versions.json')}" })
+
+        expect(result[:status]).to be_success, result[:log]
+        expect(result[:output]).to eq("versions=[\"0.1.38\",\"0.2.4\",\"0.10.0\",\"0.18.1\"]\n")
+      end
+    end
+
+    it "fails the pick when RubyGems lists no 0.x release (release-1-0-rc1/REQ-13)" do
+      result = run_step(step_named("versions", "Pick the latest patch of every 0.x minor").fetch("run"),
+        stubs: { "stub/curl" => "echo '[]'" })
+
+      expect(result[:status]).not_to be_success
+    end
+
+    describe "a row's outcome" do
+      let(:script) { step_named("upgrade", "Upgrade to this branch").fetch("run") }
+      let(:row) { { "UPGRADE_FROM_VERSION" => "0.6.4", "UPGRADE_DATABASE" => "mysql" } }
+
+      def outcome(exit_status)
+        run_step(script, stubs: { "bin/pre-release-test" => "exit #{exit_status}" }, env: row)
+      end
+
+      it "passes and reports the upgrade when the harness passes (release-1-0-rc1/REQ-13)" do
+        result = outcome(0)
+
+        expect(result[:status]).to be_success
+        expect(result[:summary]).to include("| 0.6.4 | mysql | upgraded |")
+      end
+
+      it "doesn't fail, and says so, when the release doesn't install on the database (release-1-0-rc1/REQ-13)" do
+        result = outcome(3)
+
+        expect(result[:status]).to be_success
+        expect(result[:summary]).to include("| 0.6.4 | mysql | doesn't install |")
+        expect(result[:log]).to include("::notice title=Doesn't install::0.6.4 doesn't install on mysql")
+      end
+
+      it "fails when the upgrade fails (release-1-0-rc1/REQ-13)" do
+        result = outcome(1)
+
+        expect(result[:status].exitstatus).to eq(1)
+        expect(result[:summary]).to include("| 0.6.4 | mysql | FAILED |")
       end
     end
   end
