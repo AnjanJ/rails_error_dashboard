@@ -4,7 +4,8 @@ require "rails_helper"
 
 # Decision 0004: neither option ever did anything, so both warn and store nothing
 # from 0.18, and an initializer that still assigns them keeps booting.
-# Covers deprecations-0-18/REQ-4 and deprecations-0-18/REQ-6.
+# Covers deprecations-0-18/REQ-4 and deprecations-0-18/REQ-6, and 1.0 keeps them
+# (release-1-0-rc1/REQ-4).
 RSpec.describe "Deprecated configuration options" do
   let(:config) { RailsErrorDashboard::Configuration.new }
 
@@ -12,7 +13,7 @@ RSpec.describe "Deprecated configuration options" do
 
   { async_adapter: "4", llm_observability_content_capture: "6" }.each do |option, req|
     describe option.to_s do
-      it "logs one deprecation, however often it's assigned (deprecations-0-18/REQ-#{req})" do
+      it "logs one deprecation, however often it's assigned (deprecations-0-18/REQ-#{req}, release-1-0-rc1/REQ-4)" do
         3.times { config.public_send("#{option}=", :anything) }
 
         expect(Rails.logger).to have_received(:warn).with(/DEPRECATION: config\.#{option} /).once
@@ -24,7 +25,7 @@ RSpec.describe "Deprecated configuration options" do
         expect(Rails.logger).to have_received(:warn).with(/Delete the line.*2\.0/)
       end
 
-      it "ignores the value, so the reader returns nil (deprecations-0-18/REQ-#{req})" do
+      it "ignores the value, so the reader returns nil (deprecations-0-18/REQ-#{req}, release-1-0-rc1/REQ-4)" do
         config.public_send("#{option}=", :anything)
 
         expect(config.public_send(option)).to be_nil

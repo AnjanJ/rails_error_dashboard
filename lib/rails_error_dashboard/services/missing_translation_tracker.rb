@@ -265,7 +265,7 @@ module RailsErrorDashboard
         # neither this gem's nor another gem's nor Ruby's own. Frames are
         # judged by where they are, never by what the directory is called.
         #
-        # Thread.each_caller_location (Ruby 3.2+, the gemspec floor) yields
+        # Thread.each_caller_location (Ruby 3.2+) yields
         # frames one at a time from this method's caller outwards and stops
         # the moment the block breaks or the method returns.
         # caller_locations(1, 40) materialised a 40-element array of Location

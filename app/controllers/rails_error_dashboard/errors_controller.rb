@@ -557,12 +557,7 @@ module RailsErrorDashboard
 
     def swallowed_exceptions
       unless RailsErrorDashboard.configuration.detect_swallowed_exceptions
-        # On Ruby < 3.3, validate! auto-disables this feature — tell the user why
-        if RUBY_VERSION < "3.3"
-          flash[:alert] = red_t("red.flash.swallowed_requires_ruby", version: RUBY_VERSION)
-        else
-          flash[:alert] = feature_disabled_message("swallowed_exceptions")
-        end
+        flash[:alert] = feature_disabled_message("swallowed_exceptions")
         redirect_to errors_path(**app_context_params)
         return
       end

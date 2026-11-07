@@ -632,35 +632,24 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
   end
 
   describe "swallowed exception detection validation" do
-    if RUBY_VERSION >= "3.3"
-      it "accepts valid defaults when enabled on Ruby 3.3+" do
-        config.detect_swallowed_exceptions = true
-        expect { config.validate! }.not_to raise_error
-      end
-    end
-
-    it "auto-disables and warns on Ruby < 3.3 instead of crashing" do
-      stub_const("RUBY_VERSION", "3.2.0")
+    it "accepts valid defaults when enabled" do
       config.detect_swallowed_exceptions = true
-
-      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
-      expect(Rails.logger).to receive(:warn).with(/detect_swallowed_exceptions requires Ruby 3\.3\+/)
       expect { config.validate! }.not_to raise_error
-      expect(config.detect_swallowed_exceptions).to be false
     end
 
-    it "includes upgrade guidance in the Ruby version warning" do
-      stub_const("RUBY_VERSION", "3.2.4")
+    # Every Ruby RED runs on has TracePoint(:rescue), so validate! no longer
+    # turns detection off for the Ruby version.
+    it "leaves detection on, with no Ruby version warning (release-1-0-rc1/REQ-3)" do
+      allow(Rails.logger).to receive(:warn)
       config.detect_swallowed_exceptions = true
 
-      allow(Rails.logger).to receive(:warn) # the version floors warn on old Rails and Ruby
-      expect(Rails.logger).to receive(:warn).with(/Upgrade Ruby to use this feature/)
       config.validate!
-      expect(config.detect_swallowed_exceptions).to be false
+
+      expect(config.detect_swallowed_exceptions).to be true
+      expect(Rails.logger).not_to have_received(:warn).with(/requires Ruby/)
     end
 
     it "rejects max_cache_size of 0 when enabled" do
-      stub_const("RUBY_VERSION", "3.3.0")
       config.detect_swallowed_exceptions = true
       config.swallowed_exception_max_cache_size = 0
       expect { config.validate! }.to raise_error(
@@ -670,7 +659,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
 
     it "rejects flush_interval of 0 when enabled" do
-      stub_const("RUBY_VERSION", "3.3.0")
       config.detect_swallowed_exceptions = true
       config.swallowed_exception_flush_interval = 0
       expect { config.validate! }.to raise_error(
@@ -680,7 +668,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
 
     it "rejects threshold above 1.0 when enabled" do
-      stub_const("RUBY_VERSION", "3.3.0")
       config.detect_swallowed_exceptions = true
       config.swallowed_exception_threshold = 1.5
       expect { config.validate! }.to raise_error(
@@ -690,7 +677,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
 
     it "rejects negative threshold when enabled" do
-      stub_const("RUBY_VERSION", "3.3.0")
       config.detect_swallowed_exceptions = true
       config.swallowed_exception_threshold = -0.1
       expect { config.validate! }.to raise_error(
@@ -1418,130 +1404,6 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
       config.validate!
 
       expect(deprecations).to be_empty
-    end
-  end
-
-  # Decision 0003. The versions are stubbed, because CI's rows run real ones on
-  # both sides of each floor.
-  describe "Rails and Ruby versions that 1.0 drops" do
-    let(:warnings) { [] }
-
-    before do
-      allow(Rails.logger).to receive(:warn) { |message| warnings << message }
-      run_on_rails("8.1.0")
-      stub_const("RUBY_VERSION", "3.4.0")
-    end
-
-    def run_on_rails(version)
-      allow(ActionPack).to receive(:gem_version).and_return(Gem::Version.new(version))
-    end
-
-    def floor_warnings(name)
-      warnings.select { |message| message.include?("RED 1.0 requires #{name}") }
-    end
-
-    it "warns once on Rails before 7.2, saying this version keeps working (deprecations-0-18/REQ-16)" do
-      run_on_rails("7.1.5")
-
-      config.validate!
-
-      expect(floor_warnings("Rails")).to contain_exactly(
-        a_string_including("DEPRECATION", "Rails 7.1.5", "RED 1.0 requires Rails 7.2 or later", "keeps working", "docs/VERSIONING.md")
-      )
-    end
-
-    it "says nothing from Rails 7.2 up (deprecations-0-18/REQ-16)" do
-      run_on_rails("7.2.0")
-
-      config.validate!
-
-      expect(floor_warnings("Rails")).to be_empty
-    end
-
-    it "warns once on Ruby before 3.3, saying this version keeps working (deprecations-0-18/REQ-17)" do
-      stub_const("RUBY_VERSION", "3.2.9")
-
-      config.validate!
-
-      expect(floor_warnings("Ruby")).to contain_exactly(
-        a_string_including("DEPRECATION", "Ruby 3.2.9", "RED 1.0 requires Ruby 3.3 or later", "keeps working", "docs/VERSIONING.md")
-      )
-    end
-
-    it "says nothing from Ruby 3.3 up (deprecations-0-18/REQ-17)" do
-      stub_const("RUBY_VERSION", "3.3.0")
-
-      config.validate!
-
-      expect(floor_warnings("Ruby")).to be_empty
-    end
-
-    it "compares versions, not strings, so 3.10 isn't before 3.3 (deprecations-0-18/REQ-17)" do
-      stub_const("RUBY_VERSION", "3.10.0")
-
-      config.validate!
-
-      expect(floor_warnings("Ruby")).to be_empty
-    end
-
-    it "warns once however often validate! runs, because verify runs it twice (deprecations-0-18/REQ-2)" do
-      run_on_rails("7.1.5")
-      stub_const("RUBY_VERSION", "3.2.9")
-
-      2.times { config.validate! }
-
-      expect(floor_warnings("Rails").size).to eq(1)
-      expect(floor_warnings("Ruby").size).to eq(1)
-    end
-
-    it "changes nothing else: 7.0.8 keeps its own warning, and validation passes (deprecations-0-18/REQ-18)" do
-      run_on_rails("7.0.8")
-
-      expect(config.validate!).to be(true)
-
-      expect(warnings).to include(a_string_including("Upgrading to Rails 7.0.10 or later fixes this"))
-      expect(floor_warnings("Rails").size).to eq(1)
-    end
-  end
-
-  # rails-70-request-capture/REQ-1, REQ-2: Rails 7.0.0-7.0.8.7 render request
-  # exceptions without reporting them, so RED records none. CI's 7.0 rows install
-  # 7.0.10, so the version is stubbed rather than taken from the row.
-  describe "Rails versions that do not report rendered request exceptions" do
-    let(:warnings) { [] }
-
-    before do
-      allow(Rails.logger).to receive(:warn) { |message| warnings << message }
-    end
-
-    def request_capture_warnings
-      warnings.select { |message| message.include?("Upgrading to Rails 7.0.10") }
-    end
-
-    def run_on_actionpack(version)
-      allow(ActionPack).to receive(:gem_version).and_return(Gem::Version.new(version))
-    end
-
-    it "rails-70-request-capture/REQ-1 warns once on Rails older than 7.0.10" do
-      run_on_actionpack("7.0.8.7")
-
-      config.validate!
-
-      expect(request_capture_warnings).to contain_exactly(
-        a_string_including(
-          "Rails 7.0.8.7 does not report the request exceptions it renders as error pages",
-          "Upgrading to Rails 7.0.10 or later fixes this"
-        )
-      )
-    end
-
-    it "rails-70-request-capture/REQ-2 does not warn on Rails 7.0.10 or later" do
-      [ "7.0.10", "7.1.0", ActionPack.gem_version.to_s ].each do |version|
-        run_on_actionpack(version)
-        config.validate!
-      end
-
-      expect(request_capture_warnings).to be_empty
     end
   end
 end

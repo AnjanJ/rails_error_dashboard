@@ -178,9 +178,6 @@ module RailsErrorDashboard
               default_on = f[:key] == :async_logging
               r = ask("    Enable? (#{default_on ? 'Y/n' : 'y/N'}):", :yellow, limited_to: [ "y", "Y", "n", "N", "" ])
               @selected_features[f[:key]] = default_on ? r.downcase != "n" : r.downcase == "y"
-              if @selected_features[f[:key]] && f[:key] == :swallowed_exceptions && RUBY_VERSION < "3.3"
-                say "    ⚠ Requires Ruby 3.3+ (you have #{RUBY_VERSION}) — will activate after upgrade", :yellow
-              end
             end
           else
             # Set all advanced keys to false EXCEPT async_logging which defaults ON via class_option.

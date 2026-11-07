@@ -114,7 +114,7 @@ module RailsErrorDashboard
         title: red_t("red.errors_page.csrf.title"),
         message: red_t("red.errors_page.csrf.message"),
         # Numeric: Rack renamed the symbol (:unprocessable_entity is deprecated,
-        # :unprocessable_content is unknown to the Rack that Rails 7.0 uses).
+        # :unprocessable_content is unknown to Rack 2.2, which Rails 7.2 to 8.1 allow).
         status: 422
       )
     end

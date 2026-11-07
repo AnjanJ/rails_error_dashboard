@@ -75,8 +75,6 @@ RSpec.describe RailsErrorDashboard::Services::SolidQueueConfigCheck, "agreement 
 
   # One child process for every case: it boots Rails with Solid Queue.
   before(:all) do
-    skip "Solid Queue needs Rails 7.1+, so it is not in this bundle" unless Gem.loaded_specs.key?("solid_queue")
-
     input = {
       queue_names: queue_names,
       cases: cases.map { |name, test_case| { name: name, yaml: test_case[:yaml], environments: test_case[:environments] } }

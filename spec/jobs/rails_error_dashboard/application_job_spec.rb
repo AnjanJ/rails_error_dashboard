@@ -27,12 +27,6 @@ RSpec.describe RailsErrorDashboard::ApplicationJob do
 
       expect(described_class.enqueued?(job)).to be(true)
     end
-
-    it "assumes success for a job object that predates successfully_enqueued?" do
-      # Rails 7.0/7.1 let ActiveJob::EnqueueError propagate instead of
-      # reporting it on the job, so the caller's rescue is what catches it.
-      expect(described_class.enqueued?(Object.new)).to be(true)
-    end
   end
 
   describe ".enqueue_failure_reason" do

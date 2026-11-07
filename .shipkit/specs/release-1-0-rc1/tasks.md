@@ -6,17 +6,17 @@ T16-T17 in the demo's repository. T6-T9 wait for `deploy-shape-benchmark` to fin
 its rows. Code tasks write their test first, and cite `release-1-0-rc1/REQ-N`.
 Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
 
-- [ ] **T1** The gemspec requires Rails 7.2 and Ruby 3.3 → REQ-1
+- [x] **T1** The gemspec requires Rails 7.2 and Ruby 3.3 → REQ-1
   - Files: rails_error_dashboard.gemspec, Gemfile, spec/lib/rails_error_dashboard/floors_spec.rb
   - Test: spec/lib/rails_error_dashboard/floors_spec.rb reads the gemspec's `required_ruby_version` and its `rails` dependency
   - After: none
   - Done when: `rspec spec/lib/rails_error_dashboard/floors_spec.rb` → 0 failures; the Gemfile no longer selects sqlite3 `~> 1.4` for Rails 7.0
-- [ ] **T2** CI runs 9 rows, each Ruby named by its series → REQ-2
+- [x] **T2** CI runs 9 rows, each Ruby named by its series → REQ-2
   - Files: .github/workflows/test.yml, spec/ci/workflows_spec.rb
   - Test: spec/ci/workflows_spec.rb asserts the matrix is Ruby 3.3, 3.4 and 4.0 by Rails 7.2, 8.0 and 8.1, with no patch release named
   - After: T1
   - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; the pull request's CI shows 9 test rows, all green
-- [ ] **T3** Remove every branch for Rails before 7.2 or Ruby before 3.3, and keep the `0004` no-ops → REQ-3, REQ-4
+- [x] **T3** Remove every branch for Rails before 7.2 or Ruby before 3.3, and keep the `0004` no-ops → REQ-3, REQ-4
   - Files: Gemfile, lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/middleware/error_catcher.rb, lib/rails_error_dashboard/services/live_stream_token.rb, lib/rails_error_dashboard/services/swallowed_exception_tracker.rb, lib/rails_error_dashboard/services/coverage_tracker.rb, lib/generators/rails_error_dashboard/install/install_generator.rb, app/jobs/rails_error_dashboard/application_job.rb, app/controllers/rails_error_dashboard/application_controller.rb, app/controllers/rails_error_dashboard/errors_controller.rb, spec/lib/rails_error_dashboard/floors_spec.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb, spec/lib/rails_error_dashboard/deprecated_options_spec.rb
   - Test: spec/lib/rails_error_dashboard/floors_spec.rb scans lib/ and app/ for a version check below the floors (the Rails 7.0.10 and Rails/Ruby floor warnings, `RUBY_VERSION < "3.3"`); spec/lib/rails_error_dashboard/deprecated_options_spec.rb keeps both setters warning
   - After: T2

@@ -70,14 +70,6 @@ RSpec.describe "engine drains in a booted app" do
     end
   end
 
-  # Swallowed-exception detection needs Ruby 3.3. On older Rubies the tracker
-  # never enables (no exit drain), though its end-of-work hook is still wired
-  # before config validation turns the flag off, so its lines are left out of
-  # both comparisons there.
-  def comparable(lines)
-    RUBY_VERSION >= "3.3" ? lines : lines.reject { |line| line.end_with?(" swallowed") }
-  end
-
   def lines_between(first, last)
     start = @child_lines.index(first)
     stop = @child_lines.index(last)
@@ -92,14 +84,14 @@ RSpec.describe "engine drains in a booted app" do
   it "runs each feature's end-of-work drain when an executor unit of work completes (test-gaps-0-17/REQ-4)" do
     expected = [ "complete rack_attack", "complete missing_translations", "complete storm", "complete swallowed" ]
 
-    expect(comparable(lines_between("booted", "exiting"))).to match_array(comparable(expected))
+    expect(lines_between("booted", "exiting")).to match_array(expected)
   end
 
   it "runs each feature's exit drain when the process exits (test-gaps-0-17/REQ-3)" do
     exit_lines = @child_lines.drop((@child_lines.index("exiting") || @child_lines.size) + 1)
     expected = [ "exit rack_attack", "exit missing_translations", "exit storm", "exit crash", "exit swallowed" ]
 
-    expect(comparable(exit_lines)).to match_array(comparable(expected)), "child output: #{@child_lines.inspect}\n#{@child_error}"
+    expect(exit_lines).to match_array(expected), "child output: #{@child_lines.inspect}\n#{@child_error}"
   end
 
   # at_exit hooks run last-registered first. The crash hook is registered by

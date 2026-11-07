@@ -123,22 +123,8 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
         reporter.report(error,
           handled: false,
           severity: :error,
-          context: { request: ActionDispatch::Request.new(env), middleware: true },
+          context: { request: ActionDispatch::Request.new(env) },
           source: "rack.middleware"
-        )
-      end
-
-      # Rails 7.0's reporter passes subscribers no source, so the middleware's
-      # own report is recognised by its context marker there
-      it "skips the middleware's duplicate when the reporter passed no source (Rails 7.0)" do
-        expect(RailsErrorDashboard::Commands::LogError).to receive(:call).once
-
-        reporter.report(error, handled: false, severity: :error, context: {}, source: nil)
-        reporter.report(error,
-          handled: false,
-          severity: :error,
-          context: { request: ActionDispatch::Request.new(env), middleware: true },
-          source: nil
         )
       end
 
@@ -158,7 +144,7 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
         reporter.report(other_error,
           handled: false,
           severity: :error,
-          context: { request: ActionDispatch::Request.new(env), middleware: true },
+          context: { request: ActionDispatch::Request.new(env) },
           source: "rack.middleware"
         )
       end
@@ -216,7 +202,7 @@ RSpec.describe RailsErrorDashboard::ErrorReporter do
         reporter.report(error,
           handled: false,
           severity: :error,
-          context: { request: ActionDispatch::Request.new(env), middleware: true },
+          context: { request: ActionDispatch::Request.new(env) },
           source: "rack.middleware"
         )
       end

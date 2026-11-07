@@ -72,7 +72,7 @@ module RailsErrorDashboard
       end
       private_class_method :red_stream?
 
-      # Only digest: and serializer: here: Rails 7.0 accepts nothing else.
+      # Only digest: and serializer: here, so a token's format stays as 0.x signed it.
       def self.verifier
         @verifier ||= ActiveSupport::MessageVerifier.new(
           Rails.application.key_generator.generate_key(SALT), digest: "SHA256", serializer: JSON
