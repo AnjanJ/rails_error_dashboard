@@ -1,24 +1,30 @@
 # Handoff
 
-> Written 2026-11-07 at commit `fd641303`, on the branch `feat/rc1-after-response` (T4-T8 of rc1).
+> Written 2026-11-07 at commit `396a9669`, on the branch `feat/rc1-after-response` (T4-T9 of rc1, #362).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/` (accepted 2026-11-06, merged
   in #359 with decision `0009`). Six pull requests, in the order of its tasks.md: the floors (T1-T3, merged
-  in #360), capture after the response and the budgets (T4-T9), the upgrade matrix (T10-T11), the docs and
-  the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). The release steps under
+  in #360), capture after the response and the budgets (T4-T9, #362), the upgrade matrix (T10-T11), the docs
+  and the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). The release steps under
   "After the gate" each need the maintainer's yes.
-- **T4-T9 are on `feat/rc1-after-response`.** T4-T8 are done: async capture hands its enqueue to
+- **#362 has T4-T9, all done; its merge needs the maintainer's yes.** Async capture hands its enqueue to
   `rack.response_finished` (`commands/log_error.rb`), the "Capture, async" row times the work before the
   response under a Puma-style env, "Capture, async, after the response" reports the rest with no budget, and
-  the health snapshot is gated at 1.5 ms. On #362's CI (run 42356111086, a Xeon 6973P-C) the rows read 137 µs
-  before the response, 15 µs after it, and 418 µs for the health snapshot. T5 reached past its file list: phase F needs async capture under a
+  the health snapshot is gated at 1.5 ms. T5 reached past its file list: phase F needs async capture under a
   real Puma, and only the sync HTTP app ran it, so `full_async` now boots Puma and runs phase F
   (`bin/pre-release-test`), with the TracePoint features on in its initializer. Its fixtures add
   `/test/deferred_error` and an initializer that holds that error's enqueue 1.5 s, which F9 times against
   the response. T5 also removed phase F's Ruby 3.3 and Rails 7.1 branches that T3 left.
-- **T9 needs the maintainer's yes** for its benchmark dispatches: each shape re-run with the database 1 ms
-  away, its runs recorded in the research file, then the five files that state the budgets.
+- **T9's six dispatches** ran on #362's branch at `67b69c7`, not on main, with the maintainer's yes, because
+  the code they measure was only there. "Capture, async" read 188 to 321 µs before the response on every
+  shape, MySQL and Ruby 4.0. The research file has every figure, and finding 10 leaves open whether the work
+  after the response costs throughput: on `medium` on PostgreSQL (EPYC 7763, 220/s) RED's `failing` p99 rose
+  from +0.71 to +2.03 ms, while MySQL and `medium-arm` held. T9 also reached past its list: the health
+  snapshot's figures are one sentence on five pages that `spec/docs/benchmark_claims_spec.rb` holds word for
+  word, so the getting-started features page, both configuration guides and that spec changed with it.
+- **Next: T10-T11, the upgrade matrix,** on a new branch from main once #362 merges (the maintainer chose one
+  PR at a time, since the chaos tests and the upgrade test share CPU, Docker and ports).
 
 ## Done
 - **rc1's floors merged in #360** (`b832160f`) on 2026-11-07: Rails 7.2 and Ruby 3.3, the test matrix at 9

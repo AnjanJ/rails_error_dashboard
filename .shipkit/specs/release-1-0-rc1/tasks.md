@@ -46,7 +46,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/benchmark/scenarios_spec.rb asserts the health snapshot row's budget is 1.5 ms
   - After: T7
   - Done when: `rspec spec/benchmark` → 0 failures; CI's `Overhead benchmark` passes
-- [ ] **T9** Re-run the shapes with the database 1 ms away, and write the budgets down → REQ-10, REQ-12
+- [x] **T9** Re-run the shapes with the database 1 ms away, and write the budgets down → REQ-10, REQ-12
   - Files: .shipkit/research/deploy-shape-benchmark.md, .shipkit/product.md, .claude/skills/host-app-safety/SKILL.md, .claude/skills/safety-check/SKILL.md, README.md, docs/FEATURES.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
   - Test: none, prose and dispatches verified by reading
   - After: T8
