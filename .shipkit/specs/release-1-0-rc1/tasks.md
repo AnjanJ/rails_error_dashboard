@@ -61,17 +61,17 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/ci/workflows_spec.rb asserts the workflow is dispatch-only with a read-only token and no secrets, joins `hardened_workflows`, and runs three databases
   - After: T3, T10
   - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; after it lands, a dispatch on main runs 54 rows with none failing, and its summary lists the rows whose release doesn't install
-- [ ] **T12** The upgrading guide gets "0.x to 1.0" → REQ-15
+- [x] **T12** The upgrading guide gets "0.x to 1.0" → REQ-15
   - Files: docs/UPGRADING.md, _getting_started/upgrading.md
   - Test: none, prose verified by reading
   - After: T11
   - Done when: the section names the floors, every removal, the stats partial and the steps, and both copies match
-- [ ] **T13** The docs drop "Beta" and state the floors → REQ-20, REQ-21
+- [x] **T13** The docs drop "Beta" and state the floors → REQ-20, REQ-21
   - Files: README.md, docs/FAQ.md, docs/CUSTOMIZATION.md, ROADMAP.md, .shipkit/product.md, spec/docs/floors_doc_spec.rb
   - Test: spec/docs/floors_doc_spec.rb asserts no doc calls RED beta, and the README and FAQ state Rails 7.2 to 8.1 and Ruby 3.3 to 4.0
   - After: T9
   - Done when: `rspec spec/docs` → 0 failures; `severity_calculator` is no longer "planned", and ROADMAP's header names the current version
-- [ ] **T14** Delete the stats partial, its view spec and its keys → REQ-22
+- [x] **T14** Delete the stats partial, its view spec and its keys → REQ-22
   - Files: app/views/rails_error_dashboard/errors/_stats.html.erb, spec/views/rails_error_dashboard/errors/_stats.html.erb_spec.rb, config/locales/de.yml, config/locales/en.yml, config/locales/es.yml, config/locales/fr.yml, config/locales/it.yml, config/locales/ja.yml, config/locales/pl.yml, config/locales/pt-BR.yml, config/locales/ru.yml, config/locales/uk.yml, config/locales/zh-CN.yml
   - Test: none, a deletion; `bin/i18n-check` and the view specs show it
   - After: none
