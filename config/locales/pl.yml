@@ -806,12 +806,6 @@ pl:
           assigned: przypisany
           snoozed: odłożony
           muted: wyciszony
-      stats:
-        today: Dzisiaj
-        this_week: W tym tygodniu
-        unresolved: Nierozwiązane
-        resolved: Rozwiązane
-        reopened: Otwarte ponownie
       pages:
         percent: "%{value}%"
         column_errors: Błędy

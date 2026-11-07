@@ -793,12 +793,6 @@ it:
           assigned: assegnato
           snoozed: rimandato
           muted: silenziato
-      stats:
-        today: Oggi
-        this_week: Questa settimana
-        unresolved: Non risolti
-        resolved: Risolti
-        reopened: Riaperti
       pages:
         percent: "%{value}%"
         column_errors: Errori

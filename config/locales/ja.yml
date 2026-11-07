@@ -714,12 +714,6 @@ ja:
           assigned: 割り当て済み
           snoozed: スヌーズ中
           muted: ミュート中
-      stats:
-        today: 本日
-        this_week: 今週
-        unresolved: 未解決
-        resolved: 解決済み
-        reopened: 再オープン
       pages:
         percent: "%{value}%"
         column_errors: エラー

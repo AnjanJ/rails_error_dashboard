@@ -801,12 +801,6 @@ es:
           assigned: asignado
           snoozed: pospuesto
           muted: silenciado
-      stats:
-        today: Hoy
-        this_week: Esta semana
-        unresolved: Sin resolver
-        resolved: Resueltos
-        reopened: Reabiertos
       pages:
         percent: "%{value} %"
         column_errors: Errores

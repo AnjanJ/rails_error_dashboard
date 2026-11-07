@@ -807,12 +807,6 @@ uk:
           assigned: призначено
           snoozed: відкладено
           muted: сповіщення вимкнено
-      stats:
-        today: Сьогодні
-        this_week: Цього тижня
-        unresolved: Не вирішено
-        resolved: Вирішено
-        reopened: Відкрито знову
       pages:
         percent: "%{value}%"
         column_errors: Помилки
