@@ -1,0 +1,123 @@
+name: Upgrade matrix
+
+# Upgrades a fresh app from the latest patch of every 0.x minor to this
+# branch, once each on SQLite, PostgreSQL and MySQL, and verifies it: the
+# harness's upgrade test (bin/pre-release-test full_upgrade), phases J0, J and
+# C. Run by hand before 1.0.0.rc1 and again before 1.0.0
+# (.shipkit/specs/release-1-0-rc1/, REQ-13 and REQ-14).
+#
+# A row whose release can't be installed fresh on its database (the harness
+# exits 3: 0.1.x to 0.6.2 on MySQL, issue #84; 0.6.4 adds a column twice) has
+# no app to upgrade. It passes with a notice and shows as "doesn't install" in
+# its summary. Any other failure fails the row.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    name: Releases to upgrade from
+    permissions:
+      contents: read
+    outputs:
+      versions: ${{ steps.pick.outputs.versions }}
+    steps:
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: '3.4'
+
+      # Read from RubyGems at dispatch, so a new 0.x patch is picked up and a
+      # yanked one dropped without editing this file (the design's choice).
+      - name: Pick the latest patch of every 0.x minor
+        id: pick
+        run: |
+          curl -fsS --retry 3 https://rubygems.org/api/v1/versions/rails_error_dashboard.json > versions.json
+          ruby -rjson -e '
+            picked = JSON.parse(File.read("versions.json"))
+              .reject { |release| release["prerelease"] }
+              .map { |release| Gem::Version.new(release["number"]) }
+              .select { |version| version.segments.size == 3 && version.segments.first.zero? }
+              .group_by { |version| version.segments[1] }
+              .sort.map { |_minor, versions| versions.max.to_s }
+            abort "RubyGems listed no 0.x release" if picked.empty?
+            puts "Upgrading from #{picked.size} releases: #{picked.join(", ")}"
+            File.write(ENV.fetch("GITHUB_OUTPUT"), "versions=#{JSON.generate(picked)}\n", mode: "a")
+          '
+
+  upgrade:
+    needs: versions
+    strategy:
+      fail-fast: false
+      matrix:
+        from_version: ${{ fromJSON(needs.versions.outputs.versions) }}
+        database: [ sqlite, postgresql, mysql ]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    name: Upgrade from ${{ matrix.from_version }} on ${{ matrix.database }}
+    permissions:
+      contents: read
+    # An empty image starts no container, so each row gets only its own server.
+    services:
+      postgres:
+        image: ${{ matrix.database == 'postgresql' && 'postgres:16' || '' }}
+        env:
+          POSTGRES_USER: red
+          POSTGRES_PASSWORD: red
+          POSTGRES_DB: red_upgrade
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      mysql:
+        image: ${{ matrix.database == 'mysql' && 'mysql:8.4' || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: red
+        ports: [ "3306:3306" ]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pred" --health-interval 5s
+          --health-timeout 5s --health-retries 20
+    env:
+      UPGRADE_FROM_VERSION: ${{ matrix.from_version }}
+      UPGRADE_DATABASE: ${{ matrix.database }}
+      UPGRADE_DATABASE_URL: >-
+        ${{ matrix.database == 'postgresql' && 'postgres://red:red@127.0.0.1:5432/red_upgrade'
+        || matrix.database == 'mysql' && 'mysql2://root:red@127.0.0.1:3306/red_upgrade' || '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      # The CLI that runs `rails new`; the apps it builds resolve their own gems.
+      - name: Install Rails CLI
+        run: gem install rails --no-document # zizmor: ignore[adhoc-packages]
+
+      - name: Upgrade to this branch
+        run: |
+          status=0
+          bin/pre-release-test full_upgrade || status=$?
+          case "$status" in
+            0)
+              echo "| ${UPGRADE_FROM_VERSION} | ${UPGRADE_DATABASE} | upgraded |" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            3)
+              echo "::notice title=Doesn't install::${UPGRADE_FROM_VERSION} doesn't install on ${UPGRADE_DATABASE}: its own migrations fail, so there is no app to upgrade"
+              echo "| ${UPGRADE_FROM_VERSION} | ${UPGRADE_DATABASE} | doesn't install |" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "| ${UPGRADE_FROM_VERSION} | ${UPGRADE_DATABASE} | FAILED |" >> "$GITHUB_STEP_SUMMARY"
+              exit "$status"
+              ;;
+          esac

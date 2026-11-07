@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 # ============================================================================
-# CHAOS TEST PHASE J: Upgrade Path Verification (v0.1.38 → v0.2.0)
+# CHAOS TEST PHASE J: Upgrade Path Verification (a published release → the
+# working copy). The release is UPGRADE_FROM_VERSION, any from 0.1.38 on, on
+# SQLite, PostgreSQL or MySQL (release-1-0-rc1/REQ-13), so every check asks the
+# data rather than the version number.
 # Verifies that existing data survives the upgrade and new features work
 # alongside old records.
 #

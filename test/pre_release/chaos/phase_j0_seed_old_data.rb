@@ -2,7 +2,8 @@
 
 # ============================================================================
 # CHAOS TEST PHASE J0: Seed Old Version Data
-# Creates error records under the published v0.1.38 schema.
+# Creates error records under the published release's schema, whichever
+# release UPGRADE_FROM_VERSION names (0.1.38 is the oldest it is run from).
 # Run BEFORE upgrading the gem to local version.
 #
 # Run with: bin/rails runner test/pre_release/chaos/phase_j0_seed_old_data.rb
