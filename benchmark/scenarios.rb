@@ -60,6 +60,7 @@ module RedBenchmark
     def all
       [
         capture("Capture, async (installer default)", async: true, budget: 5e-3, iterations: 1_000),
+        capture_after_response,
         storm_calm,
         storm_shedding,
         storm_open,
@@ -83,6 +84,24 @@ module RedBenchmark
           timer.measure_difference(name, budget: budget,
             with: -> { serve(catcher, env) },
             without: -> { serve(RAISING_APP, env) })
+        end
+      end)
+    end
+
+    # The work async capture leaves for after the response: the server runs
+    # the rack.response_finished callbacks, and RED's enqueues the job. Each
+    # sample serves the same failing request with and without running them,
+    # so the difference is the callbacks alone. Reported, not gated: the 5 ms
+    # budget is for the time before the response (decision 0009).
+    def capture_after_response
+      name = "Capture, async, after the response"
+      Scenario.new(name: name, budget: nil, iterations: 1_000, run: lambda do |timer|
+        with_config(**CALM_STORM, async_logging: true) do
+          catcher = RailsErrorDashboard::Middleware::ErrorCatcher.new(RAISING_APP)
+          env = request_env
+          timer.measure_difference(name,
+            with: -> { finish_response(serve(catcher, env)) },
+            without: -> { serve(catcher, env) })
         end
       end)
     end
@@ -236,6 +255,12 @@ module RedBenchmark
         nil
       end
       served
+    end
+
+    # What Puma does once the response is written: each callable, in reverse,
+    # with the env, status, headers and error.
+    def finish_response(env)
+      env["rack.response_finished"].reverse_each { |callable| callable.call(env, 500, {}, nil) }
     end
 
     def request_env

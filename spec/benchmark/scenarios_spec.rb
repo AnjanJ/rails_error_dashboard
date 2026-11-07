@@ -23,6 +23,7 @@ RSpec.describe RedBenchmark::Scenarios do
 
     expect(budgets).to eq(
       "Capture, async (installer default)" => 5e-3,
+      "Capture, async, after the response" => nil,
       "Storm check, calm" => 15e-6,
       "Storm check, shedding" => 15e-6,
       "Storm check, breaker open" => 15e-6,
@@ -66,6 +67,25 @@ RSpec.describe RedBenchmark::Scenarios do
     expect(envs.map { |env| env["rack.response_finished"].object_id }.uniq.size).to eq(envs.size)
     expect(RailsErrorDashboard::AsyncErrorLoggingJob).not_to have_been_enqueued
   end
+
+# The enqueue Puma runs once the response is written: reported, so the work
+# after the response stays visible, and not gated (design: "Time both
+# halves, and gate only the first"). release-1-0-rc1/REQ-9
+it "reports, with no budget, the time to run the callbacks async capture leaves" do
+  allow(RailsErrorDashboard::Commands::LogError).to receive(:enqueue_after_response).and_call_original
+
+  result = scenario("Capture, async, after the response").run.call(timer)
+
+  expect(result.budget).to be_nil
+  expect(RailsErrorDashboard::Commands::LogError).to have_received(:enqueue_after_response).exactly(4).times # 1 warm-up + 3 timed
+  expect(RailsErrorDashboard::AsyncErrorLoggingJob).to have_been_enqueued.exactly(4).times
+end
+
+it "orders the after-the-response row right after the row it follows" do
+  names = described_class.all.map(&:name)
+
+  expect(names.index("Capture, async, after the response")).to eq(names.index("Capture, async (installer default)") + 1)
+end
 
   it "times the storm check with the breaker closed (overhead-benchmark/REQ-2)" do
     gate = RailsErrorDashboard::Services::StormProtection::Gate
