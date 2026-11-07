@@ -54,7 +54,10 @@ budgets are frozen (decision `0002`, `docs/PUBLIC_API.md`, `docs/VERSIONING.md`)
 ### The upgrade from 0.x
 - **REQ-13.** When the maintainer dispatches the upgrade workflow, it shall install the latest patch of
   every 0.x minor from 0.1 to 0.18 in a fresh app, upgrade that app to the branch, and verify it, once each
-  on PostgreSQL, MySQL and SQLite.
+  on PostgreSQL, MySQL and SQLite. Where that release's own migrations fail on a fresh install of that
+  database, the row shall report that it doesn't install, with the release's error, and shall not count as
+  a failed upgrade. (Changed 2026-11-08, with the maintainer's yes: 0.1.38 to 0.6.2 don't install on MySQL,
+  issue #84, and 0.6.4 adds `instance_variables` twice, so those rows have no app to upgrade.)
 - **REQ-14.** The upgrade workflow shall run only when dispatched by hand, with a read-only token and no
   secrets.
 - **REQ-15.** The upgrading guide shall have a "0.x to 1.0" section that names every removal, the new

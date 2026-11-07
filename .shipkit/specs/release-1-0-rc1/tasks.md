@@ -55,12 +55,12 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Files: bin/pre-release-test, test/pre_release/chaos/phase_j0_seed_old_data.rb, test/pre_release/chaos/phase_j_upgrade_verification.rb
   - Test: `bin/pre-release-test full_upgrade` with `UPGRADE_FROM_VERSION=0.1.38` on SQLite, and with the oldest and newest minors on PostgreSQL and MySQL, locally
   - After: none
-  - Done when: the runs above pass; with no settings it still starts from the latest release on SQLite, as the PR job expects
+  - Done when: the runs above pass, except where the from-version doesn't install on that database, which ends in its own outcome, exit 3, with the release's error (0.1.38 on MySQL, issue #84); a failed migration stops the test; with no settings it still starts from the latest release on SQLite, as the PR job expects
 - [ ] **T11** A dispatch-only workflow upgrades from every 0.x minor on all three databases → REQ-13, REQ-14
   - Files: .github/workflows/upgrade-matrix.yml, spec/ci/workflows_spec.rb
   - Test: spec/ci/workflows_spec.rb asserts the workflow is dispatch-only with a read-only token and no secrets, joins `hardened_workflows`, and runs three databases
   - After: T3, T10
-  - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; after it lands, a dispatch on main runs 54 rows, all green
+  - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; after it lands, a dispatch on main runs 54 rows with none failing, and its summary lists the rows whose release doesn't install
 - [ ] **T12** The upgrading guide gets "0.x to 1.0" → REQ-15
   - Files: docs/UPGRADING.md, _getting_started/upgrading.md
   - Test: none, prose verified by reading
