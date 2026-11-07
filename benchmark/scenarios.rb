@@ -222,10 +222,20 @@ module RedBenchmark
 
     # The host app's own rescue: the response it would render is not the
     # benchmark's concern, only the time to get there.
+    #
+    # Each request gets its own empty rack.response_finished, as Puma sets
+    # it, so async capture leaves its enqueue there for after the response
+    # (decision 0009). Nothing here runs those callbacks: the time before the
+    # response is what the capture rows time. Returns the env it served, so a
+    # row can run them on its own.
     def serve(app, env)
-      app.call(env.dup)
-    rescue BenchmarkError
-      nil
+      served = env.merge("rack.response_finished" => [])
+      begin
+        app.call(served)
+      rescue BenchmarkError
+        nil
+      end
+      served
     end
 
     def request_env

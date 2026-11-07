@@ -35,7 +35,7 @@ RSpec.describe RedBenchmark::Scenarios do
     )
   end
 
-  it "times capture through the middleware and the subscriber, ending in an enqueue (overhead-benchmark/REQ-2)" do
+  it "times capture through the middleware and the subscriber, up to the response (overhead-benchmark/REQ-2)" do
     reporter = Rails.error.instance_variable_get(:@subscribers).find { |s| s.is_a?(RailsErrorDashboard::ErrorReporter) }
     expect(reporter).to be_present, "RED's Rails.error subscriber is not registered"
     allow(reporter).to receive(:report).and_call_original
@@ -43,8 +43,28 @@ RSpec.describe RedBenchmark::Scenarios do
     result = scenario("Capture, async (installer default)").run.call(timer)
 
     expect(reporter).to have_received(:report).at_least(4).times # 1 warm-up + 3 timed
-    expect(RailsErrorDashboard::AsyncErrorLoggingJob).to have_been_enqueued.at_least(4).times
     expect(result.budget).to eq(5e-3)
+  end
+
+  # What the 5 ms budget protects is the time before the response. Under a
+  # server with rack.response_finished, as Puma sets it, capture ends with its
+  # enqueue waiting in that array, and the row must not run it.
+  # release-1-0-rc1/REQ-8
+  it "times async capture under an env with an empty rack.response_finished, leaving the callbacks unrun" do
+    envs = []
+    allow(RailsErrorDashboard::Middleware::ErrorCatcher).to receive(:new).and_wrap_original do |original, app|
+      original.call(app).tap do |catcher|
+        allow(catcher).to receive(:call).and_wrap_original { |call, env| envs << env; call.call(env) }
+      end
+    end
+
+    scenario("Capture, async (installer default)").run.call(timer)
+
+    expect(envs.size).to be >= 4 # 1 warm-up + 3 timed
+    expect(envs).to all(satisfy { |env| env["rack.response_finished"].is_a?(Array) })
+    expect(envs.map { |env| env["rack.response_finished"].size }.uniq).to eq([ 1 ])
+    expect(envs.map { |env| env["rack.response_finished"].object_id }.uniq.size).to eq(envs.size)
+    expect(RailsErrorDashboard::AsyncErrorLoggingJob).not_to have_been_enqueued
   end
 
   it "times the storm check with the breaker closed (overhead-benchmark/REQ-2)" do
