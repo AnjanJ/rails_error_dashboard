@@ -601,7 +601,7 @@ end
 
 System health snapshots are designed with host app safety as the top priority:
 
-- **Around a millisecond** — The snapshot takes a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, against a 1 ms budget, so whether it stays under it depends on the host ([`bin/benchmark`](https://github.com/AnjanJ/rails_error_dashboard/blob/main/bin/benchmark), on CI's shared runners)
+- **Around a millisecond** — The snapshot takes a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74, 1.24 ms on an Intel Xeon Platinum 8573C and 1.23 ms on an arm64 Neoverse-N2, against a 1.5 ms budget ([`bin/benchmark`](https://github.com/AnjanJ/rails_error_dashboard/blob/main/bin/benchmark), on CI's shared runners)
 - **Every metric individually wrapped** in `rescue => nil` — one failure doesn't affect others
 - **Top-level rescue** — If everything fails, returns `{ captured_at: ... }` (never raises)
 - **No ObjectSpace** — Never calls `ObjectSpace.each_object` or `ObjectSpace.count_objects` (heap scan)

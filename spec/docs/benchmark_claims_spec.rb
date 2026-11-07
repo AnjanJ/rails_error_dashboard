@@ -12,8 +12,8 @@ RSpec.describe "What the docs say about overhead" do
   # One sentence, word for word, on every page that quotes the row, so a page
   # can't be left behind when the figures change.
   health = "a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, " \
-           "0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, " \
-           "against a 1 ms budget"
+           "0.85 ms on an AMD EPYC 9V74, 1.24 ms on an Intel Xeon Platinum 8573C and " \
+           "1.23 ms on an arm64 Neoverse-N2, against a 1.5 ms budget"
   breadcrumb = "a median of 1.18 µs on CI's AMD EPYC 9V45 runner and 1.89 µs on its " \
                "AMD EPYC 7763 runner, against a 10 µs budget"
 

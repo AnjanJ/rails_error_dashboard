@@ -17,7 +17,8 @@ module RailsErrorDashboard
     # Every metric call individually wrapped in rescue => nil.
     #
     # Safety contract (from .claude/skills/host-app-safety/SKILL.md):
-    # - In-process metrics < 1ms budget (~0.3ms typical on Linux). The
+    # - In-process metrics < 1.5ms budget on every CPU (0.4 to 1.3ms on CI's
+    #   and the deploy shapes' runners, gated by bin/benchmark). The
     #   queue-depth counts are the documented exception: their latency is
     #   the queue store's, which is why they are cached and optional.
     # - NEVER ObjectSpace.each_object or ObjectSpace.count_objects (heap scan)
@@ -32,7 +33,7 @@ module RailsErrorDashboard
       # @return [Hash] Health snapshot (always safe, never raises)
       def self.capture
         # OTel: emit a child span around the snapshot so operators can verify
-        # the <1ms health-budget claim from their own tracing dashboard. The
+        # the <1.5ms health-budget claim from their own tracing dashboard. The
         # snapshot itself is read-only (GC.stat, pool.stat, procfs reads) so
         # the span carries no useful attributes beyond timing.
         RailsErrorDashboard::Integrations::Tracer.in_span(

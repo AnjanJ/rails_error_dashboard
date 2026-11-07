@@ -21,32 +21,32 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: spec/lib/rails_error_dashboard/floors_spec.rb scans lib/ and app/ for a version check below the floors (the Rails 7.0.10 and Rails/Ruby floor warnings, `RUBY_VERSION < "3.3"`); spec/lib/rails_error_dashboard/deprecated_options_spec.rb keeps both setters warning
   - After: T2
   - Done when: `rspec` → 0 failures on Ruby 3.4 with Rails 8.1; the json pin check for Rails 7.2 before 7.2.4 and 8.0 stays, since both are still supported
-- [ ] **T4** Async capture enqueues from `rack.response_finished` when the env has it → REQ-5, REQ-6, REQ-7
+- [x] **T4** Async capture enqueues from `rack.response_finished` when the env has it → REQ-5, REQ-6, REQ-7
   - Files: lib/rails_error_dashboard/commands/log_error.rb, spec/commands/log_error_after_response_spec.rb
   - Test: spec/commands/log_error_after_response_spec.rb: with the env's array present, no job is enqueued until the callbacks run, then one is; with no env, or no array, the job is enqueued at once; an enqueue that raises or returns false inside the callback logs the error synchronously and raises nothing; a second request on the same thread doesn't reuse the first's env
   - After: none
   - Done when: `rspec spec/commands` → 0 failures; with the deferral reverted, the after-response examples fail
-- [ ] **T5** A real Puma runs the callback, and the error is recorded → REQ-5
+- [x] **T5** A real Puma runs the callback, and the error is recorded → REQ-5
   - Files: test/pre_release/chaos/phase_f_http_error_capture.rb
   - Test: phase F asserts that a failing request's response comes back before its job is enqueued, and that the error's row then appears
   - After: T4
   - Done when: `bin/pre-release-test full_async` and `bin/pre-release-test full_http` pass
-- [ ] **T6** The "Capture, async" row times the work before the response → REQ-8
+- [x] **T6** The "Capture, async" row times the work before the response → REQ-8
   - Files: benchmark/scenarios.rb, spec/benchmark/scenarios_spec.rb
   - Test: spec/benchmark/scenarios_spec.rb asserts the row runs capture under an env with an empty `rack.response_finished` array, and leaves the callbacks unrun inside the timed block
   - After: T4
   - Done when: `rspec spec/benchmark` → 0 failures
-- [ ] **T7** A reported row times the work after the response → REQ-9
+- [x] **T7** A reported row times the work after the response → REQ-9
   - Files: benchmark/scenarios.rb, spec/benchmark/scenarios_spec.rb
   - Test: spec/benchmark/scenarios_spec.rb asserts "Capture, async, after the response" exists, has no budget, and times running the callbacks
   - After: T6
   - Done when: `rspec spec/benchmark` → 0 failures; `bin/benchmark` prints both rows
-- [ ] **T8** The health snapshot is gated at 1.5 ms → REQ-11
+- [x] **T8** The health snapshot is gated at 1.5 ms → REQ-11
   - Files: benchmark/scenarios.rb, spec/benchmark/scenarios_spec.rb
   - Test: spec/benchmark/scenarios_spec.rb asserts the health snapshot row's budget is 1.5 ms
   - After: T7
   - Done when: `rspec spec/benchmark` → 0 failures; CI's `Overhead benchmark` passes
-- [ ] **T9** Re-run the shapes with the database 1 ms away, and write the budgets down → REQ-10, REQ-12
+- [x] **T9** Re-run the shapes with the database 1 ms away, and write the budgets down → REQ-10, REQ-12
   - Files: .shipkit/research/deploy-shape-benchmark.md, .shipkit/product.md, .claude/skills/host-app-safety/SKILL.md, .claude/skills/safety-check/SKILL.md, README.md, docs/FEATURES.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
   - Test: none, prose and dispatches verified by reading
   - After: T8

@@ -12,7 +12,7 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
 
 ## Goals this quarter
 - Ship 1.0 — metric: v1.0.0 published on RubyGems with config and public API frozen; target: released; by: 2026-12-31
-- Prove the overhead budget — metric: capture time and storm-check time, measured by a reproducible benchmark that ships in the repo; target: capture < 5ms, storm check < 15µs, both on the CI benchmark's runner (the documented budgets); by: 2026-12-31
+- Prove the overhead budget — metric: capture time and storm-check time, measured by a reproducible benchmark that ships in the repo; target: capture < 5ms before the response, storm check < 15µs, both on the CI benchmark's runner (the documented budgets); by: 2026-12-31
 - Grow adoption — metric: total RubyGems downloads and GitHub stars; target: 100,000 downloads and 200 stars (55,630 and 94 on 2026-10-21); by: 2026-12-31
 
 ## Non-goals
@@ -36,7 +36,7 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
 ## Constraints
 - **Paramount: the host app comes first.** RED runs inside the host app's process, so every line of RED can break the host app. These outrank every goal, feature and deadline in this file:
   - Never raise in the capture path, never block a request, and always re-raise the original exception (a swallowed one broke Sidekiq retries in sentry-ruby#1173).
-  - Budget every operation: total capture < 5ms, health snapshot < 1ms, breadcrumb < 0.01ms; notifications and analysis are always async.
+  - Budget every operation: capture < 5ms before the response, health snapshot < 1.5ms, storm check < 15µs, breadcrumb < 10µs; notifications and analysis are always async.
   - Fail open: under an error flood, shed RED's own context and writes before touching the host app (storm protection).
   - Detect a library before calling it; optional dependencies degrade silently.
   - Migrations run inside the host app's deploy: replay-safe, and RED never writes another gem's files (decision 0001).

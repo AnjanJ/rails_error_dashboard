@@ -185,7 +185,9 @@ RailsErrorDashboard.configure do |config|
 
 <% if @enable_async_logging -%>
   # Async Error Logging - ENABLED
-  # Errors are logged in background jobs, off the request path. The jobs run on
+  # Errors are logged in background jobs, off the request path. Under a server
+  # with rack.response_finished, such as Puma, the job is enqueued after the
+  # response is sent. The jobs run on
   # your app's Active Job adapter (config.active_job.queue_adapter), so in
   # production a worker must process the default and error_notifications queues
   # (Rails 8: bin/jobs for Solid Queue).
@@ -563,12 +565,12 @@ RailsErrorDashboard.configure do |config|
   # of every error capture. Useful for:
   #   - Auditing "when did this error get captured?" against deploy events
   #   - Measuring how much time the gem spends in the capture path
-  #   - Proving the <5ms host-safety budget from operator dashboards
+  #   - Proving the host-safety budget (<5ms before the response) from operator dashboards
   #
   # Emits four spans per error capture:
   #   rails_error_dashboard.capture_error           — parent, wraps everything
   #   rails_error_dashboard.breadcrumb_collection   — buffer drain (~µs)
-  #   rails_error_dashboard.system_health_snapshot  — GC.stat etc. (<1ms)
+  #   rails_error_dashboard.system_health_snapshot  — GC.stat etc. (<1.5ms)
   #   rails_error_dashboard.notification_dispatch   — Slack/email enqueue
   #
   # Disabled by default. Requires the host app to already run OpenTelemetry

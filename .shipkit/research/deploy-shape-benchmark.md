@@ -1,9 +1,10 @@
 # What RED adds on deploy shapes: every figure
 
-> Researched 2026-10-31 to 2026-11-05 on GitHub's hosted runners, for the spec
-> `deploy-shape-benchmark` (REQ-21). Written 2026-11-06 at `4146259`. Each figure below names its shape, its CPU,
-> the RED commit it ran and the date of its run. Each run's reports stay on GitHub under its run ID while its
-> artifacts last; the two runs from 2026-10-31 have no artifacts now, so their figures come from their logs.
+> Researched 2026-10-31 to 2026-11-07 on GitHub's hosted runners, for the spec `deploy-shape-benchmark` (REQ-21)
+> and then `release-1-0-rc1` (T9). Written 2026-11-06 at `4146259`, and its rc1 section on 2026-11-07. Each
+> figure below names its shape, its CPU, the RED commit it ran and the date of its run. Each run's reports stay
+> on GitHub under its run ID while its artifacts last; the two runs from 2026-10-31 have no artifacts now, so
+> their figures come from their logs.
 
 ## How to read these figures
 
@@ -172,6 +173,50 @@ What RED added under load, p50 / p95 / p99, in ms:
 | 42166033190 SQLite, Solid Queue | +0.00 / -0.10 / +0.04 | -0.02 / -0.13 / +0.82 | +0.11 / +0.26 / -1.25 |
 | 42166036449 PostgreSQL, Solid Queue, Ruby 4.0 | -0.01 / -0.33 / -0.24 | +0.02 / +0.27 / +1.35 | +0.12 / +0.17 / +0.60 |
 
+## Capture after the response (1.0.0.rc1)
+
+2026-11-07, commit `67b69c7` on `feat/rc1-after-response` (#362), for `release-1-0-rc1` T9: async capture
+enqueues from `rack.response_finished` (decision `0009`), the "Capture, async" row stops at the response, and a
+new reported row times the rest. The database is 1 ms away on every run. Every window of the 270 held its rate.
+
+| Run | Shape | Stack | Ruby | CPU | Round trip, load test | Round trip, rows | Rate (capacity) |
+|---|---|---|---|---|---|---|---|
+| 42372775883 | `medium` | `postgres-solid-queue` | 3.4.12 | EPYC 7763, "2 CPUs on 1 core" | 1.15 ms, 1.08 added | 1.09 ms, 1.04 added | 220/s (440) |
+| 42372783508 | `small` | `postgres-solid-queue` | 3.4.12 | EPYC 9V74 | 1.06 ms, 1.02 added | 1.07 ms, 1.02 added | 280/s (560) |
+| 42372786996 | `medium-throttled` | `postgres-solid-queue` | 3.4.12 | EPYC 7763, 0.4 CPU | 1.10 ms, 1.03 added | 1.09 ms, 1.00 added | 50/s (100) |
+| 42372790202 | `medium-arm` | `postgres-solid-queue` | 3.4.12 | Neoverse-N2 | 1.08 ms, 1.04 added | 1.09 ms, 1.06 added | 200/s (400) |
+| 42372793272 | `medium` | `mysql-solid-queue` | 3.4.12 | EPYC 7763 | 1.09 ms, 1.01 added | 1.14 ms, 1.08 added | 200/s (400) |
+| 42372796876 | `medium` | `postgres-solid-queue` | 4.0.9 | EPYC 9V74 | 1.08 ms, 1.02 added | 1.09 ms, 1.02 added | 280/s (560) |
+
+The rows, median (p95). "Capture, async" is gated at 5 ms, the health snapshot at 1.5 ms, and every gated row
+passed on every run:
+
+| Run | Capture, async | Capture, async, after the response | Capture, sync | Health snapshot | Storm check, calm | Reopen collision fallback |
+|---|---|---|---|---|---|---|
+| 42372775883 `medium` | 270 µs (679) | 7.85 ms (8.78) | 15.24 ms (16.86) | 783 µs (846) | 8.49 µs (15.19) | 17.14 ms (18.41) |
+| 42372783508 `small` | 188 µs (549) | 7.33 ms (8.92) | 13.11 ms (16.55) | 635 µs (687) | 6.35 µs (13.04) | 15.26 ms (16.73) |
+| 42372786996 `medium-throttled` | 266 µs (700) | 7.88 ms (8.82) | 16.01 ms (18.31) | 805 µs (7.00 ms) | 8.51 µs (23.14) | 17.98 ms (19.25) |
+| 42372790202 `medium-arm` | 321 µs (657) | 8.10 ms (8.72) | 15.02 ms (19.01) | 1.23 ms (1.30) | 7.66 µs (14.94) | 17.21 ms (18.02) |
+| 42372793272 `medium`, MySQL | 271 µs (653) | 8.60 ms (9.83) | 15.55 ms (17.25) | 783 µs (888) | 9.21 µs (20.97) | not applicable: its index is PostgreSQL's |
+| 42372796876 `medium`, Ruby 4.0 | 220 µs (471) | 7.46 ms (8.10) | 13.81 ms (17.08) | 815 µs (869) | 6.65 µs (10.05) | 15.92 ms (17.01) |
+
+What RED added under load, p50 / p95 / p99, in ms:
+
+| Run | `healthy` | `failing` | `storm` |
+|---|---|---|---|
+| 42372775883 `medium` | -0.00 / -0.29 / -0.19 | +0.10 / +0.17 / +2.03 | +0.11 / +0.04 / -0.52 |
+| 42372783508 `small` | -0.00 / -0.44 / -0.09 | +0.04 / +0.02 / +1.22 | +0.08 / +0.25 / +0.05 |
+| 42372786996 `medium-throttled` | +0.08 / +0.42 / +1.50 | +0.00 / +0.79 / +1.94 | +0.22 / +0.08 / -5.33 |
+| 42372790202 `medium-arm` | +0.00 / -0.26 / -0.09 | +0.04 / +0.06 / +0.35 | +0.22 / -0.24 / +0.83 |
+| 42372793272 `medium`, MySQL | -0.01 / -0.06 / +0.15 | -0.02 / -0.13 / +0.69 | +0.19 / +0.09 / +0.05 |
+| 42372796876 `medium`, Ruby 4.0 | +0.01 / -0.08 / +0.00 | +0.02 / +0.25 / +0.67 | +0.12 / +0.18 / +0.70 |
+
+Three of these can be set beside a run with the enqueue inline on the same CPU, with the database 1 ms away.
+`failing` p99, inline then after the response: `medium` on PostgreSQL, EPYC 7763 at 220/s, +0.71 ms
+(42058012637, `1c6efc4`) then +2.03 ms, its five pairs +0.85 to +2.50; `medium` on MySQL, EPYC 7763 at 200/s,
++0.82 ms (42166030030) then +0.69 ms; `medium-arm`, Neoverse-N2, +0.38 ms at 170/s (42028794330) then +0.35 ms at
+200/s.
+
 ## Runs with no load report
 
 - 41994832334, `medium-arm`, Neoverse-N2, `677dfd0`, 2026-11-05: the health snapshot row failed (1.24 ms), and the
@@ -215,3 +260,14 @@ What RED added under load, p50 / p95 / p99, in ms:
    where nothing crosses a network. Under load the stacks read alike: `healthy` within -0.04 to +0.14 ms at p50,
    and `failing` p99 +0.74 to +1.35 ms. Ruby 4.0's run read like Ruby 3.4's, on a different CPU. The health
    snapshot's one miss, 1.11 ms, was on the Xeon Platinum 8573C, where CI's overhead benchmark has missed it too.
+9. **With the enqueue after the response, capture meets 5 ms on every shape.** At `67b69c7`, with the database
+   1 ms away, "Capture, async" read 188 to 321 µs on all four shapes, on MySQL and on Ruby 4.0
+   (`release-1-0-rc1`, REQ-10). The enqueue didn't get cheaper: "Capture, async, after the response" read 7.33 to
+   8.60 ms, about what the row read before the response at `8d20630`. The health snapshot passed 1.5 ms on every
+   CPU, at 1.23 ms on the Neoverse-N2.
+10. **Whether the work after the response costs throughput is open.** The load test sends a fixed rate, so it
+    shows latency, not throughput. Of the three runs that have an inline run beside them on the same CPU,
+    `failing` p99 rose on `medium` on PostgreSQL (+0.71 to +2.03 ms, every pair positive) and held on MySQL and
+    `medium-arm`. The likely cause is the Puma thread spending the enqueue before it takes the next request.
+    Decision `0009` reverses if the callback's work costs a host more throughput than the inline enqueue did.
+    One run is not that, but a second rise on the same CPU and stack would be worth a capacity test with RED on.

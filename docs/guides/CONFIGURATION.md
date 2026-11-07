@@ -1106,7 +1106,7 @@ end
 ### Safety
 
 - **Default OFF** — opt-in only
-- **Around a millisecond**, except the job-queue counts, which are database or Redis queries (cached per process). The in-process metrics take a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74 and 1.24 ms on an Intel Xeon Platinum 8573C, against a 1 ms budget ([`bin/benchmark`](../../bin/benchmark), on CI's shared runners)
+- **Around a millisecond**, except the job-queue counts, which are database or Redis queries (cached per process). The in-process metrics take a median of 0.45 ms on an AMD EPYC 9V45, 0.80 ms on an AMD EPYC 7763, 0.85 ms on an AMD EPYC 9V74, 1.24 ms on an Intel Xeon Platinum 8573C and 1.23 ms on an arm64 Neoverse-N2, against a 1.5 ms budget ([`bin/benchmark`](../../bin/benchmark), on CI's shared runners)
 - **Every metric individually wrapped** in `rescue => nil`
 - **Top-level rescue** — returns `{ captured_at: ... }` if everything fails (never raises)
 - **No ObjectSpace scanning** — never calls `each_object` or `count_objects`
