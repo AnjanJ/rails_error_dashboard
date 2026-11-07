@@ -1,29 +1,32 @@
 # Handoff
 
-> Written 2026-11-08 at commit `63c4fa90`, on the branch `feat/rc1-upgrade-matrix` (T10-T11 of rc1).
+> Written 2026-11-08 at commit `ce61f0a6`, on the branch `docs/rc1-upgrade-matrix-results`.
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/` (accepted 2026-11-06, merged
   in #359 with decision `0009`). Six pull requests, in the order of its tasks.md: the floors (T1-T3, #360),
-  capture after the response and the budgets (T4-T9, #362), the upgrade matrix (T10-T11, this branch), the
-  docs and the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). The release steps
-  under "After the gate" each need the maintainer's yes.
-- **T10 is done, T11 waits for its dispatch.** `bin/pre-release-test full_upgrade` takes
-  `UPGRADE_FROM_VERSION`, `UPGRADE_DATABASE` (sqlite, postgresql, mysql) and `UPGRADE_DATABASE_URL`, and with
-  none still upgrades from the latest release on SQLite. `.github/workflows/upgrade-matrix.yml` picks the
-  latest patch of each 0.x minor from RubyGems and upgrades each on the three databases. GitHub dispatches a
-  workflow only once it's on the default branch, so T11's 54-row dispatch comes after this branch merges,
-  and needs the maintainer's yes.
-- **Some 0.x releases can't be installed fresh.** 0.1.38 to 0.6.2 fail their own migrations on MySQL
-  (issue #84, an int `application_id` against a bigint `applications.id`, fixed in 0.6.3), and 0.6.4 adds
-  `instance_variables` twice, so it fails on PostgreSQL and MySQL. REQ-13 was changed on 2026-11-08, with the
-  maintainer's yes: such a row ends in its own outcome, "doesn't install", exit 3, not a failed upgrade.
-  The harness used to hide a failed migration behind `tail`; it now stops on one. Its error paths also died
-  on an unset `FAILED` under `set -u`; they now record the failure like the rest.
-- **Local database containers** `red-upgrade-pg` (port 55432) and `red-upgrade-mysql` (53306) are running
-  for T10-T11, with the maintainer's yes, and are to be stopped when T11 is done. Both are `--rm`.
+  capture after the response and the budgets (T4-T9, #362), the upgrade matrix (T10-T11, #363), the docs and
+  the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). T1-T11 are done. The
+  release steps under "After the gate" each need the maintainer's yes, and the first is to run the upgrade
+  workflow again on the release commit.
+- **Next: T12-T14** on a new branch from main, once this branch merges (one PR at a time, the maintainer's
+  choice: the chaos tests and the upgrade test share CPU, Docker and ports).
 
 ## Done
+- **The upgrade matrix ran on main** (run 42409492696, `bb4b57ed`, 2026-11-08), with the maintainer's yes:
+  55 jobs, all green, 8 minutes, each row 1 to 2 minutes. Of the 54 rows (18 releases by 3 databases),
+  41 upgraded and 13 don't install, each on its release's own migration error:
+  - 0.4.2, 0.5.15, 0.6.4 and 0.7.2 on every database: their schema already has `instance_variables`, and a
+    later migration adds it again (0.4.2 on MySQL first fails on "Specified key was too long; max key length
+    is 3072 bytes").
+  - 0.1.38 on MySQL: issue #84, an int `application_id` against a bigint `applications.id`, fixed in 0.6.3.
+    0.2.4 and 0.3.1 do install on MySQL and upgrade.
+  The upgrading guide (T12) can say that users on those releases upgrade through a later one.
+- **#363 merged** (`bb4b57ed`) on 2026-11-08: T10-T11. The upgrade test takes `UPGRADE_FROM_VERSION`,
+  `UPGRADE_DATABASE` and `UPGRADE_DATABASE_URL`, stops on a failed migration, and exits 3 when the release
+  itself doesn't install; `.github/workflows/upgrade-matrix.yml` runs it for every 0.x minor on the three
+  databases. REQ-13 was changed for releases that don't install, with the maintainer's yes. A later fix
+  (`ce61f0a6`) shows SQLite's error for those rows. The local database containers were stopped.
 - **#362 merged** (`9c4b0650`) on 2026-11-07: T4-T9 of rc1, capture after the response, the benchmark's two
   capture rows, the health snapshot at 1.5 ms, and the shapes re-run (all six under 5 ms before the
   response, 188 to 321 µs). Its branch was deleted on GitHub.
