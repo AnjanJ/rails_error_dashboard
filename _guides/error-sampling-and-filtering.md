@@ -279,18 +279,15 @@ config.sampling_rate = 0.1  # Still seeing 1000s per day
 
 ### 2. Monitor Ignored/Sampled Errors
 
-```ruby
-# Track what's being filtered
-RailsErrorDashboard.configure do |config|
-  config.on_error_ignored = ->(exception) {
-    Rails.logger.info("Ignored error: #{exception.class}")
-  }
+RED has no callback for errors that are ignored or sampled out. Those errors are dropped before anything is stored, and nothing is told about them. To see what is being kept, use `RailsErrorDashboard.on_error_logged`, which runs for each error that is logged:
 
-  config.on_error_sampled_out = ->(exception) {
-    Rails.logger.info("Sampled out: #{exception.class}")
-  }
+```ruby
+RailsErrorDashboard.on_error_logged do |error_log|
+  Rails.logger.info("Logged error: #{error_log.error_type}")
 end
 ```
+
+Compare that count with your own logs or APM to see how much is filtered.
 
 ### 3. Document Your Decisions
 
@@ -503,13 +500,13 @@ end
 RailsErrorDashboard.configure do |config|
   config.ignored_exceptions = []
   config.sampling_rate = 1.0
+end
 
-  # Log what WOULD be filtered
-  config.on_candidate_for_ignoring = ->(exception) {
-    if exception.is_a?(ActionController::RoutingError)
-      Rails.logger.info("Would ignore: #{exception.class}")
-    end
-  }
+# See what WOULD be filtered: log each routing error that gets through
+RailsErrorDashboard.on_error_logged do |error_log|
+  if error_log.error_type == "ActionController::RoutingError"
+    Rails.logger.info("Would ignore: #{error_log.error_type}")
+  end
 end
 
 # Week 2: Enable filtering

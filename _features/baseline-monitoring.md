@@ -177,6 +177,8 @@ Anomalies are classified by how far above the baseline they are:
 | **High** | 3-4 std devs | Significantly above normal | Investigate |
 | **Critical** | > 4 std devs | Extremely abnormal | Immediate action |
 
+The bands above use the default `baseline_alert_threshold_std_devs` of 2.0. The bands are that value, that value plus 1, and that value plus 2. They are not separate settings. Outliers (more than 3 std devs from the mean) are dropped before the baseline is calculated, and that cut-off is fixed.
+
 ### Example Calculation
 
 ```text
@@ -246,7 +248,7 @@ RailsErrorDashboard.configure do |config|
   config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
 
   config.enable_email_notifications = true
-  config.notification_email = "errors@example.com"
+  config.notification_email_recipients = ["errors@example.com"]
 end
 ```
 
@@ -327,25 +329,9 @@ RailsErrorDashboard::BaselineAlertJob.perform_now(
 
 ```ruby
 RailsErrorDashboard.configure do |config|
-  # === Baseline Calculation ===
-
-  # How far back to look for baseline calculation
-  config.baseline_lookback_weeks = 4      # Hourly baselines
-  config.baseline_lookback_weeks_daily = 12   # Daily baselines
-  config.baseline_lookback_weeks_weekly = 52  # Weekly baselines
-
-  # Minimum sample size for valid baseline
-  config.baseline_min_sample_size = 10
-
-  # === Anomaly Detection ===
-
-  # Outlier removal threshold (std devs)
-  config.baseline_outlier_threshold = 3.0
-
-  # Anomaly severity thresholds (std devs above mean)
-  config.baseline_elevated_threshold = 2.0
-  config.baseline_high_threshold = 3.0
-  config.baseline_critical_threshold = 4.0
+  # The baseline calculation itself has no settings. The lookback periods
+  # (4 weeks hourly, 12 weeks daily, 1 year weekly), the outlier cut-off
+  # (3 std devs) and the anomaly bands are fixed in the code.
 
   # === Alerts ===
 
@@ -373,14 +359,12 @@ end
 ```ruby
 config.baseline_alert_threshold_std_devs = 3.0  # More lenient
 config.baseline_alert_cooldown_minutes = 60     # Shorter cooldown
-config.baseline_min_sample_size = 5             # Lower minimum
 ```
 
 #### For High-Traffic Applications
 ```ruby
 config.baseline_alert_threshold_std_devs = 2.0  # Stricter
 config.baseline_alert_cooldown_minutes = 180    # Longer cooldown
-config.baseline_min_sample_size = 20            # Higher minimum
 ```
 
 #### For Noisy Error Types
@@ -486,17 +470,14 @@ Use this to:
 **Cause**: Not enough historical data to calculate baseline.
 
 **Requirements**:
-- At least `baseline_min_sample_size` data points (default: 10)
-- Data must span the lookback period (e.g., 4 weeks for hourly)
+- Captured errors of that type and platform inside the lookback period
+- The baseline job must have run (it is not configurable, see the lookback periods above)
 
 **Solution**:
 ```ruby
-# Check sample size
-ErrorLog.where(error_type: "YourError").count
-# If < 10, wait for more data
-
-# Lower minimum if needed (not recommended)
-config.baseline_min_sample_size = 5
+# Check how many errors of that type exist
+RailsErrorDashboard::ErrorLog.where(error_type: "YourError").count
+# If there are very few, wait for more data. There is no minimum setting.
 ```
 
 ### "Baseline alerts not sending"

@@ -61,7 +61,7 @@ native review). A
 self-hosted Sentry alternative that keeps error data in your own database. The
 gem is MIT and free forever.
 
-Supports Rails 7.0-8.1 and Ruby 3.2-4.0. Beta: APIs may change before 1.0.
+Supports Rails 7.2-8.1 and Ruby 3.3-4.0.
 
 Live demo: https://rails-error-dashboard.anjan.dev
 

@@ -62,4 +62,32 @@ RSpec.describe "What the docs say about RED's status and floors" do
       expect(missing).to eq([])
     end
   end
+
+  # Every page's `RailsErrorDashboard.configure do |config|` blocks, to the
+  # end of their code fence. The glossary's `option_name` is a placeholder.
+  it "uses only options RED has in any configure block on any page (release-1-0-rc1/REQ-21)" do
+    missing = pages.flat_map do |page|
+      inside = false
+      root.join(page).readlines.each_with_index.flat_map do |line, index|
+        inside = true if line.include?("RailsErrorDashboard.configure do |config|")
+        inside = false if line.strip == "```"
+        next [] unless inside
+
+        line.scan(/(?<![\w.])config\.([a-z_]+)/).flatten
+          .reject { |name| name == "option_name" || options.include?(name) || options.include?("#{name}=") }
+          .map { |name| "#{page}:#{index + 1}: config.#{name}" }
+      end
+    end
+
+    expect(missing).to eq([])
+  end
+
+  # What RubyGems shows above the README.
+  it "describes the gem without beta and with the floors (release-1-0-rc1/REQ-20)" do
+    spec = Gem::Specification.load(root.join("rails_error_dashboard.gemspec").to_s)
+    text = "#{spec.summary} #{spec.description}"
+
+    expect(text).not_to match(/\bbeta\b/i)
+    expect(text).not_to match(/Rails 7\.[01]\b|Ruby 3\.[0-2]\b/)
+  end
 end
