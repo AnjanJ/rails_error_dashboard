@@ -211,7 +211,7 @@ RSpec.describe RailsErrorDashboard::Services::SystemHealthSnapshot do
 
     it "does not shell out or make network calls" do
       # Verify the snapshot uses only in-process reads (no backtick, no Open3, no Net::HTTP).
-      # The <1ms budget is enforced by code review — timing specs are flaky on shared CI.
+      # The <1.5ms budget is gated by bin/benchmark's health snapshot row — timing specs are flaky on shared CI.
       expect(described_class).not_to receive(:`)
       result = described_class.capture
       expect(result).to be_a(Hash)

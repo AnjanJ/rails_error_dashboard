@@ -19,7 +19,7 @@ Audit each changed file against these rules:
 
 1. **Never raise in capture path** — Look for `raise` statements in middleware, subscriber, or capture commands without surrounding `rescue`
 2. **Never block request path** — Look for HTTP calls, file I/O, or slow operations in synchronous capture code
-3. **Budget every operation** — Check timing: breadcrumb callback <0.01ms, health snapshot <1ms, capture total <5ms
+3. **Budget every operation** — Check timing: breadcrumb callback <10µs, health snapshot <1.5ms, storm check <15µs, capture <5ms before the response
 4. **Clean up Thread.current** — Any `Thread.current[]=` must have a matching `ensure` cleanup
 5. **Always re-raise original exceptions** — Middleware/subscriber must re-raise after capture (Sentry #1173)
 6. **Feature-detect** — Any call to `Puma`, `Sidekiq`, etc. must be guarded with `defined?()` or `respond_to?()`
