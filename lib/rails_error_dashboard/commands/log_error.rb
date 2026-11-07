@@ -221,8 +221,49 @@ module RailsErrorDashboard
           end
         end
 
-        # Enqueue the async job using ActiveJob
-        # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
+        # Everything the job carries is built above, on the request thread.
+        # Only the enqueue is deferred: it is the one step that talks to the
+        # queue's store (seven statements with Solid Queue on PostgreSQL), and
+        # the closure holds plain data, so it reads nothing ErrorCatcher's
+        # ensure clears before the callback runs (decision 0009).
+        callbacks = response_finished_callbacks
+        if callbacks
+          callbacks << proc { |*| enqueue_after_response(exception, exception_data, context) }
+          nil
+        else
+          enqueue_async(exception, exception_data, context)
+        end
+      end
+
+      # The server's rack.response_finished array for the request this thread
+      # is serving, or nil outside a request, under a server without the hook,
+      # or with the middleware off. ErrorCatcher keeps the env for exactly the
+      # length of the request, so a later capture on a reused thread sees nil.
+      def self.response_finished_callbacks
+        env = Thread.current[:rails_error_dashboard_request_env]
+        return nil unless env.is_a?(Hash)
+
+        callbacks = env["rack.response_finished"]
+        callbacks if callbacks.is_a?(Array) && !callbacks.frozen?
+      end
+
+      # Runs inside the server once the response has gone. Puma rescues a
+      # raising callback and logs it only at debug level, so nothing may
+      # escape: a failed enqueue already falls back to sync logging, and this
+      # rescue covers that fallback failing too.
+      def self.enqueue_after_response(exception, exception_data, context)
+        enqueue_async(exception, exception_data, context)
+        nil
+      rescue => e
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] Capture after the response failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      # Enqueue the async job using ActiveJob, falling back to sync logging.
+      # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
+      def self.enqueue_async(exception, exception_data, context)
         begin
           # OTel: emit a capture span around the enqueue itself. The real capture
           # work runs in the job (which starts its own root span via .new(...).call).

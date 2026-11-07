@@ -1,24 +1,30 @@
 # Handoff
 
-> Written 2026-11-07 at commit `7e1abc40` (main), with rc1's first task on the branch `feat/rc1-floors`.
+> Written 2026-11-07 at commit `fd641303`, on the branch `feat/rc1-after-response` (T4-T8 of rc1).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/` (accepted 2026-11-06, merged
-  in #359 with decision `0009`). Six pull requests, in the order of its tasks.md: the floors (T1-T3), capture
-  after the response and the budgets (T4-T9), the upgrade matrix (T10-T11), the docs and the stats partial
-  (T12-T14), the prerelease flag (T15), then the demo (T16-T17). The release steps under "After the gate"
-  each need the maintainer's yes.
-- The floors pull request also needs main's ruleset changed: it requires the 20 matrix rows by name, and the
-  11 for Ruby 3.2, Rails 7.0 and Rails 7.1 will never report again. That change needs the maintainer's yes.
-- Benchmark dispatches for rc1's tasks, such as T9's shape re-runs, need the maintainer's yes.
-- The floors branch, `feat/rc1-floors`, has T1-T3. T3 reached past the files its task lists, because REQ-3
-  covers all of lib/ and app/: the subscriber's Rails 7.0 de-duplication (`error_reporter.rb`), four jobs
-  that used the Rails 7.0 retry delay, a stale comment in `missing_translation_tracker.rb`, and the
-  `swallowed_requires_ruby` key in all 11 locales (T14 also edits those files). Left for later tasks:
-  phase F's Ruby 3.3 and Rails 7.1 branches (T5 edits that file), and the docs that still name Ruby 3.2
-  or Rails 7.0 (T12, T13).
+  in #359 with decision `0009`). Six pull requests, in the order of its tasks.md: the floors (T1-T3, merged
+  in #360), capture after the response and the budgets (T4-T9), the upgrade matrix (T10-T11), the docs and
+  the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). The release steps under
+  "After the gate" each need the maintainer's yes.
+- **T4-T9 are on `feat/rc1-after-response`.** T4-T8 are done: async capture hands its enqueue to
+  `rack.response_finished` (`commands/log_error.rb`), the "Capture, async" row times the work before the
+  response under a Puma-style env, "Capture, async, after the response" reports the rest with no budget, and
+  the health snapshot is gated at 1.5 ms. On #362's CI (run 42356111086, a Xeon 6973P-C) the rows read 137 µs
+  before the response, 15 µs after it, and 418 µs for the health snapshot. T5 reached past its file list: phase F needs async capture under a
+  real Puma, and only the sync HTTP app ran it, so `full_async` now boots Puma and runs phase F
+  (`bin/pre-release-test`), with the TracePoint features on in its initializer. Its fixtures add
+  `/test/deferred_error` and an initializer that holds that error's enqueue 1.5 s, which F9 times against
+  the response. T5 also removed phase F's Ruby 3.3 and Rails 7.1 branches that T3 left.
+- **T9 needs the maintainer's yes** for its benchmark dispatches: each shape re-run with the database 1 ms
+  away, its runs recorded in the research file, then the five files that state the budgets.
 
 ## Done
+- **rc1's floors merged in #360** (`b832160f`) on 2026-11-07: Rails 7.2 and Ruby 3.3, the test matrix at 9
+  rows, and the code for older versions removed. Main's ruleset lost the 11 required checks for Ruby 3.2
+  and Rails 7.0/7.1 first, with the maintainer's yes. The two sqlite3 Dependabot alerts (#331's) closed as
+  fixed on the merge. The merged branches of #358 and #359 were deleted on GitHub.
 - **`deploy-shape-benchmark` is finished.** T21 merged in #358 (`27720d6c`) on 2026-11-06, the last of its
   tasks: the deploy benchmark workflow takes a `shape`, a `stack` and a `ruby`. With the database 1 ms away,
   async capture missed its 5 ms budget only where Solid Queue's enqueue crosses the network (on `medium` at
@@ -110,9 +116,6 @@
   figure. A restart takes about 6 s. k6 peaked at 1.23 GiB with all 5,120 VUs of an overloaded 1,280 a
   second, about 0.24 MiB each, so its memory isn't a worry at these rates. At 10% over capacity, a 60 s
   probe dropped 3,320 requests, so the probe is long enough to see a small overload.
-- **Two Dependabot alerts stay open until rc1.** Both are sqlite3 in the development Gemfile
-  (GHSA-mwm8-39rw-8826 and GHSA-28hh-pr2h-2w89), from its Rails 7.0 branch, `~> 1.4`, because no 1.x
-  release fixes them (#331). The floors pull request removes that branch; check that both close after it merges.
 - **`RED=off` still defines `RailsErrorDashboard::VERSION`.** Bundler reads a path gem's gemspec at boot, and
   RED's requires `version.rb`. No RED class, middleware, error subscriber or route loads, so the design's
   "two images" clause, which watches for a RED class, hasn't fired.
@@ -133,7 +136,8 @@
     By hand, `docker compose -f benchmark/load/compose.yml up --build --wait`, then `down --volumes`. `LOAD_APP_BOOT=1` adds the examples in `spec/benchmark/load_app_spec.rb` and `load_traffic_spec.rb` that boot
     the app and check it with RED on and off, about a minute on a built image;
   - push over HTTPS and merge with `gh api`;
-  - main requires 29 checks and an up-to-date branch. CI shows 30 rows, because `Overhead benchmark`
-    isn't required.
+  - main requires 18 checks and an up-to-date branch. CI shows 19 rows, because `Overhead benchmark`
+    isn't required. `Upgrade Path` is required but runs only on a release PR or a change under
+    `db/migrate/`; skipped, it counts as passing.
 - **Commit and PR titles:** no `!` and no `BREAKING CHANGE` before 1.0, because either one proposes 1.0.0.
   Issue references say `Refs #N` with no colon, never `Closes`, `Fixes` or `Resolves`.

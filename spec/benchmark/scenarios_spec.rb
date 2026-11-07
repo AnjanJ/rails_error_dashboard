@@ -23,11 +23,12 @@ RSpec.describe RedBenchmark::Scenarios do
 
     expect(budgets).to eq(
       "Capture, async (installer default)" => 5e-3,
+      "Capture, async, after the response" => nil,
       "Storm check, calm" => 15e-6,
       "Storm check, shedding" => 15e-6,
       "Storm check, breaker open" => 15e-6,
       "Breadcrumb callback" => 1e-5,
-      "Health snapshot" => 1e-3,
+      "Health snapshot" => 1.5e-3,
       "Capture, sync" => nil,
       "Message filtering, 400 characters" => nil,
       "Request params, 1 MB body" => nil,
@@ -35,7 +36,7 @@ RSpec.describe RedBenchmark::Scenarios do
     )
   end
 
-  it "times capture through the middleware and the subscriber, ending in an enqueue (overhead-benchmark/REQ-2)" do
+  it "times capture through the middleware and the subscriber, up to the response (overhead-benchmark/REQ-2)" do
     reporter = Rails.error.instance_variable_get(:@subscribers).find { |s| s.is_a?(RailsErrorDashboard::ErrorReporter) }
     expect(reporter).to be_present, "RED's Rails.error subscriber is not registered"
     allow(reporter).to receive(:report).and_call_original
@@ -43,9 +44,48 @@ RSpec.describe RedBenchmark::Scenarios do
     result = scenario("Capture, async (installer default)").run.call(timer)
 
     expect(reporter).to have_received(:report).at_least(4).times # 1 warm-up + 3 timed
-    expect(RailsErrorDashboard::AsyncErrorLoggingJob).to have_been_enqueued.at_least(4).times
     expect(result.budget).to eq(5e-3)
   end
+
+  # What the 5 ms budget protects is the time before the response. Under a
+  # server with rack.response_finished, as Puma sets it, capture ends with its
+  # enqueue waiting in that array, and the row must not run it.
+  # release-1-0-rc1/REQ-8
+  it "times async capture under an env with an empty rack.response_finished, leaving the callbacks unrun" do
+    envs = []
+    allow(RailsErrorDashboard::Middleware::ErrorCatcher).to receive(:new).and_wrap_original do |original, app|
+      original.call(app).tap do |catcher|
+        allow(catcher).to receive(:call).and_wrap_original { |call, env| envs << env; call.call(env) }
+      end
+    end
+
+    scenario("Capture, async (installer default)").run.call(timer)
+
+    expect(envs.size).to be >= 4 # 1 warm-up + 3 timed
+    expect(envs).to all(satisfy { |env| env["rack.response_finished"].is_a?(Array) })
+    expect(envs.map { |env| env["rack.response_finished"].size }.uniq).to eq([ 1 ])
+    expect(envs.map { |env| env["rack.response_finished"].object_id }.uniq.size).to eq(envs.size)
+    expect(RailsErrorDashboard::AsyncErrorLoggingJob).not_to have_been_enqueued
+  end
+
+# The enqueue Puma runs once the response is written: reported, so the work
+# after the response stays visible, and not gated (design: "Time both
+# halves, and gate only the first"). release-1-0-rc1/REQ-9
+it "reports, with no budget, the time to run the callbacks async capture leaves" do
+  allow(RailsErrorDashboard::Commands::LogError).to receive(:enqueue_after_response).and_call_original
+
+  result = scenario("Capture, async, after the response").run.call(timer)
+
+  expect(result.budget).to be_nil
+  expect(RailsErrorDashboard::Commands::LogError).to have_received(:enqueue_after_response).exactly(4).times # 1 warm-up + 3 timed
+  expect(RailsErrorDashboard::AsyncErrorLoggingJob).to have_been_enqueued.exactly(4).times
+end
+
+it "orders the after-the-response row right after the row it follows" do
+  names = described_class.all.map(&:name)
+
+  expect(names.index("Capture, async, after the response")).to eq(names.index("Capture, async (installer default)") + 1)
+end
 
   it "times the storm check with the breaker closed (overhead-benchmark/REQ-2)" do
     gate = RailsErrorDashboard::Services::StormProtection::Gate
@@ -99,6 +139,15 @@ RSpec.describe RedBenchmark::Scenarios do
     scenario("Health snapshot").run.call(timer)
 
     expect(RailsErrorDashboard::Services::SystemHealthSnapshot).to have_received(:capture).at_least(4).times
+  end
+
+  # 1 ms missed on two Xeons CI draws and on every arm64 run, on identical
+  # code. One budget on every CPU, still gated. release-1-0-rc1/REQ-11
+  it "gates the health snapshot at 1.5 ms, in the row and in its result" do
+    row = scenario("Health snapshot")
+
+    expect(row.budget).to eq(1.5e-3)
+    expect(row.run.call(timer).budget).to eq(1.5e-3)
   end
 
   it "times sync capture, which writes the error (overhead-benchmark/REQ-3)" do

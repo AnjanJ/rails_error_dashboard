@@ -146,14 +146,7 @@ puts ""
 # with their mapped status and never recorded. If that changes (in Rails or
 # in RED), these checks fail and someone decides whether it is a bug.
 # ---------------------------------------------------------------------------
-RESCUE_RESPONSES_UNREPORTED = Rails.gem_version >= Gem::Version.new("7.1")
-
 def assert_rescue_response(label, status, expected_status, count_before, count_after)
-  unless RESCUE_RESPONSES_UNREPORTED
-    puts "  SKIP: #{label}: Rails #{Rails.version} reports rescue responses differently (checked on 7.1+)"
-    return
-  end
-
   assert "#{label}: answered #{expected_status}", status == expected_status, "got #{status}"
   assert "#{label}: not recorded (Rails leaves rescue responses unreported)",
     count_after == count_before, "count changed: #{count_before} -> #{count_after}"
@@ -323,27 +316,76 @@ assert "variables: instance variable @chaos_marker captured",
 # requests (a new app runs 3 threads), waits out the interval, and sends
 # several more. Buffers left on worker threads die with this server, so the
 # row has to appear during this run. test-gaps-0-17/REQ-10
-if RUBY_VERSION >= "3.3"
-  swallowed = nil
-  deadline = Time.now + 20
-  until swallowed || Time.now > deadline
-    6.times { http_get("/test/swallowed") }
-    sleep 1.2
-    6.times { http_get("/test/swallowed") }
-    refresh_db_connection!
-    swallowed = RailsErrorDashboard::SwallowedException
-      .where(exception_class: "ChaosSwallowedError")
-      .where.not(rescue_location: nil)
-      .first
-  end
+swallowed = nil
+deadline = Time.now + 20
+until swallowed || Time.now > deadline
+  6.times { http_get("/test/swallowed") }
+  sleep 1.2
+  6.times { http_get("/test/swallowed") }
+  refresh_db_connection!
+  swallowed = RailsErrorDashboard::SwallowedException
+    .where(exception_class: "ChaosSwallowedError")
+    .where.not(rescue_location: nil)
+    .first
+end
 
-  assert "swallowed: ChaosSwallowedError recorded with its rescue", swallowed.present?,
-    "no rescue row within 20 s"
-  assert "swallowed: raise located in the test controller",
-    swallowed&.raise_location.to_s.include?("test_errors_controller.rb"),
-    "got #{swallowed&.raise_location.inspect}"
+assert "swallowed: ChaosSwallowedError recorded with its rescue", swallowed.present?,
+  "no rescue row within 20 s"
+assert "swallowed: raise located in the test controller",
+  swallowed&.raise_location.to_s.include?("test_errors_controller.rb"),
+  "got #{swallowed&.raise_location.inspect}"
+puts ""
+
+# ---------------------------------------------------------------------------
+# F9: when the error's row is written, against when the response goes back
+#
+# Async capture enqueues from Puma's rack.response_finished callbacks, after
+# the response is written (release-1-0-rc1/REQ-5, decision 0009). The chaos
+# fixtures hold the enqueue of a ChaosDeferredError's job for
+# DEFERRED_ENQUEUE_HOLD seconds, then stamp the time in a file. If the
+# enqueue were still on the request thread, the response would wait out that
+# hold and arrive after the stamp. Sync capture writes the row before the
+# middleware re-raises, so there the row is already stored when the response
+# arrives, and nothing is enqueued.
+# ---------------------------------------------------------------------------
+PreReleaseTestHarness.section("F9: Capture's work against the response")
+
+DEFERRED_ENQUEUE_HOLD = 1.5
+stamp_file = Rails.root.join("tmp", "chaos_deferred_enqueued_at")
+File.delete(stamp_file) if File.exist?(stamp_file)
+
+def deferred_rows
+  RailsErrorDashboard::ErrorLog.where(error_type: "ChaosDeferredError")
+end
+
+sent_at = Time.now.to_f
+status = http_get("/test/deferred_error")
+answered_at = Time.now.to_f
+refresh_db_connection!
+rows_on_answer = deferred_rows.count
+
+assert "deferred: HTTP returned 500 (#{status})", status == 500, "got #{status}"
+
+if RailsErrorDashboard.configuration.async_logging
+  deadline = Time.now + 15
+  until (File.exist?(stamp_file) && deferred_rows.exists?) || Time.now > deadline
+    sleep 0.25
+    refresh_db_connection!
+  end
+  enqueued_at = File.exist?(stamp_file) ? File.read(stamp_file).to_f : nil
+
+  assert "async: the response did not wait for the enqueue (#{(answered_at - sent_at).round(2)} s)",
+    answered_at - sent_at < DEFERRED_ENQUEUE_HOLD,
+    "the response took #{(answered_at - sent_at).round(2)} s, the hold is #{DEFERRED_ENQUEUE_HOLD} s"
+  assert "async: no row when the response arrived", rows_on_answer == 0, "found #{rows_on_answer}"
+  assert "async: the job was enqueued after the response arrived",
+    enqueued_at && enqueued_at > answered_at,
+    "answered at #{answered_at.round(3)}, enqueued at #{enqueued_at.inspect}"
+  assert "async: the error's row then appears", deferred_rows.exists?, "no row within 15 s"
 else
-  puts "  SKIP: swallowed-exception detection needs Ruby 3.3+ (running #{RUBY_VERSION})"
+  assert "sync: the row was stored before the response arrived", rows_on_answer == 1,
+    "found #{rows_on_answer}"
+  assert "sync: no job was enqueued", !File.exist?(stamp_file)
 end
 puts ""
 
