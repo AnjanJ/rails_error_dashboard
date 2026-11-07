@@ -1028,8 +1028,8 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 
 ### Code Quality
 - **RSpec suite** (unit, request and browser system specs) run in CI on every supported Rails version
-- **Multi-version testing** (Rails 7.0, 7.1, 7.2, 8.0, 8.1)
-- **Ruby 3.2, 3.3, 3.4, 4.0 support**
+- **Multi-version testing** (Rails 7.2, 8.0, 8.1)
+- **Ruby 3.3, 3.4, 4.0 support**
 - **CI/CD via GitHub Actions**
 - **RuboCop linting**
 - **Clean, maintainable code** you can understand and modify
@@ -1064,7 +1064,7 @@ Honeybadger, Bugsnag and AppSignal register `at_exit` reporters too, so this is 
 - **Troubleshooting guides**
 
 ### Testing Support
-- **Multi-version testing** in CI: every supported Ruby (3.2 to 4.0) against every supported Rails (7.0 to 8.1)
+- **Multi-version testing** in CI: every supported Ruby (3.3 to 4.0) against every supported Rails (7.2 to 8.1)
 - **Factory Bot integration** for test data
 - **RSpec matchers** for common assertions
 - **Test helpers** for error generation

@@ -45,91 +45,43 @@ end
 - `:medium` - Should be fixed eventually (non-critical features)
 - `:low` - Nice to fix (deprecations, minor issues)
 
-### Pattern Matching
+### Matching
 
-Use string matching for flexibility:
+Keys are matched against the full class name, exactly. There are no wildcards, and a rule does not apply to subclasses.
 
 ```ruby
 config.custom_severity_rules = {
-  # Exact match
+  # Built-in and third-party classes
   'ActiveRecord::RecordNotFound' => :low,
-
-  # Your custom errors
-  'MyApp::PaymentProcessingError' => :critical,
-  'MyApp::EmailDeliveryError' => :medium,
-
-  # Third-party gems
   'Stripe::CardError' => :high,
-  'AWS::S3::Errors::ServiceError' => :medium
+
+  # Your own classes
+  'MyApp::PaymentProcessingError' => :critical,
+  'MyApp::EmailDeliveryError' => :medium
 }
 ```
 
-### Dynamic Severity
-
-For more complex logic, use a proc:
-
-```ruby
-# Advanced: Not yet implemented, but planned for future
-config.severity_calculator = ->(error) do
-  return :critical if error.message.include?('payment')
-  return :high if error.backtrace.any? { |line| line.include?('critical_path') }
-  :medium
-end
-```
+There is no hook for computing severity from the message or backtrace. Use a rule per class.
 
 ## Custom Error Context
 
-Add custom data to every error for better debugging.
+Attach your own data to an error.
 
-### Basic Context
+### Metadata
 
-```ruby
-RailsErrorDashboard.configure do |config|
-  config.add_error_context do |context|
-    # Add custom fields
-    context[:environment] = Rails.env
-    context[:server_name] = ENV['SERVER_NAME']
-    context[:deploy_version] = ENV['DEPLOY_VERSION']
-    context
-  end
-end
-```
-
-### Request-Specific Context
-
-Add data from the current request:
+Errors you report yourself with `ManualErrorReporter.report` can carry a `metadata` hash:
 
 ```ruby
-config.add_error_context do |context|
-  # Available in context: request, user, etc.
-  if context[:request]
-    context[:user_agent] = context[:request].user_agent
-    context[:referer] = context[:request].referer
-    context[:request_id] = context[:request].request_id
-  end
-
-  if context[:user]
-    context[:user_email] = context[:user].email
-    context[:user_role] = context[:user].role
-    context[:subscription_plan] = context[:user].subscription&.plan
-  end
-
-  context
-end
+RailsErrorDashboard::ManualErrorReporter.report(
+  error_type: "PaymentError",
+  message: "Card declined",
+  platform: "Web",
+  user_id: current_user.id,
+  metadata: { cart_id: @cart.id, plan: current_user.plan }
+)
 ```
 
-### Performance Context
-
-Track performance metrics:
-
-```ruby
-config.add_error_context do |context|
-  context[:memory_usage] = `ps -o rss= -p #{Process.pid}`.to_i / 1024
-  context[:load_average] = File.read('/proc/loadavg').split.first rescue nil
-  context[:active_connections] = ActiveRecord::Base.connection_pool.stat[:busy]
-  context
-end
-```
+There is no setting that adds fields to errors RED captures on its own. To add a trail of events to those, use breadcrumbs.
 
 ### Custom Breadcrumbs
 
@@ -184,119 +136,59 @@ config.ignored_exceptions = [
 ]
 ```
 
-### Conditional Logging
+### Custom Grouping
 
-Use a proc for complex filtering:
-
-```ruby
-config.should_log_error = ->(exception, context) do
-  # Don't log in test environment
-  return false if Rails.env.test?
-
-  # Don't log bot requests
-  return false if context[:user_agent]&.match?(/bot|crawler|spider/i)
-
-  # Don't log known third-party errors
-  return false if exception.is_a?(Faraday::TimeoutError)
-
-  # Log everything else
-  true
-end
-```
+To change how errors are grouped, set `config.custom_fingerprint`. See [Custom Grouping](/rails_error_dashboard/docs/guides/configuration/#custom-grouping) in the Configuration Guide.
 
 ## Custom Notifications
 
-### Custom Notification Channels
+### Notification Callbacks
 
-Add your own notification logic:
+Register Ruby blocks that run when an error is logged. Call these in an initializer, outside the `configure` block:
 
 ```ruby
-RailsErrorDashboard.configure do |config|
-  config.on_error_logged do |error_log|
-    # Custom notification logic
-    if error_log.critical?
-      CustomNotifier.alert(
-        message: "Critical error: #{error_log.error_type}",
-        error_id: error_log.id
-      )
-    end
-  end
+# config/initializers/rails_error_dashboard.rb
+RailsErrorDashboard.on_error_logged do |error_log|
+  CustomNotifier.alert(
+    message: "Error: #{error_log.error_type}",
+    error_id: error_log.id
+  )
+end
+
+RailsErrorDashboard.on_critical_error do |error_log|
+  PagerDuty.trigger(error_log)
+end
+
+RailsErrorDashboard.on_error_resolved do |error_log|
+  CustomNotifier.alert(message: "Resolved: #{error_log.error_type}")
 end
 ```
+
+`on_error_logged` runs when an error is first logged, and when a resolved error reopens. `on_critical_error` runs only for critical errors. Each block receives the `ErrorLog` record. See the [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/#notification-callbacks) for details.
 
 ### Conditional Notifications
 
-Only notify for certain errors:
+Filter inside the block:
 
 ```ruby
-config.on_error_logged do |error_log|
+RailsErrorDashboard.on_error_logged do |error_log|
   # Only notify for payment errors
-  if error_log.error_type.include?('Payment')
-    PaymentTeam.notify(error_log)
-  end
+  PaymentTeam.notify(error_log) if error_log.error_type.include?('Payment')
 
   # Only notify during business hours
-  if Time.current.hour.between?(9, 17)
-    SlackNotifier.send(error_log)
-  end
+  SlackNotifier.send(error_log) if Time.current.hour.between?(9, 17)
 end
 ```
 
-### Custom Slack Format
+### Built-in Channels
 
-Customize Slack message format:
-
-```ruby
-# Override in your own job
-class CustomSlackNotification < RailsErrorDashboard::SlackErrorNotificationJob
-  def build_payload(error_log)
-    {
-      text: "🚨 #{error_log.error_type}",
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: "*Error*: #{error_log.error_type}\n*Message*: #{error_log.message}"
-          }
-        },
-        # Your custom blocks
-      ]
-    }
-  end
-end
-
-# Use your custom job
-config.on_error_logged do |error_log|
-  CustomSlackNotification.perform_later(error_log.id)
-end
-```
+Slack, Discord, email, PagerDuty, Telegram and generic webhooks are built in. Turn them on with their `enable_*_notifications` settings. See the [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/). The message format is not customizable. For a different format, send your own message from a callback.
 
 ## UI Customization
 
 ### Custom Styles
 
-Override the dashboard CSS:
-
-```css
-/* app/assets/stylesheets/rails_error_dashboard_custom.css */
-.rails-error-dashboard {
-  --primary-color: #FF6B6B;
-  --success-color: #51CF66;
-  --danger-color: #FF6B6B;
-}
-
-.error-card {
-  border-left: 4px solid var(--primary-color);
-}
-```
-
-Include in your application:
-
-```ruby
-# config/initializers/assets.rb
-Rails.application.config.assets.precompile += %w[rails_error_dashboard_custom.css]
-```
+The dashboard layout carries its own inline CSS and does not use your app's asset pipeline, so a stylesheet added through `config.assets.precompile` is not loaded. The accent color can be changed with `config.accent_color` (`:crimson`, `:ruby`, `:ember` or `:violet`).
 
 ### Custom Views
 
@@ -416,92 +308,53 @@ end
 
 ## Advanced Customization
 
-### Custom Error Reporter
+### Reporting Errors from Your Code
 
-Replace the default error reporter:
+Report an error that Rails did not raise, or one you rescued yourself:
 
 ```ruby
-class CustomErrorReporter
-  def self.report(exception, context = {})
-    # Your custom error reporting logic
-    RailsErrorDashboard::Commands::LogError.call(
-      error_type: exception.class.name,
-      message: exception.message,
-      backtrace: exception.backtrace,
-      **context
-    )
-
-    # Also send to external service
-    Sentry.capture_exception(exception)
-  end
-end
-
-# Use it in your application
 begin
   # risky code
 rescue => e
-  CustomErrorReporter.report(e, user_id: current_user.id)
+  RailsErrorDashboard::ManualErrorReporter.report(
+    error_type: e.class.name,
+    message: e.message,
+    backtrace: e.backtrace,
+    user_id: current_user.id
+  )
 end
 ```
 
 ### Custom Middleware
 
-Add custom error catching middleware:
-
-```ruby
-class CustomErrorCatcher
-  def initialize(app)
-    @app = app
-  end
-
-  def call(env)
-    @app.call(env)
-  rescue => exception
-    # Custom error handling
-    context = {
-      path: env['PATH_INFO'],
-      method: env['REQUEST_METHOD'],
-      custom_field: extract_custom_data(env)
-    }
-
-    RailsErrorDashboard::ErrorReporter.report(exception, context)
-    raise # Re-raise to let Rails handle it
-  end
-
-  private
-
-  def extract_custom_data(env)
-    # Your custom logic
-  end
-end
-
-# Add to middleware stack
-config.middleware.use CustomErrorCatcher
-```
+RED already catches errors in the Rack stack. If you add your own middleware, let the exception pass through and RED will see it. To report one you rescue yourself, use `ManualErrorReporter.report` as above and re-raise.
 
 ### Plugin Development
 
 Create custom plugins for integrations:
 
 ```ruby
-# lib/rails_error_dashboard/plugins/jira_plugin.rb
-module RailsErrorDashboard
-  module Plugins
-    class JiraPlugin < Plugin
-      on :error_logged do |error_log|
-        create_jira_ticket(error_log) if error_log.critical?
-      end
+class JiraPlugin < RailsErrorDashboard::Plugin
+  def name
+    "Jira"
+  end
 
-      def create_jira_ticket(error_log)
-        JIRA::Client.new.Issue.create(
-          summary: error_log.error_type,
-          description: error_log.message,
-          priority: 'High'
-        )
-      end
-    end
+  def on_error_logged(error_log)
+    create_jira_ticket(error_log) if error_log.critical?
+  end
+
+  private
+
+  def create_jira_ticket(error_log)
+    JIRA::Client.new.Issue.create(
+      summary: error_log.error_type,
+      description: error_log.message,
+      priority: 'High'
+    )
   end
 end
+
+RailsErrorDashboard.register_plugin(JiraPlugin.new)
 ```
 
 See [Plugin System Guide](/rails_error_dashboard/docs/features/plugin-system/) for details.
@@ -530,7 +383,7 @@ RailsErrorDashboard.configure do |config|
   config.enable_slack_notifications = false
   config.slack_webhook_url = nil
   config.enable_email_notifications = false
-  config.notification_email = nil
+  config.notification_email_recipients = []
   config.enable_discord_notifications = false
   config.discord_webhook_url = nil
   config.enable_pagerduty_notifications = false
@@ -593,13 +446,6 @@ RailsErrorDashboard.configure do |config|
   config.slack_webhook_url = ENV['SLACK_WEBHOOK_URL']
   config.enable_pagerduty_notifications = true
   config.pagerduty_integration_key = ENV['PAGERDUTY_KEY']
-
-  # Context
-  config.add_error_context do |context|
-    context[:checkout_step] = context[:request]&.params&.dig(:step)
-    context[:cart_value] = context[:user]&.cart&.total
-    context
-  end
 end
 ```
 
@@ -608,23 +454,11 @@ end
 ```ruby
 RailsErrorDashboard.configure do |config|
   config.async_logging = true
+end
 
-  # Severity by plan
-  config.on_error_logged do |error_log|
-    if error_log.user&.subscription&.enterprise?
-      # Notify immediately for enterprise customers
-      PagerDuty.trigger(error_log)
-    end
-  end
-
-  # Context
-  config.add_error_context do |context|
-    if context[:user]
-      context[:subscription_plan] = context[:user].subscription&.plan
-      context[:account_id] = context[:user].account_id
-    end
-    context
-  end
+# Notify immediately for enterprise customers
+RailsErrorDashboard.on_error_logged do |error_log|
+  PagerDuty.trigger(error_log) if error_log.user&.subscription&.enterprise?
 end
 ```
 

@@ -10,17 +10,17 @@ Rails Engine — a free, open-source Sentry alternative that runs **inside the h
 process**, with no external services. It captures exceptions via `Rails.error`, the Rack
 middleware, boot-crash capture, and manual reporting, then serves a self-contained dashboard UI
 for triage, analytics, notifications, and issue-tracker sync. Aimed at solo founders, indie
-hackers, and small teams. Currently BETA (`VERSION = "0.16.1"` in `lib/rails_error_dashboard/version.rb`);
-API may change before v1.0.0.
+hackers, and small teams. Currently 0.18.1 (`VERSION` in `lib/rails_error_dashboard/version.rb`), with 1.0.0.rc1 next;
+see `docs/VERSIONING.md` and `docs/PUBLIC_API.md` for what 1.0 promises.
 
 ## Stack
-- **Language/framework:** Ruby >= 3.2 (CI covers 3.2–4.0), Rails Engine (`rails >= 7.0.0`, tested through 8.1)
+- **Language/framework:** Ruby >= 3.3 (CI covers 3.3–4.0), Rails Engine (`rails >= 7.2.0`, tested through 8.1)
 - **Architecture:** CQRS — Commands (writes), Queries (reads), Services (algorithms)
 - **Datastore:** host app's DB (PostgreSQL / MySQL / SQLite); supports a **separate DB** via `connects_to` (`ErrorLogsRecord`)
 - **Cache/queue:** host's ActiveJob backend (Sidekiq / Solid Queue / inline); Rails cache for analytics
-- **Runtime deps (gemspec):** `rails >= 7.0`, `pagy ~> 43.0`, `groupdate ~> 6.0`, `concurrent-ruby ~> 1.3` (storm-protection primitives). Optional, degrade gracefully: `browser`, `chartkick`, `httparty`, `turbo-rails`
+- **Runtime deps (gemspec):** `rails >= 7.2`, `pagy ~> 43.0`, `groupdate ~> 6.0`, `concurrent-ruby ~> 1.3` (storm-protection primitives). Optional, degrade gracefully: `browser`, `chartkick`, `httparty`, `turbo-rails`
 - **No asset pipeline** — all CSS/JS inline in the layout; external libs (Bootstrap JS, Chart.js, Highlight.js) via CDN only
-- **Test:** RSpec (381 `*_spec.rb` files under `spec/`, 5,966 examples at 0.16.1) + chaos integration tests. Run `bundle exec rspec` or `bin/pre-release-test all`; `bin/with-ruby` runs a command under the Ruby in `.ruby-version` (the git hooks use it). CI's matrix is Ruby 3.2–4.0 × Rails 7.0–8.1 (`.github/workflows/test.yml`). Specs need the gitignored `spec/dummy/db/test.sqlite3` to exist.
+- **Test:** RSpec (381 `*_spec.rb` files under `spec/`, 5,966 examples at 0.16.1) + chaos integration tests. Run `bundle exec rspec` or `bin/pre-release-test all`; `bin/with-ruby` runs a command under the Ruby in `.ruby-version` (the git hooks use it). CI's matrix is Ruby 3.3–4.0 × Rails 7.2–8.1 (`.github/workflows/test.yml`). Specs need the gitignored `spec/dummy/db/test.sqlite3` to exist.
 
 ## Frontend interaction model
 - **Model:** server-rendered ERB, engine-served; progressive enhancement with inline JS. No SPA, no Stimulus/importmap.
@@ -34,7 +34,7 @@ API may change before v1.0.0.
 |------|---------|
 | `lib/rails_error_dashboard.rb` | Gem entry, requires |
 | `lib/rails_error_dashboard/engine.rb` | Engine setup — DB wiring, middleware insertion, crash-capture and subscriber initializers |
-| `lib/rails_error_dashboard/configuration.rb` | 100+ config options, validation, boot warnings (e.g. Rails < 7.0.10) |
+| `lib/rails_error_dashboard/configuration.rb` | 100+ config options, validation, boot warnings |
 | `lib/rails_error_dashboard/error_reporter.rb` | `Rails.error` subscriber entry point |
 | `lib/rails_error_dashboard/manual_error_reporter.rb` | Manual-report API |
 | `lib/rails_error_dashboard/commands/` | CQRS writes (`log_error`, `find_or_increment_error`, workflow/batch ops, flush_* commands, backfills, `record_occurrence_context`) |
@@ -92,7 +92,7 @@ Tables are namespaced `rails_error_dashboard_*`. Base class `ErrorLogsRecord` en
 
 ## Primary flows
 1. **Error capture (subscriber path)** — `Rails.error.report` → `ErrorReporter#report` (`error_reporter.rb`) builds an `ErrorContext`, guards against re-entrancy, then calls `Commands::LogError`. Sync, or enqueues `AsyncErrorLoggingJob` when async logging is on. `FindOrIncrementError` dedups by fingerprint and reopens resolved errors on recurrence; storm-protection gate sits in front under flood.
-2. **HTTP middleware capture** — `Middleware::ErrorCatcher` (`insert_before 0` in `engine.rb`, there since v0.1.0) wraps the request, reports exceptions that propagate out of the stack, and **always re-raises**. An exception Rails renders as an error page never reaches it: on Rails 7.1+ and 7.0.10+ ActionDispatch reports those itself (ShowExceptions flags them, the Executor reports), skipping rescue responses such as 404s. Rails 7.0.0–7.0.8.7 never report them, so nothing records them; `configuration.rb` warns at boot (0.16.1).
+2. **HTTP middleware capture** — `Middleware::ErrorCatcher` (`insert_before 0` in `engine.rb`, there since v0.1.0) wraps the request, reports exceptions that propagate out of the stack, and **always re-raises**. An exception Rails renders as an error page never reaches it: ActionDispatch reports those itself (ShowExceptions flags them, the Executor reports), skipping rescue responses such as 404s.
 3. **Dashboard read** — host mounts the engine; `ErrorsController` (`overview`, `index`, `show`, plus ~20 analytics/health collection actions in `config/routes.rb`) calls Query objects and renders ERB. `GET health` (`health_controller.rb`) returns JSON, 503 when the error DB is unreachable.
 4. **Notification / issue sync** — new/recurring error → notification jobs (throttled) and `CreateIssueJob`; inbound `POST webhooks/:provider` closes/reopens.
 
@@ -124,7 +124,6 @@ Tables are namespaced `rails_error_dashboard_*`. Base class `ErrorLogsRecord` en
 - **Docs have two copies** — `_guides/` and `_reference/` mirror `docs/`; edit both, and grep content not filenames to find stale text.
 - **Private I18n backend** — never write fixture locales into `config/locales/`; they break unrelated model specs. Dashboard strings go through `red_t`.
 - **Optional deps degrade silently** — code must work without `browser`/`chartkick`/`httparty`/`turbo-rails`; test both ways.
-- **Rails 7.0 before 7.0.10** records no unhandled request errors; `configuration.rb` (~line 741) warns at boot.
 - **Spec hazards** — global config leaks between specs (reset in `after`), never run two rspec processes at once on the shared SQLite test DB, and keep `spec/dummy/db/test.sqlite3` in place.
 - **Pre-commit runs chaos tests** — Lefthook stage 2 runs `bin/pre-release-test all`. Skip with `LEFTHOOK_EXCLUDE=chaos-tests`.
 - **Solid Queue** — RED never writes Solid Queue's files (decision 0001); `solid_queue` generator and `services/solid_queue_config_check.rb` only advise.

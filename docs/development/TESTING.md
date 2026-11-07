@@ -6,7 +6,7 @@ permalink: /docs/development/TESTING
 
 # Multi-Version Testing Guide
 
-Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.0, 7.1, 7.2, 8.0, and 8.1, on SQLite, PostgreSQL and MySQL.
+Rails Error Dashboard supports multiple Rails versions and is tested against Rails 7.2, 8.0, and 8.1, on SQLite, PostgreSQL and MySQL.
 
 ## Table of Contents
 
@@ -25,21 +25,16 @@ Rails Error Dashboard supports multiple Rails versions and is tested against Rai
 ## Supported Versions
 
 ### Rails Versions
-- ✅ **Rails 7.0** (LTS - Long Term Support)
-- ✅ **Rails 7.1** (Stable)
 - ✅ **Rails 7.2** (Stable)
 - ✅ **Rails 8.0** (Stable)
 - ✅ **Rails 8.1** (Latest)
 
 ### Ruby Versions
-- ✅ **Ruby 3.2** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
-- ✅ **Ruby 3.3** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
-- ✅ **Ruby 3.4** (with Rails 7.0, 7.1, 7.2, 8.0, 8.1)
-- ✅ **Ruby 4.0** (with Rails 8.1) — verified by the maintainer; not yet in the CI matrix
+- ✅ **Ruby 3.3** (with Rails 7.2, 8.0, 8.1)
+- ✅ **Ruby 3.4** (with Rails 7.2, 8.0, 8.1)
+- ✅ **Ruby 4.0** (with Rails 7.2, 8.0, 8.1)
 
-**Note**: Rails Error Dashboard requires **Ruby >= 3.2** (`required_ruby_version` in the gemspec). The optional browser gem (v6) has the same floor.
-
-**Ruby 3.3+ features**: Swallowed exception detection (`TracePoint(:rescue)`) requires Ruby 3.3+. These specs are conditionally skipped on Ruby 3.2.
+**Note**: Rails Error Dashboard requires **Ruby >= 3.3** (`required_ruby_version` in the gemspec).
 
 ---
 
@@ -65,8 +60,8 @@ bundle exec rspec
 # Gemfile.lock is gitignored and pinned to whichever Rails you last installed,
 # so delete it before switching (CI does the same for every matrix row)
 rm -f Gemfile.lock
-RAILS_VERSION=7.0 bundle install
-RAILS_VERSION=7.0 bundle exec rspec
+RAILS_VERSION=7.2 bundle install
+RAILS_VERSION=7.2 bundle exec rspec
 
 # Back to the default (Rails 8.1)
 rm -f Gemfile.lock
@@ -103,12 +98,6 @@ Set `RAILS_VERSION` on **both** commands. Without it, the Gemfile asks for the d
 Rails 8.1, which no longer matches the lockfile you just installed:
 
 ```bash
-# Rails 7.0
-rm -f Gemfile.lock && RAILS_VERSION=7.0 bundle install && RAILS_VERSION=7.0 bundle exec rspec
-
-# Rails 7.1
-rm -f Gemfile.lock && RAILS_VERSION=7.1 bundle install && RAILS_VERSION=7.1 bundle exec rspec
-
 # Rails 7.2
 rm -f Gemfile.lock && RAILS_VERSION=7.2 bundle install && RAILS_VERSION=7.2 bundle exec rspec
 
@@ -123,7 +112,7 @@ rm -f Gemfile.lock && RAILS_VERSION=8.1 bundle install && RAILS_VERSION=8.1 bund
 
 ```bash
 #!/bin/bash
-for version in 7.0 7.1 7.2 8.0 8.1; do
+for version in 7.2 8.0 8.1; do
   echo "======================================="
   echo "Testing Rails $version"
   echo "======================================="
@@ -180,7 +169,7 @@ ruleset requires all of them.
 
 | Job | What runs |
 |-----|-----------|
-| `Ruby X / Rails Y` (20 jobs) | RSpec without the system specs, on SQLite: Ruby 3.2, 3.3, 3.4, 4.0 × Rails 7.0, 7.1, 7.2, 8.0, 8.1 |
+| `Ruby X / Rails Y` (9 jobs) | RSpec without the system specs, on SQLite: Ruby 3.3, 3.4, 4.0 × Rails 7.2, 8.0, 8.1 |
 | `postgresql / Ruby 3.4 / Rails 8.1` | The same suite on PostgreSQL 16, schema built from `db/migrate` |
 | `mysql / Ruby 3.4 / Rails 8.1` | The same suite on MySQL 8.4 with its time zone tables loaded, schema built from `db/migrate` |
 | `Schema parity (schema.rb vs db/migrate)` | `bin/check-schema-parity` |
@@ -271,20 +260,20 @@ the dummy app:
 
 ### Compatibility Matrix
 
-| Ruby | Rails 7.0 | Rails 7.1 | Rails 7.2 | Rails 8.0 | Rails 8.1 |
-|------|-----------|-----------|-----------|-----------|-----------|
-| 3.2  | ✅        | ✅        | ✅        | ✅        | ✅        |
-| 3.3  | ✅        | ✅        | ✅        | ✅        | ✅        |
-| 3.4  | ✅        | ✅        | ✅        | ✅        | ✅        |
+| Ruby | Rails 7.2 | Rails 8.0 | Rails 8.1 |
+|------|-----------|-----------|-----------|
+| 3.3  | ✅        | ✅        | ✅        |
+| 3.4  | ✅        | ✅        | ✅        |
+| 4.0  | ✅        | ✅        | ✅        |
 
-**All 15 combinations tested in CI!** PostgreSQL and MySQL are tested on Ruby 3.4 / Rails 8.1. [![Tests](https://github.com/AnjanJ/rails_error_dashboard/workflows/Tests/badge.svg)](https://github.com/AnjanJ/rails_error_dashboard/actions)
+**All 9 combinations tested in CI.** PostgreSQL and MySQL are tested on Ruby 3.4 / Rails 8.1. [![Tests](https://github.com/AnjanJ/rails_error_dashboard/workflows/Tests/badge.svg)](https://github.com/AnjanJ/rails_error_dashboard/actions)
 
 ### Key Compatibility Notes
 
-1. **Ruby 3.2+ required** - `required_ruby_version` in the gemspec
-2. **concurrent-ruby is `~> 1.3`, with no upper pin** - the old ceiling was removed; on Rails 7.0 the real boundary is 7.0.10+ (see the comment in the gemspec)
+1. **Ruby 3.3+ required** - `required_ruby_version` in the gemspec
+2. **concurrent-ruby is `~> 1.3`, with no upper pin** - the old ceiling was removed; see the comment in the gemspec
 3. **json is pinned `< 3` in the Gemfile** - json 3.0 breaks released Rails versions
-4. **sqlite3 version is conditional** - Different versions for Rails 7.x vs 8.x
+4. **sqlite3 version is conditional** - Different versions for Rails 7.2 vs 8.x
 
 ---
 
@@ -310,7 +299,7 @@ gem "trilogy"
 # Conditional sqlite3 based on Rails version
 rails_env = ENV["RAILS_VERSION"] || "8.1"
 if rails_env.start_with?("7.") || rails_env.start_with?("~> 7.")
-  gem "sqlite3", "~> 1.4"  # Rails 7.0-7.2
+  gem "sqlite3", "~> 1.4"  # Rails 7.2
 else
   gem "sqlite3", ">= 2.1"  # Rails 8.0+
 end
@@ -322,8 +311,8 @@ An excerpt of `rails_error_dashboard.gemspec`:
 
 ```ruby
 # Minimum versions
-spec.required_ruby_version = ">= 3.2.0"
-spec.add_dependency "rails", ">= 7.0.0"
+spec.required_ruby_version = ">= 3.3.0"
+spec.add_dependency "rails", ">= 7.2.0"
 
 # Required runtime dependencies
 spec.add_dependency "pagy", "~> 43.0"
@@ -336,8 +325,8 @@ spec.add_dependency "concurrent-ruby", "~> 1.3"
 
 ### Why These Pins?
 
-- **Ruby >= 3.2.0**: the gemspec's `required_ruby_version`
-- **concurrent-ruby `~> 1.3`**: matches how Rails itself depends on it. The earlier ceiling did not protect Rails 7.0 (the boundary is Rails 7.0.10+ whatever the concurrent-ruby version) and held users on a release with known CVEs — the gemspec comment has the detail
+- **Ruby >= 3.3.0**: the gemspec's `required_ruby_version`
+- **concurrent-ruby `~> 1.3`**: matches how Rails itself depends on it. The earlier ceiling held users on a release with known CVEs — the gemspec comment has the detail
 - **json `< 3`**: json 3.0 breaks every released Rails version, and the Rails 7.x line will never get the fix — the Gemfile comment has the detail
 
 ---
@@ -355,7 +344,7 @@ bundle install
 **Tests fail on specific Rails version?**
 ```bash
 # Check Rails version
-RAILS_VERSION=7.0 bundle exec rails -v
+RAILS_VERSION=7.2 bundle exec rails -v
 
 # Clear cache
 rm -rf .bundle vendor/bundle
@@ -371,14 +360,12 @@ bundle install
 ### Common Issues
 
 Common CI issues and their resolutions:
-1. **Browser gem Ruby version incompatibility** - Requires Ruby >= 3.2.0
+1. **Browser gem Ruby version incompatibility** - Requires Ruby >= 3.3.0
 2. **SimpleCov blocking tests** - Coverage is only enforced with `ENFORCE_COVERAGE=true`, which CI does not set
-3. **Rails 7.0 failing to boot with a `Logger` NameError** - Use Rails 7.0.10+; no concurrent-ruby pin fixes it
-4. **Rails 7.0.0 DescendantsTracker bugs** - Use Rails 7.0.8+
-5. **SQLite3 version conflicts** - Conditional versions per Rails
-6. **Gemfile.lock platform issues** - Don't commit lockfile
-7. **Bundler deployment mode conflicts** - Fresh lockfile per version
-8. **json 3.0 breaking every matrix row** - Pinned `< 3` in the Gemfile
+3. **SQLite3 version conflicts** - Conditional versions per Rails
+4. **Gemfile.lock platform issues** - Don't commit lockfile
+5. **Bundler deployment mode conflicts** - Fresh lockfile per version
+6. **json 3.0 breaking every matrix row** - Pinned `< 3` in the Gemfile
 
 ---
 
@@ -389,7 +376,7 @@ Common CI issues and their resolutions:
 Test all supported versions:
 
 ```bash
-for version in 7.0 7.1 7.2 8.0 8.1; do
+for version in 7.2 8.0 8.1; do
   echo "Testing Rails $version..."
   rm -f Gemfile.lock
   RAILS_VERSION=$version bundle install || exit 1
@@ -399,14 +386,12 @@ done
 
 ### Version Testing Checklist
 
-- [ ] All specs pass on Rails 7.0
-- [ ] All specs pass on Rails 7.1
 - [ ] All specs pass on Rails 7.2
 - [ ] All specs pass on Rails 8.0
 - [ ] All specs pass on Rails 8.1
-- [ ] All specs pass on Ruby 3.2 (all Rails)
 - [ ] All specs pass on Ruby 3.3 (all Rails)
 - [ ] All specs pass on Ruby 3.4 (all Rails)
+- [ ] All specs pass on Ruby 4.0 (all Rails)
 - [ ] All specs pass on PostgreSQL and MySQL
 - [ ] GitHub Actions CI passing (all 29 checks)
 - [ ] No deprecation warnings
@@ -448,10 +433,10 @@ A: Use Rails 8.1 (latest) unless you have specific version requirements.
 A: For multi-version gems, committed lockfiles conflict with CI matrix testing. We generate a fresh lockfile for each Rails version.
 
 **Q: Can I use Rails 6.x?**
-A: No, minimum is Rails 7.0. Rails 6.x reached EOL.
+A: No, minimum is Rails 7.2.
 
-**Q: Why no Ruby 3.1?**
-A: The gemspec requires Ruby >= 3.2.0 (as does the optional browser gem, v6).
+**Q: Why no Ruby 3.2 or older?**
+A: The gemspec requires Ruby >= 3.3.0.
 
 **Q: How do I test locally without installing all versions?**
 A: Use Docker or rely on CI. GitHub Actions tests all combinations for you.
@@ -460,4 +445,4 @@ A: Use Docker or rely on CI. GitHub Actions tests all combinations for you.
 
 **Multi-version testing complete!** 🎉
 
-All 15 Ruby/Rails combinations tested in CI across Rails 7.0 through 8.1 on Ruby 3.2, 3.3, and 3.4, plus PostgreSQL and MySQL rows on Ruby 3.4 / Rails 8.1.
+All 9 Ruby/Rails combinations tested in CI across Rails 7.2 through 8.1 on Ruby 3.3, 3.4, and 4.0, plus PostgreSQL and MySQL rows on Ruby 3.4 / Rails 8.1.

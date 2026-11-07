@@ -5,7 +5,7 @@ Welcome to Rails Error Dashboard development! This guide will help you set up yo
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Ruby >= 3.2.0
+- Ruby >= 3.3.0
 - Bundler
 - Git
 
@@ -139,8 +139,8 @@ compares `schema.rb` with the migrations on SQLite; CI runs it on every PR.
 # Gemfile.lock is gitignored and pinned to whichever Rails you last installed,
 # so delete it before switching (CI deletes it for every matrix row too)
 rm -f Gemfile.lock
-RAILS_VERSION=7.0 bundle install
-RAILS_VERSION=7.0 bundle exec rspec
+RAILS_VERSION=7.2 bundle install
+RAILS_VERSION=7.2 bundle exec rspec
 
 # Back to the default (Rails 8.1)
 rm -f Gemfile.lock
@@ -213,8 +213,8 @@ A pull request to `main` gets 22 checks from two workflows:
     The job always reports, but it only does the work on release PRs and on PRs
     that touch `db/migrate/`
 - **`.github/workflows/test.yml`**
-  - RSpec, system specs excluded, on Ruby 3.2, 3.3 and 3.4 × Rails 7.0, 7.1,
-    7.2, 8.0 and 8.1 (15 jobs, SQLite)
+  - RSpec, system specs excluded, on Ruby 3.3, 3.4 and 4.0 × Rails 7.2,
+    8.0 and 8.1 (9 jobs, SQLite)
   - PostgreSQL 16 and MySQL 8.4 on Ruby 3.4 / Rails 8.1, with the test schema
     built from the gem's own migrations (`RED_TEST_SCHEMA=migrations`)
   - `Schema parity (schema.rb vs db/migrate)` — `bin/check-schema-parity`

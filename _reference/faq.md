@@ -13,7 +13,7 @@ Common questions about Rails Error Dashboard.
 <details>
 <summary><strong>Is this production-ready?</strong></summary>
 
-This is currently in **beta** but covered by an RSpec suite that CI runs across Rails 7.0-8.1 on Ruby 3.2-3.4 (Ruby 4.0 is verified by the maintainer). Many users are running it in production. See [production requirements](/rails_error_dashboard/docs/features/#production-ready).
+RED is covered by an RSpec suite that CI runs across Rails 7.2–8.1 on Ruby 3.3–4.0. Many users are running it in production. See [production requirements](/rails_error_dashboard/docs/features/#production-ready).
 </details>
 
 <details>
@@ -219,7 +219,7 @@ Both are opt-in and disabled by default. See [Local Variable Capture](/rails_err
 
 If you enable `detect_swallowed_exceptions = true` on Ruby < 3.3, it will be automatically disabled with a warning — no crash or error.
 
-All other v0.4.0 features (local variables, instance variables, diagnostic dumps, crash capture, Rack Attack tracking) work on Ruby 3.2+.
+All other v0.4.0 features (local variables, instance variables, diagnostic dumps, crash capture, Rack Attack tracking) work on every supported Ruby.
 </details>
 
 <details>
