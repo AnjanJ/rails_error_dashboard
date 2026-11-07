@@ -1267,7 +1267,7 @@ test_full_upgrade() {
   log_step "Running v${from_version} migrations..."
   if ! (cd "$app_dir" && bin/rails db:migrate > /tmp/red_chaos_upgrade_migrate.log 2>&1); then
     # The error, not the log's end: Rails prints it before the trace
-    grep -E -m 8 "aborted|Error:|ERROR:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
+    grep -E -m 8 "aborted|Error:|ERROR:|Exception:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
     # Not an upgrade failure: the release itself can't be installed fresh on
     # this database (0.1.x-0.6.2 on MySQL, issue #84; 0.6.4 anywhere, a
     # duplicate column), so there is no old app to upgrade. Users on it got
@@ -1302,7 +1302,7 @@ test_full_upgrade() {
   log_step "Running working-copy migrations..."
   if ! (cd "$app_dir" && bin/rails db:migrate > /tmp/red_chaos_upgrade_migrate.log 2>&1); then
     # The error, not the log's end: Rails prints it before the trace
-    grep -E -m 8 "aborted|Error:|ERROR:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
+    grep -E -m 8 "aborted|Error:|ERROR:|Exception:|StandardError|Mismatched|Duplicate" /tmp/red_chaos_upgrade_migrate.log || tail -20 /tmp/red_chaos_upgrade_migrate.log
     log_error "The upgrade's migrations FAILED on ${database}, from v${from_version}"
     echo "0:1:ERR" >> "$RESULTS_FILE"
     return 1
