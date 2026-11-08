@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.1...rails_error_dashboard/v1.0.0-rc.1) (2026-11-08)
+
+
+### ✨ Features
+
+* enqueue async capture after the response, and time both halves ([#362](https://github.com/AnjanJ/rails_error_dashboard/issues/362)) ([9c4b065](https://github.com/AnjanJ/rails_error_dashboard/commit/9c4b0650b0d5aebaa89ec8f634350c31d7e634a5))
+* mark a prerelease's GitHub release as a prerelease ([#366](https://github.com/AnjanJ/rails_error_dashboard/issues/366)) ([c5feeb7](https://github.com/AnjanJ/rails_error_dashboard/commit/c5feeb7092e7dfb51d72168e4cf401de6ea19bd2))
+* rc1's docs pass, the upgrading guide's 0.x to 1.0, and the stats partial removed ([#365](https://github.com/AnjanJ/rails_error_dashboard/issues/365)) ([a109052](https://github.com/AnjanJ/rails_error_dashboard/commit/a10905273f84ebc9cb65e0ad48aa33cde94df80f))
+* require Rails 7.2 and Ruby 3.3, and test the nine rows they leave ([#360](https://github.com/AnjanJ/rails_error_dashboard/issues/360)) ([b832160](https://github.com/AnjanJ/rails_error_dashboard/commit/b832160f3ebc5a914ac06b6d54ead674dd819ae9))
+* upgrade from every 0.x minor on all three databases, on dispatch ([#363](https://github.com/AnjanJ/rails_error_dashboard/issues/363)) ([bb4b57e](https://github.com/AnjanJ/rails_error_dashboard/commit/bb4b57edc8811be14d6fee2f7fc3d7076f83d6c6))
+
+
+### 📚 Documentation
+
+* settle rc1's open clauses and release as 1.0.0-rc.1 ([#367](https://github.com/AnjanJ/rails_error_dashboard/issues/367)) ([9b43b1e](https://github.com/AnjanJ/rails_error_dashboard/commit/9b43b1eaea79d872bd031134a194312ea898d2a5))
+
 ## [0.18.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.0...rails_error_dashboard/v0.18.1) (2026-11-05)
 
 
