@@ -72,7 +72,7 @@ rails db:migrate
 
 ### Inside your app
 - **Self-hosted** - Runs inside your Rails process; error data never leaves your infrastructure. A self-hosted Sentry alternative for teams that can't send errors to a third party
-- **Native Rails integration** - Works with Rails 7.0-8.1, Ruby 3.2-4.0, on PostgreSQL, MySQL/Trilogy or SQLite
+- **Native Rails integration** - Works with Rails 7.2-8.1, Ruby 3.3-4.0, on PostgreSQL, MySQL/Trilogy or SQLite
 - **Multi-channel alerts** - Slack, Email, Discord, PagerDuty, webhooks; issues in GitHub, GitLab, Codeberg or Linear
 - **Fully customizable** - Extend with plugins and custom handlers
 

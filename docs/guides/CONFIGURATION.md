@@ -274,7 +274,7 @@ The features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-fi
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_coverage_tracking` | Boolean | `false` | Diagnostic mode: mark which lines ran in View Source. Ruby 3.2+ |
+| `enable_coverage_tracking` | Boolean | `false` | Diagnostic mode: mark which lines ran in View Source |
 
 ### OpenTelemetry Export
 

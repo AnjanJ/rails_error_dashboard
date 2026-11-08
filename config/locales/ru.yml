@@ -809,12 +809,6 @@ ru:
           assigned: назначена
           snoozed: отложена
           muted: заглушена
-      stats:
-        today: Сегодня
-        this_week: На этой неделе
-        unresolved: Не решено
-        resolved: Решено
-        reopened: Переоткрыто
       pages:
         percent: "%{value}%"
         column_errors: Ошибки

@@ -31,7 +31,7 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
 - Developer experience. The aim is an experience so good that Rails developers can't imagine monitoring errors with anything else. Measured by:
   - install to first error: minutes from `bundle add` to the first error on the dashboard, on a fresh app (not timed yet)
   - setup issues per release: new issues about install, upgrade or docs
-  - release scenarios pass: fresh, upgrade and uninstall on SQLite, PostgreSQL and MySQL across Rails 7.0–8.1, before every release
+  - release scenarios pass: fresh, upgrade and uninstall on SQLite, PostgreSQL and MySQL across Rails 7.2–8.1, before every release
 
 ## Constraints
 - **Paramount: the host app comes first.** RED runs inside the host app's process, so every line of RED can break the host app. These outrank every goal, feature and deadline in this file:
@@ -42,9 +42,9 @@ Self-hosted Rails error tracking that runs inside the app it watches, showing th
   - Migrations run inside the host app's deploy: replay-safe, and RED never writes another gem's files (decision 0001).
   - The full 11 rules, budgets, incidents and review checklist: `.claude/skills/host-app-safety/SKILL.md`.
 - MIT and free forever, a promise already made in the README.
-- Rails 7.0–8.1, Ruby 3.2–4.0, PostgreSQL, MySQL or SQLite; the host app's own database or a separate one.
+- Rails 7.2–8.1 (`rails >= 7.2.0`), Ruby 3.3–4.0 (`>= 3.3.0`), PostgreSQL, MySQL or SQLite; the host app's own database or a separate one.
 - Adds nothing to the host app's asset pipeline, and error data stays in the host app's database.
-- Beta: config and API may change until 1.0.
+- From 1.0.0, RED follows SemVer for the public API (`docs/PUBLIC_API.md`); deprecations warn for at least two minor releases and are removed only in a major, and Rails and Ruby minimums rise only at a major (`docs/VERSIONING.md`). 1.0.0.rc1 is next after 0.18.1.
 - Maintained mainly by one person.
 
 ## Now / Next / Later

@@ -462,41 +462,29 @@ end
 
 ## Customization
 
-### Change Spike Detection Threshold
+### Spike Detection Threshold
 
-**Default:** 2x average triggers spike
-
-**Custom Threshold:**
-
-```ruby
-# config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  config.spike_threshold_multiplier = 3  # Require 3x for spike
-end
-```
-
-**Implementation:**
+**The threshold is not configurable.** A spike is flagged when baseline anomalies exist, or when today's count is at least 2x the 7-day average.
 
 ```ruby
 # lib/rails_error_dashboard/queries/dashboard_stats.rb
-def spike_detected?
-  threshold = RailsErrorDashboard.configuration.spike_threshold_multiplier || 2
-  today_count >= (avg_count * threshold)
+def compute_spike_detected
+  trend = errors_trend_7d
+  return false if trend.empty?
+  return true if baseline_anomalies.any?
+
+  avg_count = trend.values.sum / 7.0
+  return false if avg_count.zero?
+
+  today_event_count >= (avg_count * 2)
 end
 ```
 
-### Customize Severity Thresholds
+To change the 2x rule you would have to change the gem. The baseline side is tunable: `config.enable_baseline_alerts` and `config.baseline_alert_threshold_std_devs` control baseline alerts (see the Baseline Monitoring guide).
 
-**Change what counts as critical/high/medium:**
+### Spike Severity Thresholds
 
-```ruby
-# config/initializers/rails_error_dashboard.rb
-RailsErrorDashboard.configure do |config|
-  config.spike_elevated_threshold = 2   # 2x = elevated (default)
-  config.spike_high_threshold = 5       # 5x = high (default)
-  config.spike_critical_threshold = 10  # 10x = critical (default)
-end
-```
+**These are not configurable either.** `Services::StatisticalClassifier.spike_severity` fixes them: under 2x is normal, 2x to under 5x is elevated, 5x to under 10x is high, and 10x or more is critical.
 
 ### Change Chart Colors
 
@@ -653,14 +641,7 @@ Ensure Chart.js and Chartkick are loaded in layout:
 
 **Symptom:** Alerts showing for minor fluctuations
 
-**Solution:** Increase threshold
-
-```ruby
-# Change detection from 2x to 3x
-def spike_detected?
-  today_count >= (avg_count * 3)  # Was: * 2
-end
-```
+**Solution:** The 2x multiplier is fixed in the gem, so there is no setting for it. If baseline anomalies are causing the alerts, raise `config.baseline_alert_threshold_std_devs`, or leave `config.enable_baseline_alerts` off. That setting controls baseline alert notifications.
 
 ### Problem: Wrong Severity Counts
 

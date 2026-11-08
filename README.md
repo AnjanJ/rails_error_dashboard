@@ -23,7 +23,7 @@ Open `/red`, then send a test error from its Settings page. No monitoring accoun
 
 [Try the live demo](https://rails-error-dashboard.anjan.dev) (`gandalf` / `youshallnotpass`) · [Read the documentation](https://anjanj.github.io/rails_error_dashboard/) · [View on RubyGems](https://rubygems.org/gems/rails_error_dashboard)
 
-> **Beta:** RED is functional and extensively tested, but configuration and APIs may change before 1.0. Supports Rails 7.0–8.1 and Ruby 3.2–4.0 (CI runs every Ruby from 3.2 to 4.0 against every supported Rails version).
+> Supports Rails 7.2–8.1 and Ruby 3.3–4.0, and CI runs every supported Ruby against every supported Rails version. [VERSIONING.md](docs/VERSIONING.md) says what 1.0 promises, and [PUBLIC_API.md](docs/PUBLIC_API.md) lists the public API.
 
 ## See the Ruby state and Rails runtime health behind every exception
 
@@ -127,7 +127,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 - **Host-app safety** — nothing in the capture path raises into your app; every subscriber and callback is rescue-wrapped, `Thread.current` is cleaned up in `ensure`, and the original exception is always re-raised. Variables, health and breadcrumbs are opt-in and off by default; storm protection is on by default and fails open.
 - **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are medians from [`bin/benchmark`](bin/benchmark), which is in this repo, not in the gem, and runs in CI on every push to main. Each names the runner it came from. The budgets: capture under 5 ms before the response, the health snapshot under 1.5 ms, the storm check under 15 µs and a breadcrumb under 10 µs. With async logging (the default) under a server that runs `rack.response_finished` callbacks, such as Puma, the job is enqueued after the response is sent; on deploy-sized containers on AMD EPYC 7763, AMD EPYC 9V74 and arm64 Neoverse-N2 runners with the database 1 ms away, capture took 188 to 321 µs before the response, and the enqueue 7.3 to 8.6 ms after it, on Solid Queue.
 - **Security** — HTTP Basic Auth or your own `authenticate_with` lambda (Devise, Warden, session); your Rails `filter_parameters` are applied to params, variables and breadcrumbs; prompts are never recorded by LLM observability. Vulnerability reports: [SECURITY.md](SECURITY.md).
-- **Compatibility** — Rails 7.0–8.1 (on Rails 7.0.0 to 7.0.8.7, unhandled request errors are not recorded; Rails 7.0.10 fixes it), Ruby 3.2–4.0, PostgreSQL, MySQL/Trilogy or SQLite; live updates are opt-in (`enable_live_updates`) and need `turbo-rails` plus ActionCable (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
+- **Compatibility** — Rails 7.2–8.1, Ruby 3.3–4.0, PostgreSQL, MySQL/Trilogy or SQLite; live updates are opt-in (`enable_live_updates`) and need `turbo-rails` plus ActionCable (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
 
 ---
 
@@ -630,10 +630,9 @@ Span names follow the `rails_error_dashboard.<operation>` convention, e.g. `rail
 gem 'rails_error_dashboard'
 ```
 
-RED requires Rails 7.0 or newer, Ruby 3.2 or newer, `pagy ~> 43` and `groupdate ~> 6`. An app that pins an older Pagy or groupdate must upgrade it first, or `bundle install` fails.
+RED requires Rails 7.2 or newer, Ruby 3.3 or newer, `pagy ~> 43` and `groupdate ~> 6`. An app that pins an older Pagy or groupdate must upgrade it first, or `bundle install` fails.
 
-- **Rails 7.0.0 to 7.0.8.7**: unhandled exceptions from web requests are not recorded, because these versions render the error page without reporting the exception. Upgrade to Rails 7.0.10 or later, which reports them; until then RED logs a warning at boot. See [Troubleshooting](docs/TROUBLESHOOTING.md#request-errors-not-recorded-on-rails-70).
-- **Rails before 8.1.4 or 7.2.4** (every 8.0, 7.1 and 7.0 release): also add `gem "json", "< 3"`. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
+- **Rails before 8.1.4 or 7.2.4** (every 8.0 release): also add `gem "json", "< 3"`. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](docs/UPGRADING.md#rails-before-814-or-724-pin-json-below-3).
 - **MySQL**: load the time-zone tables (`mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql`), or the charts fail.
 
 ### 2. Install with Interactive Setup
@@ -729,7 +728,7 @@ config.dashboard_locale = "de"  # en, de, es, fr, pt-BR, ja, ru, uk, pl, it, zh-
 
 Users can also switch language per-session from the picker in the dashboard navbar, which overrides the configured default for them alone.
 
-**French has been reviewed by a native speaker; everything but English and French is machine-translated and has not been.** That is stated plainly rather than as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; outside French, wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
+**French has been reviewed by a native speaker; everything but English and French is machine-translated and has not been.** That is stated plainly rather than described as "beta", which would imply a review process that has not happened — RED's maintainer reads only English. Key structure, interpolation variables and plural categories *are* verified mechanically in every locale; outside French, wording, register and idiom are not verified by anyone. A wrong or missing translation falls back to **English**, never to a broken page.
 
 **Corrections are very welcome, and a one-key PR is a perfectly good PR.** If you read one of these languages, [every unreviewed locale has an open issue](https://github.com/AnjanJ/rails_error_dashboard/issues?q=is%3Aissue+is%3Aopen+label%3Atranslation%3Aneeds-review) tracking its review — comment there, or [report a bad translation](https://github.com/AnjanJ/rails_error_dashboard/issues/new?template=translation_report.yml) without touching any code. You do not need to know Ruby, and you are not expected to review a whole file.
 
@@ -766,7 +765,7 @@ Yes — HTTP Basic Auth out of the box, or a custom `authenticate_with` lambda t
 Yes — apps that point at the same error database share one dashboard, with per-app filtering.
 
 **What Rails and Ruby versions are supported?**
-Rails 7.0–8.1 and Ruby 3.2–4.0.
+Rails 7.2–8.1 and Ruby 3.3–4.0.
 
 ---
 

@@ -132,8 +132,8 @@ Pull requests are the best way to propose changes to the codebase. We actively w
    matrix on every pull request)
    ```bash
    rm -f Gemfile.lock   # gitignored; pinned to the last Rails you installed
-   RAILS_VERSION=7.0 bundle install
-   RAILS_VERSION=7.0 bundle exec rspec
+   RAILS_VERSION=7.2 bundle install
+   RAILS_VERSION=7.2 bundle exec rspec
    ```
    See [docs/development/TESTING.md](docs/development/TESTING.md) for the matrix.
 
@@ -163,8 +163,8 @@ Your PR must meet these requirements:
 
 ### Prerequisites
 
-- **Ruby** 3.2+ (we test on 3.2, 3.3, 3.4)
-- **Rails** 7.0+ (we support 7.0, 7.1, 7.2, 8.0, 8.1)
+- **Ruby** 3.3+ (we test on 3.3, 3.4, 4.0)
+- **Rails** 7.2+ (we support 7.2, 8.0, 8.1)
 - **Bundler** 2.0+
 - **SQLite3** (for test database)
 - **Git**

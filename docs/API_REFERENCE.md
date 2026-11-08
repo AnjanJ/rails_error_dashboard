@@ -257,7 +257,7 @@ All are `POST`.
 | `/errors/batch_action` | `error_ids[]`, `action_type`, and see below | Acts on several errors, then redirects to `/errors` |
 | `/errors/test_error` | | Logs a `RailsErrorDashboard::TestError`, which is critical, and notifies every configured channel, PagerDuty included, on every click |
 | `/errors/create_diagnostic_dump` | `note` | Captures a snapshot of the process. Needs `enable_diagnostic_dump` |
-| `/errors/enable_coverage` | | Turns on line coverage for the source viewer. Needs `enable_coverage_tracking` and Ruby 3.2+ |
+| `/errors/enable_coverage` | | Turns on line coverage for the source viewer. Needs `enable_coverage_tracking` |
 | `/errors/disable_coverage` | | Turns it off |
 | `/locale` | `locale`: `de`, `en`, `es`, `fr`, `it`, `ja`, `pl`, `pt-BR`, `ru`, `uk` or `zh-CN` | Sets the dashboard's language for this session |
 
@@ -381,8 +381,7 @@ end
 ```
 
 Pass `handled: false` or `severity: :error`. RED skips reports that are handled warnings, which is
-what `Rails.error.handle { }` sends, and on Rails 7.1 and later a bare `Rails.error.report(e)` too
-(on Rails 7.0, `handled:` is required). `Rails.error.record { }` reports and re-raises, and RED
+what `Rails.error.handle { }` sends, and a bare `Rails.error.report(e)` too. `Rails.error.record { }` reports and re-raises, and RED
 records it.
 
 ### ManualErrorReporter.report

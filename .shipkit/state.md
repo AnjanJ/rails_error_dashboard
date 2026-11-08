@@ -1,18 +1,30 @@
 # Handoff
 
-> Written 2026-11-08 at commit `ce61f0a6`, on the branch `docs/rc1-upgrade-matrix-results`.
+> Written 2026-11-08 at commit `4b39bda1`, on the branch `feat/rc1-docs-and-stats` (T12-T14 of rc1).
 
 ## In flight
-- **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/` (accepted 2026-11-06, merged
-  in #359 with decision `0009`). Six pull requests, in the order of its tasks.md: the floors (T1-T3, #360),
-  capture after the response and the budgets (T4-T9, #362), the upgrade matrix (T10-T11, #363), the docs and
-  the stats partial (T12-T14), the prerelease flag (T15), then the demo (T16-T17). T1-T11 are done. The
-  release steps under "After the gate" each need the maintainer's yes, and the first is to run the upgrade
-  workflow again on the release commit.
-- **Next: T12-T14** on a new branch from main, once this branch merges (one PR at a time, the maintainer's
-  choice: the chaos tests and the upgrade test share CPU, Docker and ports).
+- **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/`. Six pull requests, in the
+  order of its tasks.md: the floors (T1-T3, #360), capture after the response and the budgets (T4-T9, #362),
+  the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, this branch), the
+  prerelease flag (T15), then the demo (T16-T17). T1-T14 are done. The release steps under "After the
+  gate" each need the maintainer's yes.
+- **This branch, T12-T14.** The upgrading guide has "0.x to 1.0" (both copies). No page calls RED beta, the
+  README and FAQ state Rails 7.2-8.1 and Ruby 3.3-4.0, and every page that described current support says
+  so; dated history in ROADMAP and PROJECT_MAP stays. The customization guide and three more guides
+  (baseline monitoring, trend visualizations, sampling and filtering) showed options the code doesn't have;
+  they now use real ones or say what is fixed in the code. The gemspec's description lost "Beta" and the old
+  floors. `spec/docs/floors_doc_spec.rb` checks all of it, every configure block on every page included.
+  The errors/_stats partial, its view spec and its five keys in all 11 locales are deleted. Beyond the
+  tasks' file lists: the site copies of every page changed, CONTRIBUTING, DEVELOPMENT, PROJECT_MAP, index,
+  the gemspec, and the real-time updates guide's note about the partial.
+- **Left for later:** BASELINE_MONITORING says hourly and daily baselines group "by hour of day" and "by day
+  of week"; `baseline_calculator.rb` (lines 104-142) takes one sample per calendar hour or day across the
+  lookback. Not an option, so not REQ-21; it needs its own fix.
+- **Next: T15**, the prerelease flag, on a new branch from main once this merges.
 
 ## Done
+- **#364 merged** (`cd299dd0`) on 2026-11-08: T11 ticked, the first matrix run recorded, and SQLite's
+  migration error shown for a release that doesn't install.
 - **The upgrade matrix ran on main** (run 42409492696, `bb4b57ed`, 2026-11-08), with the maintainer's yes:
   55 jobs, all green, 8 minutes, each row 1 to 2 minutes. Of the 54 rows (18 releases by 3 databases),
   41 upgraded and 13 don't install, each on its release's own migration error:

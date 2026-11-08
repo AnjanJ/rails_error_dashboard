@@ -711,12 +711,6 @@ zh-CN:
           assigned: 已指派
           snoozed: 已延后
           muted: 已静音
-      stats:
-        today: 今天
-        this_week: 本周
-        unresolved: 未解决
-        resolved: 已解决
-        reopened: 已重新打开
       pages:
         percent: "%{value}%"
         column_errors: 错误

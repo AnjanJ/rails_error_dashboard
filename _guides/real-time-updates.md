@@ -155,7 +155,7 @@ Renewal is failing. In the browser's network tab, look at the requests to `/erro
 
 - **Subscriptions are short-lived, and renewed through the dashboard** (see [Short-lived subscriptions](#short-lived-subscriptions)). Nothing to change in your app.
 - **The streams have new names, and go through the dashboard's channel.** A custom index view that subscribed with `turbo_stream_from "error_list"` (or another of the old names) stops receiving updates. Render the dashboard's helper instead, as in [In a custom index view](#in-a-custom-index-view).
-- **The stats stream is gone.** No built-in page used it. A custom view with a `#dashboard_stats` element now shows the stats as of its last page load. The `rails_error_dashboard/errors/stats` partial is still there for such views to render.
+- **The stats stream is gone.** No built-in page used it. A custom view with a `#dashboard_stats` element now shows the stats as of its last page load. The `rails_error_dashboard/errors/stats` partial stayed for such views to render until 1.0, which removes it; see [0.x to 1.0](/rails_error_dashboard/docs/upgrading/#0x-to-10).
 
 ## Upgrading from 0.16.2 or earlier
 

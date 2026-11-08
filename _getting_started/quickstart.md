@@ -10,11 +10,11 @@ Get Rails Error Dashboard up and running in 5 minutes!
 
 ## Prerequisites
 
-- Rails 7.0 or later (supports 7.0, 7.1, 7.2, 8.0, 8.1). On Rails 7.0.0 to 7.0.8.7, unhandled exceptions from web requests are not recorded; upgrade to Rails 7.0.10 or later. See [Troubleshooting](/rails_error_dashboard/docs/reference/troubleshooting/#request-errors-not-recorded-on-rails-70).
-- Ruby 3.2 or later (supports 3.2, 3.3, 3.4, 4.0)
+- Rails 7.2 or later (supports 7.2, 8.0, 8.1)
+- Ruby 3.3 or later (supports 3.3, 3.4, 4.0)
 - SQLite, PostgreSQL, or MySQL database
 - `pagy ~> 43` and `groupdate ~> 6`. If your app pins an older Pagy or groupdate, upgrade it first, or `bundle install` fails.
-- **Rails before 8.1.4 or 7.2.4** (every 8.0, 7.1 and 7.0 release): add `gem "json", "< 3"` to your Gemfile. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](/rails_error_dashboard/docs/upgrading/#rails-before-814-or-724-pin-json-below-3).
+- **Rails before 8.1.4 or 7.2.4** (every 8.0 release): add `gem "json", "< 3"` to your Gemfile. json 3 breaks those Rails versions, and the dashboard returns 500. See [the json pin](/rails_error_dashboard/docs/upgrading/#rails-before-814-or-724-pin-json-below-3).
 - **MySQL**: load the time-zone tables, or the charts fail: `mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql`.
 
 ## Installation

@@ -1,6 +1,6 @@
 # Rails Error Dashboard — Roadmap
 
-> Last updated: September 25, 2026 | Current version: v0.14.0 | Next: nothing scheduled — see "Open, uncommitted"
+> Last updated: November 8, 2026 | Current version: v0.18.1 | Next: 1.0.0.rc1
 >
 > **Working analysis docs are local-only, by design.** Earlier revisions of this file linked to
 > `DEEP_INTROSPECTION_ANALYSIS.md`, `FAULTLINE_COMPARISON.md`, `TIMESERIES_ANALYSIS.md` and
@@ -32,7 +32,7 @@ The gem sits in a **sweet spot**: more capable than Solid Errors (488 stars, min
 | i18n | 11 locales (v0.9.0) | No | No | No | No |
 | OpenTelemetry | Exports its own spans; consumes GenAI spans (v0.7.0/v0.8.0) | No | No | No | No |
 | LLM Observability | Yes (v0.7.0) | No | No | No | No |
-| Rails Versions | 7.0 - 8.1 | 7.1+ | 8.0+ | 7.0+ | 7.1+ |
+| Rails Versions | 7.2 - 8.1 | 7.1+ | 8.0+ | 7.0+ | 7.1+ |
 | Dependencies | 3 required (pagy, groupdate, concurrent-ruby) + optional | 0 extra | 0 extra | 7 (incl. Redis) | 2 |
 | Local Variables | Yes (TracePoint) | No | Yes (TracePoint) | No | No |
 | Auth | HTTP Basic + Custom Lambda | N/A | Devise/Warden/Lambda | ? | N/A |
