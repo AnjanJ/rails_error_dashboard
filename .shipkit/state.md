@@ -1,6 +1,6 @@
 # Handoff
 
-> Written 2026-11-08 at commit `c5feeb70`, on the branch `docs/rc1-release-as` (rc1's release steps).
+> Written 2026-11-08 at commit `a1539361`, on the branch `docs/rc1-published` (after rc1's publish).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/`. Six pull requests, in the
@@ -8,10 +8,15 @@
   the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, #365), the
   prerelease flag (T15, #366), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T17
   are done. The release steps under "After the gate" each need the maintainer's yes.
-- **Release PR #361 proposes 0.19.0 from main's `feat:` commits. Don't merge it without the maintainer's
-  yes.** This branch's squash commit carries `Release-As: 1.0.0-rc.1`, which turns it into 1.0.0-rc.1.
-  With `"prerelease": true` from T15, any pre-major GitHub release is marked a prerelease, so a 0.x release
-  from its own branch needs the flag off there.
+- **1.0.0-rc.1 is published** (2026-11-08, `a1539361`, #361): RubyGems `1.0.0.pre.rc.1`, marked
+  prerelease, so RubyGems' latest stays 0.18.1; the GitHub release `rails_error_dashboard/v1.0.0-rc.1` is
+  marked Pre-release, and 0.18.1 stays Latest. The next release PR needs the maintainer's yes, like every
+  one. With `"prerelease": true` from T15, any pre-major GitHub release is marked a prerelease, so a 0.x
+  release from its own branch needs the flag off there.
+- **The demo serves v1.0.0-rc.1** (`2cb7c97e`, run 42480347240). Its pin is `">= 1.0.0.pre.rc.1", "< 2"`;
+  the schedule takes 1.0.0 when it ships and puts the floor back to 0.9.
+- **The call for testers is discussion #368** (Announcements), posted 2026-11-08. It names decision 0009's
+  throughput.
 - **Left for later:** BASELINE_MONITORING says hourly and daily baselines group "by hour of day" and "by day
   of week"; `baseline_calculator.rb` (lines 104-142) takes one sample per calendar hour or day across the
   lookback. Not an option, so not REQ-21; it needs its own fix.
@@ -19,11 +24,20 @@
   `.shipkit/research/deploy-shape-benchmark.md`). On medium, PostgreSQL, EPYC 7763 at 220 requests a
   second, the failing mix's p99 rose from +0.71 to +2.03 ms after the change; MySQL and medium-arm held.
   Left open with the maintainer's yes, and named in the call for testers. It doesn't block rc1.
-- **Next: the rest of the release steps** under "After the gate" in tasks.md: the upgrade matrix on main
-  after this merges, then the release PR, the demo, and the call for testers. Before them,
-  `docs/PUBLIC_API.md` and `docs/VERSIONING.md` were re-read on 2026-11-08 and need no change.
+- **Next, after about two quiet weeks** (from 2026-11-08): read #368 and any new issues, run the upgrade
+  matrix again, then 1.0.0 with `Release-As: 1.0.0`. Each needs the maintainer's yes.
 
 ## Done
+- **1.0.0-rc.1 published** on 2026-11-08. Before it: #367 (`9b43b1ea`) carried `Release-As: 1.0.0-rc.1`;
+  the upgrade matrix on `9b43b1ea` (run 42454753264) had 41 upgraded and 13 "doesn't install", the same
+  rows as before; on the release head the full suite (7,148 examples), RuboCop and the chaos tests (7
+  apps, 1,742 assertions) passed. The release notes went on the release branch (`a564933b`) and the PR
+  body. `audit` failed twice on GitHub 504s downloading actionlint, and passed on a re-run once downloads
+  recovered. Release, test, publish and smoke-test passed on `a1539361`.
+- **The demo's #78 merged** (`5d14a1ee`) on 2026-11-08. The first rc1 dispatch (run 42477739203) stopped in
+  its own checks: T16's test asserted the Gemfile accepts 0.18.1, which the prerelease floor refuses by
+  design (REQ-17). The test now checks the Gemfile against its lockfile's version, 1.0.0, 1.9.0 and 2.0.0,
+  and that a named prerelease's pin accepts it. The second dispatch deployed rc1.
 - **#366 merged** (`c5feeb70`) on 2026-11-08: T15, `"prerelease": true` in `.release-please-config.json`,
   and T16-T17 ticked.
 - **The demo's #77 merged** (`19f9de7b`) on 2026-11-08: T16-T17. The Gemfile accepts `">= 0.9", "< 2"`, and
