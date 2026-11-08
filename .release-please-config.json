@@ -1,5 +1,6 @@
 {
   "bootstrap-sha": "c02a1081bb7d3a7fe52f4245bc77dbad7fc5b6e7",
+  "prerelease": true,
   "packages": {
     ".": {
       "package-name": "rails_error_dashboard",

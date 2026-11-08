@@ -76,17 +76,17 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: none, a deletion; `bin/i18n-check` and the view specs show it
   - After: none
   - Done when: `bin/i18n-check` reports no orphaned keys; `rspec spec/views` → 0 failures; `git grep -n "errors/stats" -- app lib` prints nothing
-- [ ] **T15** Mark a prerelease's GitHub release as a prerelease → REQ-16
+- [x] **T15** Mark a prerelease's GitHub release as a prerelease → REQ-16
   - Files: .release-please-config.json, spec/ci/workflows_spec.rb
   - Test: spec/ci/workflows_spec.rb asserts `"prerelease": true` in the config
   - After: T11
   - Done when: `rspec spec/ci/workflows_spec.rb` → 0 failures; it lands after 0.18.1 is published
-- [ ] **T16** The demo's Gemfile accepts every 1.x release → REQ-19
+- [x] **T16** The demo's Gemfile accepts every 1.x release → REQ-19
   - Files: demo: Gemfile, demo: Gemfile.lock, demo: script/update_demo_release_test.rb
   - Test: demo: script/update_demo_release_test.rb asserts the requirement accepts 1.0.0 and 1.9.0 and refuses 2.0.0
   - After: none
   - Done when: the demo's CI passes, still on 0.18.x
-- [ ] **T17** The demo's update workflow deploys a named prerelease by dispatch only → REQ-17, REQ-18
+- [x] **T17** The demo's update workflow deploys a named prerelease by dispatch only → REQ-17, REQ-18
   - Files: demo: .github/workflows/update-demo-release.yml, demo: script/update_demo_release.rb, demo: script/update_demo_release_test.rb
   - Test: demo: script/update_demo_release_test.rb: a dispatch naming a prerelease writes it into the requirement and maps it to its tag; the schedule with a prerelease on RubyGems changes nothing
   - After: T16
