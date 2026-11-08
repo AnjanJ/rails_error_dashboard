@@ -1,12 +1,12 @@
 # Handoff
 
-> Written 2026-11-08 at commit `f396219c`, on the branch `feat/rc1-prerelease-flag` (T15 of rc1).
+> Written 2026-11-08 at commit `e94ed192`, on the branch `feat/rc1-prerelease-flag` (T15 of rc1, with T16-T17 ticked).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/`. Six pull requests, in the
   order of its tasks.md: the floors (T1-T3, #360), capture after the response and the budgets (T4-T9, #362),
   the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, #365), the
-  prerelease flag (T15, this branch), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T15
+  prerelease flag (T15, this branch), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T17
   are done. The release steps under "After the gate" each need the maintainer's yes.
 - **Release PR #361 proposes 0.19.0 from main's `feat:` commits. Don't merge it.** The release steps change
   it with a commit whose body has `Release-As: 1.0.0-rc.1`. With `"prerelease": true` from T15, any
@@ -15,9 +15,14 @@
 - **Left for later:** BASELINE_MONITORING says hourly and daily baselines group "by hour of day" and "by day
   of week"; `baseline_calculator.rb` (lines 104-142) takes one sample per calendar hour or day across the
   lookback. Not an option, so not REQ-21; it needs its own fix.
-- **Next: T16-T17** in the demo's repository, once this merges.
+- **Next: the release steps** under "After the gate" in tasks.md, once this merges. Before them, re-read
+  `docs/PUBLIC_API.md` and `docs/VERSIONING.md` (rc1 freezes them) and settle the "Revisit at 1.0.0.rc1"
+  clauses under "Open questions".
 
 ## Done
+- **The demo's #77 merged** (`19f9de7b`) on 2026-11-08: T16-T17. The Gemfile accepts `">= 0.9", "< 2"`, and
+  the update workflow installs a named prerelease only by a dispatch with the `version` input; the schedule
+  never installs one. The demo still serves 0.18.1. Its branch was deleted.
 - **#365 merged** (`a1090527`) on 2026-11-08: T12-T14. The upgrading guide's "0.x to 1.0", the docs without
   "beta" and with the floors, only real options in five guides (checked by `spec/docs/floors_doc_spec.rb`),
   the gemspec's description, and the errors/_stats partial deleted with its keys.
