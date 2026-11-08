@@ -508,6 +508,23 @@ RSpec.describe "GitHub Actions workflows" do
     end
   end
 
+  # release-please's manifest config. The release candidate goes out as
+  # `Release-As: 1.0.0-rc.1` (the design's "How the release candidate's
+  # version is spelled"), and its GitHub release must say it's a prerelease.
+  describe ".release-please-config.json" do
+    let(:config) { JSON.parse(File.read(File.join(repo_root, ".release-please-config.json"))) }
+
+    it "marks a prerelease's GitHub release as a prerelease (release-1-0-rc1/REQ-16)" do
+      expect(config["prerelease"]).to be(true)
+    end
+
+    it "keeps the one package releasing as the ruby gem it is (release-1-0-rc1/REQ-16)" do
+      expect(config.fetch("packages").keys).to eq([ "." ])
+      expect(config.dig("packages", ".", "release-type")).to eq("ruby")
+      expect(config.dig("packages", ".", "version-file")).to eq("lib/rails_error_dashboard/version.rb")
+    end
+  end
+
   describe "release.yml" do
     let(:release_jobs) { jobs("release.yml") }
 
