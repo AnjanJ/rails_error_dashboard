@@ -1,28 +1,26 @@
 # Handoff
 
-> Written 2026-11-08 at commit `4b39bda1`, on the branch `feat/rc1-docs-and-stats` (T12-T14 of rc1).
+> Written 2026-11-08 at commit `f396219c`, on the branch `feat/rc1-prerelease-flag` (T15 of rc1).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/`. Six pull requests, in the
   order of its tasks.md: the floors (T1-T3, #360), capture after the response and the budgets (T4-T9, #362),
-  the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, this branch), the
-  prerelease flag (T15), then the demo (T16-T17). T1-T14 are done. The release steps under "After the
-  gate" each need the maintainer's yes.
-- **This branch, T12-T14.** The upgrading guide has "0.x to 1.0" (both copies). No page calls RED beta, the
-  README and FAQ state Rails 7.2-8.1 and Ruby 3.3-4.0, and every page that described current support says
-  so; dated history in ROADMAP and PROJECT_MAP stays. The customization guide and three more guides
-  (baseline monitoring, trend visualizations, sampling and filtering) showed options the code doesn't have;
-  they now use real ones or say what is fixed in the code. The gemspec's description lost "Beta" and the old
-  floors. `spec/docs/floors_doc_spec.rb` checks all of it, every configure block on every page included.
-  The errors/_stats partial, its view spec and its five keys in all 11 locales are deleted. Beyond the
-  tasks' file lists: the site copies of every page changed, CONTRIBUTING, DEVELOPMENT, PROJECT_MAP, index,
-  the gemspec, and the real-time updates guide's note about the partial.
+  the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, #365), the
+  prerelease flag (T15, this branch), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T15
+  are done. The release steps under "After the gate" each need the maintainer's yes.
+- **Release PR #361 proposes 0.19.0 from main's `feat:` commits. Don't merge it.** The release steps change
+  it with a commit whose body has `Release-As: 1.0.0-rc.1`. With `"prerelease": true` from T15, any
+  pre-major GitHub release is marked a prerelease, so a 0.x release from its own branch needs the flag off
+  there.
 - **Left for later:** BASELINE_MONITORING says hourly and daily baselines group "by hour of day" and "by day
   of week"; `baseline_calculator.rb` (lines 104-142) takes one sample per calendar hour or day across the
   lookback. Not an option, so not REQ-21; it needs its own fix.
-- **Next: T15**, the prerelease flag, on a new branch from main once this merges.
+- **Next: T16-T17** in the demo's repository, once this merges.
 
 ## Done
+- **#365 merged** (`a1090527`) on 2026-11-08: T12-T14. The upgrading guide's "0.x to 1.0", the docs without
+  "beta" and with the floors, only real options in five guides (checked by `spec/docs/floors_doc_spec.rb`),
+  the gemspec's description, and the errors/_stats partial deleted with its keys.
 - **#364 merged** (`cd299dd0`) on 2026-11-08: T11 ticked, the first matrix run recorded, and SQLite's
   migration error shown for a release that doesn't install.
 - **The upgrade matrix ran on main** (run 42409492696, `bb4b57ed`, 2026-11-08), with the maintainer's yes:

@@ -76,7 +76,7 @@ Commands below stand for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle ex
   - Test: none, a deletion; `bin/i18n-check` and the view specs show it
   - After: none
   - Done when: `bin/i18n-check` reports no orphaned keys; `rspec spec/views` → 0 failures; `git grep -n "errors/stats" -- app lib` prints nothing
-- [ ] **T15** Mark a prerelease's GitHub release as a prerelease → REQ-16
+- [x] **T15** Mark a prerelease's GitHub release as a prerelease → REQ-16
   - Files: .release-please-config.json, spec/ci/workflows_spec.rb
   - Test: spec/ci/workflows_spec.rb asserts `"prerelease": true` in the config
   - After: T11
