@@ -1,25 +1,31 @@
 # Handoff
 
-> Written 2026-11-08 at commit `e94ed192`, on the branch `feat/rc1-prerelease-flag` (T15 of rc1, with T16-T17 ticked).
+> Written 2026-11-08 at commit `c5feeb70`, on the branch `docs/rc1-release-as` (rc1's release steps).
 
 ## In flight
 - **`release-1-0-rc1`** is the one open spec: `.shipkit/specs/release-1-0-rc1/`. Six pull requests, in the
   order of its tasks.md: the floors (T1-T3, #360), capture after the response and the budgets (T4-T9, #362),
   the upgrade matrix (T10-T11, #363 and #364), the docs and the stats partial (T12-T14, #365), the
-  prerelease flag (T15, this branch), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T17
+  prerelease flag (T15, #366), then the demo (T16-T17, in `rails_error_dashboard_demo_app`). T1-T17
   are done. The release steps under "After the gate" each need the maintainer's yes.
-- **Release PR #361 proposes 0.19.0 from main's `feat:` commits. Don't merge it.** The release steps change
-  it with a commit whose body has `Release-As: 1.0.0-rc.1`. With `"prerelease": true` from T15, any
-  pre-major GitHub release is marked a prerelease, so a 0.x release from its own branch needs the flag off
-  there.
+- **Release PR #361 proposes 0.19.0 from main's `feat:` commits. Don't merge it without the maintainer's
+  yes.** This branch's squash commit carries `Release-As: 1.0.0-rc.1`, which turns it into 1.0.0-rc.1.
+  With `"prerelease": true` from T15, any pre-major GitHub release is marked a prerelease, so a 0.x release
+  from its own branch needs the flag off there.
 - **Left for later:** BASELINE_MONITORING says hourly and daily baselines group "by hour of day" and "by day
   of week"; `baseline_calculator.rb` (lines 104-142) takes one sample per calendar hour or day across the
   lookback. Not an option, so not REQ-21; it needs its own fix.
-- **Next: the release steps** under "After the gate" in tasks.md, once this merges. Before them, re-read
-  `docs/PUBLIC_API.md` and `docs/VERSIONING.md` (rc1 freezes them) and settle the "Revisit at 1.0.0.rc1"
-  clauses under "Open questions".
+- **Watch during the quiet weeks:** decision 0009's throughput (finding 10 in
+  `.shipkit/research/deploy-shape-benchmark.md`). On medium, PostgreSQL, EPYC 7763 at 220 requests a
+  second, the failing mix's p99 rose from +0.71 to +2.03 ms after the change; MySQL and medium-arm held.
+  Left open with the maintainer's yes, and named in the call for testers. It doesn't block rc1.
+- **Next: the rest of the release steps** under "After the gate" in tasks.md: the upgrade matrix on main
+  after this merges, then the release PR, the demo, and the call for testers. Before them,
+  `docs/PUBLIC_API.md` and `docs/VERSIONING.md` were re-read on 2026-11-08 and need no change.
 
 ## Done
+- **#366 merged** (`c5feeb70`) on 2026-11-08: T15, `"prerelease": true` in `.release-please-config.json`,
+  and T16-T17 ticked.
 - **The demo's #77 merged** (`19f9de7b`) on 2026-11-08: T16-T17. The Gemfile accepts `">= 0.9", "< 2"`, and
   the update workflow installs a named prerelease only by a dispatch with the `version` input; the schedule
   never installs one. The demo still serves 0.18.1. Its branch was deleted.
@@ -87,15 +93,15 @@
 | 1.0.0 | by 2026-12-31 |
 
 ## Open questions
-- **Does the benchmark gate change?** `Overhead benchmark` failed on main on `5ec8a3c`: health snapshot
-  1.15 ms on a Xeon 8573C, against 1 ms. It isn't a regression, because that commit changed only the
-  version and docs. The job wasn't re-run and the gate is unchanged. The Xeon has failed both times it
-  was drawn. The shape benchmark runs on the same runners, so it won't settle this. On #349's branch, a
-  Xeon 8370C read 1.30 ms on 2026-11-05, as one read 1.29 ms on #347's: PR runs, so the count stays 1.
-- **The health snapshot misses 1 ms on arm64.** On #347's dispatch (run 41216679726, `a5e5c47`), all three
-  arm64 rows read 1.23 to 1.27 ms on a Neoverse-N2, against the 1 ms budget, while every x64 row passed
-  (0.51 to 0.69 ms). The gated job runs only on x64, so CI can't see it. The `medium-arm` shape will meet it.
-  Is the budget per architecture?
+- **Decision 0009's throughput** stays open through the quiet weeks; see "Watch during the quiet weeks"
+  under "In flight".
+
+## Settled
+- **The benchmark gate changed** to 1.5 ms for the health snapshot, on every CPU and architecture (T8,
+  #362). `Overhead benchmark` had failed on main on `5ec8a3c` at 1.15 ms on a Xeon 8573C against 1 ms, with
+  no capture-path change, and PR runs read 1.29 and 1.30 ms on a Xeon 8370C.
+- **No budget per architecture.** On #347's dispatch (run 41216679726, `a5e5c47`), the arm64 rows read
+  1.23 to 1.27 ms on a Neoverse-N2, against 1 ms. The one 1.5 ms budget covers them.
 
 ## Do not forget
 - **Reversal clauses that left the automatic scan.** `decision-check.sh` reads only
@@ -104,7 +110,8 @@
   - `_shipped/small-fixes-0-18`: a third `PLATFORM = "` in the services (HOLDS on 2026-10-31).
   - `_shipped/webhook-v1`: a fourth file calling `WebhookDelivery.post` (HOLDS on 2026-10-31).
   - `_shipped/live-updates-hardening-0-17`, "Remove the stats broadcast, keep the stats partial":
-    fires when a `v1.0.0*` tag exists. **Revisit at 1.0.0.rc1.**
+    fires when a `v1.0.0*` tag exists. **Settled at rc1:** #365 (T14) deleted the partial and its keys.
+    No issue had mentioned rendering it from a custom view (searched 2026-11-06 and 2026-11-08).
   - Also in `_shipped/live-updates-hardening-0-17`: the actioncable gemspec dependency.
   - `_shipped/live-updates-client`: two clauses.
   - `_shipped/host-hygiene-0-17`: the CDN tag count.
@@ -114,8 +121,8 @@
   list too. Each is in its `design.md`. Most other 0.18 clauses wait on an issue being reported.
   - `_shipped/overhead-benchmark`, the gate: change it if the job fails on main three times by 2026-11-30
     with no capture-path change. **The count is 2**: `5ec8a3c`, and `657ea2a` (0.18.1's release, 2026-11-05),
-    whose health snapshot read 1.10 ms on a Xeon 8573C. The change is already chosen: 1.5 ms on every CPU,
-    in the rc1 spec.
+    whose health snapshot read 1.10 ms on a Xeon 8573C. **Settled:** T8 (#362) made it 1.5 ms on every
+    CPU.
   - `_shipped/overhead-benchmark`, the storm budget: raise it or pin the runner if a storm row fails on
     main on any CPU but the EPYC 7763 with no capture-path change.
   - `_shipped/overhead-benchmark`, the figures: go back to one figure per row if the job moves to a pinned
