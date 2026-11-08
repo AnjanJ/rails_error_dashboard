@@ -21,6 +21,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * settle rc1's open clauses and release as 1.0.0-rc.1 ([#367](https://github.com/AnjanJ/rails_error_dashboard/issues/367)) ([9b43b1e](https://github.com/AnjanJ/rails_error_dashboard/commit/9b43b1eaea79d872bd031134a194312ea898d2a5))
 
+### Upgrade instructions
+
+This is the first release candidate for 1.0. It needs **Rails 7.2 or newer and Ruby 3.3 or newer**; on
+Rails 7.0 or 7.1, or Ruby 3.2, stay on 0.18.x, which keeps working and gets security fixes until
+2027-06-30.
+
+Bundler takes a prerelease only when the Gemfile names one, so name it exactly:
+
+```ruby
+gem "rails_error_dashboard", "1.0.0.pre.rc.1"
+```
+
+Then, from the latest 0.18.x with its deprecation warnings cleared:
+
+```sh
+bundle update rails_error_dashboard
+bin/rails generate rails_error_dashboard:install --no-interactive
+bin/rails db:migrate
+bin/rails rails_error_dashboard:verify
+```
+
+1.0 adds no migrations, so the installer copies none. The full steps are in
+[0.x to 1.0](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/UPGRADING.md#0x-to-10).
+
+### What changes
+
+- **Rails 7.0 and 7.1 and Ruby 3.2 are no longer supported**, with the warnings and workarounds RED kept
+  for them.
+- **Async capture enqueues its job after the response is sent**, under a server that runs
+  `rack.response_finished` callbacks, such as Puma. With Solid Queue on a database 1 ms away, capture
+  added under 0.4 ms to a failing request instead of about 8 ms. If the process dies between the
+  response and the enqueue, that one error isn't recorded. Sync capture is unchanged.
+- **The `errors/_stats` partial is removed.** No page has rendered it since 0.17.0. A custom view that
+  renders `rails_error_dashboard/errors/stats` needs its own copy from 0.18.x.
+
+Nothing in the [Public API](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/PUBLIC_API.md)
+is removed. From 1.0.0 on, it changes only as the
+[versioning policy](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/VERSIONING.md) allows.
+
+### Tested upgrades
+
+A fresh app was upgraded to this release from the latest patch of every 0.x minor on SQLite, PostgreSQL
+and MySQL: 41 upgrades passed. 0.4.2, 0.5.15, 0.6.4 and 0.7.2, and 0.1.38 on MySQL, can't be installed
+fresh, so those starting points are untested.
+
+### Try it
+
+1.0.0 follows after about two quiet weeks. If something breaks, or behaves differently from 0.18.x,
+please open an issue.
+
 ## [0.18.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.0...rails_error_dashboard/v0.18.1) (2026-11-05)
 
 
