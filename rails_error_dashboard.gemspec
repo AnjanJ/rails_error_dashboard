@@ -162,7 +162,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   spec.add_development_dependency "factory_bot_rails", "~> 6.4"
   spec.add_development_dependency "faker", "~> 3.0"
   spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
-  spec.add_development_dependency "shoulda-matchers", "~> 6.0"
+  spec.add_development_dependency "shoulda-matchers", "~> 8.0"
   spec.add_development_dependency "webmock", "~> 3.0"
   spec.add_development_dependency "simplecov", "~> 1.1"
   # Note: sqlite3 is specified in the Gemfile
