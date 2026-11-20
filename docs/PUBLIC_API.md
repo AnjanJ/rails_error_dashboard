@@ -434,9 +434,9 @@ channel_count
 
 ## Grouping
 
-RED groups errors by a fingerprint. The default recipe below is stable for all of 1.x: no 1.x release
-changes it, so an upgrade within 1.x never splits a group or merges two. The fingerprint is a digest
-of:
+RED groups errors by a fingerprint, separately for each application and each environment. The default
+recipe below is stable for all of 1.x: no 1.x release changes it, so an upgrade within 1.x never splits
+a group or merges two. The fingerprint is a digest of:
 
 - the exception's class;
 - its message's first 500 characters, with hex addresses, object inspections, numbers and quoted
