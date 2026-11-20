@@ -17,6 +17,8 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
   hide the other.
 - As a Rails developer, I want an error reported inside a transaction or a read-only block to be kept, and
   RED never to wait on a starved connection pool, so that RED records what happened without slowing my app.
+- As an operator, I want to know when RED fails to store an error, without my log getting my users'
+  personal data or a flood of lines, so that a broken error store doesn't go unnoticed.
 - As an on-call engineer, I want an alert that failed to send to be retried, so that one Slack outage
   doesn't cost me the alert.
 - As a team lead, I want the dashboard to record who resolved or muted an error from our login, not from a
@@ -99,6 +101,39 @@ and accepted these terms on 2026-11-20:
 - **REQ-53.** Where an async capture's enqueue runs after the response, RED shall not wait for a connection
   on the request thread for it.
 
+### Capture failures
+Added 2026-11-20 by spike S2 (`.shipkit/research/silent-failures-spike.md`; the decision is "A failed capture
+says so in one trimmed line per call site and failure class a minute" in `design.md`). The maintainer read the
+evidence and accepted these terms on 2026-11-20:
+- **A capture-path failure:** an exception RED rescues at any of these sites, as listed in the research file's
+  Appendix A1:
+  - the 32 capture-path `RailsErrorDashboard::Logger.error` sites;
+  - the 4 in `FlushStormCounts`;
+  - the worker's direct `Rails.logger` lines (`async_error_logging_job.rb:53` and `:59-60`,
+    `application_job.rb:21-25`, `storm_flush_job.rb:36`).
+- **The summary line:** one line at `error`. It names RED's call site, the failure's class, the reported
+  exception's class when there is one, and how many failures with the same key it suppressed since the previous
+  line. Its key is the call site and the failure's class.
+- **The detail:** what those sites print in 1.0.0-rc.1, with the context as RED stores it, that is, filtered.
+- **Unchanged:** the 16 dashboard-only `Logger.error` sites. A failure count on `/health` is not part of rc.2.
+
+- **REQ-54.** When a capture-path failure occurs while `log_level` is `:error`, `:warn`, `:info` or `:debug`,
+  RED shall write the summary line for its key at most once per 60 seconds per process.
+- **REQ-55.** The summary line shall contain no exception message, context, request param, URL, header or
+  backtrace.
+- **REQ-56.** While `log_level` is `:silent`, RED shall write no line for a capture-path failure.
+- **REQ-57.** Where `enable_internal_logging` is true and `log_level` is `:debug`, RED shall also write the
+  detail of every capture-path failure.
+- **REQ-58.** `log_level` shall default to `:error`, in the library and in the installer's template.
+- **REQ-59.** RED shall not write a capture's unfiltered request params or unfiltered request URL to the host's
+  log, at any `log_level`.
+- **REQ-60.** `AsyncErrorLoggingJob` and `StormFlushJob` shall not have their arguments logged by Active Job.
+  When a RED job's retries run out, RED's log line shall name the job's class and id, not its arguments.
+- **REQ-61.** `docs/guides/CONFIGURATION.md`, the installer's template and the upgrade notes shall say three
+  things: error lines need only `log_level`; `enable_internal_logging` gates only the more verbose levels; and an
+  existing install keeps the `:silent` its initializer sets.
+  [untested: prose, verified by reading]
+
 ### Data lifecycle
 A **live** group, here, is one the retention job does not expire: `retention_days` is nil, or the group
 was last seen less than `retention_days` ago (`RetentionCleanupJob.expired_scope`).
@@ -172,7 +207,9 @@ was last seen less than `retention_days` ago (`RetentionCleanupJob.expired_scope
 - **S2, silent failures.** What changes if a failed capture becomes visible: how often RED's failure lines
   can fire, what they cost on the capture path, and whether they print personal data (the failure line
   prints the capture's context today). The options include the `log_level` default and a failure count on
-  the health page. No requirement is written until the maintainer has read the evidence.
+  the health page. No requirement is written until the maintainer has read the evidence. **Done 2026-11-20:**
+  `.shipkit/research/silent-failures-spike.md`. The maintainer chose option 2 (a trimmed, rate-limited line,
+  default `:error`), with two fixes that apply whatever the option. That added REQ-54 to REQ-61.
 
 ## Out of scope
 See `intake.md`: roles, rewriting inline `style` attributes, editing shipped migrations, the MySQL

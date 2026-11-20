@@ -632,6 +632,90 @@ The options it compares:
 It writes `.shipkit/research/silent-failures-spike.md`. The maintainer then picks, and this spec gains
 the requirement.
 
+**Outcome (2026-11-20).** The spike ran on SQLite, PostgreSQL 16 and MySQL 8.4, under Rails 7.2, 8.0 and 8.1,
+sync and async with a real Solid Queue worker. The maintainer chose option 2, with the four conditions and the
+two fixes in the next record. This section stays as the plan the spike followed.
+
+## Decision: A failed capture says so in one trimmed line per call site and failure class a minute (from spike S2)   (→ REQ-54 to REQ-61)
+
+**Context.** Spike S2 (`.shipkit/research/silent-failures-spike.md`) found that rc.1 handles a failed capture in
+three different ways, all reproduced:
+- **Sync:** nothing reaches the host's log at the default `log_level :silent`.
+- **Async, when the database refuses the write:** 8 RED lines (about 15 KB) and 11 Active Job lines (about 61 KB)
+  per lost capture, which no RED setting stops. They carry the user id, IP and user agent. In a 60 s storm with
+  storm protection off, that came to about 150 MB a minute.
+- **Async, on a payload error** (a column a migration didn't add): lost, and the job reports success.
+
+At `log_level :error`, the sync Context line (`log_error.rb:785`) prints the raw request params, password and card
+number included, on every Rails version. On PostgreSQL, a refused row's message quotes the row.
+`enable_internal_logging` doesn't gate `Logger.error` (`logger.rb:77-80`). Every new Rails app logs Active Job's
+arguments at `info`, so each async capture writes about 12 KB of payload, healthy or not.
+
+**Alternatives.**
+1. Default `log_level :error`, the lines as they are.
+2. Default `:error`, every capture-path failure line trimmed to classes and RED's call site, and rate-limited to
+   one per call site and failure class per minute per process.
+3. A per-process failure count on `/health`, with no log I/O.
+4. No change.
+
+**Case for 2.**
+- **Visible everywhere.** It is the only option that shows a failure on every path, the worker's payload errors
+  included.
+- **Bounded volume:** a handful of lines per process per minute, whatever the storm. Option 1 measured 48,008
+  writes (25.1 MB) a minute with storm protection off.
+- **No personal data**, because it carries no messages.
+- **No new setting:** `log_level :silent` is the switch.
+- **Cheap:** the prototype limiter costs 0.19 µs per suppressed failure (0.23 µs on 3 threads), and one 2-5 µs
+  line per key a minute.
+
+**Case against 2.**
+- **Hosts already at `:error` lose detail.** They see classes, not messages, unless they turn on
+  `enable_internal_logging` with `:debug`.
+- **A new install's log gains RED lines** when its error store breaks. That is the point, but it is also a change.
+- **Rate-limited means later failures are summarised.** A different failure inside the same minute under the
+  same key is a count, not a line.
+- **Existing installs keep `:silent`** from their initializer (`templates/initializer.rb:492`), so most hosts
+  won't see this until they change it.
+- **The worker's retryable-store lines become switchable.** At `:silent`, a host would see nothing, where rc.1
+  always logged them.
+
+**Why not 1, 3 or 4.**
+- **Option 1** prints passwords and grows with the storm.
+- **Option 3** can't see a job worker, where async captures fail. It needs a new public name to switch it off,
+  and resets on deploy.
+- **Option 4** keeps the silent losses, the password trap at `:error`, and the unswitchable worker flood.
+
+**Decision.** Option 2, accepted by the maintainer on 2026-11-20, with all six follow-ups said yes:
+- **The four conditions:**
+  - no messages;
+  - every capture-path site, the flush job's and the worker's direct lines (decision 4);
+  - keyed by call site and failure class;
+  - the detail reachable at `debug`, with `enable_internal_logging`.
+- **Fix 1 (REQ-59):** the Context lines (`log_error.rb:785`, `error_reporter.rb:73`) stop printing raw params
+  and the raw URL. They go to the detail, which prints the context as stored.
+- **Fix 2 (REQ-60):**
+  - `self.log_arguments = false` on `AsyncErrorLoggingJob` and `StormFlushJob`. It exists on Rails 7.2, 8.0
+    and 8.1 (`activejob logging.rb:26`).
+  - `ApplicationJob`'s `retry_on` block logs the job's class and id, not `job.arguments.inspect`.
+- **Not in rc.2:**
+  - a failure count on `/health` (option 3);
+  - any change to the 16 dashboard-only sites, which keep printing at `:error`, now the default, when a dashboard
+    action fails.
+- **The limiter is a new internal service,** `Services::CaptureFailureLog`, with `report(site, failure,
+  reported = nil)`:
+  - a Mutex-guarded Hash of `[site, failure class]` to the last line's monotonic time and a suppressed count;
+  - at most 100 keys, oldest dropped, like `storm_max_tracked_fingerprints`;
+  - never raises.
+
+  It writes the summary line with `RailsErrorDashboard::Logger.error`, and the detail with
+  `RailsErrorDashboard::Logger.debug`.
+
+**Falsifiability.** We would revisit this:
+- if `bin/benchmark` shows the failure path adding more than 5 µs to a failed capture's median (the prototype
+  measured 0.19 µs);
+- or if, after 1.0.0, a host reports more than 10 RED lines a minute per process from a single broken store.
+**Fired-if.** manual
+
 ## Data / interface changes
 - **Config, new and frozen at 1.0:**
   - `occurrence_retention_days` (nil) → REQ-23, REQ-24
@@ -641,6 +725,11 @@ the requirement.
   → REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53. These are fixes to the capture path rather than features, but
   they are still public names, so decision 0002's note covers them too.
 - **New service:** `Services::CaptureWriteGuard` (internal; not in `docs/PUBLIC_API.md`).
+- **Config default, changed by S2 (2026-11-20):** `log_level` goes from `:silent` to `:error`, in the library and the
+  installer's template → REQ-58. The name already exists, so no new name is frozen. Intake decision 8 made this
+  default subject to the spike; the maintainer accepted it after reading the evidence.
+- **New service:** `Services::CaptureFailureLog` (internal; not in `docs/PUBLIC_API.md`) → REQ-54 to REQ-57.
+- **Jobs:** `log_arguments = false` on `AsyncErrorLoggingJob` and `StormFlushJob` → REQ-60.
 - **Migration:** three nullable booleans on `rails_error_dashboard_error_logs`: `resolved_by_verified`,
   `assigned_to_verified`, `muted_by_verified` → REQ-37.
 - **Migration:** the PostgreSQL-only repair of `index_error_logs_on_group_identity` → REQ-48.

@@ -1,21 +1,22 @@
 # Tasks: 1.0 hardening (1.0.0-rc.2)
 
-Ten pull requests, in this order:
+Eleven pull requests, in this order:
 1. T1-T2: the spikes, research only, with S1 done by 2026-12-04.
 2. T3-T6: grouping v2.
 3. T7-T8: the grouping window.
-4. T9-T13: defaults and release hygiene.
+4. T9-T13 and T32: defaults and release hygiene, with S2's fix for failure lines that print raw params.
 5. T14-T16: notifications.
 6. T17-T19: data lifecycle.
 7. T20-T21: the audit actor.
 8. T22-T27: dashboard and queries.
 9. T28-T29: migrations.
 10. T30-T31: host conditions. They wait for S1's amendment, which may change T30's file list.
+11. T33-T34: capture failures, from S2's amendment (2026-11-20).
 
 Each pull request merges before the next branch starts from main. Rules for every task:
 - Code tasks write their test first, see it fail for the right reason, and cite
   `hardening-1-0-rc2/REQ-N`.
-- Capture-path tasks (T3-T5, T7, T11, T13, T30) also run `bin/benchmark`, and their pull request
+- Capture-path tasks (T3-T5, T7, T11, T13, T30, T32, T33) also run `bin/benchmark`, and their pull request
   records the capture and storm-check medians against rc.1's.
 
 `rspec` below stands for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
@@ -33,7 +34,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - spec.md and design.md are amended: the chosen option as a decision record, the final names in
       place of the provisional ones, T30's file list, and the Goldfish GAPS lines removed;
     - the maintainer has read it.
-- [ ] **T2** Spike S2: what making a failed capture visible would cost the host → REQ-19
+- [x] **T2** Spike S2: what making a failed capture visible would cost the host → REQ-19
   - Files: .shipkit/research/silent-failures-spike.md, .shipkit/specs/hardening-1-0-rc2/spec.md, .shipkit/specs/hardening-1-0-rc2/design.md
   - Test: none, it is a spike. It measures:
     - every `Logger.error` call site, and what each prints (personal data included);
@@ -131,6 +132,25 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - another error still takes the fallback.
   - After: T11
   - Done when: `rspec spec/commands` → 0 failures
+- [ ] **T32** Failure lines and job logs stop printing raw params and the capture payload → REQ-59, REQ-60
+  - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, app/jobs/rails_error_dashboard/application_job.rb, spec/integration/failure_log_privacy_spec.rb
+    From S2 (`.shipkit/research/silent-failures-spike.md`, accepted 2026-11-20). It ships with PR 4: it fixes a
+    defect any host at `log_level :error` has today.
+  - Test: spec/integration/failure_log_privacy_spec.rb. The request carries `user[password]`, `card_number`,
+    `user[email]` and `?reset_token=`, with Rails' template `filter_parameters`. It runs at the most verbose
+    setting (`enable_internal_logging = true`, `log_level :debug`), on a `StringIO` logger:
+    - a sync capture whose write fails (RED's table renamed) leaves none of the raw values in the log (REQ-59);
+    - so does an `ErrorReporter` failure (a `current_user` whose `id` raises) during the same request (REQ-59);
+    - `AsyncErrorLoggingJob.log_arguments?` and `StormFlushJob.log_arguments?` are false. An async capture's
+      `Enqueued` line carries no `user_id`, `ip_address` or `user_agent` (REQ-60);
+    - when a capture job's retries run out, the log names its class and job id and contains no argument value
+      (REQ-60).
+
+    The test bites when the old `@context.inspect` line is put back.
+  - After: T13
+  - Done when: `rspec` with `--example` for the new file → 0 failures on `RAILS_VERSION=7.2`, `8.0` and `8.1`
+    (checking the example count); the full suite → 0 failures; `bin/benchmark` capture median within 0.2 ms of
+    rc.1's
 
 ## Notifications
 - [ ] **T14** Channel jobs retry transient failures, and release the claim when retries run out → REQ-29, REQ-30, REQ-31
@@ -298,7 +318,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     spec/services/capture_write_guard_spec.rb: the lease's fallback when `connection_lease` is missing, and
     no raise from any of its three entry points.
     Every hang test asserts the elapsed time as well as the end state (tasks/lessons.md, 2026-10-30).
-  - After: T1, T13, T20
+  - After: T1, T13, T20, T32
   - Done when:
     - `RAILS_VERSION=7.2`, `8.0` and `8.1` `rspec spec/integration/host_conditions_spec.rb spec/services/capture_write_guard_spec.rb`
       → 0 failures each on SQLite locally, run with `--example` or by checking the example count
@@ -321,6 +341,47 @@ Each pull request merges before the next branch starts from main. Rules for ever
       each of `sqlite`, `postgresql` and `mysql` with each of `7.2`, `8.0` and `8.1`;
     - the CI job's 9 rows (database by Rails, with `test.yml`'s `postgres:16` and `mysql:8.4` services) are
       green.
+
+## Capture failures (after S2's amendment)
+- [ ] **T33** One trimmed line per call site and failure class a minute, default `:error`, detail at debug → REQ-54, REQ-55, REQ-56, REQ-57, REQ-58
+  - Files: lib/rails_error_dashboard/services/capture_failure_log.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/configuration.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, lib/rails_error_dashboard/middleware/error_catcher.rb, lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, lib/rails_error_dashboard/plugin.rb, lib/rails_error_dashboard/plugin_registry.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, spec/services/capture_failure_log_spec.rb, spec/integration/capture_failure_lines_spec.rb
+    The sites are the research file's Appendix A1 rows marked "capture" and "worker", and the worker's direct lines
+    named in spec.md's "Capture failures" terms. `capture_failure_log.rb` is new, and `lib/rails_error_dashboard.rb`
+    requires it.
+  - Test: spec/services/capture_failure_log_spec.rb, with an injected clock:
+    - 50 failures with one key give one line. The next line, 60 s later, carries the suppressed count (REQ-54);
+    - two failure classes at one site give two lines (REQ-54);
+    - the 101st key drops the oldest;
+    - `report` never raises (REQ-54);
+    - the line holds no message, context, param, URL or backtrace: a failure whose message carries a password
+      and a PostgreSQL-style `Failing row contains` leaves neither in the log (REQ-55).
+
+    spec/integration/capture_failure_lines_spec.rb covers each path the spike measured, 20 failures each: sync
+    with RED's table renamed, the async worker with RED's table renamed (retryable), the worker with a column
+    missing at boot (payload error), a raising plugin, a raising `custom_fingerprint`, and a failing flush job.
+    - At `:error`, one summary line per key (REQ-54);
+    - at `:silent`, no line at all, the worker's included (REQ-56);
+    - with `enable_internal_logging` and `:debug`, the detail for every failure, its context filtered (REQ-57,
+      REQ-59);
+    - `Configuration.new.log_level` is `:error`, and the generated initializer sets `:error` (REQ-58).
+
+    The test bites when the limiter is bypassed (20 lines) or the old lines are put back.
+  - After: T7, T30, T32
+  - Done when:
+    - `rspec` with `--example` for both new files → 0 failures on `RAILS_VERSION=7.2`, `8.0` and `8.1` (checking
+      the example count);
+    - the full suite → 0 failures;
+    - `bin/benchmark` capture median within 0.2 ms of rc.1's, and storm check under 15 µs;
+    - the spike's 60 s sync storm, rerun on the branch with storm protection off, writes at most 10 RED lines.
+- [ ] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
+  - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
+  - Test: none, prose (REQ-61 is waived). Read-through: each file says that error lines need only `log_level`,
+    and that `enable_internal_logging` gates `warn`, `info` and `debug`. `UPGRADING.md` and its Jekyll copy say
+    an existing install keeps the `:silent` its initializer sets, and how to switch to `:error`. The template's
+    troubleshooting example no longer sets `enable_internal_logging` for `:error`.
+  - After: T33
+  - Done when: the read-through above passes, and `git grep -n "enable_internal_logging"` in `docs/` and
+    `_getting_started/` shows no line saying it is needed for errors
 
 ## After the gate
 Release steps, not tasks: each needs the maintainer's yes.
