@@ -597,6 +597,13 @@ a table it doesn't create.
 **Fired-if.** manual
 
 ## Smaller changes (one obvious way each, so no decision record)
+- **REQ-62** (added 2026-11-21): `FindOrIncrementError` puts the capture's v1 hash on a row it creates, as a
+  non-persisted `ErrorLog#error_hash_v1`, the way `just_reopened` already reaches the subscribers.
+  `IssueTrackerSubscriber#should_auto_create?` (`issue_tracker_subscriber.rb:71-76`) matches
+  `error_hash IN (error_hash, error_hash_v1)`. Storm-created rows are not affected: `FlushStormCounts`
+  dispatches no callbacks. Not changed: the in-process notification throttle (`notification_throttler.rb:228`)
+  is keyed by the hash, so a group moved to v2 can send one extra notification; the database cooldown still
+  applies.
 - **REQ-21:** described in the host-conditions decision above.
 - **REQ-27, REQ-28:** `BatchDeleteErrors` calls `RetentionCleanupJob.delete_with_dependents(ErrorLog.where(id: ids))`,
   then `AnalyticsCacheManager.clear`, then dispatches `on_errors_batch_deleted` with the ids it plucked.

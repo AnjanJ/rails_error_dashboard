@@ -47,6 +47,10 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
   1.0.0-rc.1.
 - **REQ-8.** `docs/PUBLIC_API.md` shall state that the default grouping recipe is stable for all of 1.x
   and that the v1 fallback is removed only in 2.0. [untested: prose, verified by reading]
+- **REQ-62.** When a capture creates a new group and a group in the same application with the capture's
+  v1 fingerprint has a linked issue, RED shall link the new group to that issue instead of creating
+  another. Added 2026-11-21, during T4, with the maintainer's yes: without it, an rc.1 group with an issue
+  that no lookup matches any more (outside the 24-hour window) gets a second issue on its first v2 capture.
 
 ### Grouping window
 - **REQ-9.** While an open group's last occurrence is less than 24 hours old, a matching capture shall be
