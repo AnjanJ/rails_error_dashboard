@@ -48,3 +48,14 @@ launch's headline.
 change to the config, the public API or the schema, because then it has to be designed before
 the freeze or wait for 2.0.
 **Fired-if.** manual
+
+## Scope note (2026-11-20)
+The maintainer allowed public surface before 1.0.0, for the hardening sprint
+(`.shipkit/specs/hardening-1-0-rc2/intake.md`). These settings are added in rc.2 so that their names are
+frozen deliberately, rather than added in 1.x:
+- two opt-in settings, off by default: `occurrence_retention_days` and `dashboard_actor`;
+- the switch and timeout spike S1 settles for the host-condition fixes (provisionally
+  `isolate_capture_writes` and `capture_connection_timeout`).
+
+The rest of this decision stands: no new feature before 1.0.0. The reversal condition above has not
+fired.

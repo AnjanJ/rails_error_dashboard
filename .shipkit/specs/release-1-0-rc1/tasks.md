@@ -102,3 +102,5 @@ Release steps, not tasks: each needs the maintainer's yes.
 - Dispatch the demo's update workflow with the version, and check the demo serves it.
 - Open a GitHub discussion or issue asking early users to try it.
 - After about two quiet weeks, run the upgrade workflow again, then 1.0.0 with `Release-As: 1.0.0`.
+  - **Superseded 2026-11-20:** 1.0.0 now follows 1.0.0-rc.2, which carries the hardening sprint
+    (`.shipkit/specs/hardening-1-0-rc2/`). Its own "After the gate" holds the release steps.
