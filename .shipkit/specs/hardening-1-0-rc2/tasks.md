@@ -47,7 +47,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - spec.md gains its requirement and tasks.md its tasks, before any change to `log_level`.
 
 ## Grouping v2
-- [ ] **T3** `ErrorHashGenerator.identities` and the v2 recipe → REQ-1, REQ-2, REQ-3, REQ-4, REQ-7
+- [x] **T3** `ErrorHashGenerator.identities` and the v2 recipe → REQ-1, REQ-2, REQ-3, REQ-4, REQ-7
   - Files: lib/rails_error_dashboard/services/error_hash_generator.rb, spec/services/error_hash_generator_v2_spec.rb
   - Test: spec/services/error_hash_generator_v2_spec.rb:
     - one file loaded under two release directories, with `Rails.root` set to each, gives one v2
