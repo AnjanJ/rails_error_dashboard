@@ -65,27 +65,39 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
   `primary_key_type`.
 
 ### Host conditions
-These requirements are confirmed or amended by spike S1 before any code. Until then, these provisional
-terms hold, and S1's amendment may rename or change them:
-- **The switch:** `config.isolate_capture_writes`, default `true`. With `false`, RED writes "as in
-  1.0.0-rc.1": on the host's shared connection, inside whatever transaction and role the reporting thread
+Amended 2026-11-20 by spike S1 (`.shipkit/research/host-conditions-spike.md`; the decision is "Captures
+wait for the host's transaction, on the shared connection" in `design.md`). The maintainer read the evidence
+and accepted these terms on 2026-11-20:
+- **The switch:** `config.isolate_capture_writes`, default `true`. With `false`, RED writes as in
+  1.0.0-rc.1: on the host's shared connection, inside whatever transaction and role the reporting thread
   is in, waiting up to the pool's own `checkout_timeout`.
-- **RED's own connection timeout:** `config.capture_connection_timeout`, in seconds, default `0.1`.
-- **A held pool:** in a test, every connection of the pool RED writes through is checked out by other
-  threads (whichever pool S1 chooses).
-- **REQ-17.** If a sync capture's host transaction rolls back, then the captured error shall still be
-  stored.
+- **RED's connection timeout:** `config.capture_connection_timeout`, in seconds, default `0.1`: the longest a
+  capture waits to lease a connection from a pool it writes through.
+- **The pools a capture writes through:** RED's pool (`ErrorLogsRecord.connection_pool`, which is the host's
+  own pool unless `use_separate_database` is on) for the sync write, and the host's pool
+  (`ActiveRecord::Base.connection_pool`) for the async enqueue.
+- **A held pool:** in a test, every connection of the pool the step writes through is checked out by other
+  threads, and the reporting thread holds none.
+- **REQ-17.** If a capture is reported inside a host transaction or savepoint that rolls back, then the
+  captured error shall still be stored, in sync and in async mode.
 - **REQ-18.** While the host prevents writes (`while_preventing_writes`, or a reading role with
-  `prevent_writes`), a capture shall still be stored.
+  `prevent_writes`), a capture shall still be stored, through the writing role.
 - **REQ-19.** If the database refuses RED's write (the adapter raises `ActiveRecord::StatementInvalid` or a
   subclass of it, such as `ActiveRecord::ReadOnlyError`, on RED's INSERT or UPDATE), then the capture shall
   be dropped without raising into the host.
-- **REQ-20.** If RED cannot get a database connection within its own connection timeout, then the capture
-  shall give up and shall not try again.
+- **REQ-20.** If RED cannot lease a connection from a pool it writes through within
+  `capture_connection_timeout`, then the capture shall give up after that one wait and shall not try again.
 - **REQ-21.** If looking up or creating the application record fails on a connection timeout, then the
   capture shall not wait for a second connection.
 - **REQ-22.** Where the host turns the host-condition handling off by config, captures shall be written as
   in 1.0.0-rc.1.
+- **REQ-51.** When a capture is reported inside an open host transaction, RED shall write or enqueue it only
+  after that transaction and every enclosing one have ended, and shall record the time it was reported as
+  its occurrence time.
+- **REQ-52.** While 100 captures already wait on one host transaction, RED shall drop any further capture
+  reported inside it, without raising.
+- **REQ-53.** Where an async capture's enqueue runs after the response, RED shall not wait for a connection
+  on the request thread for it.
 
 ### Data lifecycle
 A **live** group, here, is one the retention job does not expire: `retention_days` is nil, or the group
@@ -155,15 +167,12 @@ was last seen less than `retention_days` ago (`RetentionCleanupJob.expired_scope
 - **S1, host conditions.** Which mechanism stores a capture through a host rollback, through prevented
   writes and past a starved pool, on SQLite, PostgreSQL and MySQL, under Rails 7.2, 8.0 and 8.1; what it
   costs in database connections and capture time; how it is switched off. Done by 2026-12-04 to make rc.2.
-  Its result confirms or amends REQ-17 to REQ-22.
+  Its result confirms or amends REQ-17 to REQ-22. **Done 2026-11-20:** `.shipkit/research/host-conditions-spike.md`.
+  It amended REQ-17, REQ-18 and REQ-20, added REQ-51 to REQ-53, and kept both setting names.
 - **S2, silent failures.** What changes if a failed capture becomes visible: how often RED's failure lines
   can fire, what they cost on the capture path, and whether they print personal data (the failure line
   prints the capture's context today). The options include the `log_level` default and a failure count on
   the health page. No requirement is written until the maintainer has read the evidence.
-
-## Goldfish
-Goldfish: GAPS accepted by owner — REQ-20 (the held pool is whichever pool S1 chooses; set by S1's amendment)
-Goldfish: GAPS accepted by owner — REQ-17 to REQ-22 (provisional `isolate_capture_writes` and `capture_connection_timeout`; no test before S1's amendment)
 
 ## Out of scope
 See `intake.md`: roles, rewriting inline `style` attributes, editing shipped migrations, the MySQL

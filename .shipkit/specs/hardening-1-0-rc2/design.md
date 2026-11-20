@@ -230,6 +230,87 @@ miss rc.2 and ship in rc.3, as the intake decided.
 the first day.
 **Fired-if.** manual
 
+**Outcome (2026-11-20).** The spike ran and finished on its first day, so the condition above is moot. Option 2
+passed every case; the next record holds the decision. This record stays as the plan the spike followed.
+
+## Decision: Captures wait for the host's transaction, on the shared connection (from spike S1)   (→ REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53)
+
+**Context.** Spike S1 (`.shipkit/research/host-conditions-spike.md`) ran each option on SQLite, PostgreSQL 16,
+MySQL 8.4 and MySQL 26.10, under Rails 7.2.4, 8.0.5.2 and 8.1.4.1, in sync mode, async mode with Solid Queue on the
+same database, and async mode inside a request. All of it was reproduced. What rc.1 does:
+- **Lost, with no log line:** a capture in a rolled-back transaction or savepoint, in every cell, sync and async
+  outside a request. On Rails 7.2 the async job is dropped after Rails has already marked it enqueued.
+- **Lost, with a log line:** a capture under `while_preventing_writes` or a reading role, in every cell, on
+  "Lock query".
+- **Blocked on a held pool:** 4 s sync, 6 s async outside a request, 6 s after the response in a request, and
+  10 s with a separate error database, at a `checkout_timeout` of 2 s.
+
+**Alternatives.**
+1. RED's own pool through `ErrorLogsRecord.connects_to` (pool 2, timeout 0.1 s), with or without wrapping each
+   capture in `ErrorLogsRecord.connected_to(role: :writing, prevent_writes: false)`.
+2. The shared connection, in three parts:
+   - Inside an open host transaction, the capture waits for that transaction's `after_commit` or
+     `after_rollback` (public API in Rails 7.2+). It checks again after each one, so a savepoint waits for its
+     parent.
+   - The sync write runs under `ActiveRecord::Base.connected_to(role: :writing, prevent_writes: false)`, and
+     leases RED's pool and the host's with a wait of at most `capture_connection_timeout`.
+   - The async enqueue gets the same, leasing only the host's pool.
+3. A bounded in-process worker thread that writes or enqueues the async payload.
+
+**Case for 2.**
+- **It is the only option that kept every case.** That's 7 transaction and write-prevention cases in all 36 runs
+  (12 cells × 3 modes), with a separate error database too.
+- **The held-pool wait becomes one bounded wait:** 0.10 to 0.11 s sync, and after the response in a request.
+- **It adds no database connection**, against +2 per process for option 1 (5 → 7, counted by the server), and
+  about 2 µs per capture.
+- **Async capture is fixed too.** The enqueue waits for the transaction, which neither option 1 nor rc.1 does.
+- **It keeps sync capture synchronous.** The write still happens before the request returns.
+
+**Case against 2.**
+- **The write moves to the transaction's end.** A capture inside a long transaction is stored late, and lost if
+  the process dies first. rc.1 would lose that one too: its INSERT was inside the same uncommitted transaction.
+- **It holds a closure per capture until the transaction ends.** A storm inside one transaction would grow that
+  list without the cap in REQ-52.
+- **The bounded lease relies on a private pool method** (`connection_lease`; Rails has no public
+  "lease with a timeout").
+- **In a reading role the write goes to the writing database.** In a multi-region setup with a far writer, that
+  is a round trip on the request (sync capture). Not measured: there was no remote database. rc.1 drops the
+  capture instead.
+
+**Why not 1 or 3.**
+- **Option 1 on SQLite** loses every capture inside a host write transaction, including one that commits, and
+  on Rails 8.0 and 8.1 the caller waits 5 s first. It doesn't help async capture at all.
+- **Option 3:**
+  - On SQLite under Rails 7.2 it lost captures, and in async mode stalled the host's own transaction for 5.44 s.
+  - With pool size equal to thread count, Rails' default, it dropped 2 of 5 captures.
+  - A first version looped through `executor.wrap` and `Rails.error`.
+  - Its queue is lost on exit.
+
+**Decision.** Option 2, accepted by the maintainer on 2026-11-20 with both names, the reading-role write and the
+private-lease fallback.
+- **The deferral sits after the ignore filter and the storm gate,** at the branch between sync and async in
+  `LogError.call`, so count-only storm events never wait.
+- **At most 100 captures wait per transaction** (REQ-52). Further ones are dropped.
+- **A deferred capture is stamped with the time it was reported** (REQ-51), through the same `_captured_at` the
+  async path uses (`log_error.rb:170`).
+- **The guard lives in a new service,** `Services::CaptureWriteGuard`: `defer(&blk)`, `allow_writes(pools, &blk)`
+  and `lease(pool, timeout, &blk)`. `LogError` calls it at the entry, around `#call`, and around `enqueue_async`.
+- **The lease falls back when the private method is missing.** It uses `ConnectionPool#checkout(timeout)` and
+  sets the private `connection_lease` only if `respond_to?(:connection_lease, true)`. Otherwise it falls back to
+  the pool's own wait (rc.1's behaviour) and logs once at debug. `host_conditions_spec.rb` pins it on 7.2, 8.0
+  and 8.1.
+- **Names, both kept:**
+  - `isolate_capture_writes` (default `true`): with `false`, there's no deferral, no write-allowance and no
+    lease, so rc.1's behaviour (REQ-22);
+  - `capture_connection_timeout` (default `0.1`): the lease's wait.
+- **REQ-21 (T13) still lands separately.** With the lease, the application lookup can't reach a second wait,
+  but with `isolate_capture_writes = false` it still can.
+
+**Falsifiability.** We would revisit this if T30's `bin/benchmark` capture median is more than 0.2 ms above rc.1's,
+or if, after 1.0.0, two or more issues report a capture stored late or lost because it waited for a long host
+transaction.
+**Fired-if.** manual
+
 ## Decision: Notifications retry transient failures and release the claim   (→ REQ-29 to REQ-33)
 
 **Context.**
@@ -556,9 +637,10 @@ the requirement.
   - `occurrence_retention_days` (nil) → REQ-23, REQ-24
   - `dashboard_actor` (nil) → REQ-36 to REQ-38
   Decision 0002 gets a dated scope note allowing these two.
-- **Config, provisional until S1:** `isolate_capture_writes` (true) and `capture_connection_timeout` (0.1)
-  → REQ-20, REQ-22. These are fixes to the capture path rather than features, but they are still public
-  names, so decision 0002's note covers them too.
+- **Config, kept by S1 (2026-11-20):** `isolate_capture_writes` (true) and `capture_connection_timeout` (0.1)
+  → REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53. These are fixes to the capture path rather than features, but
+  they are still public names, so decision 0002's note covers them too.
+- **New service:** `Services::CaptureWriteGuard` (internal; not in `docs/PUBLIC_API.md`).
 - **Migration:** three nullable booleans on `rails_error_dashboard_error_logs`: `resolved_by_verified`,
   `assigned_to_verified`, `muted_by_verified` → REQ-37.
 - **Migration:** the PostgreSQL-only repair of `index_error_logs_on_group_identity` → REQ-48.

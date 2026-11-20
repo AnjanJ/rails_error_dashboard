@@ -21,7 +21,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
 `rspec` below stands for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
 
 ## Spikes
-- [ ] **T1** Spike S1: how a capture survives a host rollback, prevented writes and a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, REQ-22
+- [x] **T1** Spike S1: how a capture survives a host rollback, prevented writes and a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, REQ-22
   - Files: .shipkit/research/host-conditions-spike.md, .shipkit/specs/hardening-1-0-rc2/spec.md, .shipkit/specs/hardening-1-0-rc2/design.md
   - Test: none, it is a spike. Its probes run from a scratch directory outside the repository, against
     copies of the databases, and are deleted afterwards. The research file records each probe's code.
@@ -274,22 +274,38 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: `rspec spec/migrations/concurrent_index_spec.rb` → 0 failures
 
 ## Host conditions (after S1's amendment)
-- [ ] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22
-  - Files: lib/rails_error_dashboard/configuration.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, app/models/rails_error_dashboard/error_logs_record.rb, lib/rails_error_dashboard/engine.rb, lib/rails_error_dashboard/commands/log_error.rb, spec/integration/host_conditions_spec.rb
-  - Test: spec/integration/host_conditions_spec.rb, sync and async:
-    - a report inside `transaction { …; raise ActiveRecord::Rollback }` is stored;
-    - one inside `while_preventing_writes` is stored;
-    - a `StatementInvalid` or `ReadOnlyError` on RED's INSERT drops it without raising;
-    - with RED's pool held, the capture returns within `capture_connection_timeout` plus 50 ms, stores
-      nothing, and makes one attempt;
-    - with `isolate_capture_writes = false`, the rc.1 behaviour comes back.
-    The file list and names follow S1's amendment.
+- [ ] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
+  - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb
+    From S1's amendment (option 2). `capture_write_guard.rb` is new, and `lib/rails_error_dashboard.rb` requires it. `error_logs_record.rb` and `engine.rb` are no longer in it: option 2 adds no connection.
+  - Test: spec/integration/host_conditions_spec.rb, sync, async without a request, and async with a
+    `rack.response_finished` request env, each case citing its REQ:
+    - a report inside `transaction { …; raise ActiveRecord::Rollback }` is stored once (REQ-17);
+    - so are a rolled-back savepoint whose outer commits, a rolled-back savepoint whose outer then rolls back,
+      and a committed savepoint whose outer rolls back (REQ-17, REQ-51);
+    - a report inside a committed transaction is stored once, after the commit, with `occurred_at` at the
+      report time and not the commit's (REQ-51);
+    - one inside `while_preventing_writes`, and one inside `connected_to(role: :reading, prevent_writes: true)`,
+      is stored (REQ-18);
+    - a `StatementInvalid` or `ReadOnlyError` on RED's INSERT drops it without raising (REQ-19);
+    - with the pool the step writes through held, the capture returns within `capture_connection_timeout` plus
+      50 ms, stores nothing and makes one checkout (REQ-20). In a request with async capture, the request
+      thread makes no checkout (REQ-53);
+    - the 101st report inside one transaction is dropped, and the first 100 are stored (REQ-52);
+    - with `isolate_capture_writes = false`, each case behaves as in rc.1 (REQ-22);
+    - with `use_separate_database`, the same cases (SQLite: a second file).
+    `docs/guides/CONFIGURATION.md` states that, in a reading role, a capture is written through the writing
+    role, and that a far writing database adds that round trip to sync capture (S1, accepted 2026-11-20).
+    spec/services/capture_write_guard_spec.rb: the lease's fallback when `connection_lease` is missing, and
+    no raise from any of its three entry points.
+    Every hang test asserts the elapsed time as well as the end state (tasks/lessons.md, 2026-10-30).
   - After: T1, T13, T20
   - Done when:
-    - `RAILS_VERSION=7.2`, `8.0` and `8.1` `rspec spec/integration/host_conditions_spec.rb` → 0 failures
-      each on SQLite locally;
-    - the same against the local PostgreSQL 16 and MySQL services (`DATABASE_URL` as in `test.yml`'s adapter
-      job), on all three Rails versions;
+    - `RAILS_VERSION=7.2`, `8.0` and `8.1` `rspec spec/integration/host_conditions_spec.rb spec/services/capture_write_guard_spec.rb`
+      → 0 failures each on SQLite locally, run with `--example` or by checking the example count
+      (tasks/lessons.md: `.rspec` pins the pattern);
+    - the same against the local PostgreSQL 16 and MySQL 8.4 (`mysql@8.4`, port 3307) services
+      (`DATABASE_URL` as in `test.yml`'s adapter job), on all three Rails versions;
+    - `spec/integration/capture_query_budget_spec.rb` still passes (no added query per capture);
     - `bin/benchmark` capture median within 0.2 ms of rc.1's.
     CI proves the 9 combinations in T31. The existing adapter jobs run Rails 8.1 only (`test.yml:104`).
 - [ ] **T31** A chaos target for host conditions on every database and Rails version → REQ-50
