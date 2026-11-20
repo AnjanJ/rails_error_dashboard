@@ -1,42 +1,57 @@
 # Handoff
 
-> Written 2026-11-20 on spec/hardening-1-0-rc2, after `68559b6a`; this note is the branch's last commit.
+> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `bad8a8d7`; this note is the
+> branch's last commit. The branch is local only: nothing is pushed and no PR is open.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1 and T2 are done, committed and pushed. T3-T34 are unstarted.
-- **What S2 settled** (accepted 2026-11-20, all six follow-ups "yes"): option 2, a trimmed line per call site and
-  failure class a minute, with default `log_level :error`. It became REQ-54 to REQ-61 and tasks T32-T34:
-  - **T32** ships in PR 4. It stops the failure lines printing raw params and the URL, and sets
-    `log_arguments = false` on the capture and flush jobs.
-  - **T33-T34** are a new PR 11.
-  - **Not in rc.2:** the `/health` failure count. The 16 dashboard-only sites are unchanged.
-- **PR 1 is #373** (spec, S1, S2 and the handoffs; docs only), opened 2026-11-20. Its CI was running. Merging needs
-  the maintainer's yes.
-- **The sprint's tracking issue is #374** (public, no reproduction details). From T3 on, code commits and PRs say
-  `Refs #374`. Tick its checklist as each PR merges; never close it (the maintainer decides).
+- **`hardening-1-0-rc2`**: T1-T6 and T35 are done and committed on feat/hardening-grouping-v2. PR 2 is complete;
+  pushing it and opening the PR each need the maintainer's yes. T7-T34 are unstarted.
+- **PR 1 (#373)** is merged. The tracking issue is #374: tick its checklist as each PR merges; never close it.
 
-## Done this session
-- `60f5aef5`: spike S2's research (`.shipkit/research/silent-failures-spike.md`) and the amendment.
-  - `spec.md`: "Capture failures" with REQ-54 to REQ-61, a user story, and the S2 spike marked done.
-  - `design.md`: the S2 outcome, a decision record and the interface changes.
-  - `tasks.md`: T32 (After T13), T33 (After T7, T30, T32), T34 (After T33). T30's After gains T32.
-    Eleven PRs now.
-  - spec-check: 0 gaps.
-- Cleaned up: the 6 throwaway databases are dropped, `/tmp/red-s2` is deleted, and the MySQL 8.4 server on 3307
-  is stopped. The 3306 service was not touched.
+## Done this session (2026-11-21)
+- `f7bd8fb5` T3: `ErrorHashGenerator.identities` and the v2 recipe (REQ-1 to REQ-4, REQ-7). `5945a98f` ticks it.
+- `58e87a44` T4 and T5 together, with the maintainer's yes: sync, async, the storm gate, the buffer and the flush
+  carry v2 and v1, the lookups match `error_hash IN (v2, v1)` preferring v2, and a v1 row moves to v2 in a
+  savepoint (REQ-5, REQ-6, REQ-7). T4 alone failed 15 storm specs, which is why they landed together.
+  - The first benchmark failed the storm check (19-20 µs against 15 µs). The cause was T3's frame walk
+    (`Enumerator::Lazy`, a label per frame) on the benchmark's 63-frame one-line recursion, which REQ-2's
+    same-line rule walks to the end. Rewritten as a plain loop, same rule: v2_identity 17.07 → 2.36 µs.
+  - Benchmark medians, rc.1 → branch, same machine (M3 Max, SQLite, YJIT), two alternating runs each: storm
+    check calm 3.15-3.18 → 4.73-4.76 µs, shedding 4.36-4.39 → 5.90-6.23 µs, breaker open 4.24 → 5.69-5.85 µs;
+    async capture 92-93 → 97-98 µs; sync capture 888-905 → 937-939 µs. Put these in PR 2's body.
+- `301029c8` amendment, with the maintainer's yes: REQ-62 and T35 (a new v2 group links to its v1 group's
+  issue; `issue_tracker_subscriber.rb:71-76` matched by `error_hash` alone). T7 and T11 now come after T35.
+- `8ece1185` T35 (REQ-62). `cb489217` T6: `docs/PUBLIC_API.md` "Grouping" and decision 0010 (REQ-8);
+  `bad8a8d7` says groups are per application and environment.
+- The shipkit reviewer, now run per task with the maintainer's yes: PASS for T3 (REQ-1 to REQ-4, REQ-7) and
+  for T4+T5 (REQ-5 to REQ-7), and for T35 and T6 (REQ-62, REQ-8). The last noted that the page left out the
+  per-application scope; `bad8a8d7` adds it.
+- Full suite at `8ece1185`: 7,194 examples, 0 failures, 9 pending. spec-check: 0 gaps.
 
 ## Next step
-1. Check #373's CI. When it is green, ask the maintainer to merge it.
-2. After it merges, branch from `main` for PR 2 and start T3 (grouping v2), test first, citing
-   `hardening-1-0-rc2/REQ-N`, with `Refs #374`.
+1. Ask the maintainer for a yes to push feat/hardening-grouping-v2 and open PR 2 (`Refs #374`, never Closes).
+   The body needs the benchmark table above. Then watch CI (Ruby 3.3, 3.4 and 4.0; nothing ran locally on
+   3.3 or 4.0).
+2. After PR 2 merges: tick #374, branch from main for PR 3 (T7-T8, the grouping window). T7's lookups are now
+   `with_hash` / `with_hashes`, and its window change must apply to both hashes.
 
 ## Open questions
-- Pushing needs a yes each time.
-- T32 fixes a defect any host at `log_level :error` has today. #374 names it in one plain line. The research
-  file pushed with #373 describes it in full; the maintainer accepted that (low exposure: opt-in `:error`, a
-  failing store, the host's own logs) and chose to ship T32 early in PR 4.
+- None from this session. Each push, PR, merge or branch deletion still needs its own yes.
+- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a group
+  moved to v2 can send one extra notification.
 
 ## Do not forget
+- **Agents and the working tree:** start a reviewer or research agent with `isolation: "worktree"`, and tell it
+  not to checkout, stash or reset. The first T3 reviewer, started without it, stashed the uncommitted T4 work
+  and checked out a past commit in this tree. It restored everything, but check `git status`, `git stash list`
+  and the reflog after any agent.
+- **Storm specs and entries:** a hand-built storm entry without `opaque_identity` and `opaque_identity_v1` has
+  rc.1's shape and is counted under v1 alone (REQ-6), so it can't reach a group sync created since T4. Give such
+  entries the gate's identity with `StormEntryIdentity.for(error, context)` (`spec/support/storm_entry_identity.rb`).
+- **The benchmark's exception** is raised by one-line recursion (`benchmark/scenarios.rb:233`), so REQ-2's
+  same-line rule walks all 63 frames. Anything added to the frame walk is paid 63 times per storm check there.
+- **rc.1 baseline:** a throwaway worktree at the rc.1 tag is at `/tmp/red-rc1-bench` (detached). Remove it with
+  `git worktree remove /tmp/red-rc1-bench` when no longer needed.
 - MySQL 8.4 for T30: `mysql@8.4` is installed (keg-only), with no data. Start a throwaway server like this:
   1. `/opt/homebrew/opt/mysql@8.4/bin/mysqld --no-defaults --initialize-insecure --datadir=<dir> --basedir=/opt/homebrew/opt/mysql@8.4`
   2. Run `mysqld` with `--port=3307 --bind-address=127.0.0.1 --mysqlx=OFF` and its own socket and pid file.
