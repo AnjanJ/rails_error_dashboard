@@ -170,6 +170,165 @@ module RailsErrorDashboard
         EncodingSanitizer.scrub(first_app_frame)&.split(":")&.first
       end
 
+      # Frames under Ruby's own library directory are never the app's (REQ-2).
+      RUBY_LIB_DIR = "#{RbConfig::CONFIG["rubylibdir"]}/".freeze
+
+      # A string backtrace line: "path:line:in 'label'" (Ruby 3.4+) or
+      # "path:line:in `label'" (Ruby 3.3). The label part may be missing.
+      BACKTRACE_LINE = /\A(.+?):(\d+)(?::in [`'](.*)')?\z/
+
+      # The prefixes Location#label adds and #base_label drops.
+      LABEL_PREFIX = /\A(?:(?:block(?: \(\d+ levels\))?|rescue|ensure) in )+/
+
+      # Both identities of one exception, before the application is added.
+      #
+      # v2 is the recipe from 1.0.0-rc.2 on (stable for all of 1.x): the error
+      # class, the normalised message, the first app frame as
+      # "<path relative to Rails.root>#<method>", NameError#name, and the
+      # controller and action. v1 is rc.1's recipe, kept so a group created
+      # before the upgrade is still found (removed in 2.0). A custom
+      # fingerprint replaces both, exactly as in rc.1.
+      #
+      # @param exception [Exception]
+      # @param context [Hash] the capture context (:controller_name, :action_name)
+      # @return [Hash] { v2:, v1:, custom: }: v2 and v1 are opaque (complete
+      #   them with .complete); custom is already the complete hash, and when
+      #   it is present v2 and v1 are nil
+      def self.identities(exception, context = {})
+        custom = try_custom_fingerprint(exception, context)
+        return { v2: nil, v1: nil, custom: custom } if custom
+
+        error_class = exception.class.name
+        normalized = normalize_message(exception.message)
+        controller_name = context[:controller_name]&.to_s
+        action_name = context[:action_name]&.to_s
+
+        {
+          v2: Digest::SHA256.hexdigest([
+            error_class,
+            normalized,
+            app_frame_v2(exception),
+            name_part(exception),
+            controller_name,
+            action_name
+          ].compact.join("|"))[0..15],
+          v1: opaque_identity(
+            error_class: error_class,
+            normalized_message: normalized,
+            frames: extract_app_frame_from_locations(exception) || extract_app_frame(exception.backtrace),
+            controller_name: controller_name,
+            action_name: action_name
+          ),
+          custom: nil
+        }
+      end
+
+      # The first app frame as "<path relative to Rails.root>#<method>"
+      # (REQ-1, REQ-3), or nil when there is none. Skips gem frames,
+      # "<internal:" frames, frames under Ruby's library directory, and a frame
+      # whose next kept frame has the same path and line: a C method reported
+      # at its caller's line (REQ-2). If every kept frame matches the next, the
+      # last one is used.
+      def self.app_frame_v2(exception)
+        frame = first_app_frame(each_frame(exception))
+        return nil unless frame
+
+        path, _line, label = frame
+        relative = relative_to_root(path)
+        label ? "#{relative}##{label}" : relative
+      end
+
+      # Yields [path, line, base_label] for each frame, from backtrace_locations
+      # or, when there are none (a backtrace set from strings), from the
+      # strings, so both give the same frames.
+      def self.each_frame(exception)
+        locations = safe_locations(exception)
+        if locations
+          return locations.lazy.map { |loc| [ loc.absolute_path || loc.path, loc.lineno, loc.base_label ] }
+        end
+
+        Array(exception.backtrace).lazy.map do |line|
+          match = BACKTRACE_LINE.match(EncodingSanitizer.scrub(line.to_s))
+          next [ nil, nil, nil ] unless match
+
+          [ match[1], match[2].to_i, base_label_of(match[3]) ]
+        end
+      end
+
+      def self.safe_locations(exception)
+        locations = exception.backtrace_locations
+        locations.nil? || locations.empty? ? nil : locations
+      rescue StandardError
+        nil
+      end
+
+      def self.first_app_frame(frames)
+        previous = nil
+        frames.each do |frame|
+          next if foreign_frame?(frame[0])
+          return previous if previous && (frame[0] != previous[0] || frame[1] != previous[1])
+
+          previous = frame
+        end
+        previous
+      end
+
+      def self.foreign_frame?(path)
+        path.nil? || path.include?("/gems/") || path.start_with?("<internal:") || path.start_with?(RUBY_LIB_DIR)
+      end
+
+      # What Location#base_label gives for a label: no "block in", "rescue in"
+      # or "ensure in" prefix, and no "Class#" or "Class." owner (Ruby 3.4+).
+      def self.base_label_of(label)
+        return nil if label.nil? || label.empty?
+
+        base = label.sub(LABEL_PREFIX, "")
+        return base if base.start_with?("<")
+
+        base.split(/[#.]/).last || base
+      end
+
+      # A path under Rails.root, or under its real path (a symlinked "current"
+      # and the "releases/<timestamp>" it points to), loses that prefix. Any
+      # other path stays as it is.
+      def self.relative_to_root(path)
+        prefix = root_prefixes.find { |candidate| path.start_with?(candidate) }
+        prefix ? path[prefix.length..] : path
+      end
+
+      # Rails.root and its real path, longest first, each ending in "/". The
+      # real path is a filesystem call, so it is cached per Rails.root value.
+      def self.root_prefixes
+        root = defined?(Rails) && Rails.respond_to?(:root) && Rails.root ? Rails.root.to_s : nil
+        return [] if root.nil? || root.empty?
+
+        cached = @root_prefixes
+        return cached[1] if cached && cached[0] == root
+
+        real = begin
+          File.realpath(root)
+        rescue StandardError
+          root
+        end
+        prefixes = [ root, real ].uniq.map { |dir| dir.end_with?("/") ? dir : "#{dir}/" }.sort_by { -_1.length }
+        @root_prefixes = [ root, prefixes.freeze ].freeze
+        prefixes
+      end
+
+      # "name:<NameError#name>" with digits replaced, as in the message (REQ-4).
+      def self.name_part(exception)
+        return nil unless exception.is_a?(NameError)
+
+        name = exception.name
+        return nil if name.nil?
+
+        "name:#{EncodingSanitizer.scrub(name.to_s).gsub(/\d+/, "N")}"
+      rescue StandardError
+        nil
+      end
+      private_class_method :app_frame_v2, :each_frame, :safe_locations, :first_app_frame, :foreign_frame?,
+                           :base_label_of, :relative_to_root, :root_prefixes, :name_part
+
       # Try custom fingerprint lambda if configured
       # Returns 16-char hex hash from custom key, or nil to fall back to default
       # @param exception [Exception] The exception
