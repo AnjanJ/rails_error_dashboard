@@ -33,6 +33,12 @@ RSpec.describe "capture size limits" do
     error
   end
 
+  # The full message's fingerprint (v2 since hardening-1-0-rc2/REQ-1).
+  def v2_hash(error, application_id)
+    generator = RailsErrorDashboard::Services::ErrorHashGenerator
+    generator.complete(generator.identities(error)[:v2], application_id)
+  end
+
   def marker_for(message)
     "… [#{message.length - 10_000} more characters]"
   end
@@ -45,9 +51,7 @@ RSpec.describe "capture size limits" do
 
       row = logs.sole
       expect(row.message).to eq(long_message[0, 10_000] + marker_for(long_message))
-      expect(row.error_hash).to eq(
-        RailsErrorDashboard::Services::ErrorHashGenerator.call(error, application_id: row.application_id)
-      )
+      expect(row.error_hash).to eq(v2_hash(error, row.application_id))
     end
 
     # capture-hardening-0-17/REQ-1, capture-hardening-0-17/REQ-4
@@ -66,9 +70,7 @@ RSpec.describe "capture size limits" do
       expect(row.message).to eq(long_message[0, 10_000] + marker_for(long_message))
       # capture-hardening-0-17/REQ-5: the identity crossed the queue from the
       # raw exception, so the cut doesn't change the group.
-      expect(row.error_hash).to eq(
-        RailsErrorDashboard::Services::ErrorHashGenerator.call(error, application_id: row.application_id)
-      )
+      expect(row.error_hash).to eq(v2_hash(error, row.application_id))
     end
 
     # capture-hardening-0-17/REQ-1: redaction on the request thread can make

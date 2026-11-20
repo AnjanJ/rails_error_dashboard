@@ -4,7 +4,9 @@ require "rails_helper"
 
 # The storm gate runs on the request thread for every error. It builds the
 # gate key per event and the redacted exemplar only when the count buffer
-# stores a new entry, and both must be exactly what 0.17.0 produced.
+# stores a new entry, and both must be exactly what 0.17.0 produced, except
+# for the identity: from 1.0.0-rc.2 it is v2, with 0.17.0's (v1) beside it
+# (hardening-1-0-rc2/REQ-5).
 RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate, "hot path" do
   let(:gate) { described_class }
   let(:hashing) { RailsErrorDashboard::Services::ErrorHashGenerator }
@@ -21,12 +23,22 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate, "hot path" 
   end
 
   # 0.17.0's Gate.gate_parts and Gate.gate_key, verbatim: the reference the
-  # new code must match, input for input.
+  # new code must match, input for input. The one change is the identity:
+  # opaque_identity is v2, and 0.17.0's identity travels as
+  # opaque_identity_v1, which a custom fingerprint doesn't get
+  # (hardening-1-0-rc2/REQ-5, hardening-1-0-rc2/REQ-7).
   def reference_parts(exception, context)
     raw_message = exception.message.to_s[0, hashing::HASH_MESSAGE_LIMIT]
+    custom_hash = gate.send(:custom_hash_for, exception, context)
     sanitizer.scrub_deep(
       error_class: exception.class.name,
-      opaque_identity: hashing.opaque_identity(
+      opaque_identity: hashing.v2_identity(
+        exception,
+        normalized_message: hashing.normalize_message(raw_message),
+        controller_name: context[:controller_name],
+        action_name: context[:action_name]
+      ),
+      opaque_identity_v1: custom_hash ? nil : hashing.opaque_identity(
         error_class: exception.class.name,
         normalized_message: hashing.normalize_message(raw_message),
         frames: hashing.extract_app_frame_from_locations(exception) || hashing.extract_app_frame(exception.backtrace),
@@ -37,7 +49,7 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate, "hot path" 
       first_app_frame: hashing.extract_app_frame_from_locations(exception) || hashing.extract_app_frame(exception.backtrace),
       controller_name: context[:controller_name]&.to_s,
       action_name: context[:action_name]&.to_s,
-      custom_hash: gate.send(:custom_hash_for, exception, context),
+      custom_hash: custom_hash,
       environment: context[:environment].to_s.strip.presence&.[](0, 64),
       capture_source: context[:_capture_source] == "client" ? "client" : "server"
     )
@@ -141,8 +153,17 @@ RSpec.describe RailsErrorDashboard::Services::StormProtection::Gate, "hot path" 
   end
 
   it "fails open when building the identity raises (storm-gate-hot-path/REQ-5)" do
+    allow(hashing).to receive(:v2_identity).and_raise(StandardError, "digest broke")
+
+    expect(gate.admit!(raised, {})).to eq(:full)
+    expect(hashing).to have_received(:v2_identity)
+  end
+
+  it "fails open when building a new entry's v1 identity raises (storm-gate-hot-path/REQ-5, hardening-1-0-rc2/REQ-5)" do
+    allow(gate).to receive(:decide).and_wrap_original { |original, _state, *args| original.call(:open, *args) }
     allow(hashing).to receive(:opaque_identity).and_raise(StandardError, "digest broke")
 
     expect(gate.admit!(raised, {})).to eq(:full)
+    expect(hashing).to have_received(:opaque_identity)
   end
 end

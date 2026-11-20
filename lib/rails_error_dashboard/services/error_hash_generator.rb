@@ -190,30 +190,24 @@ module RailsErrorDashboard
       # fingerprint replaces both, exactly as in rc.1.
       #
       # @param exception [Exception]
-      # @param context [Hash] the capture context (:controller_name, :action_name)
+      # @param context [Hash] the capture context, passed to custom_fingerprint
+      # @param controller_name [String, nil] defaults to context[:controller_name]
+      # @param action_name [String, nil] defaults to context[:action_name]
       # @return [Hash] { v2:, v1:, custom: }: v2 and v1 are opaque (complete
       #   them with .complete); custom is already the complete hash, and when
       #   it is present v2 and v1 are nil
-      def self.identities(exception, context = {})
+      def self.identities(exception, context = {}, controller_name: context[:controller_name], action_name: context[:action_name])
         custom = try_custom_fingerprint(exception, context)
         return { v2: nil, v1: nil, custom: custom } if custom
 
-        error_class = exception.class.name
         normalized = normalize_message(exception.message)
-        controller_name = context[:controller_name]&.to_s
-        action_name = context[:action_name]&.to_s
+        controller_name = controller_name&.to_s
+        action_name = action_name&.to_s
 
         {
-          v2: Digest::SHA256.hexdigest([
-            error_class,
-            normalized,
-            app_frame_v2(exception),
-            name_part(exception),
-            controller_name,
-            action_name
-          ].compact.join("|"))[0..15],
+          v2: v2_identity(exception, normalized_message: normalized, controller_name: controller_name, action_name: action_name),
           v1: opaque_identity(
-            error_class: error_class,
+            error_class: exception.class.name,
             normalized_message: normalized,
             frames: extract_app_frame_from_locations(exception) || extract_app_frame(exception.backtrace),
             controller_name: controller_name,
@@ -223,6 +217,23 @@ module RailsErrorDashboard
         }
       end
 
+      # The v2 identity alone, opaque. The storm gate computes it per event
+      # and v1 only for a new buffer entry. It does not consult
+      # custom_fingerprint: the caller does that first.
+      #
+      # @param normalized_message [String, nil] normalize_message's result, if
+      #   the caller already has it
+      def self.v2_identity(exception, normalized_message: nil, controller_name: nil, action_name: nil)
+        Digest::SHA256.hexdigest([
+          exception.class.name,
+          normalized_message || normalize_message(exception.message),
+          app_frame_v2(exception),
+          name_part(exception),
+          controller_name&.to_s,
+          action_name&.to_s
+        ].compact.join("|"))[0..15]
+      end
+
       # The first app frame as "<path relative to Rails.root>#<method>"
       # (REQ-1, REQ-3), or nil when there is none. Skips gem frames,
       # "<internal:" frames, frames under Ruby's library directory, and a frame
@@ -230,29 +241,30 @@ module RailsErrorDashboard
       # at its caller's line (REQ-2). If every kept frame matches the next, the
       # last one is used.
       def self.app_frame_v2(exception)
-        frame = first_app_frame(each_frame(exception))
-        return nil unless frame
+        locations = safe_locations(exception)
+        if locations
+          index = first_app_location_index(locations)
+          return nil unless index
 
-        path, _line, label = frame
+          path = locations[index].absolute_path || locations[index].path
+          label = locations[index].base_label
+        else
+          # A backtrace set from strings: parsed to the same [path, line,
+          # base_label], so it follows the same rules. Rare, so parsed whole.
+          frames = Array(exception.backtrace).map { |line| parse_backtrace_line(line) }
+          index = first_app_index(frames.size) { |i| frames[i] }
+          return nil unless index
+
+          path, _line, label = frames[index]
+        end
+
         relative = relative_to_root(path)
         label ? "#{relative}##{label}" : relative
       end
 
-      # Yields [path, line, base_label] for each frame, from backtrace_locations
-      # or, when there are none (a backtrace set from strings), from the
-      # strings, so both give the same frames.
-      def self.each_frame(exception)
-        locations = safe_locations(exception)
-        if locations
-          return locations.lazy.map { |loc| [ loc.absolute_path || loc.path, loc.lineno, loc.base_label ] }
-        end
-
-        Array(exception.backtrace).lazy.map do |line|
-          match = BACKTRACE_LINE.match(EncodingSanitizer.scrub(line.to_s))
-          next [ nil, nil, nil ] unless match
-
-          [ match[1], match[2].to_i, base_label_of(match[3]) ]
-        end
+      def self.parse_backtrace_line(line)
+        match = BACKTRACE_LINE.match(EncodingSanitizer.scrub(line.to_s))
+        match ? [ match[1], match[2].to_i, base_label_of(match[3]) ] : [ nil, nil, nil ]
       end
 
       def self.safe_locations(exception)
@@ -262,13 +274,55 @@ module RailsErrorDashboard
         nil
       end
 
-      def self.first_app_frame(frames)
+      # first_app_index for backtrace_locations, written out: no block and
+      # no array per frame, since the gate runs it per event. Consecutive
+      # frames usually share a file, so a path is classified only when it
+      # differs from the last one classified.
+      def self.first_app_location_index(locations)
         previous = nil
-        frames.each do |frame|
-          next if foreign_frame?(frame[0])
-          return previous if previous && (frame[0] != previous[0] || frame[1] != previous[1])
+        previous_path = previous_line = nil
+        checked_path = false # never equal to a path, nil included
+        foreign = false
+        index = 0
+        size = locations.size
+        while index < size
+          location = locations[index]
+          path = location.absolute_path || location.path
+          unless path == checked_path
+            foreign = foreign_frame?(path)
+            checked_path = path
+          end
+          unless foreign
+            line = location.lineno
+            return previous if previous && (path != previous_path || line != previous_line)
 
-          previous = frame
+            previous = index
+            previous_path = path
+            previous_line = line
+          end
+          index += 1
+        end
+        previous
+      end
+
+      # The index of the first app frame among `size` frames, the block giving
+      # each one's [path, line]. A plain loop, and the label is read only for
+      # the frame chosen: the storm gate runs this per event, and a deep stack
+      # of one-line recursion walks every frame (REQ-2's same-line rule).
+      def self.first_app_index(size)
+        previous = nil
+        previous_path = previous_line = nil
+        index = 0
+        while index < size
+          path, line = yield(index)
+          unless foreign_frame?(path)
+            return previous if previous && (path != previous_path || line != previous_line)
+
+            previous = index
+            previous_path = path
+            previous_line = line
+          end
+          index += 1
         end
         previous
       end
@@ -326,7 +380,8 @@ module RailsErrorDashboard
       rescue StandardError
         nil
       end
-      private_class_method :app_frame_v2, :each_frame, :safe_locations, :first_app_frame, :foreign_frame?,
+      private_class_method :app_frame_v2, :parse_backtrace_line, :safe_locations, :first_app_index,
+                           :first_app_location_index, :foreign_frame?,
                            :base_label_of, :relative_to_root, :root_prefixes, :name_part
 
       # Try custom fingerprint lambda if configured

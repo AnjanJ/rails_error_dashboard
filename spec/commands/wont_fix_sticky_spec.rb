@@ -113,7 +113,8 @@ RSpec.describe "sticky wont_fix" do
         "error_class" => "StandardError", "message" => "sticky boom",
         "first_app_frame" => "#{Rails.root}/app/models/widget.rb",
         "controller_name" => "widgets", "action_name" => "show", "custom_hash" => nil,
-        "count" => count, "first_seen_at" => 5.minutes.ago.iso8601, "last_seen_at" => Time.current.iso8601
+        "count" => count, "first_seen_at" => 5.minutes.ago.iso8601, "last_seen_at" => Time.current.iso8601,
+        **StormEntryIdentity.for(boom, { controller_name: "widgets", action_name: "show" })
       }
     end
 

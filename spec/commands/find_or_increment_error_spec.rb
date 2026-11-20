@@ -333,7 +333,9 @@ RSpec.describe RailsErrorDashboard::Commands::FindOrIncrementError do
           config.async_logging = false
           config.enable_storm_protection = false
           config.application_name = application.name
-          allow(RailsErrorDashboard::Services::ErrorHashGenerator).to receive(:call).and_return(error_hash)
+          # Every capture gets error_hash, as a custom fingerprint would give it.
+          allow(RailsErrorDashboard::Services::ErrorHashGenerator).to receive(:identities)
+            .and_return({ v2: nil, v1: nil, custom: error_hash })
         end
 
         after do

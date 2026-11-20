@@ -11,7 +11,8 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
   after { RailsErrorDashboard.reset_configuration! }
 
   def entry_for(error_class: "StandardError", message: "storm boom", frame: "#{Rails.root}/app/models/widget.rb",
-                controller: "widgets", action: "show", count: 10, custom_hash: nil)
+                controller: "widgets", action: "show", count: 10, custom_hash: nil, identity_from: nil)
+    identity = identity_from ? StormEntryIdentity.for(identity_from, { controller_name: controller, action_name: action }) : {}
     {
       "error_class" => error_class,
       "message" => message,
@@ -21,8 +22,17 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       "custom_hash" => custom_hash,
       "count" => count,
       "first_seen_at" => 5.minutes.ago.iso8601,
-      "last_seen_at" => Time.current.iso8601
+      "last_seen_at" => Time.current.iso8601,
+      **identity
     }
+  end
+
+  # The error the captures below raise, for entries that must carry the
+  # identity the gate would buffer for it.
+  def storm_boom
+    error = StandardError.new("storm boom")
+    error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+    error
   end
 
   describe "canonical hash reconciliation — the correctness property" do
@@ -36,7 +46,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(log.occurrence_count).to eq(1)
 
       # Flush counted events with the same identity parts the gate would store
-      result = described_class.call(entries: [ entry_for(count: 42) ])
+      result = described_class.call(entries: [ entry_for(count: 42, identity_from: error) ])
 
       expect(result[:success]).to be true
       expect(log.reload.occurrence_count).to eq(43)
@@ -54,7 +64,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(gate_parts[:message].length).to eq(500)
 
       expect {
-        described_class.call(entries: [ entry_for(message: gate_parts[:message], count: 3) ])
+        described_class.call(entries: [ entry_for(message: gate_parts[:message], count: 3, identity_from: error) ])
       }.not_to change(RailsErrorDashboard::ErrorLog, :count)
       expect(log.reload.occurrence_count).to eq(4)
     end
@@ -82,7 +92,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       )
       log.update!(resolved: true, status: "resolved", resolved_at: Time.current)
 
-      described_class.call(entries: [ entry_for(count: 5) ])
+      described_class.call(entries: [ entry_for(count: 5, identity_from: error) ])
 
       log.reload
       expect(log.resolved).to be false
@@ -172,7 +182,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       current_group = capture
       expect(current_group.id).not_to eq(old_group.id)
 
-      described_class.call(entries: [ entry_for(count: 5) ])
+      described_class.call(entries: [ entry_for(count: 5, identity_from: storm_boom) ])
 
       expect(current_group.reload.occurrence_count).to eq(6)
       expect(old_group.reload.occurrence_count).to eq(1)
@@ -344,7 +354,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       expect(production.id).not_to eq(staging.id)
 
       RailsErrorDashboard.configuration.environment = "staging"
-      described_class.call(entries: [ entry_for(count: 5) ])
+      described_class.call(entries: [ entry_for(count: 5, identity_from: storm_boom) ])
 
       expect(staging.reload.occurrence_count).to eq(6)
       expect(production.reload.occurrence_count).to eq(1)
@@ -355,7 +365,7 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts do
       legacy.update_column(:environment, nil)
 
       RailsErrorDashboard.configuration.environment = "production"
-      described_class.call(entries: [ entry_for(count: 3) ])
+      described_class.call(entries: [ entry_for(count: 3, identity_from: storm_boom) ])
 
       expect(legacy.reload.occurrence_count).to eq(4)
       expect(legacy.environment).to eq("production")

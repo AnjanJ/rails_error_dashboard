@@ -39,7 +39,7 @@ module RailsErrorDashboard
           :error_class, :message, :first_app_frame,
           :controller_name, :action_name, :custom_hash, :environment,
           :opaque_identity, :count, :first_seen_at, :last_seen_at, :buckets,
-          :capture_source
+          :capture_source, :opaque_identity_v1
         )
 
         # The bucket an instant belongs to, as an epoch second.
@@ -144,6 +144,10 @@ module RailsErrorDashboard
               # job CANNOT recompute this -- it has to travel, or a storm count
               # lands on a different row than the full capture path would.
               "opaque_identity" => entry.opaque_identity,
+              # From 1.0.0-rc.2 opaque_identity is v2, and v1 travels beside it
+              # so the flush can find a group created before v2. An entry
+              # buffered by rc.1 has no v1: its opaque_identity is v1.
+              "opaque_identity_v1" => entry.opaque_identity_v1,
               "capture_source" => entry.capture_source,
               "count" => entry.count.value,
               # In Time.zone, as the wire format always was: live records
@@ -210,7 +214,8 @@ module RailsErrorDashboard
             parts[:controller_name], parts[:action_name], parts[:custom_hash], parts[:environment],
             parts[:opaque_identity],
             Concurrent::AtomicFixnum.new(0), first_seen_at, last_seen_at,
-            Concurrent::Map.new, parts[:capture_source]
+            Concurrent::Map.new, parts[:capture_source],
+            parts[:opaque_identity_v1]
           )
         end
 
@@ -248,6 +253,7 @@ module RailsErrorDashboard
             first_app_frame: entry["first_app_frame"], controller_name: entry["controller_name"],
             action_name: entry["action_name"], custom_hash: entry["custom_hash"],
             environment: entry["environment"], opaque_identity: entry["opaque_identity"],
+            opaque_identity_v1: entry["opaque_identity_v1"],
             capture_source: entry["capture_source"]
           }
         end
