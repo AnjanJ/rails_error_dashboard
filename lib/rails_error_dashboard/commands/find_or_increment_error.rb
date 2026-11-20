@@ -378,9 +378,11 @@ module RailsErrorDashboard
         # Savepoint: on PostgreSQL a unique-violation poisons the enclosing
         # transaction, and the retry lookups below would fail with "current
         # transaction is aborted" instead of finding the winner's row.
-        ErrorLog.transaction(requires_new: true) do
+        created = ErrorLog.transaction(requires_new: true) do
           ErrorLog.create!(new_record_attributes)
         end
+        created.error_hash_v1 = @error_hash_v1
+        created
       rescue ActiveRecord::RecordNotUnique
         # Race condition: another process created the same error. Same three
         # lookups, same order, as the first pass.

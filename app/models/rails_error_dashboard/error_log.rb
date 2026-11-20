@@ -8,6 +8,11 @@ module RailsErrorDashboard
     # Not persisted — used by LogError to decide notification behavior.
     attr_accessor :just_reopened
 
+    # Transient: the rc.1 (v1) hash of the capture that created this row, set
+    # by FindOrIncrementError. Not persisted. IssueTrackerSubscriber uses it to
+    # link a new group to the issue its v1 group already has (REQ-62).
+    attr_accessor :error_hash_v1
+
     # Was this error previously resolved and then reopened due to recurrence?
     # Uses the persisted `reopened_at` column (set by FindOrIncrementError).
     def reopened?

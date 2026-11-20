@@ -69,8 +69,13 @@ module RailsErrorDashboard
           # issue. The 24-hour dedup window in FindOrIncrementError can create new
           # ErrorLog records for the same logical error — we must not create
           # duplicate GitHub/GitLab issues for them (issue #114 screenshot).
+          #
+          # A group created by a capture that also carried a v1 hash looks
+          # under it too: its error's rc.1 group may already have an issue
+          # that no lookup matches any more (REQ-62).
+          hashes = [ error_log.error_hash, error_log.try(:error_hash_v1) ].compact.uniq
           existing = ErrorLog
-            .where(error_hash: error_log.error_hash, application_id: error_log.application_id)
+            .where(error_hash: hashes, application_id: error_log.application_id)
             .where.not(external_issue_url: [ nil, "" ])
             .where.not(id: error_log.id)
             .order(created_at: :desc)
