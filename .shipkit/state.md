@@ -1,17 +1,19 @@
 # Handoff
 
-> Written 2026-11-20 on spec/hardening-1-0-rc2, after `60f5aef5`; this note is the branch's last commit.
+> Written 2026-11-20 on spec/hardening-1-0-rc2, after `68559b6a`; this note is the branch's last commit.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1 and T2 are done and committed. T1 is pushed; T2 (`60f5aef5`) and this handoff are
-  **not pushed**. T3-T34 are unstarted.
+- **`hardening-1-0-rc2`**: T1 and T2 are done, committed and pushed. T3-T34 are unstarted.
 - **What S2 settled** (accepted 2026-11-20, all six follow-ups "yes"): option 2, a trimmed line per call site and
   failure class a minute, with default `log_level :error`. It became REQ-54 to REQ-61 and tasks T32-T34:
   - **T32** ships in PR 4. It stops the failure lines printing raw params and the URL, and sets
     `log_arguments = false` on the capture and flush jobs.
   - **T33-T34** are a new PR 11.
   - **Not in rc.2:** the `/health` failure count. The 16 dashboard-only sites are unchanged.
-- No PR is open for `spec/hardening-1-0-rc2`.
+- **PR 1 is #373** (spec, S1, S2 and the handoffs; docs only), opened 2026-11-20. Its CI was running. Merging needs
+  the maintainer's yes.
+- **The sprint's tracking issue is #374** (public, no reproduction details). From T3 on, code commits and PRs say
+  `Refs #374`. Tick its checklist as each PR merges; never close it (the maintainer decides).
 
 ## Done this session
 - `60f5aef5`: spike S2's research (`.shipkit/research/silent-failures-spike.md`) and the amendment.
@@ -24,18 +26,15 @@
   is stopped. The 3306 service was not touched.
 
 ## Next step
-Ask the maintainer two things, each with a yes before acting:
-1. Push `spec/hardening-1-0-rc2` (T2 and this handoff), then open PR 1 for the spikes (T1-T2). The branch also
-   holds the spec and the handoffs.
-2. Before T3: open a public tracking issue for the sprint, so commits can say `Refs #N`. Show its text first, with
-   no reproduction details. The sync failure line's password leak (T32) counts as a reproduction detail.
-
-Then T3 (grouping v2), test first.
+1. Check #373's CI. When it is green, ask the maintainer to merge it.
+2. After it merges, branch from `main` for PR 2 and start T3 (grouping v2), test first, citing
+   `hardening-1-0-rc2/REQ-N`, with `Refs #374`.
 
 ## Open questions
 - Pushing needs a yes each time.
-- T32 fixes a defect any host at `log_level :error` has today. The issue and release notes must describe it
-  without a recipe.
+- T32 fixes a defect any host at `log_level :error` has today. #374 names it in one plain line. The research
+  file pushed with #373 describes it in full; the maintainer accepted that (low exposure: opt-in `:error`, a
+  failing store, the host's own logs) and chose to ship T32 early in PR 4.
 
 ## Do not forget
 - MySQL 8.4 for T30: `mysql@8.4` is installed (keg-only), with no data. Start a throwaway server like this:
