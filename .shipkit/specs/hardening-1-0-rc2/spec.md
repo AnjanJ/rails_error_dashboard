@@ -32,7 +32,9 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
 - **REQ-1.** The fingerprint shall use the first app frame's path relative to `Rails.root`, so one file
   loaded from two release directories gives one fingerprint.
 - **REQ-2.** When choosing the first app frame, the fingerprint shall skip frames whose path starts with
-  `<internal:` and frames under Ruby's own library directory.
+  `<internal:`, frames under Ruby's own library directory, and a frame whose next frame has the same path
+  and line (a C method reported at its caller's line). Amended 2026-11-20, before T3, by the C-frame check
+  in `design.md`.
 - **REQ-3.** The fingerprint shall include the first app frame's method name and shall not include its
   line number.
 - **REQ-4.** When the exception is a `NameError` (including `NoMethodError`), the fingerprint shall

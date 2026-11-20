@@ -73,6 +73,14 @@ The frame is the first location that passes all of these:
 - its path is not under `/gems/`;
 - it doesn't start with `<internal:`;
 - it isn't under `RbConfig::CONFIG["rubylibdir"]`.
+- **Amended 2026-11-20, before T3:** the frame after it doesn't have the same path and line. A C method (`Hash#fetch`,
+  and on Ruby 4.0 `Kernel#Integer`) is reported at its caller's file and line, and comes first. Without this
+  rule, its name stands in for the app method. Checked on Ruby 3.3.14, 3.4.5 and 4.0.10:
+  - `load_user` and `load_order`, each calling `fetch`, both gave `fetch`;
+  - on 4.0, `parse_a` and `parse_b`, each calling `Integer`, both gave `Integer`.
+
+  With this rule, all four gave their own method. When every remaining frame matches the next, the last one is
+  used. Known false positive: a method that calls itself on one line is reported as its caller.
 
 The path is made relative by removing whichever of `Rails.root.to_s` and `Rails.root.realpath.to_s` it
 starts with, so a symlinked `current` and a real `releases/<ts>` both work. A path outside `Rails.root`

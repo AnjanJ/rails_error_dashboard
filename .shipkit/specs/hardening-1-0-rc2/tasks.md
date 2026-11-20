@@ -53,6 +53,9 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - one file loaded under two release directories, with `Rails.root` set to each, gives one v2
       fingerprint, and a symlinked root gives the same;
     - `<internal:kernel>` and `rubylibdir` frames are skipped;
+    - a C method's frame reported at its caller's line is skipped: two methods in one file, each failing in
+      `Hash#fetch` with the same key, give two fingerprints, and so do two calling `Integer()` (REQ-2,
+      amended 2026-11-20);
     - one method at two lines gives one fingerprint, and two methods give two;
     - `NoMethodError` for `nme` and `emial` gives two;
     - a string-only backtrace follows the same rules;
