@@ -929,8 +929,14 @@ module RailsErrorDashboard
         ]
       end
 
+      # A connection timeout skips the fallback: Application.first would wait
+      # on the same starved pool for checkout_timeout again, on the request's
+      # thread (hardening-1-0-rc2, REQ-21). It reaches #call's rescue, which
+      # returns nil, or re-raises it in a worker so the job retries.
       def find_or_create_application
         Application.find_or_create_by_name(RailsErrorDashboard.resolved_application_name)
+      rescue ActiveRecord::ConnectionTimeoutError
+        raise
       rescue => e
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
         # Fallback: try to find any application or create default
