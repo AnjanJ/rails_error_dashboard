@@ -78,7 +78,7 @@ links to its full notes in the [CHANGELOG](../CHANGELOG.md).
 | [0.16.2](../CHANGELOG.md#0162-2026-10-22) | No action. |
 | [0.17.0](../CHANGELOG.md#0170-2026-10-29) | No migrations. Live updates stay off until you set `enable_live_updates = true`; a custom index view that subscribed to the old streams must render `red_live_updates_tags` instead, as in [Real-time updates](guides/REAL_TIME_UPDATES.md#upgrading-to-0170). API-only apps: RED no longer adds app-wide sessions or cookies, and the dashboard's cookie is `_rails_error_dashboard_session`. With `async_logging` and `custom_fingerprint` both on, custom-fingerprinted groups restart once. Messages over 10,000 characters and params over about 64 KB are cut, with a marker. |
 | [0.18.0](../CHANGELOG.md#0180-2026-10-31) | No migrations. If you use `webhook_urls`, three event names change and every post gains fields: see [Webhook changes in 0.18.0](#webhook-changes-in-0180). Several things are deprecated, none of which stops your app booting: see [Deprecations in 0.18.0](#deprecations-in-0180). |
-| 1.0.0 | Needs Rails 7.2 and Ruby 3.3. See [0.x to 1.0](#0x-to-10). |
+| 1.0.0 | Needs Rails 7.2 and Ruby 3.3. See [0.x to 1.0](#0x-to-10). Optional: a fresh install's `user_id` columns are `bigint` from 1.0.0-rc.2, and an existing install keeps its own; to store user IDs over 2,147,483,647 on PostgreSQL or MySQL, [widen `user_id` to bigint](#widen-user_id-to-bigint). |
 
 ## 0.x to 1.0
 
@@ -128,6 +128,35 @@ Before 1.0.0.rc1 and again before 1.0.0, a fresh app is upgraded from the latest
 minor on SQLite, PostgreSQL and MySQL. 0.4.2, 0.5.15, 0.6.4 and 0.7.2, and 0.1.38 on MySQL, can't be installed fresh
 (each fails its own migrations), so those starting points are untested. An app already running one of
 them reached it through earlier releases; if your upgrade from one fails, please open an issue.
+
+## Widen `user_id` to bigint
+
+From 1.0.0-rc.2, a fresh install creates the two `user_id` columns as `bigint`, unless your app sets
+`primary_key_type`. An existing install keeps the type its first migration gave it: a 4-byte
+`integer` on PostgreSQL and MySQL when your app doesn't set `primary_key_type`. A user ID over
+2,147,483,647 doesn't fit in that column, and RED stores the error without its user ID. SQLite's
+integer columns hold 8 bytes, so a SQLite install needs nothing.
+
+To keep those IDs, widen both columns with a migration of your own:
+
+```ruby
+class WidenRailsErrorDashboardUserIds < ActiveRecord::Migration[7.2]
+  def up
+    change_column :rails_error_dashboard_error_logs, :user_id, :bigint
+    change_column :rails_error_dashboard_error_occurrences, :user_id, :bigint
+  end
+
+  def down
+    change_column :rails_error_dashboard_error_logs, :user_id, :integer
+    change_column :rails_error_dashboard_error_occurrences, :user_id, :integer
+  end
+end
+```
+
+On PostgreSQL and MySQL this rewrites both tables and locks each one while it runs. RED's writes
+wait for the lock, and with sync capture so does the request that raised the error. Run it when
+traffic is low. With a separate error database, put the migration in `db/error_dashboard_migrate/`
+and run `bin/rails db:migrate:error_dashboard`.
 
 ## Webhook changes in 0.18.0
 

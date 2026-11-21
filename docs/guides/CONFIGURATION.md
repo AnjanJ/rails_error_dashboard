@@ -650,7 +650,7 @@ end
 
 ### User IDs That Are Not Integers
 
-At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys:
+At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys. Without `primary_key_type` it is `bigint` (an `integer` on installs before 1.0.0-rc.2):
 
 ```ruby
 # config/application.rb
@@ -659,7 +659,7 @@ config.generators do |g|
 end
 ```
 
-On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number.
+On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number, and so is an integer too large for the column (see [Widen `user_id` to bigint](../UPGRADING.md#widen-user_id-to-bigint)).
 
 ---
 

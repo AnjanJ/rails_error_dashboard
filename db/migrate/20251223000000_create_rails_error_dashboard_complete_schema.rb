@@ -279,8 +279,10 @@ class CreateRailsErrorDashboardCompleteSchema < ActiveRecord::Migration[7.0]
   private
 
   # Same type as the app's primary keys, as ActiveStorage does for record_id.
+  # Without primary_key_type, bigint: Rails' own primary keys have been 8 bytes
+  # since 5.1, and a 4-byte column can't hold their larger ids.
   def user_id_type
     config = Rails.configuration.generators
-    config.options[config.orm][:primary_key_type] || :integer
+    config.options[config.orm][:primary_key_type] || :bigint
   end
 end

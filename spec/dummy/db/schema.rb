@@ -167,7 +167,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_000002) do
     t.string "error_type", null: false
     t.text "message", null: false
     t.text "backtrace"
-    t.integer "user_id"
+    t.bigint "user_id"
     t.text "request_url"
     t.text "request_params"
     t.text "user_agent"
@@ -275,7 +275,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_000002) do
   create_table "rails_error_dashboard_error_occurrences", force: :cascade do |t|
     t.bigint "error_log_id", null: false
     t.datetime "occurred_at", null: false
-    t.integer "user_id"
+    t.bigint "user_id"
     t.string "request_id"
     t.string "session_id"
     t.datetime "created_at", null: false
