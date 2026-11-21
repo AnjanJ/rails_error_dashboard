@@ -73,14 +73,18 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a `RecordNotUnique` on the move keeps v1 and still counts.
   - After: T3
   - Done when: `rspec spec/commands` → 0 failures; `bin/benchmark` capture median within 0.2 ms of rc.1's on the same machine
-- [x] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
-  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, spec/commands/flush_storm_counts_v1_fallback_spec.rb
+- [ ] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
+  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, spec/commands/flush_storm_counts_v1_fallback_spec.rb, spec/services/storm_protection/gate_hot_path_spec.rb
   - Test: spec/commands/flush_storm_counts_v1_fallback_spec.rb:
     - a flush of a new-style entry counts on a v1-only open group and moves it to v2;
     - a flush of an rc.1-shaped buffer entry (no `opaque_identity_v1`) counts under v1;
     - the gate computes v1 once per new entry, not per hit.
+    - Reopened 2026-11-21 by the gate amendment in design.md: the gate computes v2 once per new entry too;
+      two methods raising the same error in one file get two entries, each flushed onto its own v2 group;
+      one method raising at two lines gets two entries, flushed onto one v2 group with the exact total.
   - After: T3
   - Done when: `rspec spec/commands spec/services` → 0 failures; `bin/benchmark` storm-check median < 15 µs
+    locally, and on PR CI's benchmark job
 - [x] **T35** A new v2 group links to its v1 group's issue → REQ-62
   - Files: app/models/rails_error_dashboard/error_log.rb, lib/rails_error_dashboard/commands/find_or_increment_error.rb, lib/rails_error_dashboard/subscribers/issue_tracker_subscriber.rb, spec/subscribers/issue_tracker_v1_link_spec.rb
   - Test: spec/subscribers/issue_tracker_v1_link_spec.rb, with issue tracking on and auto-create allowed:

@@ -155,6 +155,30 @@ written by rc.1 hold no v1. They flush through `opaque_identity` as v1, the same
 **Falsifiability.** We would reverse this if `bin/benchmark`'s storm-check median exceeds 15 µs with it.
 **Fired-if.** manual
 
+**Fired 2026-11-21, on PR #375's CI; amended with the maintainer's yes.** With v2 computed per event, the storm
+check read 14.68 to 15.47 µs on CI's AMD EPYC 7763 runner (shedding and breaker open; two runs, the second
+failing), against 10.59 to 10.85 µs for 1.0.0-rc.1 (`a1539361`) on the same runner type. Locally (M3 Max) the
+rise was 1.5 µs, the same 35-40%. The cause is REQ-2's same-line rule: on the benchmark's 63-frame one-line
+recursion, v2's frame walk visits every frame (2.36 µs, against 0.91 µs for v1's identity, which stops at the
+first frame).
+
+**Amendment.** The gate no longer computes v2 per event. It keys each event on
+`error_class | normalised_message | "<absolute path>:<line>" of the first kept frame | name:<NameError#name> |
+controller | action` (`ErrorHashGenerator.gate_source`), digested with the custom fingerprint or environment as
+before. The first kept frame follows REQ-2's skips but not its same-line walk, so this costs what rc.1's
+identity did. v2 and v1 are computed once, in the exemplar, when the buffer stores a new entry.
+- The key is at least as fine as v2: its other parts are v2's, and two events whose first kept frame has the
+  same path and line end the same-line walk on the method that owns that line, so they share a v2 identity.
+  Counts never merge across v2 groups.
+- One v2 group raising at several lines gets one buffer entry per line. Each flushes onto the same row, so
+  counts stay exact, but the per-fingerprint full-capture allowance during a storm (`fingerprint_buckets`)
+  becomes per line rather than per group.
+- Rejected: a cheaper same-line walk (about 0.5 µs saved locally, leaving tenths of a µs on the 7763 runner),
+  and a higher budget (a host-safety limit).
+
+**Falsifiability (amended).** We would reverse the amendment if two v2 groups are found sharing a buffer entry, or
+if `bin/benchmark`'s storm-check median on CI's slowest runner is still above 15 µs with it.
+
 ## Decision: Match an open group by its last occurrence   (→ REQ-9, REQ-10, REQ-11)
 
 **Context.** An open error that keeps happening starts a new row once it is 24 hours past its first
