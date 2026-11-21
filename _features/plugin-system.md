@@ -51,7 +51,7 @@ Define the hooks you need; the base class defines all of them as doing nothing.
 
 | Hook | Argument | Called when |
 |---|---|---|
-| `on_error_logged` | the `ErrorLog` | An error is recorded for the first time. An open error that keeps happening more than 24 hours after RED first recorded it starts a new record, and calls this again |
+| `on_error_logged` | the `ErrorLog` | An error is recorded for the first time. An open error that happens again after 24 hours without an occurrence starts a new record, and calls this again |
 | `on_error_recurred` | the `ErrorLog` | An open error happens again, muted errors included |
 | `on_error_reopened` | the `ErrorLog` | A resolved error happens again, which reopens it |
 | `on_error_resolved` | the `ErrorLog` | An error is resolved with the Resolve button, `ErrorLog#resolve!`, or by its linked issue being closed |
@@ -237,8 +237,8 @@ RailsErrorDashboard.register_plugin(ErrorAuditPlugin.new)
 
 `ErrorLog` has no column for your own data, so keep the ticket key in a table of yours, here a
 `JiraTicketLink` model with `error_hash` and `key` columns. Key it by `error_hash`, the error's
-fingerprint: an error that keeps happening for more than 24 hours gets a new record with the same
-fingerprint, and should reuse the ticket. Build the dashboard link with
+fingerprint: an error that comes back after 24 hours without an occurrence gets a new record with
+the same fingerprint, and should reuse the ticket. Build the dashboard link with
 `NotificationHelpers.dashboard_url`, which uses `config.dashboard_base_url` and the path the
 dashboard is really mounted at.
 

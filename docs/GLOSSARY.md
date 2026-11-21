@@ -16,7 +16,7 @@ A comprehensive guide to terms, concepts, and terminology used throughout the Ra
 An individual occurrence of an error captured by the dashboard. Each error log contains the exception class, message, backtrace, context, and metadata.
 
 ### Error Group
-Errors with identical stack traces are automatically grouped together. The system tracks total occurrences, first seen, last seen, and provides a single view for related errors.
+Errors with the same fingerprint (see [Grouping](PUBLIC_API.md#grouping)), in the same application and environment, are grouped into one record. It tracks total occurrences, first seen and last seen, and provides a single view for related errors. An open group keeps counting for as long as the error keeps happening, however long ago it was first seen. Once it has gone 24 hours without an occurrence, the next one starts a new group. A resolved group that happens again is reopened, and one marked "won't fix" keeps counting.
 
 ### Deduplication
 The process of identifying and grouping identical errors using SHA-256 hashing of the normalized stack trace. Prevents duplicate error entries in the database.

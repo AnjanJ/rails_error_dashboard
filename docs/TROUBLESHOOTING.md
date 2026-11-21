@@ -312,10 +312,10 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
    with numbers, quoted strings and object addresses masked, the file of the first backtrace line
    outside your gems, and the controller and action. Two `RuntimeError`s raised in different files
    are two errors. A repeat increments the existing record's `occurrence_count` only while that
-   record is unresolved, was first seen in the last 24 hours, and belongs to the same environment
+   record is unresolved, was last seen in the last 24 hours, and belongs to the same environment
    and application. Otherwise the repeat starts a new record, which notifies like a new error:
    ```ruby
-   RailsErrorDashboard::ErrorLog.where(error_type: "RuntimeError").pluck(:id, :occurrence_count, :occurred_at)
+   RailsErrorDashboard::ErrorLog.where(error_type: "RuntimeError").pluck(:id, :occurrence_count, :occurred_at, :last_seen_at)
    ```
 
 3. **A resolved error that happens again** reopens the same record. One marked "Won't fix" stays
