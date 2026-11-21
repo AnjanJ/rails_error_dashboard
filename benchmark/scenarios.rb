@@ -197,9 +197,10 @@ module RedBenchmark
     end
 
     # An old unresolved row holds the group identity, and a resolved row with
-    # the same hash is found instead (the unresolved lookup only looks back
-    # 24 hours). Reopening it violates the unique index, and the capture is
-    # counted on the row the index names. The reopen rolls back, so every
+    # the same hash is found instead (the unresolved lookup only matches a
+    # group last seen in the last 24 hours). Reopening it violates the unique
+    # index, and the capture is counted on the row the index names. Each
+    # iteration rolls back, so the unresolved row stays stale and every
     # iteration takes the same path.
     #
     # Only where that index exists: MySQL has no partial indexes, so a reopen
@@ -218,11 +219,16 @@ module RedBenchmark
             application: application, error_type: BenchmarkError.name, message: "collision",
             error_hash: error_hash, environment: "production", occurred_at: 2.days.ago, **state
           )
-          row.update_columns(group_window: nil, error_hash: error_hash)
+          row.update_columns(group_window: nil, error_hash: error_hash, last_seen_at: 2.days.ago)
         end
 
+        # requires_new: inside an open transaction (a spec's), a plain nested
+        # block would swallow the Rollback and keep the claim's last_seen_at.
         timer.measure("Reopen collision fallback") do
-          RailsErrorDashboard::Commands::FindOrIncrementError.call(error_hash, attributes)
+          RailsErrorDashboard::ErrorLog.transaction(requires_new: true) do
+            RailsErrorDashboard::Commands::FindOrIncrementError.call(error_hash, attributes)
+            raise ActiveRecord::Rollback
+          end
         end
       end)
     end

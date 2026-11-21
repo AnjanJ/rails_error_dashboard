@@ -438,8 +438,8 @@ end
 ```
 
 - `on_error_logged` runs for a new error and for a resolved error that happens again, but not for
-  each repeat of an open error. An open error that keeps happening more than 24 hours after RED
-  first recorded it starts a new error record, so it runs again then. `on_critical_error` runs at
+  each repeat of an open error. An open error that happens again after 24 hours without an
+  occurrence starts a new error record, so it runs again then. `on_critical_error` runs at
   the same moments when the error is critical.
 - `on_error_resolved` runs whenever an error is resolved: the Resolve button, a batch resolve, a
   status change to `resolved`, `ErrorLog#resolve!` or a webhook.

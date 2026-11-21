@@ -207,7 +207,10 @@ unique index tell a deliberate new group from a racing duplicate
   change.
 
 **Decision.** Option 1, applied at all three lookups:
-`last_seen_at >= :cutoff OR (last_seen_at IS NULL AND occurred_at >= :cutoff)`.
+`last_seen_at > :cutoff OR (last_seen_at IS NULL AND occurred_at > :cutoff)`.
+Amended 2026-11-21, during T7: the record said `>=`, but REQ-10 starts a new group when the last
+occurrence is "24 hours old or more", so a group last seen exactly 24 hours ago must not match. One
+definition, `FindOrIncrementError.within_group_window`, serves all three lookups.
 
 `clamped_group_time` stays: it still keeps a backdated `occurred_at` inside the window for legacy rows.
 Option 3 was rejected because it changes reopen semantics and the unique index.

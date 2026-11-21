@@ -1,59 +1,62 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `aabe535a`; this note is the
-> branch's last commit. The branch is pushed as PR #375, with CI green. Merging needs the maintainer's yes.
+> Written 2026-11-21 on feat/hardening-grouping-window (PR 3: T7 and T8), after `757aae68`; this note is
+> the branch's last commit. With the maintainer's yes it is pushed and opened as PR 3 (find it with
+> `gh pr list --head feat/hardening-grouping-window`). Merging needs another yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T6 and T35 are done. PR 2 is #375, CI green at `aabe535a`, waiting for the
-  maintainer's merge. T7-T34 are unstarted.
-- **PR 1 (#373)** is merged. The tracking issue is #374: tick its checklist as each PR merges; never close it.
+- **`hardening-1-0-rc2`**: T1-T8 and T35 are done. PR 1 (#373) and PR 2 (#375) are squash-merged, and
+  PR 2's branch is deleted. PR 3 is this branch, open and waiting for CI and the maintainer's merge.
+  T9-T34 are unstarted.
+- The tracking issue is #374. Items 1 and 2 of its checklist are ticked. Tick item 3, adding "(#N)",
+  when PR 3 merges. Change only that line, and diff the body before saving. Never close it.
 
 ## Done this session (2026-11-21)
-- `f7bd8fb5` T3: `ErrorHashGenerator.identities` and the v2 recipe (REQ-1 to REQ-4, REQ-7). `5945a98f` ticks it.
-- `58e87a44` T4 and T5 together, with the maintainer's yes: sync, async, the storm gate, the buffer and the flush
-  carry v2 and v1, the lookups match `error_hash IN (v2, v1)` preferring v2, and a v1 row moves to v2 in a
-  savepoint (REQ-5, REQ-6, REQ-7). T4 alone failed 15 storm specs, which is why they landed together.
-  - The first benchmark failed the storm check (19-20 µs against 15 µs). The cause was T3's frame walk
-    (`Enumerator::Lazy`, a label per frame) on the benchmark's 63-frame one-line recursion, which REQ-2's
-    same-line rule walks to the end. Rewritten as a plain loop, same rule: v2_identity 17.07 → 2.36 µs.
-  - Benchmark medians, rc.1 → branch, same machine (M3 Max, SQLite, YJIT), two alternating runs each: storm
-    check calm 3.15-3.18 → 4.73-4.76 µs, shedding 4.36-4.39 → 5.90-6.23 µs, breaker open 4.24 → 5.69-5.85 µs;
-    async capture 92-93 → 97-98 µs; sync capture 888-905 → 937-939 µs. Put these in PR 2's body.
-- `301029c8` amendment, with the maintainer's yes: REQ-62 and T35 (a new v2 group links to its v1 group's
-  issue; `issue_tracker_subscriber.rb:71-76` matched by `error_hash` alone). T7 and T11 now come after T35.
-- `8ece1185` T35 (REQ-62). `cb489217` T6: `docs/PUBLIC_API.md` "Grouping" and decision 0010 (REQ-8);
-  `bad8a8d7` says groups are per application and environment.
-- The shipkit reviewer, now run per task with the maintainer's yes: PASS for T3 (REQ-1 to REQ-4, REQ-7) and
-  for T4+T5 (REQ-5 to REQ-7), and for T35 and T6 (REQ-62, REQ-8). The last noted that the page left out the
-  per-application scope; `bad8a8d7` adds it.
-- Full suite at `27591bdb`: 7,201 examples, 0 failures, 9 pending. spec-check: 0 gaps.
-
-## After the PR opened (2026-11-21)
-- CI's first run failed 4 jobs, all on test preconditions; `10ef15ea` fixed them:
-  - Ruby 3.3 writes `` `nme' ``, which the normaliser doesn't fold, so the REQ-4 example's "same message"
-    precondition failed (v1 never merged those names on 3.3);
-  - MySQL has no partial indexes, so the group-identity index doesn't exist and the move can't collide.
-- Then the benchmark job failed: storm check 14.68-15.47 µs on the AMD EPYC 7763 runner (budget 15 µs; rc.1
-  10.59-10.85 µs there). design.md's gate record fired; with the maintainer's yes it was amended (`bcbb3811`)
-  and fixed (`27591bdb`): the gate keys events on `ErrorHashGenerator.gate_source` (first kept frame's
-  path:line, no same-line walk) and computes v2 and v1 once per new buffer entry. T5 was reopened and
-  re-ticked.
-  - Local storm medians now equal rc.1's (calm 3.11-3.23 vs 3.21-3.22 µs; shedding 4.37-4.39 vs 4.46-4.49;
-    open 4.20-4.23 vs 4.28-4.45). p95 is about 0.7 µs higher.
-  - CI at `27591bdb` ran on an Intel Xeon 6975P-C: calm 5.28, shedding 6.97, open 6.85 µs (rc.1 era on a
-    Xeon 6973P-C: 5.26, 7.52, 6.77).
-  - CI at `aabe535a` ran on the AMD EPYC 7763, the runner type that failed: calm 7.99, shedding 11.21, open
-    10.95 µs, against rc.1's 8.21, 10.85 and 10.59 µs there. About 4 µs under the budget.
+- `7b960efc` T7 (REQ-9 to REQ-11): an open group is matched by its last occurrence.
+  `FindOrIncrementError.within_group_window` (`last_seen_at > :cutoff OR (last_seen_at IS NULL AND
+  occurred_at > :cutoff)`) serves find_unresolved, its duplicate-create retry (which now calls
+  find_unresolved) and `FlushStormCounts#unresolved_target`, and it wraps `with_hash` / `with_hashes`,
+  so it applies to v2 and v1.
+  - design.md said `>=`. REQ-10 starts a new group at "24 hours old or more", so the record was
+    amended to `>` in the same commit, and the maintainer said yes to it.
+  - `spec/commands/grouping_window_spec.rb`: 30 examples (5 window cases x v2/v1 x lookup, retry,
+    flush). 6 fail on main's code. Seven deliberate breaks each fail 2-6 examples. With no NULL
+    fallback, only the v1 examples fail: in v2 the new row collides on the group-identity index and
+    `claim_conflicting_row` counts it on the seeded row.
+  - `benchmark/scenarios.rb` "Reopen collision fallback" seeded its stale open row with
+    `last_seen_at` = now, so the new rule found it and never collided (full-suite failure at
+    `spec/benchmark/scenarios_spec.rb:185`). It now seeds `last_seen_at` two days ago and rolls back
+    each iteration. Without the rollback, 1 claim instead of 4.
+  - EXPLAIN on PostgreSQL 16, 200,000 rows: the lookup uses
+    `index_rails_error_dashboard_error_logs_on_error_hash` (rc.1 used
+    `index_error_logs_on_hash_resolved_occurred`); 0.116 ms against 0.097. The decision's reversal
+    condition did not fire.
+  - bin/benchmark against rc.1 (M3 Max, SQLite, YJIT, alternating, two runs each): storm check calm
+    3.43-3.44 vs 3.31-3.46 us, shedding 4.66-4.70 vs 4.61-4.76, open 4.53-4.61 vs 4.42-4.69; async
+    capture 99 vs 99-106 us; sync capture 0.995-1.04 vs 1.03-1.10 ms. The reopen row (892-895 vs
+    948-971 us) is not like for like, since the scenario changed. Put these in PR 3's body.
+- `f1e39d73` T8 (REQ-12): PLUGIN_SYSTEM.md (:54 and the Jira example), GLOSSARY.md, API_REFERENCE.md
+  and TROUBLESHOOTING.md describe the last-occurrence rule, and so do their Jekyll copies in
+  `_features/` and `_reference/`.
+- `757aae68`, with the maintainer's yes: TROUBLESHOOTING.md (and its site copy) described the rc.1
+  fingerprint ("the file of the first backtrace line"); it now names v2's parts and links
+  PUBLIC_API.md's Grouping section.
+- The shipkit reviewer (worktree): PASS, with REQ-9 to REQ-12 MET. It listed `benchmark/scenarios.rb`
+  and the Jekyll copies as beyond the spec's paths, and both were explained above. Its worktree was
+  created at main, not at the branch: point a reviewer at the branch SHA with `git show <sha>:<path>`.
+- Full suite at `7b960efc`'s tree: 7,231 examples, 0 failures, 9 pending. Lefthook at `7b960efc`:
+  chaos 1,742 passed, 0 failed. spec-check: 0 gaps.
 
 ## Next step
-1. The maintainer decides on merging #375 (squash; deleting the branch needs its own yes).
-2. After PR 2 merges: tick #374, branch from main for PR 3 (T7-T8, the grouping window). T7's lookups are now
-   `with_hash` / `with_hashes`, and its window change must apply to both hashes.
+1. Watch PR 3's CI, especially the PostgreSQL, MySQL and Ruby 3.3 jobs, and the benchmark job's CPU
+   row. Then the maintainer decides on the squash merge; ticking #374's item 3 and deleting the
+   branch follow it, each with its own yes.
 
 ## Open questions
-- None from this session. Each push, PR, merge or branch deletion still needs its own yes.
-- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a group
-  moved to v2 can send one extra notification.
+- Release-please opened #376 "release 1.1.0-rc.1", its default bump after a `feat:` commit. tasks.md
+  plans rc.2 through a `Release-As: 1.0.0-rc.2` commit, so #376 must not be merged as it is.
+- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a
+  group moved to v2 can send one extra notification.
 
 ## Do not forget
 - **Agents and the working tree:** start a reviewer or research agent with `isolation: "worktree"`, and tell it

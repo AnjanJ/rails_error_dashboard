@@ -102,7 +102,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: PUBLIC_API.md names the recipe's parts, says it is stable for all of 1.x, and says the v1 fallback goes only in 2.0; 0010 has all five parts and a reversal condition
 
 ## Grouping window
-- [ ] **T7** Match open groups by last occurrence at all three lookups → REQ-9, REQ-10, REQ-11
+- [x] **T7** Match open groups by last occurrence at all three lookups → REQ-9, REQ-10, REQ-11
   - Files: lib/rails_error_dashboard/commands/find_or_increment_error.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, spec/commands/grouping_window_spec.rb
   - Test: spec/commands/grouping_window_spec.rb runs each case through the lookup, the duplicate-create
     retry and the storm flush. Times use `travel_to` relative to now, never a hard-coded date.
@@ -111,7 +111,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a legacy row with NULL `last_seen_at` falls back to `occurred_at`.
   - After: T4, T5, T35
   - Done when: `rspec spec/commands` → 0 failures; the existing 24 h specs pass, or were changed only where they asserted the old rollover
-- [ ] **T8** Say when a new group starts → REQ-12
+- [x] **T8** Say when a new group starts → REQ-12
   - Files: docs/PLUGIN_SYSTEM.md, docs/GLOSSARY.md
   - Test: none, prose.
   - After: T7
