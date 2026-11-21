@@ -208,6 +208,18 @@ puts ""
 # ---------------------------------------------------------------------------
 PreReleaseTestHarness.section("J7: Deduplication across upgrade boundary")
 
+# The fingerprint this version gives a capture, as LogError computes it: the
+# v2 recipe, completed for the application. Since 1.0.0-rc.2 a group matched by
+# the rc.1 recipe's hash moves to this one (hardening-1-0-rc2, REQ-5), so a
+# group that the recurrence dedupes onto carries it afterwards, whether it was
+# written under the older recipe or already under this one.
+current_fingerprint = lambda do |error_class, message, backtrace, context, application_id|
+  error = error_class.new(message)
+  error.set_backtrace(backtrace)
+  generator = RailsErrorDashboard::Services::ErrorHashGenerator
+  generator.complete(generator.identities(error, context)[:v2], application_id)
+end
+
 # Find the dedup record from J0
 old_dedup = RailsErrorDashboard::ErrorLog
   .where("message LIKE ?", "%repeated old error for dedup%")
@@ -218,16 +230,13 @@ if old_dedup
   old_hash = old_dedup.error_hash
   old_id = old_dedup.id
 
+  dedup_context = { controller_name: "old_controller", action_name: "show", platform: "Web" }
   capture_old_dedup = lambda do
     error = RuntimeError.new(old_dedup.message)
     error.set_backtrace(old_dedup.backtrace.to_s.split("\n"))
     raise error
   rescue => e
-    log_error_and_find(e, {
-      controller_name: "old_controller",
-      action_name: "show",
-      platform: "Web"
-    })
+    log_error_and_find(e, dedup_context)
   end
 
   first_after_upgrade = capture_old_dedup.call
@@ -250,8 +259,11 @@ if old_dedup
         first_after_upgrade.error_hash != old_hash
     else
       # Upgrading within one fingerprint format: ordinary deduplication.
-      assert "J7: the recurrence deduped onto the pre-upgrade group",
-        first_after_upgrade.error_hash == old_hash
+      expected_hash = current_fingerprint.call(RuntimeError, old_dedup.message,
+        old_dedup.backtrace.to_s.split("\n"), dedup_context, old_dedup.application_id)
+      assert "J7: the recurrence deduped onto the pre-upgrade group, which now carries this version's fingerprint",
+        first_after_upgrade.error_hash == expected_hash,
+        "was #{old_hash}, now #{first_after_upgrade.error_hash}, expected #{expected_hash}"
       assert "J7: deduplication incremented the existing count",
         old_dedup.occurrence_count == old_count + 1,
         "was #{old_count}, now #{old_dedup.occurrence_count} (deduped, so it should have gone up by one)"
@@ -295,16 +307,13 @@ if old_resolved
   old_hash = old_resolved.error_hash
   resolved_by = old_resolved.resolved_by_name
 
+  reopen_context = { controller_name: "old_controller", action_name: "index", platform: "Web" }
   recurrence = begin
     error = old_resolved.error_type.constantize.new(old_resolved.message)
     error.set_backtrace(old_resolved.backtrace.to_s.split("\n"))
     raise error
   rescue => e
-    log_error_and_find(e, {
-      controller_name: "old_controller",
-      action_name: "index",
-      platform: "Web"
-    })
+    log_error_and_find(e, reopen_context)
   end
 
   old_resolved.reload
@@ -326,8 +335,11 @@ if old_resolved
       # Within one fingerprint format: the recurrence matches and reopens it.
       assert "J8: the recurrence reopened the resolved row",
         recurrence.resolved == false
-      assert "J8: it is the same row, matched by hash",
-        recurrence.error_hash == old_hash
+      expected_hash = current_fingerprint.call(old_resolved.error_type.constantize, old_resolved.message,
+        old_resolved.backtrace.to_s.split("\n"), reopen_context, old_resolved.application_id)
+      assert "J8: it is the same row, which now carries this version's fingerprint",
+        recurrence.error_hash == expected_hash,
+        "was #{old_hash}, now #{recurrence.error_hash}, expected #{expected_hash}"
       assert "J8: reopening kept the resolution metadata",
         recurrence.resolved_by_name == resolved_by
     end
