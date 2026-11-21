@@ -774,7 +774,9 @@ module RailsErrorDashboard
         # CRITICAL: Log but never propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
-        RailsErrorDashboard::Logger.error("Context: #{@context.inspect.truncate(500)}") if @context
+        # No Context line: @context holds request.params and the URL before
+        # RED filters them, so it printed passwords and tokens at :error
+        # (hardening-1-0-rc2, REQ-59).
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
 
         # A worker must not report a delivery it did not make. Only the
