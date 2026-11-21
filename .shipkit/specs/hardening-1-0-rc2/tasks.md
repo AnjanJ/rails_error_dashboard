@@ -73,7 +73,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a `RecordNotUnique` on the move keeps v1 and still counts.
   - After: T3
   - Done when: `rspec spec/commands` → 0 failures; `bin/benchmark` capture median within 0.2 ms of rc.1's on the same machine
-- [ ] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
+- [x] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
   - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, spec/commands/flush_storm_counts_v1_fallback_spec.rb, spec/services/storm_protection/gate_hot_path_spec.rb
   - Test: spec/commands/flush_storm_counts_v1_fallback_spec.rb:
     - a flush of a new-style entry counts on a v1-only open group and moves it to v2;

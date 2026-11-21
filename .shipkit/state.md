@@ -1,11 +1,11 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `bad8a8d7`; this note is the
-> branch's last commit. The branch is local only: nothing is pushed and no PR is open.
+> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `27591bdb`; this note is the
+> branch's last commit. The branch is pushed as PR #375, with CI green. Merging needs the maintainer's yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T6 and T35 are done and committed on feat/hardening-grouping-v2. PR 2 is complete;
-  pushing it and opening the PR each need the maintainer's yes. T7-T34 are unstarted.
+- **`hardening-1-0-rc2`**: T1-T6 and T35 are done. PR 2 is #375, CI green at `27591bdb`, waiting for the
+  maintainer's merge. T7-T34 are unstarted.
 - **PR 1 (#373)** is merged. The tracking issue is #374: tick its checklist as each PR merges; never close it.
 
 ## Done this session (2026-11-21)
@@ -26,12 +26,26 @@
 - The shipkit reviewer, now run per task with the maintainer's yes: PASS for T3 (REQ-1 to REQ-4, REQ-7) and
   for T4+T5 (REQ-5 to REQ-7), and for T35 and T6 (REQ-62, REQ-8). The last noted that the page left out the
   per-application scope; `bad8a8d7` adds it.
-- Full suite at `8ece1185`: 7,194 examples, 0 failures, 9 pending. spec-check: 0 gaps.
+- Full suite at `27591bdb`: 7,201 examples, 0 failures, 9 pending. spec-check: 0 gaps.
+
+## After the PR opened (2026-11-21)
+- CI's first run failed 4 jobs, all on test preconditions; `10ef15ea` fixed them:
+  - Ruby 3.3 writes `` `nme' ``, which the normaliser doesn't fold, so the REQ-4 example's "same message"
+    precondition failed (v1 never merged those names on 3.3);
+  - MySQL has no partial indexes, so the group-identity index doesn't exist and the move can't collide.
+- Then the benchmark job failed: storm check 14.68-15.47 µs on the AMD EPYC 7763 runner (budget 15 µs; rc.1
+  10.59-10.85 µs there). design.md's gate record fired; with the maintainer's yes it was amended (`bcbb3811`)
+  and fixed (`27591bdb`): the gate keys events on `ErrorHashGenerator.gate_source` (first kept frame's
+  path:line, no same-line walk) and computes v2 and v1 once per new buffer entry. T5 was reopened and
+  re-ticked.
+  - Local storm medians now equal rc.1's (calm 3.11-3.23 vs 3.21-3.22 µs; shedding 4.37-4.39 vs 4.46-4.49;
+    open 4.20-4.23 vs 4.28-4.45). p95 is about 0.7 µs higher.
+  - CI at `27591bdb` ran on an Intel Xeon 6975P-C: calm 5.28, shedding 6.97, open 6.85 µs (rc.1 era on a
+    Xeon 6973P-C: 5.26, 7.52, 6.77). **Not yet seen on the EPYC 7763 runner**, the one that failed.
 
 ## Next step
-1. Ask the maintainer for a yes to push feat/hardening-grouping-v2 and open PR 2 (`Refs #374`, never Closes).
-   The body needs the benchmark table above. Then watch CI (Ruby 3.3, 3.4 and 4.0; nothing ran locally on
-   3.3 or 4.0).
+1. The maintainer decides on merging #375 (squash; deleting the branch needs its own yes). If a later CI run
+   lands on the EPYC 7763 runner, check its storm-check medians against rc.1's 10.59-10.85 µs.
 2. After PR 2 merges: tick #374, branch from main for PR 3 (T7-T8, the grouping window). T7's lookups are now
    `with_hash` / `with_hashes`, and its window change must apply to both hashes.
 
@@ -49,7 +63,9 @@
   rc.1's shape and is counted under v1 alone (REQ-6), so it can't reach a group sync created since T4. Give such
   entries the gate's identity with `StormEntryIdentity.for(error, context)` (`spec/support/storm_entry_identity.rb`).
 - **The benchmark's exception** is raised by one-line recursion (`benchmark/scenarios.rb:233`), so REQ-2's
-  same-line rule walks all 63 frames. Anything added to the frame walk is paid 63 times per storm check there.
+  same-line rule walks all 63 frames. The gate no longer runs that walk per event (it keys on
+  `ErrorHashGenerator.gate_source`); anything added to `gate_source` is paid on every storm check, and CI's
+  slowest runner (AMD EPYC 7763) has under 4.5 µs of headroom there.
 - **rc.1 baseline:** a throwaway worktree at the rc.1 tag is at `/tmp/red-rc1-bench` (detached). Remove it with
   `git worktree remove /tmp/red-rc1-bench` when no longer needed.
 - MySQL 8.4 for T30: `mysql@8.4` is installed (keg-only), with no data. Start a throwaway server like this:
