@@ -309,9 +309,11 @@ The installer mounts the dashboard at `/red`. Apps first installed before 0.5.8 
    ```
 
 2. **Know what counts as "the same error"**: the fingerprint covers the error class, the message
-   with numbers, quoted strings and object addresses masked, the file of the first backtrace line
-   outside your gems, and the controller and action. Two `RuntimeError`s raised in different files
-   are two errors. A repeat increments the existing record's `occurrence_count` only while that
+   with numbers, quoted strings and object addresses masked, the first frame of your own code (its
+   path and method, without the line number), the missing name of a `NameError` or
+   `NoMethodError`, and the controller and action ([Grouping](https://github.com/AnjanJ/rails_error_dashboard/blob/main/docs/PUBLIC_API.md#grouping) has the full recipe). Two
+   `RuntimeError`s raised in different methods are two errors; one method raising at two lines is
+   one. A repeat increments the existing record's `occurrence_count` only while that
    record is unresolved, was last seen in the last 24 hours, and belongs to the same environment
    and application. Otherwise the repeat starts a new record, which notifies like a new error:
    ```ruby
