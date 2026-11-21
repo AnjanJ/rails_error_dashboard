@@ -1,12 +1,12 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-grouping-window (PR 3: T7 and T8), after `f1e39d73`; this note is
-> the branch's last commit. The branch is not pushed yet. Pushing and opening the PR need the
-> maintainer's yes.
+> Written 2026-11-21 on feat/hardening-grouping-window (PR 3: T7 and T8), after `757aae68`; this note is
+> the branch's last commit. With the maintainer's yes it is pushed and opened as PR 3 (find it with
+> `gh pr list --head feat/hardening-grouping-window`). Merging needs another yes.
 
 ## In flight
 - **`hardening-1-0-rc2`**: T1-T8 and T35 are done. PR 1 (#373) and PR 2 (#375) are squash-merged, and
-  PR 2's branch is deleted. PR 3 is this branch, waiting for the maintainer's yes to push and open it.
+  PR 2's branch is deleted. PR 3 is this branch, open and waiting for CI and the maintainer's merge.
   T9-T34 are unstarted.
 - The tracking issue is #374. Items 1 and 2 of its checklist are ticked. Tick item 3, adding "(#N)",
   when PR 3 merges. Change only that line, and diff the body before saving. Never close it.
@@ -18,7 +18,7 @@
   find_unresolved) and `FlushStormCounts#unresolved_target`, and it wraps `with_hash` / `with_hashes`,
   so it applies to v2 and v1.
   - design.md said `>=`. REQ-10 starts a new group at "24 hours old or more", so the record was
-    amended to `>` in the same commit. This still needs the maintainer's yes.
+    amended to `>` in the same commit, and the maintainer said yes to it.
   - `spec/commands/grouping_window_spec.rb`: 30 examples (5 window cases x v2/v1 x lookup, retry,
     flush). 6 fail on main's code. Seven deliberate breaks each fail 2-6 examples. With no NULL
     fallback, only the v1 examples fail: in v2 the new row collides on the group-identity index and
@@ -38,6 +38,9 @@
 - `f1e39d73` T8 (REQ-12): PLUGIN_SYSTEM.md (:54 and the Jira example), GLOSSARY.md, API_REFERENCE.md
   and TROUBLESHOOTING.md describe the last-occurrence rule, and so do their Jekyll copies in
   `_features/` and `_reference/`.
+- `757aae68`, with the maintainer's yes: TROUBLESHOOTING.md (and its site copy) described the rc.1
+  fingerprint ("the file of the first backtrace line"); it now names v2's parts and links
+  PUBLIC_API.md's Grouping section.
 - The shipkit reviewer (worktree): PASS, with REQ-9 to REQ-12 MET. It listed `benchmark/scenarios.rb`
   and the Jekyll copies as beyond the spec's paths, and both were explained above. Its worktree was
   created at main, not at the branch: point a reviewer at the branch SHA with `git show <sha>:<path>`.
@@ -45,13 +48,11 @@
   chaos 1,742 passed, 0 failed. spec-check: 0 gaps.
 
 ## Next step
-1. The maintainer decides on the `>` amendment, the push, and opening PR 3. Then watch CI, especially
-   the PostgreSQL, MySQL and Ruby 3.3 jobs, and the benchmark job's CPU row.
+1. Watch PR 3's CI, especially the PostgreSQL, MySQL and Ruby 3.3 jobs, and the benchmark job's CPU
+   row. Then the maintainer decides on the squash merge; ticking #374's item 3 and deleting the
+   branch follow it, each with its own yes.
 
 ## Open questions
-- `docs/TROUBLESHOOTING.md:312` (and `_reference/troubleshooting.md`) still describes the v1 recipe
-  ("the file of the first backtrace line"). PR 2 changed the recipe. This is outside T7 and T8 and is
-  not fixed.
 - Release-please opened #376 "release 1.1.0-rc.1", its default bump after a `feat:` commit. tasks.md
   plans rc.2 through a `Release-As: 1.0.0-rc.2` commit, so #376 must not be merged as it is.
 - Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a
