@@ -1,10 +1,10 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `27591bdb`; this note is the
+> Written 2026-11-21 on feat/hardening-grouping-v2 (PR 2: T3-T6 and T35), after `aabe535a`; this note is the
 > branch's last commit. The branch is pushed as PR #375, with CI green. Merging needs the maintainer's yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T6 and T35 are done. PR 2 is #375, CI green at `27591bdb`, waiting for the
+- **`hardening-1-0-rc2`**: T1-T6 and T35 are done. PR 2 is #375, CI green at `aabe535a`, waiting for the
   maintainer's merge. T7-T34 are unstarted.
 - **PR 1 (#373)** is merged. The tracking issue is #374: tick its checklist as each PR merges; never close it.
 
@@ -41,11 +41,12 @@
   - Local storm medians now equal rc.1's (calm 3.11-3.23 vs 3.21-3.22 µs; shedding 4.37-4.39 vs 4.46-4.49;
     open 4.20-4.23 vs 4.28-4.45). p95 is about 0.7 µs higher.
   - CI at `27591bdb` ran on an Intel Xeon 6975P-C: calm 5.28, shedding 6.97, open 6.85 µs (rc.1 era on a
-    Xeon 6973P-C: 5.26, 7.52, 6.77). **Not yet seen on the EPYC 7763 runner**, the one that failed.
+    Xeon 6973P-C: 5.26, 7.52, 6.77).
+  - CI at `aabe535a` ran on the AMD EPYC 7763, the runner type that failed: calm 7.99, shedding 11.21, open
+    10.95 µs, against rc.1's 8.21, 10.85 and 10.59 µs there. About 4 µs under the budget.
 
 ## Next step
-1. The maintainer decides on merging #375 (squash; deleting the branch needs its own yes). If a later CI run
-   lands on the EPYC 7763 runner, check its storm-check medians against rc.1's 10.59-10.85 µs.
+1. The maintainer decides on merging #375 (squash; deleting the branch needs its own yes).
 2. After PR 2 merges: tick #374, branch from main for PR 3 (T7-T8, the grouping window). T7's lookups are now
    `with_hash` / `with_hashes`, and its window change must apply to both hashes.
 
@@ -66,8 +67,11 @@
   same-line rule walks all 63 frames. The gate no longer runs that walk per event (it keys on
   `ErrorHashGenerator.gate_source`); anything added to `gate_source` is paid on every storm check, and CI's
   slowest runner (AMD EPYC 7763) has under 4.5 µs of headroom there.
-- **rc.1 baseline:** a throwaway worktree at the rc.1 tag is at `/tmp/red-rc1-bench` (detached). Remove it with
-  `git worktree remove /tmp/red-rc1-bench` when no longer needed.
+- **rc.1 baseline for `bin/benchmark`:** the worktree used for PR 2 was removed. Recreate it with
+  `git worktree add --detach /tmp/red-rc1-bench rails_error_dashboard/v1.0.0-rc.1`, then run the benchmark there
+  and in the repo alternately, two runs each, with nothing else running (a busy machine moved medians by over
+  1 µs). Remove it with `git worktree remove /tmp/red-rc1-bench`. On CI, rc.1's storm-check medians by runner:
+  EPYC 7763 (`a1539361`) calm 8.21, shedding 10.85, open 10.59 µs; Xeon 6973P-C (`9b43b1ea`) 5.26, 7.52, 6.77 µs.
 - MySQL 8.4 for T30: `mysql@8.4` is installed (keg-only), with no data. Start a throwaway server like this:
   1. `/opt/homebrew/opt/mysql@8.4/bin/mysqld --no-defaults --initialize-insecure --datadir=<dir> --basedir=/opt/homebrew/opt/mysql@8.4`
   2. Run `mysqld` with `--port=3307 --bind-address=127.0.0.1 --mysqlx=OFF` and its own socket and pid file.
