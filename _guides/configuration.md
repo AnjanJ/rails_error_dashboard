@@ -758,7 +758,8 @@ Optimize performance and reduce database load with these features.
 ### Async Error Logging
 
 Save errors in a background job, so the request that raised them doesn't wait for the database
-write. The generated initializer turns this on.
+write. The generated initializer turns this on. Without it, the default is `false`: RED captures
+synchronously, saving the error before the response is sent. In deploy-shape runs on AMD EPYC 9V45 and 7763 and arm64 Neoverse-N2 runners, sync capture took 3.23 to 6.78 ms (medians) with the database on the same runner, and 11.84 to 16.38 ms with the database 1 ms away, against the 5 ms budget.
 
 ```ruby
 RailsErrorDashboard.configure do |config|

@@ -266,12 +266,13 @@ config.use_separate_database = true   # Separate database
 ```
 
 ### Async Error Logging
+- **Off unless set**: the installer turns `config.async_logging` on; without it, RED captures synchronously
 - **Non-blocking** error capture
 - **Background job processing** via ActiveJob
 - **Supports**:
   - Sidekiq
   - Solid Queue
-  - Async (Rails default)
+  - Rails' in-process `:async` adapter
   - Delayed Job
   - Resque
   - Any ActiveJob adapter
