@@ -11,6 +11,11 @@ module RailsErrorDashboard
 
     queue_as :default
 
+    # The arguments are the storm's buffered entries: exemplar messages,
+    # controller and action, per fingerprint. Active Job logs them at info on
+    # every enqueue and perform (hardening-1-0-rc2, REQ-60).
+    self.log_arguments = false
+
     def perform(entries: [], overflow: 0, episode: nil, batch_id: nil)
       entries = entries.map { |e| e.respond_to?(:stringify_keys) ? e.stringify_keys : e }
       episode = episode.stringify_keys if episode.respond_to?(:stringify_keys)

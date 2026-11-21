@@ -125,7 +125,7 @@ No RED licence or event-ingestion fee, and no plan limits — your database is t
 ## Safety, performance and compatibility
 
 - **Host-app safety** — nothing in the capture path raises into your app; every subscriber and callback is rescue-wrapped, `Thread.current` is cleaned up in `ensure`, and the original exception is always re-raised. Variables, health and breadcrumbs are opt-in and off by default; storm protection is on by default and fails open.
-- **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are medians from [`bin/benchmark`](bin/benchmark), which is in this repo, not in the gem, and runs in CI on every push to main. Each names the runner it came from. The budgets: capture under 5 ms before the response, the health snapshot under 1.5 ms, the storm check under 15 µs and a breadcrumb under 10 µs. With async logging (the default) under a server that runs `rack.response_finished` callbacks, such as Puma, the job is enqueued after the response is sent; on deploy-sized containers on AMD EPYC 7763, AMD EPYC 9V74 and arm64 Neoverse-N2 runners with the database 1 ms away, capture took 188 to 321 µs before the response, and the enqueue 7.3 to 8.6 ms after it, on Solid Queue.
+- **Performance** — the storm-protection hot path is a digest plus an atomic increment with no I/O; the figures quoted below are medians from [`bin/benchmark`](bin/benchmark), which is in this repo, not in the gem, and runs in CI on every push to main. Each names the runner it came from. The budgets: capture under 5 ms before the response, the health snapshot under 1.5 ms, the storm check under 15 µs and a breadcrumb under 10 µs. With async logging (the installer's default) under a server that runs `rack.response_finished` callbacks, such as Puma, the job is enqueued after the response is sent; on deploy-sized containers on AMD EPYC 7763, AMD EPYC 9V74 and arm64 Neoverse-N2 runners with the database 1 ms away, capture took 188 to 321 µs before the response, and the enqueue 7.3 to 8.6 ms after it, on Solid Queue. Without `config.async_logging`, RED captures synchronously, saving the error before the response is sent. In deploy-shape runs on AMD EPYC 9V45 and 7763 and arm64 Neoverse-N2 runners, sync capture took 3.23 to 6.78 ms (medians) with the database on the same runner, and 11.84 to 16.38 ms with the database 1 ms away, against the 5 ms budget.
 - **Security** — HTTP Basic Auth or your own `authenticate_with` lambda (Devise, Warden, session); your Rails `filter_parameters` are applied to params, variables and breadcrumbs; prompts are never recorded by LLM observability. Vulnerability reports: [SECURITY.md](SECURITY.md).
 - **Compatibility** — Rails 7.2–8.1, Ruby 3.3–4.0, PostgreSQL, MySQL/Trilogy or SQLite; live updates are opt-in (`enable_live_updates`) and need `turbo-rails` plus ActionCable (no polling fallback); the gem's own CSS/JS is inline but Bootstrap JS, Chart.js, highlight.js and Google Fonts load from CDNs, so it is not air-gap clean.
 
@@ -665,7 +665,7 @@ Open `/red/settings` and click **Send Test Error**, or raise an exception in any
 Rails.error.report(RuntimeError.new("Test error from Rails Error Dashboard"), handled: false)
 ```
 
-With async logging on (the default), leave the console open for a second or two so the background job can write it.
+With async logging on (the installer's default), leave the console open for a second or two so the background job can write it.
 
 [Full installation guide →](docs/QUICKSTART.md)
 

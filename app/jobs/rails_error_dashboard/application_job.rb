@@ -19,7 +19,9 @@ module RailsErrorDashboard
     # attempt, with the same detail.
     retry_on StandardError, wait: :polynomially_longer, attempts: 3 do |job, error|
       Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} failed: #{error.class} - #{error.message}")
-      Rails.logger.error("Job arguments: #{job.arguments.inspect}")
+      # The id, not the arguments: a capture job's arguments are the capture
+      # (hardening-1-0-rc2, REQ-60).
+      Rails.logger.error("Job ID: #{job.job_id}")
       Rails.logger.error("Attempt: #{job.executions}/3")
       Rails.logger.error(error.backtrace&.first(10)&.join("\n")) if error.backtrace
       Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} discarded after #{job.executions} attempts")

@@ -76,7 +76,8 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-RED's jobs then run on whatever `config.active_job.queue_adapter` says.
+RED's jobs then run on whatever `config.active_job.queue_adapter` says. Without the setting, RED
+captures synchronously, saving each error before the response is sent.
 
 ### 5. Start Workers
 

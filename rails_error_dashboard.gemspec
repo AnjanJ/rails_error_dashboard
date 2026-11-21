@@ -102,6 +102,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   spec.metadata["documentation_uri"] = "https://AnjanJ.github.io/rails_error_dashboard"
   spec.metadata["bug_tracker_uri"] = "https://github.com/AnjanJ/rails_error_dashboard/issues"
   spec.metadata["funding_uri"] = "https://github.com/sponsors/AnjanJ"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]

@@ -30,9 +30,9 @@ Every claim above was checked against 30+ products and gems in August 2026 — s
 <details>
 <summary><strong>What's the performance impact?</strong></summary>
 
-Minimal with async logging enabled:
-- **Synchronous**: ~10-50ms per error (blocks request)
-- **Async (recommended)**: ~1-2ms (queues to background job)
+A request that doesn't raise pays nothing measurable. A request that raises pays for the capture:
+- **Sync**, the library's default: RED saves the error before the response is sent. In deploy-shape runs on AMD EPYC 9V45 and 7763 and arm64 Neoverse-N2 runners, sync capture took 3.23 to 6.78 ms (medians) with the database on the same runner, and 11.84 to 16.38 ms with the database 1 ms away, against the 5 ms budget.
+- **Async**, the installer's default: under a server with `rack.response_finished`, such as Puma, capture took 188 to 321 µs before the response in the 1.0.0.rc1 runs with the database 1 ms away, and the job is enqueued after it.
 - **Sampling**: Log only 10% of non-critical errors for high-traffic apps
 
 See [Performance Guide](/rails_error_dashboard/docs/guides/error-sampling-and-filtering/).

@@ -118,17 +118,17 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: `docs/PLUGIN_SYSTEM.md:54` and the glossary's group entry describe the last-occurrence rule
 
 ## Defaults and release hygiene
-- [ ] **T9** Name each default correctly, and give sync's measured cost → REQ-13
+- [x] **T9** Name each default correctly, and give sync's measured cost → REQ-13
   - Files: README.md, docs/QUICKSTART.md, docs/PRODUCTION.md, docs/FEATURES.md, docs/guides/CONFIGURATION.md, docs/guides/SOLID_QUEUE_SETUP.md, _getting_started/production.md, _getting_started/quickstart.md, _getting_started/features.md
   - Test: none, prose.
   - After: none
   - Done when: `git grep -n -i "async" -- README.md docs _getting_started` shows no line calling async the library's default; README gives sync's figures from `.shipkit/research/deploy-shape-benchmark.md:224,242`
-- [ ] **T10** The gemspec requires MFA → REQ-14
+- [x] **T10** The gemspec requires MFA → REQ-14
   - Files: rails_error_dashboard.gemspec, spec/gemspec_mfa_spec.rb
   - Test: spec/gemspec_mfa_spec.rb loads the gemspec and asserts `metadata["rubygems_mfa_required"] == "true"`
   - After: none
   - Done when: `rspec spec/gemspec_mfa_spec.rb` → 0 failures
-- [ ] **T11** A `user_id` out of the column's range is stored as nil → REQ-15
+- [x] **T11** A `user_id` out of the column's range is stored as nil → REQ-15
   - Files: app/models/rails_error_dashboard/error_log.rb, lib/rails_error_dashboard/commands/log_error.rb, spec/models/storable_user_id_spec.rb
   - Test: spec/models/storable_user_id_spec.rb covers both the error log and the occurrence:
     - `2**40` on a 4-byte column gives nil;
@@ -136,12 +136,12 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a UUID column passes strings through.
   - After: T4, T35
   - Done when: `rspec spec/models spec/commands` → 0 failures, and on the PostgreSQL adapter job in CI
-- [ ] **T12** Fresh installs create `user_id` as bigint → REQ-16
+- [x] **T12** Fresh installs create `user_id` as bigint → REQ-16
   - Files: db/migrate/20251223000000_create_rails_error_dashboard_complete_schema.rb, spec/dummy/db/schema.rb, spec/migrations/create_rails_error_dashboard_complete_schema_spec.rb, docs/UPGRADING.md
   - Test: spec/migrations/create_rails_error_dashboard_complete_schema_spec.rb: with no `primary_key_type` both `user_id` columns are bigint; with `:uuid` they are uuid
   - After: none
   - Done when: `rspec spec/migrations` → 0 failures; `bin/check-schema-parity` passes; UPGRADING.md says how to widen an existing column
-- [ ] **T13** A connection timeout in the application lookup doesn't wait a second time → REQ-21
+- [x] **T13** A connection timeout in the application lookup doesn't wait a second time → REQ-21
   - Files: lib/rails_error_dashboard/commands/log_error.rb, spec/commands/log_error_application_lookup_spec.rb
   - Test: spec/commands/log_error_application_lookup_spec.rb:
     - `find_or_create_by_name` raising `ActiveRecord::ConnectionTimeoutError` means `Application.first`
@@ -149,7 +149,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - another error still takes the fallback.
   - After: T11
   - Done when: `rspec spec/commands` → 0 failures
-- [ ] **T32** Failure lines and job logs stop printing raw params and the capture payload → REQ-59, REQ-60
+- [x] **T32** Failure lines and job logs stop printing raw params and the capture payload → REQ-59, REQ-60
   - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, app/jobs/rails_error_dashboard/application_job.rb, spec/integration/failure_log_privacy_spec.rb
     From S2 (`.shipkit/research/silent-failures-spike.md`, accepted 2026-11-20). It ships with PR 4: it fixes a
     defect any host at `log_level :error` has today.

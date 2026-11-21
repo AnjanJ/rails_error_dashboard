@@ -64,7 +64,7 @@ Errors raised at the Rails console prompt are not captured. To report one from t
 Rails.error.report(RuntimeError.new("Test error from console"), handled: false)
 ```
 
-With async logging on (the default), leave the console open for a second or two so the background job can write it.
+With async logging on (the installer's default), leave the console open for a second or two so the background job can write it.
 
 Or raise one in a controller:
 
@@ -103,7 +103,8 @@ RailsErrorDashboard.configure do |config|
   # OPTIONAL FEATURES (Based on your selections during install)
   # ============================================================================
 
-  # Async Logging - ENABLED by default. Jobs run on your app's Active Job adapter.
+  # Async Logging - ENABLED. The installer turns it on; without this line RED
+  # captures synchronously. Jobs run on your app's Active Job adapter.
   config.async_logging = true
 
   # Slack Notifications - ENABLED (if you selected it during install)
@@ -232,7 +233,7 @@ Now that you have the basics working:
 1. Send a test error: `/red/settings` → **Send Test Error**. Errors raised at the console prompt are never captured, so don't test with `raise` there.
 2. Check the setup: `bin/rails rails_error_dashboard:verify` checks the configuration, the database connection and RED's tables.
 3. Check the middleware is loaded: `bin/rails middleware | grep RailsErrorDashboard` should print `use RailsErrorDashboard::Middleware::ErrorCatcher`.
-4. With async logging on (the default), a background job writes each error. In production that needs a worker running your app's job backend.
+4. With async logging on (the installer's default), a background job writes each error. In production that needs a worker running your app's job backend.
 
 **Fix** missing tables or migrations:
 ```bash
@@ -300,7 +301,7 @@ Then run `bin/rails rails_error_dashboard:verify`.
 
 ### Use Async Logging
 
-Async logging is on by default. RED enqueues each capture on your app's own Active Job adapter (`config.active_job.queue_adapter`), so whatever runs your other jobs runs RED's: Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`.
+The installer turns async logging on. Without `config.async_logging`, RED captures synchronously, saving the error before the response is sent, which costs more than the 5 ms capture budget on most deploys (see [the FAQ](FAQ.md)). With it, RED enqueues each capture on your app's own Active Job adapter (`config.active_job.queue_adapter`), so whatever runs your other jobs runs RED's: Sidekiq, Solid Queue, GoodJob or Rails' in-process `:async`.
 
 - In production, run a worker for the `default` and `error_notifications` queues. With Solid Queue, see [Solid Queue Setup](guides/SOLID_QUEUE_SETUP.md).
 - Rails' in-process `:async` adapter needs no worker, but captures still queued when the process restarts are lost.
