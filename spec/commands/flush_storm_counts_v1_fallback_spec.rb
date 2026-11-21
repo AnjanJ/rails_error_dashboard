@@ -112,6 +112,13 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "v1 fallback" do
   end
 
   it "keeps v1 and still counts when the move hits RecordNotUnique (hardening-1-0-rc2/REQ-5)" do
+    # MySQL has no partial indexes, so the group-identity index isn't built
+    # there and the move can't collide.
+    unless RailsErrorDashboard::ErrorLog.connection.index_name_exists?(
+      RailsErrorDashboard::ErrorLog.table_name, "index_error_logs_on_group_identity"
+    )
+      skip "no group identity index on this adapter, so the move cannot collide"
+    end
     group = seed_group(v1_hash)
     # An open v2 row the lookups don't match (seen over a day ago) but the
     # group-identity index does: same application, environment and window.

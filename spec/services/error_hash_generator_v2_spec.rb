@@ -182,8 +182,22 @@ RSpec.describe RailsErrorDashboard::Services::ErrorHashGenerator, ".identities" 
       nme = capture { fixtures.send_to_nil(:nme) }
       emial = capture { fixtures.send_to_nil(:emial) }
 
+      expect(identities(nme)[:v2]).not_to eq(identities(emial)[:v2])
+    end
+
+    # Ruby 3.4 quotes the name as 'nme', which the normaliser folds to '', so
+    # the message alone can't tell the two apart. Ruby 3.3 writes `nme', which
+    # it doesn't fold. Both messages are written the 3.4 way here, so the name
+    # is the only difference on every Ruby.
+    it "tells two names apart when their messages normalise the same" do
+      raised = capture { fixtures.send_to_nil(:nme) }
+      nme, emial = [ :nme, :emial ].map do |name|
+        NoMethodError.new("undefined method '#{name}' for nil", name).tap { |error| error.set_backtrace(raised.backtrace) }
+      end
+
       expect(described_class.normalize_message(nme.message)).to eq(described_class.normalize_message(emial.message))
       expect(identities(nme)[:v2]).not_to eq(identities(emial)[:v2])
+      expect(identities(nme)[:v1]).to eq(identities(emial)[:v1]) # rc.1 merged them
     end
 
     it "replaces digits in the name, as in the message" do
