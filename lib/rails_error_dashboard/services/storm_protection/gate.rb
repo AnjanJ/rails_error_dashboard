@@ -231,15 +231,18 @@ module RailsErrorDashboard
           # and must match what the sync and async paths hash. The custom
           # fingerprint lambda is the user's code, so it runs once, here.
           #
-          # Only v2 is computed per event; v1 waits for the exemplar, which is
-          # built once per new buffer entry (REQ-5).
+          # Neither v2 nor v1 is computed per event. The key is
+          # ErrorHashGenerator.gate_source, which costs what rc.1's identity
+          # did and never puts two v2 groups in one entry; v2 and v1 wait for
+          # the exemplar, built once per new buffer entry (design.md, the gate
+          # amendment of 2026-11-21).
           def gate_identity(exception, context)
             raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
             normalized = ErrorHashGenerator.normalize_message(raw_message)
             {
               raw_message: raw_message,
               normalized_message: normalized,
-              opaque_identity: ErrorHashGenerator.v2_identity(
+              gate_source: ErrorHashGenerator.gate_source(
                 exception,
                 normalized_message: normalized,
                 controller_name: context[:controller_name],
@@ -270,7 +273,7 @@ module RailsErrorDashboard
           # the worker runs in. Scrubbed, as the exemplar's copy is.
           def gate_key_for(identity)
             identity[:gate_key] ||= Digest::SHA256.hexdigest(
-              "#{identity[:custom_hash] || identity[:opaque_identity]}|#{EncodingSanitizer.scrub_deep(identity[:environment])}"
+              "#{identity[:custom_hash] || identity[:gate_source]}|#{EncodingSanitizer.scrub_deep(identity[:environment])}"
             )[0..15]
           end
 
@@ -285,6 +288,7 @@ module RailsErrorDashboard
           # at INSERT anyway; doing it here means the secret never reaches the
           # queue's backing store at all.
           #
+          # Both identities are computed here, once per new entry.
           # opaque_identity is v2, and opaque_identity_v1 lets the flush find
           # a group created before v2 (REQ-5). An entry buffered by rc.1 has
           # only opaque_identity, which is v1, so it still flushes under v1
@@ -303,7 +307,12 @@ module RailsErrorDashboard
             end
             EncodingSanitizer.scrub_deep(
               error_class: exception.class.name,
-              opaque_identity: identity[:opaque_identity],
+              opaque_identity: ErrorHashGenerator.v2_identity(
+                exception,
+                normalized_message: identity[:normalized_message],
+                controller_name: context[:controller_name],
+                action_name: context[:action_name]
+              ),
               opaque_identity_v1: opaque_v1,
               # Scrubbed before redaction: the filter's regexes raise on invalid bytes.
               message: redact(EncodingSanitizer.scrub(identity[:raw_message])),

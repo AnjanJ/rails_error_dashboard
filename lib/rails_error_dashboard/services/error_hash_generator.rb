@@ -262,6 +262,41 @@ module RailsErrorDashboard
         label ? "#{relative}##{label}" : relative
       end
 
+      # The storm gate's per-event key (design.md, the gate amendment of
+      # 2026-11-21): v2's parts, with the first kept frame's absolute
+      # "path:line" in place of v2's frame. It skips what REQ-2 skips but
+      # doesn't walk same-line frames, so it costs what rc.1's identity did.
+      # It is at least as fine as v2: two events whose first kept frame
+      # matches end that walk on the same method. Not a digest; the gate
+      # hashes it into its key.
+      def self.gate_source(exception, normalized_message:, controller_name: nil, action_name: nil)
+        [
+          exception.class.name,
+          normalized_message,
+          first_kept_frame(exception),
+          name_part(exception),
+          controller_name,
+          action_name
+        ].map(&:to_s).join("|")
+      end
+
+      def self.first_kept_frame(exception)
+        locations = safe_locations(exception)
+        if locations
+          locations.each do |location|
+            path = location.absolute_path || location.path
+            return "#{path}:#{location.lineno}" unless foreign_frame?(path)
+          end
+          return nil
+        end
+
+        Array(exception.backtrace).each do |line|
+          path, lineno, = parse_backtrace_line(line)
+          return "#{path}:#{lineno}" unless foreign_frame?(path)
+        end
+        nil
+      end
+
       def self.parse_backtrace_line(line)
         match = BACKTRACE_LINE.match(EncodingSanitizer.scrub(line.to_s))
         match ? [ match[1], match[2].to_i, base_label_of(match[3]) ] : [ nil, nil, nil ]
@@ -380,7 +415,7 @@ module RailsErrorDashboard
       rescue StandardError
         nil
       end
-      private_class_method :app_frame_v2, :parse_backtrace_line, :safe_locations, :first_app_index,
+      private_class_method :app_frame_v2, :parse_backtrace_line, :safe_locations, :first_app_index, :first_kept_frame,
                            :first_app_location_index, :foreign_frame?,
                            :base_label_of, :relative_to_root, :root_prefixes, :name_part
 

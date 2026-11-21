@@ -160,6 +160,89 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "v1 fallback" do
     expect(entry["opaque_identity_v1"]).to be_nil
   end
 
+  # The gate keys events on their first kept frame, not on v2 (design.md, the
+  # gate amendment of 2026-11-21). The key must never put two v2 groups in
+  # one entry.
+  def raised_at(line, label)
+    error = ArgumentError.new("widget 42 failed")
+    error.set_backtrace([
+      "#{Rails.root}/app/services/widget_service.rb:#{line}:in '#{label}'",
+      "#{Rails.root}/app/controllers/widgets_controller.rb:5:in 'show'"
+    ])
+    error
+  end
+
+  def v2_hash_of(error)
+    generator.complete(generator.identities(error, context)[:v2], application.id)
+  end
+
+  it "flushes two methods of one file onto their own v2 groups (hardening-1-0-rc2/REQ-5)" do
+    explode = raised_at(12, "explode")
+    implode = raised_at(20, "implode")
+    5.times { gate.admit!(explode, context) }
+    3.times { gate.admit!(implode, context) }
+    entries = gate.count_buffer.snapshot![:entries]
+
+    described_class.call(entries: entries)
+
+    expect(entries.size).to eq(2)
+    expect(logs.find_by!(error_hash: v2_hash_of(explode)).occurrence_count).to eq(5)
+    expect(logs.find_by!(error_hash: v2_hash_of(implode)).occurrence_count).to eq(3)
+  end
+
+  it "flushes one method raising at two lines onto one v2 group, with the exact total (hardening-1-0-rc2/REQ-5)" do
+    first = raised_at(12, "explode")
+    second = raised_at(14, "explode")
+    5.times { gate.admit!(first, context) }
+    3.times { gate.admit!(second, context) }
+    entries = gate.count_buffer.snapshot![:entries]
+
+    described_class.call(entries: entries)
+
+    expect(entries.size).to eq(2)
+    expect(v2_hash_of(first)).to eq(v2_hash_of(second))
+    expect(logs.sole.error_hash).to eq(v2_hash_of(first))
+    expect(logs.sole.occurrence_count).to eq(8)
+  end
+
+  it "flushes two methods raising through one library frame onto their own v2 groups (hardening-1-0-rc2/REQ-2, hardening-1-0-rc2/REQ-5)" do
+    library_frame = "#{RbConfig::CONFIG["rubylibdir"]}/shellwords.rb:120:in 'shellsplit'"
+    explode, implode = raised_at(12, "explode"), raised_at(20, "implode")
+    [ explode, implode ].each { |error| error.set_backtrace([ library_frame, *error.backtrace ]) }
+    5.times { gate.admit!(explode, context) }
+    3.times { gate.admit!(implode, context) }
+    entries = gate.count_buffer.snapshot![:entries]
+
+    described_class.call(entries: entries)
+
+    expect(entries.size).to eq(2)
+    expect(logs.find_by!(error_hash: v2_hash_of(explode)).occurrence_count).to eq(5)
+    expect(logs.find_by!(error_hash: v2_hash_of(implode)).occurrence_count).to eq(3)
+  end
+
+  it "flushes two misspelled names onto their own v2 groups (hardening-1-0-rc2/REQ-4, hardening-1-0-rc2/REQ-5)" do
+    nme, emial = [ :nme, :emial ].map do |name|
+      NoMethodError.new("undefined method '#{name}' for nil", name).tap { |error| error.set_backtrace(boom.backtrace) }
+    end
+    4.times { gate.admit!(nme, context) }
+    2.times { gate.admit!(emial, context) }
+    entries = gate.count_buffer.snapshot![:entries]
+
+    described_class.call(entries: entries)
+
+    expect(entries.size).to eq(2)
+    expect(logs.find_by!(error_hash: v2_hash_of(nme)).occurrence_count).to eq(4)
+    expect(logs.find_by!(error_hash: v2_hash_of(emial)).occurrence_count).to eq(2)
+  end
+
+  it "computes v2 once per new buffer entry, not per hit" do
+    allow(generator).to receive(:v2_identity).and_call_original
+
+    counted_entries(50)
+
+    expect(generator).to have_received(:v2_identity).once
+  end
+
   it "computes v1 once per new buffer entry, not per hit" do
     allow(generator).to receive(:opaque_identity).and_call_original
 
