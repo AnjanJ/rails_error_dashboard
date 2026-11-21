@@ -11,7 +11,7 @@ module RailsErrorDashboard
     #
     # Search order:
     # 0. wont_fix errors with same hash (any age) → increment, status untouched
-    # 1. Unresolved errors with same hash within 24 hours → increment occurrence count
+    # 1. Unresolved errors with same hash last seen within 24 hours → increment occurrence count
     # 2. Resolved errors with same hash (any age) → reopen and increment
     # 3. No match → create new error record
     #
@@ -26,7 +26,7 @@ module RailsErrorDashboard
     class FindOrIncrementError
       # Context that describes THIS occurrence rather than the error as a
       # group. It is refreshed on every recurrence so the row always shows the
-      # latest moment of failure, not the first one in the 24 h window. Keys
+      # latest moment of failure, not the group's first one. Keys
       # absent from @attributes (feature disabled, column not migrated, or a
       # storm :lite capture that shed context) leave the stored payload alone —
       # a shed capture must never blank out a good snapshot.
@@ -35,8 +35,23 @@ module RailsErrorDashboard
         http_method hostname content_type request_duration_ms
       ].freeze
 
+      # How long an open group may go unseen before a capture starts a new one.
+      GROUP_WINDOW = 24.hours
+
       def self.call(error_hash, attributes = {})
         new(error_hash, attributes).call
+      end
+
+      # Open groups a capture may still count on: last seen less than
+      # GROUP_WINDOW ago, however long ago they were first seen. A row from
+      # before last_seen_at was written falls back to occurred_at. The one
+      # definition for every lookup that matches an open group, here and in
+      # FlushStormCounts (hardening-1-0-rc2, REQ-9 to REQ-11).
+      def self.within_group_window(scope)
+        scope.where(
+          "last_seen_at > :cutoff OR (last_seen_at IS NULL AND occurred_at > :cutoff)",
+          cutoff: GROUP_WINDOW.ago
+        )
       end
 
       # attributes[:_error_hash_v1] is the same capture's rc.1 hash, if any.
@@ -116,9 +131,10 @@ module RailsErrorDashboard
 
       def find_unresolved
         with_environment(
-          with_hash(not_wont_fix(ErrorLog.unresolved))
-            .where(application_id: @attributes[:application_id])
-            .where("occurred_at >= ?", 24.hours.ago)
+          self.class.within_group_window(
+            with_hash(not_wont_fix(ErrorLog.unresolved))
+              .where(application_id: @attributes[:application_id])
+          )
         ).lock.order(last_seen_at: :desc).first
       end
 
@@ -231,8 +247,9 @@ module RailsErrorDashboard
         REFRESHED_REQUEST_IDENTITY.any? { |key| !@attributes[key].nil? }
       end
 
-      # Inside the 24-hour matching window find_unresolved uses, so the group
-      # this creates can still be found by its own recurrences.
+      # Less than GROUP_WINDOW old, so the group this creates can still be
+      # found by its own recurrences if it is read by occurred_at (a NULL
+      # last_seen_at), and its group_window bucket stays near today's.
       def clamped_group_time(time)
         return Time.current if time.blank?
 
@@ -338,9 +355,9 @@ module RailsErrorDashboard
       rescue ActiveRecord::RecordNotUnique
         # An unresolved row already holds the identity this one would take.
         # Resolved rows from before group_window existed keep it NULL, which
-        # the index folds into one '' bucket: reopen one and the next
-        # recurrence -- its old occurred_at is outside the 24 h lookup --
-        # reopens the next, and collides. Count the occurrence on the row the
+        # the index folds into one '' bucket: reopen one, and a recurrence
+        # after it has gone quiet for GROUP_WINDOW reopens the next, and
+        # collides. Count the occurrence on the row the
         # index objected to rather than drop the capture.
         claim_conflicting_row(environment: environment, group_window: group_window, error_hash: error.error_hash) || raise
       end
@@ -356,12 +373,13 @@ module RailsErrorDashboard
         attrs = attrs.reverse_merge(resolved: false)
 
         # The GROUP's occurred_at is clamped into the matching window, even
-        # when the EVENT is older. find_unresolved matches on
-        # `occurred_at >= 24.hours.ago`, so a backdated report (a mobile client
-        # flushing a queue it collected offline) would otherwise create a row
-        # that can never be matched again -- every recurrence making yet
-        # another group. The event's true time is preserved on its occurrence
-        # row, which is what the time-window queries read.
+        # when the EVENT is older. A new row's last_seen_at is now, so the
+        # lookups find it by that; the clamp still keeps occurred_at (their
+        # fallback when last_seen_at is NULL) and the group_window bucket
+        # derived from it within a day of now for a backdated report (a
+        # mobile client flushing a queue it collected offline). The event's
+        # true time is preserved on its occurrence row, which is what the
+        # time-window queries read.
         attrs[:occurred_at] = clamped_group_time(attrs[:occurred_at])
 
         if ErrorLog.column_names.include?("context_captured_at")
@@ -389,11 +407,7 @@ module RailsErrorDashboard
         retry_sticky = find_wont_fix
         return increment_existing(retry_sticky) if retry_sticky
 
-        retry_existing = with_environment(
-          with_hash(not_wont_fix(ErrorLog.unresolved))
-            .where(application_id: @attributes[:application_id])
-            .where("occurred_at >= ?", 24.hours.ago)
-        ).lock.first
+        retry_existing = find_unresolved
 
         if retry_existing
           retry_existing.update!(
@@ -416,9 +430,10 @@ module RailsErrorDashboard
           else
             # A RecordNotUnique means a row with this exact group identity
             # exists right now, so the only way to get here is for the two
-            # lookups above to disagree with the index: the colliding row sits
-            # outside the 24 h window (its occurred_at was moved, or the clock
-            # skewed) yet still holds this identity. Raising here would abort a
+            # lookups above to disagree with the index: the colliding row was
+            # last seen GROUP_WINDOW ago or more (a backdated capture landing
+            # in its UTC day, or the clock skewed) yet still holds this
+            # identity. Raising here would abort a
             # capture whose group demonstrably exists -- LogError's blanket
             # rescue turns that into a silently dropped error. Match the row
             # the index actually objected to and increment it instead.

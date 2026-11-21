@@ -9,7 +9,7 @@ module RailsErrorDashboard
     #   1. Recompute the canonical error_hash from the stored identity parts
     #      (the gate's key deliberately omits application_id — resolved here)
     #   2. Unresolved match  → the ONE row FindOrIncrementError would pick
-    #      (24 h window, exact environment first): occurrence_count += N
+    #      (last seen within 24 h, exact environment first): occurrence_count += N
     #   3. Resolved match    → reopen (mirrors FindOrIncrementError semantics)
     #   4. No match          → create a minimal ErrorLog from the exemplar
     #
@@ -276,14 +276,14 @@ module RailsErrorDashboard
         env = current_environment && (entry["environment"].presence || current_environment)
 
         # Priority 1: unresolved match — ONE row, chosen exactly as
-        # FindOrIncrementError chooses it (same hash + application, occurred
-        # within 24 h, exact environment before a legacy NULL row, most
-        # recently seen first), then a single atomic UPDATE on that id.
+        # FindOrIncrementError chooses it (same hash + application, last seen
+        # within 24 h by FindOrIncrementError.within_group_window, exact
+        # environment before a legacy NULL row, most recently seen first),
+        # then a single atomic UPDATE on that id.
         #
         # It must be one row: the normal path opens a fresh group once the
-        # previous one's occurred_at falls outside the 24 h window, so a
-        # long-running unresolved error legitimately owns several unresolved
-        # rows. An update_all across the whole hash would add N to every one
+        # previous one has gone 24 h without an occurrence, so an error that
+        # keeps coming back legitimately owns several unresolved rows. An update_all across the whole hash would add N to every one
         # of them — seven real events becoming twelve counted occurrences.
         #
         # Priority 0, tried first: a wont_fix row absorbs its recurrences at any
@@ -482,10 +482,11 @@ module RailsErrorDashboard
       def unresolved_target(hashes, application, env)
         # Disjoint from wont_fix_target. Not where.not(...): that would also
         # drop rows whose status is NULL.
-        scope = with_hashes(ErrorLog.unresolved, hashes)
-          .where("status IS NULL OR status <> ?", "wont_fix")
-          .where(application_id: application.id)
-          .where("occurred_at >= ?", 24.hours.ago)
+        scope = FindOrIncrementError.within_group_window(
+          with_hashes(ErrorLog.unresolved, hashes)
+            .where("status IS NULL OR status <> ?", "wont_fix")
+            .where(application_id: application.id)
+        )
         if env
           scope = scope.where(environment: [ env, nil ])
             .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
