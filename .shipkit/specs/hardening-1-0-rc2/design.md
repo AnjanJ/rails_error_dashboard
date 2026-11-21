@@ -73,6 +73,14 @@ The frame is the first location that passes all of these:
 - its path is not under `/gems/`;
 - it doesn't start with `<internal:`;
 - it isn't under `RbConfig::CONFIG["rubylibdir"]`.
+- **Amended 2026-11-20, before T3:** the frame after it doesn't have the same path and line. A C method (`Hash#fetch`,
+  and on Ruby 4.0 `Kernel#Integer`) is reported at its caller's file and line, and comes first. Without this
+  rule, its name stands in for the app method. Checked on Ruby 3.3.14, 3.4.5 and 4.0.10:
+  - `load_user` and `load_order`, each calling `fetch`, both gave `fetch`;
+  - on 4.0, `parse_a` and `parse_b`, each calling `Integer`, both gave `Integer`.
+
+  With this rule, all four gave their own method. When every remaining frame matches the next, the last one is
+  used. Known false positive: a method that calls itself on one line is reported as its caller.
 
 The path is made relative by removing whichever of `Rails.root.to_s` and `Rails.root.realpath.to_s` it
 starts with, so a symlinked `current` and a real `releases/<ts>` both work. A path outside `Rails.root`
@@ -146,6 +154,30 @@ written by rc.1 hold no v1. They flush through `opaque_identity` as v1, the same
 **Decision.** Option 1.
 **Falsifiability.** We would reverse this if `bin/benchmark`'s storm-check median exceeds 15 µs with it.
 **Fired-if.** manual
+
+**Fired 2026-11-21, on PR #375's CI; amended with the maintainer's yes.** With v2 computed per event, the storm
+check read 14.68 to 15.47 µs on CI's AMD EPYC 7763 runner (shedding and breaker open; two runs, the second
+failing), against 10.59 to 10.85 µs for 1.0.0-rc.1 (`a1539361`) on the same runner type. Locally (M3 Max) the
+rise was 1.5 µs, the same 35-40%. The cause is REQ-2's same-line rule: on the benchmark's 63-frame one-line
+recursion, v2's frame walk visits every frame (2.36 µs, against 0.91 µs for v1's identity, which stops at the
+first frame).
+
+**Amendment.** The gate no longer computes v2 per event. It keys each event on
+`error_class | normalised_message | "<absolute path>:<line>" of the first kept frame | name:<NameError#name> |
+controller | action` (`ErrorHashGenerator.gate_source`), digested with the custom fingerprint or environment as
+before. The first kept frame follows REQ-2's skips but not its same-line walk, so this costs what rc.1's
+identity did. v2 and v1 are computed once, in the exemplar, when the buffer stores a new entry.
+- The key is at least as fine as v2: its other parts are v2's, and two events whose first kept frame has the
+  same path and line end the same-line walk on the method that owns that line, so they share a v2 identity.
+  Counts never merge across v2 groups.
+- One v2 group raising at several lines gets one buffer entry per line. Each flushes onto the same row, so
+  counts stay exact, but the per-fingerprint full-capture allowance during a storm (`fingerprint_buckets`)
+  becomes per line rather than per group.
+- Rejected: a cheaper same-line walk (about 0.5 µs saved locally, leaving tenths of a µs on the 7763 runner),
+  and a higher budget (a host-safety limit).
+
+**Falsifiability (amended).** We would reverse the amendment if two v2 groups are found sharing a buffer entry, or
+if `bin/benchmark`'s storm-check median on CI's slowest runner is still above 15 µs with it.
 
 ## Decision: Match an open group by its last occurrence   (→ REQ-9, REQ-10, REQ-11)
 
@@ -589,6 +621,13 @@ a table it doesn't create.
 **Fired-if.** manual
 
 ## Smaller changes (one obvious way each, so no decision record)
+- **REQ-62** (added 2026-11-21): `FindOrIncrementError` puts the capture's v1 hash on a row it creates, as a
+  non-persisted `ErrorLog#error_hash_v1`, the way `just_reopened` already reaches the subscribers.
+  `IssueTrackerSubscriber#should_auto_create?` (`issue_tracker_subscriber.rb:71-76`) matches
+  `error_hash IN (error_hash, error_hash_v1)`. Storm-created rows are not affected: `FlushStormCounts`
+  dispatches no callbacks. Not changed: the in-process notification throttle (`notification_throttler.rb:228`)
+  is keyed by the hash, so a group moved to v2 can send one extra notification; the database cooldown still
+  applies.
 - **REQ-21:** described in the host-conditions decision above.
 - **REQ-27, REQ-28:** `BatchDeleteErrors` calls `RetentionCleanupJob.delete_with_dependents(ErrorLog.where(id: ids))`,
   then `AnalyticsCacheManager.clear`, then dispatches `on_errors_batch_deleted` with the ids it plucked.

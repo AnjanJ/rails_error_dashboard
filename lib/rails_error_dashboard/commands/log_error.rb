@@ -315,20 +315,16 @@ module RailsErrorDashboard
       # is. It is marked _identity_custom so the worker passes it through too;
       # completing it with the application id grouped the same error under a
       # different hash whenever it went through the queue.
+      #
+      # Otherwise _identity is the v2 identity and _identity_v1 the v1 one, so
+      # the worker can still find a group created before v2 (REQ-5).
+      # _identity_version marks the pair: a job queued by rc.1 or earlier has
+      # no version, and its _identity is v1 (REQ-6).
       def self.capture_identity_parts(exception, context)
-        custom = Services::ErrorHashGenerator.send(:try_custom_fingerprint, exception, context)
-        return { _identity: custom, _identity_custom: true } if custom
+        identities = Services::ErrorHashGenerator.identities(exception, context)
+        return { _identity: identities[:custom], _identity_custom: true } if identities[:custom]
 
-        {
-          _identity: Services::ErrorHashGenerator.opaque_identity(
-            error_class: exception.class.name,
-            normalized_message: Services::ErrorHashGenerator.normalize_message(exception.message),
-            frames: Services::ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
-                    Services::ErrorHashGenerator.extract_app_frame(exception.backtrace),
-            controller_name: context[:controller_name]&.to_s,
-            action_name: context[:action_name]&.to_s
-          )
-        }
+        { _identity: identities[:v2], _identity_v1: identities[:v1], _identity_version: 2 }
       rescue => e
         # No identity simply means the worker recomputes the hash from the
         # (redacted) payload, which is the pre-existing behaviour.
@@ -541,14 +537,10 @@ module RailsErrorDashboard
         # before the payload was redacted for the queue; completing it here
         # with application_id keeps grouping identical to the sync path, where
         # the hash is taken before filter_attributes runs.
-        error_hash = canonical_hash_from_identity(application) ||
-                     Services::ErrorHashGenerator.call(
-                       @exception,
-                       controller_name: error_context.controller_name,
-                       action_name: error_context.action_name,
-                       application_id: application.id,
-                       context: @context
-                     )
+        #
+        # error_hash_v1 is the rc.1 hash, or nil. The lookup falls back to it
+        # and moves a group it finds that way to error_hash (REQ-5).
+        error_hash, error_hash_v1 = queued_hashes(application) || captured_hashes(application, error_context)
 
         #  Calculate backtrace signature for fuzzy matching (if column exists)
         if ErrorLog.column_names.include?("backtrace_signature")
@@ -716,7 +708,7 @@ module RailsErrorDashboard
         attributes = ErrorLog.clamp_text_attributes(attributes)
         error_log = ErrorLog.find_or_increment_by_hash(
           error_hash,
-          attributes.merge(error_hash: error_hash, _context_fidelity: storm_lite ? "lite" : nil)
+          attributes.merge(error_hash: error_hash, _error_hash_v1: error_hash_v1, _context_fidelity: storm_lite ? "lite" : nil)
         )
 
         # OTel: now that the error_log exists, attach its id + dedup flag + severity
@@ -883,17 +875,58 @@ module RailsErrorDashboard
       # A marked custom fingerprint is already the canonical hash, as it is on
       # the sync and storm paths. A job queued before the marker existed has
       # none and is completed as it was then, so it lands where it was headed.
-      def canonical_hash_from_identity(application)
+      #
+      # Returns [error_hash, error_hash_v1], or nil when no identity was sent.
+      # A job queued by rc.1 or earlier has no _identity_version: its
+      # _identity is v1, and it is counted under v1 alone (REQ-6).
+      def queued_hashes(application)
         opaque = @context[:_identity]
         return nil unless opaque.is_a?(String) && opaque.present?
-        return opaque if @context[:_identity_custom] == true
+        return [ opaque, nil ] if @context[:_identity_custom] == true
 
-        Services::ErrorHashGenerator.complete(opaque, application.id)
+        completed = Services::ErrorHashGenerator.complete(opaque, application.id)
+        return [ completed, nil ] unless @context[:_identity_version] == 2
+
+        v1 = @context[:_identity_v1]
+        [ completed, v1.is_a?(String) && v1.present? ? Services::ErrorHashGenerator.complete(v1, application.id) : nil ]
       rescue => e
         RailsErrorDashboard::Logger.debug(
-          "[RailsErrorDashboard] canonical_hash_from_identity failed: #{e.class} - #{e.message}"
+          "[RailsErrorDashboard] queued_hashes failed: #{e.class} - #{e.message}"
         )
         nil
+      end
+
+      # [error_hash, error_hash_v1] from the exception itself: the sync path,
+      # or a job whose identity was lost. Controller and action come from the
+      # error context, as rc.1's ErrorHashGenerator.call took them.
+      def captured_hashes(application, error_context)
+        identities = Services::ErrorHashGenerator.identities(
+          @exception, @context,
+          controller_name: error_context.controller_name,
+          action_name: error_context.action_name
+        )
+        return [ identities[:custom], nil ] if identities[:custom]
+
+        [
+          Services::ErrorHashGenerator.complete(identities[:v2], application.id),
+          Services::ErrorHashGenerator.complete(identities[:v1], application.id)
+        ]
+      rescue => e
+        # A fault in the v2 recipe must not lose the capture: group it as
+        # rc.1 did.
+        RailsErrorDashboard::Logger.debug(
+          "[RailsErrorDashboard] captured_hashes failed: #{e.class} - #{e.message}"
+        )
+        [
+          Services::ErrorHashGenerator.call(
+            @exception,
+            controller_name: error_context.controller_name,
+            action_name: error_context.action_name,
+            application_id: application.id,
+            context: @context
+          ),
+          nil
+        ]
       end
 
       def find_or_create_application

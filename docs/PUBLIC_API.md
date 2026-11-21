@@ -432,6 +432,28 @@ channels
 channel_count
 ```
 
+## Grouping
+
+RED groups errors by a fingerprint, separately for each application and each environment. The default
+recipe below is stable for all of 1.x: no 1.x release changes it, so an upgrade within 1.x never splits
+a group or merges two. The fingerprint is a digest of:
+
+- the exception's class;
+- its message's first 500 characters, with hex addresses, object inspections, numbers and quoted
+  strings replaced;
+- the first app frame, as its path relative to `Rails.root` and its method name, without the line
+  number. Skipped on the way: frames under `/gems/`, `<internal:` frames, frames under Ruby's own
+  library directory, and a frame with the same path and line as the next one (a C method such as
+  `Hash#fetch`, reported at its caller's line);
+- for a `NameError` or `NoMethodError`, the missing name, with numbers replaced;
+- the controller and action, when there are any.
+
+`custom_fingerprint` replaces the default recipe, as it did in 1.0.0-rc.1.
+
+1.0.0-rc.1 used an older recipe. A group created under it keeps its occurrences: a capture
+that finds no group under its fingerprint looks for one under the older fingerprint, counts on it and
+moves it to the current one. That fallback stays for all of 1.x and is removed only in 2.0.
+
 ## What's private
 
 These can change in any release, without a deprecation:

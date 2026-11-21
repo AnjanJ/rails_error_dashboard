@@ -34,17 +34,22 @@ RSpec.describe RailsErrorDashboard::Commands::FlushStormCounts, "count conservat
       "custom_hash" => nil,
       "count" => count,
       "first_seen_at" => 5.minutes.ago.iso8601,
-      "last_seen_at" => Time.current.iso8601
+      "last_seen_at" => Time.current.iso8601,
+      **StormEntryIdentity.for(storm_boom, { controller_name: "widgets", action_name: "show" })
     }
+  end
+
+  def storm_boom
+    error = StandardError.new("storm boom")
+    error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
+    error
   end
 
   # One captured error, then resolved -- so both flushes take the Priority-2
   # resolved/reopen branch.
   def resolved_log
-    error = StandardError.new("storm boom")
-    error.set_backtrace([ "#{Rails.root}/app/models/widget.rb:10:in 'explode'" ])
     log = RailsErrorDashboard::Commands::LogError.call(
-      error, { controller_name: "widgets", action_name: "show" }
+      storm_boom, { controller_name: "widgets", action_name: "show" }
     )
     log.update!(resolved: true, status: "resolved", resolved_at: Time.current)
     log

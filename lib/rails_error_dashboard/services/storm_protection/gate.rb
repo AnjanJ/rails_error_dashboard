@@ -230,19 +230,23 @@ module RailsErrorDashboard
           # a new entry. The identity digest is hashed from the RAW message,
           # and must match what the sync and async paths hash. The custom
           # fingerprint lambda is the user's code, so it runs once, here.
+          #
+          # Neither v2 nor v1 is computed per event. The key is
+          # ErrorHashGenerator.gate_source, which costs what rc.1's identity
+          # did and never puts two v2 groups in one entry; v2 and v1 wait for
+          # the exemplar, built once per new buffer entry (design.md, the gate
+          # amendment of 2026-11-21).
           def gate_identity(exception, context)
             raw_message = exception.message.to_s[0, ErrorHashGenerator::HASH_MESSAGE_LIMIT]
-            frame = ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
-                    ErrorHashGenerator.extract_app_frame(exception.backtrace)
+            normalized = ErrorHashGenerator.normalize_message(raw_message)
             {
               raw_message: raw_message,
-              first_app_frame: frame,
-              opaque_identity: ErrorHashGenerator.opaque_identity(
-                error_class: exception.class.name,
-                normalized_message: ErrorHashGenerator.normalize_message(raw_message),
-                frames: frame,
-                controller_name: context[:controller_name]&.to_s,
-                action_name: context[:action_name]&.to_s
+              normalized_message: normalized,
+              gate_source: ErrorHashGenerator.gate_source(
+                exception,
+                normalized_message: normalized,
+                controller_name: context[:controller_name],
+                action_name: context[:action_name]
               ),
               custom_hash: custom_hash_for(exception, context),
               # Only an EXPLICIT environment from the caller. nil means "the
@@ -269,7 +273,7 @@ module RailsErrorDashboard
           # the worker runs in. Scrubbed, as the exemplar's copy is.
           def gate_key_for(identity)
             identity[:gate_key] ||= Digest::SHA256.hexdigest(
-              "#{identity[:custom_hash] || identity[:opaque_identity]}|#{EncodingSanitizer.scrub_deep(identity[:environment])}"
+              "#{identity[:custom_hash] || identity[:gate_source]}|#{EncodingSanitizer.scrub_deep(identity[:environment])}"
             )[0..15]
           end
 
@@ -283,13 +287,36 @@ module RailsErrorDashboard
           # a first-seen fingerprint gets, which FlushStormCounts would redact
           # at INSERT anyway; doing it here means the secret never reaches the
           # queue's backing store at all.
+          #
+          # Both identities are computed here, once per new entry.
+          # opaque_identity is v2, and opaque_identity_v1 lets the flush find
+          # a group created before v2 (REQ-5). An entry buffered by rc.1 has
+          # only opaque_identity, which is v1, so it still flushes under v1
+          # (REQ-6). A custom fingerprint gets no v1 (REQ-7).
           def exemplar(identity, exception, context)
+            frame = ErrorHashGenerator.extract_app_frame_from_locations(exception) ||
+                    ErrorHashGenerator.extract_app_frame(exception.backtrace)
+            opaque_v1 = unless identity[:custom_hash]
+              ErrorHashGenerator.opaque_identity(
+                error_class: exception.class.name,
+                normalized_message: identity[:normalized_message],
+                frames: frame,
+                controller_name: context[:controller_name]&.to_s,
+                action_name: context[:action_name]&.to_s
+              )
+            end
             EncodingSanitizer.scrub_deep(
               error_class: exception.class.name,
-              opaque_identity: identity[:opaque_identity],
+              opaque_identity: ErrorHashGenerator.v2_identity(
+                exception,
+                normalized_message: identity[:normalized_message],
+                controller_name: context[:controller_name],
+                action_name: context[:action_name]
+              ),
+              opaque_identity_v1: opaque_v1,
               # Scrubbed before redaction: the filter's regexes raise on invalid bytes.
               message: redact(EncodingSanitizer.scrub(identity[:raw_message])),
-              first_app_frame: identity[:first_app_frame],
+              first_app_frame: frame,
               controller_name: context[:controller_name]&.to_s,
               action_name: context[:action_name]&.to_s,
               custom_hash: identity[:custom_hash],

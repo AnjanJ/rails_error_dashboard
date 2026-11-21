@@ -15,6 +15,9 @@ module RailsErrorDashboard
     # 2. Resolved errors with same hash (any age) → reopen and increment
     # 3. No match → create new error record
     #
+    # Each lookup matches the capture's v2 hash or, failing that, its v1 hash
+    # (1.0.0-rc.1's recipe, kept until 2.0). A row found by v1 is moved to v2.
+    #
     # Environment is a MATCH dimension, not part of the hash: the same error in
     # staging and production is two rows with independent status. A row with a
     # NULL environment predates the column; it matches as a wildcard and is
@@ -36,31 +39,64 @@ module RailsErrorDashboard
         new(error_hash, attributes).call
       end
 
+      # attributes[:_error_hash_v1] is the same capture's rc.1 hash, if any.
+      # The lookups fall back to it, and a group found by it moves to
+      # error_hash (REQ-5).
       def initialize(error_hash, attributes = {})
         @error_hash = error_hash
         @attributes = attributes
+        v1 = attributes[:_error_hash_v1]
+        @error_hash_v1 = v1.present? && v1 != error_hash ? v1 : nil
       end
 
       def call
         ErrorLog.transaction do
-          # Priority 0: a wont_fix row absorbs its recurrences, at any age
-          sticky = find_wont_fix
-          next increment_existing(sticky) if sticky
-
-          # Priority 1: Find unresolved match (existing behavior)
-          existing = find_unresolved
-          next increment_existing(existing) if existing
-
-          # Priority 2: Find resolved match → reopen
-          resolved = find_resolved
-          next reopen_existing(resolved) if resolved
-
-          # Priority 3: Create new record
-          create_new_or_retry
+          move_to_current_hash(find_or_create)
         end
       end
 
       private
+
+      def find_or_create
+        # Priority 0: a wont_fix row absorbs its recurrences, at any age
+        sticky = find_wont_fix
+        return increment_existing(sticky) if sticky
+
+        # Priority 1: Find unresolved match (existing behavior)
+        existing = find_unresolved
+        return increment_existing(existing) if existing
+
+        # Priority 2: Find resolved match → reopen
+        resolved = find_resolved
+        return reopen_existing(resolved) if resolved
+
+        # Priority 3: Create new record
+        create_new_or_retry
+      end
+
+      # Rows with this capture's hash or, failing that, its v1 hash. The v1
+      # fallback exists until 2.0, so groups created before the v2 recipe keep
+      # their occurrences.
+      def with_hash(scope)
+        return scope.where(error_hash: @error_hash) unless @error_hash_v1
+
+        scope.where(error_hash: [ @error_hash, @error_hash_v1 ])
+             .order(Arel.sql(ErrorLog.sanitize_sql_array([ "CASE WHEN error_hash = ? THEN 0 ELSE 1 END", @error_hash ])))
+      end
+
+      # A group found by its v1 hash takes the v2 hash, in a savepoint: if
+      # another row already holds that identity, the unique index raises and
+      # the group keeps v1. The occurrence is counted either way.
+      def move_to_current_hash(error)
+        return error unless @error_hash_v1 && error&.error_hash == @error_hash_v1
+
+        ErrorLog.transaction(requires_new: true) { error.update_columns(error_hash: @error_hash) }
+        error
+      rescue ActiveRecord::RecordNotUnique
+        error.error_hash = @error_hash_v1
+        error.clear_attribute_changes([ :error_hash ])
+        error
+      end
 
       # The three lookups are DISJOINT by status, so which row a recurrence
       # lands on never depends on the order they happen to run in.
@@ -72,8 +108,7 @@ module RailsErrorDashboard
       # after which the triage decision was silently thrown away.
       def find_wont_fix
         with_environment(
-          ErrorLog
-            .where(error_hash: @error_hash)
+          with_hash(ErrorLog)
             .where(application_id: @attributes[:application_id])
             .where(status: "wont_fix")
         ).lock.order(last_seen_at: :desc).first
@@ -81,8 +116,7 @@ module RailsErrorDashboard
 
       def find_unresolved
         with_environment(
-          not_wont_fix(ErrorLog.unresolved)
-            .where(error_hash: @error_hash)
+          with_hash(not_wont_fix(ErrorLog.unresolved))
             .where(application_id: @attributes[:application_id])
             .where("occurred_at >= ?", 24.hours.ago)
         ).lock.order(last_seen_at: :desc).first
@@ -90,8 +124,7 @@ module RailsErrorDashboard
 
       def find_resolved
         with_environment(
-          ErrorLog
-            .where(error_hash: @error_hash)
+          with_hash(ErrorLog)
             .where(application_id: @attributes[:application_id])
             .where(status: "resolved")
         ).lock.order(last_seen_at: :desc).first
@@ -309,7 +342,7 @@ module RailsErrorDashboard
         # recurrence -- its old occurred_at is outside the 24 h lookup --
         # reopens the next, and collides. Count the occurrence on the row the
         # index objected to rather than drop the capture.
-        claim_conflicting_row(environment: environment, group_window: group_window) || raise
+        claim_conflicting_row(environment: environment, group_window: group_window, error_hash: error.error_hash) || raise
       end
 
       # Attributes for a brand-new group.
@@ -345,9 +378,11 @@ module RailsErrorDashboard
         # Savepoint: on PostgreSQL a unique-violation poisons the enclosing
         # transaction, and the retry lookups below would fail with "current
         # transaction is aborted" instead of finding the winner's row.
-        ErrorLog.transaction(requires_new: true) do
+        created = ErrorLog.transaction(requires_new: true) do
           ErrorLog.create!(new_record_attributes)
         end
+        created.error_hash_v1 = @error_hash_v1
+        created
       rescue ActiveRecord::RecordNotUnique
         # Race condition: another process created the same error. Same three
         # lookups, same order, as the first pass.
@@ -355,8 +390,7 @@ module RailsErrorDashboard
         return increment_existing(retry_sticky) if retry_sticky
 
         retry_existing = with_environment(
-          not_wont_fix(ErrorLog.unresolved)
-            .where(error_hash: @error_hash)
+          with_hash(not_wont_fix(ErrorLog.unresolved))
             .where(application_id: @attributes[:application_id])
             .where("occurred_at >= ?", 24.hours.ago)
         ).lock.first
@@ -372,8 +406,7 @@ module RailsErrorDashboard
         else
           # Also check resolved in race condition path
           retry_resolved = with_environment(
-            ErrorLog
-              .where(error_hash: @error_hash)
+            with_hash(ErrorLog)
               .where(application_id: @attributes[:application_id])
               .where(status: "resolved")
           ).lock.first
@@ -398,11 +431,11 @@ module RailsErrorDashboard
       # the unique index defines it (application, hash, environment and the
       # immutable group_window bucket) with no time window of its own. A new
       # row's identity comes from this capture; a reopened row brings its own.
-      def claim_conflicting_row(environment: @attributes[:environment], group_window: window_for_attributes)
+      def claim_conflicting_row(environment: @attributes[:environment], group_window: window_for_attributes, error_hash: @error_hash)
         return nil unless ErrorLog.column_names.include?("group_window")
 
         scope = ErrorLog.unresolved
-          .where(error_hash: @error_hash)
+          .where(error_hash: error_hash)
           .where(application_id: @attributes[:application_id])
         scope = scope.where(environment: environment) if ErrorLog.column_names.include?("environment")
         scope = scope.where(group_window: group_window)

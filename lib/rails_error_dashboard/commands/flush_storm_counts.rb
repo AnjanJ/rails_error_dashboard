@@ -268,7 +268,8 @@ module RailsErrorDashboard
         count = entry["count"].to_i
         return 0 if count <= 0
 
-        error_hash = canonical_hash(entry, application)
+        error_hash, error_hash_v1 = canonical_hashes(entry, application)
+        hashes = [ error_hash, error_hash_v1 ].compact.uniq
         last_seen = parse_time(entry["last_seen_at"]) || Time.current
         # An explicit environment captured at the gate wins over the worker's
         # own, mirroring LogError#resolve_environment for full captures.
@@ -288,8 +289,8 @@ module RailsErrorDashboard
         # Priority 0, tried first: a wont_fix row absorbs its recurrences at any
         # age and keeps its status (FindOrIncrementError#find_wont_fix). Same
         # atomic increment, so it shares the branch below.
-        target = wont_fix_target(error_hash, application, env) ||
-                 unresolved_target(error_hash, application, env)
+        target = wont_fix_target(hashes, application, env) ||
+                 unresolved_target(hashes, application, env)
         if target
           if env && target.environment.blank?
             ErrorLog.where(id: target.id).update_all([
@@ -301,14 +302,15 @@ module RailsErrorDashboard
               "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
             ])
           end
+          move_to_current_hash(target, hashes)
           yield target.id if block_given?
           return count
         end
 
         # Priority 2: resolved match — reopen, mirroring
         # FindOrIncrementError so storm recurrences don't stay buried
-        resolved_scope = ErrorLog
-          .where(error_hash: error_hash, application_id: application.id)
+        resolved_scope = with_hashes(ErrorLog, hashes)
+          .where(application_id: application.id)
           .where(status: "resolved")
         if env
           resolved_scope = resolved_scope.where(environment: [ env, nil ])
@@ -350,6 +352,7 @@ module RailsErrorDashboard
           attrs[:reopened_at] = Time.current if ErrorLog.column_names.include?("reopened_at")
           attrs[:environment] = env if env && resolved.environment.blank?
           resolved.update!(attrs)
+          move_to_current_hash(resolved, hashes)
           yield resolved.id if block_given?
           return count
         end
@@ -416,11 +419,12 @@ module RailsErrorDashboard
           #
           # Nested in its own transaction because the failed INSERT poisons the
           # surrounding one on PostgreSQL.
-          raise unless (target = existing_target(error_hash, application, env))
+          raise unless (target = existing_target(hashes, application, env))
 
           ErrorLog.where(id: target.id).update_all([
             "occurrence_count = occurrence_count + ?, last_seen_at = ?", count, last_seen
           ])
+          move_to_current_hash(target, hashes)
           # Yield on the RECOVERY path too: these counts are as real as the ones
           # the winning INSERT wrote, so they need a time bucket as well, or a
           # raced create silently loses its volume from every window query.
@@ -434,37 +438,59 @@ module RailsErrorDashboard
       # priority-ordered lookups above -- the index has already proved a row
       # with this identity exists, so refusing to match a resolved or wont_fix
       # one would drop the counts instead.
-      def existing_target(error_hash, application, env)
-        scope = ErrorLog.where(error_hash: error_hash, application_id: application.id)
+      def existing_target(hashes, application, env)
+        scope = with_hashes(ErrorLog, hashes).where(application_id: application.id)
         scope = scope.where(environment: [ env, nil ]) if env
-        scope.order(last_seen_at: :desc).select(:id).first
+        scope.order(last_seen_at: :desc).select(:id, :error_hash).first
+      end
+
+      # Rows with the entry's hash or, failing that, its v1 hash: the v1
+      # fallback FindOrIncrementError applies, kept until 2.0 (REQ-5).
+      def with_hashes(scope, hashes)
+        return scope.where(error_hash: hashes.first) if hashes.size == 1
+
+        scope.where(error_hash: hashes)
+             .order(Arel.sql(ErrorLog.sanitize_sql_array([ "CASE WHEN error_hash = ? THEN 0 ELSE 1 END", hashes.first ])))
+      end
+
+      # A row found by the v1 hash takes the current one, in a savepoint. If
+      # another row already holds that identity, the unique index raises and
+      # the row keeps v1; its counts are already added.
+      def move_to_current_hash(row, hashes)
+        return if hashes.size == 1 || row.error_hash != hashes.last
+
+        ErrorLog.transaction(requires_new: true) do
+          ErrorLog.where(id: row.id).update_all(error_hash: hashes.first)
+        end
+      rescue ActiveRecord::RecordNotUnique
+        nil
       end
 
       # The unresolved row the full capture path would increment right now.
       # No time window: "won't fix" holds for as long as the row keeps the status.
-      def wont_fix_target(error_hash, application, env)
-        scope = ErrorLog
-          .where(error_hash: error_hash, application_id: application.id)
+      def wont_fix_target(hashes, application, env)
+        scope = with_hashes(ErrorLog, hashes)
+          .where(application_id: application.id)
           .where(status: "wont_fix")
         if env
           scope = scope.where(environment: [ env, nil ])
             .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
         end
-        scope.order(last_seen_at: :desc).select(:id, :environment).first
+        scope.order(last_seen_at: :desc).select(:id, :environment, :error_hash).first
       end
 
-      def unresolved_target(error_hash, application, env)
+      def unresolved_target(hashes, application, env)
         # Disjoint from wont_fix_target. Not where.not(...): that would also
         # drop rows whose status is NULL.
-        scope = ErrorLog.unresolved
+        scope = with_hashes(ErrorLog.unresolved, hashes)
           .where("status IS NULL OR status <> ?", "wont_fix")
-          .where(error_hash: error_hash, application_id: application.id)
+          .where(application_id: application.id)
           .where("occurred_at >= ?", 24.hours.ago)
         if env
           scope = scope.where(environment: [ env, nil ])
             .order(Arel.sql("CASE WHEN environment IS NULL THEN 1 ELSE 0 END"))
         end
-        scope.order(last_seen_at: :desc).select(:id, :environment).first
+        scope.order(last_seen_at: :desc).select(:id, :environment, :error_hash).first
       end
 
       # The redaction LogError applies to a message, for exemplars that reach
@@ -477,9 +503,23 @@ module RailsErrorDashboard
 
       # Finishes the same two-stage fingerprint the full capture path uses, so
       # counts land on the ErrorLog that path would have chosen.
-      def canonical_hash(entry, application)
-        return entry["custom_hash"] if entry["custom_hash"].present?
+      #
+      # Returns [error_hash, error_hash_v1]. An entry buffered from 1.0.0-rc.2
+      # on carries v2 as opaque_identity and v1 beside it. One buffered by
+      # rc.1 or earlier has no v1: its opaque_identity is v1, and it is counted
+      # under v1 alone (REQ-6).
+      def canonical_hashes(entry, application)
+        return [ entry["custom_hash"], nil ] if entry["custom_hash"].present?
 
+        v1 = entry["opaque_identity_v1"].presence
+        [
+          canonical_hash(entry, application),
+          v1 && Services::ErrorHashGenerator.complete(v1, application.id)
+        ]
+      end
+
+      # The entry's own hash: v2 from rc.2 on, v1 for an entry buffered by rc.1.
+      def canonical_hash(entry, application)
         # The gate hashed the identity from the RAW message and buffered only
         # the digest; the buffered "message" is redacted, so recomputing from
         # it here would produce a DIFFERENT fingerprint and storm counts would

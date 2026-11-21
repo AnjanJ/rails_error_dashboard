@@ -2,7 +2,7 @@
 
 Eleven pull requests, in this order:
 1. T1-T2: the spikes, research only, with S1 done by 2026-12-04.
-2. T3-T6: grouping v2.
+2. T3-T6 and T35: grouping v2.
 3. T7-T8: the grouping window.
 4. T9-T13 and T32: defaults and release hygiene, with S2's fix for failure lines that print raw params.
 5. T14-T16: notifications.
@@ -47,12 +47,15 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - spec.md gains its requirement and tasks.md its tasks, before any change to `log_level`.
 
 ## Grouping v2
-- [ ] **T3** `ErrorHashGenerator.identities` and the v2 recipe → REQ-1, REQ-2, REQ-3, REQ-4, REQ-7
+- [x] **T3** `ErrorHashGenerator.identities` and the v2 recipe → REQ-1, REQ-2, REQ-3, REQ-4, REQ-7
   - Files: lib/rails_error_dashboard/services/error_hash_generator.rb, spec/services/error_hash_generator_v2_spec.rb
   - Test: spec/services/error_hash_generator_v2_spec.rb:
     - one file loaded under two release directories, with `Rails.root` set to each, gives one v2
       fingerprint, and a symlinked root gives the same;
     - `<internal:kernel>` and `rubylibdir` frames are skipped;
+    - a C method's frame reported at its caller's line is skipped: two methods in one file, each failing in
+      `Hash#fetch` with the same key, give two fingerprints, and so do two calling `Integer()` (REQ-2,
+      amended 2026-11-20);
     - one method at two lines gives one fingerprint, and two methods give two;
     - `NoMethodError` for `nme` and `emial` gives two;
     - a string-only backtrace follows the same rules;
@@ -60,7 +63,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - v1 from `identities` equals rc.1's `ErrorHashGenerator.call` for the same exception.
   - After: none
   - Done when: `rspec spec/services` → 0 failures; with the old frame rule restored, the release-directory and `nme`/`emial` examples fail
-- [ ] **T4** Sync and async capture carry both identities; the lookups match v2 then v1 and move the row to v2 → REQ-5, REQ-6
+- [x] **T4** Sync and async capture carry both identities; the lookups match v2 then v1 and move the row to v2 → REQ-5, REQ-6
   - Files: lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/commands/find_or_increment_error.rb, spec/commands/log_error_identity_v2_spec.rb, spec/commands/find_or_increment_error_v1_fallback_spec.rb
   - Test:
     - an open, a resolved and a wont_fix group seeded with only a v1 hash each take a sync and an async
@@ -70,15 +73,29 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a `RecordNotUnique` on the move keeps v1 and still counts.
   - After: T3
   - Done when: `rspec spec/commands` → 0 failures; `bin/benchmark` capture median within 0.2 ms of rc.1's on the same machine
-- [ ] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
-  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, spec/commands/flush_storm_counts_v1_fallback_spec.rb
+- [x] **T5** The storm gate, count buffer and flush carry v1 beside v2 → REQ-5, REQ-6
+  - Files: lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/services/storm_protection/count_buffer.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, spec/commands/flush_storm_counts_v1_fallback_spec.rb, spec/services/storm_protection/gate_hot_path_spec.rb
   - Test: spec/commands/flush_storm_counts_v1_fallback_spec.rb:
     - a flush of a new-style entry counts on a v1-only open group and moves it to v2;
     - a flush of an rc.1-shaped buffer entry (no `opaque_identity_v1`) counts under v1;
     - the gate computes v1 once per new entry, not per hit.
+    - Reopened 2026-11-21 by the gate amendment in design.md: the gate computes v2 once per new entry too;
+      two methods raising the same error in one file get two entries, each flushed onto its own v2 group;
+      one method raising at two lines gets two entries, flushed onto one v2 group with the exact total.
   - After: T3
   - Done when: `rspec spec/commands spec/services` → 0 failures; `bin/benchmark` storm-check median < 15 µs
-- [ ] **T6** Document the recipe as stable for 1.x, and record decision 0010 → REQ-8
+    locally, and on PR CI's benchmark job
+- [x] **T35** A new v2 group links to its v1 group's issue → REQ-62
+  - Files: app/models/rails_error_dashboard/error_log.rb, lib/rails_error_dashboard/commands/find_or_increment_error.rb, lib/rails_error_dashboard/subscribers/issue_tracker_subscriber.rb, spec/subscribers/issue_tracker_v1_link_spec.rb
+  - Test: spec/subscribers/issue_tracker_v1_link_spec.rb, with issue tracking on and auto-create allowed:
+    - a v1-only group with a linked issue, last seen two days ago, then a sync capture of the same error:
+      the new v2 group carries that issue and no `CreateIssueJob` is enqueued;
+    - the same through the async path;
+    - with no v1 group, a `CreateIssueJob` is enqueued as before;
+    - `error_hash_v1` is never written to the database.
+  - After: T4
+  - Done when: `rspec spec/subscribers spec/commands` → 0 failures
+- [x] **T6** Document the recipe as stable for 1.x, and record decision 0010 → REQ-8
   - Files: docs/PUBLIC_API.md, .shipkit/decisions/0010-grouping-recipe-stable-for-1x.md
   - Test: none, prose.
   - After: T4, T5
@@ -92,7 +109,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - first seen 30 h ago and last seen 1 h ago: counted on it;
     - last seen 25 h ago: a new group;
     - a legacy row with NULL `last_seen_at` falls back to `occurred_at`.
-  - After: T4, T5
+  - After: T4, T5, T35
   - Done when: `rspec spec/commands` → 0 failures; the existing 24 h specs pass, or were changed only where they asserted the old rollover
 - [ ] **T8** Say when a new group starts → REQ-12
   - Files: docs/PLUGIN_SYSTEM.md, docs/GLOSSARY.md
@@ -117,7 +134,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - `2**40` on a 4-byte column gives nil;
     - `2**31 - 1` is kept;
     - a UUID column passes strings through.
-  - After: T4
+  - After: T4, T35
   - Done when: `rspec spec/models spec/commands` → 0 failures, and on the PostgreSQL adapter job in CI
 - [ ] **T12** Fresh installs create `user_id` as bigint → REQ-16
   - Files: db/migrate/20251223000000_create_rails_error_dashboard_complete_schema.rb, spec/dummy/db/schema.rb, spec/migrations/create_rails_error_dashboard_complete_schema_spec.rb, docs/UPGRADING.md

@@ -32,7 +32,9 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
 - **REQ-1.** The fingerprint shall use the first app frame's path relative to `Rails.root`, so one file
   loaded from two release directories gives one fingerprint.
 - **REQ-2.** When choosing the first app frame, the fingerprint shall skip frames whose path starts with
-  `<internal:` and frames under Ruby's own library directory.
+  `<internal:`, frames under Ruby's own library directory, and a frame whose next frame has the same path
+  and line (a C method reported at its caller's line). Amended 2026-11-20, before T3, by the C-frame check
+  in `design.md`.
 - **REQ-3.** The fingerprint shall include the first app frame's method name and shall not include its
   line number.
 - **REQ-4.** When the exception is a `NameError` (including `NoMethodError`), the fingerprint shall
@@ -45,6 +47,10 @@ the behaviour. The review's evidence and the maintainer's answers are in `intake
   1.0.0-rc.1.
 - **REQ-8.** `docs/PUBLIC_API.md` shall state that the default grouping recipe is stable for all of 1.x
   and that the v1 fallback is removed only in 2.0. [untested: prose, verified by reading]
+- **REQ-62.** When a capture creates a new group and a group in the same application with the capture's
+  v1 fingerprint has a linked issue, RED shall link the new group to that issue instead of creating
+  another. Added 2026-11-21, during T4, with the maintainer's yes: without it, an rc.1 group with an issue
+  that no lookup matches any more (outside the 24-hour window) gets a second issue on its first v2 capture.
 
 ### Grouping window
 - **REQ-9.** While an open group's last occurrence is less than 24 hours old, a matching capture shall be
