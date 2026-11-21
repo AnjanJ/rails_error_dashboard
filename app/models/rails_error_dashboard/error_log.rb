@@ -224,11 +224,17 @@ module RailsErrorDashboard
       Commands::LogError.call(exception, context)
     end
 
-    # nil rather than a wrong user: an integer column casts "3f2a9c1e-..." to 3
-    def self.storable_user_id(user_id)
-      return user_id unless type_for_attribute("user_id").type == :integer
+    # nil rather than a wrong user: an integer column casts "3f2a9c1e-..." to 3.
+    # nil too for an id the column can't hold: writing it raises
+    # ActiveModel::RangeError, which lost the whole capture (hardening-1-0-rc2,
+    # REQ-15). `model` names the table whose user_id column decides, since an
+    # upgraded host may have widened one and not the other.
+    def self.storable_user_id(user_id, model: self)
+      type = model.type_for_attribute("user_id")
+      return user_id unless type.type == :integer
 
-      Integer(user_id.to_s, 10, exception: false)
+      id = Integer(user_id.to_s, 10, exception: false)
+      id if id && type.serializable?(id)
     end
 
     # Mark error as resolved (delegates to Command)

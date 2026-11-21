@@ -725,7 +725,7 @@ module RailsErrorDashboard
             occurrence_attrs = {
               error_log: error_log,
               occurred_at: attributes[:occurred_at],
-              user_id: attributes[:user_id],
+              user_id: ErrorLog.storable_user_id(attributes[:user_id], model: ErrorOccurrence),
               request_id: error_context.request_id,
               # Digest, not the raw ID -- it is a bearer credential. Idempotent,
               # so a value already digested at the queue boundary passes through.
