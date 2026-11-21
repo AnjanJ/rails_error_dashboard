@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-rc.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v1.0.0-rc.1...rails_error_dashboard/v1.1.0-rc.1) (2026-11-21)
+
+
+### ✨ Features
+
+* grouping v2, a fingerprint that survives deploys, with the rc.1 fallback ([#375](https://github.com/AnjanJ/rails_error_dashboard/issues/375)) ([430d080](https://github.com/AnjanJ/rails_error_dashboard/commit/430d08018d23a63020ae754ff2b0bf851e0e427e)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* match an open group by its last occurrence ([#377](https://github.com/AnjanJ/rails_error_dashboard/issues/377)) ([6bcabbd](https://github.com/AnjanJ/rails_error_dashboard/commit/6bcabbdd3d8d43ccaea08ee9c9414f747fc52f7e)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+
 ## [1.0.0-rc.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.1...rails_error_dashboard/v1.0.0-rc.1) (2026-11-08)
 
 
