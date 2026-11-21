@@ -1,8 +1,8 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-defaults-hygiene (PR 4: T9-T13 and T32), after `e40d8a4a`; this
-> note is the branch's last commit. The branch is not pushed. Pushing, opening the PR and merging each
-> need the maintainer's yes.
+> Written 2026-11-21 on feat/hardening-defaults-hygiene (PR 4: T9-T13 and T32), after `26c47133`; this
+> note is the branch's last commit. PR 4 is #378, opened with the maintainer's yes. Each further push,
+> and the merge, need their own yes.
 
 ## In flight
 - **`hardening-1-0-rc2`**: T1-T13, T32 and T35 are done. PRs 1-3 (#373, #375, #377) are squash-merged and
@@ -25,6 +25,11 @@
   - `bf877987` T13 (REQ-21): a `ConnectionTimeoutError` in the application lookup skips the fallback.
   - `e40d8a4a` T32 (REQ-59, REQ-60): no Context lines on the failure paths; `log_arguments = false` on the two
     capture jobs; an exhausted job is named by class and id. The spec passes on Rails 7.2.4, 8.0.5.2, 8.1.4.1.
+- `26c47133`: #378's CI failed only Upgrade Path (published 0.18.1 -> branch), on J7 and J8. Cause: #375's
+  v1 -> v2 move (REQ-5) changes the matched group's hash, and J7/J8 asserted it kept the old one. The job
+  runs only on release PRs and PRs touching migrations, so #375 and #377 never ran it. Reproduced from a
+  normal checkout on main (`6bcabbdd`, fails) and `94ce924f` (passes); fixed by asserting the v2
+  fingerprint; a break (no move) fails both.
 - bin/benchmark against rc.1 (M3 Max, SQLite, YJIT, alternating, two runs each): sync capture 1.02-1.04 vs
   1.06-1.12 ms; async 95-100 vs 103 µs; storm check calm 3.38-3.41 vs 3.39-3.59 µs, shedding 4.59-4.63 vs
   4.71-5.17, open 4.44-4.62 vs 4.50-4.83. Put these in PR 4's body.
@@ -32,8 +37,8 @@
   to REQ-16, REQ-21, REQ-59, REQ-60). spec-check: 0 gaps.
 
 ## Next step
-1. The maintainer decides on pushing and opening PR 4. Then watch CI, especially the PostgreSQL and MySQL jobs
-   (T11's range check and T12's bigint run against real 4-byte columns there) and the Rails 7.2 and 8.0 rows.
+1. The maintainer decides on pushing `26c47133` and this note to #378. Then watch Upgrade Path go green; the
+   other 18 checks passed at `3b2ebeaf`, PostgreSQL, MySQL and the Rails 7.2 and 8.0 rows included.
 
 ## Open questions
 - The installer template's sync comment says "adds ~1-5ms to requests that trigger errors"
@@ -50,6 +55,9 @@
   HEAD doesn't move and the files stay staged. Ask the maintainer to unlock it, then rerun the commit.
 - **SQLite and bigint:** a SQLite bigint column reports `limit` nil, and Rails' `SQLite3Integer` holds 8 bytes
   for every integer column. Tell bigint apart by `sql_type`, not `limit`.
+- **The upgrade test depends on where the checkout lives.** J0-J8 raise errors in the gem's own chaos scripts,
+  so a checkout under /tmp gives other frames than a normal one: J7 then takes its "regrouped" branch and
+  passes where CI fails. Bisect `full_upgrade` from a worktree beside the repo, never under /tmp.
 - **The reviewer's worktree starts at main,** not at the branch. Give it the branch SHA and have it read with
   `git diff <base> <sha>` and `git show <sha>:<path>`.
 - **Agents and the working tree:** start a reviewer or research agent with `isolation: "worktree"`, and tell it
