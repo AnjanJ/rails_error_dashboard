@@ -159,7 +159,7 @@ Documentation: https://AnjanJ.github.io/rails_error_dashboard
   spec.add_dependency "concurrent-ruby", "~> 1.3", ">= 1.3.7"
 
   # Development and testing dependencies
-  spec.add_development_dependency "rspec-rails", "~> 7.0"
+  spec.add_development_dependency "rspec-rails", "~> 8.1"
   spec.add_development_dependency "factory_bot_rails", "~> 6.4"
   spec.add_development_dependency "faker", "~> 3.0"
   spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
