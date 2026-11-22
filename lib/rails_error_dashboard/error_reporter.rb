@@ -70,7 +70,9 @@ module RailsErrorDashboard
         # Log failure for debugging but NEVER propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original error: #{error.class} - #{error.message}") if error
-        RailsErrorDashboard::Logger.error("Context: #{context.inspect.truncate(500)}") if context
+        # No Context line: the host's context is unfiltered, and its request's
+        # inspect carries the URL with its query string (hardening-1-0-rc2,
+        # REQ-59).
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
         nil # Explicitly return nil, never raise
       ensure

@@ -6,6 +6,11 @@ module RailsErrorDashboard
   class AsyncErrorLoggingJob < ApplicationJob
     queue_as :default
 
+    # The arguments are a capture: user id, IP, user agent and the request's
+    # context. Active Job logs them at info on every enqueue and perform
+    # (hardening-1-0-rc2, REQ-60).
+    self.log_arguments = false
+
     # Performs async error logging
     # @param exception_data [Hash] Serialized exception data
     # @param context [Hash] Error context (request, user, etc.)

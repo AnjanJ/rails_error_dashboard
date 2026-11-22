@@ -725,7 +725,7 @@ module RailsErrorDashboard
             occurrence_attrs = {
               error_log: error_log,
               occurred_at: attributes[:occurred_at],
-              user_id: attributes[:user_id],
+              user_id: ErrorLog.storable_user_id(attributes[:user_id], model: ErrorOccurrence),
               request_id: error_context.request_id,
               # Digest, not the raw ID -- it is a bearer credential. Idempotent,
               # so a value already digested at the queue boundary passes through.
@@ -774,7 +774,9 @@ module RailsErrorDashboard
         # CRITICAL: Log but never propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
         RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
-        RailsErrorDashboard::Logger.error("Context: #{@context.inspect.truncate(500)}") if @context
+        # No Context line: @context holds request.params and the URL before
+        # RED filters them, so it printed passwords and tokens at :error
+        # (hardening-1-0-rc2, REQ-59).
         RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
 
         # A worker must not report a delivery it did not make. Only the
@@ -929,8 +931,14 @@ module RailsErrorDashboard
         ]
       end
 
+      # A connection timeout skips the fallback: Application.first would wait
+      # on the same starved pool for checkout_timeout again, on the request's
+      # thread (hardening-1-0-rc2, REQ-21). It reaches #call's rescue, which
+      # returns nil, or re-raises it in a worker so the job retries.
       def find_or_create_application
         Application.find_or_create_by_name(RailsErrorDashboard.resolved_application_name)
+      rescue ActiveRecord::ConnectionTimeoutError
+        raise
       rescue => e
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
         # Fallback: try to find any application or create default

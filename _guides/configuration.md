@@ -650,7 +650,7 @@ end
 
 ### User IDs That Are Not Integers
 
-At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys:
+At install, `user_id` takes the type of your app's primary keys, as Active Storage does for its keys. Without `primary_key_type` it is `bigint` (an `integer` on installs before 1.0.0-rc.2):
 
 ```ruby
 # config/application.rb
@@ -659,7 +659,7 @@ config.generators do |g|
 end
 ```
 
-On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number.
+On an existing install, change the type of `user_id` on `rails_error_dashboard_error_logs` and `rails_error_dashboard_error_occurrences` with a migration of your own. Until then, a user ID that is not an integer is stored as `nil` rather than as a wrong number, and so is an integer too large for the column (see [Widen `user_id` to bigint](/rails_error_dashboard/docs/upgrading/#widen-user_id-to-bigint)).
 
 
 ---
@@ -758,7 +758,8 @@ Optimize performance and reduce database load with these features.
 ### Async Error Logging
 
 Save errors in a background job, so the request that raised them doesn't wait for the database
-write. The generated initializer turns this on.
+write. The generated initializer turns this on. Without it, the default is `false`: RED captures
+synchronously, saving the error before the response is sent. In deploy-shape runs on AMD EPYC 9V45 and 7763 and arm64 Neoverse-N2 runners, sync capture took 3.23 to 6.78 ms (medians) with the database on the same runner, and 11.84 to 16.38 ms with the database 1 ms away, against the 5 ms budget.
 
 ```ruby
 RailsErrorDashboard.configure do |config|

@@ -1,64 +1,65 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-grouping-window (PR 3: T7 and T8), after `757aae68`; this note is
-> the branch's last commit. With the maintainer's yes it is pushed and opened as PR 3 (find it with
-> `gh pr list --head feat/hardening-grouping-window`). Merging needs another yes.
+> Written 2026-11-21 on feat/hardening-defaults-hygiene (PR 4: T9-T13 and T32), after `26c47133`; this
+> note is the branch's last commit. PR 4 is #378, opened with the maintainer's yes. Each further push,
+> and the merge, need their own yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T8 and T35 are done. PR 1 (#373) and PR 2 (#375) are squash-merged, and
-  PR 2's branch is deleted. PR 3 is this branch, open and waiting for CI and the maintainer's merge.
-  T9-T34 are unstarted.
-- The tracking issue is #374. Items 1 and 2 of its checklist are ticked. Tick item 3, adding "(#N)",
-  when PR 3 merges. Change only that line, and diff the body before saving. Never close it.
+- **`hardening-1-0-rc2`**: T1-T13, T32 and T35 are done. PRs 1-3 (#373, #375, #377) are squash-merged and
+  their branches deleted. PR 4 is this branch. T14-T31, T33 and T34 are unstarted.
+- The tracking issue is #374. Items 1-3 of its checklist are ticked. Tick item 4, adding "(#N)", when PR 4
+  merges. Change only that line, diff the body before saving, and never close it.
 
 ## Done this session (2026-11-21)
-- `7b960efc` T7 (REQ-9 to REQ-11): an open group is matched by its last occurrence.
-  `FindOrIncrementError.within_group_window` (`last_seen_at > :cutoff OR (last_seen_at IS NULL AND
-  occurred_at > :cutoff)`) serves find_unresolved, its duplicate-create retry (which now calls
-  find_unresolved) and `FlushStormCounts#unresolved_target`, and it wraps `with_hash` / `with_hashes`,
-  so it applies to v2 and v1.
-  - design.md said `>=`. REQ-10 starts a new group at "24 hours old or more", so the record was
-    amended to `>` in the same commit, and the maintainer said yes to it.
-  - `spec/commands/grouping_window_spec.rb`: 30 examples (5 window cases x v2/v1 x lookup, retry,
-    flush). 6 fail on main's code. Seven deliberate breaks each fail 2-6 examples. With no NULL
-    fallback, only the v1 examples fail: in v2 the new row collides on the group-identity index and
-    `claim_conflicting_row` counts it on the seeded row.
-  - `benchmark/scenarios.rb` "Reopen collision fallback" seeded its stale open row with
-    `last_seen_at` = now, so the new rule found it and never collided (full-suite failure at
-    `spec/benchmark/scenarios_spec.rb:185`). It now seeds `last_seen_at` two days ago and rolls back
-    each iteration. Without the rollback, 1 claim instead of 4.
-  - EXPLAIN on PostgreSQL 16, 200,000 rows: the lookup uses
-    `index_rails_error_dashboard_error_logs_on_error_hash` (rc.1 used
-    `index_error_logs_on_hash_resolved_occurred`); 0.116 ms against 0.097. The decision's reversal
-    condition did not fire.
-  - bin/benchmark against rc.1 (M3 Max, SQLite, YJIT, alternating, two runs each): storm check calm
-    3.43-3.44 vs 3.31-3.46 us, shedding 4.66-4.70 vs 4.61-4.76, open 4.53-4.61 vs 4.42-4.69; async
-    capture 99 vs 99-106 us; sync capture 0.995-1.04 vs 1.03-1.10 ms. The reopen row (892-895 vs
-    948-971 us) is not like for like, since the scenario changed. Put these in PR 3's body.
-- `f1e39d73` T8 (REQ-12): PLUGIN_SYSTEM.md (:54 and the Jira example), GLOSSARY.md, API_REFERENCE.md
-  and TROUBLESHOOTING.md describe the last-occurrence rule, and so do their Jekyll copies in
-  `_features/` and `_reference/`.
-- `757aae68`, with the maintainer's yes: TROUBLESHOOTING.md (and its site copy) described the rc.1
-  fingerprint ("the file of the first backtrace line"); it now names v2's parts and links
-  PUBLIC_API.md's Grouping section.
-- The shipkit reviewer (worktree): PASS, with REQ-9 to REQ-12 MET. It listed `benchmark/scenarios.rb`
-  and the Jekyll copies as beyond the spec's paths, and both were explained above. Its worktree was
-  created at main, not at the branch: point a reviewer at the branch SHA with `git show <sha>:<path>`.
-- Full suite at `7b960efc`'s tree: 7,231 examples, 0 failures, 9 pending. Lefthook at `7b960efc`:
-  chaos 1,742 passed, 0 failed. spec-check: 0 gaps.
+- PR 3 (#377, T7-T8) merged as `6bcabbdd`, #374 item 3 ticked, branch deleted, all with the maintainer's yes.
+- PR 4, each task test-first, with deliberate breaks, the full suite and the full lefthook (chaos 1,742 passed):
+  - `7df7a856` T9 (REQ-13): the docs say async is the installer's default and sync the library's, and give
+    sync's cost: 3.23-6.78 ms with the database on the runner, 11.84-16.38 ms with it 1 ms away. FAQ.md is
+    outside T9's list: its "~10-50ms" / "~1-2ms" figures contradicted the measurements.
+  - `f2778d3b` T10 (REQ-14): `rubygems_mfa_required`. The release uses trusted publishing, which rubygems.org
+    doesn't hold to the flag (design.md, REQ-14 notes). The rc.2 notes must say a manual `gem push` needs MFA.
+  - `13145864` T11 (REQ-15): an out-of-range `user_id` is stored as nil. Before, `create!` raised
+    `ActiveModel::RangeError` and the whole capture was lost. The occurrence is checked against its own column.
+  - `0471cf85` T12 (REQ-16): fresh installs create `user_id` as bigint; UPGRADING.md has "Widen `user_id` to
+    bigint". CONFIGURATION.md and API_REFERENCE.md updated to match.
+  - `bf877987` T13 (REQ-21): a `ConnectionTimeoutError` in the application lookup skips the fallback.
+  - `e40d8a4a` T32 (REQ-59, REQ-60): no Context lines on the failure paths; `log_arguments = false` on the two
+    capture jobs; an exhausted job is named by class and id. The spec passes on Rails 7.2.4, 8.0.5.2, 8.1.4.1.
+- `26c47133`: #378's CI failed only Upgrade Path (published 0.18.1 -> branch), on J7 and J8. Cause: #375's
+  v1 -> v2 move (REQ-5) changes the matched group's hash, and J7/J8 asserted it kept the old one. The job
+  runs only on release PRs and PRs touching migrations, so #375 and #377 never ran it. Reproduced from a
+  normal checkout on main (`6bcabbdd`, fails) and `94ce924f` (passes); fixed by asserting the v2
+  fingerprint; a break (no move) fails both.
+- bin/benchmark against rc.1 (M3 Max, SQLite, YJIT, alternating, two runs each): sync capture 1.02-1.04 vs
+  1.06-1.12 ms; async 95-100 vs 103 µs; storm check calm 3.38-3.41 vs 3.39-3.59 µs, shedding 4.59-4.63 vs
+  4.71-5.17, open 4.44-4.62 vs 4.50-4.83. Put these in PR 4's body.
+- Full suite at `e40d8a4a`: 7,250 examples, 0 failures, 9 pending. The shipkit reviewer: PASS, 7 MET (REQ-13
+  to REQ-16, REQ-21, REQ-59, REQ-60). spec-check: 0 gaps.
 
 ## Next step
-1. Watch PR 3's CI, especially the PostgreSQL, MySQL and Ruby 3.3 jobs, and the benchmark job's CPU
-   row. Then the maintainer decides on the squash merge; ticking #374's item 3 and deleting the
-   branch follow it, each with its own yes.
+1. The maintainer decides on pushing `26c47133` and this note to #378. Then watch Upgrade Path go green; the
+   other 18 checks passed at `3b2ebeaf`, PostgreSQL, MySQL and the Rails 7.2 and 8.0 rows included.
 
 ## Open questions
-- Release-please opened #376 "release 1.1.0-rc.1", its default bump after a `feat:` commit. tasks.md
-  plans rc.2 through a `Release-As: 1.0.0-rc.2` commit, so #376 must not be merged as it is.
-- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a
-  group moved to v2 can send one extra notification.
+- The installer template's sync comment says "adds ~1-5ms to requests that trigger errors"
+  (`templates/initializer.rb`), against the measured 3.23-16.38 ms. T34 (REQ-61) edits that template; fix it
+  there.
+- Release-please's #376 ("release 1.1.0-rc.1") must not be merged as it is: rc.2 is cut with a
+  `Release-As: 1.0.0-rc.2` commit (tasks.md, the release steps).
+- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a group
+  moved to v2 can send one extra notification.
 
 ## Do not forget
+- **Commit signing goes through the 1Password agent too.** A locked 1Password fails a commit *after*
+  lefthook has run (`error: 1Password: agent returned an error`, `fatal: failed to write commit object`);
+  HEAD doesn't move and the files stay staged. Ask the maintainer to unlock it, then rerun the commit.
+- **SQLite and bigint:** a SQLite bigint column reports `limit` nil, and Rails' `SQLite3Integer` holds 8 bytes
+  for every integer column. Tell bigint apart by `sql_type`, not `limit`.
+- **The upgrade test depends on where the checkout lives.** J0-J8 raise errors in the gem's own chaos scripts,
+  so a checkout under /tmp gives other frames than a normal one: J7 then takes its "regrouped" branch and
+  passes where CI fails. Bisect `full_upgrade` from a worktree beside the repo, never under /tmp.
+- **The reviewer's worktree starts at main,** not at the branch. Give it the branch SHA and have it read with
+  `git diff <base> <sha>` and `git show <sha>:<path>`.
 - **Agents and the working tree:** start a reviewer or research agent with `isolation: "worktree"`, and tell it
   not to checkout, stash or reset. The first T3 reviewer, started without it, stashed the uncommitted T4 work
   and checked out a past commit in this tree. It restored everything, but check `git status`, `git stash list`

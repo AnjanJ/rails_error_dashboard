@@ -406,7 +406,7 @@ RailsErrorDashboard::ManualErrorReporter.report(
 | `message:` | Required |
 | `backtrace:` | An array of lines, or one string with a line per frame. With source code integration on, the viewer reads the files these lines name, under its [file rules](SOURCE_CODE_INTEGRATION.md#security) |
 | `platform:` | Stored as given. The dashboard's iOS and Android badges match exactly `"iOS"` and `"Android"`. Without it the platform is `"API"` |
-| `user_id:` | Stored as given. While RED's `user_id` column is an integer, an ID it can't hold, such as a UUID, is stored as `nil`; see [User IDs That Are Not Integers](guides/CONFIGURATION.md#user-ids-that-are-not-integers) |
+| `user_id:` | Stored as given. While RED's `user_id` column is an integer, an ID it can't hold, such as a UUID or a number too large for the column, is stored as `nil`; see [User IDs That Are Not Integers](guides/CONFIGURATION.md#user-ids-that-are-not-integers) |
 | `app_version:` | Stored as given |
 | `request_url:`, `user_agent:`, `ip_address:` | Stored as given |
 | `metadata:` | A Hash. It is shown with the request params. Anything else is dropped |
