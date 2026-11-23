@@ -201,9 +201,9 @@ assert "M6: episode finalized with ended_at", m6_episode && m6_episode[:ended_at
 m6_dispatched = []
 dispatcher = RailsErrorDashboard::Services::ErrorNotificationDispatcher.singleton_class
 dispatcher.send(:alias_method, :__m6_original_call, :call)
-dispatcher.send(:define_method, :call) do |error_log|
+dispatcher.send(:define_method, :call) do |error_log, **options|
   m6_dispatched << error_log.error_type
-  __m6_original_call(error_log)
+  __m6_original_call(error_log, **options)
 end
 begin
   RailsErrorDashboard::Services::NotificationThrottler.clear!

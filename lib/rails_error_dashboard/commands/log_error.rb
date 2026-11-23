@@ -812,12 +812,13 @@ module RailsErrorDashboard
 
         # Claim, THEN send. The claim is a conditional UPDATE only one process can
         # win, so N workers reopening the same error send one notification, not
-        # N. The price: if the send below fails, this error is not retried inside
-        # the cooldown window. Recording after sending is what let every process
-        # through.
-        return unless Services::NotificationThrottler.claim!(error_log, respect_cooldown: respect_cooldown)
+        # N. Recording after sending is what let every process through. The
+        # jobs get the claim's time, so one that fails on every retry can hand
+        # the claim back (hardening-1-0-rc2, REQ-31).
+        claimed_at = Time.current
+        return unless Services::NotificationThrottler.claim!(error_log, respect_cooldown: respect_cooldown, at: claimed_at)
 
-        Services::ErrorNotificationDispatcher.call(error_log)
+        Services::ErrorNotificationDispatcher.call(error_log, claimed_at: claimed_at)
       rescue => e
         # The error row is already written by the time we get here. A channel
         # that cannot be reached (Redis down for the Slack job's enqueue, a

@@ -3,18 +3,28 @@
 module RailsErrorDashboard
   # Job to send error notifications to Discord via webhook
   class DiscordErrorNotificationJob < ApplicationJob
+    include Concerns::TransientDelivery
+
     queue_as :default
 
     # @param locale [String, nil] resolved at enqueue time. nil for jobs
     #   enqueued by a pre-Phase-4 version still draining from the queue.
-    def perform(error_log_id, locale = nil)
+    # @param claimed_at [Time, nil] the cooldown claim to release if every
+    #   attempt fails (Concerns::TransientDelivery). nil for rc.1's jobs.
+    def perform(error_log_id, locale = nil, claimed_at = nil)
       error_log = ErrorLog.find(error_log_id)
       webhook_url = RailsErrorDashboard.configuration.discord_webhook_url
 
       return unless webhook_url.present?
 
       payload = Services::DiscordPayloadBuilder.call(error_log, locale: job_locale(locale))
-      post_json(webhook_url, payload)
+      response = deliver_or_retry { post_json(webhook_url, payload) }
+
+      unless check_delivery_response!(response, "Discord")
+        Rails.logger.error("[RailsErrorDashboard] Discord notification failed: #{response.code}")
+      end
+    rescue TransientDeliveryError
+      raise
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Failed to send Discord notification: #{e.message}")
       Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace

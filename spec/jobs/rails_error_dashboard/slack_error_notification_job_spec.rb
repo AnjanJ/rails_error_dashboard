@@ -165,9 +165,11 @@ RSpec.describe RailsErrorDashboard::SlackErrorNotificationJob, type: :job do
       end
     end
 
+    # A 5xx retries now (spec/jobs/notification_retry_spec.rb); a 4xx is the
+    # failure that logs and finishes.
     context "when Slack API returns error" do
       it "logs the error" do
-        stub_request(:post, webhook_url).to_return(status: 500, body: "Internal Server Error")
+        stub_request(:post, webhook_url).to_return(status: 400, body: "invalid_payload")
 
         allow(Rails.logger).to receive(:error)
 

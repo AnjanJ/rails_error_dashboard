@@ -52,7 +52,7 @@ RSpec.describe "Locale propagation into jobs" do
       expect {
         RailsErrorDashboard::Services::ErrorNotificationDispatcher.call(error_log)
       }.to have_enqueued_job(RailsErrorDashboard::SlackErrorNotificationJob)
-        .with(error_log.id, TEST_LOCALE)
+        .with(error_log.id, TEST_LOCALE, nil)
     end
 
     it "prefers the acting user's locale when enqueued from a dashboard request" do
@@ -88,8 +88,8 @@ RSpec.describe "Locale propagation into jobs" do
       RailsErrorDashboard::Services::ErrorNotificationDispatcher.call(error_log)
 
       serialized = ActiveJob::Base.queue_adapter.enqueued_jobs.last
-      expect(serialized[:args].last).to be_a(String)
-      expect(serialized[:args].last).to eq(TEST_LOCALE)
+      expect(serialized[:args][1]).to be_a(String)
+      expect(serialized[:args][1]).to eq(TEST_LOCALE)
     end
 
     it "survives an ActiveJob serialization round-trip" do

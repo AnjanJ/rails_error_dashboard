@@ -57,14 +57,16 @@ RSpec.describe RailsErrorDashboard::TelegramErrorNotificationJob, type: :job do
       expect(Rails.logger).to have_received(:error).with(/Failed to send Telegram notification/)
     end
 
+    # A DNS failure retries now (spec/jobs/notification_retry_spec.rb, which
+    # also checks the redaction on that path). A TLS failure does not.
     it "logs a transport failure with the token redacted" do
-      stub_request(:post, url).to_raise(SocketError.new("getaddrinfo: #{url}"))
+      stub_request(:post, url).to_raise(OpenSSL::SSL::SSLError.new("certificate verify failed: #{url}"))
       allow(Rails.logger).to receive(:error)
 
       expect { described_class.new.perform(error_log.id) }.not_to raise_error
 
       expect(Rails.logger).to have_received(:error)
-        .with("[RailsErrorDashboard] Failed to send Telegram notification: getaddrinfo: https://api.telegram.org/bot[FILTERED]/sendMessage")
+        .with("[RailsErrorDashboard] Failed to send Telegram notification: certificate verify failed: https://api.telegram.org/bot[FILTERED]/sendMessage")
       expect(Rails.logger).not_to have_received(:error).with(/#{Regexp.escape(token)}/)
     end
 
