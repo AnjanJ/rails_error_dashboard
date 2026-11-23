@@ -1,55 +1,74 @@
 # Handoff
 
-> Written 2026-11-21 on feat/hardening-defaults-hygiene (PR 4: T9-T13 and T32), after `26c47133`; this
-> note is the branch's last commit. PR 4 is #378, opened with the maintainer's yes. Each further push,
-> and the merge, need their own yes.
+> Written 2026-11-23 on feat/hardening-notifications (PR 5: T14-T16), after `f4c16092`; this note is the
+> branch's last commit. Nothing is pushed. The push, opening the PR, each later push and the merge each need
+> the maintainer's yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T13, T32 and T35 are done. PRs 1-3 (#373, #375, #377) are squash-merged and
-  their branches deleted. PR 4 is this branch. T14-T31, T33 and T34 are unstarted.
-- The tracking issue is #374. Items 1-3 of its checklist are ticked. Tick item 4, adding "(#N)", when PR 4
+- **`hardening-1-0-rc2`**: T1-T16, T32 and T35 are done. PRs 1-4 (#373, #375, #377, #378) are squash-merged
+  and their branches deleted. PR 5 is this branch, not yet pushed. T17-T31, T33 and T34 are unstarted.
+- The tracking issue is #374. Items 1-4 of its checklist are ticked. Tick item 5, adding "(#N)", when PR 5
   merges. Change only that line, diff the body before saving, and never close it.
 
-## Done this session (2026-11-21)
-- PR 3 (#377, T7-T8) merged as `6bcabbdd`, #374 item 3 ticked, branch deleted, all with the maintainer's yes.
-- PR 4, each task test-first, with deliberate breaks, the full suite and the full lefthook (chaos 1,742 passed):
-  - `7df7a856` T9 (REQ-13): the docs say async is the installer's default and sync the library's, and give
-    sync's cost: 3.23-6.78 ms with the database on the runner, 11.84-16.38 ms with it 1 ms away. FAQ.md is
-    outside T9's list: its "~10-50ms" / "~1-2ms" figures contradicted the measurements.
-  - `f2778d3b` T10 (REQ-14): `rubygems_mfa_required`. The release uses trusted publishing, which rubygems.org
-    doesn't hold to the flag (design.md, REQ-14 notes). The rc.2 notes must say a manual `gem push` needs MFA.
-  - `13145864` T11 (REQ-15): an out-of-range `user_id` is stored as nil. Before, `create!` raised
-    `ActiveModel::RangeError` and the whole capture was lost. The occurrence is checked against its own column.
-  - `0471cf85` T12 (REQ-16): fresh installs create `user_id` as bigint; UPGRADING.md has "Widen `user_id` to
-    bigint". CONFIGURATION.md and API_REFERENCE.md updated to match.
-  - `bf877987` T13 (REQ-21): a `ConnectionTimeoutError` in the application lookup skips the fallback.
-  - `e40d8a4a` T32 (REQ-59, REQ-60): no Context lines on the failure paths; `log_arguments = false` on the two
-    capture jobs; an exhausted job is named by class and id. The spec passes on Rails 7.2.4, 8.0.5.2, 8.1.4.1.
-- `26c47133`: #378's CI failed only Upgrade Path (published 0.18.1 -> branch), on J7 and J8. Cause: #375's
-  v1 -> v2 move (REQ-5) changes the matched group's hash, and J7/J8 asserted it kept the old one. The job
-  runs only on release PRs and PRs touching migrations, so #375 and #377 never ran it. Reproduced from a
-  normal checkout on main (`6bcabbdd`, fails) and `94ce924f` (passes); fixed by asserting the v2
-  fingerprint; a break (no move) fails both.
-- bin/benchmark against rc.1 (M3 Max, SQLite, YJIT, alternating, two runs each): sync capture 1.02-1.04 vs
-  1.06-1.12 ms; async 95-100 vs 103 µs; storm check calm 3.38-3.41 vs 3.39-3.59 µs, shedding 4.59-4.63 vs
-  4.71-5.17, open 4.44-4.62 vs 4.50-4.83. Put these in PR 4's body.
-- Full suite at `e40d8a4a`: 7,250 examples, 0 failures, 9 pending. The shipkit reviewer: PASS, 7 MET (REQ-13
-  to REQ-16, REQ-21, REQ-59, REQ-60). spec-check: 0 gaps.
+## Done this session (2026-11-23)
+- PR 5, each task test-first, with deliberate breaks, the full suite and the full lefthook (chaos 1,742 passed):
+  - `c433eb55` T14 (REQ-29 to REQ-31): the six channel jobs raise `TransientDeliveryError` on a timeout, a
+    refused or reset connection, DNS, HTTP 429/5xx or SMTP 4xx (new `Concerns::TransientDelivery`), and
+    retry 3 times; anything else logs and finishes. When retries run out the job calls
+    `NotificationThrottler.release!`, which clears `last_notified_at` only if it still equals the job's
+    `claimed_at` (LogError picks the time, passes it to `claim!(at:)` and the dispatcher). A nanosecond
+    claim time matches the stored microseconds on SQLite and PostgreSQL 16 (reproduced). 43 breaks.
+  - The first T14 commit's chaos run caught a host-safety bug in it: on `:inline` (and Resque without a
+    scheduler, Sneakers, queue_classic) `enqueue_at` raises `NotImplementedError`, a ScriptError that
+    passed every rescue on the capture path and reached the host. The concern now overrides `retry_job`:
+    a retry that can't be scheduled is the last attempt. Recorded in design.md and tasks/lessons.md.
+  - `484fe0bd` T15 (REQ-32, REQ-33): one webhook job per URL, given `WebhookDelivery.url_digest(url)`, not
+    the URL (tokens; maintainer's yes, in design.md). `X-Error-Dashboard-Delivery` is a SHA-256 of
+    `job_id` and the URL, so it survives retries; posts with no job get a random id. WEBHOOKS.md has
+    "Delivery: at least once"; NOTIFICATIONS.md lists the header (maintainer's yes). 11 breaks.
+  - `f4c16092` T16 (REQ-34, REQ-35): `CreateIssue` returns `code:` (`:created`, `:already_linked`,
+    `:not_configured`, `:not_found`, `:failed`; the last two beyond design.md's three, with the
+    maintainer's yes). The job counts a failed result once and doesn't retry the first three failure
+    codes. The task's `I18n.with_locale(:de)` alone can't make the test fail: `red_t` follows
+    `dashboard_locale`, so the test sets both and checks the text is German. 11 breaks.
+- Full suite at `f4c16092`: 7,347 examples, 0 failures, 9 pending. The shipkit reviewer: PASS, 7 MET
+  (REQ-29 to REQ-35). spec-check: 0 gaps.
+- No bin/benchmark: the request path does no new work in T14 (`Time.current` moved from `claim!` to its
+  caller) and the benchmark configures no channels; with webhooks on, a sync capture now enqueues one job
+  per URL instead of one. Read, not measured.
 
 ## Next step
-1. The maintainer decides on pushing `26c47133` and this note to #378. Then watch Upgrade Path go green; the
-   other 18 checks passed at `3b2ebeaf`, PostgreSQL, MySQL and the Rails 7.2 and 8.0 rows included.
+1. The maintainer decides on pushing this branch and opening PR 5. Its body needs the points above,
+   "Refs #374" and the Claude Code line.
 
 ## Open questions
+- One intermittent chaos failure on this branch, not explained: the sync app failed E0 (the subscriber
+  probe) once during T14's second commit attempt, then passed 8 runs in a row and both later commits. The
+  failed app was deleted before its log was read. Watch for E0 on CI.
+- `_guides/notifications.md` lacks the "Muting Notifications for Specific Errors" section that
+  `docs/guides/NOTIFICATIONS.md` has (pre-existing, not changed).
+- `CreateIssueJob`'s `discard_on`/`rescue ActiveRecord::RecordNotFound` is still unreachable (the command
+  rescues it); `:not_found` now covers the case. Removing them is a separate cleanup.
 - The installer template's sync comment says "adds ~1-5ms to requests that trigger errors"
   (`templates/initializer.rb`), against the measured 3.23-16.38 ms. T34 (REQ-61) edits that template; fix it
   there.
 - Release-please's #376 ("release 1.1.0-rc.1") must not be merged as it is: rc.2 is cut with a
-  `Release-As: 1.0.0-rc.2` commit (tasks.md, the release steps).
+  `Release-As: 1.0.0-rc.2` commit (tasks.md, the release steps). The rc.2 notes must say a manual `gem push`
+  needs MFA, and should say notifications now retry (receivers can see duplicates; the delivery header).
+- The Upgrade Path job runs only on release PRs and PRs touching migrations, so a grouping regression can
+  reach main unseen (#375's did). Worth a CI change; needs the maintainer's yes.
 - Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a group
   moved to v2 can send one extra notification.
 
 ## Do not forget
+- **Commit signing can also time out.** After a ~4 minute lefthook run, 1Password failed with `failed to fill
+  whole buffer` (no unlock prompt answered in time). The maintainer ran `! git commit -F <msg>` themselves and
+  approved the prompt; later commits signed unattended.
+- **Chaos failures:** the orchestrator keeps `/tmp/pre_release_test_<pid>` on failure. Read the app's
+  `log/production.log` before deleting it; reruns in it fail after phase Z drops the tables. Reproduce with
+  `bin/pre-release-test full_sync` (about a minute) instead.
+- **Retry tests:** stub the adapter's `enqueue_at` to raise `NotImplementedError` to test an adapter that
+  can't schedule; never swap adapters. `CreateIssue`'s messages follow `dashboard_locale`, not `I18n.locale`.
 - **Commit signing goes through the 1Password agent too.** A locked 1Password fails a commit *after*
   lefthook has run (`error: 1Password: agent returned an error`, `fatal: failed to write commit object`);
   HEAD doesn't move and the files stay staged. Ask the maintainer to unlock it, then rerun the commit.
