@@ -387,6 +387,14 @@ transaction.
 - `X-Error-Dashboard-Delivery` is added to the contract's headers. Decision 0005 allows new headers in
   1.x.
 - `docs/WEBHOOKS.md` says delivery is at-least-once.
+- **Amended 2026-11-23, in T15, with the maintainer's yes:** the webhook job is given
+  `WebhookDelivery.url_digest(url)`, not the URL, and finds the URL in `webhook_urls` when it runs. A URL
+  can carry a token, and Active Job logs a job's arguments on enqueue and keeps them in the queue store. A
+  URL removed from `webhook_urls` before the job runs is not posted.
+- **Amended 2026-11-23, in T14:** when the queue adapter can't schedule a retry (`:inline`, and Resque
+  without a scheduler, Sneakers, queue_classic raise `NotImplementedError` from `enqueue_at`), the attempt
+  counts as the last: log, release the claim, finish. `NotImplementedError` isn't a `StandardError`, so it
+  passed every rescue on the capture path and reached the host. The pre-commit chaos run caught it.
 
 **Falsifiability.** We would reverse the claim release if, after 1.0.0, two or more issues report
 duplicate alerts on channels that had succeeded.

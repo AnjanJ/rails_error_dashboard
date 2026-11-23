@@ -44,8 +44,25 @@ not as strings.
 | `User-Agent` | Every post | Starts with `RailsErrorDashboard/` |
 | `X-Error-Dashboard-Event` | Every post | The same as the body's `event` |
 | `X-Error-Dashboard-ID` | Events that name one error | The error's `id` |
+| `X-Error-Dashboard-Delivery` | Every post | 32 hex characters, the same on every retry of this post. See [Delivery: at least once](#delivery-at-least-once) |
 | `X-Error-Dashboard-Timestamp` | Every post, once a signing secret is set | Unix seconds when RED sent it |
 | `X-Error-Dashboard-Signature-256` | Every post, once a signing secret is set | `sha256=` and the hex digest |
+
+## Delivery: at least once
+
+A post that times out, can't connect, or gets a 429 or a 5xx answer is tried again: three attempts in all, the
+second about 3 seconds after the first and the third about 18 seconds after that. Any other answer, such as a
+400, is logged and not retried. Each URL in `webhook_urls` is posted on its own, so a retry goes only to the URL
+that failed.
+
+So a receiver can get the same post more than once, for example when it stored a post but answered after RED
+had given up waiting. Every retry of a post carries the same `X-Error-Dashboard-Delivery` header, and every other
+post a different one. To drop duplicates, keep the delivery ids you have handled for a day, and answer a post
+whose id you have already seen with a 2xx without acting on it. Any other answer to a duplicate is retried.
+
+If all three attempts fail, RED drops that alert and lets the error notify again on its next occurrence. That
+next alert is a new post with its own delivery id, and it goes to every channel again, including any that
+received the first one.
 
 ## Verifying a signature
 

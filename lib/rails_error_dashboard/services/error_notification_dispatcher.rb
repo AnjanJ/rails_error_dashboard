@@ -73,7 +73,12 @@ module RailsErrorDashboard
           end
 
           if config.enable_webhook_notifications && config.webhook_urls.present?
-            WebhookErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
+            # One job per URL, so a retry re-posts only the URL that failed
+            # (hardening-1-0-rc2, REQ-32). Each job gets a digest of its URL,
+            # not the URL, which can carry a token.
+            Array(config.webhook_urls).uniq.each do |url|
+              WebhookErrorNotificationJob.perform_later(error_log.id, locale, claimed_at, WebhookDelivery.url_digest(url))
+            end
             fired << "webhook"
           end
 

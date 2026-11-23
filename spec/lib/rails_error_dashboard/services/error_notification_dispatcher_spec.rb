@@ -106,7 +106,8 @@ RSpec.describe RailsErrorDashboard::Services::ErrorNotificationDispatcher do
 
       expect {
         described_class.call(error_log)
-      }.to have_enqueued_job(RailsErrorDashboard::WebhookErrorNotificationJob).with(error_log.id, "en", nil)
+      }.to have_enqueued_job(RailsErrorDashboard::WebhookErrorNotificationJob)
+        .with(error_log.id, "en", nil, RailsErrorDashboard::Services::WebhookDelivery.url_digest("https://example.com/webhook"))
     end
 
     it "enqueues nothing when all notifications disabled" do

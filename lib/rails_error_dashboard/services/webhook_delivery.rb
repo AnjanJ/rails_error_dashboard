@@ -29,18 +29,23 @@ module RailsErrorDashboard
       READ_TIMEOUT = 10
       USER_AGENT = "RailsErrorDashboard/1.0"
       CONTRACT_VERSION = 1
+      DELIVERY_HEADER = "X-Error-Dashboard-Delivery"
 
       class << self
         # @param url [String]
         # @param payload [Hash] serialised with #to_json, with version added
         # @param headers [Hash{String => String}] merged over the defaults. The
         #   contract's headers win: they come from the body, so they can't disagree
+        # @param delivery_id [String, nil] sent as X-Error-Dashboard-Delivery.
+        #   A job that retries passes .delivery_id, so every retry sends the
+        #   same one. nil (a post that is never retried) sends a fresh id
         # @return [HTTParty::Response, Net::HTTPResponse]
-        def post(url, payload, headers: {})
+        def post(url, payload, headers: {}, delivery_id: nil)
           body = { version: CONTRACT_VERSION }.merge(payload).to_json
           all_headers = { "Content-Type" => "application/json", "User-Agent" => USER_AGENT }
             .merge(headers)
             .merge(contract_headers(payload))
+            .merge(DELIVERY_HEADER => delivery_id.presence || SecureRandom.hex(16))
             .merge(signature_headers(body))
 
           if defined?(HTTParty)
@@ -57,6 +62,23 @@ module RailsErrorDashboard
             request.body = body
             http.request(request)
           end
+        end
+
+        # The delivery id of one job's post to one URL (hardening-1-0-rc2,
+        # REQ-32). The same on every retry: Active Job keeps job_id when
+        # retry_on re-enqueues a job. Different for every other job or URL, so
+        # a receiver can drop a duplicate by it.
+        # @return [String] 32 hex characters
+        def delivery_id(job_id, url)
+          Digest::SHA256.hexdigest("#{job_id}\n#{url}")[0, 32]
+        end
+
+        # What WebhookErrorNotificationJob is given to name its URL. Not the
+        # URL itself: a webhook URL can carry a token, and job arguments are
+        # logged on enqueue and kept in the queue store.
+        # @return [String] 32 hex characters
+        def url_digest(url)
+          Digest::SHA256.hexdigest(url.to_s)[0, 32]
         end
 
         # The event, and the error when the body is about one.
