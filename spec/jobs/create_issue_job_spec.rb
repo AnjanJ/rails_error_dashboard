@@ -39,4 +39,73 @@ RSpec.describe RailsErrorDashboard::CreateIssueJob do
 
     expect { described_class.perform_now(error_log.id) }.not_to raise_error
   end
+
+  def failures
+    described_class.class_variable_get(:@@recent_failures).size
+  end
+
+  def retries_of(job)
+    described_class.queue_adapter.enqueued_jobs.select { |data| data["job_id"] == job.job_id && data[:at] }
+  end
+
+  # hardening-1-0-rc2/REQ-34
+  it "counts a failed result as one failure, and retries it" do
+    stub_request(:post, "https://api.github.com/repos/user/repo/issues")
+      .to_return(status: 422, body: { message: "Validation Failed" }.to_json)
+    job = described_class.new(error_log.id)
+
+    job.perform_now
+
+    expect(failures).to eq(1)
+    expect(retries_of(job).size).to eq(1)
+  end
+
+  it "counts an error raised outside the command as one failure" do
+    allow(RailsErrorDashboard::Commands::CreateIssue).to receive(:call).and_raise(RuntimeError, "boom")
+    job = described_class.new(error_log.id)
+
+    job.perform_now
+
+    expect(failures).to eq(1)
+    expect(retries_of(job).size).to eq(1)
+  end
+
+  # hardening-1-0-rc2/REQ-35. The command's messages follow dashboard_locale
+  # (Translation#red_t reads Current.locale_or_default, not I18n.locale), so
+  # both are set, and each example first checks the message is German: in
+  # English the old check on the text passed too.
+  context "in German" do
+    around do |example|
+      RailsErrorDashboard.configuration.dashboard_locale = "de"
+      I18n.with_locale(:de) { example.run }
+    end
+
+    it "does not retry when the error already has an issue" do
+      error_log.update!(external_issue_url: "https://github.com/user/repo/issues/99")
+      expect(RailsErrorDashboard::Commands::CreateIssue.call(error_log.id)[:error]).to include("bereits")
+      job = described_class.new(error_log.id)
+
+      job.perform_now
+
+      expect(retries_of(job)).to be_empty
+    end
+
+    it "does not retry when issue tracking is not configured" do
+      RailsErrorDashboard.configuration.enable_issue_tracking = false
+      expect(RailsErrorDashboard::Commands::CreateIssue.call(error_log.id)[:error]).to include("nicht konfiguriert")
+      job = described_class.new(error_log.id)
+
+      job.perform_now
+
+      expect(retries_of(job)).to be_empty
+    end
+  end
+
+  it "does not retry when the error is gone" do
+    job = described_class.new(999_999)
+
+    job.perform_now
+
+    expect(retries_of(job)).to be_empty
+  end
 end
