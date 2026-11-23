@@ -314,9 +314,11 @@ Content-Type: application/json
 User-Agent: RailsErrorDashboard/1.0
 X-Error-Dashboard-Event: error.created
 X-Error-Dashboard-ID: 123
+X-Error-Dashboard-Delivery: 3f2a9c0e7b1d4e6f8a0b2c4d6e8f0a1b
 ```
 
-`X-Error-Dashboard-ID` is only on events about one error.
+`X-Error-Dashboard-ID` is only on events about one error. `X-Error-Dashboard-Delivery` is the same on every retry
+of a post, so a receiver can drop duplicates by it ([Delivery: at least once](../WEBHOOKS.md#delivery-at-least-once)).
 
 ### Signing (HMAC-SHA256)
 

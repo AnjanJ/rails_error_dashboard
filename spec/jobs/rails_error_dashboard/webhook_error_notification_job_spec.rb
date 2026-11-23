@@ -359,7 +359,7 @@ RSpec.describe RailsErrorDashboard::WebhookErrorNotificationJob, type: :job do
       end
 
       it "continues sending if one webhook fails" do
-        stub_request(:post, webhook_urls[0]).to_return(status: 500)
+        stub_request(:post, webhook_urls[0]).to_return(status: 404)
         stub_request(:post, webhook_urls[1]).to_return(status: 200)
 
         allow(Rails.logger).to receive(:warn)
@@ -416,14 +416,16 @@ RSpec.describe RailsErrorDashboard::WebhookErrorNotificationJob, type: :job do
     end
 
     context "when webhook API returns error" do
+      # A 5xx retries now (spec/jobs/notification_retry_spec.rb); a 4xx is the
+      # failure that logs and finishes.
       it "logs warning for failed webhook" do
-        stub_request(:post, webhook_url).to_return(status: 500, body: "Internal Server Error")
+        stub_request(:post, webhook_url).to_return(status: 410, body: "Gone")
 
         allow(Rails.logger).to receive(:warn)
 
         described_class.new.perform(error_log.id)
 
-        expect(Rails.logger).to have_received(:warn).with(/Webhook failed for #{webhook_url}: 500/)
+        expect(Rails.logger).to have_received(:warn).with(/Webhook failed for #{webhook_url}: 410/)
       end
     end
 

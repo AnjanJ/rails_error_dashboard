@@ -170,7 +170,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     rc.1's
 
 ## Notifications
-- [ ] **T14** Channel jobs retry transient failures, and release the claim when retries run out → REQ-29, REQ-30, REQ-31
+- [x] **T14** Channel jobs retry transient failures, and release the claim when retries run out → REQ-29, REQ-30, REQ-31
   - Files: app/jobs/rails_error_dashboard/concerns/transient_delivery.rb, app/jobs/rails_error_dashboard/concerns/plain_channel_message.rb, app/jobs/rails_error_dashboard/slack_error_notification_job.rb, app/jobs/rails_error_dashboard/email_error_notification_job.rb, app/jobs/rails_error_dashboard/discord_error_notification_job.rb, app/jobs/rails_error_dashboard/telegram_error_notification_job.rb, app/jobs/rails_error_dashboard/pagerduty_error_notification_job.rb, app/jobs/rails_error_dashboard/webhook_error_notification_job.rb, lib/rails_error_dashboard/services/notification_throttler.rb, lib/rails_error_dashboard/services/error_notification_dispatcher.rb, spec/jobs/notification_retry_spec.rb
   - Test: spec/jobs/notification_retry_spec.rb, for each channel:
     - a timeout, a refused connection, a 429 and a 503 each schedule a retry, asserted by the scheduled
@@ -181,7 +181,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a job enqueued without `claimed_at` releases nothing.
   - After: none
   - Done when: `rspec spec/jobs` → 0 failures; `klass.rescue_handlers` shows `TransientDeliveryError` checked before `StandardError`
-- [ ] **T15** One webhook job per URL, with a delivery id that survives retries → REQ-32, REQ-33
+- [x] **T15** One webhook job per URL, with a delivery id that survives retries → REQ-32, REQ-33
   - Files: lib/rails_error_dashboard/services/error_notification_dispatcher.rb, app/jobs/rails_error_dashboard/webhook_error_notification_job.rb, lib/rails_error_dashboard/services/webhook_delivery.rb, docs/WEBHOOKS.md, spec/jobs/webhook_delivery_id_spec.rb
   - Test: spec/jobs/webhook_delivery_id_spec.rb:
     - two URLs enqueue two jobs;
@@ -190,7 +190,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - a job enqueued by rc.1 (all URLs in one) still posts each URL.
   - After: T14
   - Done when: `rspec spec/jobs spec/services` → 0 failures; WEBHOOKS.md says at-least-once and how to drop duplicates by the header
-- [ ] **T16** CreateIssueJob counts a failure once, and decides on retries by a result code → REQ-34, REQ-35
+- [x] **T16** CreateIssueJob counts a failure once, and decides on retries by a result code → REQ-34, REQ-35
   - Files: lib/rails_error_dashboard/commands/create_issue.rb, app/jobs/rails_error_dashboard/create_issue_job.rb, spec/jobs/create_issue_job_spec.rb, spec/commands/create_issue_spec.rb
   - Test:
     - a failed result adds one failure to the breaker;

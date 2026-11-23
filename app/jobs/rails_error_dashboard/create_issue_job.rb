@@ -20,6 +20,14 @@ module RailsErrorDashboard
     CIRCUIT_BREAKER_THRESHOLD = 5
     CIRCUIT_BREAKER_WINDOW = 600 # 10 minutes
 
+    # Results another attempt would get again: the error has an issue, issue
+    # tracking is off, or the error was deleted.
+    NO_RETRY_CODES = %i[already_linked not_configured not_found].freeze
+
+    # Raised for a failed result so retry_on runs again. The failure is
+    # already counted, so the rescue below lets it through uncounted.
+    class IssueCreationFailed < StandardError; end
+
     def perform(error_log_id, dashboard_url: nil)
       if circuit_open?
         Rails.logger.warn("[RailsErrorDashboard] CreateIssueJob circuit breaker open — skipping")
@@ -34,10 +42,14 @@ module RailsErrorDashboard
       else
         record_failure
         Rails.logger.error("[RailsErrorDashboard] Failed to create issue for error #{error_log_id}: #{result[:error]}")
-        # Don't retry on "already has a linked issue" or "not configured"
-        return if result[:error]&.include?("already has") || result[:error]&.include?("not configured")
-        raise "Issue creation failed: #{result[:error]}" # triggers retry
+        # By the code: the message is translated, so matching its English
+        # text retried "already linked" in German (hardening-1-0-rc2, REQ-35).
+        return if NO_RETRY_CODES.include?(result[:code])
+
+        raise IssueCreationFailed, "Issue creation failed: #{result[:error]}" # triggers retry
       end
+    rescue IssueCreationFailed
+      raise # counted once, above (REQ-34)
     rescue ActiveRecord::RecordNotFound
       # Error was deleted — discard silently
     rescue => e

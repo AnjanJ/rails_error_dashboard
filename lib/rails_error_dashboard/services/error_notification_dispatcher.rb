@@ -25,7 +25,10 @@ module RailsErrorDashboard
       end
 
       # @param error_log [ErrorLog] The error to notify about
-      def self.call(error_log)
+      # @param claimed_at [Time, nil] the cooldown claim's time, passed to each
+      #   job so one whose retries run out can release it (REQ-31). nil when
+      #   nothing was claimed (the dashboard's test button)
+      def self.call(error_log, claimed_at: nil)
         # OTel: emit a child span around the dispatch so operators can see
         # which channels fired for a given error and how long the enqueue
         # itself took. Actual delivery happens in the background jobs (Slack
@@ -45,32 +48,37 @@ module RailsErrorDashboard
           locale = ApplicationJob.enqueue_locale
 
           if config.enable_slack_notifications && config.slack_webhook_url.present?
-            SlackErrorNotificationJob.perform_later(error_log.id, locale)
+            SlackErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
             fired << "slack"
           end
 
           if config.enable_email_notifications && config.notification_email_recipients.present?
-            EmailErrorNotificationJob.perform_later(error_log.id, locale)
+            EmailErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
             fired << "email"
           end
 
           if config.enable_discord_notifications && config.discord_webhook_url.present?
-            DiscordErrorNotificationJob.perform_later(error_log.id, locale)
+            DiscordErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
             fired << "discord"
           end
 
           if TelegramDelivery.configured?(config)
-            TelegramErrorNotificationJob.perform_later(error_log.id, locale)
+            TelegramErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
             fired << "telegram"
           end
 
           if config.enable_pagerduty_notifications && config.pagerduty_integration_key.present?
-            PagerdutyErrorNotificationJob.perform_later(error_log.id, locale)
+            PagerdutyErrorNotificationJob.perform_later(error_log.id, locale, claimed_at)
             fired << "pagerduty"
           end
 
           if config.enable_webhook_notifications && config.webhook_urls.present?
-            WebhookErrorNotificationJob.perform_later(error_log.id, locale)
+            # One job per URL, so a retry re-posts only the URL that failed
+            # (hardening-1-0-rc2, REQ-32). Each job gets a digest of its URL,
+            # not the URL, which can carry a token.
+            Array(config.webhook_urls).uniq.each do |url|
+              WebhookErrorNotificationJob.perform_later(error_log.id, locale, claimed_at, WebhookDelivery.url_digest(url))
+            end
             fired << "webhook"
           end
 

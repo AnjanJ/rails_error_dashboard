@@ -10,7 +10,12 @@ module RailsErrorDashboard
     # @example
     #   result = CreateIssue.call(error_id, dashboard_url: "https://app.com/error_dashboard/errors/42")
     #   result[:success]   # => true
+    #   result[:code]      # => :created
     #   result[:issue_url] # => "https://github.com/user/repo/issues/42"
+    #
+    # result[:code] is one of :created, :already_linked, :not_configured,
+    # :not_found or :failed. Decide by it, not by result[:error]: that is
+    # translated (hardening-1-0-rc2, REQ-35).
     class CreateIssue
       include RailsErrorDashboard::Translation
 
@@ -28,11 +33,11 @@ module RailsErrorDashboard
 
         # Don't create duplicate issues
         if error.external_issue_url.present?
-          return { success: false, error: red_t("red.commands.issue.already_linked", url: error.external_issue_url) }
+          return { success: false, code: :already_linked, error: red_t("red.commands.issue.already_linked", url: error.external_issue_url) }
         end
 
         client = Services::IssueTrackerClient.from_config
-        return { success: false, error: red_t("red.commands.issue.not_configured") } unless client
+        return { success: false, code: :not_configured, error: red_t("red.commands.issue.not_configured") } unless client
 
         config = RailsErrorDashboard.configuration
         title = "[#{error.error_type}] #{error.message.to_s.truncate(100)}"
@@ -55,14 +60,14 @@ module RailsErrorDashboard
           end
 
           error.update!(attrs)
-          { success: true, issue_url: result[:url], issue_number: result[:number] }
+          { success: true, code: :created, issue_url: result[:url], issue_number: result[:number] }
         else
-          { success: false, error: result[:error] }
+          { success: false, code: :failed, error: result[:error] }
         end
       rescue ActiveRecord::RecordNotFound
-        { success: false, error: red_t("red.commands.error_not_found", id: @error_id) }
+        { success: false, code: :not_found, error: red_t("red.commands.error_not_found", id: @error_id) }
       rescue => e
-        { success: false, error: "#{e.class}: #{e.message}" }
+        { success: false, code: :failed, error: "#{e.class}: #{e.message}" }
       end
     end
   end

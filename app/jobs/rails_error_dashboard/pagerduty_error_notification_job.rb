@@ -4,13 +4,17 @@ module RailsErrorDashboard
   # Job to send critical error notifications to PagerDuty
   # Only triggers for critical severity errors
   class PagerdutyErrorNotificationJob < ApplicationJob
+    include Concerns::TransientDelivery
+
     queue_as :default
 
     PAGERDUTY_EVENTS_API = "https://events.pagerduty.com/v2/enqueue"
 
     # @param locale [String, nil] resolved at enqueue time. nil for jobs
     #   enqueued by a pre-Phase-4 version still draining from the queue.
-    def perform(error_log_id, locale = nil)
+    # @param claimed_at [Time, nil] the cooldown claim to release if every
+    #   attempt fails (Concerns::TransientDelivery). nil for rc.1's jobs.
+    def perform(error_log_id, locale = nil, claimed_at = nil)
       error_log = ErrorLog.find(error_log_id)
 
       # Only trigger PagerDuty for critical errors
@@ -22,11 +26,13 @@ module RailsErrorDashboard
       payload = Services::PagerdutyPayloadBuilder.call(
         error_log, routing_key: routing_key, locale: job_locale(locale)
       )
-      response = post_json(PAGERDUTY_EVENTS_API, payload)
+      response = deliver_or_retry { post_json(PAGERDUTY_EVENTS_API, payload) }
 
-      unless response_success?(response)
+      unless check_delivery_response!(response, "PagerDuty")
         Rails.logger.error("[RailsErrorDashboard] PagerDuty API error: #{response_code(response)} - #{response_body(response)}")
       end
+    rescue TransientDeliveryError
+      raise
     rescue StandardError => e
       Rails.logger.error("[RailsErrorDashboard] Failed to send PagerDuty notification: #{e.message}")
       Rails.logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
@@ -47,14 +53,6 @@ module RailsErrorDashboard
         request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" })
         request.body = payload.to_json
         http.request(request)
-      end
-    end
-
-    def response_success?(response)
-      if response.respond_to?(:success?)
-        response.success?
-      else
-        response.is_a?(Net::HTTPSuccess)
       end
     end
 

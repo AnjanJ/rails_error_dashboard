@@ -387,6 +387,14 @@ transaction.
 - `X-Error-Dashboard-Delivery` is added to the contract's headers. Decision 0005 allows new headers in
   1.x.
 - `docs/WEBHOOKS.md` says delivery is at-least-once.
+- **Amended 2026-11-23, in T15, with the maintainer's yes:** the webhook job is given
+  `WebhookDelivery.url_digest(url)`, not the URL, and finds the URL in `webhook_urls` when it runs. A URL
+  can carry a token, and Active Job logs a job's arguments on enqueue and keeps them in the queue store. A
+  URL removed from `webhook_urls` before the job runs is not posted.
+- **Amended 2026-11-23, in T14:** when the queue adapter can't schedule a retry (`:inline`, and Resque
+  without a scheduler, Sneakers, queue_classic raise `NotImplementedError` from `enqueue_at`), the attempt
+  counts as the last: log, release the claim, finish. `NotImplementedError` isn't a `StandardError`, so it
+  passed every rescue on the capture path and reached the host. The pre-commit chaos run caught it.
 
 **Falsifiability.** We would reverse the claim release if, after 1.0.0, two or more issues report
 duplicate alerts on channels that had succeeded.
@@ -411,6 +419,13 @@ duplicate alerts on channels that had succeeded.
 works.
 
 **Decision.** Option 1.
+- **Amended 2026-11-23, in T16, with the maintainer's yes:** two more codes. `:created` on success, and
+  `:not_found` when the error was deleted. `CreateIssue` rescues `RecordNotFound` itself, so the job's
+  `discard_on RecordNotFound` never saw it, and a deleted error was retried three times. `:not_found` is not
+  retried, like `:already_linked` and `:not_configured`. Every failed result still counts one failure.
+- **Found in T16:** the command's messages follow `dashboard_locale` (`Translation#red_t` reads
+  `Current.locale_or_default`), not `I18n.locale`. Under `I18n.with_locale(:de)` alone they stay English and
+  the old text check passes, so the test also sets `dashboard_locale = "de"` and checks the message is German.
 **Falsifiability.** No clear reversal condition identified: option 2 is wrong in any non-English locale.
 **Fired-if.** manual
 

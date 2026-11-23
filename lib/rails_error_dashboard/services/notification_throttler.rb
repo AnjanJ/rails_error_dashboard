@@ -36,9 +36,10 @@ module RailsErrorDashboard
         # Take the right to notify about this error, atomically.
         #
         # Call it immediately BEFORE dispatching, and dispatch only on true. It
-        # is claim-then-send: a claim followed by a failed send is not handed
-        # back, so that error stays quiet until the cooldown ends. The
-        # alternative (send, then record) is what let N processes all send.
+        # is claim-then-send. The alternative (send, then record) is what let N
+        # processes all send. A send that fails on every retry hands the claim
+        # back through release! (hardening-1-0-rc2, REQ-31); any other failed
+        # send keeps it, so that error stays quiet until the cooldown ends.
         #
         # With the column present this is ONE statement and no read:
         #
@@ -52,19 +53,44 @@ module RailsErrorDashboard
         # @param respect_cooldown [Boolean] false for notifications the cooldown
         #   has never applied to (first occurrence, threshold milestones): always
         #   granted, but still stamped, so a reopen soon afterwards is throttled
+        # @param at [Time] the claim time to stamp. A caller that may release the
+        #   claim later passes its own, and gives that same time to release!
         # @return [Boolean] true if the caller may notify
-        def claim!(error_log, respect_cooldown: true)
+        def claim!(error_log, respect_cooldown: true, at: Time.current)
           minutes = respect_cooldown ? cooldown_minutes : 0
 
           if database_claim?(error_log)
-            claim_in_database(error_log, minutes)
+            claim_in_database(error_log, minutes, at)
           else
-            claim_in_process(error_log, minutes)
+            claim_in_process(error_log, minutes, at)
           end
         rescue => e
           # Fail-open: a throttler that cannot decide must not lose a page.
           RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] NotificationThrottler.claim! failed: #{e.class}: #{e.message}")
           true
+        end
+
+        # Hand back a database claim whose notification was never delivered,
+        # so the next occurrence can notify (hardening-1-0-rc2, REQ-31).
+        #
+        #   UPDATE error_logs SET last_notified_at = NULL
+        #   WHERE id = :id AND last_notified_at = :claimed_at
+        #
+        # Only while the column still holds this claim: a newer one belongs to
+        # a later notification and is never undone. Active Record casts
+        # claimed_at to the column's precision on both the claim and this
+        # comparison, so a nanosecond Time matches the microseconds stored.
+        # A nil claimed_at matches no claim, so it releases nothing. The
+        # in-process claim is not released: it lives in another process.
+        #
+        # @param error_log_id [Integer, nil]
+        # @param claimed_at [Time, nil] the time given to claim!
+        # @return [Boolean] true if the claim was released. Never raises
+        def release!(error_log_id, claimed_at)
+          ErrorLog.where(id: error_log_id, COOLDOWN_COLUMN => claimed_at).update_all(COOLDOWN_COLUMN => nil) == 1
+        rescue => e
+          RailsErrorDashboard::Logger.debug("[RailsErrorDashboard] NotificationThrottler.release! failed: #{e.class}: #{e.message}")
+          false
         end
 
         # Should we send a notification for this error? Read-only (severity
@@ -212,8 +238,7 @@ module RailsErrorDashboard
             ErrorLog.column_names.include?(COOLDOWN_COLUMN)
         end
 
-        def claim_in_database(error_log, minutes)
-          now = Time.current
+        def claim_in_database(error_log, minutes, now)
           scope = ErrorLog.where(id: error_log.id)
           if minutes.positive?
             scope = scope.where("#{COOLDOWN_COLUMN} IS NULL OR #{COOLDOWN_COLUMN} < ?", now - minutes.minutes)
@@ -224,9 +249,8 @@ module RailsErrorDashboard
           granted || !minutes.positive?
         end
 
-        def claim_in_process(error_log, minutes)
+        def claim_in_process(error_log, minutes, now)
           key = error_log.error_hash
-          now = Time.current
 
           @mutex.synchronize do
             last_time = @last_notification_times[key]
