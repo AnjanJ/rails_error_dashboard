@@ -1,5 +1,13 @@
 # Tasks: 1.0 hardening (1.0.0-rc.2)
 
+> **Order changed 2026-11-24, by the maintainer, after PR 5 merged (#379).** The six pull requests left go in
+> this order: PR 10 (T30-T31, host conditions), PR 11 (T33-T34), PR 6 (T17-T19), PR 7 (T20-T21), PR 9
+> (T28-T29), then PR 8 (T22-T27). Host safety comes first: T30 fixes captures lost on a host rollback and a
+> starved pool blocking a request, and it is the largest and riskiest task left, so it gets the most slack
+> before rc.2 (2026-12-11). T30's "After: T20" is only a file overlap (`configuration.rb`,
+> `docs/guides/CONFIGURATION.md`, `docs/PUBLIC_API.md`), not a dependency, so PR 7 takes the conflicts. The
+> numbers below are the original ones.
+
 Eleven pull requests, in this order:
 1. T1-T2: the spikes, research only, with S1 done by 2026-12-04.
 2. T3-T6 and T35: grouping v2.
