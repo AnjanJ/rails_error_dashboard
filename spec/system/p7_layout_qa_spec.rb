@@ -43,7 +43,7 @@ RSpec.describe "P7-T2 layout QA", type: :system do
     # elements the desktop layout shows are hidden: js_date_localization's
     # `.local-time` assertions turned into skips ("no .local-time element on
     # this page") purely because this file happened to run first.
-    page.driver.resize_window(*DEFAULT_WINDOW_SIZE)
+    page.current_window.resize_to(*DEFAULT_WINDOW_SIZE)
   end
 
   # Any element whose content is wider than its box. Excludes the elements
@@ -142,7 +142,7 @@ RSpec.describe "P7-T2 layout QA", type: :system do
     WIDTHS.each do |size, (w, h)|
       it "renders #{locale} at #{size} (#{w}px) no wider than English" do
         @locale_under_test = locale
-        page.driver.resize_window(w, h)
+        page.current_window.resize_to(w, h)
 
         expect_no_worse_than_english("#{locale}@#{w}", "/errors")
 
@@ -157,7 +157,7 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   THEMES.each do |theme|
     it "keeps the sidebar nav readable in #{theme} theme at 375px (ru, the widest label)" do
       @locale_under_test = "ru"
-      page.driver.resize_window(375, 812)
+      page.current_window.resize_to(375, 812)
       expect_no_worse_than_english("ru@375/#{theme}", "/errors")
       page.execute_script("document.documentElement.setAttribute('data-theme', '#{theme}')")
 
@@ -186,7 +186,7 @@ RSpec.describe "P7-T2 layout QA", type: :system do
   %w[/errors /overview /errors/analytics /settings].each do |path|
     it "renders #{path} in French at 375px no wider than English" do
       @locale_under_test = "fr"
-      page.driver.resize_window(375, 812)
+      page.current_window.resize_to(375, 812)
 
       expect_no_worse_than_english("fr#{path}@375", path)
 
