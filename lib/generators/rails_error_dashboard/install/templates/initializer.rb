@@ -495,10 +495,10 @@ RailsErrorDashboard.configure do |config|
   # Enable internal logging (default: false - silent)
   config.enable_internal_logging = false
 
-  # Log level (default: :silent)
+  # Log level (default: :error)
   # Options: :debug, :info, :warn, :error, :fatal, :silent
   # (RED has no fatal-level messages, so :fatal logs nothing, like :silent)
-  config.log_level = :silent
+  config.log_level = :error
 
   # Example: Enable verbose logging for debugging
   # config.enable_internal_logging = true

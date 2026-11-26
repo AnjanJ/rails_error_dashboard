@@ -175,7 +175,8 @@ RSpec.describe "async capture after the response" do
       capture_during_request(env)
 
       expect { finish_response(env) }.not_to raise_error
-      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/database down/).at_least(:once)
+      expect(RailsErrorDashboard::Logger).to have_received(:error)
+        .with(/Capture failure in Commands::LogError.enqueue_after_response: ActiveRecord::ConnectionNotEstablished/).once
     end
   end
 

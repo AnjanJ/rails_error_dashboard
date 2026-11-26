@@ -63,7 +63,7 @@ RSpec.describe RailsErrorDashboard::PluginRegistry do
       expect { described_class.dispatch(:on_error_logged, :payload) }.not_to raise_error
 
       expect(seen).to eq([ :payload ])
-      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/broken.*enabled\?.*config missing/)
+      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/Plugin 'broken'#enabled\?: RuntimeError/)
     end
 
     it "logs a failing hook without depending on name or version answering" do
@@ -75,8 +75,7 @@ RSpec.describe RailsErrorDashboard::PluginRegistry do
       described_class.register(klass.new)
 
       expect { described_class.dispatch(:on_error_logged, :payload) }.not_to raise_error
-      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/flaky.*on_error_logged.*hook down/)
-      expect(RailsErrorDashboard::Logger).to have_received(:error).with("Plugin version: unknown")
+      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/Plugin 'flaky'#on_error_logged: RuntimeError/)
     end
   end
 

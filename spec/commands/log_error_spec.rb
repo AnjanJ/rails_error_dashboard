@@ -1315,7 +1315,7 @@ RSpec.describe "LogError — one capture, one occurrence" do
 
     it "logs the dispatch failure instead of swallowing it silently" do
       expect(RailsErrorDashboard::Logger)
-        .to receive(:error).with(/Failed to dispatch notification/).at_least(:once)
+        .to receive(:error).with(/Capture failure in Commands::LogError#maybe_notify: IOError/).at_least(:once)
 
       RailsErrorDashboard::Commands::LogError.call(boom)
     end

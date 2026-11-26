@@ -47,6 +47,10 @@ RSpec.configure do |config|
     # Likewise per process: which errors sampling has already admitted once.
     RailsErrorDashboard::Services::ExceptionFilter.reset_seen!
 
+    # Likewise per process: which capture-failure lines were written in the
+    # last minute (hardening-1-0-rc2, REQ-54).
+    RailsErrorDashboard::Services::CaptureFailureLog.reset!
+
     # async_logging is forced off for the same reason, and it is the more
     # dangerous leak of the two: when it escapes, LogError enqueues
     # AsyncErrorLoggingJob instead of writing a row, so any example asserting

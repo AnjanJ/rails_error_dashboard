@@ -41,9 +41,9 @@ module RailsErrorDashboard
         )
         trim(limit)
       rescue => e
-        RailsErrorDashboard::Logger.error(
+        RailsErrorDashboard::Services::CaptureFailureLog.report("Commands::RecordOccurrenceContext#call", e) do
           "[RailsErrorDashboard] Failed to record occurrence context: #{e.class}: #{e.message}"
-        )
+        end
         nil
       end
 

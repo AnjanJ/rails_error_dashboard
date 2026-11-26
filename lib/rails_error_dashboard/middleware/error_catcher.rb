@@ -49,8 +49,12 @@ module RailsErrorDashboard
           Rails.error.report(exception, **options)
         rescue => e
           # If error reporting fails, log it but DON'T break the app
-          RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Middleware error reporting failed: #{e.class} - #{e.message}")
-          RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+          RailsErrorDashboard::Services::CaptureFailureLog.report("Middleware::ErrorCatcher#call", e, exception) do
+            [
+              "[RailsErrorDashboard] Middleware error reporting failed: #{e.class} - #{e.message}",
+              e.backtrace&.first(5)&.join("\n")
+            ]
+          end
         end
 
         # Re-raise original exception to let Rails handle the response

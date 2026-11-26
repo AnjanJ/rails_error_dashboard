@@ -545,9 +545,11 @@ module RailsErrorDashboard
       @otel_service_name = nil
       @otel_spans = %i[capture breadcrumbs health notifications]
 
-      # Internal logging defaults - SILENT by default
+      # Internal logging defaults. A failed capture writes one rate-limited
+      # line at :error; enable_internal_logging gates the more verbose levels
+      # (hardening-1-0-rc2, REQ-54, REQ-58).
       @enable_internal_logging = false  # Opt-in for debugging
-      @log_level = :silent  # Silent by default; see Logger::LOG_LEVELS for the levels
+      @log_level = :error  # :silent writes nothing; see Logger::LOG_LEVELS for the levels
 
       # Dashboard UI
       @accent_color = :crimson  # :crimson, :ruby, :ember, :violet

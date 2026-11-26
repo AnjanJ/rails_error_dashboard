@@ -80,6 +80,21 @@ module RailsErrorDashboard
         Rails.logger.error(formatted_message(message))
       end
 
+      # Would a message at this level be written? The same gates as the
+      # methods above: error needs only log_level, the other levels need
+      # enable_internal_logging too. For callers that build a message only
+      # when it will be written.
+      #
+      # @param level [Symbol] :debug, :info, :warn or :error
+      # @return [Boolean]
+      def enabled?(level)
+        return false unless level == :error || logging_enabled?
+
+        log_level_enabled?(level)
+      rescue StandardError
+        false
+      end
+
       private
 
       # Check if internal logging is enabled

@@ -37,9 +37,9 @@ module RailsErrorDashboard
             maybe_flush!
             decision
           rescue => e
-            RailsErrorDashboard::Logger.error(
+            RailsErrorDashboard::Services::CaptureFailureLog.report("Services::StormProtection::Gate.admit!", e, exception) do
               "[RailsErrorDashboard] StormProtection failed open: #{e.class} - #{e.message}"
-            )
+            end
             :full
           end
 
@@ -404,17 +404,17 @@ module RailsErrorDashboard
               # put it back so the next interval retries, and leave the
               # closed episode in place so it is persisted by that retry.
               count_buffer.restore(snapshot[:entries], snapshot[:overflow])
-              RailsErrorDashboard::Logger.error(
+              RailsErrorDashboard::Services::CaptureFailureLog.report("Services::StormProtection::Gate.maybe_flush! (enqueue)", e) do
                 "[RailsErrorDashboard] Storm flush enqueue failed (batch retained for retry): #{e.class} - #{e.message}"
-              )
+              end
               return
             end
 
             breaker.clear_closed_episode!
           rescue => e
-            RailsErrorDashboard::Logger.error(
+            RailsErrorDashboard::Services::CaptureFailureLog.report("Services::StormProtection::Gate.maybe_flush!", e) do
               "[RailsErrorDashboard] Storm flush failed: #{e.class} - #{e.message}"
-            )
+            end
           end
 
           def serialize_episode(episode)
@@ -447,9 +447,9 @@ module RailsErrorDashboard
               locale: ApplicationJob.enqueue_locale
             )
           rescue => e
-            RailsErrorDashboard::Logger.error(
+            RailsErrorDashboard::Services::CaptureFailureLog.report("Services::StormProtection::Gate.maybe_storm_notification", e) do
               "[RailsErrorDashboard] Storm notification enqueue failed: #{e.class} - #{e.message}"
-            )
+            end
           end
 
           def monotonic_now

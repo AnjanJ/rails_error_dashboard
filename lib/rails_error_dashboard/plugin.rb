@@ -124,9 +124,13 @@ module RailsErrorDashboard
       # Log plugin failures but never propagate - plugins must not break the app.
       # name and version are plugin code too, so the log line must not depend
       # on them answering.
-      RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Plugin '#{safe_label}' failed in #{method_name}: #{e.class} - #{e.message}")
-      RailsErrorDashboard::Logger.error("Plugin version: #{safe_version}")
-      RailsErrorDashboard::Logger.error(e.backtrace&.first(10)&.join("\n")) if e.backtrace
+      RailsErrorDashboard::Services::CaptureFailureLog.report("Plugin '#{safe_label}'##{method_name}", e) do
+        [
+          "[RailsErrorDashboard] Plugin '#{safe_label}' failed in #{method_name}: #{e.class} - #{e.message}",
+          "Plugin version: #{safe_version}",
+          e.backtrace&.first(10)&.join("\n")
+        ]
+      end
       nil # Explicitly return nil, never raise
     end
 

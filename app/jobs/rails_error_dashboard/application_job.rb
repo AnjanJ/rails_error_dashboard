@@ -17,14 +17,20 @@ module RailsErrorDashboard
     # every job in the gem. The logging that block provided now runs from
     # retry_on's own exhaustion block, where it fires once, after the last
     # attempt, with the same detail.
+    #
+    # The line names the job by class and id, not its arguments: a capture
+    # job's arguments are the capture (hardening-1-0-rc2, REQ-60). It is one
+    # rate-limited line, and the detail goes to debug (REQ-54 to REQ-57).
     retry_on StandardError, wait: :polynomially_longer, attempts: 3 do |job, error|
-      Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} failed: #{error.class} - #{error.message}")
-      # The id, not the arguments: a capture job's arguments are the capture
-      # (hardening-1-0-rc2, REQ-60).
-      Rails.logger.error("Job ID: #{job.job_id}")
-      Rails.logger.error("Attempt: #{job.executions}/3")
-      Rails.logger.error(error.backtrace&.first(10)&.join("\n")) if error.backtrace
-      Rails.logger.error("[RailsErrorDashboard] Job #{job.class.name} discarded after #{job.executions} attempts")
+      Services::CaptureFailureLog.report("#{job.class.name} (retries exhausted)", error, job_id: job.job_id) do
+        [
+          "[RailsErrorDashboard] Job #{job.class.name} failed: #{error.class} - #{error.message}",
+          "Job ID: #{job.job_id}",
+          "Attempt: #{job.executions}/3",
+          error.backtrace&.first(10)&.join("\n"),
+          "[RailsErrorDashboard] Job #{job.class.name} discarded after #{job.executions} attempts"
+        ]
+      end
     end
 
     # Did this perform_later actually reach the queue?

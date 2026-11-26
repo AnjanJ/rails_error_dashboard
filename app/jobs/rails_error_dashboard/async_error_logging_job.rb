@@ -55,14 +55,17 @@ module RailsErrorDashboard
       # capture it too; that capture fails the same way and is swallowed by
       # LogError's own rescue. ErrorReporter's recursion guard (issue #114)
       # plus the attempt cap bound this to a few wasted attempts, not a loop.
-      Rails.logger.error("AsyncErrorLoggingJob: error storage unavailable (#{e.class}: #{e.message}) — will retry")
+      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#perform (store unavailable)", e, exception, job_id: job_id) do
+        "AsyncErrorLoggingJob: error storage unavailable (#{e.class}: #{e.message}) — will retry"
+      end
       raise
     rescue => e
       # A payload problem (unparseable arguments, a class that cannot be
       # reconstructed). Retrying replays the identical payload, so it would
       # fail identically three times and still be discarded. Log and drop.
-      Rails.logger.error("AsyncErrorLoggingJob failed: #{e.message}")
-      Rails.logger.error("Backtrace: #{e.backtrace&.first(5)&.join("\n")}")
+      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#perform (payload)", e, exception, job_id: job_id) do
+        [ "AsyncErrorLoggingJob failed: #{e.message}", "Backtrace: #{e.backtrace&.first(5)&.join("\n")}" ]
+      end
     end
 
     # Active Job schedules a retry with the adapter's enqueue_at. :inline, and
@@ -75,11 +78,11 @@ module RailsErrorDashboard
     # Concerns::TransientDelivery does for the notification jobs.
     def retry_job(options = {})
       super
-    rescue NotImplementedError
-      Rails.logger.error(
+    rescue NotImplementedError => e
+      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#retry_job", e, options[:error], job_id: job_id) do
         "[RailsErrorDashboard] AsyncErrorLoggingJob could not schedule a retry: the queue adapter has no " \
-        "scheduled jobs, so the capture is dropped (#{options[:error].class})"
-      )
+          "scheduled jobs, so the capture is dropped (#{options[:error].class})"
+      end
       nil
     end
 
