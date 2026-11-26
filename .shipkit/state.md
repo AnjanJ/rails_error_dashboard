@@ -1,118 +1,101 @@
 # Handoff
 
-> Written 2026-11-23 on feat/hardening-notifications (PR 5: T14-T16), after `f4c16092`; this note is the
+> Written 2026-11-26 on feat/hardening-host-conditions (PR 10: T30-T31), after `494d06a6`; this note is the
 > branch's last commit. Nothing is pushed. The push, opening the PR, each later push and the merge each need
 > the maintainer's yes.
 
 ## In flight
-- **`hardening-1-0-rc2`**: T1-T16, T32 and T35 are done. PRs 1-4 (#373, #375, #377, #378) are squash-merged
-  and their branches deleted. PR 5 is this branch, not yet pushed. T17-T31, T33 and T34 are unstarted.
-- The tracking issue is #374. Items 1-4 of its checklist are ticked. Tick item 5, adding "(#N)", when PR 5
-  merges. Change only that line, diff the body before saving, and never close it.
+- **`hardening-1-0-rc2`**: T1-T16, T30-T32 and T35 are done. PRs 1-5 are squash-merged (#373, #375, #377, #378,
+  #379). PR 10 is this branch, not yet pushed. Left, in the maintainer's order (2026-11-24): PR 11 (T33-T34),
+  PR 6 (T17-T19), PR 7 (T20-T21), PR 9 (T28-T29), PR 8 (T22-T27). rc.2 is due 2026-12-11.
+- The tracking issue is #374, items 1-5 ticked. Tick PR 10's item, adding "(#N)", when it merges. Change only
+  that line, diff the body before saving, and never close it.
 
-## Done this session (2026-11-23)
-- PR 5, each task test-first, with deliberate breaks, the full suite and the full lefthook (chaos 1,742 passed):
-  - `c433eb55` T14 (REQ-29 to REQ-31): the six channel jobs raise `TransientDeliveryError` on a timeout, a
-    refused or reset connection, DNS, HTTP 429/5xx or SMTP 4xx (new `Concerns::TransientDelivery`), and
-    retry 3 times; anything else logs and finishes. When retries run out the job calls
-    `NotificationThrottler.release!`, which clears `last_notified_at` only if it still equals the job's
-    `claimed_at` (LogError picks the time, passes it to `claim!(at:)` and the dispatcher). A nanosecond
-    claim time matches the stored microseconds on SQLite and PostgreSQL 16 (reproduced). 43 breaks.
-  - The first T14 commit's chaos run caught a host-safety bug in it: on `:inline` (and Resque without a
-    scheduler, Sneakers, queue_classic) `enqueue_at` raises `NotImplementedError`, a ScriptError that
-    passed every rescue on the capture path and reached the host. The concern now overrides `retry_job`:
-    a retry that can't be scheduled is the last attempt. Recorded in design.md and tasks/lessons.md.
-  - `484fe0bd` T15 (REQ-32, REQ-33): one webhook job per URL, given `WebhookDelivery.url_digest(url)`, not
-    the URL (tokens; maintainer's yes, in design.md). `X-Error-Dashboard-Delivery` is a SHA-256 of
-    `job_id` and the URL, so it survives retries; posts with no job get a random id. WEBHOOKS.md has
-    "Delivery: at least once"; NOTIFICATIONS.md lists the header (maintainer's yes). 11 breaks.
-  - `f4c16092` T16 (REQ-34, REQ-35): `CreateIssue` returns `code:` (`:created`, `:already_linked`,
-    `:not_configured`, `:not_found`, `:failed`; the last two beyond design.md's three, with the
-    maintainer's yes). The job counts a failed result once and doesn't retry the first three failure
-    codes. The task's `I18n.with_locale(:de)` alone can't make the test fail: `red_t` follows
-    `dashboard_locale`, so the test sets both and checks the text is German. 11 breaks.
-- Full suite at `f4c16092`: 7,347 examples, 0 failures, 9 pending. The shipkit reviewer: PASS, 7 MET
-  (REQ-29 to REQ-35). spec-check: 0 gaps.
-- No bin/benchmark: the request path does no new work in T14 (`Time.current` moved from `claim!` to its
-  caller) and the benchmark configures no channels; with webhooks on, a sync capture now enqueues one job
-  per URL instead of one. Read, not measured.
+## Done this session (2026-11-25 and 26)
+- `27761b66` docs: the new order of the pull requests (a dated note at the top of tasks.md).
+- `5e126a8d` T30 (REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53): `Services::CaptureWriteGuard` (defer, allow_writes,
+  lease with a `CheckoutBudget` prepend on `ConnectionPool#checkout`), `isolate_capture_writes` and
+  `capture_connection_timeout`. design.md amends the S1 record twice, both with the maintainer's yes:
+  2026-11-25, bound what a step uses instead of leasing the host's pool; 2026-11-26, the `:inline` fix.
+  - The `:inline` bug, found by a probe this session and reproduced on rc.1 too: under `:inline` the capture
+    job runs inside `perform_later`; a failed write made `retry_on` schedule a retry, `:inline` raised
+    `NotImplementedError` (a ScriptError), and it reached the caller of `Rails.error.report`. Fixed with
+    `AsyncErrorLoggingJob#retry_job` (as PR 5's `TransientDelivery`) and `StandardError, ScriptError` in
+    `LogError.call` and `ErrorReporter#report`.
+  - Full suite 7,465 examples, 0 failures, 9 pending. The 118 T30 examples on SQLite, PostgreSQL 16.16 and
+    MySQL 8.4.13, each on Rails 7.2.4, 8.0.5.2 and 8.1.4.1: 0 failures. 55 deliberate breaks, each failed 1-75.
+  - bin/benchmark against rc.1, alternating, two runs each: async 110 and 99 µs (rc.1 96 and 99.5), sync 1.13
+    and 1.19 ms (rc.1 1.07 and 0.962); a first pair gave sync 1.04 and 1.03 (rc.1 1.12 and 1.01). Storm check
+    calm/shedding/open 3.25/4.32/4.41 and 3.14/4.35/4.37 µs (rc.1 3.60/5.07/4.80 and 3.26/4.44/4.80).
+- `d8867e87` T31 (REQ-50): `bin/pre-release-test full_host_conditions` (`HOST_DATABASE`, `HOST_DATABASE_URL`,
+  `RAILS_VERSION`), `phase_q_host_conditions.rb` (Q0 the Rails and database asked for, Q1 two release
+  directories, Q2-Q4 rollback, prevented writes, held pool, sync and async on `:inline`), and a 9-row
+  `test.yml` job "Host conditions / <database> / Rails <series>". Local: 24 passed in all 9. Red on rc.1's code:
+  8 of 22. Five breaks, each caught by its case.
+- `494d06a6` docs: UPGRADING's bullet that notifications retry (decided 2026-11-24).
+- Lefthook's chaos run: 1,742 passed at `5e126a8d` and at `d8867e87`.
+- The shipkit reviewer: PASS, 9 MET (REQ-17 to REQ-20, REQ-22, REQ-50 to REQ-53), no decision unfollowed.
+  It noted that the host spec cites "hardening-1-0-rc2" and the REQ numbers apart, not as
+  `hardening-1-0-rc2/REQ-N` (spec-check counts them, 0 gaps; not changed), and that the UPGRADING note is beyond
+  T30-T31 (the maintainer's decision of 2026-11-24).
 
 ## Next step
-1. The maintainer decides on pushing this branch and opening PR 5. Its body needs the points above,
-   "Refs #374" and the Claude Code line.
+1. The maintainer decides on pushing this branch and opening PR 10. Its body needs the capture and storm
+   medians against rc.1 (above), "Refs #374", and the Claude Code line.
 
 ## Open questions
-- One intermittent chaos failure on this branch, not explained: the sync app failed E0 (the subscriber
-  probe) once during T14's second commit attempt, then passed 8 runs in a row and both later commits. The
-  failed app was deleted before its log was read. Watch for E0 on CI.
-- `_guides/notifications.md` lacks the "Muting Notifications for Specific Errors" section that
-  `docs/guides/NOTIFICATIONS.md` has (pre-existing, not changed).
-- `CreateIssueJob`'s `discard_on`/`rescue ActiveRecord::RecordNotFound` is still unreachable (the command
-  rescues it); `:not_found` now covers the case. Removing them is a separate cleanup.
-- The installer template's sync comment says "adds ~1-5ms to requests that trigger errors"
-  (`templates/initializer.rb`), against the measured 3.23-16.38 ms. T34 (REQ-61) edits that template; fix it
-  there.
-- Release-please's #376 ("release 1.1.0-rc.1") must not be merged as it is: rc.2 is cut with a
-  `Release-As: 1.0.0-rc.2` commit (tasks.md, the release steps). The rc.2 notes must say a manual `gem push`
-  needs MFA, and should say notifications now retry (receivers can see duplicates; the delivery header).
-- The Upgrade Path job runs only on release PRs and PRs touching migrations, so a grouping regression can
-  reach main unseen (#375's did). Worth a CI change; needs the maintainer's yes.
-- Not changed, recorded in design.md: the in-process notification throttle is keyed by the hash, so a group
-  moved to v2 can send one extra notification.
+- **For PR 11 (T33):** seven jobs enqueued from capture code share `ApplicationJob`'s `retry_on` without the
+  `:inline` guard: the issue-tracker jobs, `NotificationBurstSummaryJob`, `BaselineAlertJob`, `StormFlushJob`,
+  `StormNotificationJob`, `SwallowedExceptionFlushJob`, `RackAttackFlushJob`. Not probed. The widened outer
+  rescue covers whatever runs under `LogError.call`; the rest is unchecked. Noted under T33 in tasks.md.
+- The 9 CI rows have never run on GitHub: `gem install rails -v "~> <series>.0"`, the mysql2 build and the
+  services are proven locally only. The job is not a required check; adding it to main's ruleset is a
+  GitHub setting and needs a yes.
+- Whether UPGRADING should also describe T30's change (captures wait for the host's transaction; the two
+  settings). T34 edits UPGRADING; not decided.
+- The installer template's sync comment says "~1-5ms" (measured 3.23-16.38 ms): fix in T34.
+- Release-please's #376 must not be merged; rc.2 is cut with a `Release-As: 1.0.0-rc.2` commit. The rc.2 notes
+  must say a manual `gem push` needs MFA, and that notifications now retry (duplicates; the delivery header).
+- The Upgrade Path job runs only on release PRs and migration PRs (a CI change needs a yes). The intermittent
+  sync-app E0 chaos failure from PR 5 didn't recur in this branch's two chaos runs: watch.
+- Not verified: the REQ-52 test "stops counting blocks Rails never ran" relies on `GC.start` collecting lost
+  waiters; it passed every run so far.
+- Housekeeping, untouched: dependabot #370-372, four old worktrees beside the repo, PROJECT_MAP.md stale,
+  ROADMAP "Next up", `_guides/notifications.md` missing "Muting Notifications", `CreateIssueJob`'s unreachable
+  rescue, SimpleCov deprecation warnings.
 
 ## Do not forget
-- **Commit signing can also time out.** After a ~4 minute lefthook run, 1Password failed with `failed to fill
-  whole buffer` (no unlock prompt answered in time). The maintainer ran `! git commit -F <msg>` themselves and
-  approved the prompt; later commits signed unattended.
-- **Chaos failures:** the orchestrator keeps `/tmp/pre_release_test_<pid>` on failure. Read the app's
-  `log/production.log` before deleting it; reruns in it fail after phase Z drops the tables. Reproduce with
-  `bin/pre-release-test full_sync` (about a minute) instead.
-- **Retry tests:** stub the adapter's `enqueue_at` to raise `NotImplementedError` to test an adapter that
-  can't schedule; never swap adapters. `CreateIssue`'s messages follow `dashboard_locale`, not `I18n.locale`.
-- **Commit signing goes through the 1Password agent too.** A locked 1Password fails a commit *after*
-  lefthook has run (`error: 1Password: agent returned an error`, `fatal: failed to write commit object`);
-  HEAD doesn't move and the files stay staged. Ask the maintainer to unlock it, then rerun the commit.
-- **SQLite and bigint:** a SQLite bigint column reports `limit` nil, and Rails' `SQLite3Integer` holds 8 bytes
-  for every integer column. Tell bigint apart by `sql_type`, not `limit`.
-- **The upgrade test depends on where the checkout lives.** J0-J8 raise errors in the gem's own chaos scripts,
-  so a checkout under /tmp gives other frames than a normal one: J7 then takes its "regrouped" branch and
-  passes where CI fails. Bisect `full_upgrade` from a worktree beside the repo, never under /tmp.
-- **The reviewer's worktree starts at main,** not at the branch. Give it the branch SHA and have it read with
-  `git diff <base> <sha>` and `git show <sha>:<path>`.
-- **Agents and the working tree:** start a reviewer or research agent with `isolation: "worktree"`, and tell it
-  not to checkout, stash or reset. The first T3 reviewer, started without it, stashed the uncommitted T4 work
-  and checked out a past commit in this tree. It restored everything, but check `git status`, `git stash list`
-  and the reflog after any agent.
-- **Storm specs and entries:** a hand-built storm entry without `opaque_identity` and `opaque_identity_v1` has
-  rc.1's shape and is counted under v1 alone (REQ-6), so it can't reach a group sync created since T4. Give such
-  entries the gate's identity with `StormEntryIdentity.for(error, context)` (`spec/support/storm_entry_identity.rb`).
-- **The benchmark's exception** is raised by one-line recursion (`benchmark/scenarios.rb:233`), so REQ-2's
-  same-line rule walks all 63 frames. The gate no longer runs that walk per event (it keys on
-  `ErrorHashGenerator.gate_source`); anything added to `gate_source` is paid on every storm check, and CI's
-  slowest runner (AMD EPYC 7763) has under 4.5 µs of headroom there.
-- **rc.1 baseline for `bin/benchmark`:** the worktree used for PR 2 was removed. Recreate it with
-  `git worktree add --detach /tmp/red-rc1-bench rails_error_dashboard/v1.0.0-rc.1`, then run the benchmark there
-  and in the repo alternately, two runs each, with nothing else running (a busy machine moved medians by over
-  1 µs). Remove it with `git worktree remove /tmp/red-rc1-bench`. On CI, rc.1's storm-check medians by runner:
-  EPYC 7763 (`a1539361`) calm 8.21, shedding 10.85, open 10.59 µs; Xeon 6973P-C (`9b43b1ea`) 5.26, 7.52, 6.77 µs.
-- MySQL 8.4 for T30: `mysql@8.4` is installed (keg-only), with no data. Start a throwaway server like this:
-  1. `/opt/homebrew/opt/mysql@8.4/bin/mysqld --no-defaults --initialize-insecure --datadir=<dir> --basedir=/opt/homebrew/opt/mysql@8.4`
-  2. Run `mysqld` with `--port=3307 --bind-address=127.0.0.1 --mysqlx=OFF` and its own socket and pid file.
-
-  Never touch the 26.10 service on 3306.
-- Run probes on their own bundle: a Gemfile that does `eval_gemfile "<repo>/Gemfile"`, with `BUNDLE_GEMFILE` and
-  `RAILS_VERSION` set. The repo's `Gemfile.lock` then stays on Rails 8.1.4.1.
-- `Rails.error.report(e)` alone is skipped by RED (a handled warning, `error_reporter.rb:25`). Probes need
-  `severity: :error`.
-- **Timing on macOS:** `CLOCK_MONOTONIC` resolves only 1 µs there. Time single calls with `CLOCK_MONOTONIC_RAW`
-  (42 ns), or amortise over many calls.
-- **Solid Queue on SQLite under Rails 7.2:** with a worker and a dispatcher in one process, the dispatcher thread
-  can die on `SQLite3::BusyException`. It happened in 1 of 2 runs alone. Scheduled retries then never run, so a
-  probe that waits for an empty queue hangs until its timeout.
-- **Logging tests (T32, T33):** a new Rails app logs Active Job arguments at `info`, and spec/dummy has no
-  `filter_parameter_logging.rb`. Set the template's `filter_parameters` in the test, or Rails' own lines will
-  show the raw params and hide what RED does.
-- Phase G exists, so the new chaos phase is `phase_q`. The PostgreSQL and MySQL adapter jobs run Rails 8.1 only
-  (`test.yml:104`).
+- **MySQL 8.4 locally:** the Homebrew `mysql@8.4` keg is gone (only mysql 26.10, its service on 3306: never touch
+  it). Docker container `red-pr10-mysql84` (image `mysql:8.4`, 8.4.13, as CI) on 127.0.0.1:3307, root password
+  `red`. Specs: `trilogy://root:red@127.0.0.1:3307/<db>?pool=10`; chaos: `mysql2://root:red@127.0.0.1:3307/<db>`.
+  Kept until PR 10's CI is green, then `docker rm -f red-pr10-mysql84`.
+- **PostgreSQL 16** on /tmp:5432: `createdb -h /tmp <name>`, `DATABASE_URL="postgres:///<name>?host=/tmp&pool=10"`.
+- **Other Rails versions for specs:** a Gemfile with `eval_gemfile "<repo>/Gemfile"`, then `RAILS_VERSION=7.2
+  BUNDLE_GEMFILE=<that> mise exec ruby@3.4.5 -- bundle install --local`. The repo's Gemfile.lock stays on 8.1.4.1.
+  For chaos, `RAILS_VERSION=<series> bin/pre-release-test full_host_conditions` uses the installed rails gem.
+- **A spy keeps the method it finds.** `allow(pool).to receive(:checkout).and_call_original` set before
+  `CheckoutBudget` is prepended bypasses the bound, so an example run alone timed the pool's own wait.
+  `with_pool_drained` runs a lease first. Run a timing example alone before trusting it.
+- **Rails reports an exception object once** (`@__rails_error_reported`): a second `Rails.error.report` of
+  the same object does nothing. Each report in a test needs its own exception.
+- **Never copy an open SQLite database from the process using it.** Phase Q's first version copied the whole
+  app, storage/ included, and a later new connection failed on "disk I/O error" (2 runs of 2); copying the code
+  alone fixed it.
+- **zsh doesn't split `$var`:** `env $combo` passes one argument, and `(${@:-a b c})` makes one element. Use
+  `${=var}` or arrays. RSpec prints "1 example", singular: grep `examples?`.
+- **`:inline` runs jobs on the reporting thread:** anything that makes a RED job raise for `retry_on` must be
+  tested with the adapter's `enqueue_at` stubbed to raise `NotImplementedError` (tasks/lessons.md).
+- **Commit signing goes through 1Password** and can fail after a long hook ("agent returned an error" / "failed
+  to fill whole buffer"): HEAD doesn't move, files stay staged; ask the maintainer to unlock or run
+  `! git commit -F <file>`. It signed unattended all this session.
+- **Chaos failures:** read the kept /tmp/pre_release_test_<pid>/…/log/production.log before deleting anything.
+- **Agents and the working tree:** start a reviewer with `isolation: "worktree"`, give it the branch SHA, have it
+  read with `git diff <base> <sha>` and `git show <sha>:<path>`, and check `git status`, `git stash list`, the
+  reflog and `git worktree list` afterwards.
+- **rc.1 baseline for `bin/benchmark`:** the worktree was removed after this session's runs. Recreate it with
+  `git worktree add --detach /tmp/red-rc1-bench rails_error_dashboard/v1.0.0-rc.1`; run alternately, two runs
+  each, nothing else running.
+- In async-in-request mode the server's `response_finished` callbacks run last-first: never assert row order.
+  Count `sum(occurrence_count)`, not rows.
 - Rules: commit with `LEFTHOOK_EXCLUDE=chaos-tests` only for docs-only commits; write "Refs #N"; one commit per
   task, staged by name; every merge, release, push or setting change needs a yes.

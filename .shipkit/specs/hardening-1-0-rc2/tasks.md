@@ -319,7 +319,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: `rspec spec/migrations/concurrent_index_spec.rb` → 0 failures
 
 ## Host conditions (after S1's amendment)
-- [ ] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
+- [x] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
   - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, _guides/configuration.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, lib/rails_error_dashboard/error_reporter.rb, spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb
     From S1's amendment (option 2). `capture_write_guard.rb` is new, and `lib/rails_error_dashboard.rb` requires it. `error_logs_record.rb` and `engine.rb` are no longer in it: option 2 adds no connection.
   - Test: spec/integration/host_conditions_spec.rb, sync, async without a request, and async with a
@@ -359,7 +359,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - `spec/integration/capture_query_budget_spec.rb` still passes (no added query per capture);
     - `bin/benchmark` capture median within 0.2 ms of rc.1's.
     CI proves the 9 combinations in T31. The existing adapter jobs run Rails 8.1 only (`test.yml:104`).
-- [ ] **T31** A chaos target for host conditions on every database and Rails version → REQ-50
+- [x] **T31** A chaos target for host conditions on every database and Rails version → REQ-50
   - Files: bin/pre-release-test, test/pre_release/chaos/phase_q_host_conditions.rb, .github/workflows/test.yml
   - Test: test/pre_release/chaos/phase_q_host_conditions.rb covers:
     - one error from two release directories gives one group;
@@ -379,6 +379,11 @@ Each pull request merges before the next branch starts from main. Rules for ever
     The sites are the research file's Appendix A1 rows marked "capture" and "worker", and the worker's direct lines
     named in spec.md's "Capture failures" terms. `capture_failure_log.rb` is new, and `lib/rails_error_dashboard.rb`
     requires it.
+    Open item from T30 (2026-11-26, maintainer's yes): seven jobs enqueued from capture code share
+    `ApplicationJob`'s `retry_on` without the `:inline` guard T30 gave `AsyncErrorLoggingJob`: the issue-tracker
+    jobs, `NotificationBurstSummaryJob`, `BaselineAlertJob`, `StormFlushJob`, `StormNotificationJob`,
+    `SwallowedExceptionFlushJob` and `RackAttackFlushJob`. Not probed yet (design.md, the S1 decision's second
+    amendment).
   - Test: spec/services/capture_failure_log_spec.rb, with an injected clock:
     - 50 failures with one key give one line. The next line, 60 s later, carries the suppressed count (REQ-54);
     - two failure classes at one site give two lines (REQ-54);
