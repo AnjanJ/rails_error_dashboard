@@ -135,6 +135,69 @@ jobs:
     - name: Run unit and integration tests (schema built from db/migrate)
       run: bundle exec rspec --exclude-pattern "spec/system/**/*"
 
+  # The host-condition chaos test (hardening-1-0-rc2/REQ-50) on every
+  # database with every Rails series: how a transaction, prevented writes and a
+  # held pool behave is what changes between them. bin/pre-release-test builds
+  # a production app with that Rails on that database and runs phase Q.
+  host-conditions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [ sqlite, postgresql, mysql ]
+        rails: [ '7.2', '8.0', '8.1' ]
+
+    name: Host conditions / ${{ matrix.database }} / Rails ${{ matrix.rails }}
+
+    # An empty image starts no container, so each row gets only its own server.
+    services:
+      postgres:
+        image: ${{ matrix.database == 'postgresql' && 'postgres:16' || '' }}
+        env:
+          POSTGRES_USER: red
+          POSTGRES_PASSWORD: red
+          POSTGRES_DB: red_test
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U red" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      mysql:
+        image: ${{ matrix.database == 'mysql' && 'mysql:8.4' || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: red
+        ports: [ "3306:3306" ]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pred" --health-interval 5s
+          --health-timeout 5s --health-retries 20
+
+    env:
+      HOST_DATABASE: ${{ matrix.database }}
+      RAILS_VERSION: ${{ matrix.rails }}
+      HOST_DATABASE_URL: >-
+        ${{ matrix.database == 'postgresql' && 'postgres://red:red@127.0.0.1:5432/red_host_conditions'
+        || matrix.database == 'mysql' && 'mysql2://root:red@127.0.0.1:3306/red_host_conditions' || '' }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    # No bundle here: the app the test builds resolves its own gems, and the
+    # gem's Gemfile.lock is on Rails 8.1.
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+
+    # The CLI that runs `rails new`, of the row's series.
+    - name: Install Rails CLI
+      run: gem install rails -v "~> ${RAILS_VERSION}.0" --no-document # zizmor: ignore[adhoc-packages]
+
+    - name: Run the host-condition chaos test
+      run: bin/pre-release-test full_host_conditions
+
   # spec/dummy/db/schema.rb is hand-maintained; the gem's migrations are what
   # hosts run. This keeps the two from drifting apart (columns, types, limits,
   # indexes) on the adapter the schema file is written for.
