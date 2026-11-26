@@ -268,7 +268,7 @@ the first day.
 **Outcome (2026-11-20).** The spike ran and finished on its first day, so the condition above is moot. Option 2
 passed every case; the next record holds the decision. This record stays as the plan the spike followed.
 
-## Decision: Captures wait for the host's transaction, on the shared connection (from spike S1)   (→ REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53)
+## Decision: Captures wait for the host's transaction, on the shared connection (from spike S1)   (→ REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53), REQ-63
 
 **Context.** Spike S1 (`.shipkit/research/host-conditions-spike.md`) ran each option on SQLite, PostgreSQL 16,
 MySQL 8.4 and MySQL 26.10, under Rails 7.2.4, 8.0.5.2 and 8.1.4.1, in sync mode, async mode with Solid Queue on the
@@ -410,6 +410,44 @@ the caller of `LogError.call`, and of `Rails.error.report(e, handled: true)`, on
 - Not changed: seven other jobs enqueued from capture code (the issue-tracker jobs, `NotificationBurstSummaryJob`,
   `BaselineAlertJob`, `StormFlushJob`, `StormNotificationJob`, `SwallowedExceptionFlushJob`,
   `RackAttackFlushJob`) share `ApplicationJob`'s `retry_on` without the guard. Not probed; left to PR 11 (T33).
+
+**Amendment (2026-11-27, T36, with the maintainer's yes): every RED job, not only the capture job.**
+- **Context.** Read on `8ccdc73b`, before T36's tests reproduce it. Ten other jobs are enqueued from capture code.
+  Six of them can raise into `ApplicationJob`'s `retry_on`, which then schedules a retry through `enqueue_at`:
+  - the four issue-tracker jobs, which re-raise any failure; `CreateIssueJob` also raises on a failed result;
+  - `StormFlushJob`, on a store error or a flush that wrote nothing;
+  - `BaselineAlertJob`, only when `ErrorLog.find_by` raises.
+
+  The other four can't: `NotificationBurstSummaryJob` and `StormNotificationJob` rescue every failure in
+  `perform`, and so do the commands behind `SwallowedExceptionFlushJob` and `RackAttackFlushJob`. Under
+  `:inline` a retry that can't be scheduled raises `NotImplementedError` out of `perform_later`. T30's outer
+  layers stop it on most paths, but by then the rest of that capture is skipped, and the line names
+  `NotImplementedError`. One path had no such layer: `LogError.enqueue_after_response` rescued only
+  `StandardError`, and under `:inline` the capture job runs inside the server's `rack.response_finished`
+  callback.
+- **Alternatives.**
+  1. A `retry_job` override on each of the six jobs, as `AsyncErrorLoggingJob` and `TransientDelivery` have.
+  2. One `retry_job` on `ApplicationJob` that rescues `NotImplementedError` and calls a hook,
+     `retry_unschedulable(error)`, that ends the attempt with one line. `TransientDelivery` and
+     `AsyncErrorLoggingJob` override the hook instead of `retry_job`.
+  3. Leave it to rc.3.
+- **Case for 2.**
+  - One place covers every RED job, including one added after 1.0.
+  - The two existing overrides become hook overrides, so no job can forget the guard.
+  - Rescuing on `ApplicationJob` while `TransientDelivery` kept its own `retry_job` would break PR 5: its
+    override calls `super` and relies on `NotImplementedError` reaching it to release the notification claim. With
+    the hook, the release runs from `TransientDelivery#retry_unschedulable`.
+- **Case against 2.**
+  - It moves PR 5's and T30's tested paths onto a new hook, so their tests must still pass unchanged in what they
+    assert.
+  - A job that needs another answer must know the hook exists. A subclass `retry_job` that rescues
+    `NotImplementedError` after `super` would never see it.
+- **Why not 1 or 3.** Option 1 is six copies of the same rescue, and the seventh job forgets it. Option 3 leaves
+  hosts on `:inline` with a raise RED can stop, and host safety outranks the deadline.
+- **Decision.** Option 2. `LogError.enqueue_after_response` also rescues `StandardError, ScriptError`, as T30's
+  other last layers do.
+- **I would reverse this if** a host reports, after rc.2, an exception from a RED job's retry reaching its code:
+  that would mean one hook doesn't cover every path, and the per-job overrides of option 1 are needed after all.
 
 ## Decision: Notifications retry transient failures and release the claim   (→ REQ-29 to REQ-33)
 
@@ -838,6 +876,23 @@ arguments at `info`, so each async capture writes about 12 KB of payload, health
 - or if, after 1.0.0, a host reports more than 10 RED lines a minute per process from a single broken store.
 **Fired-if.** manual
 
+**Amendment (2026-11-27, T33): how it is built.** Three choices the decision left open, none with a real
+alternative worth a record:
+- **The call:** `report(site, failure, reported = nil, job_id: nil) { detail }`. The detail is a block, so at
+  `:error` RED builds and filters nothing for it. `failure` can be a string naming a condition that has no
+  exception, which is how `CaptureWriteGuard.hold` reports its 100 waiting captures. `job_id` is there for
+  REQ-60: the exhaustion line of `ApplicationJob`'s `retry_on` names the job by class and id. `Logger.enabled?`
+  is new, public and internal: it answers whether a level would be written, with the same gates as the writers.
+- **The detail's context, as RED stores it:** `LogError#capture`'s detail builds the fields `ErrorContext` keeps
+  and filters them as the async payload is filtered (`LogError.loggable_context`). It never prints the hash as
+  given, because a direct `LogError.call` can pass the request itself, and its `inspect` carries the URL. With
+  `filter_sensitive_data` off the row keeps the raw params and URL, but the detail withholds them: REQ-59 says
+  "at any `log_level`". The reported exception's message is filtered as it is stored. `ErrorReporter`'s detail
+  has no Context line, because its failure comes before RED has built the context it stores.
+- **Sites:** each rescue is one site, named by class and method, with a qualifier where one method has two
+  rescues (`Commands::LogError.enqueue_job (no connection in time)`). A plugin's site includes its name and
+  hook, and a job's exhaustion site includes its class, so their keys stay distinct.
+
 ## Data / interface changes
 - **Config, new and frozen at 1.0:**
   - `occurrence_retention_days` (nil) → REQ-23, REQ-24
@@ -853,6 +908,8 @@ arguments at `info`, so each async capture writes about 12 KB of payload, health
   installer's template → REQ-58. The name already exists, so no new name is frozen. Intake decision 8 made this
   default subject to the spike; the maintainer accepted it after reading the evidence.
 - **New service:** `Services::CaptureFailureLog` (internal; not in `docs/PUBLIC_API.md`) → REQ-54 to REQ-57.
+- **Jobs:** `ApplicationJob#retry_job` rescues `NotImplementedError` and calls `retry_unschedulable(error)`, which
+  `TransientDelivery` and `AsyncErrorLoggingJob` override (internal) → REQ-63.
 - **Jobs:** `log_arguments = false` on `AsyncErrorLoggingJob` and `StormFlushJob` → REQ-60.
 - **Migration:** three nullable booleans on `rails_error_dashboard_error_logs`: `resolved_by_verified`,
   `assigned_to_verified`, `muted_by_verified` → REQ-37.
