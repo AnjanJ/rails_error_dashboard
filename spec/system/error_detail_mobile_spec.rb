@@ -28,14 +28,14 @@ RSpec.describe "error detail at phone width", type: :system do
   end
 
   before do
-    page.driver.resize_window(*PHONE)
+    page.current_window.resize_to(*PHONE)
   end
 
   after do
     # Cuprite does not restore the viewport between examples -- the window
     # belongs to the browser, not the session -- so a resize would otherwise
     # hand the next spec a mobile layout.
-    page.driver.resize_window(*RESTORE)
+    page.current_window.resize_to(*RESTORE)
   end
 
   it "does not scroll sideways" do
@@ -82,7 +82,7 @@ RSpec.describe "error detail at phone width", type: :system do
   end
 
   it "is unchanged on the desktop layout" do
-    page.driver.resize_window(*RESTORE)
+    page.current_window.resize_to(*RESTORE)
     visit_error(error)
 
     side_by_side = page.evaluate_script(<<~JS)
