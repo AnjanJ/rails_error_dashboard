@@ -300,6 +300,27 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
           nil
         end
       end
+
+      # :inline, and adapters with no scheduler, raise NotImplementedError
+      # from enqueue_at. It is a ScriptError, so no `rescue => e` stops it, and
+      # under :inline this job runs inside perform_later, on the thread that
+      # reported the error (hardening-1-0-rc2, REQ-19, REQ-20). Stubbed on the
+      # adapter, not swapped: swapping adapters leaks between specs.
+      context "on a queue adapter that cannot schedule a retry" do
+        before do
+          allow(described_class.queue_adapter).to receive(:enqueue_at)
+            .and_raise(NotImplementedError, "Use a queueing backend to enqueue jobs in the future.")
+          allow(Rails.logger).to receive(:error)
+        end
+
+        it "makes the failed attempt the last one, dropping the capture without raising, and says so (hardening-1-0-rc2/REQ-19, REQ-20)" do
+          expect { described_class.perform_now(exception_data, context) }.not_to raise_error
+
+          expect(described_class.queue_adapter).to have_received(:enqueue_at).once
+          expect(Rails.logger).to have_received(:error).with(/AsyncErrorLoggingJob could not schedule a retry/).once
+          expect(RailsErrorDashboard::ErrorLog.count).to eq(0)
+        end
+      end
     end
   end
 

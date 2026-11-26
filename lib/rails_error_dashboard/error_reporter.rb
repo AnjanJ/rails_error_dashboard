@@ -65,7 +65,10 @@ module RailsErrorDashboard
 
         # Log to our error dashboard using Command
         Commands::LogError.call(error, error_context.to_h.merge(source: source))
-      rescue => e
+      # ScriptError too (NotImplementedError, LoadError): Rails' own
+      # ErrorReporter rescues only StandardError from a subscriber, so anything
+      # else would reach the code that reported (hardening-1-0-rc2, REQ-19).
+      rescue StandardError, ScriptError => e
         # Don't let error logging cause more errors - fail silently
         # Log failure for debugging but NEVER propagate exception
         RailsErrorDashboard::Logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")

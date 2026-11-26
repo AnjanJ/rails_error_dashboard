@@ -320,7 +320,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
 
 ## Host conditions (after S1's amendment)
 - [ ] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
-  - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb
+  - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, _guides/configuration.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, lib/rails_error_dashboard/error_reporter.rb, spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb
     From S1's amendment (option 2). `capture_write_guard.rb` is new, and `lib/rails_error_dashboard.rb` requires it. `error_logs_record.rb` and `engine.rb` are no longer in it: option 2 adds no connection.
   - Test: spec/integration/host_conditions_spec.rb, sync, async without a request, and async with a
     `rack.response_finished` request env, each case citing its REQ:
@@ -338,10 +338,16 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - the 101st report inside one transaction is dropped, and the first 100 are stored (REQ-52);
     - with `isolate_capture_writes = false`, each case behaves as in rc.1 (REQ-22);
     - with `use_separate_database`, the same cases (SQLite: a second file).
+    - with a queue adapter that runs the job on the reporting thread and can't schedule a retry (`:inline`;
+      the adapter's `enqueue_at` stubbed to raise `NotImplementedError`), a refused write and a pool run dry
+      drop the capture without raising, after one bounded wait (REQ-19, REQ-20). Added 2026-11-26 with the
+      maintainer's yes, with the job, `error_reporter.rb` and the job spec (design.md, the S1 decision's
+      second amendment).
     `docs/guides/CONFIGURATION.md` states that, in a reading role, a capture is written through the writing
     role, and that a far writing database adds that round trip to sync capture (S1, accepted 2026-11-20).
-    spec/services/capture_write_guard_spec.rb: the lease's fallback when `connection_lease` is missing, and
-    no raise from any of its three entry points.
+    spec/services/capture_write_guard_spec.rb: that the checkout bound does nothing outside a lease, and no
+    raise from any of its three entry points. (Amended 2026-11-25: the lease no longer uses the private
+    `connection_lease`, so it has no fallback to test; design.md, the S1 decision's amendment.)
     Every hang test asserts the elapsed time as well as the end state (tasks/lessons.md, 2026-10-30).
   - After: T1, T13, T20, T32
   - Done when:

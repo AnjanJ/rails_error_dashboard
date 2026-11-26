@@ -199,6 +199,13 @@ The features guide's [Sensitive Data Filtering](../FEATURES.md#sensitive-data-fi
 | `sampling_rate` | Float | `1.0` | Fraction of non-critical errors to log, from 0.0 to 1.0. Critical errors are always logged. Outside that range, boot fails |
 | `max_backtrace_lines` | Integer | `100` | Maximum backtrace lines to store |
 
+### Host Transactions and Connections
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `isolate_capture_writes` | Boolean | `true` | Keep a capture's write apart from the database state of the code that reported it: it waits for an open transaction to end, and is written in the writing role with writes allowed. `false` writes as 1.0.0-rc.1 did. See [Captures Inside Your Transactions](#captures-inside-your-transactions) |
+| `capture_connection_timeout` | Float | `0.1` | Seconds a capture waits for a database connection before it gives up. While `isolate_capture_writes` is on it must be a positive number, or boot fails |
+
 ### Rate Limiting
 
 | Option | Type | Default | Description |
@@ -797,6 +804,37 @@ end
 
 Boot fails if `config.database` is missing. Every environment the app boots in also needs that
 entry in `config/database.yml`. See the [Database Options Guide](DATABASE_OPTIONS.md) for setup instructions.
+
+### Captures Inside Your Transactions
+
+With `isolate_capture_writes` on, the default, a capture is kept apart from what your code was doing
+with the database when it reported the error:
+
+- **An open transaction.** A capture reported inside a transaction waits for it, and for every
+  transaction around it, to end, and is then written, whether it committed or rolled back. A
+  rollback no longer takes the capture with it. The capture keeps the time it was reported, and the
+  breadcrumbs and system health of that moment. It is written late if the transaction runs long, and
+  lost if the process dies before the transaction ends, as it was before. At most 100 captures wait
+  on one transaction; further ones are dropped.
+- **Prevented writes and reading roles.** A capture inside `while_preventing_writes`, or in a
+  reading role with `prevent_writes` (as Rails' automatic role switching sets), is written through
+  the writing role. With a read replica that means the primary database: if your writing database
+  is far away, as in a multi-region setup, sync capture pays that round trip on the request. Async
+  capture under a server with `rack.response_finished`, such as Puma, enqueues after the response.
+- **A pool run dry.** Each wait for a database connection, RED's own or a queue's for async
+  capture, lasts at most `capture_connection_timeout` seconds, once; then the capture is dropped. A
+  queue that needs no database connection, such as Sidekiq's, waits for none. RED's own capture
+  job, in your worker, keeps the pool's `checkout_timeout` and retries.
+
+```ruby
+RailsErrorDashboard.configure do |config|
+  config.isolate_capture_writes = true       # the default
+  config.capture_connection_timeout = 0.1    # seconds, the default
+end
+```
+
+`config.isolate_capture_writes = false` turns all of this off: captures are written as in
+1.0.0-rc.1, inside your transaction and role, waiting up to the pool's `checkout_timeout`.
 
 ---
 

@@ -81,9 +81,11 @@ and accepted these terms on 2026-11-20:
   is in, waiting up to the pool's own `checkout_timeout`.
 - **RED's connection timeout:** `config.capture_connection_timeout`, in seconds, default `0.1`: the longest a
   capture waits to lease a connection from a pool it writes through.
-- **The pools a capture writes through:** RED's pool (`ErrorLogsRecord.connection_pool`, which is the host's
-  own pool unless `use_separate_database` is on) for the sync write, and the host's pool
-  (`ActiveRecord::Base.connection_pool`) for the async enqueue.
+- **The pools a capture writes through:** any pool the step checks a connection out of: RED's pool
+  (`ErrorLogsRecord.connection_pool`, which is the host's own pool unless `use_separate_database` is on) for
+  the sync write, and the queue's pool, when the queue keeps its jobs in a database, for the async enqueue.
+  Amended 2026-11-25 (T30, with the maintainer's yes) from "the host's pool for the async enqueue": see
+  design.md, the S1 decision's amendment.
 - **A held pool:** in a test, every connection of the pool the step writes through is checked out by other
   threads, and the reporting thread holds none.
 - **REQ-17.** If a capture is reported inside a host transaction or savepoint that rolls back, then the
