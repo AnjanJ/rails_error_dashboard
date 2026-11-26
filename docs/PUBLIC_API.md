@@ -32,6 +32,7 @@ baseline_alert_severities
 baseline_alert_threshold_std_devs
 breadcrumb_buffer_size
 breadcrumb_categories
+capture_connection_timeout
 context_sampling_keep_every
 context_sampling_threshold_per_day
 crash_capture_path
@@ -91,6 +92,7 @@ git_sha
 ignored_exceptions
 instance_variable_filter_patterns
 instance_variable_max_count
+isolate_capture_writes
 issue_tracker_api_url
 issue_tracker_auto_create_severities
 issue_tracker_labels

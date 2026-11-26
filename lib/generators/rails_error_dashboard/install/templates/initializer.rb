@@ -201,6 +201,15 @@ RailsErrorDashboard.configure do |config|
   config.async_logging = false
 
 <% end -%>
+  # Captures inside your transactions (on by default)
+  # A capture reported inside a transaction waits for it to end, so a rollback
+  # doesn't lose it. One inside while_preventing_writes or a reading role is
+  # written through the writing role. A wait for a database connection lasts at
+  # most capture_connection_timeout seconds, then the capture is dropped.
+  # false writes as 1.0.0-rc.1 did.
+  # config.isolate_capture_writes = true
+  # config.capture_connection_timeout = 0.1
+
   # Backtrace size limiting (100 lines is industry standard: Rollbar, Airbrake, Bugsnag)
   config.max_backtrace_lines = 100
 

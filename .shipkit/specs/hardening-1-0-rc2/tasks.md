@@ -1,5 +1,13 @@
 # Tasks: 1.0 hardening (1.0.0-rc.2)
 
+> **Order changed 2026-11-24, by the maintainer, after PR 5 merged (#379).** The six pull requests left go in
+> this order: PR 10 (T30-T31, host conditions), PR 11 (T33-T34), PR 6 (T17-T19), PR 7 (T20-T21), PR 9
+> (T28-T29), then PR 8 (T22-T27). Host safety comes first: T30 fixes captures lost on a host rollback and a
+> starved pool blocking a request, and it is the largest and riskiest task left, so it gets the most slack
+> before rc.2 (2026-12-11). T30's "After: T20" is only a file overlap (`configuration.rb`,
+> `docs/guides/CONFIGURATION.md`, `docs/PUBLIC_API.md`), not a dependency, so PR 7 takes the conflicts. The
+> numbers below are the original ones.
+
 Eleven pull requests, in this order:
 1. T1-T2: the spikes, research only, with S1 done by 2026-12-04.
 2. T3-T6 and T35: grouping v2.
@@ -311,8 +319,8 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: `rspec spec/migrations/concurrent_index_spec.rb` → 0 failures
 
 ## Host conditions (after S1's amendment)
-- [ ] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
-  - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb
+- [x] **T30** Captures survive a host rollback and prevented writes, and give up on a starved pool → REQ-17, REQ-18, REQ-19, REQ-20, REQ-22, REQ-51, REQ-52, REQ-53
+  - Files: lib/rails_error_dashboard/configuration.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, _guides/configuration.md, docs/PUBLIC_API.md, spec/services/capture_write_guard_spec.rb, spec/integration/host_conditions_spec.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, lib/rails_error_dashboard/error_reporter.rb, spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb
     From S1's amendment (option 2). `capture_write_guard.rb` is new, and `lib/rails_error_dashboard.rb` requires it. `error_logs_record.rb` and `engine.rb` are no longer in it: option 2 adds no connection.
   - Test: spec/integration/host_conditions_spec.rb, sync, async without a request, and async with a
     `rack.response_finished` request env, each case citing its REQ:
@@ -330,10 +338,16 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - the 101st report inside one transaction is dropped, and the first 100 are stored (REQ-52);
     - with `isolate_capture_writes = false`, each case behaves as in rc.1 (REQ-22);
     - with `use_separate_database`, the same cases (SQLite: a second file).
+    - with a queue adapter that runs the job on the reporting thread and can't schedule a retry (`:inline`;
+      the adapter's `enqueue_at` stubbed to raise `NotImplementedError`), a refused write and a pool run dry
+      drop the capture without raising, after one bounded wait (REQ-19, REQ-20). Added 2026-11-26 with the
+      maintainer's yes, with the job, `error_reporter.rb` and the job spec (design.md, the S1 decision's
+      second amendment).
     `docs/guides/CONFIGURATION.md` states that, in a reading role, a capture is written through the writing
     role, and that a far writing database adds that round trip to sync capture (S1, accepted 2026-11-20).
-    spec/services/capture_write_guard_spec.rb: the lease's fallback when `connection_lease` is missing, and
-    no raise from any of its three entry points.
+    spec/services/capture_write_guard_spec.rb: that the checkout bound does nothing outside a lease, and no
+    raise from any of its three entry points. (Amended 2026-11-25: the lease no longer uses the private
+    `connection_lease`, so it has no fallback to test; design.md, the S1 decision's amendment.)
     Every hang test asserts the elapsed time as well as the end state (tasks/lessons.md, 2026-10-30).
   - After: T1, T13, T20, T32
   - Done when:
@@ -345,7 +359,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - `spec/integration/capture_query_budget_spec.rb` still passes (no added query per capture);
     - `bin/benchmark` capture median within 0.2 ms of rc.1's.
     CI proves the 9 combinations in T31. The existing adapter jobs run Rails 8.1 only (`test.yml:104`).
-- [ ] **T31** A chaos target for host conditions on every database and Rails version → REQ-50
+- [x] **T31** A chaos target for host conditions on every database and Rails version → REQ-50
   - Files: bin/pre-release-test, test/pre_release/chaos/phase_q_host_conditions.rb, .github/workflows/test.yml
   - Test: test/pre_release/chaos/phase_q_host_conditions.rb covers:
     - one error from two release directories gives one group;
@@ -365,6 +379,11 @@ Each pull request merges before the next branch starts from main. Rules for ever
     The sites are the research file's Appendix A1 rows marked "capture" and "worker", and the worker's direct lines
     named in spec.md's "Capture failures" terms. `capture_failure_log.rb` is new, and `lib/rails_error_dashboard.rb`
     requires it.
+    Open item from T30 (2026-11-26, maintainer's yes): seven jobs enqueued from capture code share
+    `ApplicationJob`'s `retry_on` without the `:inline` guard T30 gave `AsyncErrorLoggingJob`: the issue-tracker
+    jobs, `NotificationBurstSummaryJob`, `BaselineAlertJob`, `StormFlushJob`, `StormNotificationJob`,
+    `SwallowedExceptionFlushJob` and `RackAttackFlushJob`. Not probed yet (design.md, the S1 decision's second
+    amendment).
   - Test: spec/services/capture_failure_log_spec.rb, with an injected clock:
     - 50 failures with one key give one line. The next line, 60 s later, carries the suppressed count (REQ-54);
     - two failure classes at one site give two lines (REQ-54);

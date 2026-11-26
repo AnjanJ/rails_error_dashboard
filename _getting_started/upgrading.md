@@ -114,6 +114,15 @@ Nothing in [docs/PUBLIC_API.md](https://github.com/AnjanJ/rails_error_dashboard/
   `config.enable_middleware = false`, the job is enqueued at once, as before. Sync capture is unchanged.
 - **RED's own jobs retry on Rails' `:polynomially_longer` schedule.** The delays are the same as before;
   the random spread now follows your app's `retry_jitter` setting.
+- **Notifications retry a delivery that failed for a passing reason** (from 1.0.0-rc.2). A Slack, Discord,
+  Telegram, PagerDuty, email or webhook delivery that times out, can't connect, or gets a 429, a 5xx or an
+  SMTP 4xx answer is tried again, three attempts in all. So a receiver can get the same alert more than
+  once; a webhook receiver can drop the duplicates by their `X-Error-Dashboard-Delivery` header, as in
+  [Delivery: at least once](/rails_error_dashboard/docs/reference/webhooks/#delivery-at-least-once).
+  Each URL in `webhook_urls` now gets a job of its own, so a retry goes only to the URL that failed.
+  Notification jobs 1.0.0-rc.1 had already queued still run after the upgrade, as rc.1 ran them: one job
+  posts to every URL, and it carries no claim time, so if all its attempts fail the error waits out the
+  notification cooldown instead of notifying again on its next occurrence.
 
 ### The steps
 

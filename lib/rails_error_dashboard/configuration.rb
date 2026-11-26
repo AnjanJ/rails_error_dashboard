@@ -126,6 +126,10 @@ module RailsErrorDashboard
     # Async logging configuration
     attr_accessor :async_logging
 
+    # Host conditions (hardening-1-0-rc2, REQ-17 to REQ-22, REQ-51 to REQ-53)
+    attr_accessor :isolate_capture_writes      # Keep a capture's write apart from the host's transaction, role and write prevention (default: true)
+    attr_accessor :capture_connection_timeout  # Seconds a capture waits for a database connection before giving up (default: 0.1)
+
     # Backtrace configuration
     attr_accessor :max_backtrace_lines
 
@@ -387,6 +391,8 @@ module RailsErrorDashboard
       @context_sampling_threshold_per_day = 25
       @context_sampling_keep_every = 10
       @async_logging = false
+      @isolate_capture_writes = true
+      @capture_connection_timeout = 0.1
       @max_backtrace_lines = 100 # Matches industry standard (Rollbar, Airbrake)
 
       # Rate limiting defaults
@@ -1024,6 +1030,13 @@ module RailsErrorDashboard
         unless value.is_a?(Integer) && value >= 0
           errors << "#{name} must be a non-negative Integer (got: #{value.inspect})"
         end
+      end
+
+      # Every wait a capture makes for a database connection is bounded by this
+      # (hardening-1-0-rc2, REQ-20), so it must be a positive number of seconds.
+      # Unused while capture writes aren't isolated.
+      if isolate_capture_writes && !(capture_connection_timeout.is_a?(Numeric) && capture_connection_timeout.positive?)
+        errors << "capture_connection_timeout must be a positive number of seconds (got: #{capture_connection_timeout.inspect})"
       end
 
       # Log warnings (non-fatal issues)

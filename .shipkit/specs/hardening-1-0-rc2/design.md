@@ -346,6 +346,71 @@ or if, after 1.0.0, two or more issues report a capture stored late or lost beca
 transaction.
 **Fired-if.** manual
 
+**Amendment (2026-11-25, T30, with the maintainer's yes).** Building T30 changed how the wait is bounded, and settled
+four details the record left open.
+- **Only what a step uses is bounded.** The record leased the host's pool around the async enqueue, and both RED's pool
+  and the host's around the sync write. The spike ran Solid Queue on the host's database only. A probe in a scratch
+  folder (Rails 8.1, SQLite, the host's pool held by other threads with a `checkout_timeout` of 1 s, the reported error
+  that pool's own `ConnectionTimeoutError`) showed that lease losing two captures rc.1 keeps:
+
+  | Case | rc.1's path | Lease the host's pool (the record) | Bound what the step uses (now) |
+  |---|---|---|---|
+  | async, a queue that needs no database (the test adapter, as Sidekiq) | enqueued, 10.5 ms | lost after 102.9 ms | enqueued, 8.4 ms, no checkout |
+  | async, a queue in the host's database | lost after 2,015 ms | lost after 107.5 ms, 1 checkout | lost after 105.0 ms, 1 checkout |
+  | sync, a separate error database | stored, 109 ms | lost after 105.9 ms | stored, 104.8 ms, 1 checkout of RED's pool |
+  | sync, a shared database | lost after 1,009 ms | lost after 105.9 ms, 1 checkout | lost after 105.9 ms, 1 checkout |
+
+  Read, not run: Solid Queue's installer writes `config.solid_queue.connects_to = { database: { writing: :queue } }`
+  (solid_queue 1.7.2, `install_generator.rb:20`), so in Rails 8's production setup the queue writes through a pool of
+  its own, which leasing the host's pool never bounded.
+
+  So `lease(owner)` now sets a bound for the thread that `CaptureWriteGuard::CheckoutBudget`, a `prepend` on
+  `ConnectionPool#checkout`, applies to every checkout made while the step runs. With an owner it also holds one
+  connection of that pool through the public `with_connection`. The prepend is installed the first time a lease runs,
+  so with `isolate_capture_writes = false` it never is; outside a lease it reads one value. No private method is used,
+  so the `connection_lease` fallback is gone, and the case against's "relies on a private pool method" becomes "RED's
+  code sits in every connection checkout of the host process". A checkout that runs out of time during the enqueue no
+  longer falls back to a sync write, which would be a second wait (REQ-20). spec.md's "pools a capture writes
+  through" term follows.
+- **RED's own capture job isn't guarded** (maintainer, 2026-11-24). The worker (`worker: true`) re-raises a connection
+  timeout for `retry_on`. Under the guard it would give up after the capture's timeout and finish without storing
+  anything. It keeps rc.1's wait and retry.
+- **A capture that waits is snapshotted when it is reported** (maintainer, 2026-11-24): `_captured_at`, and
+  `_serialized_breadcrumbs` and `_serialized_system_health` when those features are on. Harvesting breadcrumbs empties
+  the thread's buffer, so a capture written at the commit would get the transaction's later queries, and a second one
+  in the same transaction an empty trail. A capture that doesn't wait does no extra work.
+- **The limit counts waiting captures in a per-thread weak map** (`ObjectSpace::WeakMap`, Ruby 3.3+). When a host
+  `after_commit` callback raises before RED's, Rails never runs the rest. A counter would then stay full and drop every
+  later capture on that thread; a weak map lets the lost ones be collected.
+- **Three kinds of test pass on rc.1, by design.** REQ-53's request-thread check passes on rc.1, which never took a
+  connection on the request thread; it fails when the bound is put around `call_async`. The no-database queue, the
+  separate database with only the host's pool dry, and RED's own job pass on rc.1 too; they fail against the lease
+  this amendment replaced, and against a guard on the worker.
+
+**Amendment (2026-11-26, T30, with the maintainer's yes).** A queue adapter that runs the capture job on the
+reporting thread broke REQ-19 and REQ-20, on rc.1 too. Under `:inline` the job runs inside `perform_later`. When its
+write fails on a store error (the pool run dry, the table missing) it raises for `retry_on`, and `retry_on` schedules
+a retry through the adapter's `enqueue_at`, which `:inline` (like Resque without a scheduler, Sneakers and
+queue_classic) answers with `NotImplementedError`. That is a `ScriptError`, so it passed every `rescue => e` on the
+way out, and Rails' own `ErrorReporter` rescues only `StandardError` from a subscriber (activesupport 7.2.4, 8.0.5.2
+and 8.1.4.1). A probe (Rails 8.1, SQLite, async, `:inline`, pool held with a `checkout_timeout` of 1 s) had it reach
+the caller of `LogError.call`, and of `Rails.error.report(e, handled: true)`, on rc.1 and on this branch:
+
+| Store | rc.1 | T30 before this amendment | T30 now |
+|---|---|---|---|
+| the pool run dry | raised after 4.15 s | raised after 0.32 s | dropped, one bounded wait (0.11 to 0.12 s once warm) |
+| the table missing | raised after 0.12 s | raised after 0.13 s | dropped |
+
+- `AsyncErrorLoggingJob#retry_job` rescues `NotImplementedError`: a retry that can't be scheduled makes the attempt
+  the last one, and the capture is dropped with one log line, as `Concerns::TransientDelivery` does for the
+  notification jobs (PR 5). With a scheduler-less adapter in a worker process the job now finishes instead of
+  failing there.
+- The two outer layers, `LogError.call` and `ErrorReporter#report`, rescue `StandardError, ScriptError`, as
+  `CaptureWriteGuard.resume` already did.
+- Not changed: seven other jobs enqueued from capture code (the issue-tracker jobs, `NotificationBurstSummaryJob`,
+  `BaselineAlertJob`, `StormFlushJob`, `StormNotificationJob`, `SwallowedExceptionFlushJob`,
+  `RackAttackFlushJob`) share `ApplicationJob`'s `retry_on` without the guard. Not probed; left to PR 11 (T33).
+
 ## Decision: Notifications retry transient failures and release the claim   (→ REQ-29 to REQ-33)
 
 **Context.**
@@ -781,7 +846,9 @@ arguments at `info`, so each async capture writes about 12 KB of payload, health
 - **Config, kept by S1 (2026-11-20):** `isolate_capture_writes` (true) and `capture_connection_timeout` (0.1)
   → REQ-17 to REQ-20, REQ-22, REQ-51 to REQ-53. These are fixes to the capture path rather than features, but
   they are still public names, so decision 0002's note covers them too.
-- **New service:** `Services::CaptureWriteGuard` (internal; not in `docs/PUBLIC_API.md`).
+- **New service:** `Services::CaptureWriteGuard` (internal; not in `docs/PUBLIC_API.md`), with a `prepend` on
+  `ActiveRecord::ConnectionAdapters::ConnectionPool#checkout` (`CaptureWriteGuard::CheckoutBudget`), installed the
+  first time a capture's write is guarded (T30's amendment, 2026-11-25).
 - **Config default, changed by S2 (2026-11-20):** `log_level` goes from `:silent` to `:error`, in the library and the
   installer's template → REQ-58. The name already exists, so no new name is frozen. Intake decision 8 made this
   default subject to the spike; the maintainer accepted it after reading the evidence.

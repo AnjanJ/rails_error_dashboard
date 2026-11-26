@@ -62,6 +62,27 @@ module RailsErrorDashboard
           # Fall through and attempt full capture — fail open, never raise
         end
 
+        # Inside an open host transaction the capture waits for it to end, so
+        # a rollback can't take it along (hardening-1-0-rc2, REQ-17, REQ-51).
+        # After the filter and the storm gate, so a count-only event never
+        # waits. Returns nil for a capture that waits.
+        if RailsErrorDashboard.configuration.isolate_capture_writes
+          context = at_report_time(context) if Services::CaptureWriteGuard.transaction_open?
+          Services::CaptureWriteGuard.defer { dispatch(exception, context) }
+        else
+          dispatch(exception, context)
+        end
+      # ScriptError too: NotImplementedError (a queue adapter that can't do
+      # what was asked of it) and LoadError pass `rescue => e`, and this is the
+      # last layer before the host (hardening-1-0-rc2, REQ-19).
+      rescue StandardError, ScriptError => e
+        RailsErrorDashboard::Logger.error(
+          "[RailsErrorDashboard] LogError.call failed: #{e.class} - #{e.message}"
+        )
+        nil
+      end
+
+      def self.dispatch(exception, context)
         if RailsErrorDashboard.configuration.async_logging
           # For async logging, just enqueue the job
           call_async(exception, context)
@@ -69,12 +90,38 @@ module RailsErrorDashboard
           # For sync logging, execute immediately
           new(exception, context).call
         end
-      rescue => e
-        RailsErrorDashboard::Logger.error(
-          "[RailsErrorDashboard] LogError.call failed: #{e.class} - #{e.message}"
-        )
-        nil
       end
+      private_class_method :dispatch
+
+      # A capture that waits for the host's transaction is written when it
+      # ends, so what belongs to the moment it was reported is taken now: the
+      # time (REQ-51), and the breadcrumb trail and system health, which the
+      # write would otherwise read at the commit, after more of the
+      # transaction had run (maintainer's decision, 2026-11-24). The sync
+      # write and call_async both read these keys before their own.
+      def self.at_report_time(context)
+        context = context.merge(_captured_at: (normalized_occurred_at(context) || Time.current).iso8601(6))
+        return context if storm_lite?(context)
+
+        config = RailsErrorDashboard.configuration
+        context = context.merge(_serialized_breadcrumbs: report_trail) if config.enable_breadcrumbs
+        context = context.merge(_serialized_system_health: Services::SystemHealthSnapshot.capture) if config.enable_system_health
+        context
+      end
+      private_class_method :at_report_time
+
+      # This thread's breadcrumb trail, taken off it. A failing job's snapshot
+      # wins over the live buffer: the job that runs the capture is a different
+      # thread (and often a different process), so a thread-local left here
+      # would never be seen again, and the job's ensure has already cleared
+      # the live buffer.
+      def self.report_trail
+        job_trail = Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY]
+        Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY] = nil
+        harvested = Services::BreadcrumbCollector.harvest
+        job_trail.is_a?(Array) && job_trail.any? ? job_trail : harvested
+      end
+      private_class_method :report_trail
 
       # :lite captures shed context (breadcrumbs/health/locals/ivars) — the
       # storm shedding ladder's first economy. Symbol or string key: the
@@ -166,8 +213,11 @@ module RailsErrorDashboard
         # an error captured at 12:00 under v1 and drained at 14:00 under v2 was
         # stored as 14:00/v2, and release comparison blamed the wrong build.
         # The row's created_at still records when the worker wrote it, so queue
-        # lag stays observable.
-        context = context.merge(_captured_at: (normalized_occurred_at(context) || Time.current).iso8601(6))
+        # lag stays observable. A capture that waited for the host's
+        # transaction was stamped when it was reported (at_report_time).
+        unless context.key?(:_captured_at)
+          context = context.merge(_captured_at: (normalized_occurred_at(context) || Time.current).iso8601(6))
+        end
         context = context.merge(_app_version: capture_app_version) unless context.key?(:_app_version)
         context = context.merge(_git_sha: capture_git_sha) unless context.key?(:_git_sha)
 
@@ -175,21 +225,15 @@ module RailsErrorDashboard
         # this is request-thread CPU, the most valuable thing to shed.
         lite = storm_lite?(context)
 
-        # Harvest breadcrumbs NOW (before job dispatch — different thread won't have them)
-        if !lite && RailsErrorDashboard.configuration.enable_breadcrumbs
-          # A failing job's snapshot rides the envelope: the worker that runs
-          # the capture is a different thread (and often a different process),
-          # so a thread-local left here would never be seen again. Prefer it
-          # over the live buffer, which the job's ensure has already cleared.
-          job_trail = Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY]
-          Thread.current[Subscribers::BreadcrumbSubscriber::JOB_TRAIL_KEY] = nil
-          harvested = Services::BreadcrumbCollector.harvest
-          trail = job_trail.is_a?(Array) && job_trail.any? ? job_trail : harvested
-          context = context.merge(_serialized_breadcrumbs: trail)
+        # Harvest breadcrumbs NOW (before job dispatch — different thread won't
+        # have them), unless they were taken when a capture that waited for
+        # the host's transaction was reported.
+        if !lite && RailsErrorDashboard.configuration.enable_breadcrumbs && !context.key?(:_serialized_breadcrumbs)
+          context = context.merge(_serialized_breadcrumbs: report_trail)
         end
 
         # Capture system health NOW (metrics are time-sensitive, different thread = different state)
-        if !lite && RailsErrorDashboard.configuration.enable_system_health
+        if !lite && RailsErrorDashboard.configuration.enable_system_health && !context.key?(:_serialized_system_health)
           context = context.merge(_serialized_system_health: Services::SystemHealthSnapshot.capture)
         end
 
@@ -263,7 +307,22 @@ module RailsErrorDashboard
 
       # Enqueue the async job using ActiveJob, falling back to sync logging.
       # The queue adapter (:sidekiq, :solid_queue, :async) is configured separately
+      #
+      # With isolate_capture_writes the enqueue runs in the writing role with
+      # writes allowed, and a connection it checks out (a queue in a database)
+      # waits at most capture_connection_timeout (hardening-1-0-rc2, REQ-18,
+      # REQ-20). A queue that needs no connection, such as Sidekiq's, waits for
+      # none. This can run after the response, so nothing is leased on the
+      # request thread (REQ-53).
       def self.enqueue_async(exception, exception_data, context)
+        return enqueue_job(exception, exception_data, context) unless RailsErrorDashboard.configuration.isolate_capture_writes
+
+        Services::CaptureWriteGuard.allow_writes do
+          Services::CaptureWriteGuard.lease { enqueue_job(exception, exception_data, context) }
+        end
+      end
+
+      def self.enqueue_job(exception, exception_data, context)
         begin
           # OTel: emit a capture span around the enqueue itself. The real capture
           # work runs in the job (which starts its own root span via .new(...).call).
@@ -286,6 +345,16 @@ module RailsErrorDashboard
             end
           end
         rescue => e
+          # The queue's database had no connection within
+          # capture_connection_timeout. A sync write would wait for one again,
+          # so the capture gives up after that one wait (REQ-20).
+          if e.is_a?(ActiveRecord::ConnectionTimeoutError) && RailsErrorDashboard.configuration.isolate_capture_writes
+            RailsErrorDashboard::Logger.error(
+              "[RailsErrorDashboard] Capture gave up: no database connection for the enqueue within the capture's timeout (#{e.class})"
+            )
+            return nil
+          end
+
           # Queue adapter failed (e.g., Redis down for Sidekiq), or the job
           # never reached the queue. Fall back to sync logging so the error is
           # still captured. Without this rescue, the exception propagates back
@@ -299,6 +368,7 @@ module RailsErrorDashboard
           new(exception, context.except(:_message_limited)).call
         end
       end
+      private_class_method :enqueue_job
 
       # The opaque half of the canonical fingerprint, computed from the RAW
       # exception before the payload is redacted for the queue.
@@ -455,7 +525,22 @@ module RailsErrorDashboard
         @worker = worker
       end
 
+      # The sync write. With isolate_capture_writes it runs in the writing role
+      # with writes allowed, holding one connection of RED's pool, and any
+      # connection checkout waits at most capture_connection_timeout
+      # (hardening-1-0-rc2, REQ-18, REQ-20). RED's own capture job (worker:
+      # true) isn't the host's request: it keeps the pool's own wait, and a
+      # connection timeout there is retried (maintainer's decision,
+      # 2026-11-24).
       def call
+        return capture if @worker || !RailsErrorDashboard.configuration.isolate_capture_writes
+
+        Services::CaptureWriteGuard.allow_writes do
+          Services::CaptureWriteGuard.lease(ErrorLogsRecord) { capture }
+        end
+      end
+
+      def capture
         # OTel: parent capture span. Wraps the entire sync capture path so
         # operators can audit how long error capture takes from their existing
         # tracing pipeline. Child spans (breadcrumbs, health, notifications)
@@ -787,6 +872,7 @@ module RailsErrorDashboard
 
         nil # Explicitly return nil, never raise
       end
+      private :capture
 
       private
 

@@ -11,7 +11,8 @@ set -uo pipefail
 # Usage:
 #   bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|
 #                         full_separate_db|full_api|full_kitchen_sink|
-#                         full_multi_app|full_solid_queue|full_upgrade]
+#                         full_multi_app|full_solid_queue|full_upgrade|
+#                         full_host_conditions]
 #
 # Examples:
 #   bin/pre-release-test full_sync         # Test sync config only (~1 min)
@@ -28,6 +29,11 @@ set -uo pipefail
 #     UPGRADE_DATABASE_URL=postgres://user:pass@host/db bin/pre-release-test full_upgrade
 #                                          # from a chosen release, on a database
 #                                          # server (see test_full_upgrade)
+#   bin/pre-release-test full_host_conditions  # rollbacks, prevented writes, a held pool
+#   HOST_DATABASE=postgresql HOST_DATABASE_URL=postgres://user:pass@host/db \
+#     RAILS_VERSION=7.2 bin/pre-release-test full_host_conditions
+#                                          # on a database server and a Rails
+#                                          # series (see test_full_host_conditions)
 #   bin/pre-release-test                   # Same as 'all'
 #
 # Exits 0 when every app passes, 1 when anything fails, and 3 when nothing
@@ -129,7 +135,13 @@ create_app() {
     # rails new always runs in development — that's fine, we switch to production after
     # NOTE: Do NOT skip action-mailer — our gem has mailer classes that require
     # ActionMailer::Base, and production eager_load=true will crash without it.
-    RAILS_ENV=development rails new "$app_name" \
+    # RAILS_NEW_VERSION (full_host_conditions) picks an installed release, as
+    # RubyGems' `rails _x.y.z_ new` does.
+    local rails_cli=(rails)
+    if [ -n "${RAILS_NEW_VERSION:-}" ]; then
+      rails_cli=(rails "_${RAILS_NEW_VERSION}_")
+    fi
+    RAILS_ENV=development "${rails_cli[@]}" new "$app_name" \
       --skip-git \
       --skip-docker \
       --skip-action-mailbox \
@@ -149,6 +161,11 @@ create_app() {
   # Add our gem to the Gemfile (path reference to test local code)
   echo "" >> "$app_dir/Gemfile"
   echo "gem 'rails_error_dashboard', path: '$GEM_DIR'" >> "$app_dir/Gemfile"
+  # Rails 8.0 passes json 3 an option it refuses, and its Gemfile doesn't pin
+  # json; the gem's own Gemfile explains.
+  if [[ "${RAILS_NEW_VERSION:-}" == 8.0.* ]]; then
+    echo "gem 'json', '< 3'" >> "$app_dir/Gemfile"
+  fi
 
   log_step "Running bundle install (this may take a moment)..."
   (cd "$app_dir" && bundle install 2>&1 | tail -5)
@@ -1158,14 +1175,17 @@ RUBY
     "$CHAOS_DIR/phase_c_queries.rb"
 }
 
+# Args: app_dir [url_variable], the variable that holds the server's URL
+# (UPGRADE_DATABASE_URL unless given).
 use_database_server() {
   local app_dir=$1
+  local url_variable=${2:-UPGRADE_DATABASE_URL}
 
   # configure_for_production wrote SQLite; production moves to the server.
   # The URL's scheme picks the adapter, and stays out of this file.
-  cat > "$app_dir/config/database.yml" << 'YAML'
+  cat > "$app_dir/config/database.yml" << YAML
 production:
-  url: <%= ENV.fetch("UPGRADE_DATABASE_URL") %>
+  url: <%= ENV.fetch("$url_variable") %>
   pool: 5
 YAML
 
@@ -1175,7 +1195,7 @@ YAML
   if ! (cd "$app_dir" && ERROR_DASHBOARD_USER=chaos_test_admin ERROR_DASHBOARD_PASSWORD=chaos_test_secret_42 \
         DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rails db:drop db:create > /tmp/red_chaos_db_create.log 2>&1); then
     tail -20 /tmp/red_chaos_db_create.log
-    log_error "Could not create the database at UPGRADE_DATABASE_URL"
+    log_error "Could not create the database at $url_variable"
     return 1
   fi
 }
@@ -1320,6 +1340,79 @@ test_full_upgrade() {
     "$CHAOS_DIR/phase_c_queries.rb"
 }
 
+# The newest installed rails gem of a series ("8.0" gives "8.0.5.2"), or
+# nothing.
+installed_rails_version() {
+  local series=$1
+  gem list --exact rails --local 2>/dev/null \
+    | sed -n 's/^rails (\(.*\))$/\1/p' | tr ',' '\n' | sed 's/^ *//; s/^default: //; s/ .*//' \
+    | grep -E "^${series//./\\.}\\." | head -1
+}
+
+# The host-condition test (hardening-1-0-rc2/REQ-50): one error from two
+# release directories, then a report in a transaction that rolls back, under
+# while_preventing_writes and with the pool held, sync and async (phase Q). CI
+# runs it on each database with each Rails series (test.yml).
+#
+#   HOST_DATABASE       sqlite (the default), postgresql or mysql
+#   HOST_DATABASE_URL   the server, for postgresql or mysql: postgres://... or
+#                       mysql2://... Its database is dropped and created.
+#   RAILS_VERSION       7.2, 8.0 or 8.1: the newest installed rails gem of that
+#                       series builds the app (gem install rails -v '~> 8.0.0').
+#                       Unset, the rails on PATH does.
+test_full_host_conditions() {
+  local database="${HOST_DATABASE:-sqlite}"
+  local rails_database
+  case "$database" in
+    sqlite)     rails_database=sqlite3 ;;
+    postgresql) rails_database=postgresql ;;
+    mysql)      rails_database=mysql ;;
+    *)
+      log_error "HOST_DATABASE must be sqlite, postgresql or mysql, not '${database}'."
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      return 1
+      ;;
+  esac
+
+  if [ "$database" != "sqlite" ] && [ -z "${HOST_DATABASE_URL:-}" ]; then
+    log_error "HOST_DATABASE=${database} needs HOST_DATABASE_URL, the server to test on."
+    echo "0:1:ERR" >> "$RESULTS_FILE"
+    return 1
+  fi
+
+  local series="${RAILS_VERSION:-}"
+  local release=""
+  if [ -n "$series" ]; then
+    if ! [[ "$series" =~ ^[0-9]+\.[0-9]+$ ]]; then
+      log_error "RAILS_VERSION must be a series like 8.0, not '${series}'."
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      return 1
+    fi
+    release="$(installed_rails_version "$series")"
+    if [ -z "$release" ]; then
+      log_error "No rails ${series}.x is installed: gem install rails -v '~> ${series}.0'"
+      echo "0:1:ERR" >> "$RESULTS_FILE"
+      return 1
+    fi
+  fi
+
+  log_header "full_host_conditions — Host conditions on ${database}, Rails ${release:-$(rails -v | awk '{print $2}')} (production)"
+
+  RAILS_NEW_VERSION="$release"
+  create_app "full_host_conditions_app" --database="$rails_database"
+  RAILS_NEW_VERSION=""
+
+  local app_dir="$TEST_DIR/full_host_conditions_app"
+
+  if [ "$database" != "sqlite" ]; then
+    use_database_server "$app_dir" HOST_DATABASE_URL || { echo "0:1:ERR" >> "$RESULTS_FILE"; return 1; }
+  fi
+
+  install_gem "$app_dir" "$TEMPLATES_DIR/full_sync_initializer.rb"
+
+  run_chaos_tests "$app_dir" "$CHAOS_DIR/phase_q_host_conditions.rb"
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1369,6 +1462,9 @@ case "$TARGET" in
   full_upgrade)
     test_full_upgrade
     ;;
+  full_host_conditions)
+    test_full_host_conditions
+    ;;
   all)
     # The lefthook pre-commit set: the original 4 apps plus the API-only host
     test_full_sync
@@ -1391,7 +1487,7 @@ case "$TARGET" in
     check_cdn_integrity
     ;;
   *)
-    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_api|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade|cdn_integrity]"
+    echo "Usage: bin/pre-release-test [all|release_audit|full_sync|full_async|full_http|full_separate_db|full_api|full_kitchen_sink|full_multi_app|full_solid_queue|full_upgrade|full_host_conditions|cdn_integrity]"
     exit 1
     ;;
 esac
