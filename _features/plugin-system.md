@@ -154,8 +154,15 @@ Register plugins in an initializer, so they are registered once, at boot.
 
 - An exception (a `StandardError`) raised inside a hook is rescued. The error is still recorded, and
   the other plugins still run.
-- The failure is logged only when `config.log_level` is `:error` or lower; the default, `:silent`,
-  logs nothing. The log lines look like this:
+- The failure writes one line at error level, at most once a minute for each plugin, hook and failure
+  class, when `config.log_level` is `:error` (the default) or lower. `:silent` writes nothing. The line
+  names the classes and nothing else:
+
+  ```text
+  [RailsErrorDashboard] Capture failure in Plugin 'My Custom Plugin'#on_error_logged: Errno::ECONNREFUSED (0 suppressed since the last line; detail at log_level :debug with enable_internal_logging)
+  ```
+
+  With `enable_internal_logging = true` and `log_level = :debug`, the detail of every failure follows:
 
   ```text
   [RailsErrorDashboard] [RailsErrorDashboard] Plugin 'My Custom Plugin' failed in on_error_logged: Errno::ECONNREFUSED - Connection refused
@@ -288,7 +295,7 @@ end
 Both Jira calls run in your jobs, which get the plugin with
 `RailsErrorDashboard::PluginRegistry.find("Jira Tickets")`. That keeps Jira's response time out of
 capture and out of the Resolve button, and a failed call fails the job, where you see it and it can
-be retried; inside a hook, RED would rescue it, and log nothing at the default `log_level`. Use the
+be retried; inside a hook, RED would rescue it and log only the failure's class. Use the
 transition name your Jira workflow has.
 
 ### Production only
@@ -402,7 +409,8 @@ plugin.safe_execute(:on_error_logged, RailsErrorDashboard::ErrorLog.last)
 
 ### See failures
 
-Set `config.log_level = :error` and look for `Plugin '...' failed in` in the log.
+At the default `log_level`, `:error`, look for `Capture failure in Plugin '...'` in the log. For the
+message and backtrace, set `enable_internal_logging = true` and `log_level = :debug`.
 
 ---
 
@@ -465,7 +473,7 @@ No, but every event calls every enabled plugin, in turn.
 2. Check `enabled?` returns true:
    `RailsErrorDashboard::PluginRegistry.find("My Custom Plugin").enabled?`.
 3. Check the event calls a hook at all (see [Event hooks](#event-hooks)).
-4. Set `config.log_level = :error` and look for `failed in` in the log.
+4. Look for `Capture failure in Plugin` in the log, at `log_level` `:error` (the default) or lower.
 
 ### Registering twice
 

@@ -135,7 +135,9 @@ The message after "Batch operation failed:" says why:
 - **Failed to resolve N errors** (or mute, unmute): saving those errors raised.
 - Anything else is the message of an exception that stopped the whole batch.
 
-RED logs the details only when `config.log_level` is `:error` or lower. The default is `:silent`.
+RED logs the details when `config.log_level` is `:error` or lower, and `:error` is the default from
+1.0.0-rc.2. If your initializer sets `config.log_level = :silent`, as the installer wrote it before
+then, RED logs nothing.
 
 ---
 

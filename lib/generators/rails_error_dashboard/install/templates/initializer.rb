@@ -196,7 +196,9 @@ RailsErrorDashboard.configure do |config|
 
 <% else -%>
   # Async Error Logging - DISABLED
-  # Errors are logged synchronously (adds ~1-5ms to requests that trigger errors)
+  # Errors are saved before the response is sent. In RED's deploy-shape benchmark
+  # that took 3.2 to 6.8 ms with the database on the same host, and 11.8 to
+  # 16.4 ms with it 1 ms away (medians).
   # To enable: Set config.async_logging = true
   config.async_logging = false
 
@@ -487,26 +489,24 @@ RailsErrorDashboard.configure do |config|
   # config.git_branch_strategy = :commit_sha  # :commit_sha (default), :current_branch, or :main
 
   # ============================================================================
-  # INTERNAL LOGGING (Silent by Default)
+  # INTERNAL LOGGING
   # ============================================================================
-  # Rails Error Dashboard logging is SILENT by default to keep your logs clean.
-  # Enable only for debugging gem issues or troubleshooting setup.
+  # A capture that fails writes one line a minute for each place and kind of
+  # failure, at error level. It names the classes involved: no message,
+  # params, URL or backtrace. log_level alone controls that line;
+  # enable_internal_logging turns on RED's warn, info and debug lines.
 
-  # Enable internal logging (default: false - silent)
+  # Enable internal logging (default: false)
   config.enable_internal_logging = false
 
-  # Log level (default: :error)
+  # Log level (default: :error; :silent writes nothing)
   # Options: :debug, :info, :warn, :error, :fatal, :silent
   # (RED has no fatal-level messages, so :fatal logs nothing, like :silent)
   config.log_level = :error
 
-  # Example: Enable verbose logging for debugging
+  # Example: verbose logging, with the detail of each failed capture
   # config.enable_internal_logging = true
   # config.log_level = :debug
-
-  # Example: Log only errors (troubleshooting)
-  # config.enable_internal_logging = true
-  # config.log_level = :error
 
   # ============================================================================
   # ADDITIONAL CONFIGURATION

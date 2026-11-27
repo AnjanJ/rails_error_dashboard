@@ -1296,7 +1296,12 @@ RailsErrorDashboard.configure do |config|
 end
 ```
 
-Both lines are needed: `log_level` defaults to `:silent`, which logs nothing.
+Both lines are needed for that much. RED's error lines need only `log_level`, which defaults to `:error`
+from 1.0.0-rc.2: a capture that fails writes one line a minute for each place and kind of failure,
+starting `[RailsErrorDashboard] Capture failure in`. It names the classes involved and nothing from the
+request. `enable_internal_logging` gates only the warn, info and debug lines; at `:debug`, the detail of
+each failure follows. If your initializer sets `config.log_level = :silent`, as the installer wrote it
+before 1.0.0-rc.2, RED writes nothing.
 
 Restart server, then check logs:
 ```bash
@@ -1398,4 +1403,4 @@ If you've tried the solutions above and still have issues:
 
 ---
 
-**Pro Tip**: When debugging, set both `enable_internal_logging = true` and `log_level = :debug`. With the default `log_level` (`:silent`), internal logging shows nothing.
+**Pro Tip**: When debugging, set both `enable_internal_logging = true` and `log_level = :debug`. At the default `log_level`, `:error`, you see one line a minute for each kind of failure, without its detail.

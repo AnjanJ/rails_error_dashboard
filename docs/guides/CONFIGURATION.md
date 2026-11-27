@@ -398,8 +398,8 @@ config.issue_tracker_token = ENV["RED_BOT_TOKEN"]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enable_internal_logging` | Boolean | `false` | Turns on RED's debug, info and warn messages, at or above `log_level` |
-| `log_level` | Symbol | `:silent` | `:debug`, `:info`, `:warn`, `:error`, `:fatal` or `:silent`. RED's error messages are logged at `:error` and below, with or without `enable_internal_logging`. The default, `:silent`, silences RED's internal logger. Some messages, such as job failures and boot warnings, go straight to the Rails log whatever this says |
+| `enable_internal_logging` | Boolean | `false` | Turns on RED's debug, info and warn messages, at or above `log_level`. RED's error lines don't need it |
+| `log_level` | Symbol | `:error` | `:debug`, `:info`, `:warn`, `:error`, `:fatal` or `:silent`. RED's error lines need only this setting. At `:error` and below, a capture that fails writes one line a minute for each place and kind of failure: it names the classes involved, never the message, params, URL or backtrace. `enable_internal_logging` gates only the more verbose levels: with it on at `:debug`, the detail of every failure follows, its context filtered as RED stores it. `:silent` writes nothing. If your initializer sets `:silent`, as the installer wrote it before 1.0.0-rc.2, it still writes nothing: see [Upgrading](../UPGRADING.md#what-behaves-differently). Boot warnings, and a notification or an issue that fails to send, go straight to the Rails log whatever this says |
 
 ### Read-Only Attributes
 
@@ -1646,7 +1646,7 @@ end
 
 ### Error Handling
 
-Callbacks are fail-safe - if one callback raises an error, it won't break error logging or prevent other callbacks from running. The failure is logged at error level, which you only see when `config.log_level` isn't `:silent` (the default):
+Callbacks are fail-safe - if one callback raises an error, it won't break error logging or prevent other callbacks from running. The failure writes one line at error level, at most once a minute, naming the class of what the callback raised. You see it at the default `log_level`, `:error`, and not at `:silent`:
 
 ```ruby
 RailsErrorDashboard.on_error_logged do |error_log|

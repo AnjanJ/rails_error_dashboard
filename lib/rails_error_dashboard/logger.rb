@@ -3,19 +3,15 @@
 module RailsErrorDashboard
   # Internal logger wrapper for Rails Error Dashboard
   #
-  # By default, all logging is SILENT to keep production logs clean.
-  # Users can opt-in to verbose logging for debugging.
+  # Error lines need only log_level, which defaults to :error; a failed
+  # capture writes its line through Services::CaptureFailureLog. debug, info
+  # and warn need enable_internal_logging too. :silent writes nothing
+  # (hardening-1-0-rc2, REQ-54 to REQ-58, REQ-61).
   #
   # @example Enable logging for debugging
   #   RailsErrorDashboard.configure do |config|
   #     config.enable_internal_logging = true
   #     config.log_level = :debug
-  #   end
-  #
-  # @example Production troubleshooting (errors only)
-  #   RailsErrorDashboard.configure do |config|
-  #     config.enable_internal_logging = true
-  #     config.log_level = :error
   #   end
   module Logger
     # The levels Configuration#validate! accepts: it reads this hash, so the two

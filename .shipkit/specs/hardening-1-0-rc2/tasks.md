@@ -431,12 +431,19 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: the new spec, `notification_retry_spec.rb` and `async_error_logging_job_spec.rb` → 0 failures on
     `RAILS_VERSION=7.2`, `8.0` and `8.1`; the full suite → 0 failures; `bin/benchmark` as for T33.
 - [ ] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
-  - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
+  - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb, _guides/configuration.md, _guides/settings.md, _reference/troubleshooting.md, docs/PLUGIN_SYSTEM.md, _features/plugin-system.md, docs/guides/BATCH_OPERATIONS.md, _guides/batch-operations.md, lib/rails_error_dashboard/logger.rb
+    Amended 2026-11-27: each doc's Jekyll copy; the plugin and batch-operation guides and `logger.rb`'s comment,
+    which gave `:silent` as the default or told readers to look for rc.1's failure text; and, with the maintainer's
+    yes, an UPGRADING bullet for T30 (captures wait for the host's transaction). `docs/PUBLIC_API.md` is unchanged:
+    it lists names and keeps each fact in one place, so it links the Configuration Guide for what the two
+    settings gate. The template's sync comment gives the deploy-shape benchmark's numbers, not "~1-5ms".
   - Test: none, prose (REQ-61 is waived). Read-through: each file says that error lines need only `log_level`,
     and that `enable_internal_logging` gates `warn`, `info` and `debug`. `UPGRADING.md` and its Jekyll copy say
     an existing install keeps the `:silent` its initializer sets, and how to switch to `:error`. The template's
     troubleshooting example no longer sets `enable_internal_logging` for `:error`.
-  - After: T33
+  - After: T27, T33
+    T27 is a file overlap only (`docs/PLUGIN_SYSTEM.md`), as T30's T20 is: T34 lands first, in PR 11, and
+    PR 8 takes the conflict.
   - Done when: the read-through above passes, and `git grep -n "enable_internal_logging"` in `docs/` and
     `_getting_started/` shows no line saying it is needed for errors
 
