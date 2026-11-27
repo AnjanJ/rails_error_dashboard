@@ -44,6 +44,10 @@ RSpec.describe "A RED job's retry that can't be scheduled" do
       RailsErrorDashboard::ReopenLinkedIssueJob.perform_later(id)
     end,
     RailsErrorDashboard::AddIssueRecurrenceCommentJob => proc do |id|
+      # Its throttle is per process, keyed by id, and SQLite reuses ids after
+      # a rolled-back example: an earlier comment for this id would skip the
+      # failure (seed 38495 on #383).
+      RailsErrorDashboard::AddIssueRecurrenceCommentJob.class_variable_get(:@@last_comment_at).clear
       allow(RailsErrorDashboard::ErrorLog).to receive(:find).and_raise(store_down, "db down")
       RailsErrorDashboard::AddIssueRecurrenceCommentJob.perform_later(id)
     end,

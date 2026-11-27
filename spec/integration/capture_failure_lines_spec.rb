@@ -14,7 +14,14 @@ require "rails_helper"
 #
 # Active Job's own lines go to a log of their own: they are Active Job's, not
 # RED's (REQ-60 covers what they carry, in failure_log_privacy_spec.rb).
-RSpec.describe "Capture failure lines" do
+#
+# Committed rows (:non_transactional): the paths rename RED's table or a
+# column, and DDL inside the test's transaction breaks it. MySQL commits it
+# implicitly, so the cleaner's savepoint is gone; on PostgreSQL the first
+# failed statement aborts the transaction, so the rename back fails.
+RSpec.describe "Capture failure lines", :non_transactional do
+  self.use_transactional_tests = false
+
   def failures = 20
 
   def run_sync_table_hidden
