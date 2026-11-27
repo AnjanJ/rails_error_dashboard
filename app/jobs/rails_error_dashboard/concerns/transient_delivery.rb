@@ -73,25 +73,20 @@ module RailsErrorDashboard
         end
       end
 
-      # Active Job schedules a retry with the adapter's enqueue_at. :inline,
-      # and adapters without a scheduler (Resque without resque-scheduler,
-      # Sneakers, queue_classic), raise NotImplementedError there. That is a
-      # ScriptError, so no `rescue => e` on the capture path stops it, and
-      # under :inline this job runs inside perform_later, on the thread that
-      # captured the error. A retry that cannot be scheduled makes this
-      # attempt the last one.
-      def retry_job(options = {})
-        super
-      rescue NotImplementedError
+      private
+
+      # A retry the queue adapter can't schedule (:inline, and adapters with no
+      # scheduler) makes this attempt the last one, so the claim goes back as
+      # it does when the retries run out. ApplicationJob#retry_job calls this
+      # (hardening-1-0-rc2, REQ-31, REQ-63).
+      # @param error [Exception] the error retry_on was retrying (activejob 7.2 to 8.1)
+      def retry_unschedulable(error)
         Rails.logger.error(
           "[RailsErrorDashboard] #{self.class.name.demodulize} could not schedule a retry: " \
           "the queue adapter has no scheduled jobs"
         )
-        # retry_on passes the error it is retrying (activejob 7.2 to 8.1).
-        delivery_retries_exhausted(options.fetch(:error))
+        delivery_retries_exhausted(error)
       end
-
-      private
 
       # Run a send, turning a transient failure into a TransientDeliveryError.
       # Other errors propagate unchanged, for the job's own rescue to log.

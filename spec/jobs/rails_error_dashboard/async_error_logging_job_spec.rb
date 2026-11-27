@@ -247,12 +247,13 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
         # Mock the instance method, not the class method
         allow_any_instance_of(RailsErrorDashboard::Commands::LogError).to receive(:call).and_raise("Job error")
 
-        expect(Rails.logger).to receive(:error).with(/AsyncErrorLoggingJob failed/)
-        expect(Rails.logger).to receive(:error).with(/Backtrace:/)
+        allow(Rails.logger).to receive(:error)
 
         expect {
           described_class.new.perform(exception_data, context)
         }.not_to raise_error
+        expect(Rails.logger).to have_received(:error)
+          .with(/Capture failure in AsyncErrorLoggingJob#perform \(payload\): RuntimeError/)
       end
     end
 
@@ -291,7 +292,6 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
       end
 
       it "says why it is failing rather than dropping the capture silently" do
-        expect(Rails.logger).to receive(:error).with(/error storage unavailable/).at_least(:once)
         allow(Rails.logger).to receive(:error)
 
         begin
@@ -299,6 +299,10 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
         rescue ActiveRecord::ConnectionNotEstablished
           nil
         end
+
+        expect(Rails.logger).to have_received(:error).with(
+          /Capture failure in AsyncErrorLoggingJob#perform \(store unavailable\): ActiveRecord::ConnectionNotEstablished/
+        )
       end
 
       # :inline, and adapters with no scheduler, raise NotImplementedError
@@ -317,7 +321,8 @@ RSpec.describe RailsErrorDashboard::AsyncErrorLoggingJob, type: :job do
           expect { described_class.perform_now(exception_data, context) }.not_to raise_error
 
           expect(described_class.queue_adapter).to have_received(:enqueue_at).once
-          expect(Rails.logger).to have_received(:error).with(/AsyncErrorLoggingJob could not schedule a retry/).once
+          expect(Rails.logger).to have_received(:error)
+            .with(/Capture failure in AsyncErrorLoggingJob#retry_job: NotImplementedError/).once
           expect(RailsErrorDashboard::ErrorLog.count).to eq(0)
         end
       end

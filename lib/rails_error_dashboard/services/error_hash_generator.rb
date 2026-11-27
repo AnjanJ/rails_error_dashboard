@@ -433,10 +433,9 @@ module RailsErrorDashboard
 
         Digest::SHA256.hexdigest(result)[0..15]
       rescue => e
-        RailsErrorDashboard::Logger.error(
-          "[RailsErrorDashboard] Custom fingerprint lambda failed: #{e.class} - #{e.message}. " \
-          "Falling back to default hash."
-        )
+        RailsErrorDashboard::Services::CaptureFailureLog.report("Services::ErrorHashGenerator.try_custom_fingerprint", e, exception) do
+          "[RailsErrorDashboard] Custom fingerprint lambda failed: #{e.class} - #{e.message}. Falling back to default hash."
+        end
         nil
       end
       private_class_method :try_custom_fingerprint

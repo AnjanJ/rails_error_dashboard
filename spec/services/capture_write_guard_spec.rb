@@ -70,12 +70,14 @@ RSpec.describe RailsErrorDashboard::Services::CaptureWriteGuard do
       expect(described_class::MAX_WAITING).to eq(100)
     end
 
+    # CaptureFailureLog then writes at most one of those a minute (REQ-54).
     it "says once each time it reaches the limit that it is dropping captures, not once per capture" do
-      allow(RailsErrorDashboard::Logger).to receive(:error)
+      allow(RailsErrorDashboard::Services::CaptureFailureLog).to receive(:report)
 
       2.times { ActiveRecord::Base.transaction { 150.times { guard.defer { nil } } } }
 
-      expect(RailsErrorDashboard::Logger).to have_received(:error).with(/dropping further ones/).twice
+      expect(RailsErrorDashboard::Services::CaptureFailureLog).to have_received(:report)
+        .with("Services::CaptureWriteGuard.hold", "100 captures already waiting").twice
     end
 
     it "gives the next transaction its own 100 (REQ-52)" do

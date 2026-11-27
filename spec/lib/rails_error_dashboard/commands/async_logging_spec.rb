@@ -172,7 +172,7 @@ RSpec.describe "Async Error Logging", type: :integration do
         .to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue store down")
 
       expect(RailsErrorDashboard::Logger)
-        .to receive(:error).with(/Async enqueue failed/).at_least(:once)
+        .to receive(:error).with(/Capture failure in Commands::LogError.enqueue_job: ActiveJob::EnqueueError/).at_least(:once)
 
       RailsErrorDashboard::Commands::LogError.call(error, {})
     end

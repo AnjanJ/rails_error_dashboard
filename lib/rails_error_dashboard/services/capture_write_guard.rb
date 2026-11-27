@@ -105,7 +105,9 @@ module RailsErrorDashboard
         rescue StandardError => e
           raise if entered
 
-          RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Capture could not switch to the writing role (#{e.class})")
+          RailsErrorDashboard::Services::CaptureFailureLog.report("Services::CaptureWriteGuard.allow_writes", e) do
+            "[RailsErrorDashboard] Capture could not switch to the writing role (#{e.class})"
+          end
           yield
         end
 
@@ -133,9 +135,9 @@ module RailsErrorDashboard
             rescue StandardError => e
               raise if held
 
-              RailsErrorDashboard::Logger.error(
+              RailsErrorDashboard::Services::CaptureFailureLog.report("Services::CaptureWriteGuard.lease", e) do
                 "[RailsErrorDashboard] Capture gave up: no database connection within #{connection_timeout}s (#{e.class})"
-              )
+              end
               nil
             end
           ensure
@@ -150,7 +152,9 @@ module RailsErrorDashboard
           transaction = open_transaction
           transaction ? waiter.wait_for(transaction) : waiter.run
         rescue StandardError, ScriptError => e
-          RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Capture after the host's transaction failed (#{e.class})")
+          RailsErrorDashboard::Services::CaptureFailureLog.report("Services::CaptureWriteGuard.resume", e) do
+            "[RailsErrorDashboard] Capture after the host's transaction failed (#{e.class})"
+          end
           nil
         end
 
@@ -188,9 +192,9 @@ module RailsErrorDashboard
           if pending.size >= MAX_WAITING
             unless state[DROPPING_KEY]
               state[DROPPING_KEY] = true
-              RailsErrorDashboard::Logger.error(
+              RailsErrorDashboard::Services::CaptureFailureLog.report("Services::CaptureWriteGuard.hold", "#{MAX_WAITING} captures already waiting") do
                 "[RailsErrorDashboard] #{MAX_WAITING} captures already wait for the host's transaction to end; dropping further ones"
-              )
+              end
             end
             return
           end

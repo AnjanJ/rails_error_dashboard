@@ -123,6 +123,22 @@ Nothing in [docs/PUBLIC_API.md](https://github.com/AnjanJ/rails_error_dashboard/
   Notification jobs 1.0.0-rc.1 had already queued still run after the upgrade, as rc.1 ran them: one job
   posts to every URL, and it carries no claim time, so if all its attempts fail the error waits out the
   notification cooldown instead of notifying again on its next occurrence.
+- **A capture that fails says so in the log** (from 1.0.0-rc.2). `log_level` defaults to `:error`, and a
+  capture that fails writes one line a minute for each place and kind of failure. The line names the
+  classes involved and nothing from the request: no message, params, URL or backtrace. The lines RED
+  wrote whatever the settings said, when its capture or storm-flush job failed or one of its jobs ran
+  out of retries, now follow `log_level` too. If your initializer sets `config.log_level = :silent`, as
+  the installer wrote it before 1.0.0-rc.2, RED still writes nothing; change it to
+  `config.log_level = :error` to see these lines. They don't need `enable_internal_logging`, which gates
+  only RED's warn, info and debug lines. With it on at `:debug`, the detail of each failure follows, its
+  context filtered as RED stores it.
+- **Captures inside your transactions wait for them to end** (from 1.0.0-rc.2). A capture reported
+  inside a transaction is written, or its job enqueued, once that transaction and every one around it
+  have ended, so a rollback no longer takes it along. It keeps the time it was reported. Inside
+  `while_preventing_writes` or a reading role it is written through the writing role. Each wait for a
+  database connection lasts at most `capture_connection_timeout` (0.1 s), once; then the capture is
+  dropped. `config.isolate_capture_writes = false` writes as 1.0.0-rc.1 did. See
+  [Captures Inside Your Transactions](/rails_error_dashboard/docs/guides/configuration/#captures-inside-your-transactions).
 
 ### The steps
 

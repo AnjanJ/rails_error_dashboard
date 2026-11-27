@@ -38,7 +38,9 @@ module RailsErrorDashboard
 
       result
     rescue *Commands::LogError::RETRYABLE_STORE_ERRORS => e
-      Rails.logger.error("[RailsErrorDashboard] StormFlushJob: error storage unavailable (#{e.class}: #{e.message}) — will retry")
+      RailsErrorDashboard::Services::CaptureFailureLog.report("StormFlushJob#perform (store unavailable)", e, job_id: job_id) do
+        "[RailsErrorDashboard] StormFlushJob: error storage unavailable (#{e.class}: #{e.message}) — will retry"
+      end
       raise
     end
   end

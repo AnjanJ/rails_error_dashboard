@@ -311,7 +311,8 @@ RSpec.describe RailsErrorDashboard do
 
         error = StandardError.new("Test error")
 
-        expect(RailsErrorDashboard::Logger).to receive(:error).with(/Error in error_logged callback/)
+        expect(RailsErrorDashboard::Logger).to receive(:error)
+          .with(/Capture failure in Commands::LogError#trigger_callbacks \(error_logged\): RuntimeError/)
         RailsErrorDashboard::Commands::LogError.call(error, {})
       end
     end

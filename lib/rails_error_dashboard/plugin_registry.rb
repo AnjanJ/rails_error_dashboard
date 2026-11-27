@@ -127,9 +127,9 @@ module RailsErrorDashboard
       def enabled?(plugin)
         plugin.enabled? ? true : false
       rescue => e
-        RailsErrorDashboard::Logger.error(
+        RailsErrorDashboard::Services::CaptureFailureLog.report("Plugin '#{name_of(plugin) || plugin.class}'#enabled?", e) do
           "[RailsErrorDashboard] Plugin '#{name_of(plugin) || plugin.class}' failed in enabled?: #{e.class} - #{e.message}; treated as disabled"
-        )
+        end
         false
       end
     end

@@ -19,12 +19,13 @@ Eleven pull requests, in this order:
 8. T22-T27: dashboard and queries.
 9. T28-T29: migrations.
 10. T30-T31: host conditions. They wait for S1's amendment, which may change T30's file list.
-11. T33-T34: capture failures, from S2's amendment (2026-11-20).
+11. T33-T34: capture failures, from S2's amendment (2026-11-20). T36 joined them on 2026-11-27, with the
+    maintainer's yes.
 
 Each pull request merges before the next branch starts from main. Rules for every task:
 - Code tasks write their test first, see it fail for the right reason, and cite
   `hardening-1-0-rc2/REQ-N`.
-- Capture-path tasks (T3-T5, T7, T11, T13, T30, T32, T33) also run `bin/benchmark`, and their pull request
+- Capture-path tasks (T3-T5, T7, T11, T13, T30, T32, T33, T36) also run `bin/benchmark`, and their pull request
   records the capture and storm-check medians against rc.1's.
 
 `rspec` below stands for `env -u RAILS_VERSION mise exec ruby@3.4.5 -- bundle exec rspec`.
@@ -374,8 +375,8 @@ Each pull request merges before the next branch starts from main. Rules for ever
       green.
 
 ## Capture failures (after S2's amendment)
-- [ ] **T33** One trimmed line per call site and failure class a minute, default `:error`, detail at debug → REQ-54, REQ-55, REQ-56, REQ-57, REQ-58
-  - Files: lib/rails_error_dashboard/services/capture_failure_log.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/configuration.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, lib/rails_error_dashboard/middleware/error_catcher.rb, lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, lib/rails_error_dashboard/plugin.rb, lib/rails_error_dashboard/plugin_registry.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, spec/services/capture_failure_log_spec.rb, spec/integration/capture_failure_lines_spec.rb
+- [x] **T33** One trimmed line per call site and failure class a minute, default `:error`, detail at debug → REQ-54, REQ-55, REQ-56, REQ-57, REQ-58
+  - Files: lib/rails_error_dashboard/services/capture_failure_log.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/configuration.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, lib/rails_error_dashboard/middleware/error_catcher.rb, lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, lib/rails_error_dashboard/plugin.rb, lib/rails_error_dashboard/plugin_registry.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard/logger.rb, spec/rails_helper.rb, spec/services/capture_failure_log_spec.rb, spec/integration/capture_failure_lines_spec.rb, and the specs that asserted on rc.1's lines (spec/commands/log_error_spec.rb, spec/commands/log_error_after_response_spec.rb, spec/lib/rails_error_dashboard/commands/log_error_spec.rb, spec/lib/rails_error_dashboard/commands/async_logging_spec.rb, spec/lib/rails_error_dashboard/plugin_registry_spec.rb, spec/lib/rails_error_dashboard_spec.rb, spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb, spec/services/capture_write_guard_spec.rb)
     The sites are the research file's Appendix A1 rows marked "capture" and "worker", and the worker's direct lines
     named in spec.md's "Capture failures" terms. `capture_failure_log.rb` is new, and `lib/rails_error_dashboard.rb`
     requires it.
@@ -383,7 +384,9 @@ Each pull request merges before the next branch starts from main. Rules for ever
     `ApplicationJob`'s `retry_on` without the `:inline` guard T30 gave `AsyncErrorLoggingJob`: the issue-tracker
     jobs, `NotificationBurstSummaryJob`, `BaselineAlertJob`, `StormFlushJob`, `StormNotificationJob`,
     `SwallowedExceptionFlushJob` and `RackAttackFlushJob`. Not probed yet (design.md, the S1 decision's second
-    amendment).
+    amendment). Decided 2026-11-27, with the maintainer's yes: T36, below, not T33.
+    Amended 2026-11-27: `capture_write_guard.rb` joins the list for T30's four sites (spec.md's amended terms),
+    `logger.rb` for `Logger.enabled?`, and `spec/rails_helper.rb` to reset the limiter before each example.
   - Test: spec/services/capture_failure_log_spec.rb, with an injected clock:
     - 50 failures with one key give one line. The next line, 60 s later, carries the suppressed count (REQ-54);
     - two failure classes at one site give two lines (REQ-54);
@@ -409,13 +412,38 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - the full suite → 0 failures;
     - `bin/benchmark` capture median within 0.2 ms of rc.1's, and storm check under 15 µs;
     - the spike's 60 s sync storm, rerun on the branch with storm protection off, writes at most 10 RED lines.
-- [ ] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
-  - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb
+- [x] **T36** No RED job's unschedulable retry raises into the host → REQ-63
+  - Files: app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/concerns/transient_delivery.rb, lib/rails_error_dashboard/commands/log_error.rb, spec/jobs/unschedulable_retry_spec.rb
+    Added 2026-11-27 with the maintainer's yes (design.md, the S1 decision's third amendment).
+  - Test: spec/jobs/unschedulable_retry_spec.rb, first on the code as it is, with the adapter's `enqueue_at`
+    stubbed to raise `NotImplementedError` (never a swapped adapter), and each job run through
+    `perform_enqueued_jobs`:
+    - each of the six jobs that can raise into `retry_on` (the four issue-tracker jobs, `StormFlushJob`,
+      `BaselineAlertJob`) fails once and raises nothing; the attempt is its last, and one line says so (REQ-63);
+    - every RED job class, read from `app/jobs`, ends an unschedulable retry without raising (REQ-63);
+    - a sync capture whose issue-tracker job fails that way still runs its later steps (REQ-63);
+    - `LogError.enqueue_after_response` raises nothing when the enqueue raises a `ScriptError` (REQ-63).
+
+    The notification jobs still release their claim, and the capture job still drops its capture with one line:
+    spec/jobs/notification_retry_spec.rb and spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb pass
+    unchanged in what they assert.
+  - After: T14, T33
+  - Done when: the new spec, `notification_retry_spec.rb` and `async_error_logging_job_spec.rb` → 0 failures on
+    `RAILS_VERSION=7.2`, `8.0` and `8.1`; the full suite → 0 failures; `bin/benchmark` as for T33.
+- [x] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
+  - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb, _guides/configuration.md, _guides/settings.md, _reference/troubleshooting.md, docs/PLUGIN_SYSTEM.md, _features/plugin-system.md, docs/guides/BATCH_OPERATIONS.md, _guides/batch-operations.md, lib/rails_error_dashboard/logger.rb
+    Amended 2026-11-27: each doc's Jekyll copy; the plugin and batch-operation guides and `logger.rb`'s comment,
+    which gave `:silent` as the default or told readers to look for rc.1's failure text; and, with the maintainer's
+    yes, an UPGRADING bullet for T30 (captures wait for the host's transaction). `docs/PUBLIC_API.md` is unchanged:
+    it lists names and keeps each fact in one place, so it links the Configuration Guide for what the two
+    settings gate. The template's sync comment gives the deploy-shape benchmark's numbers, not "~1-5ms".
   - Test: none, prose (REQ-61 is waived). Read-through: each file says that error lines need only `log_level`,
     and that `enable_internal_logging` gates `warn`, `info` and `debug`. `UPGRADING.md` and its Jekyll copy say
     an existing install keeps the `:silent` its initializer sets, and how to switch to `:error`. The template's
     troubleshooting example no longer sets `enable_internal_logging` for `:error`.
-  - After: T33
+  - After: T27, T33
+    T27 is a file overlap only (`docs/PLUGIN_SYSTEM.md`), as T30's T20 is: T34 lands first, in PR 11, and
+    PR 8 takes the conflict.
   - Done when: the read-through above passes, and `git grep -n "enable_internal_logging"` in `docs/` and
     `_getting_started/` shows no line saying it is needed for errors
 

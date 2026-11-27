@@ -55,33 +55,23 @@ module RailsErrorDashboard
       # capture it too; that capture fails the same way and is swallowed by
       # LogError's own rescue. ErrorReporter's recursion guard (issue #114)
       # plus the attempt cap bound this to a few wasted attempts, not a loop.
-      Rails.logger.error("AsyncErrorLoggingJob: error storage unavailable (#{e.class}: #{e.message}) — will retry")
+      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#perform (store unavailable)", e, exception, job_id: job_id) do
+        "AsyncErrorLoggingJob: error storage unavailable (#{e.class}: #{e.message}) — will retry"
+      end
       raise
     rescue => e
       # A payload problem (unparseable arguments, a class that cannot be
       # reconstructed). Retrying replays the identical payload, so it would
       # fail identically three times and still be discarded. Log and drop.
-      Rails.logger.error("AsyncErrorLoggingJob failed: #{e.message}")
-      Rails.logger.error("Backtrace: #{e.backtrace&.first(5)&.join("\n")}")
+      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#perform (payload)", e, exception, job_id: job_id) do
+        [ "AsyncErrorLoggingJob failed: #{e.message}", "Backtrace: #{e.backtrace&.first(5)&.join("\n")}" ]
+      end
     end
 
-    # Active Job schedules a retry with the adapter's enqueue_at. :inline, and
-    # adapters without a scheduler (Resque without resque-scheduler, Sneakers,
-    # queue_classic), raise NotImplementedError there. That is a ScriptError,
-    # so no `rescue => e` on the capture path stops it, and under :inline this
-    # job runs inside perform_later, on the thread that reported the error. A
-    # retry that cannot be scheduled makes this attempt the last one, and the
-    # capture is dropped (hardening-1-0-rc2, REQ-19, REQ-20), as
-    # Concerns::TransientDelivery does for the notification jobs.
-    def retry_job(options = {})
-      super
-    rescue NotImplementedError
-      Rails.logger.error(
-        "[RailsErrorDashboard] AsyncErrorLoggingJob could not schedule a retry: the queue adapter has no " \
-        "scheduled jobs, so the capture is dropped (#{options[:error].class})"
-      )
-      nil
-    end
+    # A retry the queue adapter can't schedule (:inline, and adapters with no
+    # scheduler) makes this attempt the last one, and the capture is dropped
+    # with one line: ApplicationJob#retry_job (hardening-1-0-rc2, REQ-19,
+    # REQ-20, REQ-63).
 
     private
 

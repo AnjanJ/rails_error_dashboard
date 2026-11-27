@@ -3,19 +3,15 @@
 module RailsErrorDashboard
   # Internal logger wrapper for Rails Error Dashboard
   #
-  # By default, all logging is SILENT to keep production logs clean.
-  # Users can opt-in to verbose logging for debugging.
+  # Error lines need only log_level, which defaults to :error; a failed
+  # capture writes its line through Services::CaptureFailureLog. debug, info
+  # and warn need enable_internal_logging too. :silent writes nothing
+  # (hardening-1-0-rc2, REQ-54 to REQ-58, REQ-61).
   #
   # @example Enable logging for debugging
   #   RailsErrorDashboard.configure do |config|
   #     config.enable_internal_logging = true
   #     config.log_level = :debug
-  #   end
-  #
-  # @example Production troubleshooting (errors only)
-  #   RailsErrorDashboard.configure do |config|
-  #     config.enable_internal_logging = true
-  #     config.log_level = :error
   #   end
   module Logger
     # The levels Configuration#validate! accepts: it reads this hash, so the two
@@ -78,6 +74,21 @@ module RailsErrorDashboard
         return unless log_level_enabled?(:error)
 
         Rails.logger.error(formatted_message(message))
+      end
+
+      # Would a message at this level be written? The same gates as the
+      # methods above: error needs only log_level, the other levels need
+      # enable_internal_logging too. For callers that build a message only
+      # when it will be written.
+      #
+      # @param level [Symbol] :debug, :info, :warn or :error
+      # @return [Boolean]
+      def enabled?(level)
+        return false unless level == :error || logging_enabled?
+
+        log_level_enabled?(level)
+      rescue StandardError
+        false
       end
 
       private

@@ -76,9 +76,9 @@ module RailsErrorDashboard
             # permanently malformed entry from poisoning its batch.
             failed += 1
             aborted = true
-            RailsErrorDashboard::Logger.error(
+            RailsErrorDashboard::Services::CaptureFailureLog.report("Commands::FlushStormCounts#call (transient store failure)", e) do
               "[RailsErrorDashboard] Storm batch aborted by a transient store failure: #{e.class} - #{e.message}"
-            )
+            end
             raise
           rescue => e
             # A corrupt (non-Hash) entry must not abort the whole batch — and the
@@ -86,9 +86,9 @@ module RailsErrorDashboard
             # from a broken serializer would raise again here, escaping this rescue).
             failed += 1
             error_class = entry.is_a?(Hash) ? entry["error_class"] : entry.class
-            RailsErrorDashboard::Logger.error(
+            RailsErrorDashboard::Services::CaptureFailureLog.report("Commands::FlushStormCounts#call (entry)", e, error_class) do
               "[RailsErrorDashboard] Storm count reconcile failed for #{error_class}: #{e.class} - #{e.message}"
-            )
+            end
           end
 
           # Nothing was written, so there is nothing to protect from a replay:
@@ -133,9 +133,9 @@ module RailsErrorDashboard
         result[:buckets_incomplete] = true if @buckets_incomplete
         result
       rescue => e
-        RailsErrorDashboard::Logger.error(
+        RailsErrorDashboard::Services::CaptureFailureLog.report("Commands::FlushStormCounts#call", e) do
           "[RailsErrorDashboard] FlushStormCounts failed: #{e.class} - #{e.message}"
-        )
+        end
         # retryable: true says "the batch is intact, replay it" -- nothing was
         # committed, so the job can retry without doubling. A permanent failure
         # carries no such promise.
@@ -609,9 +609,9 @@ module RailsErrorDashboard
         event.ended_at = parse_time(@episode["ended_at"]) if @episode["ended_at"]
         event.save!
       rescue => e
-        RailsErrorDashboard::Logger.error(
+        RailsErrorDashboard::Services::CaptureFailureLog.report("Commands::FlushStormCounts#upsert_storm_event", e) do
           "[RailsErrorDashboard] Storm event upsert failed: #{e.class} - #{e.message}"
-        )
+        end
       end
 
       def top_fingerprints_json(event)

@@ -71,12 +71,16 @@ module RailsErrorDashboard
       rescue StandardError, ScriptError => e
         # Don't let error logging cause more errors - fail silently
         # Log failure for debugging but NEVER propagate exception
-        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}")
-        RailsErrorDashboard::Logger.error("Original error: #{error.class} - #{error.message}") if error
         # No Context line: the host's context is unfiltered, and its request's
         # inspect carries the URL with its query string (hardening-1-0-rc2,
-        # REQ-59).
-        RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+        # REQ-59). This failure comes before RED has built the context it stores.
+        RailsErrorDashboard::Services::CaptureFailureLog.report("ErrorReporter#report", e, error) do
+          [
+            "[RailsErrorDashboard] ErrorReporter failed: #{e.class} - #{e.message}",
+            ("Original error: #{error.class} - #{Commands::LogError.loggable_message(error)}" if error),
+            e.backtrace&.first(5)&.join("\n")
+          ]
+        end
         nil # Explicitly return nil, never raise
       ensure
         Thread.current[:rails_error_dashboard_logging] = nil

@@ -56,9 +56,9 @@ module RailsErrorDashboard
           return nil if storm_decision == :count_only
           context = context.merge(_storm_decision: storm_decision) if storm_decision == :lite
         rescue => e
-          RailsErrorDashboard::Logger.error(
+          Services::CaptureFailureLog.report("Commands::LogError.call (pre-checks)", e, exception) do
             "[RailsErrorDashboard] Capture pre-checks failed: #{e.class} - #{e.message}"
-          )
+          end
           # Fall through and attempt full capture — fail open, never raise
         end
 
@@ -76,9 +76,9 @@ module RailsErrorDashboard
       # what was asked of it) and LoadError pass `rescue => e`, and this is the
       # last layer before the host (hardening-1-0-rc2, REQ-19).
       rescue StandardError, ScriptError => e
-        RailsErrorDashboard::Logger.error(
+        Services::CaptureFailureLog.report("Commands::LogError.call", e, exception) do
           "[RailsErrorDashboard] LogError.call failed: #{e.class} - #{e.message}"
-        )
+        end
         nil
       end
 
@@ -294,14 +294,16 @@ module RailsErrorDashboard
       # Runs inside the server once the response has gone. Puma rescues a
       # raising callback and logs it only at debug level, so nothing may
       # escape: a failed enqueue already falls back to sync logging, and this
-      # rescue covers that fallback failing too.
+      # rescue covers that fallback failing too. ScriptError too: under :inline
+      # the capture job runs here, and NotImplementedError and LoadError pass
+      # `rescue => e` (hardening-1-0-rc2, REQ-63).
       def self.enqueue_after_response(exception, exception_data, context)
         enqueue_async(exception, exception_data, context)
         nil
-      rescue => e
-        RailsErrorDashboard::Logger.error(
+      rescue StandardError, ScriptError => e
+        Services::CaptureFailureLog.report("Commands::LogError.enqueue_after_response", e, exception) do
           "[RailsErrorDashboard] Capture after the response failed: #{e.class} - #{e.message}"
-        )
+        end
         nil
       end
 
@@ -349,9 +351,9 @@ module RailsErrorDashboard
           # capture_connection_timeout. A sync write would wait for one again,
           # so the capture gives up after that one wait (REQ-20).
           if e.is_a?(ActiveRecord::ConnectionTimeoutError) && RailsErrorDashboard.configuration.isolate_capture_writes
-            RailsErrorDashboard::Logger.error(
+            Services::CaptureFailureLog.report("Commands::LogError.enqueue_job (no connection in time)", e, exception) do
               "[RailsErrorDashboard] Capture gave up: no database connection for the enqueue within the capture's timeout (#{e.class})"
-            )
+            end
             return nil
           end
 
@@ -360,9 +362,9 @@ module RailsErrorDashboard
           # still captured. Without this rescue, the exception propagates back
           # to ErrorReporter, which re-reports it via Rails.error.report →
           # infinite recursion (issue #114).
-          RailsErrorDashboard::Logger.error(
+          Services::CaptureFailureLog.report("Commands::LogError.enqueue_job", e, exception) do
             "[RailsErrorDashboard] Async enqueue failed (#{e.class}: #{e.message}), falling back to sync logging"
-          )
+          end
           # The raw exception goes to the sync path, so its message has not
           # been limited, whatever the half-built payload says.
           new(exception, context.except(:_message_limited)).call
@@ -463,15 +465,42 @@ module RailsErrorDashboard
         # Never fail a capture over redaction, and never ship the raw payload
         # either: withhold what redaction was meant to clean (fail closed). The
         # identity was taken from the raw exception, so grouping is unchanged.
-        RailsErrorDashboard::Logger.error(
+        Services::CaptureFailureLog.report("Commands::LogError.redact_async_payload", e) do
           "[RailsErrorDashboard] Async payload redaction failed: #{e.class} - #{e.message}"
-        )
+        end
         withheld = Services::SensitiveDataFilter::FILTERED_REPLACEMENT
         exception_data = exception_data.merge(message: withheld, cause_chain: nil)
         context = context.except(*CONTEXT_PARAM_KEYS, :session_id)
         context = context.merge(request_params: withheld) unless context[:request_params].nil?
         context = context.merge(request_url: withheld) unless context[:request_url].nil?
         [ exception_data, context ]
+      end
+
+      # A capture's context as RED stores it, for the detail a failed capture
+      # writes at debug (hardening-1-0-rc2, REQ-57, REQ-59): the fields
+      # ErrorContext keeps, filtered as the async payload is. Never the hash as
+      # given: it can hold the request itself, whose inspect carries the URL
+      # with its query string. With filter_sensitive_data off the row keeps the
+      # raw params and URL, but the log never gets them, at any level.
+      # @param context [Hash]
+      # @return [Hash]
+      def self.loggable_context(context)
+        stored = ValueObjects::ErrorContext.new(context, context[:source]).to_h
+        return redact_async_payload({}, stored).last if RailsErrorDashboard.configuration.filter_sensitive_data
+
+        withheld = Services::SensitiveDataFilter::FILTERED_REPLACEMENT
+        stored.except(:session_id).merge(request_params: withheld, request_url: withheld)
+      rescue StandardError
+        {}
+      end
+
+      # A reported exception's message as RED stores it.
+      # @param exception [Exception]
+      # @return [String]
+      def self.loggable_message(exception)
+        Services::SensitiveDataFilter.filter_attributes(message: exception.message.to_s)[:message]
+      rescue StandardError
+        Services::SensitiveDataFilter::FILTERED_REPLACEMENT
       end
 
       # Serialize cause chain for async job serialization
@@ -828,7 +857,9 @@ module RailsErrorDashboard
             # raises, so a failure here is never logged as the occurrence's.
             RecordOccurrenceContext.call(occurrence, attributes) if occurrence.persisted?
           rescue => e
-            RailsErrorDashboard::Logger.error("Failed to create error occurrence: #{e.message}")
+            Services::CaptureFailureLog.report("Commands::LogError#capture (occurrence)", e, @exception) do
+              "Failed to create error occurrence: #{e.message}"
+            end
           end
         end
 
@@ -857,12 +888,18 @@ module RailsErrorDashboard
       rescue => e
         # Don't let error logging cause more errors - fail silently
         # CRITICAL: Log but never propagate exception
-        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}")
-        RailsErrorDashboard::Logger.error("Original exception: #{@exception.class} - #{@exception.message}") if @exception
-        # No Context line: @context holds request.params and the URL before
-        # RED filters them, so it printed passwords and tokens at :error
-        # (hardening-1-0-rc2, REQ-59).
-        RailsErrorDashboard::Logger.error(e.backtrace&.first(5)&.join("\n")) if e.backtrace
+        # The Context line prints the context as RED stores it: @context holds
+        # request.params and the URL before RED filters them, and printed
+        # passwords and tokens at :error in 1.0.0-rc.1 (hardening-1-0-rc2,
+        # REQ-57, REQ-59).
+        Services::CaptureFailureLog.report("Commands::LogError#capture", e, @exception) do
+          [
+            "[RailsErrorDashboard] LogError command failed: #{e.class} - #{e.message}",
+            ("Original exception: #{@exception.class} - #{self.class.loggable_message(@exception)}" if @exception),
+            "Context: #{self.class.loggable_context(@context).inspect[0, 500]}",
+            e.backtrace&.first(5)&.join("\n")
+          ]
+        end
 
         # A worker must not report a delivery it did not make. Only the
         # store-unavailable failures are re-raised (they are worth another
@@ -910,9 +947,9 @@ module RailsErrorDashboard
         # that cannot be reached (Redis down for the Slack job's enqueue, a
         # broken webhook config) must not take the capture down with it: the
         # caller asked us to record an error, and we did. Log, don't raise.
-        RailsErrorDashboard::Logger.error(
+        Services::CaptureFailureLog.report("Commands::LogError#maybe_notify", e, @exception) do
           "[RailsErrorDashboard] Failed to dispatch notification for error #{error_log&.id}: #{e.class} - #{e.message}"
-        )
+        end
       end
 
       # A bad deploy can produce hundreds of DISTINCT new errors, each a first
@@ -1027,7 +1064,9 @@ module RailsErrorDashboard
       rescue ActiveRecord::ConnectionTimeoutError
         raise
       rescue => e
-        RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Failed to find/create application: #{e.message}")
+        Services::CaptureFailureLog.report("Commands::LogError#find_or_create_application", e, @exception) do
+          "[RailsErrorDashboard] Failed to find/create application: #{e.message}"
+        end
         # Fallback: try to find any application or create default
         Application.first || Application.create!(name: "Default Application")
       end
@@ -1038,7 +1077,9 @@ module RailsErrorDashboard
         RailsErrorDashboard.configuration.notification_callbacks[:error_logged].each do |callback|
           callback.call(error_log)
         rescue => e
-          RailsErrorDashboard::Logger.error("Error in error_logged callback: #{e.message}")
+          Services::CaptureFailureLog.report("Commands::LogError#trigger_callbacks (error_logged)", e, @exception) do
+            "Error in error_logged callback: #{e.message}"
+          end
         end
 
         # Trigger critical_error callbacks if this is a critical error
@@ -1046,7 +1087,9 @@ module RailsErrorDashboard
           RailsErrorDashboard.configuration.notification_callbacks[:critical_error].each do |callback|
             callback.call(error_log)
           rescue => e
-            RailsErrorDashboard::Logger.error("Error in critical_error callback: #{e.message}")
+            Services::CaptureFailureLog.report("Commands::LogError#trigger_callbacks (critical_error)", e, @exception) do
+              "Error in critical_error callback: #{e.message}"
+            end
           end
         end
       end
@@ -1076,9 +1119,9 @@ module RailsErrorDashboard
         # caller (fanout.rb#iterate_guarding_exceptions), so a host subscriber
         # on error_logged.rails_error_dashboard would otherwise abort a capture
         # whose row is already persisted.
-        RailsErrorDashboard::Logger.error(
+        Services::CaptureFailureLog.report("Commands::LogError#emit_instrumentation_events", e, @exception) do
           "[RailsErrorDashboard] Failed to emit instrumentation events for error #{error_log&.id}: #{e.class} - #{e.message}"
-        )
+        end
       end
 
       #  Check if error exceeds baseline and send alert if needed
@@ -1114,7 +1157,9 @@ module RailsErrorDashboard
         )
       rescue => e
         # Don't let baseline alerting cause errors
-        RailsErrorDashboard::Logger.error("Failed to check baseline anomaly: #{e.message}")
+        Services::CaptureFailureLog.report("Commands::LogError#check_baseline_anomaly", e, @exception) do
+          "Failed to check baseline anomaly: #{e.message}"
+        end
       end
 
       # Add enriched request context fields if columns exist

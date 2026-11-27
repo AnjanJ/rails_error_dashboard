@@ -628,7 +628,8 @@ RSpec.describe RailsErrorDashboard::Commands::LogError do
           end
 
           it "handles error gracefully" do
-            expect(RailsErrorDashboard::Logger).to receive(:error).with(/Failed to check baseline anomaly/)
+            expect(RailsErrorDashboard::Logger).to receive(:error)
+              .with(/Capture failure in Commands::LogError#check_baseline_anomaly: StandardError/)
 
             expect {
               described_class.call(exception, context)

@@ -56,6 +56,10 @@ leave them unset.
 | Advanced Configuration | `custom_severity_rules`, `ignored_exceptions` |
 | Internal Logging | `enable_internal_logging`, `log_level` |
 
+Under Internal Logging, RED's error lines, such as the one a failed capture writes, need only
+`log_level`, which defaults to `:error`. `enable_internal_logging` gates only the warn, info and debug
+lines.
+
 Not every option is on the page. The LLM observability options, for one, aren't shown. The
 [Configuration Guide](/rails_error_dashboard/docs/guides/configuration/) has them all.
 

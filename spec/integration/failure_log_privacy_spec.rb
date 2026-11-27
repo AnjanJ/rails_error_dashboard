@@ -12,7 +12,15 @@ require "rails_helper"
 #   retries run out is named by class and id (hardening-1-0-rc2/REQ-60).
 #
 # Spike S2: .shipkit/research/silent-failures-spike.md.
-RSpec.describe "Failure log privacy" do
+#
+# Committed rows (:non_transactional): one example renames RED's table, and
+# DDL inside the test's transaction breaks it. On PostgreSQL, run early in a
+# process (before RED's columns are cached), the first failed statement
+# aborts the transaction and the rename back fails; MySQL commits DDL
+# implicitly.
+RSpec.describe "Failure log privacy", :non_transactional do
+  self.use_transactional_tests = false
+
   # Rails' own template, config/initializers/filter_parameter_logging.rb. The
   # dummy app has none, and without it Rails' lines would show what RED hides.
   let(:template_filters) { %i[passw email secret token _key crypt salt certificate otp ssn cvv cvc] }

@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `4afd12db` on spec/hardening-1-0-rc2.
 > Status: open
-> Paths: lib/,app/,db/migrate/,config/locales/,spec/,test/pre_release/,bin/pre-release-test,docs/,README.md,rails_error_dashboard.gemspec,_getting_started/,.github/workflows/,.shipkit/decisions/,.shipkit/research/,.shipkit/specs/release-1-0-rc1/
+> Paths: lib/,app/,db/migrate/,config/locales/,spec/,test/pre_release/,bin/pre-release-test,docs/,README.md,rails_error_dashboard.gemspec,_getting_started/,_guides/,_reference/,_features/,.github/workflows/,.shipkit/decisions/,.shipkit/research/,.shipkit/specs/release-1-0-rc1/
 
 ## Purpose
 Fix every finding of the independent 1.0.0-rc.1 review that held up on verification, before 1.x freezes
@@ -108,6 +108,11 @@ and accepted these terms on 2026-11-20:
   reported inside it, without raising.
 - **REQ-53.** Where an async capture's enqueue runs after the response, RED shall not wait for a connection
   on the request thread for it.
+- **REQ-63.** If the queue adapter can't schedule a retry of a RED job, then RED shall end that attempt as the
+  job's last and raise nothing into the code that enqueued or ran the job.
+  Added 2026-11-27 (T36, with the maintainer's yes): `:inline`, and Resque without a scheduler, Sneakers and
+  queue_classic, raise `NotImplementedError` from `enqueue_at`, and under `:inline` a job runs inside
+  `perform_later`, on the thread that enqueued it. See design.md, the S1 decision's third amendment.
 
 ### Capture failures
 Added 2026-11-20 by spike S2 (`.shipkit/research/silent-failures-spike.md`; the decision is "A failed capture
@@ -124,6 +129,12 @@ evidence and accepted these terms on 2026-11-20:
   line. Its key is the call site and the failure's class.
 - **The detail:** what those sites print in 1.0.0-rc.1, with the context as RED stores it, that is, filtered.
 - **Unchanged:** the 16 dashboard-only `Logger.error` sites. A failure count on `/health` is not part of rc.2.
+- **Amended 2026-11-27 (T33, with the maintainer's yes of 2026-11-26 and 2026-11-27):** the sites were counted
+  again on `8ccdc73b`, with the research file's `census.rb`. T32 removed the two Context lines, so 30 of the 32
+  remain. T30 added five, and they are capture-path failures too: the give-up in `LogError.enqueue_job` when the
+  queue's pool has no connection in time, and `CaptureWriteGuard`'s `allow_writes`, `lease`, `resume` and `hold`.
+  So is the worker's `AsyncErrorLoggingJob#retry_job` line. The line numbers above are rc.1's. `Gate.drain!` (at
+  exit) and `PluginRegistry.register` (boot) stay outside, where the census put them.
 
 - **REQ-54.** When a capture-path failure occurs while `log_level` is `:error`, `:warn`, `:info` or `:debug`,
   RED shall write the summary line for its key at most once per 60 seconds per process.
