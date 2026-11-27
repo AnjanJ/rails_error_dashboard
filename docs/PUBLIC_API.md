@@ -466,3 +466,5 @@ These can change in any release, without a deprecation:
 - i18n keys.
 - The dashboard's HTML, CSS and JavaScript.
 - Every dashboard URL not listed under [URLs](#urls).
+- The wording of RED's log lines. One part stays for all of 1.x: a capture that fails writes a line that
+  starts `[RailsErrorDashboard] Capture failure in`, so you can alert on that prefix.

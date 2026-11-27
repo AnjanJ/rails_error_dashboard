@@ -94,6 +94,14 @@ RSpec.describe RailsErrorDashboard::Services::CaptureFailureLog do
       expect(summary_lines.last).to include("site 0")
     end
 
+    # The one part of RED's log wording 1.x keeps (.shipkit/decisions/0011,
+    # docs/PUBLIC_API.md "What's private").
+    it "starts with the prefix 1.x keeps, so a host can alert on it (hardening-1-0-rc2/REQ-54)" do
+      failure_log.report("Commands::LogError#capture", store_error)
+
+      expect(lines.first).to start_with("[RailsErrorDashboard] Capture failure in Commands::LogError#capture: ")
+    end
+
     it "names a job by its id when given one (hardening-1-0-rc2/REQ-60)" do
       failure_log.report("ApplicationJob retry_on (RailsErrorDashboard::AsyncErrorLoggingJob)", store_error,
                          job_id: "job-id-1234")

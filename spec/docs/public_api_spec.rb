@@ -184,7 +184,8 @@ RSpec.describe "The public API page" do
 
     expect(private_part).to include(
       "Database tables, columns and models", "Job classes and their arguments", "Classes and modules not named on this page",
-      "i18n keys", "HTML, CSS and JavaScript", "Every dashboard URL not listed"
+      "i18n keys", "HTML, CSS and JavaScript", "Every dashboard URL not listed",
+      "The wording of RED's log lines", "starts `[RailsErrorDashboard] Capture failure in`"
     )
   end
 
