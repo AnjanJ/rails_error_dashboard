@@ -33,6 +33,23 @@ module RailsErrorDashboard
       end
     end
 
+    # Active Job schedules a retry with the adapter's enqueue_at. :inline, and
+    # adapters without a scheduler (Resque without resque-scheduler, Sneakers,
+    # queue_classic), raise NotImplementedError there. That is a ScriptError,
+    # so no `rescue => e` stops it, and under :inline a job runs inside
+    # perform_later, on the thread that enqueued it: for most RED jobs, a
+    # capture inside the host's request. A retry that can't be scheduled makes
+    # this attempt the last one (hardening-1-0-rc2, REQ-63).
+    #
+    # One rescue here, for every RED job: a job that needs another answer
+    # overrides retry_unschedulable, never retry_job (a retry_job of its own
+    # that calls super would never see the NotImplementedError).
+    def retry_job(options = {})
+      super
+    rescue NotImplementedError
+      retry_unschedulable(options[:error])
+    end
+
     # Did this perform_later actually reach the queue?
     #
     # Active Job does NOT raise on every failed handoff: from Rails 7.2 an
@@ -55,6 +72,23 @@ module RailsErrorDashboard
     def self.enqueue_failure_reason(job)
       (job.respond_to?(:enqueue_error) && job.enqueue_error&.message) ||
         "perform_later returned #{job.inspect}"
+    end
+
+    private
+
+    # What a RED job does when its retry can't be scheduled: one rate-limited
+    # line, and the attempt ends (hardening-1-0-rc2, REQ-54, REQ-63).
+    # Concerns::TransientDelivery overrides it to hand back the notification
+    # claim.
+    # @param error [Exception, nil] the error retry_on was retrying
+    # @return [nil]
+    def retry_unschedulable(error)
+      name = self.class.name.delete_prefix("RailsErrorDashboard::")
+      Services::CaptureFailureLog.report("#{name}#retry_job", "NotImplementedError", error, job_id: job_id) do
+        "[RailsErrorDashboard] #{name} could not schedule a retry: the queue adapter has no scheduled jobs, " \
+          "so this attempt was the last (#{error.class})"
+      end
+      nil
     end
   end
 end

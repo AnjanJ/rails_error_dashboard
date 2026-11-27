@@ -428,12 +428,13 @@ the caller of `LogError.call`, and of `Rails.error.report(e, handled: true)`, on
 - **Alternatives.**
   1. A `retry_job` override on each of the six jobs, as `AsyncErrorLoggingJob` and `TransientDelivery` have.
   2. One `retry_job` on `ApplicationJob` that rescues `NotImplementedError` and calls a hook,
-     `retry_unschedulable(error)`, that ends the attempt with one line. `TransientDelivery` and
-     `AsyncErrorLoggingJob` override the hook instead of `retry_job`.
+     `retry_unschedulable(error)`, that ends the attempt with one line. `TransientDelivery` overrides the hook
+     instead of `retry_job`.
   3. Leave it to rc.3.
 - **Case for 2.**
   - One place covers every RED job, including one added after 1.0.
-  - The two existing overrides become hook overrides, so no job can forget the guard.
+  - The two existing overrides go: `TransientDelivery`'s becomes a hook override, and `AsyncErrorLoggingJob`'s
+    isn't needed, because the default line says what it said. No job can forget the guard.
   - Rescuing on `ApplicationJob` while `TransientDelivery` kept its own `retry_job` would break PR 5: its
     override calls `super` and relies on `NotImplementedError` reaching it to release the notification claim. With
     the hook, the release runs from `TransientDelivery#retry_unschedulable`.
@@ -446,6 +447,13 @@ the caller of `LogError.call`, and of `Rails.error.report(e, handled: true)`, on
   hosts on `:inline` with a raise RED can stop, and host safety outranks the deadline.
 - **Decision.** Option 2. `LogError.enqueue_after_response` also rescues `StandardError, ScriptError`, as T30's
   other last layers do.
+- **Reproduced (2026-11-27, T36's test on the code before the fix,** with the adapter's `enqueue_at` stubbed to raise
+  `NotImplementedError` and each job run through `perform_enqueued_jobs`): each of the six jobs raised it out of
+  `perform_later`. So did `retry_job` on 14 of the 21 job classes in `app/jobs`; the 7 that didn't were
+  `AsyncErrorLoggingJob` and the six `TransientDelivery` jobs. A sync capture whose `CreateIssueJob` failed that
+  way returned `nil` from `LogError.call` and skipped its instrumentation events, and
+  `enqueue_after_response` let the error out. After the fix: none of these, and the notification jobs still
+  hand back their claim.
 - **I would reverse this if** a host reports, after rc.2, an exception from a RED job's retry reaching its code:
   that would mean one hook doesn't cover every path, and the per-job overrides of option 1 are needed after all.
 
@@ -909,7 +917,7 @@ alternative worth a record:
   default subject to the spike; the maintainer accepted it after reading the evidence.
 - **New service:** `Services::CaptureFailureLog` (internal; not in `docs/PUBLIC_API.md`) → REQ-54 to REQ-57.
 - **Jobs:** `ApplicationJob#retry_job` rescues `NotImplementedError` and calls `retry_unschedulable(error)`, which
-  `TransientDelivery` and `AsyncErrorLoggingJob` override (internal) → REQ-63.
+  `TransientDelivery` overrides (internal) → REQ-63.
 - **Jobs:** `log_arguments = false` on `AsyncErrorLoggingJob` and `StormFlushJob` → REQ-60.
 - **Migration:** three nullable booleans on `rails_error_dashboard_error_logs`: `resolved_by_verified`,
   `assigned_to_verified`, `muted_by_verified` → REQ-37.

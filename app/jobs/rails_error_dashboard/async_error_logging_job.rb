@@ -68,23 +68,10 @@ module RailsErrorDashboard
       end
     end
 
-    # Active Job schedules a retry with the adapter's enqueue_at. :inline, and
-    # adapters without a scheduler (Resque without resque-scheduler, Sneakers,
-    # queue_classic), raise NotImplementedError there. That is a ScriptError,
-    # so no `rescue => e` on the capture path stops it, and under :inline this
-    # job runs inside perform_later, on the thread that reported the error. A
-    # retry that cannot be scheduled makes this attempt the last one, and the
-    # capture is dropped (hardening-1-0-rc2, REQ-19, REQ-20), as
-    # Concerns::TransientDelivery does for the notification jobs.
-    def retry_job(options = {})
-      super
-    rescue NotImplementedError => e
-      RailsErrorDashboard::Services::CaptureFailureLog.report("AsyncErrorLoggingJob#retry_job", e, options[:error], job_id: job_id) do
-        "[RailsErrorDashboard] AsyncErrorLoggingJob could not schedule a retry: the queue adapter has no " \
-          "scheduled jobs, so the capture is dropped (#{options[:error].class})"
-      end
-      nil
-    end
+    # A retry the queue adapter can't schedule (:inline, and adapters with no
+    # scheduler) makes this attempt the last one, and the capture is dropped
+    # with one line: ApplicationJob#retry_job (hardening-1-0-rc2, REQ-19,
+    # REQ-20, REQ-63).
 
     private
 

@@ -294,11 +294,13 @@ module RailsErrorDashboard
       # Runs inside the server once the response has gone. Puma rescues a
       # raising callback and logs it only at debug level, so nothing may
       # escape: a failed enqueue already falls back to sync logging, and this
-      # rescue covers that fallback failing too.
+      # rescue covers that fallback failing too. ScriptError too: under :inline
+      # the capture job runs here, and NotImplementedError and LoadError pass
+      # `rescue => e` (hardening-1-0-rc2, REQ-63).
       def self.enqueue_after_response(exception, exception_data, context)
         enqueue_async(exception, exception_data, context)
         nil
-      rescue => e
+      rescue StandardError, ScriptError => e
         Services::CaptureFailureLog.report("Commands::LogError.enqueue_after_response", e, exception) do
           "[RailsErrorDashboard] Capture after the response failed: #{e.class} - #{e.message}"
         end
