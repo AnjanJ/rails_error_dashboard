@@ -2,7 +2,7 @@
 
 > Spec accepted at commit `4afd12db` on spec/hardening-1-0-rc2.
 > Status: open
-> Paths: lib/,app/,db/migrate/,config/locales/,spec/,test/pre_release/,bin/pre-release-test,docs/,README.md,rails_error_dashboard.gemspec,_getting_started/,.github/workflows/,.shipkit/decisions/,.shipkit/research/,.shipkit/specs/release-1-0-rc1/
+> Paths: lib/,app/,db/migrate/,config/locales/,spec/,test/pre_release/,bin/pre-release-test,docs/,README.md,rails_error_dashboard.gemspec,_getting_started/,_guides/,_reference/,_features/,.github/workflows/,.shipkit/decisions/,.shipkit/research/,.shipkit/specs/release-1-0-rc1/
 
 ## Purpose
 Fix every finding of the independent 1.0.0-rc.1 review that held up on verification, before 1.x freezes

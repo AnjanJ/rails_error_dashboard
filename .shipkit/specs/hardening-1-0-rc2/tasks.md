@@ -375,7 +375,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
       green.
 
 ## Capture failures (after S2's amendment)
-- [ ] **T33** One trimmed line per call site and failure class a minute, default `:error`, detail at debug → REQ-54, REQ-55, REQ-56, REQ-57, REQ-58
+- [x] **T33** One trimmed line per call site and failure class a minute, default `:error`, detail at debug → REQ-54, REQ-55, REQ-56, REQ-57, REQ-58
   - Files: lib/rails_error_dashboard/services/capture_failure_log.rb, lib/rails_error_dashboard.rb, lib/rails_error_dashboard/configuration.rb, lib/generators/rails_error_dashboard/install/templates/initializer.rb, lib/rails_error_dashboard/commands/log_error.rb, lib/rails_error_dashboard/error_reporter.rb, lib/rails_error_dashboard/middleware/error_catcher.rb, lib/rails_error_dashboard/commands/record_occurrence_context.rb, lib/rails_error_dashboard/services/error_hash_generator.rb, lib/rails_error_dashboard/plugin.rb, lib/rails_error_dashboard/plugin_registry.rb, lib/rails_error_dashboard/services/storm_protection/gate.rb, lib/rails_error_dashboard/commands/flush_storm_counts.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/storm_flush_job.rb, lib/rails_error_dashboard/services/capture_write_guard.rb, lib/rails_error_dashboard/logger.rb, spec/rails_helper.rb, spec/services/capture_failure_log_spec.rb, spec/integration/capture_failure_lines_spec.rb, and the specs that asserted on rc.1's lines (spec/commands/log_error_spec.rb, spec/commands/log_error_after_response_spec.rb, spec/lib/rails_error_dashboard/commands/log_error_spec.rb, spec/lib/rails_error_dashboard/commands/async_logging_spec.rb, spec/lib/rails_error_dashboard/plugin_registry_spec.rb, spec/lib/rails_error_dashboard_spec.rb, spec/jobs/rails_error_dashboard/async_error_logging_job_spec.rb, spec/services/capture_write_guard_spec.rb)
     The sites are the research file's Appendix A1 rows marked "capture" and "worker", and the worker's direct lines
     named in spec.md's "Capture failures" terms. `capture_failure_log.rb` is new, and `lib/rails_error_dashboard.rb`
@@ -412,7 +412,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - the full suite → 0 failures;
     - `bin/benchmark` capture median within 0.2 ms of rc.1's, and storm check under 15 µs;
     - the spike's 60 s sync storm, rerun on the branch with storm protection off, writes at most 10 RED lines.
-- [ ] **T36** No RED job's unschedulable retry raises into the host → REQ-63
+- [x] **T36** No RED job's unschedulable retry raises into the host → REQ-63
   - Files: app/jobs/rails_error_dashboard/application_job.rb, app/jobs/rails_error_dashboard/async_error_logging_job.rb, app/jobs/rails_error_dashboard/concerns/transient_delivery.rb, lib/rails_error_dashboard/commands/log_error.rb, spec/jobs/unschedulable_retry_spec.rb
     Added 2026-11-27 with the maintainer's yes (design.md, the S1 decision's third amendment).
   - Test: spec/jobs/unschedulable_retry_spec.rb, first on the code as it is, with the adapter's `enqueue_at`
@@ -430,7 +430,7 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - After: T14, T33
   - Done when: the new spec, `notification_retry_spec.rb` and `async_error_logging_job_spec.rb` → 0 failures on
     `RAILS_VERSION=7.2`, `8.0` and `8.1`; the full suite → 0 failures; `bin/benchmark` as for T33.
-- [ ] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
+- [x] **T34** Say what `log_level` and `enable_internal_logging` each gate, and what an upgrade keeps → REQ-61
   - Files: docs/guides/CONFIGURATION.md, docs/guides/SETTINGS.md, docs/TROUBLESHOOTING.md, docs/PUBLIC_API.md, docs/UPGRADING.md, _getting_started/upgrading.md, lib/generators/rails_error_dashboard/install/templates/initializer.rb, _guides/configuration.md, _guides/settings.md, _reference/troubleshooting.md, docs/PLUGIN_SYSTEM.md, _features/plugin-system.md, docs/guides/BATCH_OPERATIONS.md, _guides/batch-operations.md, lib/rails_error_dashboard/logger.rb
     Amended 2026-11-27: each doc's Jekyll copy; the plugin and batch-operation guides and `logger.rb`'s comment,
     which gave `:silent` as the default or told readers to look for rc.1's failure text; and, with the maintainer's
