@@ -77,6 +77,30 @@ module RailsErrorDashboard
       []
     end
 
+    # Days past retention_days before an error still stored means the
+    # retention job isn't running: two days cover a job that runs daily.
+    RETENTION_GRACE_DAYS = 2
+    RETENTION_SCHEDULE_GUIDE_URL = "https://anjanj.github.io/rails_error_dashboard/docs/production/#2-schedule-the-periodic-jobs"
+
+    # True while retention_days is set and an error not seen for more than
+    # retention_days plus the grace is still stored. The expired rows ARE the
+    # evidence that the job isn't running, so nothing else is recorded.
+    #
+    # Cached for an hour under the analytics cache generation, which the job
+    # bumps when it deletes, so the banner goes as soon as it has run. Never
+    # raises: a dashboard page doesn't fail over its own banner.
+    def red_retention_overdue?
+      days = RailsErrorDashboard.configuration.retention_days
+      return false if days.blank?
+
+      key = [ "red/retention_overdue", days, Services::AnalyticsCacheManager.generation ].join("/")
+      Rails.cache.fetch(key, expires_in: 1.hour) do
+        RetentionCleanupJob.expired_scope((days + RETENTION_GRACE_DAYS).days.ago).exists?
+      end
+    rescue StandardError
+      false
+    end
+
     # Returns the host app's CSP nonce (if any) so inline <script> tags pass strict CSP.
     # Falls back to nil when the host has no CSP configured — in that case the script tag
     # works without a nonce attribute. Strict CSPs (script-src 'self' 'nonce-...') require

@@ -95,6 +95,10 @@ ru:
         label: "Solid Queue не будет выполнять задания RED."
         body_html: "Ошибки, записанные в фоне, и уведомления ждут в очереди, пока не исправлен <code>config/queue.yml</code>. Запустите <code>bin/rails rails_error_dashboard:verify</code>, чтобы увидеть исправление, затем перезапустите приложение."
         guide: "Что RED нужно от Solid Queue"
+      retention_overdue:
+        label: "Старые ошибки не удаляются."
+        body_html: "Всё ещё хранятся ошибки, которых не было дольше <code>retention_days</code> (%{days}) плюс два дня, значит <code>RailsErrorDashboard::RetentionCleanupJob</code> не запускается. Гем не планирует его сам: запускайте его ежедневно из планировщика или установите <code>retention_days</code> в <code>nil</code>, чтобы хранить все ошибки."
+        guide: "Планирование периодических заданий"
       storm:
         active_title: Идёт шторм ошибок
         recent_title: Недавно сработала защита от шторма

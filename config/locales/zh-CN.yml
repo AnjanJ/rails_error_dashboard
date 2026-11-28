@@ -94,6 +94,10 @@ zh-CN:
         label: "Solid Queue 不会运行 RED 的任务。"
         body_html: "在修复 <code>config/queue.yml</code> 之前，后台捕获的错误和通知会一直在队列中等待。运行 <code>bin/rails rails_error_dashboard:verify</code> 查看修复方法，然后重启应用。"
         guide: "RED 对 Solid Queue 的要求"
+      retention_overdue:
+        label: "旧错误没有被删除。"
+        body_html: "超过 <code>retention_days</code>（%{days}）加两天未再出现的错误仍然保存着，说明 <code>RailsErrorDashboard::RetentionCleanupJob</code> 没有运行。该 gem 不会自动调度它：请通过调度器每天运行它，或将 <code>retention_days</code> 设为 <code>nil</code> 以保留所有错误。"
+        guide: "调度定期任务"
       storm:
         active_title: 错误风暴进行中
         recent_title: 近期触发过风暴保护

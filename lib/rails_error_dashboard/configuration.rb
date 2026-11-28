@@ -76,6 +76,7 @@ module RailsErrorDashboard
 
     # Retention policy (days to keep errors)
     attr_accessor :retention_days
+    attr_accessor :occurrence_retention_days  # Days a live error's occurrences are kept (default: nil, kept as long as the error)
 
     # Enable/disable error catching middleware
     attr_accessor :enable_middleware
@@ -365,6 +366,11 @@ module RailsErrorDashboard
       # Set to nil to keep errors forever (not recommended for production)
       # Schedule cleanup: RailsErrorDashboard::RetentionCleanupJob.perform_later
       @retention_days = 90
+
+      # Occurrence retention - days the occurrences (and their stored context)
+      # of an error that is still live are kept. nil keeps them as long as the
+      # error. The same job deletes them, and their events stay in the counts.
+      @occurrence_retention_days = nil
 
       @enable_middleware = true
       @enable_error_subscriber = true
@@ -675,6 +681,22 @@ module RailsErrorDashboard
       # Validate retention_days (must be positive)
       if retention_days && retention_days < 1
         errors << "retention_days must be at least 1 day (got: #{retention_days})"
+      end
+
+      # Occurrence retention deletes rows, so a typo must not boot.
+      unless occurrence_retention_days.nil? || (occurrence_retention_days.is_a?(Integer) && occurrence_retention_days >= 1)
+        errors << "occurrence_retention_days must be nil or a whole number of 1 or more " \
+                  "(got: #{occurrence_retention_days.inspect})"
+      end
+
+      # Baselines count occurrence rows, and read none of the event buckets the
+      # deleted occurrences' events move to, so a shorter history makes the
+      # deleted weeks look quiet: baselines drop and alerts fire more often.
+      baseline_days = Services::BaselineCalculator::DAILY_LOOKBACK.in_days.to_i
+      if enable_baseline_alerts && occurrence_retention_days.is_a?(Integer) && occurrence_retention_days < baseline_days
+        warnings << "occurrence_retention_days is #{occurrence_retention_days}, under the #{baseline_days} days of " \
+                    "history baselines are calculated from, so baselines count the deleted weeks as quiet and " \
+                    "baseline alerts fire more often. Set it to #{baseline_days} or more, or leave it nil."
       end
 
       # Validate max_backtrace_lines (must be positive)

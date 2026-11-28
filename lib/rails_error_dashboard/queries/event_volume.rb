@@ -18,7 +18,9 @@ module RailsErrorDashboard
     #   1. an ErrorOccurrence row     -- ordinary captures, with a real
     #                                    per-event timestamp
     #   2. an EventCount bucket       -- storm-shed events, which write no
-    #                                    occurrence row by design; the bucket
+    #                                    occurrence row by design, and the
+    #                                    events of occurrence rows deleted by
+    #                                    occurrence_retention_days; the bucket
     #                                    is their timestamp
     #   3. the group's own count      -- rows from before occurrence tracking
     #                                    existed, which have neither of the
@@ -26,9 +28,9 @@ module RailsErrorDashboard
     #                                    occurred_at, which for such a row is
     #                                    the best (and only) timestamp there is
     #
-    # Nothing is double counted: (1) and (2) are written by mutually exclusive
-    # paths, and (3) only ever covers the remainder of a group that has no
-    # per-event record at all.
+    # Nothing is double counted: a shed event never writes a row, occurrence
+    # retention moves an event from (1) to (2) in one transaction, and (3) only
+    # ever covers the remainder of a group that has no per-event record at all.
     class EventVolume
       # @param scope [ActiveRecord::Relation] an ErrorLog scope (already
       #   filtered by application, if applicable)

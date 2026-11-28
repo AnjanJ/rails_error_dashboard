@@ -644,6 +644,55 @@ bounds each statement, though.
 minutes in the chaos fixture.
 **Fired-if.** manual
 
+**Amendment (2026-11-28, before T17, with the maintainer's yes): deleted occurrences keep their place in
+the counts.** (→ REQ-64 to REQ-66)
+- **Context.** Read on `d21e3748`, and probed (`tasks/scratch/t17/window_probe_spec.rb`, git-ignored).
+  - An occurrence row is the timestamp `Queries::EventVolume` counts an ordinary event by. A group's events
+    with no row and no `EventCount` bucket count only as its "untracked remainder", at the group's
+    `occurred_at` (`event_volume.rb:157-197`).
+  - The probe deleted occurrences older than 7 days. A group first seen 60 days ago went from 3 events to 1
+    in the 30-day window. A group first seen 20 days ago kept its 3, but the event from 10 days ago moved
+    onto the first-seen day.
+  - The Overview counts 30 days and Analytics up to 365 (`errors_controller.rb:886`).
+  - `EventCount` is read only by `EventVolume`. `EventCount.accumulate` adds to a group's 15-minute bucket,
+    handling the insert race, and the storm flush already uses it.
+  - `BaselineCalculator` counts occurrence rows over 4 weeks (hourly) and 12 weeks (daily)
+    (`baseline_calculator.rb:21-22, 96-101`). It reads no buckets, so it already skips storm-shed events.
+- **Alternatives.**
+  1. Delete only, as decided, and document the undercount.
+  2. Delete, and record an `EventTimingGap` up to the cutoff, so the existing "incomplete" warning shows on
+     every window that reaches past it.
+  3. Before each batch is deleted, add its events to their groups' `EventCount` buckets, in the same
+     transaction.
+- **Case for 3.**
+  - Every window count and day chart stays exact, whatever the setting.
+  - Only per-event detail goes (user, request, release, context). Analytics already says so: its "affected
+    users incomplete" flag compares events with recorded occurrences.
+  - It reuses the storm flush's bucket write, so the race and a missing table are handled the same way.
+- **Case against 3.**
+  - Per 1,000-row batch it adds one two-column pluck, and one UPDATE (or INSERT) for each group and
+    15 minutes.
+  - `EventCount` stops meaning "storm-shed events" only; its comments and `EventVolume`'s change with it.
+  - Baselines still count only occurrence rows. That's REQ-66's warning, not a fix.
+- **Decision.** Option 3.
+  - The occurrence pass runs after group expiry, so it touches only live groups. It runs whether or not
+    `retention_days` is set, with its own rescue, so a failure in either pass doesn't stop the other.
+  - A batch whose buckets can't be written (`accumulate` answers `:unavailable`) is not deleted: deleting it
+    would lose the events from every window. A transient store error aborts the run, as it does for groups.
+  - The rake task previews the occurrences it will delete, and runs when only `occurrence_retention_days` is
+    set.
+  - `occurrence_retention_days` must be nil or a whole number of 1 or more (REQ-65). Under 84 with
+    `enable_baseline_alerts` on, boot warns (REQ-66).
+- **Falsifiability.** We would drop the buckets for option 1 if, on a local PostgreSQL, one batch of 1,000
+  occurrences, each in a group and 15 minutes of its own, takes longer than 2 seconds. That is the worst
+  case: one bucket write per row. T17 measures it.
+  **Fired-if.** manual
+  Measured 2026-11-28, during T17, on PostgreSQL 16 on an idle M3 Max, inside a test transaction
+  (`tasks/scratch/t17/cost_probe_spec.rb`, git-ignored): 1,040 occurrences in 1,040 groups and buckets, two
+  batches, took 0.990, 0.989 and 0.990 s in three runs. A delete-only pass of 960 such rows took 0.005 s.
+  Not fired. The precision this costs is in REQ-64's note: a window that starts between two 15-minute
+  boundaries can gain or lose the events of the 15 minutes at its start.
+
 ## Decision: MTTR in SQL   (→ REQ-44)
 
 **Context.** `mttr_stats.rb:42-102` loads every resolved row and subtracts times in Ruby, once per week
@@ -926,6 +975,8 @@ alternative worth a record:
   `spec/dummy/db/schema.rb` follows, checked by `bin/check-schema-parity`.
 - **Async job context:** `_identity_v1` and `_identity_version: 2` → REQ-5, REQ-6.
 - **Storm buffer entries:** `opaque_identity_v1` → REQ-5.
+- **Event count buckets:** `rails_error_dashboard_event_counts` also holds the events of occurrences deleted
+  by age (no schema change) → REQ-64.
 - **Notification jobs:** an optional `claimed_at` argument → REQ-31. Webhook dispatch: one job per URL
   → REQ-32.
 - **Webhook header:** `X-Error-Dashboard-Delivery` → REQ-32.

@@ -95,6 +95,10 @@ pl:
         label: "Solid Queue nie uruchomi zadań RED."
         body_html: "Błędy przechwycone w tle i powiadomienia czekają w kolejce, dopóki <code>config/queue.yml</code> nie zostanie poprawiony. Uruchom <code>bin/rails rails_error_dashboard:verify</code>, aby zobaczyć poprawkę, a następnie zrestartuj aplikację."
         guide: "Czego RED potrzebuje od Solid Queue"
+      retention_overdue:
+        label: "Stare błędy nie są usuwane."
+        body_html: "Nadal zapisane są błędy niewidziane dłużej niż <code>retention_days</code> (%{days}) plus dwa dni, więc <code>RailsErrorDashboard::RetentionCleanupJob</code> nie jest uruchamiany. Gem go nie planuje: uruchamiaj go codziennie z harmonogramu zadań albo ustaw <code>retention_days</code> na <code>nil</code>, aby zachować wszystkie błędy."
+        guide: "Planowanie zadań okresowych"
       storm:
         active_title: Trwa sztorm błędów
         recent_title: Ochrona przed sztormem zadziałała niedawno

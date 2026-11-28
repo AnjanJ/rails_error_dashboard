@@ -95,6 +95,10 @@ ja:
         label: "Solid Queue は RED のジョブを実行しません。"
         body_html: "<code>config/queue.yml</code> を修正するまで、バックグラウンドで記録されたエラーと通知はキューで待機します。<code>bin/rails rails_error_dashboard:verify</code> を実行して修正方法を確認し、再起動してください。"
         guide: "RED が Solid Queue に必要とするもの"
+      retention_overdue:
+        label: "古いエラーが削除されていません。"
+        body_html: "<code>retention_days</code>（%{days}）に 2 日を加えた期間より長く発生していないエラーがまだ保存されているため、<code>RailsErrorDashboard::RetentionCleanupJob</code> は実行されていません。この gem はジョブをスケジュールしません。スケジューラーから毎日実行するか、すべてのエラーを保持する場合は <code>retention_days</code> を <code>nil</code> に設定してください。"
+        guide: "定期ジョブをスケジュールする"
       storm:
         active_title: エラーストームが発生中です
         recent_title: ストーム保護が最近作動しました

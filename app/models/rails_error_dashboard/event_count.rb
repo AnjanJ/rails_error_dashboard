@@ -1,20 +1,25 @@
 # frozen_string_literal: true
 
 module RailsErrorDashboard
-  # How many storm-shed events landed on one error group in one hour.
+  # How many events with no occurrence row landed on one error group in one
+  # 15-minute bucket.
   #
   # Storm protection sheds events by folding N of them into the group's
   # occurrence_count and writing no ErrorOccurrence row. That keeps the total
   # exact but leaves the events with no timestamp of their own, so a window
   # query has nothing to filter them by. This table gives them one.
   #
+  # Occurrence retention (occurrence_retention_days) puts the events of the
+  # occurrence rows it deletes here too, in the same transaction as the delete,
+  # so they stay in every window.
+  #
   # Window volume is therefore:
   #
   #   ErrorOccurrence rows in the window  +  EventCount buckets in the window
   #
-  # Ordinary captures contribute the first term, shed events the second, and
-  # neither is double counted: an event that wrote an occurrence row is never
-  # also bucketed here.
+  # Ordinary captures contribute the first term; shed events, and the events of
+  # deleted occurrences, the second. Neither is double counted: an event is in a
+  # row or a bucket, never both.
   #
   # Inherits ErrorLogsRecord so separate-database routing applies.
   class EventCount < ErrorLogsRecord
