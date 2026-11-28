@@ -209,28 +209,42 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - Done when: `rspec spec/jobs spec/commands` → 0 failures
 
 ## Data lifecycle
-- [ ] **T17** Opt-in occurrence retention → REQ-23, REQ-24, REQ-25
-  - Files: lib/rails_error_dashboard/configuration.rb, app/jobs/rails_error_dashboard/retention_cleanup_job.rb, lib/tasks/error_dashboard.rake, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, spec/jobs/retention_cleanup_occurrences_spec.rb
+- [ ] **T17** Opt-in occurrence retention → REQ-23, REQ-24, REQ-25, REQ-64, REQ-65, REQ-66
+  - Files: lib/rails_error_dashboard/configuration.rb, app/jobs/rails_error_dashboard/retention_cleanup_job.rb, lib/tasks/error_dashboard.rake, lib/generators/rails_error_dashboard/install/templates/initializer.rb, docs/guides/CONFIGURATION.md, docs/PUBLIC_API.md, spec/jobs/retention_cleanup_occurrences_spec.rb, _guides/configuration.md, app/models/rails_error_dashboard/event_count.rb, lib/rails_error_dashboard/queries/event_volume.rb, spec/lib/rails_error_dashboard/configuration_validation_spec.rb
+    Amended 2026-11-28, with the maintainer's yes: REQ-64 to REQ-66 (design.md, the retention decision's
+    amendment); the guide's Jekyll copy, which spec/docs/public_api_spec.rb also checks; the comments in
+    `event_count.rb` and `event_volume.rb`, which said the buckets hold storm-shed events only.
   - Test: spec/jobs/retention_cleanup_occurrences_spec.rb:
     - with 30 days, a live group's 31-day occurrences and their contexts go and its 29-day ones stay,
       in batches of 1,000;
     - `occurrence_count`, `first_seen_at` and `last_seen_at` are unchanged;
     - with nil, nothing of a live group goes;
-    - the rake preview counts occurrences.
+    - the rake preview counts occurrences;
+    - with `retention_days` nil, the occurrences still go;
+    - the 30-day count and the day counts of the deleted events are the same before and after;
+    - when the buckets can't be written, the batch isn't deleted.
+
+    spec/lib/rails_error_dashboard/configuration_validation_spec.rb:
+    - 0, -1, 2.5 and "30" refuse to boot, and nil and 30 don't;
+    - under 84 with `enable_baseline_alerts` on, boot warns; at 84, or with alerts off, it doesn't.
   - After: T6, T9
   - Done when: `rspec spec/jobs spec/lib` → 0 failures; the option is in PUBLIC_API.md and CONFIGURATION.md
 - [ ] **T18** A banner while expired errors outlive the grace period → REQ-26
-  - Files: app/helpers/rails_error_dashboard/application_helper.rb, app/views/layouts/rails_error_dashboard.html.erb, config/locales/, spec/requests/retention_overdue_banner_spec.rb
+  - Files: app/helpers/rails_error_dashboard/application_helper.rb, app/views/layouts/rails_error_dashboard.html.erb, config/locales/, spec/requests/retention_overdue_banner_spec.rb, docs/UPGRADING.md, _getting_started/upgrading.md, docs/guides/CONFIGURATION.md, _guides/configuration.md
+    Amended 2026-11-28, with the maintainer's yes: an UPGRADING bullet (an install that never scheduled the
+    job sees the banner once an error is 92 days unseen) and a sentence in the `retention_days` row.
   - Test: spec/requests/retention_overdue_banner_spec.rb, with `retention_days` 30:
     - an error last seen 33 days ago shows a banner naming `RetentionCleanupJob`;
     - one last seen 31 days ago doesn't;
     - with `retention_days` nil, no banner;
     - the check is cached for an hour.
-  - After: T17
+  - After: T12, T17
+    T12 is a file overlap only (`docs/UPGRADING.md`).
   - Done when: `rspec spec/requests` → 0 failures; the i18n check passes on every locale
 - [ ] **T19** Batch delete uses the batched delete → REQ-27, REQ-28
   - Files: lib/rails_error_dashboard/commands/batch_delete_errors.rb, spec/commands/batch_delete_errors_spec.rb
-  - Test: spec/commands/batch_delete_errors_spec.rb:
+  - Test: spec/commands/batch_delete_errors_spec.rb, a new file. The older spec,
+  spec/commands/rails_error_dashboard/commands/batch_delete_errors_spec.rb, stays as it is:
     - the errors, occurrences, contexts, comments, cascade patterns and event counts are gone;
     - no `ErrorLog` is instantiated, checked through `ActiveSupport::Notifications` `instantiation.active_record`;
     - `on_errors_batch_deleted` gets the ids.
@@ -245,7 +259,8 @@ Each pull request merges before the next branch starts from main. Rules for ever
     - unset or nil, the typed name is recorded unverified;
     - raising, the typed name is recorded unverified and the response is a redirect, not a 500;
     - the issue webhook's "Webhook" is verified.
-  - After: T12, T17
+  - After: T12, T17, T18
+    T18 is a file overlap only (`docs/guides/CONFIGURATION.md`), added 2026-11-28; PR 7 follows PR 6 anyway.
   - Done when: `rspec spec/requests spec/commands spec/migrations` → 0 failures; `bin/check-schema-parity` passes; the migration's `down` removes the three columns
 - [ ] **T21** The error page marks an unverified name → REQ-39
   - Files: app/views/rails_error_dashboard/errors/_sidebar_metadata.html.erb, config/locales/, spec/requests/audit_actor_display_spec.rb

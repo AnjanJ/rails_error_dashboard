@@ -162,6 +162,19 @@ was last seen less than `retention_days` ago (`RetentionCleanupJob.expired_scope
   occurrence of a live group.
 - **REQ-25.** When occurrences are deleted by age, the group's `occurrence_count`, `first_seen_at` and
   `last_seen_at` shall not change.
+- **REQ-64.** When occurrences are deleted by age, the number of events the dashboard counts in any time
+  window, and on any day, shall not change.
+- **REQ-65.** If `occurrence_retention_days` is set to anything but a whole number of 1 or more, then RED
+  shall refuse to boot.
+- **REQ-66.** Where `enable_baseline_alerts` is on and `occurrence_retention_days` is under 84, RED shall
+  warn at boot that baselines count the deleted weeks as quiet.
+
+  REQ-64 to REQ-66 were added 2026-11-28, before T17, with the maintainer's yes. Occurrence rows are the
+  per-event timestamps of the dashboard's window counts (`Queries::EventVolume`) and of the baselines
+  (`Services::BaselineCalculator`, 4 and 12 weeks). A probe showed that deleting a live group's occurrences
+  older than 7 days took its 30-day count from 3 to 1 when the group was first seen 60 days ago, and moved
+  the deleted events onto the first-seen day when it was first seen 20 days ago. See design.md, the
+  retention decision's amendment.
 - **REQ-26.** While `retention_days` is set and an error last seen more than `retention_days` plus 2 days
   ago still exists, the dashboard shall show a banner that names the retention job.
 - **REQ-27.** When a user deletes errors in a batch, RED shall delete them and their dependents in batches,
