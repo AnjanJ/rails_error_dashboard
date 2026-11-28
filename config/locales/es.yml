@@ -95,6 +95,10 @@ es:
         label: "Solid Queue no ejecutará los trabajos de RED."
         body_html: "Los errores capturados en segundo plano y las notificaciones esperan en la cola hasta que se corrija <code>config/queue.yml</code>. Ejecute <code>bin/rails rails_error_dashboard:verify</code> para ver la corrección y luego reinicie."
         guide: "Lo que RED necesita de Solid Queue"
+      retention_overdue:
+        label: "Los errores antiguos no se están eliminando."
+        body_html: "Siguen guardados errores que no se han visto en más de <code>retention_days</code> (%{days}) más dos días, así que <code>RailsErrorDashboard::RetentionCleanupJob</code> no se está ejecutando. La gema no lo programa: ejecútelo a diario desde su programador de tareas, o establezca <code>retention_days</code> en <code>nil</code> para conservar todos los errores."
+        guide: "Programar los trabajos periódicos"
       storm:
         active_title: Tormenta de errores en curso
         recent_title: La protección ante tormentas se activó recientemente

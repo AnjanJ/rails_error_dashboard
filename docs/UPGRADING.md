@@ -139,6 +139,14 @@ Nothing in [docs/PUBLIC_API.md](PUBLIC_API.md) is removed.
   database connection lasts at most `capture_connection_timeout` (0.1 s), once; then the capture is
   dropped. `config.isolate_capture_writes = false` writes as 1.0.0-rc.1 did. See
   [Captures Inside Your Transactions](guides/CONFIGURATION.md#captures-inside-your-transactions).
+- **The dashboard says when old errors aren't being deleted** (from 1.0.0-rc.2). While an error not seen
+  for more than `retention_days` plus two days is still stored, every dashboard page shows a banner
+  naming `RailsErrorDashboard::RetentionCleanupJob`. `retention_days` defaults to 90 and nothing in the
+  gem schedules the job, so an install that never scheduled it sees the banner once an error has gone
+  92 days unseen. Schedule the job daily, as in
+  [Schedule the periodic jobs](PRODUCTION.md#2-schedule-the-periodic-jobs), or set
+  `config.retention_days = nil` to keep every error. The check is cached for an hour, and clears as soon
+  as the job has deleted something.
 
 ### The steps
 

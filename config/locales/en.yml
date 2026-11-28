@@ -165,6 +165,12 @@ en:
         label: "Solid Queue won't run RED's jobs."
         body_html: "Errors captured in the background and notifications wait in the queue until <code>config/queue.yml</code> is fixed. Run <code>bin/rails rails_error_dashboard:verify</code> for the fix, then restart."
         guide: "What RED needs from Solid Queue"
+      # Shown while errors more than two days past retention_days are still stored.
+      # %{days} is retention_days, a number of days.
+      retention_overdue:
+        label: "Old errors aren't being deleted."
+        body_html: "Errors not seen for more than <code>retention_days</code> (%{days}) plus two days are still stored, so <code>RailsErrorDashboard::RetentionCleanupJob</code> isn't running. Nothing in the gem schedules it: run it daily from your scheduler, or set <code>retention_days</code> to <code>nil</code> to keep every error."
+        guide: "Schedule the periodic jobs"
       storm:
         # Whole sentences, not fragments. The English original assembled these
         # from a stem plus a conditional clause, which cannot be reordered into

@@ -230,9 +230,13 @@ Each pull request merges before the next branch starts from main. Rules for ever
   - After: T6, T9
   - Done when: `rspec spec/jobs spec/lib` → 0 failures; the option is in PUBLIC_API.md and CONFIGURATION.md
 - [ ] **T18** A banner while expired errors outlive the grace period → REQ-26
-  - Files: app/helpers/rails_error_dashboard/application_helper.rb, app/views/layouts/rails_error_dashboard.html.erb, config/locales/, spec/requests/retention_overdue_banner_spec.rb, docs/UPGRADING.md, _getting_started/upgrading.md, docs/guides/CONFIGURATION.md, _guides/configuration.md
+  - Files: app/helpers/rails_error_dashboard/application_helper.rb, app/views/layouts/rails_error_dashboard.html.erb, config/locales/, spec/requests/retention_overdue_banner_spec.rb, docs/UPGRADING.md, _getting_started/upgrading.md, docs/guides/CONFIGURATION.md, _guides/configuration.md, spec/requests/issue_fetch_negative_cache_spec.rb
     Amended 2026-11-28, with the maintainer's yes: an UPGRADING bullet (an install that never scheduled the
     job sees the banner once an error is 92 days unseen) and a sentence in the `retention_days` row.
+    Amended 2026-11-28, during T18: `issue_fetch_negative_cache_spec.rb` replaces `Rails.cache` with a double
+    that fails `fetch` only. Every page now reads the cache generation, and the double's unexpected `read`
+    raises an RSpec error that isn't a `StandardError`, so the page failed. The double fails `read` too, as a
+    store that is down does.
   - Test: spec/requests/retention_overdue_banner_spec.rb, with `retention_days` 30:
     - an error last seen 33 days ago shows a banner naming `RetentionCleanupJob`;
     - one last seen 31 days ago doesn't;

@@ -1356,6 +1356,16 @@ tr[data-red-row-href]:hover .sev-bar { opacity: 1 !important; }
               </div>
             </div>
           <% end %>
+          <% if red_retention_overdue? %>
+            <div id="retention-overdue-warning" class="alert alert-warning" style="display: flex; align-items: flex-start; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid var(--status-warning);">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; flex-shrink: 0;"></i>
+              <div style="flex: 1;">
+                <strong><%= red_t("red.banners.retention_overdue.label") %></strong>
+                <%= red_t("red.banners.retention_overdue.body_html", days: RailsErrorDashboard.configuration.retention_days.to_i) %>
+                <a href="<%= RailsErrorDashboard::ApplicationHelper::RETENTION_SCHEDULE_GUIDE_URL %>" target="_blank" rel="noopener"><%= red_t("red.banners.retention_overdue.guide") %></a>
+              </div>
+            </div>
+          <% end %>
           <% if defined?(@storm_banner_event) && @storm_banner_event %>
             <% storm_active = @storm_banner_event.active? %>
             <div id="storm-banner" class="alert <%= storm_active ? 'alert-danger' : 'alert-info' %>" style="display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); margin-bottom: var(--space-4); border-left: 4px solid <%= storm_active ? 'var(--status-critical)' : 'var(--status-info)' %>;">

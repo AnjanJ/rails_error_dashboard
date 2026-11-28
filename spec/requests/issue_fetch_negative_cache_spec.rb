@@ -103,6 +103,9 @@ RSpec.describe "Issue tracker fetch caching", type: :request do
 
     broken = instance_double(ActiveSupport::Cache::MemoryStore)
     allow(broken).to receive(:fetch).and_raise(RuntimeError, "cache down")
+    # A store that is down fails reads too, and every page reads the cache
+    # generation for the retention banner.
+    allow(broken).to receive(:read).and_raise(RuntimeError, "cache down")
     allow(Rails).to receive(:cache).and_return(broken)
 
     get "/error_dashboard/errors/#{error.id}"
