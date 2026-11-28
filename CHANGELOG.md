@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-rc.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v1.0.0-rc.1...rails_error_dashboard/v1.1.0-rc.1) (2026-11-28)
+
+
+### ✨ Features
+
+* captures survive host rollbacks, prevented writes and a drained pool, on every database and Rails version ([#381](https://github.com/AnjanJ/rails_error_dashboard/issues/381)) ([8ccdc73](https://github.com/AnjanJ/rails_error_dashboard/commit/8ccdc73b8fba1029cf05d96e765b3738ddf860fa)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* failed captures say so in one trimmed line, and no RED job's unschedulable retry raises into the host ([#383](https://github.com/AnjanJ/rails_error_dashboard/issues/383)) ([d21e374](https://github.com/AnjanJ/rails_error_dashboard/commit/d21e374833f3ec97eaf8deaba7671d56f9c2f75e)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* grouping v2, a fingerprint that survives deploys, with the rc.1 fallback ([#375](https://github.com/AnjanJ/rails_error_dashboard/issues/375)) ([430d080](https://github.com/AnjanJ/rails_error_dashboard/commit/430d08018d23a63020ae754ff2b0bf851e0e427e)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* match an open group by its last occurrence ([#377](https://github.com/AnjanJ/rails_error_dashboard/issues/377)) ([6bcabbd](https://github.com/AnjanJ/rails_error_dashboard/commit/6bcabbdd3d8d43ccaea08ee9c9414f747fc52f7e)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* notifications retry transient failures, with webhook delivery ids and issue-creation result codes ([#379](https://github.com/AnjanJ/rails_error_dashboard/issues/379)) ([31f4475](https://github.com/AnjanJ/rails_error_dashboard/commit/31f447554c74b01393cc962b6afd1d1239df27a7)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+* opt-in occurrence retention, an overdue-retention banner, and a batched batch delete ([#384](https://github.com/AnjanJ/rails_error_dashboard/issues/384)) ([4af038d](https://github.com/AnjanJ/rails_error_dashboard/commit/4af038d23954fc9cb24adc20c1cd21eb685154bc)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+
+
+### 🐛 Bug Fixes
+
+* defaults and release hygiene for 1.0.0-rc.2 ([#378](https://github.com/AnjanJ/rails_error_dashboard/issues/378)) ([fa1b469](https://github.com/AnjanJ/rails_error_dashboard/commit/fa1b4696b7a05ce281d62f79b4ce7ac479c4ba64)), closes [#374](https://github.com/AnjanJ/rails_error_dashboard/issues/374)
+
 ## [1.0.0-rc.1](https://github.com/AnjanJ/rails_error_dashboard/compare/rails_error_dashboard/v0.18.1...rails_error_dashboard/v1.0.0-rc.1) (2026-11-08)
 
 
