@@ -162,8 +162,11 @@ was last seen less than `retention_days` ago (`RetentionCleanupJob.expired_scope
   occurrence of a live group.
 - **REQ-25.** When occurrences are deleted by age, the group's `occurrence_count`, `first_seen_at` and
   `last_seen_at` shall not change.
-- **REQ-64.** When occurrences are deleted by age, the number of events the dashboard counts in any time
-  window, and on any day, shall not change.
+- **REQ-64.** When occurrences are deleted by age, the number of events the dashboard counts on any day, and
+  in any time window that starts on a 15-minute boundary, shall not change.
+  Narrowed 2026-11-28, during T17: a deleted occurrence's event keeps the 15-minute bucket it fell in, as a
+  storm-shed event does. A window that starts between two boundaries, such as the Overview's 30 days back
+  from now, can gain or lose the events of the 15 minutes at its start. Days start on a boundary.
 - **REQ-65.** If `occurrence_retention_days` is set to anything but a whole number of 1 or more, then RED
   shall refuse to boot.
 - **REQ-66.** Where `enable_baseline_alerts` is on and `occurrence_retention_days` is under 84, RED shall

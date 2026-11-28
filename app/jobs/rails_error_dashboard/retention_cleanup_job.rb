@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 module RailsErrorDashboard
-  # Background job to enforce the retention_days configuration.
-  # Deletes error logs (and their associated records) older than the configured threshold.
-  # Uses batch deletion (in_batches + delete_all) for performance on large tables.
+  # Background job to enforce the retention_days and occurrence_retention_days
+  # configuration. Deletes error logs (and their associated records) not seen
+  # for retention_days, then the occurrences of the errors still live that are
+  # older than occurrence_retention_days. Uses batch deletion (in_batches +
+  # delete_all) for performance on large tables.
   #
   # Schedule this job daily via your preferred scheduler (SolidQueue, Sidekiq, cron).
   #
@@ -64,11 +66,78 @@ module RailsErrorDashboard
       deleted
     end
 
+    # The occurrences occurrence retention deletes. After the job has expired
+    # old errors, every row left here belongs to an error that is still live.
+    # The (occurred_at, error_log_id) index covers the condition. Public
+    # because the rake task previews the same selection.
+    def self.expired_occurrences(cutoff)
+      ErrorOccurrence.where("occurred_at < ?", cutoff)
+    end
+
+    # Deletes the occurrences older than +cutoff+ and their stored contexts,
+    # 1,000 at a time. Before a batch goes, its events are added to their
+    # groups' EventCount buckets, in the same transaction, so every window
+    # count the dashboard shows still includes them: only the per-event detail
+    # (user, request, release, context) is lost. The group row isn't touched,
+    # so its occurrence_count and first and last seen stay as they were.
+    #
+    # A batch whose buckets can't be written is rolled back, buckets and all,
+    # and the pass stops there: deleting it would drop its events from every
+    # window. A transient store error raises out of here, like any other.
+    #
+    # @param cutoff [Time]
+    # @return [Integer] number of occurrences deleted
+    def self.delete_old_occurrences(cutoff)
+      with_contexts = ErrorOccurrenceContext.table_exists?
+      deleted = 0
+
+      expired_occurrences(cutoff).in_batches(of: 1000) do |batch|
+        rows = batch.pluck(:id, :error_log_id, :occurred_at)
+        events = Hash.new(0)
+        rows.each { |_id, error_log_id, occurred_at| events[[ error_log_id, EventCount.bucket_for(occurred_at) ]] += 1 }
+
+        # requires_new: inside a caller's transaction a plain one only joins
+        # it, and the Rollback below would undo nothing.
+        removed = ErrorOccurrence.transaction(requires_new: true) do
+          written = events.all? do |(error_log_id, bucket_at), count|
+            EventCount.accumulate(error_log_id: error_log_id, bucket_at: bucket_at, count: count) == :written
+          end
+          raise ActiveRecord::Rollback unless written
+
+          ids = rows.map(&:first)
+          ErrorOccurrenceContext.where(error_occurrence_id: ids).delete_all if with_contexts
+          ErrorOccurrence.where(id: ids).delete_all
+        end
+
+        unless removed
+          RailsErrorDashboard::Logger.error(
+            "[RailsErrorDashboard] Occurrence retention stopped after #{deleted} occurrences: " \
+            "their event count buckets couldn't be written, so no more were deleted"
+          )
+          break
+        end
+        deleted += removed
+      end
+
+      deleted
+    end
+
+    # The number of occurrences the last #perform deleted.
+    attr_reader :occurrences_deleted
+
     # @return [Integer] number of errors deleted
     def perform
-      retention_days = RailsErrorDashboard.configuration.retention_days
-      return 0 if retention_days.blank?
+      config = RailsErrorDashboard.configuration
+      deleted_count = config.retention_days.present? ? expire_errors(config.retention_days) : 0
+      # After the errors, so only live errors' occurrences are left to delete.
+      # It runs whatever happened above: each pass has its own rescue.
+      @occurrences_deleted = expire_occurrences(config.occurrence_retention_days)
+      deleted_count
+    end
 
+    private
+
+    def expire_errors(retention_days)
       cutoff = retention_days.days.ago
 
       # Rack Attack events live in their own table and expire independently of
@@ -101,7 +170,23 @@ module RailsErrorDashboard
       0
     end
 
-    private
+    def expire_occurrences(days)
+      return 0 if days.blank?
+
+      deleted = self.class.delete_old_occurrences(days.days.ago)
+      if deleted > 0
+        # The counts are unchanged, but affected users and the occurrence
+        # lists aren't, and the stat cards are cached.
+        Services::AnalyticsCacheManager.clear
+        RailsErrorDashboard::Logger.info(
+          "[RailsErrorDashboard] Retention cleanup: deleted #{deleted} occurrences older than #{days} days"
+        )
+      end
+      deleted
+    rescue => e
+      RailsErrorDashboard::Logger.error("[RailsErrorDashboard] Occurrence retention failed: #{e.class} - #{e.message}")
+      0
+    end
 
     # Expire the storm batch ledger. Its only job is to make a replayed batch
     # a no-op, and a replay arrives within the job's retry window (minutes),

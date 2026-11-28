@@ -129,6 +129,7 @@ notification_environments
 notification_minimum_severity
 notification_threshold_alerts
 occurrence_context_limit
+occurrence_retention_days
 only_show_app_code_source
 otel_service_name
 otel_spans

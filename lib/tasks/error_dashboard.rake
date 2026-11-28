@@ -584,30 +584,52 @@ namespace :rails_error_dashboard do
     puts "\n" + "=" * 70 + "\n"
   end
 
-  desc "Run retention cleanup (delete errors not seen for retention_days)"
+  desc "Run retention cleanup (delete errors not seen for retention_days, and old occurrences with occurrence_retention_days)"
   task retention_cleanup: :environment do
     config = RailsErrorDashboard.configuration
+    job_class = RailsErrorDashboard::RetentionCleanupJob
 
     puts "\n" + "=" * 80
     puts "RAILS ERROR DASHBOARD - RETENTION CLEANUP"
     puts "=" * 80
 
-    if config.retention_days.blank?
+    if config.retention_days.blank? && config.occurrence_retention_days.blank?
       puts "\n  retention_days is not configured (set it in your initializer)"
       puts "\n" + "=" * 80 + "\n"
       next
     end
 
-    cutoff = config.retention_days.days.ago
-    # The job's own selection, so the number shown is the number deleted.
-    count = RailsErrorDashboard::RetentionCleanupJob.expired_scope(cutoff).count
+    # The job's own selections, so the numbers shown are the numbers deleted.
+    count = 0
+    if config.retention_days.present?
+      cutoff = config.retention_days.days.ago
+      count = job_class.expired_scope(cutoff).count
 
-    puts "\n  Retention policy: #{config.retention_days} days"
-    puts "  Cutoff date: #{cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
-    puts "  Errors to delete: #{count}"
+      puts "\n  Retention policy: #{config.retention_days} days"
+      puts "  Cutoff date: #{cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
+      puts "  Errors to delete: #{count}"
+    end
 
-    if count.zero?
-      puts "\n  No errors unseen for more than #{config.retention_days} days"
+    occurrence_count = 0
+    if config.occurrence_retention_days.present?
+      occurrence_cutoff = config.occurrence_retention_days.days.ago
+      occurrences = job_class.expired_occurrences(occurrence_cutoff)
+      # An expiring error's occurrences go with it, so they aren't counted twice.
+      occurrences = occurrences.where.not(error_log_id: job_class.expired_scope(cutoff).select(:id)) if cutoff
+      occurrence_count = occurrences.count
+
+      puts "\n  Occurrence retention: #{config.occurrence_retention_days} days, for errors still live"
+      puts "  Cutoff date: #{occurrence_cutoff.strftime('%Y-%m-%d %H:%M:%S')}"
+      puts "  Occurrences to delete: #{occurrence_count}"
+      puts "  Their events stay in the dashboard's counts"
+    end
+
+    if count.zero? && occurrence_count.zero?
+      if config.occurrence_retention_days.present?
+        puts "\n  Nothing to delete"
+      else
+        puts "\n  No errors unseen for more than #{config.retention_days} days"
+      end
       puts "\n" + "=" * 80 + "\n"
       next
     end
@@ -621,13 +643,15 @@ namespace :rails_error_dashboard do
       next
     end
 
-    puts "\n  Deleting errors..."
+    puts "\n  Deleting..."
     start_time = Time.current
-    deleted = RailsErrorDashboard::RetentionCleanupJob.new.perform
+    job = job_class.new
+    deleted = job.perform
     elapsed = (Time.current - start_time).round(2)
 
     puts "\n  Retention cleanup complete!"
-    puts "  Deleted: #{deleted} errors"
+    puts "  Deleted: #{deleted} errors" if config.retention_days.present?
+    puts "  Deleted: #{job.occurrences_deleted} occurrences" if config.occurrence_retention_days.present?
     puts "  Time elapsed: #{elapsed} seconds"
 
     puts "\n" + "=" * 80 + "\n"

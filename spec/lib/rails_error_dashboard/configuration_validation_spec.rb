@@ -1352,6 +1352,65 @@ RSpec.describe RailsErrorDashboard::Configuration, "#validate!" do
     end
   end
 
+  describe "occurrence_retention_days" do
+    it "defaults to nil, which keeps occurrences as long as their error (hardening-1-0-rc2/REQ-24)" do
+      expect(config.occurrence_retention_days).to be_nil
+    end
+
+    [ nil, 1, 30 ].each do |value|
+      it "accepts #{value.inspect} (hardening-1-0-rc2/REQ-65)" do
+        config.occurrence_retention_days = value
+        expect { config.validate! }.not_to raise_error
+      end
+    end
+
+    [ 0, -1, 2.5, "30" ].each do |value|
+      it "refuses to boot with #{value.inspect} (hardening-1-0-rc2/REQ-65)" do
+        config.occurrence_retention_days = value
+        expect { config.validate! }.to raise_error(
+          RailsErrorDashboard::ConfigurationError, /occurrence_retention_days must be nil or a whole number of 1 or more/
+        )
+      end
+    end
+
+    describe "with baseline alerts" do
+      let(:warnings) { [] }
+
+      before { allow(Rails.logger).to receive(:warn) { |message| warnings << message } }
+
+      it "warns under 84 days, the baselines' history (hardening-1-0-rc2/REQ-66)" do
+        config.enable_baseline_alerts = true
+        config.occurrence_retention_days = 83
+
+        config.validate!
+
+        expect(warnings.grep(/occurrence_retention_days is 83.*baselines count the deleted weeks as quiet/)).not_to be_empty
+      end
+
+      it "doesn't warn at 84 days (hardening-1-0-rc2/REQ-66)" do
+        config.enable_baseline_alerts = true
+        config.occurrence_retention_days = 84
+
+        config.validate!
+
+        expect(warnings.grep(/occurrence_retention_days/)).to be_empty
+      end
+
+      it "doesn't warn with baseline alerts off (hardening-1-0-rc2/REQ-66)" do
+        config.enable_baseline_alerts = false
+        config.occurrence_retention_days = 7
+
+        config.validate!
+
+        expect(warnings.grep(/occurrence_retention_days/)).to be_empty
+      end
+
+      it "uses the baselines' own history length (hardening-1-0-rc2/REQ-66)" do
+        expect(RailsErrorDashboard::Services::BaselineCalculator::DAILY_LOOKBACK).to eq(84.days)
+      end
+    end
+  end
+
   describe "USE_SEPARATE_ERROR_DB" do
     let(:warnings) { [] }
 

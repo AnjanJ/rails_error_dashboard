@@ -687,6 +687,11 @@ the counts.** (→ REQ-64 to REQ-66)
   occurrences, each in a group and 15 minutes of its own, takes longer than 2 seconds. That is the worst
   case: one bucket write per row. T17 measures it.
   **Fired-if.** manual
+  Measured 2026-11-28, during T17, on PostgreSQL 16 on an idle M3 Max, inside a test transaction
+  (`tasks/scratch/t17/cost_probe_spec.rb`, git-ignored): 1,040 occurrences in 1,040 groups and buckets, two
+  batches, took 0.990, 0.989 and 0.990 s in three runs. A delete-only pass of 960 such rows took 0.005 s.
+  Not fired. The precision this costs is in REQ-64's note: a window that starts between two 15-minute
+  boundaries can gain or lose the events of the 15 minutes at its start.
 
 ## Decision: MTTR in SQL   (→ REQ-44)
 

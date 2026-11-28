@@ -84,6 +84,13 @@ RailsErrorDashboard.configure do |config|
   # Or schedule the job: RailsErrorDashboard::RetentionCleanupJob.perform_later
   config.retention_days = 90
 
+  # Occurrence retention: the same job deletes the occurrences of an error that
+  # is still live once they are this many days old. The error's counts and the
+  # dashboard's counts stay; who was affected, the request and the context of
+  # each deleted occurrence go. nil (the default) keeps them as long as the error.
+  # With baseline alerts on, use 84 or more (baselines read 84 days of occurrences).
+  # config.occurrence_retention_days = 90
+
   # ============================================================================
   # NOTIFICATION SETTINGS
   # ============================================================================
